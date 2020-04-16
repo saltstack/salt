@@ -19,6 +19,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {macpackage: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_pkg(self):
         """
             Test installing a PKG file
@@ -52,6 +53,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_pkg_exists(self):
         """
             Test installing a PKG file where it's already installed
@@ -83,6 +85,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 assert not install_mock.called
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_pkg_version_succeeds(self):
         """
             Test installing a PKG file where the version number matches the current installed version
@@ -124,6 +127,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 assert not install_mock.called
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_pkg_version_fails(self):
         """
             Test installing a PKG file where the version number if different from the expected one
@@ -167,6 +171,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_dmg(self):
         """
             Test installing a DMG file
@@ -206,6 +211,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_dmg_exists(self):
         """
             Test installing a DMG file when the package already exists
@@ -243,6 +249,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 assert not install_mock.called
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_app(self):
         """
             Test installing an APP file
@@ -271,6 +278,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_app_exists(self):
         """
             Test installing an APP file that already exists
@@ -297,6 +305,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 assert not install_mock.called
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_app_dmg(self):
         """
             Test installing an APP file contained in a DMG file
@@ -339,6 +348,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_app_dmg_exists(self):
         """
             Test installing an APP file contained in a DMG file where the file exists
@@ -379,6 +389,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 assert not install_mock.called
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_pkg_only_if_pass(self):
         """
             Test installing a PKG file where the only if call passes
@@ -412,6 +423,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_pkg_onlyif_fail(self,):
         """
             Test installing a PKG file where the onlyif call fails
@@ -430,6 +442,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
             out = macpackage.installed("/path/to/file.pkg", onlyif="some command")
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_pkg_unless_fail(self,):
         """
             Test installing a PKG file where the unless run fails

@@ -33,7 +33,7 @@ from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 # pylint: disable=invalid-name,protected-access,attribute-defined-outside-init,too-many-public-methods,unused-argument
 
@@ -106,6 +106,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         mock_domain.name.return_value = name
         return mock_domain
 
+    @skipIf(True, "FASTTEST skip")
     def test_disk_profile_merge(self):
         """
         Test virt._disk_profile() when merging with user-defined disks
@@ -141,6 +142,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             disks,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_boot_default_dev(self):
         """
         Test virt._gen_xml() default boot device
@@ -153,6 +155,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find("os/type").attrib["arch"], "x86_64")
         self.assertEqual(root.find("os/type").text, "hvm")
 
+    @skipIf(True, "FASTTEST skip")
     def test_boot_custom_dev(self):
         """
         Test virt._gen_xml() custom boot device
@@ -165,6 +168,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         root = ET.fromstring(xml_data)
         self.assertEqual(root.find("os/boot").attrib["dev"], "cdrom")
 
+    @skipIf(True, "FASTTEST skip")
     def test_boot_multiple_devs(self):
         """
         Test virt._gen_xml() multiple boot devices
@@ -186,6 +190,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         devs = root.findall(".//boot")
         self.assertTrue(len(devs) == 2)
 
+    @skipIf(True, "FASTTEST skip")
     def test_gen_xml_no_nic(self):
         """
         Test virt._gen_xml() serial console
@@ -208,6 +213,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find("devices/serial").attrib["type"], "pty")
         self.assertEqual(root.find("devices/console").attrib["type"], "pty")
 
+    @skipIf(True, "FASTTEST skip")
     def test_gen_xml_for_serial_console(self):
         """
         Test virt._gen_xml() serial console
@@ -230,6 +236,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find("devices/serial").attrib["type"], "pty")
         self.assertEqual(root.find("devices/console").attrib["type"], "pty")
 
+    @skipIf(True, "FASTTEST skip")
     def test_gen_xml_for_telnet_console(self):
         """
         Test virt._gen_xml() telnet console
@@ -254,6 +261,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find("devices/console").attrib["type"], "tcp")
         self.assertEqual(root.find("devices/console/source").attrib["service"], "22223")
 
+    @skipIf(True, "FASTTEST skip")
     def test_gen_xml_for_telnet_console_unspecified_port(self):
         """
         Test virt._gen_xml() telnet console without any specified port
@@ -279,6 +287,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             int(root.find("devices/console/source").attrib["service"]), int
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_gen_xml_for_serial_no_console(self):
         """
         Test virt._gen_xml() with no serial console
@@ -301,6 +310,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find("devices/serial").attrib["type"], "pty")
         self.assertEqual(root.find("devices/console"), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_gen_xml_for_telnet_no_console(self):
         """
         Test virt._gen_xml() with no telnet console
@@ -323,6 +333,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find("devices/serial").attrib["type"], "tcp")
         self.assertEqual(root.find("devices/console"), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_gen_xml_nographics_default(self):
         """
         Test virt._gen_xml() with default no graphics device
@@ -333,6 +344,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         root = ET.fromstring(xml_data)
         self.assertIsNone(root.find("devices/graphics"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_gen_xml_vnc_default(self):
         """
         Test virt._gen_xml() with default vnc graphics device
@@ -366,6 +378,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             root.find("devices/graphics/listen").attrib["address"], "myhost"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_gen_xml_spice_default(self):
         """
         Test virt._gen_xml() with default spice graphics device
@@ -392,6 +405,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             root.find("devices/graphics/listen").attrib["address"], "0.0.0.0"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_gen_xml_spice(self):
         """
         Test virt._gen_xml() with spice graphics device
@@ -423,6 +437,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find("devices/graphics/listen").attrib["type"], "none")
         self.assertFalse("address" in root.find("devices/graphics/listen").attrib)
 
+    @skipIf(True, "FASTTEST skip")
     def test_default_disk_profile_hypervisor_esxi(self):
         """
         Test virt._disk_profile() default ESXi profile
@@ -440,6 +455,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(system["model"], "scsi")
             self.assertTrue(int(system["size"]) >= 1)
 
+    @skipIf(True, "FASTTEST skip")
     def test_default_disk_profile_hypervisor_kvm(self):
         """
         Test virt._disk_profile() default KVM profile
@@ -457,6 +473,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(system["model"], "virtio")
             self.assertTrue(int(system["size"]) >= 1)
 
+    @skipIf(True, "FASTTEST skip")
     def test_default_disk_profile_hypervisor_xen(self):
         """
         Test virt._disk_profile() default XEN profile
@@ -474,6 +491,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(system["model"], "xen")
             self.assertTrue(int(system["size"]) >= 1)
 
+    @skipIf(True, "FASTTEST skip")
     def test_default_nic_profile_hypervisor_esxi(self):
         """
         Test virt._nic_profile() default ESXi profile
@@ -490,6 +508,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(eth0["source"], "DEFAULT")
             self.assertEqual(eth0["model"], "e1000")
 
+    @skipIf(True, "FASTTEST skip")
     def test_default_nic_profile_hypervisor_kvm(self):
         """
         Test virt._nic_profile() default KVM profile
@@ -506,6 +525,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(eth0["source"], "br0")
             self.assertEqual(eth0["model"], "virtio")
 
+    @skipIf(True, "FASTTEST skip")
     def test_default_nic_profile_hypervisor_xen(self):
         """
         Test virt._nic_profile() default XEN profile
@@ -522,6 +542,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(eth0["source"], "br0")
             self.assertFalse(eth0["model"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_gen_vol_xml(self):
         """
         Test virt._get_vol_xml()
@@ -535,6 +556,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find("capacity").attrib["unit"], "KiB")
         self.assertEqual(root.find("capacity").text, six.text_type(8192 * 1024))
 
+    @skipIf(True, "FASTTEST skip")
     def test_gen_xml_for_kvm_default_profile(self):
         """
         Test virt._gen_xml(), KVM default profile case
@@ -569,6 +591,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         mac = iface.find("mac").attrib["address"]
         self.assertTrue(re.match("^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$", mac, re.I))
 
+    @skipIf(True, "FASTTEST skip")
     def test_gen_xml_for_esxi_default_profile(self):
         """
         Test virt._gen_xml(), ESXi/vmware default profile case
@@ -603,6 +626,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         mac = iface.find("mac").attrib["address"]
         self.assertTrue(re.match("^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$", mac, re.I))
 
+    @skipIf(True, "FASTTEST skip")
     def test_gen_xml_for_xen_default_profile(self):
         """
         Test virt._gen_xml(), XEN PV default profile case
@@ -640,6 +664,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(iface.find("source").attrib["bridge"], "br0")
             self.assertIsNone(iface.find("model"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_gen_xml_for_esxi_custom_profile(self):
         """
         Test virt._gen_xml(), ESXi/vmware custom profile case
@@ -673,6 +698,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(len(root.findall(".//disk")) == 2)
             self.assertTrue(len(root.findall(".//interface")) == 2)
 
+    @skipIf(True, "FASTTEST skip")
     def test_gen_xml_for_kvm_custom_profile(self):
         """
         Test virt._gen_xml(), KVM custom profile case
@@ -718,6 +744,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             }
         },
     )
+    @skipIf(True, "FASTTEST skip")
     def test_disk_profile_kvm_disk_pool(self, mock_poolinfo):
         """
         Test virt._gen_xml(), KVM case with pools defined.
@@ -756,6 +783,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(diskp[1]["source_file"].startswith(default_path))
         # pylint: enable=no-member
 
+    @skipIf(True, "FASTTEST skip")
     def test_disk_profile_kvm_disk_external_image(self):
         """
         Test virt._gen_xml(), KVM case with an external image.
@@ -771,6 +799,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(diskp[0]["source_file"], ("/path/to/my/image.qcow2"))
 
     @patch("salt.modules.virt.pool_info", return_value={})
+    @skipIf(True, "FASTTEST skip")
     def test_disk_profile_kvm_disk_pool_notfound(self, mock_poolinfo):
         """
         Test virt._gen_xml(), KVM case with pools defined.
@@ -790,6 +819,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
     @patch(
         "salt.modules.virt.pool_info", return_value={"target_path": "/dev/disk/by-path"}
     )
+    @skipIf(True, "FASTTEST skip")
     def test_disk_profile_kvm_disk_pool_invalid(self, mock_poolinfo):
         """
         Test virt._gen_xml(), KVM case with pools defined.
@@ -806,6 +836,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             with self.assertRaises(CommandExecutionError):
                 virt._disk_profile("noeffect", "kvm", [], "hello")
 
+    @skipIf(True, "FASTTEST skip")
     def test_gen_xml_cdrom(self):
         """
         Test virt._gen_xml(), generating a cdrom device (different disk type, no source)
@@ -830,6 +861,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(disk.attrib["device"], "cdrom")
         self.assertIsNone(disk.find("source"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_controller_for_esxi(self):
         """
         Test virt._gen_xml() generated device controller for ESXi/vmware
@@ -845,6 +877,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         controller = controllers[0]
         self.assertEqual(controller.attrib["model"], "lsilogic")
 
+    @skipIf(True, "FASTTEST skip")
     def test_controller_for_kvm(self):
         """
         Test virt._gen_xml() generated device controller for KVM
@@ -859,6 +892,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         # kvm mac address shoud start with 52:54:00
         self.assertTrue("mac address='52:54:00" in xml_data)
 
+    @skipIf(True, "FASTTEST skip")
     def test_diff_disks(self):
         """
         Test virt._diff_disks()
@@ -959,6 +993,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             ],
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_diff_nics(self):
         """
         Test virt._diff_nics()
@@ -1023,6 +1058,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             ["52:54:00:39:02:b2", "52:54:00:39:02:b3"],
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_init(self):
         """
         Test init() function
@@ -1270,6 +1306,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(mock_chmod.call_args[0][0], expected_disk_path)
 
+    @skipIf(True, "FASTTEST skip")
     def test_update(self):
         """
         Test virt.update()
@@ -1629,6 +1666,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             virt.update("my_vm", cpu=4, mem=2048),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_existing_boot_params(self):
         """
         Test virt.update() with existing boot parameters.
@@ -1782,6 +1820,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(setxml.find("os").find("loader"), None)
         self.assertEqual(setxml.find("os").find("nvram"), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_mixed_dict_and_list_as_profile_objects(self):
         """
         Test virt._nic_profile with mixed dictionaries and lists as input.
@@ -1833,6 +1872,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                     )
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_xml(self):
         """
         Test virt.get_xml()
@@ -1850,6 +1890,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(xml, virt.get_xml("test-vm"))
         self.assertEqual(xml, virt.get_xml(domain))
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_qemu_img_info(self):
         """
         Make sure that qemu-img info output is properly parsed
@@ -1978,6 +2019,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.modules.virt.stop", return_value=True)
     @patch("salt.modules.virt.undefine")
     @patch("os.remove")
+    @skipIf(True, "FASTTEST skip")
     def test_purge_default(self, mock_remove, mock_undefine, mock_stop):
         """
         Test virt.purge() with default parameters
@@ -2031,6 +2073,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.modules.virt.stop", return_value=True)
     @patch("salt.modules.virt.undefine")
     @patch("os.remove")
+    @skipIf(True, "FASTTEST skip")
     def test_purge_noremovable(self, mock_remove, mock_undefine, mock_stop):
         """
         Test virt.purge(removables=False)
@@ -2087,6 +2130,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         mock_remove.assert_called_once()
         mock_remove.assert_any_call("/disks/test.qcow2")
 
+    @skipIf(True, "FASTTEST skip")
     def test_capabilities(self):
         """
         Test the virt.capabilities parsing
@@ -2413,6 +2457,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(expected, caps)
 
+    @skipIf(True, "FASTTEST skip")
     def test_network(self):
         """
         Test virt._get_net_xml()
@@ -2424,6 +2469,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find("forward").attrib["mode"], "bridge")
         self.assertEqual(root.find("virtualport").attrib["type"], "openvswitch")
 
+    @skipIf(True, "FASTTEST skip")
     def test_network_nat(self):
         """
         Test virt._get_net_xml() in a nat setup
@@ -2466,6 +2512,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "192.168.2.125",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_domain_capabilities(self):
         """
         Test the virt.domain_capabilities parsing
@@ -2623,6 +2670,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(expected, caps)
 
+    @skipIf(True, "FASTTEST skip")
     def test_network_tag(self):
         """
         Test virt._get_net_xml() with VLAN tag
@@ -2635,6 +2683,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find("virtualport").attrib["type"], "openvswitch")
         self.assertEqual(root.find("vlan/tag").attrib["id"], "1001")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_networks(self):
         """
         Test virt.list_networks()
@@ -2650,6 +2699,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         actual = virt.list_networks()
         self.assertEqual(names, actual)
 
+    @skipIf(True, "FASTTEST skip")
     def test_network_info(self):
         """
         Test virt.network_info()
@@ -2709,6 +2759,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             net,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_network_info_all(self):
         """
         Test virt.network_info()
@@ -2755,6 +2806,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             net,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_network_info_notfound(self):
         """
         Test virt.network_info() when the network can't be found
@@ -2765,6 +2817,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         net = virt.network_info("foo")
         self.assertEqual({}, net)
 
+    @skipIf(True, "FASTTEST skip")
     def test_network_get_xml(self):
         """
         Test virt.network_get_xml
@@ -2775,6 +2828,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual("<net>Raw XML</net>", virt.network_get_xml("default"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_pool(self):
         """
         Test virt._gen_pool_xml()
@@ -2785,6 +2839,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.attrib["type"], "logical")
         self.assertEqual(root.find("target/path").text, "/dev/base")
 
+    @skipIf(True, "FASTTEST skip")
     def test_pool_with_source(self):
         """
         Test virt._gen_pool_xml() with a source device
@@ -2798,6 +2853,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find("target/path").text, "/dev/base")
         self.assertEqual(root.find("source/device").attrib["path"], "/dev/sda")
 
+    @skipIf(True, "FASTTEST skip")
     def test_pool_with_scsi(self):
         """
         Test virt._gen_pool_xml() with a SCSI source
@@ -2844,6 +2900,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             root.find("source/adapter/parentaddr/address").attrib["function"], "0x2"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_pool_with_rbd(self):
         """
         Test virt._gen_pool_xml() with an RBD source
@@ -2882,6 +2939,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find("source/auth").attrib["username"], "admin")
         self.assertEqual(root.find("source/auth/secret").attrib["uuid"], "someuuid")
 
+    @skipIf(True, "FASTTEST skip")
     def test_pool_with_netfs(self):
         """
         Test virt._gen_pool_xml() with a netfs source
@@ -2919,6 +2977,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find("source/host").attrib["name"], "nfs.host")
         self.assertEqual(root.find("source/auth"), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_pool_with_iscsi_direct(self):
         """
         Test virt._gen_pool_xml() with a iscsi-direct source
@@ -2946,6 +3005,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "iqn.2013-06.com.example:iscsi-initiator",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_pool_define(self):
         """
         Test virt.pool_define()
@@ -3054,6 +3114,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             root.find("description").text, "Passphrase for default pool created by Salt"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_pools(self):
         """
         Test virt.list_pools()
@@ -3069,6 +3130,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         actual = virt.list_pools()
         self.assertEqual(names, actual)
 
+    @skipIf(True, "FASTTEST skip")
     def test_pool_info(self):
         """
         Test virt.pool_info()
@@ -3118,6 +3180,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             pool,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_pool_info_notarget(self):
         """
         Test virt.pool_info()
@@ -3165,6 +3228,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             pool,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_pool_info_notfound(self):
         """
         Test virt.pool_info() when the pool can't be found
@@ -3175,6 +3239,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         pool = virt.pool_info("foo")
         self.assertEqual({}, pool)
 
+    @skipIf(True, "FASTTEST skip")
     def test_pool_info_all(self):
         """
         Test virt.pool_info()
@@ -3238,6 +3303,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             pool,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_pool_get_xml(self):
         """
         Test virt.pool_get_xml
@@ -3248,6 +3314,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual("<pool>Raw XML</pool>", virt.pool_get_xml("default"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_pool_list_volumes(self):
         """
         Test virt.pool_list_volumes
@@ -3262,6 +3329,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch("salt.modules.virt._is_kvm_hyper", return_value=True)
     @patch("salt.modules.virt._is_xen_hyper", return_value=False)
+    @skipIf(True, "FASTTEST skip")
     def test_get_hypervisor(self, isxen_mock, iskvm_mock):
         """
         test the virt.get_hypervisor() function
@@ -3274,6 +3342,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         isxen_mock.return_value = True
         self.assertEqual("xen", virt.get_hypervisor())
 
+    @skipIf(True, "FASTTEST skip")
     def test_pool_delete(self):
         """
         Test virt.pool_delete function
@@ -3293,6 +3362,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.mock_libvirt.VIR_STORAGE_POOL_DELETE_NORMAL
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_full_info(self):
         """
         Test virt.full_info
@@ -3432,6 +3502,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual("5900", graphics["port"])
         self.assertEqual("0.0.0.0", graphics["listen"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_pool_update(self):
         """
         Test the pool_update function
@@ -3496,6 +3567,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.mock_conn.storagePoolDefineXML.assert_called_once_with(expected_xml)
 
+    @skipIf(True, "FASTTEST skip")
     def test_pool_update_nochange(self):
         """
         Test the pool_update function when no change is needed
@@ -3535,6 +3607,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.mock_conn.storagePoolDefineXML.assert_not_called()
 
+    @skipIf(True, "FASTTEST skip")
     def test_pool_update_password(self):
         """
         Test the pool_update function, where the password only is changed
@@ -3593,6 +3666,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_conn.storagePoolDefineXML.assert_called_once_with(expected_xml)
         mock_secret.setValue.assert_called_once_with(b"secret")
 
+    @skipIf(True, "FASTTEST skip")
     def test_pool_update_password_create(self):
         """
         Test the pool_update function, where the password only is changed
@@ -3648,6 +3722,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_conn.storagePoolDefineXML.assert_called_once_with(expected_xml)
         mock_secret.setValue.assert_called_once_with(b"secret")
 
+    @skipIf(True, "FASTTEST skip")
     def test_volume_infos(self):
         """
         Test virt.volume_infos
@@ -3959,6 +4034,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_volume_delete(self):
         """
         Test virt.volume_delete
@@ -3989,6 +4065,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             virt.volume_delete("missing", "test_volume")
         self.assertEqual(mock_delete.call_count, 2)
 
+    @skipIf(True, "FASTTEST skip")
     def test_pool_capabilities(self):
         """
         Test virt.pool_capabilities where libvirt has the pool-capabilities feature
@@ -4061,6 +4138,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
 
     @patch("salt.modules.virt.get_hypervisor", return_value="kvm")
+    @skipIf(True, "FASTTEST skip")
     def test_pool_capabilities_computed(self, mock_get_hypervisor):
         """
         Test virt.pool_capabilities where libvirt doesn't have the pool-capabilities feature
@@ -4161,6 +4239,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             ],
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_domain(self):
         """
         Test the virt._get_domain function

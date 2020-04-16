@@ -11,7 +11,7 @@ import salt.output.nested as nested
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class NestedOutputterTestCase(TestCase, LoaderModuleMockMixin):
@@ -40,6 +40,7 @@ class NestedOutputterTestCase(TestCase, LoaderModuleMockMixin):
         }
         self.addCleanup(delattr, self, "data")
 
+    @skipIf(True, "FASTTEST skip")
     def test_output_with_colors(self):
         # Should look exacly like that, with the default color scheme:
         #
@@ -83,6 +84,7 @@ class NestedOutputterTestCase(TestCase, LoaderModuleMockMixin):
         ret = nested.output(self.data)
         self.assertEqual(ret, expected_output_str)
 
+    @skipIf(True, "FASTTEST skip")
     def test_output_with_retcode(self):
         # Non-zero retcode should change the colors
         # Same output format as above, just different colors
@@ -104,6 +106,7 @@ class NestedOutputterTestCase(TestCase, LoaderModuleMockMixin):
         ret = nested.output(self.data, _retcode=1)
         self.assertEqual(ret, expected_output_str)
 
+    @skipIf(True, "FASTTEST skip")
     def test_output_with_indent(self):
         # Everything must be indented by exactly two spaces
         # (using nested_indent=2 sent to nested.output as kwarg)

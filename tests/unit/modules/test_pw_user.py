@@ -32,6 +32,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {pw_user: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_add(self):
         """
         Test for adding a user
@@ -41,6 +42,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(pw_user.__salt__, {"cmd.retcode": mock}):
                 self.assertTrue(pw_user.add("a"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete(self):
         """
         Test for deleting a user
@@ -49,6 +51,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pw_user.__salt__, {"cmd.retcode": mock}):
             self.assertTrue(pw_user.delete("A"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_getent(self):
         """
         Test if user.getent already have a value
@@ -65,6 +68,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(pw_user, "info", MagicMock(return_value=mock_user)):
                     self.assertEqual(pw_user.getent(True)[0], mock_user)
 
+    @skipIf(True, "FASTTEST skip")
     def test_chuid(self):
         """
         Test if user id given is same as previous id
@@ -85,6 +89,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(pw_user, "info", mock):
                 self.assertTrue(pw_user.chuid("name", "A"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_chgid(self):
         """
         Test if group id given is same as previous id
@@ -105,6 +110,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(pw_user, "info", mock):
                 self.assertTrue(pw_user.chgid("name", 1))
 
+    @skipIf(True, "FASTTEST skip")
     def test_chshell(self):
         """
         Test if shell given is same as previous shell
@@ -125,6 +131,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(pw_user, "info", mock):
                 self.assertTrue(pw_user.chshell("name", "A"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_chhome(self):
         """
         Test if home directory given is same as previous home directory
@@ -145,6 +152,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(pw_user, "info", mock):
                 self.assertTrue(pw_user.chhome("name", "A"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_chgroups(self):
         """
         Test if no group needs to be added
@@ -161,6 +169,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(pw_user, "list_groups", mock):
                 self.assertTrue(pw_user.chgroups("name", "a, b, c"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_chfullname(self):
         """
         Change the user's Full Name
@@ -193,6 +202,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(pw_user, "info", mock):
                     self.assertFalse(pw_user.chfullname("name", "fullname1"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_chroomnumber(self):
         """
         Change the user's Room Number
@@ -225,6 +235,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(pw_user, "info", mock):
                     self.assertFalse(pw_user.chroomnumber("name", 1))
 
+    @skipIf(True, "FASTTEST skip")
     def test_chworkphone(self):
         """
         Change the user's Work Phone
@@ -257,6 +268,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(pw_user, "info", mock):
                     self.assertFalse(pw_user.chworkphone("name", 1))
 
+    @skipIf(True, "FASTTEST skip")
     def test_chhomephone(self):
         """
         Change the user's Home Phone
@@ -289,6 +301,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(pw_user, "info", mock):
                     self.assertFalse(pw_user.chhomephone("name", 1))
 
+    @skipIf(True, "FASTTEST skip")
     def test_info(self):
         """
         Return user information
@@ -313,6 +326,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(pw_user, "list_groups", mock):
                 self.assertEqual(pw_user.info("name")["name"], "_TEST_GROUP")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_groups(self):
         """
         Return a list of groups the named user belongs to
@@ -324,6 +338,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(pw_user.list_groups("name"), [mock_group])
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_users(self):
         """
         Return a list of all users
@@ -336,6 +351,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
         with patch("pwd.getpwall", MagicMock(return_value=[MockData()])):
             self.assertEqual(pw_user.list_users(), [mock_user])
 
+    @skipIf(True, "FASTTEST skip")
     def test_rename(self):
         """
         Change the username for a named user

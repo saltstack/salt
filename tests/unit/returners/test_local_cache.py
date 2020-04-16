@@ -61,6 +61,7 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         if os.path.exists(self.TMP_CACHE_DIR):
             shutil.rmtree(self.TMP_CACHE_DIR)
 
+    @skipIf(True, "FASTTEST skip")
     def test_clean_old_jobs_no_jid_root(self):
         """
         Tests that the function returns None when no jid_root is found.
@@ -68,6 +69,7 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         with patch("os.path.exists", MagicMock(return_value=False)):
             self.assertEqual(local_cache.clean_old_jobs(), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_clean_old_jobs_empty_jid_dir_removed(self):
         """
         Tests that an empty JID dir is removed when it is old enough to be deleted.
@@ -95,6 +97,7 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         # Assert that the JID dir was removed
         self.assertEqual([], os.listdir(self.TMP_JID_DIR))
 
+    @skipIf(True, "FASTTEST skip")
     def test_clean_old_jobs_empty_jid_dir_remains(self):
         """
         Tests that an empty JID dir is NOT removed because it was created within
@@ -118,6 +121,7 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         # Assert the JID directory is still present to be cleaned after keep_jobs interval
         self.assertEqual([jid_dir_name], os.listdir(self.TMP_JID_DIR))
 
+    @skipIf(True, "FASTTEST skip")
     def test_clean_old_jobs_jid_file_corrupted(self):
         """
         Tests that the entire JID dir is removed when the jid_file is not a file.
@@ -144,6 +148,7 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         # while the 'jid' dir inside it should be gone
         self.assertEqual(False, os.path.exists(jid_dir_name))
 
+    @skipIf(True, "FASTTEST skip")
     def test_clean_old_jobs_jid_file_is_cleaned(self):
         """
         Test that the entire JID dir is removed when a job is old enough to be removed.
@@ -305,7 +310,6 @@ class Local_CacheTest(
             "Dir/file does not exist: ", self.JOB_CACHE_DIR_FILES, status="present"
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_clean_old_jobs(self):
         """
         test to ensure jobs are removed from job cache
@@ -319,7 +323,6 @@ class Local_CacheTest(
             "job cache was not removed: ", self.JOB_CACHE_DIR_FILES, status="removed"
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_not_clean_new_jobs(self):
         """
         test to ensure jobs are not removed when
@@ -334,7 +337,6 @@ class Local_CacheTest(
                 "job cache was removed: ", self.JOB_CACHE_DIR_FILES, status="present"
             )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_empty_jid_dir(self):
         """
         test to ensure removal of empty jid dir

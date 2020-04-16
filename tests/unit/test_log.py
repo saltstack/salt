@@ -23,6 +23,7 @@ from salt.ext.six.moves import StringIO
 # Import Salt Testing libs
 from tests.support.case import TestCase
 from tests.support.helpers import TstSuiteLoggingHandler
+from tests.support.unit import skipIf
 
 
 class TestLog(TestCase):
@@ -30,6 +31,7 @@ class TestLog(TestCase):
     Test several logging settings
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_issue_2853_regex_TypeError(self):
         # Now, python's logging logger class is ours.
         # Let's make sure we have at least one instance
@@ -73,6 +75,7 @@ class TestLog(TestCase):
             # Remove the testing handler
             log.removeHandler(handler)
 
+    @skipIf(True, "FASTTEST skip")
     def test_exc_info_on_loglevel(self):
         def raise_exception_on_purpose():
             1 / 0  # pylint: disable=pointless-statement

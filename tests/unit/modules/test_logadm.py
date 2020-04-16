@@ -12,7 +12,7 @@ import salt.modules.logadm as logadm
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class LogadmTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class LogadmTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {logadm: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_conf(self):
         """
         Test for Show parsed configuration
@@ -30,6 +31,7 @@ class LogadmTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(logadm, "_parse_conf", return_value=True):
             self.assertTrue(logadm.show_conf("conf_file"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_rotate(self):
         """
         Test for Set up pattern for logging.
@@ -49,6 +51,7 @@ class LogadmTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(logadm.rotate("name"), {"Result": "Success"})
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove(self):
         """
         Test for Remove log pattern from logadm

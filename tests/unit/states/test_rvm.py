@@ -12,7 +12,7 @@ from salt.ext import six
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class TestRvmState(TestCase, LoaderModuleMockMixin):
@@ -27,6 +27,7 @@ class TestRvmState(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test__check_rvm(self):
         mock = MagicMock(return_value=True)
         with patch.dict(
@@ -37,6 +38,7 @@ class TestRvmState(TestCase, LoaderModuleMockMixin):
             # rvm.install is not run anymore while checking rvm.is_installed
             self.assertEqual(mock.call_count, 0)
 
+    @skipIf(True, "FASTTEST skip")
     def test__check_and_install_ruby(self):
         mock_check_rvm = MagicMock(return_value={"changes": {}, "result": True})
         mock_check_ruby = MagicMock(return_value={"changes": {}, "result": False})
@@ -49,6 +51,7 @@ class TestRvmState(TestCase, LoaderModuleMockMixin):
             "1.9.3", runas=None, opts=None, env=None
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test__check_ruby(self):
         mock = MagicMock(
             return_value=[["ruby", "1.9.3-p125", False], ["jruby", "1.6.5.1", True]]
@@ -72,6 +75,7 @@ class TestRvmState(TestCase, LoaderModuleMockMixin):
                 ret = rvm._check_ruby({"changes": {}, "result": False}, ruby)
                 self.assertEqual(result, ret["result"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_gemset_present(self):
         with patch.object(rvm, "_check_rvm") as mock_method:
             mock_method.return_value = {"result": True, "changes": {}}
@@ -94,6 +98,7 @@ class TestRvmState(TestCase, LoaderModuleMockMixin):
                     self.assertEqual(True, ret["result"])
                     gemset_create.assert_called_once_with("default", "quux", runas=None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed(self):
         mock = MagicMock()
         with patch.object(rvm, "_check_rvm") as mock_method:
@@ -104,6 +109,7 @@ class TestRvmState(TestCase, LoaderModuleMockMixin):
             {"result": True}, "1.9.3", True, user=None, opts=None, env=None
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_with_env(self):
         mock = MagicMock()
         with patch.object(rvm, "_check_rvm") as mock_method:
@@ -121,6 +127,7 @@ class TestRvmState(TestCase, LoaderModuleMockMixin):
             env=[{"RUBY_CONFIGURE_OPTS": "--foobar"}],
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_with_opts(self):
         mock = MagicMock()
         with patch.object(rvm, "_check_rvm") as mock_method:

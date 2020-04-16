@@ -11,7 +11,7 @@ import salt.modules.cpan as cpan
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class CpanTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {cpan: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_install(self):
         """
         Test if it install a module from cpan
@@ -36,6 +37,7 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(cpan, "show", mock):
                 self.assertDictEqual(cpan.install("Alloy"), {"new": "3.1", "old": None})
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_error(self):
         """
         Test if it install a module from cpan
@@ -53,6 +55,7 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'remove' function tests: 4
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove(self):
         """
         Test if it remove a module using cpan
@@ -72,6 +75,7 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
                         cpan.remove("Alloy"), {"new": None, "old": "2.1"}
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_unexist_error(self):
         """
         Test if it try to remove an unexist module using cpan
@@ -82,6 +86,7 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
                 cpan.remove("Alloy"), {"error": "This package does not seem to exist"}
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_noninstalled_error(self):
         """
         Test if it remove non installed module using cpan
@@ -90,6 +95,7 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(cpan, "show", mock):
             self.assertDictEqual(cpan.remove("Alloy"), {"new": None, "old": None})
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_nopan_error(self):
         """
         Test if it gives no cpan error while removing
@@ -101,6 +107,7 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list(self):
         """
         Test if it list installed Perl module
@@ -111,6 +118,7 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'show' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_show(self):
         """
         Test if it show information about a specific Perl module
@@ -122,6 +130,7 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
                 {"error": "This package does not seem to exist", "name": "Alloy"},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_mock(self):
         """
         Test if it show information about a specific Perl module
@@ -133,6 +142,7 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'show_config' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_config(self):
         """
         Test if it return a dict of CPAN configuration values

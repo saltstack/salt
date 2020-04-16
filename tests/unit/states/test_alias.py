@@ -12,7 +12,7 @@ import salt.states.alias as alias
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class AliasTest(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class AliasTest(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {alias: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_has_target(self):
         """
         test alias.present has target already
@@ -40,6 +41,7 @@ class AliasTest(TestCase, LoaderModuleMockMixin):
         with patch.dict(alias.__salt__, {"aliases.has_target": has_target}):
             self.assertEqual(alias.present(name, target), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_has_not_target_test(self):
         """
         test alias.present has't got target yet test mode
@@ -58,6 +60,7 @@ class AliasTest(TestCase, LoaderModuleMockMixin):
             with patch.dict(alias.__opts__, {"test": True}):
                 self.assertEqual(alias.present(name, target), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_set_target(self):
         """
         test alias.present set target
@@ -78,6 +81,7 @@ class AliasTest(TestCase, LoaderModuleMockMixin):
                 with patch.dict(alias.__salt__, {"aliases.set_target": set_target}):
                     self.assertEqual(alias.present(name, target), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_set_target_failed(self):
         """
         test alias.present set target failure
@@ -98,6 +102,7 @@ class AliasTest(TestCase, LoaderModuleMockMixin):
                 with patch.dict(alias.__salt__, {"aliases.set_target": set_target}):
                     self.assertEqual(alias.present(name, target), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_already_gone(self):
         """
         test alias.absent already gone
@@ -115,6 +120,7 @@ class AliasTest(TestCase, LoaderModuleMockMixin):
         with patch.dict(alias.__salt__, {"aliases.get_target": get_target}):
             self.assertEqual(alias.absent(name), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_not_gone_test(self):
         """
         test alias.absent already gone test mode
@@ -133,6 +139,7 @@ class AliasTest(TestCase, LoaderModuleMockMixin):
             with patch.dict(alias.__opts__, {"test": True}):
                 self.assertEqual(alias.absent(name), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_rm_alias(self):
         """
         test alias.absent remove alias
@@ -153,6 +160,7 @@ class AliasTest(TestCase, LoaderModuleMockMixin):
                 with patch.dict(alias.__salt__, {"aliases.rm_alias": rm_alias}):
                     self.assertEqual(alias.absent(name), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_rm_alias_failed(self):
         """
         test alias.absent remove alias failure

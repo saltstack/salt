@@ -9,7 +9,7 @@ from salt.utils import dictdiffer
 from salt.utils.listdiffer import list_diff
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 NONE = dictdiffer.RecursiveDictDiffer.NONE_VALUE
 
@@ -35,18 +35,21 @@ class ListDictDifferTestCase(TestCase):
             except AttributeError:
                 continue
 
+    @skipIf(True, "FASTTEST skip")
     def test_added(self):
         self.assertEqual(len(self.list_diff.added), 1)
         self.assertDictEqual(
             self.list_diff.added[0], {"key": 5, "value": "foo5", "int_value": 105}
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_removed(self):
         self.assertEqual(len(self.list_diff.removed), 1)
         self.assertDictEqual(
             self.list_diff.removed[0], {"key": 3, "value": "foo3", "int_value": 103}
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_diffs(self):
         self.assertEqual(len(self.list_diff.diffs), 3)
         self.assertDictEqual(
@@ -75,6 +78,7 @@ class ListDictDifferTestCase(TestCase):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_new_values(self):
         self.assertEqual(len(self.list_diff.new_values), 2)
         self.assertDictEqual(self.list_diff.new_values[0], {"key": 2, "int_value": 112})
@@ -82,6 +86,7 @@ class ListDictDifferTestCase(TestCase):
             self.list_diff.new_values[1], {"key": 5, "value": "foo5", "int_value": 105}
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_old_values(self):
         self.assertEqual(len(self.list_diff.old_values), 2)
         self.assertDictEqual(self.list_diff.old_values[0], {"key": 2, "int_value": 102})
@@ -89,6 +94,7 @@ class ListDictDifferTestCase(TestCase):
             self.list_diff.old_values[1], {"key": 3, "value": "foo3", "int_value": 103}
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_changed_all(self):
         self.assertEqual(
             self.list_diff.changed(selection="all"),
@@ -101,11 +107,13 @@ class ListDictDifferTestCase(TestCase):
             ],
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_changed_intersect(self):
         self.assertEqual(
             self.list_diff.changed(selection="intersect"), ["key.2.int_value"]
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_changes_str(self):
         self.assertEqual(
             self.list_diff.changes_str,

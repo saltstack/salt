@@ -11,7 +11,7 @@ import salt.states.ini_manage as ini_manage
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 # pylint: disable=no-member
 
@@ -26,6 +26,7 @@ class IniManageTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'options_present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_options_present(self):
         """
         Test to verify options present in file.
@@ -94,6 +95,7 @@ class IniManageTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'options_absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_options_absent(self):
         """
         Test to verify options absent in file.
@@ -114,6 +116,7 @@ class IniManageTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'sections_present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_sections_present(self):
         """
         Test to verify sections present in file.
@@ -145,6 +148,7 @@ class IniManageTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'sections_absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_sections_absent(self):
         """
         Test to verify sections absent in file.

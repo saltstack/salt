@@ -9,13 +9,14 @@ import salt.modules.nexus as nexus
 # Import Salt testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class nexusTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {nexus: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_artifact_get_metadata(self):
         with patch(
             "salt.modules.nexus._get_artifact_metadata_xml",
@@ -46,6 +47,7 @@ class nexusTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(metadata["latest_version"], "0.1.0")
 
+    @skipIf(True, "FASTTEST skip")
     def test_snapshot_version_get_metadata(self):
         with patch(
             "salt.modules.nexus._get_snapshot_version_metadata_xml",
@@ -91,6 +93,7 @@ class nexusTestCase(TestCase, LoaderModuleMockMixin):
                 metadata["snapshot_versions"]["dist"], "0.0.2-20170920.212353-3"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_artifact_metadata_url(self):
         metadata_url = nexus._get_artifact_metadata_url(
             nexus_url="http://nexus.example.com/repository",
@@ -104,6 +107,7 @@ class nexusTestCase(TestCase, LoaderModuleMockMixin):
             "http://nexus.example.com/repository/libs-releases/com/company/sampleapp/web-module/web/maven-metadata.xml",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_snapshot_version_metadata_url(self):
         metadata_url = nexus._get_snapshot_version_metadata_url(
             nexus_url="http://nexus.example.com/repository",
@@ -118,6 +122,7 @@ class nexusTestCase(TestCase, LoaderModuleMockMixin):
             "http://nexus.example.com/repository/libs-snapshots/com/company/sampleapp/web-module/web/0.0.2-SNAPSHOT/maven-metadata.xml",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_construct_url_for_released_version(self):
         artifact_url, file_name = nexus._get_release_url(
             repository="libs-releases",
@@ -134,6 +139,7 @@ class nexusTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(file_name, "web-0.1.0.zip")
 
+    @skipIf(True, "FASTTEST skip")
     def test_construct_url_for_snapshot_version(self):
         with patch(
             "salt.modules.nexus._get_snapshot_version_metadata",

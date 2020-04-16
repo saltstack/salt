@@ -12,7 +12,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 
 # Salt testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -36,6 +36,7 @@ class NetworkInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {network_info: {"__context__": {}, "__salt__": {}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_non_list_config(self):
         config = {}
 
@@ -45,6 +46,7 @@ class NetworkInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret, (False, "Configuration for network_info beacon must be a list.")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_empty_config(self):
         config = [{}]
 
@@ -52,6 +54,7 @@ class NetworkInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(ret, (True, "Valid beacon configuration"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_network_info_equal(self):
         with patch(
             "salt.utils.psutil_compat.net_io_counters",
@@ -98,6 +101,7 @@ class NetworkInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret = network_info.beacon(config)
             self.assertEqual(ret, _expected_return)
 
+    @skipIf(True, "FASTTEST skip")
     def test_network_info_greater_than(self):
         with patch(
             "salt.utils.psutil_compat.net_io_counters",

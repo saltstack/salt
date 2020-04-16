@@ -7,10 +7,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 from salt.utils.aggregation import Map, Scalar, aggregate
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class TestAggregation(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_merging(self):
         a = {"foo": 42, "bar": "first"}
         b = {"bar": "second"}
@@ -43,6 +44,7 @@ class TestAggregation(TestCase):
             }
             assert aggregate(c, d, level=level) == ["first", "second"]
 
+    @skipIf(True, "FASTTEST skip")
     def test_nested(self):
         a = {"foo": {"bar": "first"}}
         b = {"foo": {"bar": "second"}}
@@ -53,6 +55,7 @@ class TestAggregation(TestCase):
 
         assert aggregate(a, b) == {"foo": {"bar": ["first", "second"]}}, aggregate(a, b)
 
+    @skipIf(True, "FASTTEST skip")
     def test_introspection(self):
 
         a = {"foo": {"lvl1": {"lvl2-a": "first", "lvl2-b": "first"}}}
@@ -63,6 +66,7 @@ class TestAggregation(TestCase):
             a, b
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_instruction(self):
         a = {"foo": Map({"bar": Scalar("first")})}
         b = {"foo": Map({"bar": Scalar("second")})}

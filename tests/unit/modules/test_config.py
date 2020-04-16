@@ -10,7 +10,7 @@ import salt.modules.config as config
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 DEFAULTS = {
     "test.option.foo": "value of test.option.foo in DEFAULTS",
@@ -55,12 +55,14 @@ class TestModulesConfig(TestCase, LoaderModuleMockMixin):
     def _wildcard_match(self, data):
         return {x: data[x] for x in fnmatch.filter(data, self.wildcard_opt_name)}
 
+    @skipIf(True, "FASTTEST skip")
     def test_defaults_only_name(self):
         with patch.dict(config.DEFAULTS, DEFAULTS):
             opt_name = "test.option"
             opt = config.option(opt_name)
             self.assertEqual(opt, config.DEFAULTS[opt_name])
 
+    @skipIf(True, "FASTTEST skip")
     def test_no_match(self):
         """
         Make sure that the defa
@@ -84,6 +86,7 @@ class TestModulesConfig(TestCase, LoaderModuleMockMixin):
             ret = config.option(self.wildcard_opt_name)
             assert ret == "", ret
 
+    @skipIf(True, "FASTTEST skip")
     def test_omits(self):
         with patch.dict(config.DEFAULTS, DEFAULTS):
 

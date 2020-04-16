@@ -13,7 +13,7 @@ from salt.ext.six.moves import StringIO
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 STUB_USER = "root"
 STUB_PATH = "/tmp"
@@ -86,6 +86,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             self.addCleanup(patcher.stop)
         self.addCleanup(set_crontab, "")
 
+    @skipIf(True, "FASTTEST skip")
     def test_present(self):
         cron.present(name="foo", hour="1", identifier="1", user="root")
         self.assertMultiLineEqual(
@@ -162,6 +163,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             ),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove(self):
         with patch.dict(cron.__opts__, {"test": True}):
             set_crontab(
@@ -221,6 +223,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 get_crontab(), "# Lines below here are managed by Salt, do not edit"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_multiline_comments_are_updated(self):
         set_crontab(
             "# Lines below here are managed by Salt, do not edit\n"
@@ -261,6 +264,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             "* 1 * * * foo",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_existing_unmanaged_jobs_are_made_managed(self):
         set_crontab(
             "# Lines below here are managed by Salt, do not edit\n" "0 2 * * * foo"
@@ -280,6 +284,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret["changes"], {})
         self.assertEqual(ret["comment"], "Cron foo already present")
 
+    @skipIf(True, "FASTTEST skip")
     def test_existing_noid_jobs_are_updated_with_identifier(self):
         set_crontab(
             "# Lines below here are managed by Salt, do not edit\n"
@@ -298,6 +303,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             "1 * * * * foo",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_existing_duplicate_unmanaged_jobs_are_merged_and_given_id(self):
         set_crontab(
             "# Lines below here are managed by Salt, do not edit\n"

@@ -183,7 +183,6 @@ class BotoLambdaFunctionTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCase
     TestCase for salt.modules.boto_lambda state.module
     """
 
-    @skipIf(True, "SLOWTEST skip")
     def test_present_when_function_does_not_exist(self):
         """
         Tests present on a function that does not exist.
@@ -212,7 +211,6 @@ class BotoLambdaFunctionTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCase
             function_ret["FunctionName"],
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_present_when_function_exists(self):
         self.conn.list_functions.return_value = {"Functions": [function_ret]}
         self.conn.update_function_code.return_value = function_ret
@@ -240,7 +238,8 @@ class BotoLambdaFunctionTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCase
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"], {})
 
-    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_present_with_failure(self):
         self.conn.list_functions.side_effect = [
             {"Functions": []},
@@ -272,6 +271,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCase
         self.assertFalse(result["result"])
         self.assertTrue("An error occurred" in result["comment"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_when_function_does_not_exist(self):
         """
         Tests absent on a function that does not exist.
@@ -281,6 +281,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCase
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"], {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_when_function_exists(self):
         self.conn.list_functions.return_value = {"Functions": [function_ret]}
         result = self.salt_states["boto_lambda.function_absent"](
@@ -289,6 +290,9 @@ class BotoLambdaFunctionTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCase
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"]["new"]["function"], None)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_absent_with_failure(self):
         self.conn.list_functions.return_value = {"Functions": [function_ret]}
         self.conn.delete_function.side_effect = ClientError(
@@ -300,7 +304,6 @@ class BotoLambdaFunctionTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCase
         self.assertFalse(result["result"])
         self.assertTrue("An error occurred" in result["comment"])
 
-    @skipIf(True, "SLOWTEST skip")
     def test_present_when_function_exists_and_permissions(self):
         self.conn.list_functions.return_value = {"Functions": [function_ret]}
         self.conn.update_function_code.return_value = function_ret
@@ -380,6 +383,7 @@ class BotoLambdaAliasTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCaseMix
     TestCase for salt.modules.boto_lambda state.module aliases
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_when_alias_does_not_exist(self):
         """
         Tests present on a alias that does not exist.
@@ -396,6 +400,7 @@ class BotoLambdaAliasTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCaseMix
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"]["new"]["alias"]["Name"], alias_ret["Name"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_when_alias_exists(self):
         self.conn.list_aliases.return_value = {"Aliases": [alias_ret]}
         self.conn.create_alias.return_value = alias_ret
@@ -409,7 +414,8 @@ class BotoLambdaAliasTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCaseMix
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"], {})
 
-    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_present_with_failure(self):
         self.conn.list_aliases.side_effect = [{"Aliases": []}, {"Aliases": [alias_ret]}]
         self.conn.create_alias.side_effect = ClientError(error_content, "create_alias")
@@ -422,6 +428,7 @@ class BotoLambdaAliasTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCaseMix
         self.assertFalse(result["result"])
         self.assertTrue("An error occurred" in result["comment"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_when_alias_does_not_exist(self):
         """
         Tests absent on a alias that does not exist.
@@ -433,6 +440,7 @@ class BotoLambdaAliasTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCaseMix
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"], {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_when_alias_exists(self):
         self.conn.list_aliases.return_value = {"Aliases": [alias_ret]}
         result = self.salt_states["boto_lambda.alias_absent"](
@@ -441,6 +449,9 @@ class BotoLambdaAliasTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCaseMix
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"]["new"]["alias"], None)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_absent_with_failure(self):
         self.conn.list_aliases.return_value = {"Aliases": [alias_ret]}
         self.conn.delete_alias.side_effect = ClientError(error_content, "delete_alias")
@@ -468,6 +479,7 @@ class BotoLambdaEventSourceMappingTestCase(
     TestCase for salt.modules.boto_lambda state.module event_source_mappings
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_when_event_source_mapping_does_not_exist(self):
         """
         Tests present on a event_source_mapping that does not exist.
@@ -491,6 +503,7 @@ class BotoLambdaEventSourceMappingTestCase(
             event_source_mapping_ret["UUID"],
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_when_event_source_mapping_exists(self):
         self.conn.list_event_source_mappings.return_value = {
             "EventSourceMappings": [event_source_mapping_ret]
@@ -507,7 +520,8 @@ class BotoLambdaEventSourceMappingTestCase(
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"], {})
 
-    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_present_with_failure(self):
         self.conn.list_event_source_mappings.side_effect = [
             {"EventSourceMappings": []},
@@ -527,6 +541,7 @@ class BotoLambdaEventSourceMappingTestCase(
         self.assertFalse(result["result"])
         self.assertTrue("An error occurred" in result["comment"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_when_event_source_mapping_does_not_exist(self):
         """
         Tests absent on a event_source_mapping that does not exist.
@@ -540,6 +555,7 @@ class BotoLambdaEventSourceMappingTestCase(
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"], {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_when_event_source_mapping_exists(self):
         self.conn.list_event_source_mappings.return_value = {
             "EventSourceMappings": [event_source_mapping_ret]
@@ -553,6 +569,9 @@ class BotoLambdaEventSourceMappingTestCase(
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"]["new"]["event_source_mapping"], None)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_absent_with_failure(self):
         self.conn.list_event_source_mappings.return_value = {
             "EventSourceMappings": [event_source_mapping_ret]

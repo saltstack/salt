@@ -12,6 +12,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import re
 
+from tests.support.unit import skipIf
+
 try:
     # Import Salt Testing Libs
     from tests.support.mixins import LoaderModuleMockMixin
@@ -63,6 +65,7 @@ class AptKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_installed(self):
         """
         Test - Return return the latest installed kernel version
@@ -76,6 +79,7 @@ class AptKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
         with patch.dict(self._kernelpkg.__salt__, {"pkg.list_pkgs": mock}):
             self.assertListEqual(self._kernelpkg.list_installed(), self.KERNEL_LIST)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_installed_none(self):
         """
         Test - Return return the latest installed kernel version
@@ -84,6 +88,7 @@ class AptKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
         with patch.dict(self._kernelpkg.__salt__, {"pkg.list_pkgs": mock}):
             self.assertListEqual(self._kernelpkg.list_installed(), [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_success(self):
         """
         Test - remove kernel package
@@ -99,6 +104,7 @@ class AptKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
                 )  # pylint: disable=protected-access
                 self.assertListEqual(result["removed"], [target])
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_error(self):
         """
         Test - remove kernel package

@@ -15,7 +15,7 @@ import salt.utils.files
 import salt.utils.stringutils
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class IniManageTestCase(TestCase):
@@ -62,6 +62,7 @@ class IniManageTestCase(TestCase):
     def tearDown(self):
         os.remove(self.tfile.name)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_option(self):
         """
         Test get_option method.
@@ -78,6 +79,7 @@ class IniManageTestCase(TestCase):
             ini.get_option(self.tfile.name, "SectionC", "empty_option"), ""
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_section(self):
         """
         Test get_section method.
@@ -87,6 +89,7 @@ class IniManageTestCase(TestCase):
             {"test1": "value 1B", "test3": "value 3B"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_option(self):
         """
         Test remove_option method.
@@ -96,6 +99,7 @@ class IniManageTestCase(TestCase):
         )
         self.assertIsNone(ini.get_option(self.tfile.name, "SectionB", "test1"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_section(self):
         """
         Test remove_section method.
@@ -106,6 +110,7 @@ class IniManageTestCase(TestCase):
         )
         self.assertEqual(ini.get_section(self.tfile.name, "SectionB"), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_ini(self):
         """
         Test get_ini method.
@@ -121,6 +126,7 @@ class IniManageTestCase(TestCase):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_option(self):
         """
         Test set_option method.
@@ -158,6 +164,7 @@ class IniManageTestCase(TestCase):
             "test_set_value1",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_empty_value(self):
         """
         Test empty value preserved after edit
@@ -168,6 +175,7 @@ class IniManageTestCase(TestCase):
         expected = "{0}{1}{0}".format(os.linesep, "empty_option = ")
         self.assertIn(expected, file_content, "empty_option was not preserved")
 
+    @skipIf(True, "FASTTEST skip")
     def test_empty_lines(self):
         """
         Test empty lines preserved after edit
@@ -205,6 +213,7 @@ class IniManageTestCase(TestCase):
             file_content = salt.utils.stringutils.to_unicode(fp_.read())
         self.assertEqual(expected, file_content)
 
+    @skipIf(True, "FASTTEST skip")
     def test_empty_lines_multiple_edits(self):
         """
         Test empty lines preserved after multiple edits

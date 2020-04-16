@@ -13,7 +13,7 @@ from salt.ext.six.moves import StringIO, builtins, range
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 STUB_USER = "root"
 STUB_PATH = "/tmp"
@@ -70,6 +70,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {cron: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test__need_changes_new(self):
         """
         New behavior, identifier will get track of the managed lines!
@@ -148,6 +149,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 "1 2 3 4 5 foo",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test__unicode_match(self):
         with patch.object(builtins, "__salt_system_encoding__", "utf-8"):
             self.assertTrue(cron._cron_matched({"identifier": "1"}, "foo", 1))
@@ -156,6 +158,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(cron._cron_matched({"identifier": "é"}, "foo", "é"))
             self.assertTrue(cron._cron_matched({"identifier": "é"}, "foo", "é"))
 
+    @skipIf(True, "FASTTEST skip")
     def test__need_changes_old(self):
         """
         old behavior; ID has no special action
@@ -267,6 +270,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 "* * * * * ls",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test__issue10959(self):
         """
         handle multi old style crontabs
@@ -647,6 +651,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                     ),
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_tab_commented_cron_jobs(self):
         """
         handle commented cron jobs
@@ -727,6 +732,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_entry(self):
         """
         test get_entry function
@@ -819,6 +825,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertDictEqual(get_entry_output, get_entry_3)
 
+    @skipIf(True, "FASTTEST skip")
     def test_cron_extra_spaces(self):
         """
         Issue #38449
@@ -849,6 +856,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertEqual(eret, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_cron_at_sign(self):
         with patch.dict(cron.__grains__, {"os": None}), patch(
             "salt.modules.cron.raw_cron", MagicMock(return_value=STUB_AT_SIGN)
@@ -870,6 +878,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertDictEqual(eret, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test__load_tab(self):
         with patch.dict(cron.__grains__, {"os_family": "Solaris"}), patch(
             "salt.modules.cron.raw_cron",
@@ -950,6 +959,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_write_cron_file_root_rh(self):
         """
         Assert that write_cron_file() is called with the correct cron command and user: RedHat
@@ -966,6 +976,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 "crontab /tmp", python_shell=False
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_write_cron_file_foo_rh(self):
         """
         Assert that write_cron_file() is called with the correct cron command and user: RedHat
@@ -981,6 +992,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 "crontab /tmp", runas="foo", python_shell=False
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_write_cron_file_root_sol(self):
         """
         Assert that write_cron_file() is called with the correct cron command and user: Solaris
@@ -994,6 +1006,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 "crontab /tmp", runas=STUB_USER, python_shell=False
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_write_cron_file_foo_sol(self):
         """
         Assert that write_cron_file() is called with the correct cron command and user: Solaris
@@ -1007,6 +1020,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 "crontab /tmp", runas="foo", python_shell=False
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_write_cron_file_root_aix(self):
         """
         Assert that write_cron_file() is called with the correct cron command and user: AIX
@@ -1020,6 +1034,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 "crontab /tmp", runas=STUB_USER, python_shell=False
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_write_cron_file_foo_aix(self):
         """
         Assert that write_cron_file() is called with the correct cron command and user: AIX
@@ -1033,6 +1048,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 "crontab /tmp", runas="foo", python_shell=False
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_write_cr_file_v_root_rh(self):
         """
         Assert that write_cron_file_verbose() is called with the correct cron command and user: RedHat
@@ -1048,6 +1064,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 "crontab /tmp", python_shell=False
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_write_cr_file_v_foo_rh(self):
         """
         Assert that write_cron_file_verbose() is called with the correct cron command and user: RedHat
@@ -1063,6 +1080,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 "crontab /tmp", runas="foo", python_shell=False
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_write_cr_file_v_root_sol(self):
         """
         Assert that write_cron_file_verbose() is called with the correct cron command and user: Solaris
@@ -1076,6 +1094,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 "crontab /tmp", runas=STUB_USER, python_shell=False
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_write_cr_file_v_foo_sol(self):
         """
         Assert that write_cron_file_verbose() is called with the correct cron command and user: Solaris
@@ -1089,6 +1108,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 "crontab /tmp", runas="foo", python_shell=False
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_write_cr_file_v_root_aix(self):
         """
         Assert that write_cron_file_verbose() is called with the correct cron command and user: AIX
@@ -1102,6 +1122,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 "crontab /tmp", runas=STUB_USER, python_shell=False
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_write_cr_file_v_foo_aix(self):
         """
         Assert that write_cron_file_verbose() is called with the correct cron command and user: AIX
@@ -1115,6 +1136,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 "crontab /tmp", runas="foo", python_shell=False
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_raw_cron_root_redhat(self):
         """
         Assert that raw_cron() is called with the correct cron command and user: RedHat
@@ -1130,6 +1152,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 "crontab -l", ignore_retcode=True, rstrip=False, python_shell=False
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_raw_cron_foo_redhat(self):
         """
         Assert that raw_cron() is called with the correct cron command and user: RedHat
@@ -1149,6 +1172,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_raw_cron_root_solaris(self):
         """
         Assert that raw_cron() is called with the correct cron command and user: Solaris
@@ -1168,6 +1192,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_raw_cron_foo_solaris(self):
         """
         Assert that raw_cron() is called with the correct cron command and user: Solaris
@@ -1187,6 +1212,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_raw_cron_root_aix(self):
         """
         Assert that raw_cron() is called with the correct cron command and user: AIX
@@ -1206,6 +1232,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_raw_cron_foo_aix(self):
         """
         Assert that raw_cron() is called with the correct cron command and user: AIX
@@ -1230,9 +1257,11 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {cron: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test__needs_change(self):
         self.assertTrue(cron._needs_change(True, False))
 
+    @skipIf(True, "FASTTEST skip")
     def test__needs_change_random(self):
         """
         Assert that if the new var is 'random' and old is '* that we return True
@@ -1242,10 +1271,12 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
     ## Still trying to figure this one out.
     # def test__render_tab(self):
     #     pass
+    @skipIf(True, "FASTTEST skip")
     def test__get_cron_cmdstr(self):
         self.assertEqual("crontab /tmp", cron._get_cron_cmdstr(STUB_PATH))
 
     # Test get_cron_cmdstr() when user is added
+    @skipIf(True, "FASTTEST skip")
     def test__get_cron_cmdstr_user(self):
         """
         Passes if a user is added to crontab command
@@ -1254,6 +1285,7 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
             "crontab -u root /tmp", cron._get_cron_cmdstr(STUB_PATH, STUB_USER)
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test__date_time_match(self):
         """
         Passes if a match is found on all elements. Note the conversions to strings here!
@@ -1269,6 +1301,7 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
             )
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_tab(self):
         with patch(
             "salt.modules.cron.raw_cron",
@@ -1276,6 +1309,7 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertDictEqual(STUB_SIMPLE_CRON_DICT, cron.list_tab("DUMMY_USER"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_special(self):
         with patch(
             "salt.modules.cron._write_cron_lines"
@@ -1296,6 +1330,7 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
                 (expected_write_call,), any_order=True
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test__get_cron_date_time(self):
         ret = cron._get_cron_date_time(
             minute=STUB_CRON_TIMESTAMP["minute"],
@@ -1306,6 +1341,7 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertDictEqual(ret, STUB_CRON_TIMESTAMP)
 
+    @skipIf(True, "FASTTEST skip")
     def test__get_cron_date_time_daymonth_max(self):
         ret = cron._get_cron_date_time(
             minute="random",
@@ -1320,6 +1356,7 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(int(ret["dayweek"]) in range(0, 8))
         self.assertTrue(int(ret["month"]) in range(1, 13))
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_job(self):
         with patch.dict(cron.__grains__, {"os": None}), patch(
             "salt.modules.cron._write_cron_lines",
@@ -1349,6 +1386,7 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
             )
             cron._write_cron_lines.call_args.assert_called_with(expected_call)
 
+    @skipIf(True, "FASTTEST skip")
     def test_rm_special(self):
         with patch.dict(cron.__grains__, {"os": None}), patch(
             "salt.modules.cron._write_cron_lines",
@@ -1364,6 +1402,7 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual("removed", ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_rm_special_default_special(self):
         with patch.dict(cron.__grains__, {"os": None}), patch(
             "salt.modules.cron._write_cron_lines",
@@ -1376,6 +1415,7 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual("removed", ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_rm_special_absent(self):
         with patch.dict(cron.__grains__, {"os": None}), patch(
             "salt.modules.cron._write_cron_lines",
@@ -1388,6 +1428,7 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual("absent", ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_rm_job_is_absent(self):
         with patch.dict(cron.__grains__, {"os": None}), patch(
             "salt.modules.cron._write_cron_lines",

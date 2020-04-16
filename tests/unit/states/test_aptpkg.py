@@ -11,7 +11,7 @@ import salt.states.aptpkg as aptpkg
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class AptTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class AptTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'held' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_held(self):
         """
         Test to set package in 'hold' state, meaning it will not be upgraded.

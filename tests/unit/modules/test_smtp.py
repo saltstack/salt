@@ -12,7 +12,7 @@ import salt.modules.smtp as smtp
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class SMTPRecipientsRefused(Exception):
@@ -237,6 +237,7 @@ class SmtpTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'send_msg' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_send_msg(self):
         """
         Tests if it send a message to an SMTP recipient.

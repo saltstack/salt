@@ -11,7 +11,7 @@ import salt.states.postgres_cluster as postgres_cluster
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PostgresClusterTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class PostgresClusterTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_present(self):
         """
         Test to ensure that the named database is present
@@ -104,6 +105,7 @@ class PostgresClusterTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
         Test to ensure that the named database is absent.

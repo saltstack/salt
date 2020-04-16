@@ -16,7 +16,7 @@ from salt.ext import six
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class JsonTestCase(TestCase, LoaderModuleMockMixin):
@@ -88,12 +88,14 @@ class JsonTestCase(TestCase, LoaderModuleMockMixin):
         }
         self.addCleanup(delattr, self, "data")
 
+    @skipIf(True, "FASTTEST skip")
     def test_default_output(self):
         ret = highstate.output(self.data)
         self.assertIn("Succeeded: 1 (changed=1)", ret)
         self.assertIn("Failed:    0", ret)
         self.assertIn("Total states run:     1", ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_output_comment_is_not_unicode(self):
         entry = None
         for key in (
@@ -197,6 +199,7 @@ class JsonNestedTestCase(TestCase, LoaderModuleMockMixin):
 
         self.addCleanup(delattr, self, "data")
 
+    @skipIf(True, "FASTTEST skip")
     def test_nested_output(self):
         ret = highstate.output(self.data)
         self.assertIn("Succeeded: 1 (changed=1)", ret)

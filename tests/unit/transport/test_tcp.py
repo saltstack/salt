@@ -158,7 +158,7 @@ class AESReqTestCases(BaseTCPReqCase, ReqChannelMixin):
     # TODO: make failed returns have a specific framing so we can raise the same exception
     # on encrypted channels
     @flaky
-    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_badload(self):
         """
         Test a variety of bad requests, make sure that we get some sort of error
@@ -262,7 +262,6 @@ class BaseTCPPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
 
 
 class AsyncTCPPubChannelTest(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
-    @skipIf(True, "SLOWTEST skip")
     def test_connect_publish_port(self):
         """
         test when publish_port is not 4506
@@ -311,6 +310,7 @@ class SaltMessageClientPoolTest(AsyncTestCase):
             del self.original_message_clients
         super(SaltMessageClientPoolTest, self).tearDown()
 
+    @skipIf(True, "FASTTEST skip")
     def test_send(self):
         for message_client_mock in self.message_client_pool.message_clients:
             message_client_mock.send_queue = [0, 0, 0]
@@ -320,6 +320,7 @@ class SaltMessageClientPoolTest(AsyncTestCase):
         self.message_client_pool.message_clients[2].send.return_value = [1]
         self.assertEqual([1], self.message_client_pool.send())
 
+    @skipIf(True, "FASTTEST skip")
     def test_write_to_stream(self):
         for message_client_mock in self.message_client_pool.message_clients:
             message_client_mock.send_queue = [0, 0, 0]
@@ -329,10 +330,12 @@ class SaltMessageClientPoolTest(AsyncTestCase):
         self.message_client_pool.message_clients[2]._stream.write.return_value = [1]
         self.assertEqual([1], self.message_client_pool.write_to_stream(""))
 
+    @skipIf(True, "FASTTEST skip")
     def test_close(self):
         self.message_client_pool.close()
         self.assertEqual([], self.message_client_pool.message_clients)
 
+    @skipIf(True, "FASTTEST skip")
     def test_on_recv(self):
         for message_client_mock in self.message_client_pool.message_clients:
             message_client_mock.on_recv.return_value = None
@@ -340,6 +343,7 @@ class SaltMessageClientPoolTest(AsyncTestCase):
         for message_client_mock in self.message_client_pool.message_clients:
             self.assertTrue(message_client_mock.on_recv.called)
 
+    @skipIf(True, "FASTTEST skip")
     def test_connect_all(self):
         @gen_test
         def test_connect(self):
@@ -352,6 +356,7 @@ class SaltMessageClientPoolTest(AsyncTestCase):
 
         self.assertIsNone(test_connect(self))
 
+    @skipIf(True, "FASTTEST skip")
     def test_connect_partial(self):
         @gen_test(timeout=0.1)
         def test_connect(self):
@@ -382,6 +387,7 @@ class SaltMessageClientCleanupTest(TestCase, AdaptedConfigurationTestCaseMixin):
         self.sock.close()
         del self.sock
 
+    @skipIf(True, "FASTTEST skip")
     def test_message_client(self):
         """
         test message client cleanup on close
@@ -426,6 +432,7 @@ class TCPPubServerChannelTest(TestCase, AdaptedConfigurationTestCaseMixin):
     @patch("salt.master.SMaster.secrets")
     @patch("salt.crypt.Crypticle")
     @patch("salt.utils.asynchronous.SyncWrapper")
+    @skipIf(True, "FASTTEST skip")
     def test_publish_filtering(self, sync_wrapper, crypticle, secrets):
         opts = self.get_temp_config("master")
         opts["sign_pub_messages"] = False
@@ -466,6 +473,7 @@ class TCPPubServerChannelTest(TestCase, AdaptedConfigurationTestCaseMixin):
     @patch("salt.master.SMaster.secrets")
     @patch("salt.crypt.Crypticle")
     @patch("salt.utils.asynchronous.SyncWrapper")
+    @skipIf(True, "FASTTEST skip")
     def test_publish_filtering_str_list(
         self, sync_wrapper, crypticle, secrets, check_minions
     ):

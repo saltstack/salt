@@ -60,6 +60,7 @@ class ConfigTestCase(TestCase):
     TestCase for salt.utils.config module
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_configuration_subclass_inherits_items(self):
         class BaseConfig(schema.Schema):
             base = schema.BooleanItem(default=True, required=True)
@@ -119,6 +120,7 @@ class ConfigTestCase(TestCase):
         )
         self.assertDictContainsSubset(expected, MergedConfigClass.serialize())
 
+    @skipIf(True, "FASTTEST skip")
     def test_configuration_items_order(self):
         class One(schema.Schema):
             one = schema.BooleanItem()
@@ -132,6 +134,7 @@ class ConfigTestCase(TestCase):
 
         self.assertEqual(Final.serialize()["x-ordering"], ["one", "two", "three"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_optional_requirements_config(self):
         class BaseRequirements(schema.Schema):
             driver = schema.StringItem(default="digitalocean", format="hidden")
@@ -426,6 +429,7 @@ class ConfigTestCase(TestCase):
         self.assertDictContainsSubset(expected, Requirements4.serialize())
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @skipIf(True, "FASTTEST skip")
     def test_optional_requirements_config_validation(self):
         class BaseRequirements(schema.Schema):
             driver = schema.StringItem(default="digitalocean", format="hidden")
@@ -506,6 +510,7 @@ class ConfigTestCase(TestCase):
                 "is not valid under any of the given schemas", excinfo.exception.message
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_boolean_config(self):
         item = schema.BooleanItem(title="Hungry", description="Are you hungry?")
         self.assertDictEqual(
@@ -540,6 +545,7 @@ class ConfigTestCase(TestCase):
         )
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @skipIf(True, "FASTTEST skip")
     def test_boolean_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.BooleanItem(title="Hungry", description="Are you hungry?")
@@ -553,6 +559,7 @@ class ConfigTestCase(TestCase):
             jsonschema.validate({"item": 1}, TestConf.serialize())
         self.assertIn("is not of type", excinfo.exception.message)
 
+    @skipIf(True, "FASTTEST skip")
     def test_string_config(self):
         item = schema.StringItem(title="Foo", description="Foo Item")
         self.assertDictEqual(
@@ -647,6 +654,7 @@ class ConfigTestCase(TestCase):
         )
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @skipIf(True, "FASTTEST skip")
     def test_string_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.StringItem(title="Foo", description="Foo Item")
@@ -724,6 +732,7 @@ class ConfigTestCase(TestCase):
             )
         self.assertIn("does not match", excinfo.exception.message)
 
+    @skipIf(True, "FASTTEST skip")
     def test_email_config(self):
         item = schema.EMailItem(title="Foo", description="Foo Item")
         self.assertDictEqual(
@@ -737,6 +746,7 @@ class ConfigTestCase(TestCase):
         )
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @skipIf(True, "FASTTEST skip")
     def test_email_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.EMailItem(title="Item", description="Item description")
@@ -758,6 +768,7 @@ class ConfigTestCase(TestCase):
             )
         self.assertIn("is not a", excinfo.exception.message)
 
+    @skipIf(True, "FASTTEST skip")
     def test_ipv4_config(self):
         item = schema.IPv4Item(title="Foo", description="Foo Item")
         self.assertDictEqual(
@@ -774,6 +785,7 @@ class ConfigTestCase(TestCase):
         JSONSCHEMA_VERSION <= _LooseVersion("2.5.0"),
         "Requires jsonschema 2.5.0 or greater",
     )
+    @skipIf(True, "FASTTEST skip")
     def test_ipv4_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.IPv4Item(title="Item", description="Item description")
@@ -795,6 +807,7 @@ class ConfigTestCase(TestCase):
             )
         self.assertIn("is not a", excinfo.exception.message)
 
+    @skipIf(True, "FASTTEST skip")
     def test_ipv6_config(self):
         item = schema.IPv6Item(title="Foo", description="Foo Item")
         self.assertDictEqual(
@@ -808,6 +821,7 @@ class ConfigTestCase(TestCase):
         )
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @skipIf(True, "FASTTEST skip")
     def test_ipv6_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.IPv6Item(title="Item", description="Item description")
@@ -829,6 +843,7 @@ class ConfigTestCase(TestCase):
             )
         self.assertIn("is not a", excinfo.exception.message)
 
+    @skipIf(True, "FASTTEST skip")
     def test_hostname_config(self):
         item = schema.HostnameItem(title="Foo", description="Foo Item")
         self.assertDictEqual(
@@ -842,6 +857,7 @@ class ConfigTestCase(TestCase):
         )
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @skipIf(True, "FASTTEST skip")
     def test_hostname_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.HostnameItem(title="Item", description="Item description")
@@ -863,6 +879,7 @@ class ConfigTestCase(TestCase):
             )
         self.assertIn("is not a", excinfo.exception.message)
 
+    @skipIf(True, "FASTTEST skip")
     def test_datetime_config(self):
         item = schema.DateTimeItem(title="Foo", description="Foo Item")
         self.assertDictEqual(
@@ -880,6 +897,7 @@ class ConfigTestCase(TestCase):
         any([HAS_ISODATE, HAS_STRICT_RFC3339]) is False,
         "The 'strict_rfc3339' or 'isodate' library is missing",
     )
+    @skipIf(True, "FASTTEST skip")
     def test_datetime_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.DateTimeItem(title="Item", description="Item description")
@@ -901,6 +919,7 @@ class ConfigTestCase(TestCase):
             )
         self.assertIn("is not a", excinfo.exception.message)
 
+    @skipIf(True, "FASTTEST skip")
     def test_secret_config(self):
         item = schema.SecretItem(title="Foo", description="Foo Item")
         self.assertDictEqual(
@@ -913,6 +932,7 @@ class ConfigTestCase(TestCase):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_uri_config(self):
         item = schema.UriItem(title="Foo", description="Foo Item")
         self.assertDictEqual(
@@ -927,6 +947,7 @@ class ConfigTestCase(TestCase):
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
     @skipIf(HAS_RFC3987 is False, "The 'rfc3987' library is missing")
+    @skipIf(True, "FASTTEST skip")
     def test_uri_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.UriItem(title="Item", description="Item description")
@@ -948,6 +969,7 @@ class ConfigTestCase(TestCase):
             )
         self.assertIn("is not a", excinfo.exception.message)
 
+    @skipIf(True, "FASTTEST skip")
     def test_number_config(self):
         item = schema.NumberItem(title="How many dogs", description="Question")
         self.assertDictEqual(
@@ -1044,6 +1066,7 @@ class ConfigTestCase(TestCase):
         )
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @skipIf(True, "FASTTEST skip")
     def test_number_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.NumberItem(title="How many dogs", description="Question")
@@ -1135,6 +1158,7 @@ class ConfigTestCase(TestCase):
             jsonschema.validate({"item": 3}, TestConf.serialize())
         self.assertIn("is not one of", excinfo.exception.message)
 
+    @skipIf(True, "FASTTEST skip")
     def test_integer_config(self):
         item = schema.IntegerItem(title="How many dogs", description="Question")
         self.assertDictEqual(
@@ -1231,6 +1255,7 @@ class ConfigTestCase(TestCase):
         )
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @skipIf(True, "FASTTEST skip")
     def test_integer_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.IntegerItem(title="How many dogs", description="Question")
@@ -1322,6 +1347,7 @@ class ConfigTestCase(TestCase):
             jsonschema.validate({"item": 3}, TestConf.serialize())
         self.assertIn("is not one of", excinfo.exception.message)
 
+    @skipIf(True, "FASTTEST skip")
     def test_array_config(self):
         string_item = schema.StringItem(title="Dog Name", description="The dog name")
         item = schema.ArrayItem(
@@ -1429,6 +1455,7 @@ class ConfigTestCase(TestCase):
         )
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @skipIf(True, "FASTTEST skip")
     def test_array_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.ArrayItem(
@@ -1576,6 +1603,7 @@ class ConfigTestCase(TestCase):
             )
         self.assertIn("is not one of", excinfo.exception.message)
 
+    @skipIf(True, "FASTTEST skip")
     def test_dict_config(self):
         item = schema.DictItem(
             title="Poligon",
@@ -1731,6 +1759,7 @@ class ConfigTestCase(TestCase):
         )
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @skipIf(True, "FASTTEST skip")
     def test_dict_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.DictItem(
@@ -1914,6 +1943,7 @@ class ConfigTestCase(TestCase):
             )
         self.assertIn("'sides' is a required property", excinfo.exception.message)
 
+    @skipIf(True, "FASTTEST skip")
     def test_oneof_config(self):
         item = schema.OneOfItem(
             items=(
@@ -1926,6 +1956,7 @@ class ConfigTestCase(TestCase):
         )
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @skipIf(True, "FASTTEST skip")
     def test_oneof_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.ArrayItem(
@@ -1959,6 +1990,7 @@ class ConfigTestCase(TestCase):
             jsonschema.validate({"item": 2}, TestConf.serialize())
         self.assertIn("is not of type", excinfo.exception.message)
 
+    @skipIf(True, "FASTTEST skip")
     def test_anyof_config(self):
         item = schema.AnyOfItem(
             items=(
@@ -1972,6 +2004,7 @@ class ConfigTestCase(TestCase):
         )
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @skipIf(True, "FASTTEST skip")
     def test_anyof_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.ArrayItem(
@@ -2021,6 +2054,7 @@ class ConfigTestCase(TestCase):
             jsonschema.validate({"item": 2}, TestConf.serialize())
         self.assertIn("is not of type", excinfo.exception.message)
 
+    @skipIf(True, "FASTTEST skip")
     def test_allof_config(self):
         item = schema.AllOfItem(
             items=(schema.StringItem(min_length=2), schema.StringItem(max_length=3))
@@ -2031,6 +2065,7 @@ class ConfigTestCase(TestCase):
         )
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @skipIf(True, "FASTTEST skip")
     def test_allof_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.ArrayItem(
@@ -2066,11 +2101,13 @@ class ConfigTestCase(TestCase):
             jsonschema.validate({"item": 2}, TestConf.serialize())
         self.assertIn("is not of type", excinfo.exception.message)
 
+    @skipIf(True, "FASTTEST skip")
     def test_not_config(self):
         item = schema.NotItem(item=schema.BooleanItem())
         self.assertEqual(item.serialize(), {"not": item.item.serialize()})
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @skipIf(True, "FASTTEST skip")
     def test_not_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.ArrayItem(
@@ -2097,6 +2134,7 @@ class ConfigTestCase(TestCase):
             jsonschema.validate({"item": [False]}, TestConf.serialize())
         self.assertIn("is not allowed for", excinfo.exception.message)
 
+    @skipIf(True, "FASTTEST skip")
     def test_item_name_override_class_attrname(self):
         class TestConf(schema.Schema):
             item = schema.BooleanItem(
@@ -2118,6 +2156,7 @@ class ConfigTestCase(TestCase):
         }
         self.assertDictEqual(TestConf.serialize(), expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_config_name_override_class_attrname(self):
         class TestConf(schema.Schema):
             item = schema.BooleanItem(title="Hungry", description="Are you hungry?")
@@ -2202,11 +2241,13 @@ class ComplexSchemaTestCase(TestCase):
     dict_schema = TestDictComplexDefinitionsSchema()
     complex_schema = TestComplexComplexDefinitionsSchema()
 
+    @skipIf(True, "FASTTEST skip")
     def test_complex_schema_item_serialize(self):
         obj = copy.deepcopy(self.obj)
         expected_serialized = {"$ref": "#/definitions/ComplexSchemaItem"}
         self.assertDictEqual(obj.serialize(), expected_serialized)
 
+    @skipIf(True, "FASTTEST skip")
     def test_complex_schema_item_definition(self):
         obj = copy.deepcopy(self.obj)
         expected_def = {
@@ -2222,6 +2263,7 @@ class ComplexSchemaTestCase(TestCase):
         }
         self.assertDictEqual(obj.get_definition(), expected_def)
 
+    @skipIf(True, "FASTTEST skip")
     def test_complex_complex_schema_item_definition(self):
         complex_obj = copy.deepcopy(self.complex_obj)
         expected_def = {
@@ -2242,6 +2284,7 @@ class ComplexSchemaTestCase(TestCase):
         }
         self.assertDictEqual(complex_obj.get_definition(), expected_def)
 
+    @skipIf(True, "FASTTEST skip")
     def test_complex_definition_schema(self):
         serialized = salt.utils.yaml.safe_load(
             salt.utils.json.dumps(self.schema.serialize())
@@ -2269,6 +2312,7 @@ class ComplexSchemaTestCase(TestCase):
         }
         self.assertDictEqual(serialized, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_one_of_complex_definition_schema(self):
         serialized = salt.utils.yaml.safe_load(
             salt.utils.json.dumps(self.one_of_schema.serialize())
@@ -2303,6 +2347,7 @@ class ComplexSchemaTestCase(TestCase):
         }
         self.assertDictEqual(serialized, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_array_complex_definition_schema(self):
         serialized = salt.utils.yaml.safe_load(
             salt.utils.json.dumps(self.array_schema.serialize())
@@ -2336,6 +2381,7 @@ class ComplexSchemaTestCase(TestCase):
         }
         self.assertDictEqual(serialized, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_dict_complex_definition_schema(self):
         serialized = salt.utils.yaml.safe_load(
             salt.utils.json.dumps(self.dict_schema.serialize())
@@ -2373,6 +2419,7 @@ class ComplexSchemaTestCase(TestCase):
         }
         self.assertDictEqual(serialized, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_complex_complex_definition_schema(self):
         serialized = salt.utils.yaml.safe_load(
             salt.utils.json.dumps(self.complex_schema.serialize())
@@ -2421,6 +2468,7 @@ class ComplexSchemaTestCase(TestCase):
         self.assertDictEqual(serialized, expected)
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @skipIf(True, "FASTTEST skip")
     def test_complex_schema_item_thirsty_valid(self):
         serialized = self.schema.serialize()
 
@@ -2430,6 +2478,7 @@ class ComplexSchemaTestCase(TestCase):
             self.fail("ValidationError raised: {0}".format(exc))
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @skipIf(True, "FASTTEST skip")
     def test_complex_schema_item_thirsty_invalid(self):
         serialized = self.schema.serialize()
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
@@ -2442,6 +2491,7 @@ class ComplexSchemaTestCase(TestCase):
         self.assertIn(expected, excinfo.exception.message)
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @skipIf(True, "FASTTEST skip")
     def test_complex_complex_schema_item_hungry_valid(self):
         serialized = self.complex_schema.serialize()
 
@@ -2451,6 +2501,7 @@ class ComplexSchemaTestCase(TestCase):
             self.fail("ValidationError raised: {0}".format(exc))
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @skipIf(True, "FASTTEST skip")
     def test_both_complex_complex_schema_all_items_valid(self):
         serialized = self.complex_schema.serialize()
         try:
@@ -2467,6 +2518,7 @@ class ComplexSchemaTestCase(TestCase):
             self.fail("ValidationError raised: {0}".format(exc))
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @skipIf(True, "FASTTEST skip")
     def test_complex_complex_schema_item_hungry_invalid(self):
         serialized = self.complex_schema.serialize()
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
@@ -2479,6 +2531,7 @@ class ComplexSchemaTestCase(TestCase):
         self.assertIn(expected, excinfo.exception.message)
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @skipIf(True, "FASTTEST skip")
     def test_complex_complex_schema_item_inner_thirsty_invalid(self):
         serialized = self.complex_schema.serialize()
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
@@ -2500,6 +2553,7 @@ class ComplexSchemaTestCase(TestCase):
         self.assertIn(expected, excinfo.exception.message)
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @skipIf(True, "FASTTEST skip")
     def test_complex_complex_schema_item_missing_required_hungry(self):
         serialized = self.complex_schema.serialize()
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:

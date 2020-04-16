@@ -12,7 +12,7 @@ import salt.modules.restartcheck as restartcheck
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 # import salt.utils.files
 # from salt.exceptions import CommandExecutionError
@@ -26,6 +26,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {restartcheck: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_kernel_versions_debian(self):
         """
         Test kernel version debian
@@ -37,6 +38,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
                     restartcheck._kernel_versions_debian(), ["4.9.82-1+deb9u3"]
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_kernel_versions_ubuntu(self):
         """
         Test kernel version ubuntu
@@ -53,6 +55,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
                     ],
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_kernel_versions_redhat(self):
         """
         Test if it return a data structure of the current, in-memory rules
@@ -65,12 +68,14 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
                 restartcheck._kernel_versions_redhat(), ["3.10.0-862.el7.x86_64"]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_deleted_file_deleted(self):
         """
         Test (deleted) file
         """
         self.assertTrue(restartcheck._valid_deleted_file("/usr/lib/test (deleted)"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_deleted_file_psth_inode(self):
         """
         Test (path inode=1) file
@@ -79,6 +84,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
             restartcheck._valid_deleted_file("/usr/lib/test (path inode=1)")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_deleted_file_var_log(self):
         """
         Test /var/log/
@@ -89,6 +95,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
             restartcheck._valid_deleted_file("/var/log/test (path inode=1)")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_deleted_file_var_local_log(self):
         """
         Test /var/local/log/
@@ -101,6 +108,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
             restartcheck._valid_deleted_file("/var/local/log/test (path inode=1)")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_deleted_file_var_run(self):
         """
         Test /var/run/
@@ -111,6 +119,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
             restartcheck._valid_deleted_file("/var/run/test (path inode=1)")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_deleted_file_var_local_run(self):
         """
         Test /var/local/run/
@@ -123,6 +132,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
             restartcheck._valid_deleted_file("/var/local/run/test (path inode=1)")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_deleted_file_tmp(self):
         """
         Test /tmp/
@@ -131,6 +141,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
         self.assertFalse(restartcheck._valid_deleted_file("/tmp/test (deleted)"))
         self.assertFalse(restartcheck._valid_deleted_file("/tmp/test (path inode=1)"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_deleted_file_dev_shm(self):
         """
         Test /dev/shm/
@@ -141,6 +152,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
             restartcheck._valid_deleted_file("/dev/shm/test (path inode=1)")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_deleted_file_run(self):
         """
         Test /run/
@@ -149,6 +161,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
         self.assertFalse(restartcheck._valid_deleted_file("/run/test (deleted)"))
         self.assertFalse(restartcheck._valid_deleted_file("/run/test (path inode=1)"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_deleted_file_drm(self):
         """
         Test /drm/
@@ -157,6 +170,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
         self.assertFalse(restartcheck._valid_deleted_file("/drm/test (deleted)"))
         self.assertFalse(restartcheck._valid_deleted_file("/drm/test (path inode=1)"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_deleted_file_var_tmp(self):
         """
         Test /var/tmp/
@@ -167,6 +181,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
             restartcheck._valid_deleted_file("/var/tmp/test (path inode=1)")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_deleted_file_var_local_tmp(self):
         """
         Test /var/local/tmp/
@@ -179,6 +194,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
             restartcheck._valid_deleted_file("/var/local/tmp/test (path inode=1)")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_deleted_file_dev_zero(self):
         """
         Test /dev/zero/
@@ -189,6 +205,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
             restartcheck._valid_deleted_file("/dev/zero/test (path inode=1)")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_deleted_file_dev_pts(self):
         """
         Test /dev/pts/
@@ -199,6 +216,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
             restartcheck._valid_deleted_file("/dev/pts/test (path inode=1)")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_deleted_file_usr_lib_locale(self):
         """
         Test /usr/lib/locale/
@@ -211,6 +229,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
             restartcheck._valid_deleted_file("/usr/lib/locale/test (path inode=1)")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_deleted_file_home(self):
         """
         Test /home/
@@ -219,6 +238,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
         self.assertFalse(restartcheck._valid_deleted_file("/home/test (deleted)"))
         self.assertFalse(restartcheck._valid_deleted_file("/home/test (path inode=1)"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_deleted_file_icon_theme_cache(self):
         """
         Test /test.icon-theme.cache
@@ -233,6 +253,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
             )
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_deleted_file_var_cache_fontconfig(self):
         """
         Test /var/cache/fontconfig/
@@ -247,6 +268,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
             )
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_deleted_file_var_lib_nagios3_spool(self):
         """
         Test /var/lib/nagios3/spool/
@@ -263,6 +285,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
             )
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_deleted_file_var_lib_nagios3_spool_checkresults(self):
         """
         Test /var/lib/nagios3/spool/checkresults/
@@ -281,6 +304,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
             )
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_deleted_file_var_lib_postgresql(self):
         """
         Test /var/lib/postgresql/
@@ -293,6 +317,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
             restartcheck._valid_deleted_file("/var/lib/postgresql/test (path inode=1)")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_deleted_file_var_lib_vdr(self):
         """
         Test /var/lib/vdr/
@@ -305,6 +330,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
             restartcheck._valid_deleted_file("/var/lib/vdr/test (path inode=1)")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_deleted_file_aio(self):
         """
         Test /[aio]/
@@ -322,6 +348,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
         self.assertFalse(restartcheck._valid_deleted_file("/aio/test (deleted)"))
         self.assertFalse(restartcheck._valid_deleted_file("/aio/test (path inode=1)"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_deleted_file_sysv(self):
         """
         Test /SYSV/

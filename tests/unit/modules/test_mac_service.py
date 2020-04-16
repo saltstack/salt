@@ -12,7 +12,7 @@ import salt.modules.mac_service as mac_service
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {mac_service: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_service_disabled_when_enabled(self):
         """
         test service.disabled when service is enabled
@@ -33,6 +34,7 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(mac_service, "launchctl", MagicMock(return_value=cmd)):
             self.assertFalse(mac_service.disabled(srv_name))
 
+    @skipIf(True, "FASTTEST skip")
     def test_service_disabled_when_disabled(self):
         """
         test service.disabled when service is disabled
@@ -43,6 +45,7 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(mac_service, "launchctl", MagicMock(return_value=cmd)):
             self.assertTrue(mac_service.disabled(srv_name))
 
+    @skipIf(True, "FASTTEST skip")
     def test_service_disabled_srvname_wrong(self):
         """
         test service.disabled when service is just slightly wrong
@@ -53,6 +56,7 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(mac_service, "launchctl", MagicMock(return_value=cmd)):
                 self.assertFalse(mac_service.disabled(name))
 
+    @skipIf(True, "FASTTEST skip")
     def test_service_disabled_status_upper_case(self):
         """
         test service.disabled when disabled status is uppercase
@@ -63,6 +67,7 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(mac_service, "launchctl", MagicMock(return_value=cmd)):
             self.assertTrue(mac_service.disabled(srv_name))
 
+    @skipIf(True, "FASTTEST skip")
     def test_service_keep_alive_pathstate_file_rm(self):
         """
         test _always_running_service when keep_alive
@@ -82,6 +87,7 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
             with patch("os.path.exists", MagicMock(return_value=False)):
                 assert mac_service._always_running_service(srv_name) is False
 
+    @skipIf(True, "FASTTEST skip")
     def test_service_keep_alive_empty(self):
         """
         test _always_running_service when keep_alive
@@ -101,6 +107,7 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
             with patch("os.path.exists", MagicMock(return_value=False)):
                 assert mac_service._always_running_service(srv_name) is False
 
+    @skipIf(True, "FASTTEST skip")
     def test_service_keep_alive_pathstate_false(self):
         """
         test _always_running_service when keep_alive
@@ -120,6 +127,7 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
             with patch("os.path.exists", MagicMock(return_value=False)):
                 assert mac_service._always_running_service(srv_name) is True
 
+    @skipIf(True, "FASTTEST skip")
     def test_service_keep_alive_pathstate(self):
         """
         test _always_running_service when keep_alive
@@ -139,6 +147,7 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
             with patch("os.path.exists", MagicMock(return_value=True)):
                 assert mac_service._always_running_service(srv_name) is True
 
+    @skipIf(True, "FASTTEST skip")
     def test_service_keep_alive(self):
         """
         test _always_running_service when keep_alive set
@@ -156,6 +165,7 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(mac_service, "show", MagicMock(return_value=info)):
             assert mac_service._always_running_service(srv_name) is True
 
+    @skipIf(True, "FASTTEST skip")
     def test_service_keep_alive_false(self):
         """
         test _always_running_service when keep_alive False
@@ -173,6 +183,7 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(mac_service, "show", MagicMock(return_value=info)):
             assert mac_service._always_running_service(srv_name) is False
 
+    @skipIf(True, "FASTTEST skip")
     def test_service_keep_alive_missing(self):
         """
         test _always_running_service when keep_alive not in dict
@@ -189,6 +200,7 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(mac_service, "show", MagicMock(return_value=info)):
             assert mac_service._always_running_service(srv_name) is False
 
+    @skipIf(True, "FASTTEST skip")
     def test_service_keep_alive_wrong_setting(self):
         """
         test _always_running_service when keep_alive

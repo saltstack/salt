@@ -15,7 +15,7 @@ import salt.ext.six as six
 from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 try:
     import importlib.util
@@ -84,6 +84,7 @@ class VirtualNameTestCase(TestCase):
                     )
         return ret
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_virtualname(self):
         """
         Test that the virtualname is in __name__ of the module

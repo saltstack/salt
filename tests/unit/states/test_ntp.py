@@ -11,7 +11,7 @@ import salt.states.ntp as ntp
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class NtpTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class NtpTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'managed' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed(self):
         """
         Test to manage NTP servers.

@@ -39,6 +39,7 @@ class ExtendTestCase(TestCase):
         not os.path.exists(os.path.join(RUNTIME_VARS.CODE_DIR, "templates")),
         "Test template directory 'templates/' missing.",
     )
+    @skipIf(True, "FASTTEST skip")
     def test_run(self):
         with patch("sys.exit", MagicMock):
             out = salt.utils.extend.run(

@@ -19,7 +19,6 @@ import salt.utils.json as json
 
 # Import salt tests libs
 from tests.support.case import ShellCase
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
@@ -37,7 +36,6 @@ class ProxyCallerSimpleTestCase(ShellCase):
             log.warning("Failed to JSON decode: '%s'", ret)
             six.reraise(*sys.exc_info())
 
-    @skipIf(True, "SLOWTEST skip")
     def test_can_it_ping(self):
         """
         Ensure the proxy can ping
@@ -47,7 +45,6 @@ class ProxyCallerSimpleTestCase(ShellCase):
         )
         self.assertEqual(ret["local"], True)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_list_pkgs(self):
         """
         Package test 1, really just tests that the virtual function capability
@@ -60,7 +57,6 @@ class ProxyCallerSimpleTestCase(ShellCase):
         self.assertIn("apache", ret["local"])
         self.assertIn("redbull", ret["local"])
 
-    @skipIf(True, "SLOWTEST skip")
     def test_upgrade(self):
         ret = self._load_return(
             self.run_call("--proxyid proxytest --out=json pkg.upgrade")
@@ -68,14 +64,12 @@ class ProxyCallerSimpleTestCase(ShellCase):
         self.assertEqual(ret["local"]["coreutils"]["new"], "2.0")
         self.assertEqual(ret["local"]["redbull"]["new"], "1000.99")
 
-    @skipIf(True, "SLOWTEST skip")
     def test_service_list(self):
         ret = self._load_return(
             self.run_call("--proxyid proxytest --out=json service.list")
         )
         self.assertIn("ntp", ret["local"])
 
-    @skipIf(True, "SLOWTEST skip")
     def test_service_start(self):
         ret = self._load_return(
             self.run_call("--proxyid proxytest --out=json service.start samba")
@@ -85,14 +79,12 @@ class ProxyCallerSimpleTestCase(ShellCase):
         )
         self.assertTrue(ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_service_get_all(self):
         ret = self._load_return(
             self.run_call("--proxyid proxytest --out=json service.get_all")
         )
         self.assertIn("samba", ret["local"])
 
-    @skipIf(True, "SLOWTEST skip")
     def test_grains_items(self):
         ret = self._load_return(
             self.run_call("--proxyid proxytest --out=json grains.items")

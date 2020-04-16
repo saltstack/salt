@@ -12,7 +12,7 @@ import salt.output.yaml_out as yaml
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class YamlTestCase(TestCase, LoaderModuleMockMixin):
@@ -27,11 +27,13 @@ class YamlTestCase(TestCase, LoaderModuleMockMixin):
         self.data = {"test": "two", "example": "one"}
         self.addCleanup(delattr, self, "data")
 
+    @skipIf(True, "FASTTEST skip")
     def test_default_output(self):
         ret = yaml.output(self.data)
         expect = "example: one\ntest: two\n"
         self.assertEqual(expect, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_negative_int_output(self):
         with patch.dict(yaml.__opts__, {"output_indent": -1}):
             ret = yaml.output(self.data)

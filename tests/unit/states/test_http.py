@@ -11,7 +11,7 @@ import salt.states.http as http
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class HttpTestCase(TestCase, LoaderModuleMockMixin):
@@ -22,6 +22,7 @@ class HttpTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {http: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_query(self):
         """
             Test to perform an HTTP query and statefully return the result
@@ -50,6 +51,7 @@ class HttpTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(http.__salt__, {"http.query": mock}):
                 self.assertDictEqual(http.query("salt", "Dude", "stack"), ret[1])
 
+    @skipIf(True, "FASTTEST skip")
     def test_query_pcre_statustype(self):
         """
             Test to perform an HTTP query with a regex used to match the status code and statefully return the result
@@ -77,6 +79,7 @@ class HttpTestCase(TestCase, LoaderModuleMockMixin):
                     state_return,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_query_stringstatustype(self):
         """
             Test to perform an HTTP query with a string status code and statefully return the result
@@ -104,6 +107,7 @@ class HttpTestCase(TestCase, LoaderModuleMockMixin):
                     state_return,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_query_liststatustype(self):
         """
             Test to perform an HTTP query with a list of status codes and statefully return the result
@@ -131,6 +135,7 @@ class HttpTestCase(TestCase, LoaderModuleMockMixin):
                     state_return,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_wait_for_with_interval(self):
         """
         Test for wait_for_successful_query waits for request_interval
@@ -148,6 +153,7 @@ class HttpTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 sleep_mock.assert_called_once_with(1)
 
+    @skipIf(True, "FASTTEST skip")
     def test_wait_for_without_interval(self):
         """
         Test for wait_for_successful_query waits for request_interval

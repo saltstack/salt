@@ -46,6 +46,7 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'raw_interface_configs' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_raw_interface_configs(self):
         """
         Test if it return raw configs for all interfaces.
@@ -56,6 +57,7 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_all_interfaces' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_all_interfaces(self):
         """
         Test if it return configs for all interfaces.
@@ -85,6 +87,7 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_interface' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_interface(self):
         """
         Test if it return the configuration of a network interface.
@@ -112,6 +115,7 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'is_enabled' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_enabled(self):
         """
         Test if it returns `True` if interface is enabled, otherwise `False`.
@@ -123,6 +127,7 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'is_disabled' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_disabled(self):
         """
         Test if it returns `True` if interface is disabled, otherwise `False`.
@@ -133,6 +138,7 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'enable' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_enable(self):
         """
         Test if it enable an interface.
@@ -161,6 +167,7 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'disable' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_disable(self):
         """
         Test if it disable an interface.
@@ -188,6 +195,7 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_subnet_length' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_subnet_length(self):
         """
         Test if it disable an interface.
@@ -197,7 +205,6 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_static_ip' function tests: 1
 
-    @skipIf(True, "SLOWTEST skip")
     def test_set_static_ip(self):
         """
         Test if it set static IP configuration on a Windows NIC.
@@ -245,6 +252,7 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_dhcp_ip' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_dhcp_ip(self):
         """
         Test if it set Windows NIC to get IP from DHCP.
@@ -258,6 +266,7 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_static_dns' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_static_dns(self):
         """
         Test if it set static DNS configuration on a Windows NIC.
@@ -303,6 +312,7 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
                 ]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_static_dns_clear(self):
         """
         Test if it set static DNS configuration on a Windows NIC.
@@ -327,6 +337,7 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_static_dns_no_action(self):
         """
         Test if it set static DNS configuration on a Windows NIC.
@@ -350,6 +361,7 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_dhcp_dns' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_dhcp_dns(self):
         """
         Test if it set DNS source to DHCP on Windows.
@@ -363,6 +375,7 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_dhcp_all' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_dhcp_all(self):
         """
         Test if it set both IP Address and DNS to DHCP.
@@ -376,6 +389,7 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_default_gateway' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_default_gateway(self):
         """
         Test if it set DNS source to DHCP on Windows.

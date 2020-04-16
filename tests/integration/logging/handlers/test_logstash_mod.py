@@ -30,7 +30,7 @@ class DatagramLogstashHandlerTest(TestCase):
     def tearDown(self):
         self.test_server.close()
 
-    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_log_pickling(self):
         # given
         the_log = "test message"
@@ -68,7 +68,7 @@ class ZMQLogstashHanderTest(TestCase):
         self.zmq_server.close()
         self.context.term()
 
-    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_log_pickling(self):
         # given
         the_log = "test message"

@@ -12,7 +12,7 @@ import salt.modules.monit as monit
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MonitTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class MonitTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {monit: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_start(self):
         """
         Test for start
@@ -30,6 +31,7 @@ class MonitTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(monit.__salt__, {"cmd.retcode": MagicMock(return_value=False)}):
             self.assertTrue(monit.start("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_stop(self):
         """
         Test for Stops service via monit
@@ -37,6 +39,7 @@ class MonitTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(monit.__salt__, {"cmd.retcode": MagicMock(return_value=False)}):
             self.assertTrue(monit.stop("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_restart(self):
         """
         Test for Restart service via monit
@@ -44,6 +47,7 @@ class MonitTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(monit.__salt__, {"cmd.retcode": MagicMock(return_value=False)}):
             self.assertTrue(monit.restart("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_unmonitor(self):
         """
         Test for Unmonitor service via monit
@@ -51,6 +55,7 @@ class MonitTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(monit.__salt__, {"cmd.retcode": MagicMock(return_value=False)}):
             self.assertTrue(monit.unmonitor("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_monitor(self):
         """
         Test for monitor service via monit
@@ -58,6 +63,7 @@ class MonitTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(monit.__salt__, {"cmd.retcode": MagicMock(return_value=False)}):
             self.assertTrue(monit.monitor("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_summary(self):
         """
         Test for Display a summary from monit
@@ -70,6 +76,7 @@ class MonitTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertEqual(monit.summary(), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_status(self):
         """
         Test for Display a process status from monit
@@ -77,6 +84,7 @@ class MonitTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(monit.__salt__, {"cmd.run": MagicMock(return_value="Process")}):
             self.assertEqual(monit.status("service"), "No such service")
 
+    @skipIf(True, "FASTTEST skip")
     def test_reload(self):
         """
         Test for Reload configuration
@@ -85,6 +93,7 @@ class MonitTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(monit.__salt__, {"cmd.retcode": mock}):
             self.assertTrue(monit.reload_())
 
+    @skipIf(True, "FASTTEST skip")
     def test_version(self):
         """
         Test for Display version from monit -V
@@ -93,6 +102,7 @@ class MonitTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(monit.__salt__, {"cmd.run": mock}):
             self.assertEqual(monit.version(), "5.14")
 
+    @skipIf(True, "FASTTEST skip")
     def test_id(self):
         """
         Test for Display unique id
@@ -101,6 +111,7 @@ class MonitTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(monit.__salt__, {"cmd.run": mock}):
             self.assertEqual(monit.id_(), "d3b1aba48527dd599db0e86f5ad97120")
 
+    @skipIf(True, "FASTTEST skip")
     def test_reset_id(self):
         """
         Test for Regenerate a unique id
@@ -110,6 +121,7 @@ class MonitTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(monit.__salt__, {"cmd.run_all": mock}):
             self.assertEqual(monit.id_(reset=True), "d3b1aba48527dd599db0e86f5ad97120")
 
+    @skipIf(True, "FASTTEST skip")
     def test_configtest(self):
         """
         Test for Check configuration syntax
@@ -120,6 +132,7 @@ class MonitTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(monit.configtest()["result"])
             self.assertEqual(monit.configtest()["comment"], "Syntax OK")
 
+    @skipIf(True, "FASTTEST skip")
     def test_validate(self):
         """
         Test for Check all services are monitored

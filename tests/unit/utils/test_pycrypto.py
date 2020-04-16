@@ -25,6 +25,7 @@ class PycryptoTestCase(TestCase):
     # The crypt module is only available on Unix systems
     # https://docs.python.org/dev/library/crypt.html
     @skipIf(not salt.utils.pycrypto.HAS_CRYPT, "crypt module not available")
+    @skipIf(True, "FASTTEST skip")
     def test_gen_hash(self):
         """
         Test gen_hash
@@ -42,6 +43,7 @@ class PycryptoTestCase(TestCase):
         ret = salt.utils.pycrypto.gen_hash(password=passwd, algorithm="sha256")
         self.assertTrue(ret.startswith("$5{0}".format(id)))
 
+    @skipIf(True, "FASTTEST skip")
     def test_secure_password(self):
         """
         test secure_password

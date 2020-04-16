@@ -12,7 +12,7 @@ import salt.modules.win_autoruns as win_autoruns
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 KEY = [
     "HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run",
@@ -31,6 +31,7 @@ class WinAutorunsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list(self):
         """
         Test if it enables win_autoruns the service on the server

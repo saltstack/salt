@@ -43,6 +43,7 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
     def tearDown(self):
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_non_list_config(self):
         config = {}
 
@@ -52,12 +53,14 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret, (False, "Configuration for inotify beacon must be a list.")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_empty_config(self):
         config = [{}]
         ret = inotify.validate(config)
         _expected = (False, "Configuration for inotify beacon must include files.")
         self.assertEqual(ret, _expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_files_none_config(self):
         config = [{"files": None}]
         ret = inotify.validate(config)
@@ -67,6 +70,7 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(ret, _expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_files_list_config(self):
         config = [{"files": [{u"/importantfile": {u"mask": [u"modify"]}}]}]
         ret = inotify.validate(config)
@@ -76,6 +80,7 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(ret, _expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_file_open(self):
         path = os.path.realpath(__file__)
         config = [{"files": {path: {"mask": ["open"]}}}]
@@ -92,6 +97,7 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret[0]["path"], path)
         self.assertEqual(ret[0]["change"], "IN_OPEN")
 
+    @skipIf(True, "FASTTEST skip")
     def test_dir_no_auto_add(self):
         config = [{"files": {self.tmpdir: {"mask": ["create"]}}}]
         ret = inotify.validate(config)
@@ -111,6 +117,7 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         ret = inotify.beacon(config)
         self.assertEqual(ret, [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_dir_auto_add(self):
         config = [
             {"files": {self.tmpdir: {"mask": ["create", "open"], "auto_add": True}}}
@@ -136,6 +143,7 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret[0]["path"], fp)
         self.assertEqual(ret[0]["change"], "IN_OPEN")
 
+    @skipIf(True, "FASTTEST skip")
     def test_dir_recurse(self):
         dp1 = os.path.join(self.tmpdir, "subdir1")
         os.mkdir(dp1)
@@ -161,6 +169,7 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret[2]["path"], fp)
         self.assertEqual(ret[2]["change"], "IN_OPEN")
 
+    @skipIf(True, "FASTTEST skip")
     def test_dir_recurse_auto_add(self):
         dp1 = os.path.join(self.tmpdir, "subdir1")
         os.mkdir(dp1)
@@ -199,6 +208,7 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret[0]["path"], fp)
         self.assertEqual(ret[0]["change"], "IN_DELETE")
 
+    @skipIf(True, "FASTTEST skip")
     def test_multi_files_exclude(self):
         dp1 = os.path.join(self.tmpdir, "subdir1")
         dp2 = os.path.join(self.tmpdir, "subdir2")

@@ -11,7 +11,7 @@ import salt.states.lvs_service as lvs_service
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class LvsServiceTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class LvsServiceTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_present(self):
         """
         Test to ensure that the named service is present.
@@ -95,6 +96,7 @@ class LvsServiceTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
         Test to ensure the LVS Real Server in specified service is absent.

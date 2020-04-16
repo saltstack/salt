@@ -16,7 +16,7 @@ import salt.modules.match as match
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 MATCHERS_DICT = {
     "compound_match.match": compound_match.match,
@@ -42,6 +42,7 @@ class MatchTestCase(TestCase, LoaderModuleMockMixin):
             list_match: {"__opts__": {"id": MINION_ID}},
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_compound_with_minion_id(self):
         """
         Make sure that when a minion_id IS past, that it is contained in opts
@@ -65,6 +66,7 @@ class MatchTestCase(TestCase, LoaderModuleMockMixin):
             # The compound matcher should not get MINION_ID, no opts should be passed
             mock_compound_match.assert_called_once_with(target)
 
+    @skipIf(True, "FASTTEST skip")
     def test_compound(self):
         """
         Test issue #55149
@@ -87,6 +89,7 @@ class MatchTestCase(TestCase, LoaderModuleMockMixin):
             # The compound matcher should not get MINION_ID, no opts should be passed
             mock_compound_match.assert_called_once_with(target)
 
+    @skipIf(True, "FASTTEST skip")
     def test_filter_by(self):
         """
         Tests if filter_by returns the correct dictionary.
@@ -99,6 +102,7 @@ class MatchTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertDictEqual(match.filter_by(lookup), result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_watch_for_opts_mismatch_glob_match(self):
         """
         Tests for situations where the glob matcher might reference __opts__ directly
@@ -113,6 +117,7 @@ class MatchTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(glob_match.match("rest03", {"id": "rest03"}))
         self.assertFalse(glob_match.match("rest03"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_watch_for_opts_mismatch_list_match(self):
         """
         Tests for situations where the list matcher might reference __opts__ directly
@@ -127,6 +132,7 @@ class MatchTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(list_match.match("rest03", {"id": "rest03"}))
         self.assertFalse(list_match.match("rest03"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_watch_for_opts_mismatch_compound_match(self):
         """
         Tests for situations where the compound matcher might reference __opts__ directly

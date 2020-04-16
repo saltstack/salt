@@ -72,6 +72,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {win_groupadd: {"__opts__": {"test": False}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_add(self):
         """
         Test adding a new group
@@ -82,6 +83,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(win_groupadd.add("foo"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_group_exists(self):
         """
         Test adding a new group if the group already exists
@@ -99,6 +101,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertFalse(win_groupadd.add("foo"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_error(self):
         """
         Test adding a group and encountering an error
@@ -115,6 +118,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertFalse(win_groupadd.add("foo"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete(self):
         """
         Test removing a group
@@ -132,6 +136,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(win_groupadd.delete("foo"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_no_group(self):
         """
         Test removing a group that doesn't exists
@@ -142,6 +147,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertFalse(win_groupadd.delete("foo"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_error(self):
         """
         Test removing a group and encountering an error
@@ -165,6 +171,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertFalse(win_groupadd.delete("foo"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_info(self):
         """
         Test if it return information about a group.
@@ -183,6 +190,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_getent(self):
         obj_group_mock = MagicMock(
             return_value=[
@@ -212,6 +220,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
                 ],
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_getent_context(self):
         """
         Test group.getent is using the values in __context__
@@ -219,6 +228,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_groupadd.__context__, {"group.getent": True}):
             self.assertTrue(win_groupadd.getent())
 
+    @skipIf(True, "FASTTEST skip")
     def test_adduser(self):
         """
         Test adding a user to a group
@@ -231,6 +241,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.object(salt.utils.win_functions, "get_sam_name", sam_mock):
             self.assertTrue(win_groupadd.adduser("foo", "spongebob"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_adduser_already_exists(self):
         """
         Test adding a user that already exists
@@ -243,6 +254,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.object(salt.utils.win_functions, "get_sam_name", sam_mock):
             self.assertFalse(win_groupadd.adduser("foo", "steve"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_adduser_error(self):
         """
         Test adding a user and encountering an error
@@ -259,11 +271,13 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.object(salt.utils.win_functions, "get_sam_name", sam_mock):
             self.assertFalse(win_groupadd.adduser("foo", "username"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_adduser_group_does_not_exist(self):
         obj_group_mock = MagicMock(side_effect=PYWINTYPES_ERROR)
         with patch.object(win_groupadd, "_get_group_object", obj_group_mock):
             self.assertFalse(win_groupadd.adduser("foo", "spongebob"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_deluser(self):
         """
         Test removing a user from a group
@@ -277,6 +291,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.object(salt.utils.win_functions, "get_sam_name", sam_mock):
             self.assertTrue(win_groupadd.deluser("foo", "spongebob"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_deluser_no_user(self):
         """
         Test removing a user from a group and that user is not a member of the
@@ -290,6 +305,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.object(salt.utils.win_functions, "get_sam_name", sam_mock):
             self.assertFalse(win_groupadd.deluser("foo", "spongebob"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_deluser_error(self):
         """
         Test removing a user and encountering an error
@@ -307,11 +323,13 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.object(salt.utils.win_functions, "get_sam_name", sam_mock):
             self.assertFalse(win_groupadd.deluser("foo", "spongebob"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_deluser_group_does_not_exist(self):
         obj_group_mock = MagicMock(side_effect=PYWINTYPES_ERROR)
         with patch.object(win_groupadd, "_get_group_object", obj_group_mock):
             self.assertFalse(win_groupadd.deluser("foo", "spongebob"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_members(self):
         """
         Test adding a list of members to a group, all existing users removed
@@ -325,6 +343,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(win_groupadd.members("foo", "spongebob,patrick,squidward"))
             obj_group_mock.assert_called_once_with("foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_members_correct_membership(self):
         """
         Test adding a list of users where the list of users already exists
@@ -341,6 +360,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(win_groupadd.members("foo", "spongebob,patrick,squidward"))
             obj_group_mock.assert_called_once_with("foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_members_group_does_not_exist(self):
         """
         Test adding a list of users where the group does not exist
@@ -351,6 +371,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.object(win_groupadd, "_get_group_object", obj_group_mock):
             self.assertFalse(win_groupadd.members("foo", "spongebob"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_members_fail_to_remove(self):
         """
         Test adding a list of members and fail to remove members not in the list
@@ -369,6 +390,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
             self.assertFalse(win_groupadd.members("foo", "patrick"))
             obj_group_mock.assert_called_once_with("foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_members_fail_to_add(self):
         """
         Test adding a list of members and failing to add
@@ -387,6 +409,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
             self.assertFalse(win_groupadd.members("foo", "patrick"))
             obj_group_mock.assert_called_once_with("foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_groups(self):
         """
         Test that list groups returns a list of groups by name
@@ -400,6 +423,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(win_groupadd, "_get_all_groups", obj_group_mock):
             self.assertListEqual(win_groupadd.list_groups(), ["salt", "salty"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_groups_context(self):
         """
         Test group.list_groups is using the values in __context__

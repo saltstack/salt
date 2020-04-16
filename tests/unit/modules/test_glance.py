@@ -10,7 +10,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class GlanceTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class GlanceTestCase(TestCase, LoaderModuleMockMixin):
             },
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_image_list(self):
         """
         test salt.modles.glance

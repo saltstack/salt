@@ -36,6 +36,7 @@ class NaclUtilsTests(TestCase, LoaderModuleMockMixin):
         self.key = "C16NxgBhw8cqbhvPCDAn2pirwW1A1WEVLUexCsoUD2Y="
         self.pub = "+XWFfZXnfItS++a4gQf8Adu1aUlTgHWyTfsglbTdXyg="
 
+    @skipIf(True, "FASTTEST skip")
     def test_keygen(self):
         """
         test nacl.keygen function
@@ -44,6 +45,7 @@ class NaclUtilsTests(TestCase, LoaderModuleMockMixin):
         assert all(key in ret for key in ret.keys())
 
     @with_tempfile()
+    @skipIf(True, "FASTTEST skip")
     def test_keygen_sk_file(self, fpath):
         """
         test nacl.keygen function
@@ -56,6 +58,7 @@ class NaclUtilsTests(TestCase, LoaderModuleMockMixin):
         assert "saved pk_file: {}.pub".format(fpath) == ret
 
     @with_tempfile()
+    @skipIf(True, "FASTTEST skip")
     def test_keygen_keyfile(self, fpath):
         """
         test nacl.keygen function
@@ -68,6 +71,7 @@ class NaclUtilsTests(TestCase, LoaderModuleMockMixin):
         assert "saved pk_file: {}.pub".format(fpath) == ret
 
     @with_tempfile()
+    @skipIf(True, "FASTTEST skip")
     def test_enc_keyfile(self, fpath):
         """
         test nacl.enc function
@@ -87,6 +91,7 @@ class NaclUtilsTests(TestCase, LoaderModuleMockMixin):
         assert isinstance(ret, bytes)
 
     @with_tempfile()
+    @skipIf(True, "FASTTEST skip")
     def test_enc_sk_file(self, fpath):
         """
         test nacl.enc function
@@ -106,6 +111,7 @@ class NaclUtilsTests(TestCase, LoaderModuleMockMixin):
         assert isinstance(ret, bytes)
 
     @with_tempfile()
+    @skipIf(True, "FASTTEST skip")
     def test_dec_keyfile(self, fpath):
         """
         test nacl.dec function
@@ -128,6 +134,7 @@ class NaclUtilsTests(TestCase, LoaderModuleMockMixin):
         assert ret == b"blah"
 
     @with_tempfile()
+    @skipIf(True, "FASTTEST skip")
     def test_dec_sk_file(self, fpath):
         """
         test nacl.dec function

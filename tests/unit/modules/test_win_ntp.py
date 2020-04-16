@@ -12,7 +12,7 @@ import salt.modules.win_ntp as win_ntp
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class WinNtpTestCase(TestCase, LoaderModuleMockMixin):
@@ -25,6 +25,7 @@ class WinNtpTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_servers' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_servers(self):
         """
         Test if it set Windows to use a list of NTP servers
@@ -71,6 +72,7 @@ class WinNtpTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_servers' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_servers(self):
         """
         Test if it get list of configured NTP servers

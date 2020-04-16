@@ -15,7 +15,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MockRequests(object):
@@ -84,6 +84,7 @@ class ServerdensityDeviceTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_sd_auth' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_sd_auth(self):
         """
         Tests if it returns requested Server Density
@@ -105,6 +106,7 @@ class ServerdensityDeviceTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'create' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_create(self):
         """
         Tests if it create device in Server Density.
@@ -129,6 +131,7 @@ class ServerdensityDeviceTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete(self):
         """
         Tests if it delete a device from Server Density.
@@ -149,6 +152,7 @@ class ServerdensityDeviceTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'ls' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_ls(self):
         """
         Tests if it list devices in Server Density.
@@ -169,6 +173,7 @@ class ServerdensityDeviceTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'update' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_update(self):
         """
         Tests if it updates device information in Server Density.
@@ -192,6 +197,7 @@ class ServerdensityDeviceTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'install_agent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_agent(self):
         """
         Tests if it downloads Server Density installation agent,
@@ -207,6 +213,7 @@ class ServerdensityDeviceTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'install_agent_v2' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_agent_v2(self):
         """
         Tests if it downloads Server Density installation agent,

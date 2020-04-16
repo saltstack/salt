@@ -11,7 +11,7 @@ import salt.states.zk_concurrency as zk_concurrency
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ZkConcurrencyTestCase(TestCase, LoaderModuleMockMixin):
@@ -22,6 +22,7 @@ class ZkConcurrencyTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {zk_concurrency: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_lock(self):
         """
         Test to block state execution until you are able to get the lock
@@ -38,6 +39,7 @@ class ZkConcurrencyTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({"comment": "lock acquired", "result": True})
                 self.assertDictEqual(zk_concurrency.lock("salt", "dude", "stack"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_unlock(self):
         """
         Test to remove lease from semaphore
@@ -56,6 +58,7 @@ class ZkConcurrencyTestCase(TestCase, LoaderModuleMockMixin):
                     zk_concurrency.unlock("salt", identifier="stack"), ret
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_min_party(self):
         """
         Test to ensure min party of nodes and the blocking behavior

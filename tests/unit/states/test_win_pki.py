@@ -15,7 +15,7 @@ import salt.states.win_pki as win_pki
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 CERT_PATH = r"C:\certs\testdomain.local.cer"
 THUMBPRINT = "9988776655443322111000AAABBBCCCDDDEEEFFF"
@@ -40,6 +40,7 @@ class WinPkiTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {win_pki: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_import_cert(self):
         """
         Test - Import the certificate file into the given certificate store.
@@ -75,6 +76,7 @@ class WinPkiTestCase(TestCase, LoaderModuleMockMixin):
                 ret["result"] = None
                 self.assertEqual(win_pki.import_cert(**kwargs), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_cert(self):
         """
         Test - Remove the certificate from the given certificate store.

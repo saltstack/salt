@@ -16,7 +16,7 @@ import salt.utils.crypt
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class KeyTestCase(TestCase, LoaderModuleMockMixin):
@@ -27,6 +27,7 @@ class KeyTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {key: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_finger(self):
         """
         Test for finger
@@ -39,6 +40,7 @@ class KeyTestCase(TestCase, LoaderModuleMockMixin):
                 ):
                     self.assertEqual(key.finger(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_finger_master(self):
         """
         Test for finger

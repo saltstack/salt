@@ -11,7 +11,7 @@ import salt.modules.mac_power as mac_power
 from salt.exceptions import SaltInvocationError
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MacPowerTestCase(TestCase):
@@ -19,18 +19,21 @@ class MacPowerTestCase(TestCase):
     test mac_power execution module
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_validate_sleep_valid_number(self):
         """
         test _validate_sleep function with valid number
         """
         self.assertEqual(mac_power._validate_sleep(179), 179)
 
+    @skipIf(True, "FASTTEST skip")
     def test_validate_sleep_invalid_number(self):
         """
         test _validate_sleep function with invalid number
         """
         self.assertRaises(SaltInvocationError, mac_power._validate_sleep, 181)
 
+    @skipIf(True, "FASTTEST skip")
     def test_validate_sleep_valid_string(self):
         """
         test _validate_sleep function with valid string
@@ -38,24 +41,28 @@ class MacPowerTestCase(TestCase):
         self.assertEqual(mac_power._validate_sleep("never"), "Never")
         self.assertEqual(mac_power._validate_sleep("off"), "Never")
 
+    @skipIf(True, "FASTTEST skip")
     def test_validate_sleep_invalid_string(self):
         """
         test _validate_sleep function with invalid string
         """
         self.assertRaises(SaltInvocationError, mac_power._validate_sleep, "bob")
 
+    @skipIf(True, "FASTTEST skip")
     def test_validate_sleep_bool_true(self):
         """
         test _validate_sleep function with True
         """
         self.assertRaises(SaltInvocationError, mac_power._validate_sleep, True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_validate_sleep_bool_false(self):
         """
         test _validate_sleep function with False
         """
         self.assertEqual(mac_power._validate_sleep(False), "Never")
 
+    @skipIf(True, "FASTTEST skip")
     def test_validate_sleep_unexpected(self):
         """
         test _validate_sleep function with True

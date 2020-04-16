@@ -232,6 +232,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
     TestCase for salt.modules.boto_apigateway module
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_checking_if_a_rest_api_exists_and_a_rest_api_exists_the_api_exists_method_returns_true(
         self,
     ):
@@ -245,6 +246,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
 
         self.assertTrue(api_exists_result["exists"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_checking_if_a_rest_api_exists_and_multiple_rest_api_exist_the_api_exists_method_returns_true(
         self,
     ):
@@ -260,6 +262,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         api_exists_result = boto_apigateway.api_exists(name="myapi", **conn_parameters)
         self.assertTrue(api_exists_result["exists"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_checking_if_a_rest_api_exists_and_no_rest_api_exists_the_api_exists_method_returns_false(
         self,
     ):
@@ -277,6 +280,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertFalse(api_exists_result["exists"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_rest_apis_and_no_name_given_the_describe_apis_method_returns_list_of_all_rest_apis(
         self,
     ):
@@ -338,6 +342,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.assertEqual(len(apis), len(items))
         self.assertFalse(diff)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_rest_apis_and_name_is_testing123_the_describe_apis_method_returns_list_of_two_rest_apis(
         self,
     ):
@@ -415,6 +420,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.assertTrue(apis)
         self.assertIs(diff, False)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_rest_apis_and_name_is_testing123_the_describe_apis_method_returns_no_matching_items(
         self,
     ):
@@ -459,6 +465,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         apis = get_apis_result.get("restapi")
         self.assertFalse(apis)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_a_rest_api_succeeds_the_create_api_method_returns_true(
         self,
     ):
@@ -489,6 +496,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.assertEqual(api["name"], "unit-testing123")
         self.assertEqual(api["description"], "unit-testing1234")
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_a_rest_api_fails_the_create_api_method_returns_error(
         self,
     ):
@@ -507,6 +515,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             error_message.format("create_rest_api"),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_rest_apis_and_name_is_testing123_matching_two_apis_the_delete_api_method_returns_delete_count_of_two(
         self,
     ):
@@ -565,6 +574,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.assertTrue(delete_api_result.get("deleted"))
         self.assertEqual(delete_api_result.get("count"), 2)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_rest_apis_and_name_given_provides_no_match_the_delete_api_method_returns_false(
         self,
     ):
@@ -592,6 +602,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
 
         self.assertFalse(delete_api_result.get("deleted"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_describing_api_keys_the_describe_api_keys_method_returns_all_api_keys(
         self,
     ):
@@ -640,6 +651,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.assertTrue(api_keys)
         self.assertIs(diff, False)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_describing_api_keys_fails_the_desribe_api_keys_method_returns_error(
         self,
     ):
@@ -652,6 +664,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             result.get("error", {}).get("message"), error_message.format("get_api_keys")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_describing_an_api_key_the_describe_api_key_method_returns_matching_api_key(
         self,
     ):
@@ -667,6 +680,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             self.conn.get_api_key.return_value.get("id"),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_describing_an_api_key_that_does_not_exists_the_desribe_api_key_method_returns_error(
         self,
     ):
@@ -681,6 +695,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             result.get("error", {}).get("message"), error_message.format("get_api_keys")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_an_api_key_succeeds_the_create_api_key_method_returns_true(
         self,
     ):
@@ -713,6 +728,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.assertEqual(api_key.get("lastUpdatedDate"), now_str)
         self.assertEqual(api_key.get("createdDate"), now_str)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_an_api_key_fails_the_create_api_key_method_returns_error(
         self,
     ):
@@ -735,6 +751,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             error_message.format("create_api_key"),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_an_api_key_that_exists_the_delete_api_key_method_returns_true(
         self,
     ):
@@ -753,6 +770,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
 
         self.assertTrue(result.get("deleted"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_an_api_key_that_does_not_exist_the_delete_api_key_method_returns_false(
         self,
     ):
@@ -768,6 +786,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
 
         self.assertFalse(result.get("deleted"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_updating_an_api_key_description_successfully_the_update_api_key_description_method_returns_true(
         self,
     ):
@@ -782,6 +801,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertTrue(result.get("updated"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_updating_an_api_key_description_for_a_key_that_does_not_exist_the_update_api_key_description_method_returns_false(
         self,
     ):
@@ -798,6 +818,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertFalse(result.get("updated"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_enabling_an_api_key_that_exists_the_enable_api_key_method_returns_api_key(
         self,
     ):
@@ -810,6 +831,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertTrue(result.get("apiKey", {}).get("enabled"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_enabling_an_api_key_that_does_not_exist_the_enable_api_key_method_returns_error(
         self,
     ):
@@ -826,6 +848,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             result.get("error").get("message"), error_message.format("update_api_key")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_disabling_an_api_key_that_exists_the_disable_api_key_method_returns_api_key(
         self,
     ):
@@ -839,6 +862,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertFalse(result.get("apiKey", {}).get("enabled"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_disabling_an_api_key_that_does_not_exist_the_disable_api_key_method_returns_error(
         self,
     ):
@@ -855,6 +879,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             result.get("error").get("message"), error_message.format("update_api_key")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_associating_stages_to_an_api_key_that_exists_the_associate_api_key_stagekeys_method_returns_true(
         self,
     ):
@@ -869,6 +894,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertTrue(result.get("associated"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_associating_stages_to_an_api_key_that_does_not_exist_the_associate_api_key_stagekeys_method_returns_false(
         self,
     ):
@@ -885,6 +911,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertFalse(result.get("associated"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_disassociating_stages_to_an_api_key_that_exists_the_disassociate_api_key_stagekeys_method_returns_true(
         self,
     ):
@@ -899,6 +926,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertTrue(result.get("disassociated"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_disassociating_stages_to_an_api_key_that_does_not_exist_the_disassociate_api_key_stagekeys_method_returns_false(
         self,
     ):
@@ -915,6 +943,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertFalse(result.get("disassociated"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_api_deployments_the_describe_api_deployments_method_returns_list_of_deployments(
         self,
     ):
@@ -942,6 +971,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertEqual(len(result.get("deployments", {})), 2)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_api_deployments_and_an_error_occurred_the_describe_api_deployments_method_returns_error(
         self,
     ):
@@ -958,6 +988,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             result.get("error").get("message"), error_message.format("get_deployments")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_an_api_deployment_the_describe_api_deployment_method_returns_the_deployment(
         self,
     ):
@@ -977,6 +1008,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertTrue(result.get("deployment"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_api_deployment_that_does_not_exist_the_describe_api_deployment_method_returns_error(
         self,
     ):
@@ -993,6 +1025,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             result.get("error").get("message"), error_message.format("get_deployment")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_activating_api_deployment_for_stage_and_deployment_that_exist_the_activate_api_deployment_method_returns_true(
         self,
     ):
@@ -1020,6 +1053,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertTrue(result.get("set"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_activating_api_deployment_for_stage_that_does_not_exist_the_activate_api_deployment_method_returns_false(
         self,
     ):
@@ -1035,6 +1069,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertFalse(result.get("set"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_an_api_deployment_succeeds_the_create_api_deployment_method_returns_true(
         self,
     ):
@@ -1062,6 +1097,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.assertTrue(result.get("created"))
         self.assertEqual(deployment.get("createdDate"), now_str)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_an_deployment_fails_the_create_api_deployment_method_returns_error(
         self,
     ):
@@ -1081,6 +1117,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             error_message.format("create_deployment"),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_an_api_deployment_that_exists_the_delete_api_deployment_method_returns_true(
         self,
     ):
@@ -1098,6 +1135,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertTrue(result.get("deleted"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_an_api_deployment_that_does_not_exist_the_delete_api_deployment_method_returns_false(
         self,
     ):
@@ -1112,6 +1150,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertFalse(result.get("deleted"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_api_stages_the_describe_api_stages_method_returns_list_of_stages(
         self,
     ):
@@ -1149,6 +1188,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertEqual(len(result.get("stages", {})), 2)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_api_stages_and_that_the_deployment_does_not_exist_the_describe_api_stages_method_returns_error(
         self,
     ):
@@ -1163,6 +1203,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             result.get("error").get("message"), error_message.format("get_stages")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_an_api_stage_the_describe_api_stage_method_returns_the_stage(
         self,
     ):
@@ -1187,6 +1228,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertTrue(result.get("stage"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_api_stage_that_does_not_exist_the_describe_api_stage_method_returns_error(
         self,
     ):
@@ -1201,6 +1243,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             result.get("error").get("message"), error_message.format("get_stage")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_overwriting_stage_variables_to_an_existing_stage_the_overwrite_api_stage_variables_method_returns_the_updated_stage(
         self,
     ):
@@ -1243,6 +1286,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertEqual(result.get("stage").get("variables").get("key1"), "val2")
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_overwriting_stage_variables_to_a_nonexisting_stage_the_overwrite_api_stage_variables_method_returns_error(
         self,
     ):
@@ -1260,6 +1304,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             result.get("error").get("message"), error_message.format("get_stage")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_overwriting_stage_variables_to_an_existing_stage_the_overwrite_api_stage_variables_method_returns_error(
         self,
     ):
@@ -1291,6 +1336,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             result.get("error").get("message"), error_message.format("update_stage")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_an_api_stage_succeeds_the_create_api_stage_method_returns_true(
         self,
     ):
@@ -1325,6 +1371,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.assertEqual(stage.get("createdDate"), now_str)
         self.assertEqual(stage.get("lastUpdatedDate"), now_str)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_an_api_stage_fails_the_create_api_stage_method_returns_error(
         self,
     ):
@@ -1344,6 +1391,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             result.get("error").get("message"), error_message.format("create_stage")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_an_api_stage_that_exists_the_delete_api_stage_method_returns_true(
         self,
     ):
@@ -1361,6 +1409,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertTrue(result.get("deleted"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_an_api_stage_that_does_not_exist_the_delete_api_stage_method_returns_false(
         self,
     ):
@@ -1373,6 +1422,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertFalse(result.get("deleted"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_flushing_api_stage_cache_for_an_existing_stage_the_flush_api_stage_cache_method_returns_true(
         self,
     ):
@@ -1390,6 +1440,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertTrue(result.get("flushed"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_flushing_api_stage_cache_and_the_stage_does_not_exist_the_flush_api_stage_cache_method_returns_false(
         self,
     ):
@@ -1404,6 +1455,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertFalse(result.get("flushed"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_api_models_the_describe_api_models_method_returns_list_of_models(
         self,
     ):
@@ -1437,6 +1489,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertEqual(len(result.get("models", {})), 2)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_api_models_and_that_the_api_does_not_exist_the_describe_api_models_method_returns_error(
         self,
     ):
@@ -1451,6 +1504,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             result.get("error").get("message"), error_message.format("get_models")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_api_model_the_describe_api_model_method_returns_the_model(
         self,
     ):
@@ -1463,6 +1517,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertTrue(result.get("model"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_api_model_and_that_the_model_does_not_exist_the_describe_api_model_method_returns_error(
         self,
     ):
@@ -1477,6 +1532,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             result.get("error").get("message"), error_message.format("get_model")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_model_exists_the_api_model_exists_method_returns_true(self):
         """
         Tests True when model exists
@@ -1487,6 +1543,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertTrue(result.get("exists"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_model_does_not_exists_the_api_model_exists_method_returns_false(self):
         """
         Tests False when model does not exist
@@ -1497,6 +1554,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertFalse(result.get("exists"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_updating_model_schema_the_update_api_model_schema_method_returns_true(
         self,
     ):
@@ -1512,6 +1570,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertTrue(result.get("updated"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_updating_model_schema_when_model_does_not_exist_the_update_api_model_schema_emthod_returns_false(
         self,
     ):
@@ -1527,6 +1586,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertFalse(result.get("updated"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_an_api_model_succeeds_the_create_api_model_method_returns_true(
         self,
     ):
@@ -1543,6 +1603,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertTrue(result.get("created"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_an_api_model_fails_the_create_api_model_method_returns_error(
         self,
     ):
@@ -1559,6 +1620,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertFalse(result.get("created"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_an_api_model_that_exists_the_delete_api_model_method_returns_true(
         self,
     ):
@@ -1576,6 +1638,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertTrue(result.get("deleted"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_an_api_model_that_does_not_exist_the_delete_api_model_method_returns_false(
         self,
     ):
@@ -1588,6 +1651,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertFalse(result.get("deleted"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_api_resources_the_describe_api_resources_method_returns_list_of_3_resources(
         self,
     ):
@@ -1602,6 +1666,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             len(result.get("resources")), len(api_resources_ret.get("items"))
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_api_resources_and_that_the_api_does_not_exist_the_describe_api_resources_method_returns_error(
         self,
     ):
@@ -1618,6 +1683,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             result.get("error").get("message"), error_message.format("get_resources")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_an_api_resource_that_exists_the_describe_api_resource_method_returns_the_resource(
         self,
     ):
@@ -1630,6 +1696,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertEqual(result.get("resource", {}).get("path"), "/api")
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_an_api_resource_that_does_not_exist_the_describe_api_resource_method_returns_the_resource_as_none(
         self,
     ):
@@ -1642,6 +1709,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertEqual(result.get("resource"), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_an_api_resource_and_that_the_api_does_not_exist_the_describe_api_resource_method_returns_error(
         self,
     ):
@@ -1658,6 +1726,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             result.get("error").get("message"), error_message.format("get_resources")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_api_resources_for_a_path_that_creates_one_new_resource_the_create_resources_api_method_returns_all_resources(
         self,
     ):
@@ -1677,6 +1746,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.assertEqual(resources[0].get("path"), "/")
         self.assertEqual(resources[1].get("path"), "/api3")
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_api_resources_for_a_path_whose_resources_exist_the_create_resources_api_method_returns_all_resources(
         self,
     ):
@@ -1695,6 +1765,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.assertEqual(resources[1].get("path"), "/api")
         self.assertEqual(resources[2].get("path"), "/api/users")
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_api_resource_fails_the_create_resources_api_method_returns_false(
         self,
     ):
@@ -1710,6 +1781,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertFalse(result.get("created"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_api_resources_for_a_resource_that_exists_the_delete_api_resources_method_returns_true(
         self,
     ):
@@ -1722,6 +1794,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertTrue(result.get("deleted"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_api_resources_for_a_resource_that_does_not_exist_the_delete_api_resources_method_returns_false(
         self,
     ):
@@ -1734,6 +1807,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertFalse(result.get("deleted"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_the_root_api_resource_the_delete_api_resources_method_returns_false(
         self,
     ):
@@ -1746,6 +1820,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertFalse(result.get("deleted"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_api_resources_and_delete_resource_throws_error_the_delete_api_resources_method_returns_false(
         self,
     ):
@@ -1761,6 +1836,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertFalse(result.get("deleted"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_an_api_resource_method_that_exists_the_describe_api_resource_method_returns_the_method(
         self,
     ):
@@ -1783,6 +1859,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertTrue(result.get("method"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_an_api_resource_method_whose_method_does_not_exist_the_describe_api_resource_method_returns_error(
         self,
     ):
@@ -1801,6 +1878,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             result.get("error").get("message"), error_message.format("get_method")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_an_api_resource_method_whose_resource_does_not_exist_the_describe_api_resrouce_method_returns_error(
         self,
     ):
@@ -1816,6 +1894,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertTrue(result.get("error"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_an_api_method_the_create_api_method_method_returns_true(
         self,
     ):
@@ -1839,6 +1918,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertTrue(result.get("created"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_an_api_method_and_resource_does_not_exist_the_create_api_method_method_returns_false(
         self,
     ):
@@ -1855,6 +1935,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertFalse(result.get("created"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_an_api_method_and_error_thrown_on_put_method_the_create_api_method_method_returns_false(
         self,
     ):
@@ -1872,6 +1953,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertFalse(result.get("created"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_an_api_method_for_a_method_that_exist_the_delete_api_method_method_returns_true(
         self,
     ):
@@ -1893,6 +1975,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertTrue(result.get("deleted"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_an_api_method_for_a_method_that_does_not_exist_the_delete_api_method_method_returns_false(
         self,
     ):
@@ -1911,6 +1994,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertFalse(result.get("deleted"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_an_api_method_for_a_resource_that_does_not_exist_the_delete_api_method_method_returns_false(
         self,
     ):
@@ -1926,6 +2010,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertFalse(result.get("deleted"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_an_api_method_response_that_exists_the_describe_api_method_respond_method_returns_the_response(
         self,
     ):
@@ -1949,6 +2034,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertTrue(result.get("response"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_an_api_method_response_and_response_code_does_not_exist_the_describe_api_method_response_method_returns_error(
         self,
     ):
@@ -1971,6 +2057,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             error_message.format("get_method_response"),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_an_api_method_response_and_resource_does_not_exist_the_describe_api_method_response_method_returns_error(
         self,
     ):
@@ -1987,6 +2074,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertTrue(result.get("error"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_an_api_method_response_the_create_api_method_response_method_returns_true(
         self,
     ):
@@ -2010,6 +2098,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertTrue(result.get("created"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_an_api_method_response_and_resource_does_not_exist_the_create_api_method_response_method_returns_false(
         self,
     ):
@@ -2026,6 +2115,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertFalse(result.get("created"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_an_api_method_response_and_error_thrown_on_put_method_response_the_create_api_method_response_method_returns_false(
         self,
     ):
@@ -2045,6 +2135,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertFalse(result.get("created"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_an_api_method_response_for_a_response_that_exist_the_delete_api_method_response_method_returns_true(
         self,
     ):
@@ -2067,6 +2158,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertTrue(result.get("deleted"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_an_api_method_response_for_a_response_that_does_not_exist_the_delete_api_method_response_method_returns_false(
         self,
     ):
@@ -2086,6 +2178,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertFalse(result.get("deleted"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_an_api_method_response_for_a_resource_that_does_not_exist_the_delete_api_method_response_method_returns_false(
         self,
     ):
@@ -2102,6 +2195,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertFalse(result.get("deleted"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_an_api_integration_that_exists_the_describe_api_integration_method_returns_the_intgration(
         self,
     ):
@@ -2129,6 +2223,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertTrue(result.get("integration"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_an_api_integration_and_method_does_not_have_integration_defined_the_describe_api_integration_method_returns_error(
         self,
     ):
@@ -2149,6 +2244,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             result.get("error").get("message"), error_message.format("get_integration")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_an_api_integration_and_resource_does_not_exist_the_describe_api_integration_method_returns_error(
         self,
     ):
@@ -2164,6 +2260,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertTrue(result.get("error"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_an_api_integration_response_that_exists_the_describe_api_integration_response_method_returns_the_intgration(
         self,
     ):
@@ -2188,6 +2285,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertTrue(result.get("response"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_an_api_integration_response_and_status_code_does_not_exist_the_describe_api_integration_response_method_returns_error(
         self,
     ):
@@ -2210,6 +2308,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             error_message.format("get_integration_response"),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_an_api_integration_response_and_resource_does_not_exist_the_describe_api_integration_response_method_returns_error(
         self,
     ):
@@ -2226,6 +2325,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertTrue(result.get("error"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_usage_plans_and_an_exception_is_thrown_in_get_usage_plans(
         self,
     ):
@@ -2243,6 +2343,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             error_message.format("get_usage_plans_exception"),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_usage_plans_and_plan_name_or_id_does_not_exist_that_results_have_empty_plans_list(
         self,
     ):
@@ -2276,6 +2377,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertEqual(result.get("plans"), [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_usage_plans_for_plans_that_exist_that_the_function_returns_all_matching_plans(
         self,
     ):
@@ -2291,6 +2393,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         for plan in result["plans"]:
             self.assertTrue(plan in [usage_plan1, usage_plan1b])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_or_updating_a_usage_plan_and_throttle_or_quota_failed_to_validate_that_an_error_is_returned(
         self,
     ):
@@ -2329,6 +2432,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.assertTrue(self.conn.create_usage_plan.call_count == 0)
         self.assertTrue(self.conn.update_usage_plan.call_count == 0)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_a_usage_plan_and_create_usage_plan_throws_an_exception_that_an_error_is_returned(
         self,
     ):
@@ -2344,6 +2448,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             error_message.format("create_usage_plan_exception"),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_create_usage_plan_succeeds(self):
         """
         tests for success user plan creation
@@ -2354,6 +2459,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.assertEqual(result.get("created"), True)
         self.assertEqual(result.get("result"), res)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_udpating_a_usage_plan_and_update_usage_plan_throws_an_exception_that_an_error_is_returned(
         self,
     ):
@@ -2371,6 +2477,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             error_message.format("update_usage_plan_exception"),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_updating_a_usage_plan_and_if_throttle_and_quota_parameters_are_none_update_usage_plan_removes_throttle_and_quota(
         self,
     ):
@@ -2386,6 +2493,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.assertEqual(result.get("result"), ret)
         self.assertTrue(self.conn.update_usage_plan.call_count >= 1)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_usage_plan_and_describe_usage_plans_had_error_that_the_same_error_is_returned(
         self,
     ):
@@ -2400,6 +2508,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.assertEqual(result.get("error").get("message"), error_message.format(ret))
         self.assertTrue(self.conn.delete_usage_plan.call_count == 0)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_usage_plan_and_plan_exists_that_the_functions_returns_deleted_true(
         self,
     ):
@@ -2413,6 +2522,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.assertEqual(result.get("usagePlanId"), "plan1_id")
         self.assertTrue(self.conn.delete_usage_plan.call_count >= 1)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_usage_plan_and_plan_does_not_exist_that_the_functions_returns_deleted_true(
         self,
     ):
@@ -2429,6 +2539,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.assertEqual(result.get("usagePlanId"), "plan1_id")
         self.assertTrue(self.conn.delete_usage_plan.call_count == 0)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_usage_plan_and_delete_usage_plan_throws_exception_that_an_error_is_returned(
         self,
     ):
@@ -2446,6 +2557,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         )
         self.assertTrue(self.conn.delete_usage_plan.call_count >= 1)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_attach_or_detach_usage_plan_when_apis_is_empty_that_success_is_returned(
         self,
     ):
@@ -2466,6 +2578,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.assertEqual(result.get("result", "no result?"), None)
         self.assertTrue(self.conn.update_usage_plan.call_count == 0)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_attach_or_detach_usage_plan_when_api_does_not_contain_apiId_or_stage_that_an_error_is_returned(
         self,
     ):
@@ -2485,6 +2598,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
 
         self.assertTrue(self.conn.update_usage_plan.call_count == 0)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_attach_or_detach_usage_plan_and_update_usage_plan_throws_exception_that_an_error_is_returned(
         self,
     ):
@@ -2509,6 +2623,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             result.get("error").get("message"), error_message.format(error_msg)
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_attach_or_detach_usage_plan_updated_successfully(self):
         """
         tests for update_usage_plan called

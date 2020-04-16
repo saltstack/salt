@@ -12,6 +12,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 from salt.ext import six
+from tests.support.unit import skipIf
 
 try:
     # Import Salt Testing Libs
@@ -52,6 +53,7 @@ class KernelPkgTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_latest_installed_with_changes(self):
         """
         Test - latest_installed when an upgrade is available
@@ -80,6 +82,7 @@ class KernelPkgTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertIsInstance(ret["comment"], six.text_type)
                     kernelpkg.__salt__["kernelpkg.upgrade"].assert_not_called()
 
+    @skipIf(True, "FASTTEST skip")
     def test_latest_installed_at_latest(self):
         """
         Test - latest_installed when no upgrade is available
@@ -106,6 +109,7 @@ class KernelPkgTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertIsInstance(ret["comment"], six.text_type)
                     kernelpkg.__salt__["kernelpkg.upgrade"].assert_not_called()
 
+    @skipIf(True, "FASTTEST skip")
     def test_latest_active_with_changes(self):
         """
         Test - latest_active when a new kernel is available
@@ -133,6 +137,7 @@ class KernelPkgTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertIsInstance(ret["comment"], six.text_type)
                 kernelpkg.__salt__["system.reboot"].assert_not_called()
 
+    @skipIf(True, "FASTTEST skip")
     def test_latest_active_at_latest(self):
         """
         Test - latest_active when the newest kernel is already active
@@ -157,6 +162,7 @@ class KernelPkgTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertIsInstance(ret["comment"], six.text_type)
                 kernelpkg.__salt__["system.reboot"].assert_not_called()
 
+    @skipIf(True, "FASTTEST skip")
     def test_latest_wait(self):
         """
         Test - latest_wait static results

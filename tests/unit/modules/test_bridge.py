@@ -12,7 +12,7 @@ import salt.modules.bridge as bridge
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class BridgeTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class BridgeTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {bridge: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_show(self):
         """
         Test for Returns bridges interfaces
@@ -32,6 +33,7 @@ class BridgeTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(bridge, "_os_dispatch", mock):
             self.assertTrue(bridge.show("br"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_(self):
         """
         Test for Returns the machine's bridges list
@@ -44,6 +46,7 @@ class BridgeTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(bridge, "_os_dispatch", mock):
             self.assertEqual(bridge.list_(), ["A", "B"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_interfaces(self):
         """
         Test for Returns interfaces attached to a bridge
@@ -54,6 +57,7 @@ class BridgeTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(bridge, "_os_dispatch", mock):
             self.assertEqual(bridge.interfaces("br"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_find_interfaces(self):
         """
         Test for Returns the bridge to which the interfaces are bond to
@@ -66,6 +70,7 @@ class BridgeTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(bridge, "_os_dispatch", mock):
             self.assertEqual(bridge.find_interfaces(), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_add(self):
         """
         Test for Creates a bridge
@@ -74,6 +79,7 @@ class BridgeTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(bridge, "_os_dispatch", mock):
             self.assertEqual(bridge.add(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete(self):
         """
         Test for Deletes a bridge
@@ -82,6 +88,7 @@ class BridgeTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(bridge, "_os_dispatch", mock):
             self.assertEqual(bridge.delete(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_addif(self):
         """
         Test for Adds an interface to a bridge
@@ -90,6 +97,7 @@ class BridgeTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(bridge, "_os_dispatch", mock):
             self.assertEqual(bridge.addif(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_delif(self):
         """
         Test for Removes an interface from a bridge
@@ -98,6 +106,7 @@ class BridgeTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(bridge, "_os_dispatch", mock):
             self.assertEqual(bridge.delif(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_stp(self):
         """
         Test for Sets Spanning Tree Protocol state for a bridge

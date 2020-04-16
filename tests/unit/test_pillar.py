@@ -24,7 +24,7 @@ from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MockFileclient(object):
@@ -63,6 +63,7 @@ class PillarTestCase(TestCase):
             except AttributeError:
                 continue
 
+    @skipIf(True, "FASTTEST skip")
     def test_pillarenv_from_saltenv(self):
         with patch("salt.pillar.compile_template") as compile_template:
             opts = {
@@ -83,6 +84,7 @@ class PillarTestCase(TestCase):
             self.assertEqual(pillar.opts["saltenv"], "dev")
             self.assertEqual(pillar.opts["pillarenv"], "dev")
 
+    @skipIf(True, "FASTTEST skip")
     def test_ext_pillar_no_extra_minion_data_val_dict(self):
         opts = {
             "optimization_order": [0, 1, 2],
@@ -125,6 +127,7 @@ class PillarTestCase(TestCase):
             "mocked-minion", "fake_pillar", arg="foo"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_ext_pillar_no_extra_minion_data_val_list(self):
         opts = {
             "optimization_order": [0, 1, 2],
@@ -163,6 +166,7 @@ class PillarTestCase(TestCase):
             "mocked-minion", "fake_pillar", "foo"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_ext_pillar_no_extra_minion_data_val_elem(self):
         opts = {
             "optimization_order": [0, 1, 2],
@@ -201,6 +205,7 @@ class PillarTestCase(TestCase):
             "mocked-minion", "fake_pillar", "fake_val"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_ext_pillar_with_extra_minion_data_val_dict(self):
         opts = {
             "optimization_order": [0, 1, 2],
@@ -248,6 +253,7 @@ class PillarTestCase(TestCase):
             extra_minion_data={"fake_key": "foo"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_ext_pillar_with_extra_minion_data_val_list(self):
         opts = {
             "optimization_order": [0, 1, 2],
@@ -288,6 +294,7 @@ class PillarTestCase(TestCase):
             "mocked-minion", "fake_pillar", "bar", extra_minion_data={"fake_key": "foo"}
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_ext_pillar_with_extra_minion_data_val_elem(self):
         opts = {
             "optimization_order": [0, 1, 2],
@@ -328,6 +335,7 @@ class PillarTestCase(TestCase):
             "mocked-minion", "fake_pillar", "bar", extra_minion_data={"fake_key": "foo"}
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_ext_pillar_first(self):
         """
         test when using ext_pillar and ext_pillar_first
@@ -377,6 +385,7 @@ class PillarTestCase(TestCase):
         finally:
             shutil.rmtree(tempdir, ignore_errors=True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_dynamic_pillarenv(self):
         opts = {
             "optimization_order": [0, 1, 2],
@@ -397,6 +406,7 @@ class PillarTestCase(TestCase):
             {"base": ["/srv/pillar/base"], "dev": ["/srv/pillar/__env__"]},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_ignored_dynamic_pillarenv(self):
         opts = {
             "optimization_order": [0, 1, 2],
@@ -415,6 +425,7 @@ class PillarTestCase(TestCase):
         self.assertEqual(pillar.opts["pillar_roots"], {"base": ["/srv/pillar/base"]})
 
     @patch("salt.fileclient.Client.list_states")
+    @skipIf(True, "FASTTEST skip")
     def test_malformed_pillar_sls(self, mock_list_states):
         with patch("salt.pillar.compile_template") as compile_template:
             opts = {
@@ -527,6 +538,7 @@ class PillarTestCase(TestCase):
                 ({"foo": "bar", "nested": {"level": {"foo": "bar2"}}}, []),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_includes_override_sls(self):
         opts = {
             "optimization_order": [0, 1, 2],
@@ -590,6 +602,7 @@ class PillarTestCase(TestCase):
                 pillar.render_pillar({"base": ["foo.sls"]}), ({"foo": "bar"}, [])
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_topfile_order(self):
         opts = {
             "optimization_order": [0, 1, 2],
@@ -739,6 +752,7 @@ generic:
         }
 
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_include(self, tempdir):
         opts = {
             "optimization_order": [0, 1, 2],
@@ -884,6 +898,8 @@ class RemotePillarTestCase(TestCase):
             except AttributeError:
                 continue
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_opts_in_pillar_override_call(self):
         mock_get_extra_minion_data = MagicMock(return_value={})
         with patch(
@@ -894,6 +910,7 @@ class RemotePillarTestCase(TestCase):
             salt.pillar.RemotePillar({}, self.grains, "mocked-minion", "dev")
         mock_get_extra_minion_data.assert_called_once_with({"saltenv": "dev"})
 
+    @skipIf(True, "FASTTEST skip")
     def test_multiple_keys_in_opts_added_to_pillar(self):
         opts = {
             "renderer": "json",
@@ -910,6 +927,7 @@ class RemotePillarTestCase(TestCase):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_subkey_in_opts_added_to_pillar(self):
         opts = {
             "renderer": "json",
@@ -925,6 +943,7 @@ class RemotePillarTestCase(TestCase):
             pillar.extra_minion_data, {"path_to_add2": {"fake_data5": "fake_data6"}}
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_non_existent_leaf_opt_in_add_to_pillar(self):
         opts = {
             "renderer": "json",
@@ -938,6 +957,7 @@ class RemotePillarTestCase(TestCase):
         pillar = salt.pillar.RemotePillar(opts, self.grains, "mocked-minion", "dev")
         self.assertEqual(pillar.pillar_override, {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_non_existent_intermediate_opt_in_add_to_pillar(self):
         opts = {
             "renderer": "json",
@@ -951,6 +971,7 @@ class RemotePillarTestCase(TestCase):
         pillar = salt.pillar.RemotePillar(opts, self.grains, "mocked-minion", "dev")
         self.assertEqual(pillar.pillar_override, {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_malformed_add_to_pillar(self):
         opts = {
             "renderer": "json",
@@ -967,6 +988,8 @@ class RemotePillarTestCase(TestCase):
             excinfo.exception.strerror, "'pass_to_ext_pillars' config is malformed."
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_pillar_send_extra_minion_data_from_config(self):
         opts = {
             "renderer": "json",
@@ -1022,6 +1045,8 @@ class AsyncRemotePillarTestCase(TestCase):
             except AttributeError:
                 continue
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_opts_in_pillar_override_call(self):
         mock_get_extra_minion_data = MagicMock(return_value={})
         with patch(
@@ -1032,6 +1057,8 @@ class AsyncRemotePillarTestCase(TestCase):
             salt.pillar.RemotePillar({}, self.grains, "mocked-minion", "dev")
         mock_get_extra_minion_data.assert_called_once_with({"saltenv": "dev"})
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_pillar_send_extra_minion_data_from_config(self):
         opts = {
             "renderer": "json",

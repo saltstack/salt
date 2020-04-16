@@ -39,6 +39,7 @@ class DNShelpersCase(TestCase):
     Tests for the parser helpers
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_port(self):
         for right in (1, 42, "123", 65535):
             self.assertEqual(_to_port(right), int(right))
@@ -46,6 +47,7 @@ class DNShelpersCase(TestCase):
         for wrong in (0, 65536, 100000, "not-a-port"):
             self.assertRaises(ValueError, _to_port, wrong)
 
+    @skipIf(True, "FASTTEST skip")
     def test_tree(self):
         test_map = (
             "ex1.nl",
@@ -71,6 +73,7 @@ class DNShelpersCase(TestCase):
         for domain, result in zip(test_map, res_map):
             self.assertEqual(_tree(domain), result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_weight(self):
         recs = [
             [],
@@ -99,6 +102,7 @@ class DNShelpersCase(TestCase):
             rs_res = _weighted_order(list(recset))
             self.assertTrue(all(rec["name"] in rs_res for rec in recset))
 
+    @skipIf(True, "FASTTEST skip")
     def test_data2rec(self):
         right = [
             "10.0.0.1",
@@ -131,6 +135,7 @@ class DNShelpersCase(TestCase):
         for rdata, rschema in zip(wrong, schemas):
             self.assertRaises(ValueError, _data2rec, rschema, rdata)
 
+    @skipIf(True, "FASTTEST skip")
     def test_data2group(self):
         right = [
             ["10 mbox.example.com"],
@@ -311,6 +316,7 @@ class DNSlookupsCase(TestCase):
                     )
 
     @skipIf(not salt.utils.dns.HAS_NSLOOKUP, "nslookup is not available")
+    @skipIf(True, "FASTTEST skip")
     def test_lookup_with_servers(self):
         rights = {
             "A": [
@@ -351,6 +357,7 @@ class DNSlookupsCase(TestCase):
                     )
 
     @skipIf(not salt.utils.dns.HAS_DIG, "dig is not available")
+    @skipIf(True, "FASTTEST skip")
     def test_dig_options(self):
         cmd = "dig {0} -v".format(salt.utils.dns.DIG_OPTIONS)
         cmd = salt.modules.cmdmod.retcode(
@@ -358,6 +365,7 @@ class DNSlookupsCase(TestCase):
         )
         self.assertEqual(cmd, 0)
 
+    @skipIf(True, "FASTTEST skip")
     def test_dig(self):
         wrong_type = {"retcode": 0, "stderr": ";; Warning, ignoring invalid type ABC"}
 
@@ -422,6 +430,7 @@ class DNSlookupsCase(TestCase):
             secure=secure,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_drill(self):
         # all Drill returns look like this
         RES_TMPL = textwrap.dedent(
@@ -518,6 +527,7 @@ class DNSlookupsCase(TestCase):
             secure=secure,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_gai(self):
         # wrong type
         self.assertRaises(ValueError, _lookup_gai, "mockq", "WRONG")
@@ -558,6 +568,7 @@ class DNSlookupsCase(TestCase):
                         msg="Error parsing {0} returns".format(rec_t),
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_host(self):
         wrong_type = {"retcode": 9, "stderr": "host: invalid type: WRONG"}
 
@@ -611,6 +622,7 @@ class DNSlookupsCase(TestCase):
             _lookup_host, wrong_type=wrong_type, wrong=wrongs, right=rights, empty=empty
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_nslookup(self):
         # all nslookup returns look like this
         RES_TMPL = textwrap.dedent(

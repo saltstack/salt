@@ -39,7 +39,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import test Libs
 from tests.support.case import SSHCase
-from tests.support.unit import skipIf
 
 
 class SSHCustomModuleTest(SSHCase):
@@ -47,7 +46,6 @@ class SSHCustomModuleTest(SSHCase):
     Test sls with custom module functionality using ssh
     """
 
-    @skipIf(True, "SLOWTEST skip")
     def test_ssh_regular_module(self):
         """
         Test regular module work using SSHCase environment
@@ -56,7 +54,6 @@ class SSHCustomModuleTest(SSHCase):
         cmd = self.run_function("test.echo", arg=["hello"])
         self.assertEqual(expected, cmd)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_ssh_custom_module(self):
         """
         Test custom module work using SSHCase environment
@@ -65,7 +62,6 @@ class SSHCustomModuleTest(SSHCase):
         cmd = self.run_function("test.recho", arg=["hello"])
         self.assertEqual(expected, cmd)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_ssh_sls_with_custom_module(self):
         """
         Test sls with custom module work using SSHCase environment

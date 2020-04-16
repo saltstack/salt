@@ -11,7 +11,7 @@ import salt.modules.haproxyconn as haproxyconn
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class Mockcmds(object):
@@ -110,6 +110,7 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_servers' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_servers(self):
         """
         Test list_servers
@@ -118,6 +119,7 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'enable_server' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_enable_server(self):
         """
         Test enable_server
@@ -126,6 +128,7 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'disable_server' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_disable_server(self):
         """
         Test disable_server
@@ -134,6 +137,7 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_weight' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_weight(self):
         """
         Test get the weight of a server
@@ -142,6 +146,7 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_weight' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_weight(self):
         """
         Test setting the weight of a given server
@@ -150,12 +155,14 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'show_frontends' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_frontends(self):
         """
         Test print all frontends received from the HAProxy socket
         """
         self.assertTrue(haproxyconn.show_frontends())
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_frontends(self):
         """
         Test listing all frontends
@@ -167,12 +174,14 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'show_backends' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_backends(self):
         """
         Test print all backends received from the HAProxy socket
         """
         self.assertTrue(haproxyconn.show_backends())
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_backends(self):
         """
         Test listing of all backends
@@ -182,6 +191,7 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
             sorted(["backend-alpha", "backend-beta", "backend-gamma"]),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_backend(self):
         """
         Test get_backend and compare returned value
@@ -192,12 +202,14 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
         }
         self.assertDictEqual(haproxyconn.get_backend("test"), expected_data)
 
+    @skipIf(True, "FASTTEST skip")
     def test_wait_state_true(self):
         """
         Test a successful wait for state
         """
         self.assertTrue(haproxyconn.wait_state("test", "server01"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_wait_state_false(self):
         """
         Test a failed wait for state, with a timeout of 0

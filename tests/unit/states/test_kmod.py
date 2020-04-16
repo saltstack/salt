@@ -11,7 +11,7 @@ import salt.states.kmod as kmod
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class KmodTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'present' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_present(self):
         """
         Test to ensure that the specified kernel module is loaded.
@@ -62,6 +63,7 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertDictEqual(kmod.present(name), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_multi(self):
         """
         Test to ensure that multiple kernel modules are loaded.
@@ -126,6 +128,7 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'absent' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
         Test to verify that the named kernel module is not loaded.
@@ -159,6 +162,7 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({"comment": comment, "result": True, "changes": {}})
                 self.assertDictEqual(kmod.absent(name), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_multi(self):
         """
         Test to verify that multiple kernel modules are not loaded.

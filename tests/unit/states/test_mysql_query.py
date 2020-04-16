@@ -13,7 +13,7 @@ import salt.states.mysql_query as mysql_query
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MysqlQueryTestCase(TestCase, LoaderModuleMockMixin):
@@ -26,6 +26,7 @@ class MysqlQueryTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'run' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_run(self):
         """
         Test to execute an arbitrary query on the specified database.

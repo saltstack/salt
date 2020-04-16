@@ -13,7 +13,7 @@ import salt.grains.disks as disks
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class IscsiGrainsTestCase(TestCase, LoaderModuleMockMixin):
@@ -26,6 +26,7 @@ class IscsiGrainsTestCase(TestCase, LoaderModuleMockMixin):
             disks: {"__salt__": {}},
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test__windows_disks(self):
         """
         Test grains._windows_disks, normal return
@@ -70,6 +71,7 @@ class IscsiGrainsTestCase(TestCase, LoaderModuleMockMixin):
             )
             mock_run_all.assert_called_once_with(cmd)
 
+    @skipIf(True, "FASTTEST skip")
     def test__windows_disks_retcode(self):
         """
         Test grains._windows_disks, retcode 1

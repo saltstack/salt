@@ -10,7 +10,7 @@ from salt.exceptions import SaltInvocationError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {wusa: {"__opts__": {"test": False}, "__env__": "base"}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_no_source(self):
         """
         test wusa.installed without passing source
@@ -34,6 +35,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             excinfo.exception.strerror, 'Must specify a "source" file to install'
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_existing(self):
         """
         test wusa.installed when the kb is already installed
@@ -51,6 +53,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertDictEqual(expected, returned)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_test_true(self):
         """
         test wusa.installed with test=True
@@ -70,6 +73,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertDictEqual(expected, returned)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_cache_fail(self):
         """
         test wusa.install when it fails to cache the file
@@ -92,6 +96,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertDictEqual(expected, returned)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed(self):
         """
         test wusa.installed assuming success
@@ -117,6 +122,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertDictEqual(expected, returned)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_failed(self):
         """
         test wusa.installed with a failure
@@ -142,6 +148,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertDictEqual(expected, returned)
 
+    @skipIf(True, "FASTTEST skip")
     def test_uninstalled_non_existing(self):
         """
         test wusa.uninstalled when the kb is not installed
@@ -157,6 +164,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertDictEqual(expected, returned)
 
+    @skipIf(True, "FASTTEST skip")
     def test_uninstalled_test_true(self):
         """
         test wusa.uninstalled with test=True
@@ -174,6 +182,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertDictEqual(expected, returned)
 
+    @skipIf(True, "FASTTEST skip")
     def test_uninstalled(self):
         """
         test wusa.uninstalled assuming success
@@ -192,6 +201,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertDictEqual(expected, returned)
 
+    @skipIf(True, "FASTTEST skip")
     def test_uninstalled_failed(self):
         """
         test wusa.uninstalled with a failure

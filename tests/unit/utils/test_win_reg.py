@@ -34,6 +34,7 @@ class WinFunctionsTestCase(TestCase):
     Test cases for salt.utils.win_reg
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_broadcast_change_success(self):
         """
         Tests the broadcast_change function
@@ -41,6 +42,7 @@ class WinFunctionsTestCase(TestCase):
         with patch("win32gui.SendMessageTimeout", return_value=("", 0)):
             self.assertTrue(win_reg.broadcast_change())
 
+    @skipIf(True, "FASTTEST skip")
     def test_broadcast_change_fail(self):
         """
         Tests the broadcast_change function failure
@@ -48,18 +50,21 @@ class WinFunctionsTestCase(TestCase):
         with patch("win32gui.SendMessageTimeout", return_value=("", 1)):
             self.assertFalse(win_reg.broadcast_change())
 
+    @skipIf(True, "FASTTEST skip")
     def test_key_exists_existing(self):
         """
         Tests the key_exists function using a well known registry key
         """
         self.assertTrue(win_reg.key_exists(hive="HKLM", key="SOFTWARE\\Microsoft"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_key_exists_non_existing(self):
         """
         Tests the key_exists function using a non existing registry key
         """
         self.assertFalse(win_reg.key_exists(hive="HKLM", key=FAKE_KEY))
 
+    @skipIf(True, "FASTTEST skip")
     def test_key_exists_invalid_hive(self):
         """
         Tests the key_exists function using an invalid hive
@@ -71,6 +76,7 @@ class WinFunctionsTestCase(TestCase):
             key="SOFTWARE\\Microsoft",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_key_exists_unknown_key_error(self):
         """
         Tests the key_exists function with an unknown key error
@@ -86,6 +92,7 @@ class WinFunctionsTestCase(TestCase):
                 key="SOFTWARE\\Microsoft",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_value_exists_existing(self):
         """
         Tests the value_exists function using a well known registry key
@@ -98,6 +105,7 @@ class WinFunctionsTestCase(TestCase):
             )
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_value_exists_non_existing(self):
         """
         Tests the value_exists function using a non existing registry key
@@ -110,6 +118,7 @@ class WinFunctionsTestCase(TestCase):
             )
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_value_exists_invalid_hive(self):
         """
         Tests the value_exists function using an invalid hive
@@ -122,6 +131,7 @@ class WinFunctionsTestCase(TestCase):
             vname="CommonFilesDir",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_value_exists_key_not_exist(self):
         """
         Tests the value_exists function when the key does not exist
@@ -138,6 +148,7 @@ class WinFunctionsTestCase(TestCase):
                 )
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_value_exists_unknown_key_error(self):
         """
         Tests the value_exists function with an unknown error when opening the
@@ -155,6 +166,7 @@ class WinFunctionsTestCase(TestCase):
                 vname="CommonFilesDir",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_value_exists_empty_default_value(self):
         """
         Tests the value_exists function when querying the default value
@@ -171,6 +183,7 @@ class WinFunctionsTestCase(TestCase):
                 )
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_value_exists_no_vname(self):
         """
         Tests the value_exists function when the vname does not exist
@@ -187,12 +200,14 @@ class WinFunctionsTestCase(TestCase):
                 )
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_keys_existing(self):
         """
         Test the list_keys function using a well known registry key
         """
         self.assertIn("Microsoft", win_reg.list_keys(hive="HKLM", key="SOFTWARE"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_keys_non_existing(self):
         """
         Test the list_keys function using a non existing registry key
@@ -200,6 +215,7 @@ class WinFunctionsTestCase(TestCase):
         expected = (False, "Cannot find key: HKLM\\{0}".format(FAKE_KEY))
         self.assertEqual(win_reg.list_keys(hive="HKLM", key=FAKE_KEY), expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_keys_invalid_hive(self):
         """
         Test the list_keys function when passing an invalid hive
@@ -211,6 +227,7 @@ class WinFunctionsTestCase(TestCase):
             key="SOFTWARE\\Microsoft",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_keys_unknown_key_error(self):
         """
         Tests the list_keys function with an unknown key error
@@ -226,6 +243,7 @@ class WinFunctionsTestCase(TestCase):
                 key="SOFTWARE\\Microsoft",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_values_existing(self):
         """
         Test the list_values function using a well known registry key
@@ -238,6 +256,7 @@ class WinFunctionsTestCase(TestCase):
             keys.append(value["vname"])
         self.assertIn("ProgramFilesDir", keys)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_values_non_existing(self):
         """
         Test the list_values function using a non existing registry key
@@ -245,6 +264,7 @@ class WinFunctionsTestCase(TestCase):
         expected = (False, "Cannot find key: HKLM\\{0}".format(FAKE_KEY))
         self.assertEqual(win_reg.list_values(hive="HKLM", key=FAKE_KEY), expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_values_invalid_hive(self):
         """
         Test the list_values function when passing an invalid hive
@@ -256,6 +276,7 @@ class WinFunctionsTestCase(TestCase):
             key="SOFTWARE\\Microsoft",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_values_unknown_key_error(self):
         """
         Tests the list_values function with an unknown key error
@@ -271,6 +292,7 @@ class WinFunctionsTestCase(TestCase):
                 key="SOFTWARE\\Microsoft",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_read_value_existing(self):
         """
         Test the read_value function using a well known registry value
@@ -282,6 +304,7 @@ class WinFunctionsTestCase(TestCase):
         )
         self.assertEqual(ret["vdata"], "%ProgramFiles%")
 
+    @skipIf(True, "FASTTEST skip")
     def test_read_value_default(self):
         """
         Test the read_value function reading the default value using a well
@@ -292,6 +315,7 @@ class WinFunctionsTestCase(TestCase):
         )
         self.assertEqual(ret["vdata"], "(value not set)")
 
+    @skipIf(True, "FASTTEST skip")
     def test_read_value_non_existing(self):
         """
         Test the read_value function using a non existing value pair
@@ -314,6 +338,7 @@ class WinFunctionsTestCase(TestCase):
             expected,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_read_value_non_existing_key(self):
         """
         Test the read_value function using a non existing registry key
@@ -330,6 +355,7 @@ class WinFunctionsTestCase(TestCase):
             win_reg.read_value(hive="HKLM", key=FAKE_KEY, vname="fake_name"), expected
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_read_value_invalid_hive(self):
         """
         Test the read_value function when passing an invalid hive
@@ -342,6 +368,7 @@ class WinFunctionsTestCase(TestCase):
             vname="ProgramFilesPath",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_read_value_unknown_key_error(self):
         """
         Tests the read_value function with an unknown key error
@@ -358,6 +385,7 @@ class WinFunctionsTestCase(TestCase):
                 vname="ProgramFilesPath",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_read_value_unknown_value_error(self):
         """
         Tests the read_value function with an unknown value error
@@ -375,6 +403,7 @@ class WinFunctionsTestCase(TestCase):
             )
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_read_value_multi_sz_empty_list(self):
         """
         An empty REG_MULTI_SZ value should return an empty list, not None
@@ -405,6 +434,7 @@ class WinFunctionsTestCase(TestCase):
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_set_value(self):
         """
         Test the set_value function
@@ -431,6 +461,7 @@ class WinFunctionsTestCase(TestCase):
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_set_value_default(self):
         """
         Test the set_value function on the default value
@@ -452,6 +483,7 @@ class WinFunctionsTestCase(TestCase):
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_set_value_unicode_key(self):
         """
         Test the set_value function on a unicode key
@@ -485,6 +517,7 @@ class WinFunctionsTestCase(TestCase):
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_set_value_unicode_value(self):
         """
         Test the set_value function on a unicode value
@@ -511,6 +544,7 @@ class WinFunctionsTestCase(TestCase):
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_set_value_reg_dword(self):
         """
         Test the set_value function on a REG_DWORD value
@@ -541,6 +575,7 @@ class WinFunctionsTestCase(TestCase):
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_set_value_reg_qword(self):
         """
         Test the set_value function on a REG_QWORD value
@@ -570,6 +605,7 @@ class WinFunctionsTestCase(TestCase):
         finally:
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_value_invalid_hive(self):
         """
         Test the set_value function when passing an invalid hive
@@ -583,6 +619,7 @@ class WinFunctionsTestCase(TestCase):
             vdata="fake_data",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_value_open_create_failure(self):
         """
         Test the set_value function when there is a problem opening/creating
@@ -598,6 +635,7 @@ class WinFunctionsTestCase(TestCase):
                 )
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_value_type_error(self):
         """
         Test the set_value function when the wrong type of data is passed
@@ -610,6 +648,7 @@ class WinFunctionsTestCase(TestCase):
                 )
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_value_system_error(self):
         """
         Test the set_value function when a SystemError occurs while setting the
@@ -623,6 +662,7 @@ class WinFunctionsTestCase(TestCase):
                 )
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_value_value_error(self):
         """
         Test the set_value function when a ValueError occurs while setting the
@@ -636,6 +676,7 @@ class WinFunctionsTestCase(TestCase):
                 )
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_cast_vdata_reg_binary(self):
         """
         Test the cast_vdata function with REG_BINARY
@@ -653,6 +694,7 @@ class WinFunctionsTestCase(TestCase):
         result = win_reg.cast_vdata(vdata=vdata, vtype="REG_BINARY")
         self.assertTrue(isinstance(result, six.binary_type))
 
+    @skipIf(True, "FASTTEST skip")
     def test_cast_vdata_reg_dword(self):
         """
         Test the cast_vdata function with REG_DWORD
@@ -671,6 +713,7 @@ class WinFunctionsTestCase(TestCase):
         result = win_reg.cast_vdata(vdata=vdata, vtype="REG_DWORD")
         self.assertEqual(result, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_cast_vdata_reg_expand_sz(self):
         """
         Test the cast_vdata function with REG_EXPAND_SZ
@@ -684,6 +727,7 @@ class WinFunctionsTestCase(TestCase):
         result = win_reg.cast_vdata(vdata=vdata, vtype="REG_EXPAND_SZ")
         self.assertTrue(isinstance(result, six.text_type))
 
+    @skipIf(True, "FASTTEST skip")
     def test_cast_vdata_reg_multi_sz(self):
         """
         Test the cast_vdata function with REG_MULTI_SZ
@@ -698,6 +742,7 @@ class WinFunctionsTestCase(TestCase):
         for item in result:
             self.assertTrue(isinstance(item, six.text_type))
 
+    @skipIf(True, "FASTTEST skip")
     def test_cast_vdata_reg_qword(self):
         """
         Test the cast_vdata function with REG_QWORD
@@ -722,6 +767,7 @@ class WinFunctionsTestCase(TestCase):
         else:
             self.assertTrue(isinstance(result, int))
 
+    @skipIf(True, "FASTTEST skip")
     def test_cast_vdata_reg_sz(self):
         """
         Test the cast_vdata function with REG_SZ
@@ -736,6 +782,7 @@ class WinFunctionsTestCase(TestCase):
         self.assertTrue(isinstance(result, six.text_type))
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_delete_value(self):
         """
         Test the delete_value function
@@ -752,6 +799,7 @@ class WinFunctionsTestCase(TestCase):
         finally:
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_value_non_existing(self):
         """
         Test the delete_value function on non existing value
@@ -764,6 +812,7 @@ class WinFunctionsTestCase(TestCase):
                 win_reg.delete_value(hive="HKLM", key=FAKE_KEY, vname="fake_name")
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_value_invalid_hive(self):
         """
         Test the delete_value function when passing an invalid hive
@@ -776,6 +825,7 @@ class WinFunctionsTestCase(TestCase):
             vname="fake_name",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_value_unknown_error(self):
         """
         Test the delete_value function when there is a problem opening the key
@@ -793,6 +843,7 @@ class WinFunctionsTestCase(TestCase):
             )
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_delete_value_unicode(self):
         """
         Test the delete_value function on a unicode value
@@ -810,6 +861,7 @@ class WinFunctionsTestCase(TestCase):
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_delete_value_unicode_vname(self):
         """
         Test the delete_value function on a unicode vname
@@ -827,6 +879,7 @@ class WinFunctionsTestCase(TestCase):
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_delete_value_unicode_key(self):
         """
         Test the delete_value function on a unicode key
@@ -850,6 +903,7 @@ class WinFunctionsTestCase(TestCase):
         finally:
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_key_recursive_invalid_hive(self):
         """
         Test the delete_key_recursive function when passing an invalid hive
@@ -861,6 +915,7 @@ class WinFunctionsTestCase(TestCase):
             key=FAKE_KEY,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_key_recursive_key_not_found(self):
         """
         Test the delete_key_recursive function when the passed key to delete is
@@ -869,6 +924,7 @@ class WinFunctionsTestCase(TestCase):
         self.assertFalse(win_reg.key_exists(hive="HKLM", key=FAKE_KEY))
         self.assertFalse(win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY))
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_key_recursive_too_close(self):
         """
         Test the delete_key_recursive function when the passed key to delete is
@@ -879,6 +935,7 @@ class WinFunctionsTestCase(TestCase):
             self.assertFalse(win_reg.delete_key_recursive(hive="HKLM", key="FAKE_KEY"))
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_delete_key_recursive(self):
         """
         Test the delete_key_recursive function
@@ -897,6 +954,7 @@ class WinFunctionsTestCase(TestCase):
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_delete_key_recursive_failed_to_open_key(self):
         """
         Test the delete_key_recursive function on failure to open the key
@@ -928,6 +986,7 @@ class WinFunctionsTestCase(TestCase):
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_delete_key_recursive_failed_to_delete(self):
         """
         Test the delete_key_recursive function on failure to delete a key
@@ -953,6 +1012,7 @@ class WinFunctionsTestCase(TestCase):
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_delete_key_recursive_unicode(self):
         """
         Test the delete_key_recursive function on value within a unicode key
@@ -979,6 +1039,7 @@ class WinFunctionsTestCase(TestCase):
         finally:
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
+    @skipIf(True, "FASTTEST skip")
     def test__to_unicode_int(self):
         """
         Test the ``_to_unicode`` function when it receives an integer value.

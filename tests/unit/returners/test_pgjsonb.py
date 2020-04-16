@@ -17,7 +17,7 @@ import salt.returners.pgjsonb as pgjsonb
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -30,6 +30,7 @@ class PGJsonbCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {pgjsonb: {"__opts__": {"keep_jobs": 1, "archive_jobs": 0}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_clean_old_jobs_purge(self):
         """
         Tests that the function returns None when no jid_root is found.
@@ -39,6 +40,7 @@ class PGJsonbCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(pgjsonb.__salt__, {"config.option": MagicMock()}):
                 self.assertEqual(pgjsonb.clean_old_jobs(), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_clean_old_jobs_archive(self):
         """
         Tests that the function returns None when no jid_root is found.

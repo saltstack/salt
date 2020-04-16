@@ -8,7 +8,7 @@ import salt.states.grafana_datasource as grafana_datasource
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 profile = {
     "grafana_url": "http://grafana",
@@ -26,6 +26,7 @@ class GrafanaDatasourceTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {grafana_datasource: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_present(self):
         with patch("requests.get", mock_json_response([])):
             with patch("requests.post") as rpost:
@@ -79,6 +80,7 @@ class GrafanaDatasourceTestCase(TestCase, LoaderModuleMockMixin):
                     ret["changes"], {"old": {"url": "url"}, "new": {"url": "newurl"}}
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         with patch("requests.get", mock_json_response([])):
             with patch("requests.delete") as rdelete:

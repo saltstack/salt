@@ -13,7 +13,7 @@ from salt.states import elasticsearch
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
@@ -31,6 +31,7 @@ class ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'index_absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_index_absent(self):
         """
         Test to manage a elasticsearch index.
@@ -100,6 +101,7 @@ class ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'index_present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_index_present(self):
         """
         Test to manage a elasticsearch index.
@@ -171,6 +173,7 @@ class ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'alias_absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_alias_absent(self):
         """
         Test to manage a elasticsearch alias.
@@ -245,6 +248,7 @@ class ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'alias_present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_alias_present(self):
         """
         Test to manage a elasticsearch alias.
@@ -347,6 +351,7 @@ class ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'index_template_absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_index_template_absent(self):
         """
         Test to manage a elasticsearch index template.
@@ -420,6 +425,7 @@ class ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'index_template_present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_index_template_present(self):
         """
         Test to manage a elasticsearch index template.
@@ -495,6 +501,7 @@ class ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({"comment": "", "result": False, "changes": {}})
             self.assertDictEqual(elasticsearch.index_template_present(name, {}), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_index_template_present_check_definition(self):
         """
         Test to manage a elasticsearch index template.
@@ -531,6 +538,7 @@ class ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertDictEqual(expected, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_index_template_present_check_definition_alias_not_empty(self):
         """
         Test to manage a elasticsearch index template.
@@ -569,6 +577,7 @@ class ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'pipeline_absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_pipeline_absent(self):
         """
         Test to manage a elasticsearch pipeline.
@@ -642,6 +651,7 @@ class ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'pipeline_present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_pipeline_present(self):
         """
         Test to manage a elasticsearch pipeline.
@@ -740,6 +750,7 @@ class ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'search_template_absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_search_template_absent(self):
         """
         Test to manage a elasticsearch search template.
@@ -811,6 +822,7 @@ class ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'pipeline_present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_search_template_present(self):
         """
         Test to manage a elasticsearch search template.

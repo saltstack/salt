@@ -26,7 +26,6 @@ class ProxyTest(testprogram.TestProgramCase):
     Various integration tests for the salt-proxy executable.
     """
 
-    @skipIf(True, "SLOWTEST skip")
     def test_exit_status_no_proxyid(self):
         """
         Ensure correct exit status when --proxyid argument is missing.
@@ -68,7 +67,6 @@ class ProxyTest(testprogram.TestProgramCase):
     # Hangs on Windows. You can add a timeout to the proxy.run command, but then
     # it just times out.
     @skipIf(salt.utils.platform.is_windows(), "Test hangs on Windows")
-    @skipIf(True, "SLOWTEST skip")
     def test_exit_status_unknown_user(self):
         """
         Ensure correct exit status when the proxy is configured to run as an
@@ -101,7 +99,6 @@ class ProxyTest(testprogram.TestProgramCase):
             # cause timeout exceptions and respective traceback
             proxy.shutdown()
 
-    @skipIf(True, "SLOWTEST skip")
     def test_exit_status_unknown_argument(self):
         """
         Ensure correct exit status when an unknown argument is passed to
@@ -136,7 +133,6 @@ class ProxyTest(testprogram.TestProgramCase):
     # Hangs on Windows. You can add a timeout to the proxy.run command, but then
     # it just times out.
     @skipIf(salt.utils.platform.is_windows(), "Test hangs on Windows")
-    @skipIf(True, "SLOWTEST skip")
     def test_exit_status_correct_usage(self):
         """
         Ensure correct exit status when salt-proxy starts correctly.

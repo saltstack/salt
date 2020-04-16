@@ -13,7 +13,7 @@ import salt.utils.http
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class HttpTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class HttpTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {http: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_query(self):
         """
         Test for Query a resource, and decode the return data
@@ -31,6 +32,7 @@ class HttpTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(salt.utils.http, "query", return_value="A"):
             self.assertEqual(http.query("url"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_wait_for_with_interval(self):
         """
         Test for wait_for_successful_query waits for request_interval
@@ -45,6 +47,7 @@ class HttpTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 sleep_mock.assert_called_once_with(1)
 
+    @skipIf(True, "FASTTEST skip")
     def test_wait_for_without_interval(self):
         """
         Test for wait_for_successful_query waits for request_interval

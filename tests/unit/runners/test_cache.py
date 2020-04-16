@@ -14,7 +14,7 @@ from tests.support.mock import patch
 
 # Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class CacheTest(TestCase, LoaderModuleMockMixin):
@@ -33,6 +33,7 @@ class CacheTest(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_grains(self):
         """
         test cache.grains runner

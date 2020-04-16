@@ -14,7 +14,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class NftablesTestCase(TestCase, LoaderModuleMockMixin):
@@ -27,6 +27,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'version' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_version(self):
         """
         Test if it return version from nftables --version
@@ -37,6 +38,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'build_rule' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_build_rule(self):
         """
         Test if it build a well-formatted nftables rule based on kwargs.
@@ -99,6 +101,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_saved_rules' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_saved_rules(self):
         """
         Test if it return a data structure of the rules in the conf file
@@ -109,6 +112,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_tables' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_tables(self):
         """
         Test if it return a data structure of the current, in-memory tables
@@ -125,6 +129,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_rules' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_rules(self):
         """
         Test if it return a data structure of the current, in-memory rules
@@ -158,6 +163,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'save' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_save(self):
         """
         Test if it save the current in-memory rules to disk
@@ -175,6 +181,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_rule_handle' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_rule_handle(self):
         """
         Test if it get the handle for a particular rule
@@ -249,6 +256,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'check' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_check(self):
         """
         Test if it check for the existence of a rule in the table and chain
@@ -296,6 +304,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'check_chain' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_chain(self):
         """
         Test if it check for the existence of a chain in the table
@@ -323,6 +332,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'check_table' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_table(self):
         """
         Test if it check for the existence of a table
@@ -344,6 +354,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'new_table' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_new_table(self):
         """
         Test if it create new custom table.
@@ -365,6 +376,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete_table' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_table(self):
         """
         Test if it delete custom table.
@@ -412,6 +424,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'new_chain' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_new_chain(self):
         """
         Test if it create new chain to the specified table.
@@ -434,6 +447,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(nftables.__salt__, {"cmd.run": mock}):
             self.assertEqual(nftables.new_chain(chain="input"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_new_chain_variable(self):
         """
         Test if it create new chain to the specified table.
@@ -462,6 +476,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete_chain' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_chain(self):
         """
         Test if it delete the chain from the specified table.
@@ -504,6 +519,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(nftables.delete_chain(chain="input"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_chain_variables(self):
         """
         Test if it delete the chain from the specified table.
@@ -524,6 +540,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'append' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_append(self):
         """
         Test if it append a rule to the specified table & chain.
@@ -561,6 +578,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(nftables.__salt__, {"cmd.run": mock}):
             self.assertEqual(nftables.append(chain="input", rule=_ru), _expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_append_rule(self):
         """
         Test if it append a rule to the specified table & chain.
@@ -594,6 +612,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'insert' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_insert(self):
         """
         Test if it insert a rule into the specified table & chain,
@@ -633,6 +652,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
             log.debug("=== res %s ===", res)
             self.assertTrue(nftables.insert(chain="input", rule=_ru))
 
+    @skipIf(True, "FASTTEST skip")
     def test_insert_rule(self):
         """
         Test if it insert a rule into the specified table & chain,
@@ -667,6 +687,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete(self):
         """
         Test if it delete a rule from the specified table & chain,
@@ -703,6 +724,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(nftables.__salt__, {"cmd.run": mock}):
             self.assertTrue(nftables.delete(table="filter", chain="input", rule=_ru))
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_rule(self):
         """
         Test if it delete a rule from the specified table & chain,
@@ -737,6 +759,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'flush' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_flush(self):
         """
         Test if it flush the chain in the specified table, flush all chains
@@ -755,6 +778,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(nftables.__salt__, {"cmd.run": mock}):
             self.assertEqual(nftables.flush(table="filter", chain="input"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_flush_chain(self):
         """
         Test if it flush the chain in the specified table, flush all chains

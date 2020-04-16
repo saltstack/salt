@@ -11,7 +11,7 @@ import salt.modules.varnish as varnish
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class VarnishTestCase(TestCase, LoaderModuleMockMixin):
@@ -22,6 +22,7 @@ class VarnishTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {varnish: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_version(self):
         """
         Test to return server version from varnishd -V
@@ -31,6 +32,7 @@ class VarnishTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(varnish.version(), "2.0")
 
+    @skipIf(True, "FASTTEST skip")
     def test_ban(self):
         """
         Test to add ban to the varnish cache
@@ -38,6 +40,7 @@ class VarnishTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(varnish, "_run_varnishadm", return_value={"retcode": 0}):
             self.assertTrue(varnish.ban("ban_expression"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_ban_list(self):
         """
         Test to list varnish cache current bans
@@ -52,6 +55,7 @@ class VarnishTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(varnish.ban_list(), ["B", "C"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_purge(self):
         """
         Test to purge the varnish cache
@@ -59,6 +63,7 @@ class VarnishTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(varnish, "ban", return_value=True):
             self.assertTrue(varnish.purge())
 
+    @skipIf(True, "FASTTEST skip")
     def test_param_set(self):
         """
         Test to set a param in varnish cache
@@ -66,6 +71,7 @@ class VarnishTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(varnish, "_run_varnishadm", return_value={"retcode": 0}):
             self.assertTrue(varnish.param_set("param", "value"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_param_show(self):
         """
         Test to show params of varnish cache

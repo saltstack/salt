@@ -9,13 +9,14 @@ import salt.modules.macpackage as macpackage
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {macpackage: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_install(self):
         """
             Test installing a PKG file
@@ -28,6 +29,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_wildcard(self):
         """
             Test installing a PKG file with a wildcard
@@ -39,6 +41,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 "installer -pkg /path/to/*.pkg -target LocalSystem", python_shell=True
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_with_extras(self):
         """
             Test installing a PKG file with extra options
@@ -51,6 +54,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_app(self):
         """
             Test installing an APP package
@@ -62,6 +66,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 'rsync -a --delete "/path/to/file.app/" ' '"/Applications/file.app"'
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_app_specify_target(self):
         """
             Test installing an APP package with a specific target
@@ -73,6 +78,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 'rsync -a --delete "/path/to/file.app/" ' '"/Applications/new.app"'
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_app_with_slash(self):
         """
             Test installing an APP package with a specific target
@@ -84,6 +90,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 'rsync -a --delete "/path/to/file.app/" ' '"/Applications/file.app"'
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_uninstall(self):
         """
             Test Uninstalling an APP package with a specific target
@@ -93,6 +100,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
             macpackage.uninstall_app("/path/to/file.app")
             mock.assert_called_once_with("/path/to/file.app")
 
+    @skipIf(True, "FASTTEST skip")
     def test_mount(self):
         """
             Test mounting an dmg file to a temporary location
@@ -109,6 +117,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 'dmg-ABCDEF "/path/to/file.dmg"'
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_unmount(self):
         """
             Test Unmounting an dmg file to a temporary location
@@ -118,6 +127,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
             macpackage.unmount("/path/to/file.dmg")
             mock.assert_called_once_with('hdiutil detach "/path/to/file.dmg"')
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_pkgs(self):
         """
             Test getting a list of the installed packages
@@ -129,6 +139,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
             mock.assert_called_once_with("pkgutil --pkgs")
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_pkg_id_with_files(self):
         """
             Test getting a the id for a package
@@ -182,6 +193,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
 
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_pkg_id_with_dir(self):
         """
             Test getting a the id for a package with a directory
@@ -214,6 +226,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
 
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_mpkg_ids(self):
         """
             Test getting the ids of a mpkg file
@@ -235,6 +248,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
 
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_pkg_id_from_pkginfo(self):
         """
             Test getting a package id from pkginfo files
@@ -250,6 +264,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
             mock.assert_called_once_with(cmd, python_shell=True)
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_pkg_id_from_pkginfo_no_file(self):
         """
             Test getting a package id from pkginfo file when it doesn't exist
@@ -265,6 +280,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
             mock.assert_called_once_with(cmd, python_shell=True)
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_pkg_id_dir(self):
         """
             Test getting a package id from a directory
@@ -277,6 +293,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
             mock.assert_called_once_with(cmd, python_shell=False)
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_pkg_id_dir_wildcard(self):
         """
             Test getting a package id from a directory with a wildcard

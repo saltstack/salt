@@ -12,7 +12,7 @@ import salt.states.vbox_guest as vbox_guest
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class VboxGuestTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class VboxGuestTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {vbox_guest: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_additions_installed(self):
         """
             Test to ensure that the VirtualBox Guest Additions are installed
@@ -61,6 +62,7 @@ class VboxGuestTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertDictEqual(vbox_guest.additions_installed("salt"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_additions_removed(self):
         """
             Test to ensure that the VirtualBox Guest Additions are removed.
@@ -95,6 +97,7 @@ class VboxGuestTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertDictEqual(vbox_guest.additions_removed("salt"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_grantaccess_to_sharedfolders(self):
         """
             Test to grant access to auto-mounted shared folders to the users.

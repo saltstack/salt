@@ -43,6 +43,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {kubernetes: {"__salt__": {}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_nodes(self):
         """
         Test node listing.
@@ -64,6 +65,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     kubernetes.kubernetes.client.CoreV1Api().list_node().to_dict.called
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_deployments(self):
         """
         Tests deployment listing.
@@ -89,6 +91,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 # pylint: enable=E1120
 
+    @skipIf(True, "FASTTEST skip")
     def test_services(self):
         """
         Tests services listing.
@@ -114,6 +117,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 # pylint: enable=E1120
 
+    @skipIf(True, "FASTTEST skip")
     def test_pods(self):
         """
         Tests pods listing.
@@ -139,6 +143,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 # pylint: enable=E1120
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_deployments(self):
         """
         Tests deployment deletion
@@ -171,6 +176,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     )
                     # pylint: enable=E1120
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_deployments(self):
         """
         Tests deployment creation.
@@ -211,6 +217,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         }
         return data.get(name, value)
 
+    @skipIf(True, "FASTTEST skip")
     def test_setup_kubeconfig_file(self):
         """
         Test that the `kubernetes.kubeconfig` configuration isn't overwritten
@@ -226,6 +233,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     self.settings("kubernetes.kubeconfig"), config["kubeconfig"],
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_setup_kubeconfig_data_overwrite(self):
         """
         Test that provided `kubernetes.kubeconfig` configuration is overwritten
@@ -255,6 +263,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertEqual("1234567890\n", kcfg.read())
                 kubernetes._cleanup(**config)
 
+    @skipIf(True, "FASTTEST skip")
     def test_node_labels(self):
         """
         Test kubernetes.node_labels
@@ -274,6 +283,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 {"kubernetes.io/hostname": "minikube", "kubernetes.io/os": "linux"},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_adding_change_cause_annotation(self):
         """
         Tests adding a `kubernetes.io/change-cause` annotation just like
@@ -299,6 +309,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertEqual(data.annotations, {"kubernetes.io/change-cause": "NOPE"})
 
+    @skipIf(True, "FASTTEST skip")
     def test_enforce_only_strings_dict(self):
         func = getattr(kubernetes, "__enforce_only_strings_dict")
         data = {

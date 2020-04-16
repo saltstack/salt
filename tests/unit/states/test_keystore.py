@@ -11,7 +11,7 @@ import salt.states.keystore as keystore
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class KeystoreTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class KeystoreTestCase(TestCase, LoaderModuleMockMixin):
         return {keystore: {"__opts__": {"test": False}}}
 
     @patch("os.path.exists", MagicMock(return_value=True))
+    @skipIf(True, "FASTTEST skip")
     def test_cert_already_present(self):
         """
         Test for existing value_present
@@ -121,6 +122,7 @@ class KeystoreTestCase(TestCase, LoaderModuleMockMixin):
                     )
 
     @patch("os.path.exists", MagicMock(return_value=True))
+    @skipIf(True, "FASTTEST skip")
     def test_cert_update(self):
         """
         Test for existing value_present
@@ -231,6 +233,7 @@ class KeystoreTestCase(TestCase, LoaderModuleMockMixin):
                         )
 
     @patch("os.path.exists", MagicMock(return_value=False))
+    @skipIf(True, "FASTTEST skip")
     def test_new_file(self):
         """
         Test for existing value_present
@@ -285,6 +288,7 @@ class KeystoreTestCase(TestCase, LoaderModuleMockMixin):
                 )
 
     @patch("os.path.exists", MagicMock(return_value=True))
+    @skipIf(True, "FASTTEST skip")
     def test_force_remove(self):
         """
         Test for existing value_present

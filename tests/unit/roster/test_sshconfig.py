@@ -11,7 +11,7 @@ from tests.support import mixins
 
 # Import Salt Testing Libs
 from tests.support.mock import mock_open, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 _SAMPLE_SSH_CONFIG = """
 Host *
@@ -76,12 +76,14 @@ class SSHConfigRosterTestCase(TestCase, mixins.LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {sshconfig: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_all(self):
         with patch("salt.utils.files.fopen", self.mock_fp):
             with patch("salt.roster.sshconfig._get_ssh_config_file"):
                 targets = sshconfig.targets("*")
         self.assertEqual(targets, _ALL)
 
+    @skipIf(True, "FASTTEST skip")
     def test_abc_glob(self):
         with patch("salt.utils.files.fopen", self.mock_fp):
             with patch("salt.roster.sshconfig._get_ssh_config_file"):

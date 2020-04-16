@@ -13,7 +13,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
@@ -40,6 +40,7 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'start' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_start(self):
         """
         Tests if it start the named service.
@@ -52,6 +53,7 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'restart' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_restart(self):
         """
         Tests if it restart the named service.
@@ -64,6 +66,7 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'stop' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_stop(self):
         """
         Tests if it stop the named service.
@@ -76,6 +79,7 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'add' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_add(self):
         """
         Tests if it activates any updates in config for process/group.
@@ -88,6 +92,7 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'remove' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove(self):
         """
         Tests if it removes process/group from active config
@@ -100,6 +105,7 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'reread' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_reread(self):
         """
         Tests if it reload the daemon's configuration files
@@ -112,6 +118,7 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'update' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_update(self):
         """
         Tests if it reload config and add/remove as necessary
@@ -124,6 +131,7 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'status' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_status(self):
         """
         Tests if it list programs and its state
@@ -141,6 +149,7 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'status_raw' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_status_raw(self):
         """
         Tests if it display the raw output of status
@@ -153,6 +162,7 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'custom' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_custom(self):
         """
         Tests if it run any custom supervisord command
@@ -165,6 +175,7 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'options' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_options(self):
         """
         Tests if it read the config file and return the config options

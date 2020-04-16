@@ -9,7 +9,7 @@ import salt.modules.uwsgi as uwsgi
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class UwsgiTestCase(TestCase, LoaderModuleMockMixin):
@@ -19,6 +19,7 @@ class UwsgiTestCase(TestCase, LoaderModuleMockMixin):
         self.addCleanup(patcher.stop)
         return {uwsgi: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_uwsgi_stats(self):
         socket = "127.0.0.1:5050"
         mock = MagicMock(return_value='{"a": 1, "b": 2}')

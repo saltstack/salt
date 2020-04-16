@@ -21,7 +21,7 @@ from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class LocalFSTest(TestCase, LoaderModuleMockMixin):
@@ -46,6 +46,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
 
     # 'store' function tests: 5
 
+    @skipIf(True, "FASTTEST skip")
     def test_handled_exception_cache_dir(self):
         """
         Tests that a SaltCacheError is raised when the base directory doesn't exist and
@@ -57,6 +58,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
                     Exception, localfs.store, bank="", key="", data="", cachedir=""
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_unhandled_exception_cache_dir(self):
         """
         Tests that a SaltCacheError is raised when the base directory doesn't exist and
@@ -67,6 +69,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
                 SaltCacheError, localfs.store, bank="", key="", data="", cachedir=""
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_store_close_mkstemp_file_handle(self):
         """
         Tests that the file descriptor that is opened by os.open during the mkstemp call
@@ -81,6 +84,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
                     OSError, localfs.store, bank="", key="", data="", cachedir=""
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_store_error_writing_cache(self):
         """
         Tests that a SaltCacheError is raised when there is a problem writing to the
@@ -101,6 +105,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
                             cachedir="",
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_store_success(self):
         """
         Tests that the store function writes the data to the serializer for storage.
@@ -118,6 +123,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
 
     # 'fetch' function tests: 3
 
+    @skipIf(True, "FASTTEST skip")
     def test_fetch_return_when_cache_file_does_not_exist(self):
         """
         Tests that the fetch function returns an empty dic when the cache key file
@@ -126,6 +132,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         with patch("os.path.isfile", MagicMock(return_value=False)):
             self.assertEqual(localfs.fetch(bank="", key="", cachedir=""), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_fetch_error_reading_cache(self):
         """
         Tests that a SaltCacheError is raised when there is a problem reading the cache
@@ -137,6 +144,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
                     SaltCacheError, localfs.fetch, bank="", key="", cachedir=""
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_fetch_success(self):
         """
         Tests that the fetch function is able to read the cache file and return its data.
@@ -160,6 +168,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
 
     # 'updated' function tests: 3
 
+    @skipIf(True, "FASTTEST skip")
     def test_updated_return_when_cache_file_does_not_exist(self):
         """
         Tests that the updated function returns None when the cache key file doesn't
@@ -168,6 +177,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         with patch("os.path.isfile", MagicMock(return_value=False)):
             self.assertIsNone(localfs.updated(bank="", key="", cachedir=""))
 
+    @skipIf(True, "FASTTEST skip")
     def test_updated_error_when_reading_mtime(self):
         """
         Tests that a SaltCacheError is raised when there is a problem reading the mtime
@@ -179,6 +189,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
                     SaltCacheError, localfs.updated, bank="", key="", cachedir=""
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_updated_success(self):
         """
         Test that the updated function returns the modification time of the cache file
@@ -196,6 +207,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
 
     # 'flush' function tests: 4
 
+    @skipIf(True, "FASTTEST skip")
     def test_flush_key_is_none_and_no_target_dir(self):
         """
         Tests that the flush function returns False when no key is passed in and the
@@ -204,6 +216,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         with patch("os.path.isdir", MagicMock(return_value=False)):
             self.assertFalse(localfs.flush(bank="", key=None, cachedir=""))
 
+    @skipIf(True, "FASTTEST skip")
     def test_flush_key_provided_and_no_key_file_false(self):
         """
         Tests that the flush function returns False when a key file is provided but
@@ -212,6 +225,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         with patch("os.path.isfile", MagicMock(return_value=False)):
             self.assertFalse(localfs.flush(bank="", key="key", cachedir=""))
 
+    @skipIf(True, "FASTTEST skip")
     def test_flush_success(self):
         """
         Tests that the flush function returns True when a key file is provided and
@@ -228,6 +242,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
             with patch.dict(localfs.__opts__, {"cachedir": tmp_dir}):
                 self.assertTrue(localfs.flush(bank="bank", key="key", cachedir=tmp_dir))
 
+    @skipIf(True, "FASTTEST skip")
     def test_flush_error_raised(self):
         """
         Tests that a SaltCacheError is raised when there is a problem removing the
@@ -245,6 +260,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
 
     # 'list' function tests: 3
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_no_base_dir(self):
         """
         Tests that the ls function returns an empty list if the bank directory
@@ -253,6 +269,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         with patch("os.path.isdir", MagicMock(return_value=False)):
             self.assertEqual(localfs.list_(bank="", cachedir=""), [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_error_raised_no_bank_directory_access(self):
         """
         Tests that a SaltCacheError is raised when there is a problem accessing the
@@ -262,6 +279,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
             with patch("os.listdir", MagicMock(side_effect=OSError)):
                 self.assertRaises(SaltCacheError, localfs.list_, bank="", cachedir="")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_success(self):
         """
         Tests the return of the ls function containing bank entries.
@@ -278,6 +296,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
 
     # 'contains' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_contains(self):
         """
         Test the return of the contains function when key=None and when a key

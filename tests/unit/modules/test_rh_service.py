@@ -14,7 +14,7 @@ import salt.modules.rh_service as rh_service
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 RET = [
     "hostname",
@@ -62,6 +62,7 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
         """
         return MagicMock(return_value=bol)
 
+    @skipIf(True, "FASTTEST skip")
     def test__chkconfig_is_enabled(self):
         """
         test _chkconfig_is_enabled function
@@ -99,6 +100,7 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_enabled' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_enabled(self):
         """
         Test if it return the enabled services. Use the ``limit``
@@ -126,6 +128,7 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_disabled' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_disabled(self):
         """
         Test if it return the disabled services. Use the ``limit``
@@ -153,6 +156,7 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_all' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_all(self):
         """
         Test if it return all installed services. Use the ``limit``
@@ -169,6 +173,7 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'available' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_available(self):
         """
         Test if it return True if the named service is available.
@@ -184,6 +189,7 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'missing' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_missing(self):
         """
         Test if it return True if the named service is not available.
@@ -202,6 +208,7 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'start' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_start(self):
         """
         Test if it start the specified service.
@@ -212,6 +219,7 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'stop' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_stop(self):
         """
         Test if it stop the specified service.
@@ -222,6 +230,7 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'restart' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_restart(self):
         """
         Test if it restart the specified service.
@@ -232,6 +241,7 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'reload_' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_reload(self):
         """
         Test if it reload the specified service.
@@ -242,6 +252,7 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'status' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_status(self):
         """
         Test if it return the status for a service,
@@ -262,6 +273,7 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'enable' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_enable(self):
         """
         Test if it enable the named service to start at boot.
@@ -285,6 +297,7 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'disable' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_disable(self):
         """
         Test if it disable the named service to start at boot.
@@ -308,6 +321,7 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'enabled' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_enabled(self):
         """
         Test if it check to see if the named service is enabled
@@ -325,6 +339,7 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'disabled' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_disabled(self):
         """
         Test if it check to see if the named service is disabled

@@ -12,7 +12,7 @@ from salt.cloud.clouds import proxmox
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ProxmoxTest(TestCase, LoaderModuleMockMixin):
@@ -50,6 +50,7 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
     def tearDown(self):
         del self.vm_
 
+    @skipIf(True, "FASTTEST skip")
     def test__stringlist_to_dictionary(self):
         result = proxmox._stringlist_to_dictionary("")
         self.assertEqual(result, {})
@@ -69,6 +70,7 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
             "foo=bar,totally=invalid=assignment",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test__dictionary_to_stringlist(self):
         result = proxmox._dictionary_to_stringlist({})
         self.assertEqual(result, "")
@@ -79,6 +81,7 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
         result = proxmox._dictionary_to_stringlist({"a": "a", "b": "b"})
         self.assertEqual(result, "a=a,b=b")
 
+    @skipIf(True, "FASTTEST skip")
     def test__reconfigure_clone(self):
         # The return_value is for the net reconfigure assertions, it is irrelevant for the rest
         with patch.object(

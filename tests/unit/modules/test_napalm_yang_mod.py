@@ -11,7 +11,7 @@ import tests.support.napalm as napalm_test_support
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 import salt.modules.napalm_yang_mod as napalm_yang_mod  # NOQA
 import salt.modules.napalm_network as napalm_network  # NOQA
@@ -71,10 +71,12 @@ class NapalmYangModModuleTestCase(TestCase, LoaderModuleMockMixin):
 
         return {napalm_yang_mod: module_globals, napalm_network: module_globals}
 
+    @skipIf(True, "FASTTEST skip")
     def test_diff(self):
         ret = napalm_yang_mod.diff({}, {"test": True}, "models.openconfig_interfaces")
         assert ret == TEST_DIFF
 
+    @skipIf(True, "FASTTEST skip")
     def test_diff_list(self):
         """
         Test it with an actual list
@@ -82,18 +84,22 @@ class NapalmYangModModuleTestCase(TestCase, LoaderModuleMockMixin):
         ret = napalm_yang_mod.diff({}, {"test": True}, ["models.openconfig_interfaces"])
         assert ret == TEST_DIFF
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse(self):
         ret = napalm_yang_mod.parse("models.openconfig_interfaces")
         assert ret is not None
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_config(self):
         ret = napalm_yang_mod.get_config({}, "models.openconfig_interfaces")
         assert ret is not None
 
+    @skipIf(True, "FASTTEST skip")
     def test_load_config(self):
         ret = napalm_yang_mod.load_config({}, "models.openconfig_interfaces")
         assert ret is TEST_CONFIG
 
+    @skipIf(True, "FASTTEST skip")
     def test_compliance_report(self):
         ret = napalm_yang_mod.compliance_report({}, "models.openconfig_interfaces")
         assert ret is not None

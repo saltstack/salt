@@ -13,7 +13,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class EngineScriptTestCase(TestCase, LoaderModuleMockMixin):
@@ -26,6 +26,7 @@ class EngineScriptTestCase(TestCase, LoaderModuleMockMixin):
         opts = salt.config.DEFAULT_MASTER_OPTS
         return {script: {"__opts__": opts}}
 
+    @skipIf(True, "FASTTEST skip")
     def test__get_serializer(self):
         """
         Test known serializer is returned or exception is raised
@@ -37,6 +38,7 @@ class EngineScriptTestCase(TestCase, LoaderModuleMockMixin):
         with self.assertRaises(CommandExecutionError):
             script._get_serializer("bad")
 
+    @skipIf(True, "FASTTEST skip")
     def test__read_stdout(self):
         """
         Test we can yield stdout

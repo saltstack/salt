@@ -11,7 +11,7 @@ import salt.states.host as host
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class HostTestCase(TestCase, LoaderModuleMockMixin):
@@ -37,6 +37,7 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
             host: {"__opts__": {"test": False}},
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_present(self):
         """
         Test to ensures that the named host is present with the given ip
@@ -303,6 +304,7 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
             assert add_host.mock_calls == [], add_host.mock_calls
             assert rm_host.mock_calls == [], rm_host.mock_calls
 
+    @skipIf(True, "FASTTEST skip")
     def test_host_present_should_return_True_if_test_and_no_changes(self):
         expected = {
             "comment": "Host {} ({}) already present".format(
@@ -326,6 +328,7 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
 
                 self.assertDictEqual(ret, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_host_present_should_return_None_if_test_and_adding(self):
         expected = {
             "comment": "\n".join(
@@ -348,6 +351,7 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
                 ret = host.present(self.hostname, self.ip_list)
                 self.assertDictEqual(ret, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_host_present_should_return_None_if_test_and_removing(self):
         expected = {
             "comment": "\n".join(
@@ -369,6 +373,7 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
                 ret = host.present(self.hostname, self.ip_list[:1], clean=True)
                 self.assertDictEqual(ret, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
         Test to ensure that the named host is absent
@@ -384,6 +389,7 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(host.__salt__, {"hosts.has_pair": mock}):
             self.assertDictEqual(host.absent("salt", "127.0.0.1"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_only_already(self):
         """
         Test only() when the state hasn't changed
@@ -401,6 +407,7 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(host.__opts__, {"test": False}):
                     self.assertDictEqual(expected, host.only("127.0.1.1", "foo.bar"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_only_dryrun(self):
         """
         Test only() when state would change, but it's a dry run
@@ -420,6 +427,7 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
                         expected, host.only("127.0.1.1", ["foo.bar", "foo"])
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_only_fail(self):
         """
         Test only() when state change fails
@@ -440,6 +448,7 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
                         expected, host.only("127.0.1.1", ["foo.bar", "foo"])
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_only_success(self):
         """
         Test only() when state successfully changes

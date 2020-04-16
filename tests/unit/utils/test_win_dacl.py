@@ -34,6 +34,7 @@ class WinDaclTestCase(TestCase):
     Test cases for salt.utils.win_dacl in the registry
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_sid_string(self):
         """
         Validate getting a pysid object from a name
@@ -44,6 +45,7 @@ class WinDaclTestCase(TestCase):
             win32security.LookupAccountSid(None, sid_obj)[0], "Administrators"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_sid_sid_string(self):
         """
         Validate getting a pysid object from a SID string
@@ -54,6 +56,7 @@ class WinDaclTestCase(TestCase):
             win32security.LookupAccountSid(None, sid_obj)[0], "Administrators"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_sid_string_name(self):
         """
         Validate getting a pysid object from a SID string
@@ -62,6 +65,7 @@ class WinDaclTestCase(TestCase):
         self.assertTrue(isinstance(sid_obj, pywintypes.SIDType))
         self.assertEqual(win_dacl.get_sid_string(sid_obj), "S-1-5-32-544")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_sid_string_none(self):
         """
         Validate getting a pysid object from None (NULL SID)
@@ -70,6 +74,7 @@ class WinDaclTestCase(TestCase):
         self.assertTrue(isinstance(sid_obj, pywintypes.SIDType))
         self.assertEqual(win_dacl.get_sid_string(sid_obj), "S-1-0-0")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_name(self):
         """
         Get the name
@@ -107,6 +112,8 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
         win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_owner(self):
         """
         Test the set_owner function
@@ -125,6 +132,8 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
         )
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_primary_group(self):
         """
         Test the set_primary_group function
@@ -143,6 +152,8 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
         )
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_set_permissions(self):
         """
         Test the set_permissions function
@@ -178,6 +189,8 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
         )
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_permissions(self):
         """
         Test the get_permissions function
@@ -213,6 +226,8 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
         )
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_has_permission(self):
         """
         Test the has_permission function
@@ -252,6 +267,8 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
         )
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_rm_permissions(self):
         """
         Test the rm_permissions function
@@ -284,6 +301,8 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
         )
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_inheritance(self):
         """
         Test the set_inheritance function
@@ -313,6 +332,8 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
         )
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_check_perms(self):
         """
         Test the check_perms function
@@ -402,6 +423,8 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
         )
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_check_perms_test_true(self):
         """
         Test the check_perms function
@@ -452,6 +475,8 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
             {},
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_set_perms(self):
         """
         Test the set_perms function
@@ -503,6 +528,8 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
         os.remove(self.obj_name)
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_owner(self):
         """
         Test the set_owner function
@@ -521,6 +548,8 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
         )
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_primary_group(self):
         """
         Test the set_primary_group function
@@ -539,6 +568,8 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
         )
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_set_permissions(self):
         """
         Test the set_permissions function
@@ -574,6 +605,8 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
         )
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_permissions(self):
         """
         Test the get_permissions function
@@ -609,6 +642,8 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
         )
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_has_permission(self):
         """
         Test the has_permission function
@@ -648,6 +683,8 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
         )
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_rm_permissions(self):
         """
         Test the rm_permissions function
@@ -680,6 +717,8 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
         )
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_inheritance(self):
         """
         Test the set_inheritance function
@@ -709,6 +748,8 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
         )
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_check_perms(self):
         """
         Test the check_perms function
@@ -808,6 +849,8 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
         )
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_check_perms_test_true(self):
         """
         Test the check_perms function
@@ -858,6 +901,8 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
             {},
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_set_perms(self):
         """
         Test the set_perms function

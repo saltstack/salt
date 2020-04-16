@@ -12,7 +12,7 @@ import salt.states.acme as acme
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class AcmeTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {acme: {"__opts__": {"test": False}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_cert_no_changes_t(self):
         """
         Test cert state with no needed changes. (test=True)
@@ -47,6 +48,7 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_cert_no_changes(self):
         """
         Test cert state with no needed changes. (test=False)
@@ -69,6 +71,7 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_cert_fresh_certificate_t(self):
         """
         Test cert state fetching a new certificate. (test=True)
@@ -94,6 +97,7 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_cert_fresh_certificate(self):
         """
         Test cert state fetching a new certificate. (test=False)
@@ -119,6 +123,7 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_cert_renew_certificate_t(self):
         """
         Test cert state renewing a certificate. (test=True)
@@ -148,6 +153,7 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_cert_renew_certificate(self):
         """
         Test cert state renewing a certificate. (test=False)

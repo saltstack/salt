@@ -7,7 +7,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 from salt.utils.validate import net
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ValidateNetTestCase(TestCase):
@@ -15,6 +15,7 @@ class ValidateNetTestCase(TestCase):
     TestCase for salt.utils.validate.net module
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_ipv4_addr(self):
         """
         Test IPv4 address validation
@@ -43,6 +44,7 @@ class ValidateNetTestCase(TestCase):
         for addr in false_addrs:
             self.assertFalse(net.ipv4_addr(addr))
 
+    @skipIf(True, "FASTTEST skip")
     def test_ipv6_addr(self):
         """
         Test IPv6 address validation

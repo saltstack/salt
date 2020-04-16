@@ -20,7 +20,7 @@ from tests.support.mock import MagicMock, mock_open, patch
 
 # Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class LibvirtMock(MagicMock):  # pylint: disable=too-many-ancestors
@@ -64,6 +64,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'keys' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_keys(self):
         """
         Test to manage libvirt keys.
@@ -106,6 +107,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                             virt.keys(name, basepath=self.pki_dir), ret
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_keys_with_expiration_days(self):
         """
         Test to manage libvirt keys.
@@ -153,6 +155,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                             ret,
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_keys_with_state(self):
         """
         Test to manage libvirt keys.
@@ -199,6 +202,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                             virt.keys(name, basepath=self.pki_dir, st="California"), ret
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_keys_with_all_options(self):
         """
         Test to manage libvirt keys.
@@ -272,6 +276,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                             ret,
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_running(self):
         """
         running state test cases.
@@ -536,6 +541,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({"changes": {}, "result": False, "comment": "error message"})
             self.assertDictEqual(virt.running("myvm", update=True, cpu=2), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_stopped(self):
         """
         stopped state test cases.
@@ -628,6 +634,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertDictEqual(virt.stopped("myvm"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_powered_off(self):
         """
         powered_off state test cases.
@@ -720,6 +727,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertDictEqual(virt.powered_off("myvm"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_snapshot(self):
         """
         snapshot state test cases.
@@ -796,6 +804,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertDictEqual(virt.snapshot("myvm"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_rebooted(self):
         """
         rebooted state test cases.
@@ -867,6 +876,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertDictEqual(virt.rebooted("myvm"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_network_running(self):
         """
         network_running state test cases.
@@ -997,6 +1007,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({"changes": {}, "comment": "Some error", "result": False})
             self.assertDictEqual(virt.network_running("mynet", "br2", "bridge"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_pool_running(self):
         """
         pool_running state test cases.
@@ -1368,6 +1379,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     ret,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_pool_deleted(self):
         """
         Test the pool_deleted state

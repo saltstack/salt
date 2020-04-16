@@ -15,13 +15,14 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PipTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {pip: {"__salt__": {"cmd.which_bin": lambda _: "pip"}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test__pip_bin_env(self):
         ret = pip._pip_bin_env(None, "C:/Users/ch44d/Documents/salt/tests/pip.exe")
         if salt.utils.platform.is_windows():
@@ -29,15 +30,18 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         else:
             self.assertIsNone(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test__pip_bin_env_no_change(self):
         cwd = "C:/Users/ch44d/Desktop"
         ret = pip._pip_bin_env(cwd, "C:/Users/ch44d/Documents/salt/tests/pip.exe")
         self.assertEqual(ret, cwd)
 
+    @skipIf(True, "FASTTEST skip")
     def test__pip_bin_env_no_bin_env(self):
         ret = pip._pip_bin_env(None, None)
         self.assertIsNone(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_fix4361(self):
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
@@ -58,6 +62,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_editable_without_egg_fails(self):
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
@@ -67,6 +72,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 editable="git+https://github.com/saltstack/salt-testing.git",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_multiple_editable(self):
         editables = [
             "git+https://github.com/jek/blinker.git#egg=Blinker",
@@ -93,6 +99,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_multiple_pkgs_and_editables(self):
         pkgs = ["pep8", "salt"]
         editables = [
@@ -138,6 +145,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_issue5940_install_multiple_pip_mirrors(self):
         """
         test multiple pip mirrors.  This test only works with pip < 7.0.0
@@ -201,6 +209,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_with_multiple_find_links(self):
         find_links = [
             "http://g.pypi.python.org",
@@ -266,6 +275,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 find_links="sftp://pypi.crate.io",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_no_index_with_index_url_or_extra_index_url_raises(self):
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
@@ -285,6 +295,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 extra_index_url="http://foo.tld",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_failed_cached_requirements(self):
         with patch(
             "salt.modules.pip._get_cached_requirements"
@@ -294,6 +305,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(False, ret["result"])
             self.assertIn("my_test_reqs", ret["comment"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_cached_requirements_used(self):
         with patch(
             "salt.modules.pip._get_cached_requirements"
@@ -318,6 +330,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_venv(self):
         with patch("os.path") as mock_path:
 
@@ -351,6 +364,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_log_argument_in_resulting_command(self):
         with patch("os.access") as mock_path:
             pkg = "pep8"
@@ -375,6 +389,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_non_writeable_log(self):
         with patch("os.path") as mock_path:
             # Let's fake a non-writable log file
@@ -385,6 +400,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
                 self.assertRaises(IOError, pip.install, pkg, log=log_path)
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_timeout_argument_in_resulting_command(self):
         # Passing an int
         pkg = "pep8"
@@ -417,6 +433,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
             self.assertRaises(ValueError, pip.install, pkg, timeout="a")
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_index_url_argument_in_resulting_command(self):
         pkg = "pep8"
         index_url = "http://foo.tld"
@@ -436,6 +453,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_extra_index_url_argument_in_resulting_command(self):
         pkg = "pep8"
         extra_index_url = "http://foo.tld"
@@ -455,6 +473,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_no_index_argument_in_resulting_command(self):
         pkg = "pep8"
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
@@ -465,6 +484,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_build_argument_in_resulting_command(self):
         pkg = "pep8"
         build = "/tmp/foo"
@@ -476,6 +496,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_target_argument_in_resulting_command(self):
         pkg = "pep8"
         target = "/tmp/foo"
@@ -487,6 +508,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_download_argument_in_resulting_command(self):
         pkg = "pep8"
         download = "/tmp/foo"
@@ -506,6 +528,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_no_download_argument_in_resulting_command(self):
         pkg = "pep8"
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
@@ -516,6 +539,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_download_cache_dir_arguments_in_resulting_command(self):
         pkg = "pep8"
         cache_dir_arg_mapping = {
@@ -559,6 +583,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                         python_shell=False,
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_source_argument_in_resulting_command(self):
         pkg = "pep8"
         source = "/tmp/foo"
@@ -570,6 +595,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_exists_action_argument_in_resulting_command(self):
         pkg = "pep8"
         for action in ("s", "i", "w", "b"):
@@ -600,6 +626,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 CommandExecutionError, pip.install, pkg, exists_action="d"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_install_options_argument_in_resulting_command(self):
         install_options = ["--exec-prefix=/foo/bar", "--install-scripts=/foo/bar/bin"]
         pkg = "pep8"
@@ -642,6 +669,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_global_options_argument_in_resulting_command(self):
         global_options = ["--quiet", "--no-user-cfg"]
         pkg = "pep8"
@@ -684,6 +712,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_upgrade_argument_in_resulting_command(self):
         pkg = "pep8"
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
@@ -694,6 +723,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_force_reinstall_argument_in_resulting_command(self):
         pkg = "pep8"
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
@@ -711,6 +741,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_ignore_installed_argument_in_resulting_command(self):
         pkg = "pep8"
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
@@ -728,6 +759,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_no_deps_argument_in_resulting_command(self):
         pkg = "pep8"
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
@@ -738,6 +770,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_no_install_argument_in_resulting_command(self):
         pkg = "pep8"
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
@@ -748,6 +781,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_proxy_argument_in_resulting_command(self):
         pkg = "pep8"
         proxy = "salt-user:salt-passwd@salt-proxy:3128"
@@ -759,6 +793,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_proxy_false_argument_in_resulting_command(self):
         """
         Checking that there is no proxy set if proxy arg is set to False
@@ -785,6 +820,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_global_proxy_in_resulting_command(self):
         """
         Checking that there is proxy set if global proxy is set.
@@ -818,6 +854,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_multiple_requirements_arguments_in_resulting_command(self):
         with patch(
             "salt.modules.pip._get_cached_requirements"
@@ -876,6 +913,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_extra_args_arguments_in_resulting_command(self):
         pkg = "pep8"
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
@@ -897,6 +935,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_extra_args_arguments_recursion_error(self):
         pkg = "pep8"
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
@@ -916,6 +955,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 ),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_uninstall_multiple_requirements_arguments_in_resulting_command(self):
         with patch(
             "salt.modules.pip._get_cached_requirements"
@@ -978,6 +1018,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_uninstall_global_proxy_in_resulting_command(self):
         """
         Checking that there is proxy set if global proxy is set.
@@ -1013,6 +1054,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_uninstall_proxy_false_argument_in_resulting_command(self):
         """
         Checking that there is no proxy set if proxy arg is set to False
@@ -1040,6 +1082,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_uninstall_log_argument_in_resulting_command(self):
         pkg = "pep8"
         log_path = "/tmp/pip-install.log"
@@ -1073,6 +1116,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
                 self.assertRaises(IOError, pip.uninstall, pkg, log=log_path)
 
+    @skipIf(True, "FASTTEST skip")
     def test_uninstall_timeout_argument_in_resulting_command(self):
         pkg = "pep8"
         expected = [sys.executable, "-m", "pip", "uninstall", "-y", "--timeout"]
@@ -1107,6 +1151,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
             self.assertRaises(ValueError, pip.uninstall, pkg, timeout="a")
 
+    @skipIf(True, "FASTTEST skip")
     def test_freeze_command(self):
         expected = [sys.executable, "-m", "pip", "freeze"]
         eggs = [
@@ -1148,6 +1193,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     CommandExecutionError, pip.freeze,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_freeze_command_with_all(self):
         eggs = [
             "M2Crypto==0.21.1",
@@ -1176,6 +1222,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     CommandExecutionError, pip.freeze,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_command(self):
         eggs = [
             "M2Crypto==0.21.1",
@@ -1215,6 +1262,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     CommandExecutionError, pip.list_,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_command_with_all(self):
         eggs = [
             "M2Crypto==0.21.1",
@@ -1260,6 +1308,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     CommandExecutionError, pip.list_,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_command_with_prefix(self):
         eggs = [
             "M2Crypto==0.21.1",
@@ -1278,6 +1327,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(ret, {"bbfreeze-loader": "1.1.0", "bbfreeze": "1.1.0"})
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_upgrades_legacy(self):
         eggs = [
             "apache-libcloud (Current: 1.1.0 Latest: 2.2.1 [wheel])",
@@ -1302,6 +1352,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     },
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_upgrades_gt9(self):
         eggs = """[{"latest_filetype": "wheel", "version": "1.1.0", "name": "apache-libcloud", "latest_version": "2.2.1"},
                 {"latest_filetype": "wheel", "version": "1.4.1", "name": "appdirs", "latest_version": "1.4.3"},
@@ -1332,6 +1383,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     },
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_installed_true(self):
         eggs = [
             "M2Crypto==0.21.1",
@@ -1353,6 +1405,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertTrue(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_installed_false(self):
         eggs = [
             "M2Crypto==0.21.1",
@@ -1374,6 +1427,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertFalse(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_pre_argument_in_resulting_command(self):
         pkg = "pep8"
         # Lower than 1.4 versions don't end up with `--pre` in the resulting output

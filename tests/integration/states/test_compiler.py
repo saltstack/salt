@@ -11,6 +11,7 @@ import salt.utils.platform
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
 
 # Import 3rd-Party libs
 HAS_LSB_RELEASE = True
@@ -25,6 +26,7 @@ class CompileTest(ModuleCase):
     Validate the state compiler
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_multi_state(self):
         """
         Test the error with multiple states of the same type
@@ -33,6 +35,7 @@ class CompileTest(ModuleCase):
         # Verify that the return is a list, aka, an error
         self.assertIsInstance(ret, list)
 
+    @skipIf(True, "FASTTEST skip")
     def test_jinja_deep_error(self):
         """
         Test when we have an error in a execution module

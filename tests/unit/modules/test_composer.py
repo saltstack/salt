@@ -17,7 +17,7 @@ from salt.exceptions import (
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ComposerTestCase(TestCase, LoaderModuleMockMixin):
@@ -28,6 +28,7 @@ class ComposerTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {composer: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_install(self):
         """
         Test for Install composer dependencies for a directory.
@@ -79,6 +80,7 @@ class ComposerTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(composer.__salt__, {"cmd.run_all": mock}):
                 self.assertEqual(composer.install("dir"), rval)
 
+    @skipIf(True, "FASTTEST skip")
     def test_update(self):
         """
         Test for Update composer dependencies for a directory.
@@ -171,6 +173,7 @@ class ComposerTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(composer.__salt__, {"cmd.run_all": mock}):
                     self.assertEqual(composer.update("dir"), rval)
 
+    @skipIf(True, "FASTTEST skip")
     def test_selfupdate(self):
         """
         Test for Composer selfupdate

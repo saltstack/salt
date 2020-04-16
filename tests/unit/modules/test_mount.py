@@ -18,7 +18,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 MOCK_SHELL_FILE = "A B C D F G\n"
 
@@ -31,6 +31,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {mount: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_active(self):
         """
         List the active mounts.
@@ -96,6 +97,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(mount, "_active_mounts_aix", mock):
                 self.assertEqual(mount.active(), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_fstab(self):
         """
         List the content of the fstab
@@ -120,6 +122,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 }
             }, fstab
 
+    @skipIf(True, "FASTTEST skip")
     def test_vfstab(self):
         """
         List the content of the vfstab
@@ -150,6 +153,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 }
             }, vfstab
 
+    @skipIf(True, "FASTTEST skip")
     def test_filesystems(self):
         """
         List the content of the filesystems
@@ -200,6 +204,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertEqual(test_fsyst, fsyst)
 
+    @skipIf(True, "FASTTEST skip")
     def test_rm_fstab(self):
         """
         Remove the mount point from the fstab
@@ -210,6 +215,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 with patch("salt.utils.files.fopen", mock_open()):
                     self.assertTrue(mount.rm_fstab("name", "device"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_fstab(self):
         """
         Tests to verify that this mount is represented in the fstab,
@@ -245,6 +251,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                     mount.set_fstab("B", "A", "C", not_change=True), "present"
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_rm_automaster(self):
         """
         Remove the mount point from the auto_master
@@ -257,6 +264,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(mount, "fstab", mock):
             self.assertTrue(mount.rm_automaster("name", "device"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_automaster(self):
         """
         Verify that this mount is represented in the auto_salt, change the mount
@@ -297,12 +305,14 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                     mount.set_automaster("A", "B", "C", "D", not_change=True), "present"
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_automaster(self):
         """
         Test the list the contents of the fstab
         """
         self.assertDictEqual(mount.automaster(), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_rm_filesystems(self):
         """
         Remove the mount point from the filesystems
@@ -336,6 +346,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         ), patch("salt.utils.files.fopen", mock_open(read_data=file_data)):
             self.assertTrue(mount.rm_filesystems("/name", "device"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_filesystems(self):
         """
         Tests to verify that this mount is represented in the filesystems,
@@ -356,6 +367,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                         CommandExecutionError, mount.set_filesystems, "A", "B", "C"
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_mount(self):
         """
         Mount a device
@@ -434,6 +446,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                     with patch.dict(mount.__salt__, {"cmd.run_all": mock}):
                         self.assertTrue(mount.mount("name", "device"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_remount_non_mounted(self):
         """
         Attempt to remount a device, if the device is not already mounted, mount
@@ -460,6 +473,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(mount, "mount", mock):
                     self.assertTrue(mount.remount("name", "device"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_remount_already_mounted_no_fstype(self):
         """
         Attempt to remount a device already mounted that do not provides
@@ -499,6 +513,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                         runas=None,
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_remount_already_mounted_with_fstype(self):
         """
         Attempt to remount a device already mounted that do not provides
@@ -540,6 +555,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                         runas=None,
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_umount(self):
         """
         Attempt to unmount a device by specifying the directory it is
@@ -567,6 +583,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
             mount.umount("/mountpoint", device="/path/to/my.qcow", util="guestfs")
             mock.assert_called_once_with("/mountpoint", disk="/path/to/my.qcow")
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_fuse_exec(self):
         """
         Returns true if the command passed is a fuse mountable application
@@ -601,6 +618,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertTrue(mount.is_fuse_exec("cmd1"))
                 self.assertFalse(mount.is_fuse_exec("cmd2"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_swaps(self):
         """
         Return a dict containing information on active swap
@@ -663,6 +681,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 }
             }, swaps
 
+    @skipIf(True, "FASTTEST skip")
     def test_swapon(self):
         """
         Activate a swap disk
@@ -709,6 +728,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                         mount.swapon("name"), {"stats": "name", "new": True}
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_swapoff(self):
         """
         Deactivate a named swap mount
@@ -756,6 +776,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                     with patch.dict(mount.__salt__, {"cmd.run": mock}):
                         self.assertTrue(mount.swapoff("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_mounted(self):
         """
         Provide information if the path is mounted

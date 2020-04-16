@@ -16,13 +16,14 @@ import salt.modules.mdadm_raid as mdadm
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MdadmTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {mdadm: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_create(self):
         mock = MagicMock(return_value="salt")
         with patch.dict(mdadm.__salt__, {"cmd.run": mock}), patch(
@@ -58,6 +59,7 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(kwargs, {"python_shell": False})
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_metadata(self):
         mock = MagicMock(return_value="salt")
         with patch.dict(mdadm.__salt__, {"cmd.run": mock}), patch(
@@ -89,6 +91,7 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(kwargs, {"python_shell": False})
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_test_mode(self):
         mock = MagicMock()
         with patch.dict(mdadm.__salt__, {"cmd.run": mock}):
@@ -110,6 +113,7 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
             )
             assert not mock.called, "test mode failed, cmd.run called"
 
+    @skipIf(True, "FASTTEST skip")
     def test_examine(self):
         """
         Test for mdadm_raid.examine
@@ -128,6 +132,7 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
                 "mdadm -Y -E /dev/md0", ignore_retcode=False, python_shell=False
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_examine_quiet(self):
         """
         Test for mdadm_raid.examine

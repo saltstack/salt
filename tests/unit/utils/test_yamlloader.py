@@ -17,7 +17,7 @@ from salt.utils.yamlloader import SaltYamlSafeLoader
 from tests.support.mock import mock_open, patch
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 # Import Salt Libs
 from yaml.constructor import ConstructorError
@@ -70,6 +70,7 @@ class YamlLoaderTestCase(TestCase):
         self.assertEqual(ret, expected)
         self.assert_unicode(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_yaml_basics(self):
         """
         Test parsing an ordinary path
@@ -86,6 +87,7 @@ class YamlLoaderTestCase(TestCase):
             {"p1": ["alpha", "beta"]},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_yaml_merge(self):
         """
         Test YAML anchors
@@ -136,6 +138,7 @@ class YamlLoaderTestCase(TestCase):
             {"p2": {"v2": ["t1", "t2"]}, "p1": {"v1": ["t1", "t2"]}},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_yaml_duplicates(self):
         """
         Test that duplicates still throw an error
@@ -162,6 +165,7 @@ class YamlLoaderTestCase(TestCase):
                 )
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_yaml_with_plain_scalars(self):
         """
         Test that plain (i.e. unqoted) string and non-string scalars are

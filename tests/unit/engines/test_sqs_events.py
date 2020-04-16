@@ -34,6 +34,7 @@ class EngineSqsEventTestCase(TestCase, LoaderModuleMockMixin):
         return fake_msg
 
     # 'present' function tests: 1
+    @skipIf(True, "FASTTEST skip")
     def test_no_queue_present(self):
         """
         Test to ensure the SQS engine logs a warning when queue not present
@@ -47,6 +48,7 @@ class EngineSqsEventTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertTrue(mock_logging.warning.called)
                 self.assertFalse(self.mock_sqs.queue.Queue().get_messages.called)
 
+    @skipIf(True, "FASTTEST skip")
     def test_minion_message_fires(self):
         """
         Test SQS engine correctly gets and fires messages on minion
@@ -62,6 +64,7 @@ class EngineSqsEventTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(self.mock_sqs.queue.Queue().get_messages.called)
             self.assertTrue(all(x.delete.called for x in msgs))
 
+    @skipIf(True, "FASTTEST skip")
     def test_master_message_fires(self):
         """
         Test SQS engine correctly gets and fires messages on master

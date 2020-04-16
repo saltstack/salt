@@ -11,7 +11,7 @@ import salt.states.boto_dynamodb as boto_dynamodb
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class BotoDynamodbTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class BotoDynamodbTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_present(self):
         """
         Test to ensure the DynamoDB table exists.
@@ -83,6 +84,7 @@ class BotoDynamodbTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
         Test to ensure the DynamoDB table does not exist.

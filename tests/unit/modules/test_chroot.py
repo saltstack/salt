@@ -51,6 +51,7 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
         return {chroot: {"__salt__": {}, "__utils__": {}, "__opts__": {"cachedir": ""}}}
 
     @patch("os.path.isdir")
+    @skipIf(True, "FASTTEST skip")
     def test_exist(self, isdir):
         """
         Test if the chroot environment exist.
@@ -63,6 +64,7 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch("os.makedirs")
     @patch("salt.modules.chroot.exist")
+    @skipIf(True, "FASTTEST skip")
     def test_create(self, exist, makedirs):
         """
         Test the creation of an empty chroot environment.
@@ -76,6 +78,7 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
         makedirs.assert_called()
 
     @patch("salt.modules.chroot.exist")
+    @skipIf(True, "FASTTEST skip")
     def test_call_fails_input_validation(self, exist):
         """
         Test execution of Salt functions in chroot.
@@ -87,6 +90,7 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch("salt.modules.chroot.exist")
     @patch("tempfile.mkdtemp")
+    @skipIf(True, "FASTTEST skip")
     def test_call_fails_untar(self, mkdtemp, exist):
         """
         Test execution of Salt functions in chroot.
@@ -116,6 +120,7 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch("salt.modules.chroot.exist")
     @patch("tempfile.mkdtemp")
+    @skipIf(True, "FASTTEST skip")
     def test_call_fails_salt_thin(self, mkdtemp, exist):
         """
         Test execution of Salt functions in chroot.
@@ -166,6 +171,7 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch("salt.modules.chroot.exist")
     @patch("tempfile.mkdtemp")
+    @skipIf(True, "FASTTEST skip")
     def test_call_success(self, mkdtemp, exist):
         """
         Test execution of Salt functions in chroot.
@@ -213,6 +219,7 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch("salt.modules.chroot.exist")
     @patch("tempfile.mkdtemp")
+    @skipIf(True, "FASTTEST skip")
     def test_call_success_parameters(self, mkdtemp, exist):
         """
         Test execution of Salt functions in chroot with parameters.
@@ -265,6 +272,7 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.client.ssh.state.SSHHighState")
     @patch("salt.fileclient.get_file_client")
     @patch("salt.utils.state.get_sls_opts")
+    @skipIf(True, "FASTTEST skip")
     def test_sls(
         self,
         get_sls_opts,
@@ -294,6 +302,7 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.client.ssh.state.SSHHighState")
     @patch("salt.fileclient.get_file_client")
     @patch("salt.utils.state.get_sls_opts")
+    @skipIf(True, "FASTTEST skip")
     def test_highstate(
         self,
         get_sls_opts,

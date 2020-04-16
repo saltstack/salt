@@ -13,7 +13,7 @@ import salt.states.docker_image as docker_state
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class DockerImageTestCase(TestCase, LoaderModuleMockMixin):
@@ -27,6 +27,7 @@ class DockerImageTestCase(TestCase, LoaderModuleMockMixin):
             docker_state: {"__opts__": {"test": False}},
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_already_local(self):
         """
         According following sls,
@@ -69,6 +70,7 @@ class DockerImageTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_and_force(self):
         """
         According following sls,

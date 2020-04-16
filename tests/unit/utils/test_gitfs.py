@@ -41,6 +41,7 @@ OPTS = {"cachedir": "/tmp/gitfs-test-cache"}
 
 
 class TestGitFSProvider(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_provider_case_insensitive(self):
         """
         Ensure that both lowercase and non-lowercase values are supported
@@ -73,6 +74,7 @@ class TestGitFSProvider(TestCase):
                     # letters. Again, no need for an assert here.
                     role_class(*args, **kwargs)
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_provider(self):
         """
         Ensure that an invalid provider is not accepted, raising a
@@ -227,6 +229,7 @@ class TestPygit2(TestCase):
         )
         return provider
 
+    @skipIf(True, "FASTTEST skip")
     def test_checkout(self):
         remote = os.path.join(tests.support.paths.TMP, "pygit2-repo")
         cache = os.path.join(tests.support.paths.TMP, "pygit2-repo-cache")

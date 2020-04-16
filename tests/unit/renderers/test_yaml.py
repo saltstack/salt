@@ -13,7 +13,7 @@ from salt.ext import six
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class YAMLRendererTestCase(TestCase, LoaderModuleMockMixin):
@@ -41,18 +41,21 @@ class YAMLRendererTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret, expected)
         self.assert_unicode(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_yaml_render_string(self):
         data = "string"
         result = yaml.render(data)
 
         self.assertEqual(result, data)
 
+    @skipIf(True, "FASTTEST skip")
     def test_yaml_render_unicode(self):
         data = "!!python/unicode python unicode string"
         result = yaml.render(data)
 
         self.assertEqual(result, "python unicode string")
 
+    @skipIf(True, "FASTTEST skip")
     def test_yaml_render_old_unicode(self):
         config = {"use_yamlloader_old": True}
         with patch.dict(yaml.__opts__, config):  # pylint: disable=no-member

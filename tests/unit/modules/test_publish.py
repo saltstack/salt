@@ -13,7 +13,7 @@ from salt.exceptions import SaltReqTimeoutError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class SAuth(object):
@@ -94,6 +94,7 @@ class PublishTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'publish' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_publish(self):
         """
         Test if it publish a command from the minion out to other minions.
@@ -102,6 +103,7 @@ class PublishTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'full_data' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_full_data(self):
         """
         Test if it return the full data about the publication
@@ -110,6 +112,7 @@ class PublishTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'runner' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_runner(self):
         """
         Test if it execute a runner on the master and return the data

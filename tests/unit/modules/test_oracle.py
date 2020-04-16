@@ -14,7 +14,7 @@ import salt.modules.oracle as oracle
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class OracleTestCase(TestCase, LoaderModuleMockMixin):
@@ -25,6 +25,7 @@ class OracleTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {oracle: {"cx_Oracle": object()}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_query(self):
         """
         Test for Run SQL query and return result
@@ -34,6 +35,7 @@ class OracleTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(oracle, "show_dbs", MagicMock()):
                 self.assertTrue(oracle.run_query("db", "query"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_dbs(self):
         """
         Test for Show databases configuration from pillar. Filter by `*args`
@@ -43,6 +45,7 @@ class OracleTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertEqual(oracle.show_dbs(), "a")
 
+    @skipIf(True, "FASTTEST skip")
     def test_version(self):
         """
         Test for Server Version (select banner  from v$version)
@@ -51,6 +54,7 @@ class OracleTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(oracle, "run_query", return_value="A"):
                 self.assertDictEqual(oracle.version(), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_client_version(self):
         """
         Test for Oracle Client Version
@@ -58,6 +62,7 @@ class OracleTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(oracle, "cx_Oracle", MagicMock(side_effect=MagicMock())):
             self.assertEqual(oracle.client_version(), "")
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_pillar(self):
         """
         Test for Show Pillar segment oracle.*
@@ -65,6 +70,7 @@ class OracleTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(oracle.__salt__, {"pillar.get": MagicMock(return_value="a")}):
             self.assertEqual(oracle.show_pillar("item"), "a")
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_env(self):
         """
         Test for Show Environment used by Oracle Client

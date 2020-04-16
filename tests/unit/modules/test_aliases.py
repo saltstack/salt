@@ -13,7 +13,7 @@ from salt.exceptions import SaltInvocationError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class AliasesTestCase(TestCase, LoaderModuleMockMixin):
@@ -30,6 +30,7 @@ class AliasesTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {aliases: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_aliases(self):
         """
         Tests the return of a file containing one alias
@@ -41,6 +42,7 @@ class AliasesTestCase(TestCase, LoaderModuleMockMixin):
             ret = {"foo": "bar@example.com"}
             self.assertEqual(aliases.list_aliases(), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_aliases_mult(self):
         """
         Tests the return of a file containing multiple aliases
@@ -55,6 +57,7 @@ class AliasesTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertEqual(aliases.list_aliases(), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_target(self):
         """
         Tests the target returned by an alias with one target
@@ -66,6 +69,7 @@ class AliasesTestCase(TestCase, LoaderModuleMockMixin):
             ret = "bar@example.com"
             self.assertEqual(aliases.get_target("foo"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_target_mult(self):
         """
         Tests the target returned by an alias with multiple targets
@@ -77,6 +81,7 @@ class AliasesTestCase(TestCase, LoaderModuleMockMixin):
             ret = "world@earth.com, earth@world.com"
             self.assertEqual(aliases.get_target("hello"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_target_no_alias(self):
         """
         Tests return of an alias doesn't exist
@@ -87,6 +92,7 @@ class AliasesTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(aliases.get_target("pizza"), "")
 
+    @skipIf(True, "FASTTEST skip")
     def test_has_target(self):
         """
         Tests simple return known alias and target
@@ -98,6 +104,7 @@ class AliasesTestCase(TestCase, LoaderModuleMockMixin):
             ret = aliases.has_target("foo", "bar@example.com")
             self.assertTrue(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_has_target_no_alias(self):
         """
         Tests return of empty alias and known target
@@ -109,12 +116,14 @@ class AliasesTestCase(TestCase, LoaderModuleMockMixin):
             ret = aliases.has_target("", "bar@example.com")
             self.assertFalse(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_has_target_no_target(self):
         """
         Tests return of known alias and empty target
         """
         self.assertRaises(SaltInvocationError, aliases.has_target, "foo", "")
 
+    @skipIf(True, "FASTTEST skip")
     def test_has_target_mult(self):
         """
         Tests return of multiple targets to one alias
@@ -126,6 +135,7 @@ class AliasesTestCase(TestCase, LoaderModuleMockMixin):
             ret = aliases.has_target("hello", "world@earth.com, earth@world.com")
             self.assertTrue(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_has_target_mult_differs(self):
         """
         Tests return of multiple targets to one alias in opposite order
@@ -137,6 +147,7 @@ class AliasesTestCase(TestCase, LoaderModuleMockMixin):
             ret = aliases.has_target("hello", "earth@world.com, world@earth.com")
             self.assertFalse(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_has_target_list_mult(self):
         """
         Tests return of target as same list to know alias
@@ -148,6 +159,7 @@ class AliasesTestCase(TestCase, LoaderModuleMockMixin):
             ret = aliases.has_target("hello", ["world@earth.com", "earth@world.com"])
             self.assertTrue(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_has_target_list_mult_differs(self):
         """
         Tests return of target as differing list to known alias
@@ -159,6 +171,7 @@ class AliasesTestCase(TestCase, LoaderModuleMockMixin):
             ret = aliases.has_target("hello", ["world@earth.com", "mars@space.com"])
             self.assertFalse(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_target_equal(self):
         """
         Tests return when target is already present
@@ -171,18 +184,21 @@ class AliasesTestCase(TestCase, LoaderModuleMockMixin):
             ret = aliases.set_target(alias, target)
             self.assertTrue(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_target_empty_alias(self):
         """
         Tests return of empty alias
         """
         self.assertRaises(SaltInvocationError, aliases.set_target, "", "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_target_empty_target(self):
         """
         Tests return of known alias and empty target
         """
         self.assertRaises(SaltInvocationError, aliases.set_target, "foo", "")
 
+    @skipIf(True, "FASTTEST skip")
     def test_rm_alias_absent(self):
         """
         Tests return when alias is not present

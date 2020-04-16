@@ -13,7 +13,6 @@ import salt.utils.platform
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
-from tests.support.unit import skipIf
 
 
 class MinionTimeoutTestCase(ShellCase):
@@ -21,7 +20,6 @@ class MinionTimeoutTestCase(ShellCase):
     Test minion timing functions
     """
 
-    @skipIf(True, "SLOWTEST skip")
     def test_long_running_job(self):
         """
         Test that we will wait longer than the job timeout for a minion to

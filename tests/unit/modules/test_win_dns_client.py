@@ -82,6 +82,7 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_dns_servers' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_dns_servers(self):
         """
         Test if it return a list of the configured DNS servers
@@ -102,6 +103,7 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'rm_dns' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_rm_dns(self):
         """
         Test if it remove the DNS server from the network interface.
@@ -113,6 +115,7 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'add_dns' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_dns(self):
         """
         Test if it add the DNS server to the network interface.
@@ -141,6 +144,7 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'dns_dhcp' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_dns_dhcp(self):
         """
         Test if it configure the interface to get its
@@ -153,6 +157,7 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_dns_config' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_dns_config(self):
         """
         Test if it get the type of DNS configuration (dhcp / static)
@@ -167,6 +172,7 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(win_dns_client.get_dns_config())
 
     @patch("salt.utils.platform.is_windows")
+    @skipIf(True, "FASTTEST skip")
     def test___virtual__non_windows(self, mock):
         mock.return_value = False
         result = win_dns_client.__virtual__()
@@ -177,11 +183,13 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(result, expected)
 
     @patch.object(win_dns_client, "HAS_LIBS", False)
+    @skipIf(True, "FASTTEST skip")
     def test___virtual__missing_libs(self):
         result = win_dns_client.__virtual__()
         expected = (False, "Module win_dns_client: missing required libraries")
         self.assertEqual(result, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test___virtual__(self):
         result = win_dns_client.__virtual__()
         expected = "win_dns_client"

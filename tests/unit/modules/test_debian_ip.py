@@ -32,6 +32,7 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'build_bond' function tests: 3
 
+    @skipIf(True, "FASTTEST skip")
     def test_build_bond(self):
         """
         Test if it create a bond script in /etc/modprobe.d with the passed
@@ -48,6 +49,7 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
                 ):
                     self.assertEqual(debian_ip.build_bond("bond0"), "")
 
+    @skipIf(True, "FASTTEST skip")
     def test_error_message_iface_should_process_non_str_expected(self):
         values = [1, True, False, "no-kaboom"]
         iface = "ethtest"
@@ -55,11 +57,13 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
         msg = debian_ip._error_msg_iface(iface, option, values)
         self.assertTrue(msg.endswith("[1|True|False|no-kaboom]"), msg)
 
+    @skipIf(True, "FASTTEST skip")
     def test_error_message_network_should_process_non_str_expected(self):
         values = [1, True, False, "no-kaboom"]
         msg = debian_ip._error_msg_network("fnord", values)
         self.assertTrue(msg.endswith("[1|True|False|no-kaboom]"), msg)
 
+    @skipIf(True, "FASTTEST skip")
     def test_build_bond_exception(self):
         """
         Test if it create a bond script in /etc/modprobe.d with the passed
@@ -76,6 +80,7 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(jinja2.Environment, "get_template", mock):
                     self.assertEqual(debian_ip.build_bond("bond0"), "")
 
+    @skipIf(True, "FASTTEST skip")
     def test_build_bond_data(self):
         """
         Test if it create a bond script in /etc/modprobe.d with the passed
@@ -90,6 +95,7 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'build_routes' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_build_routes(self):
         """
         Test if it add route scripts for a network interface using up commands.
@@ -104,6 +110,7 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(debian_ip.build_routes("eth0"), "saltsalt")
 
+    @skipIf(True, "FASTTEST skip")
     def test_build_routes_exception(self):
         """
         Test if it add route scripts for a network interface using up commands.
@@ -120,6 +127,7 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'down' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_down(self):
         """
         Test if it shutdown a network interface
@@ -132,6 +140,7 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_bond' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_bond(self):
         """
         Test if it return the content of a bond script
@@ -140,6 +149,7 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_interface' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_interface(self):
         """
         Test if it return the contents of an interface script
@@ -167,6 +177,7 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'build_interface' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_build_interface(self):
         """
         Test if it builds an interface script for a network interface.
@@ -544,6 +555,7 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'up' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_up(self):
         """
         Test if it start up a network interface
@@ -556,6 +568,7 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_network_settings' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_network_settings(self):
         """
         Test if it return the contents of the global network script.
@@ -595,6 +608,7 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_routes' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_routes(self):
         """
         Test if it return the routes for the interface
@@ -604,7 +618,6 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'apply_network_settings' function tests: 1
 
-    @skipIf(True, "SLOWTEST skip")
     def test_apply_network_settings(self):
         """
         Test if it apply global network configuration.
@@ -618,6 +631,7 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'build_network_settings' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_build_network_settings(self):
         """
         Test if it build the global network script.

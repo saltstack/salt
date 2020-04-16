@@ -12,7 +12,7 @@ import salt.modules.postfix as postfix
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PostfixTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class PostfixTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {postfix: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_master(self):
         """
         Test for return a dict of active config values
@@ -30,6 +31,7 @@ class PostfixTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(postfix, "_parse_master", return_value=({"A": "a"}, ["b"])):
             self.assertDictEqual(postfix.show_master("path"), {"A": "a"})
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_master(self):
         """
         Test for set a single config value in the master.cf file
@@ -38,6 +40,7 @@ class PostfixTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(postfix, "_write_conf", return_value=None):
                 self.assertTrue(postfix.set_master("a", "b"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_main(self):
         """
         Test for return a dict of active config values
@@ -45,6 +48,7 @@ class PostfixTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(postfix, "_parse_main", return_value=({"A": "a"}, ["b"])):
             self.assertDictEqual(postfix.show_main("path"), {"A": "a"})
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_main(self):
         """
         Test for set a single config value in the master.cf file
@@ -53,6 +57,7 @@ class PostfixTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(postfix, "_write_conf", return_value=None):
                 self.assertTrue(postfix.set_main("key", "value"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_queue(self):
         """
         Test for show contents of the mail queue
@@ -60,6 +65,7 @@ class PostfixTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(postfix.__salt__, {"cmd.run": MagicMock(return_value="A\nB")}):
             self.assertEqual(postfix.show_queue(), [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete(self):
         """
         Test for delete message(s) from the mail queue
@@ -78,6 +84,7 @@ class PostfixTestCase(TestCase, LoaderModuleMockMixin):
                 {"result": True, "message": "Successfully removed all messages"},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_hold(self):
         """
         Test for set held message(s) in the mail queue to unheld
@@ -96,6 +103,7 @@ class PostfixTestCase(TestCase, LoaderModuleMockMixin):
                 {"result": True, "message": "Successfully placed all messages on hold"},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_unhold(self):
         """
         Test for put message(s) on hold from the mail queue
@@ -114,6 +122,7 @@ class PostfixTestCase(TestCase, LoaderModuleMockMixin):
                 {"result": True, "message": "Successfully set all message as unheld"},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_requeue(self):
         """
         Test for requeue message(s) in the mail queue

@@ -19,7 +19,7 @@ from salt.ext.six.moves import (  # pylint: disable=import-error,redefined-built
 )
 from salt.utils.odict import OrderedDict
 from tests.support.mock import patch
-from tests.support.unit import LOREM_IPSUM, TestCase
+from tests.support.unit import LOREM_IPSUM, TestCase, skipIf
 
 log = logging.getLogger(__name__)
 _b = lambda x: x.encode("utf-8")
@@ -59,11 +59,13 @@ class DataTestCase(TestCase):
         OrderedDict([(_b("foo"), "bar"), (123, 456), (EGGS, BYTES)]),
     ]
 
+    @skipIf(True, "FASTTEST skip")
     def test_sorted_ignorecase(self):
         test_list = ["foo", "Foo", "bar", "Bar"]
         expected_list = ["bar", "Bar", "foo", "Foo"]
         self.assertEqual(salt.utils.data.sorted_ignorecase(test_list), expected_list)
 
+    @skipIf(True, "FASTTEST skip")
     def test_mysql_to_dict(self):
         test_mysql_output = [
             "+----+------+-----------+------+---------+------+-------+------------------+",
@@ -89,6 +91,7 @@ class DataTestCase(TestCase):
 
         self.assertDictEqual(ret, expected_dict)
 
+    @skipIf(True, "FASTTEST skip")
     def test_subdict_match(self):
         test_two_level_dict = {"foo": {"bar": "baz"}}
         test_two_level_comb_dict = {"foo": {"bar": "baz:woz"}}
@@ -143,6 +146,7 @@ class DataTestCase(TestCase):
         # Test wildcard match
         self.assertTrue(salt.utils.data.subdict_match(test_three_level_dict, "a:*:c:v"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_subdict_match_with_wildcards(self):
         """
         Tests subdict matching when wildcards are used in the expression
@@ -165,6 +169,7 @@ class DataTestCase(TestCase):
         assert salt.utils.data.subdict_match(data, "a:b:*:*:k")
         assert salt.utils.data.subdict_match(data, "a:b:*:*:*")
 
+    @skipIf(True, "FASTTEST skip")
     def test_traverse_dict(self):
         test_two_level_dict = {"foo": {"bar": "baz"}}
 
@@ -181,6 +186,7 @@ class DataTestCase(TestCase):
             ),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_traverse_dict_and_list(self):
         test_two_level_dict = {"foo": {"bar": "baz"}}
         test_two_level_dict_and_list = {
@@ -227,6 +233,7 @@ class DataTestCase(TestCase):
             ),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_compare_dicts(self):
         ret = salt.utils.data.compare_dicts(old={"foo": "bar"}, new={"foo": "bar"})
         self.assertEqual(ret, {})
@@ -235,6 +242,7 @@ class DataTestCase(TestCase):
         expected_ret = {"foo": {"new": "woz", "old": "bar"}}
         self.assertDictEqual(ret, expected_ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_compare_lists_no_change(self):
         ret = salt.utils.data.compare_lists(
             old=[1, 2, 3, "a", "b", "c"], new=[1, 2, 3, "a", "b", "c"]
@@ -242,6 +250,7 @@ class DataTestCase(TestCase):
         expected = {}
         self.assertDictEqual(ret, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_compare_lists_changes(self):
         ret = salt.utils.data.compare_lists(
             old=[1, 2, 3, "a", "b", "c"], new=[1, 2, 4, "x", "y", "z"]
@@ -249,16 +258,19 @@ class DataTestCase(TestCase):
         expected = {"new": [4, "x", "y", "z"], "old": [3, "a", "b", "c"]}
         self.assertDictEqual(ret, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_compare_lists_changes_new(self):
         ret = salt.utils.data.compare_lists(old=[1, 2, 3], new=[1, 2, 3, "x", "y", "z"])
         expected = {"new": ["x", "y", "z"]}
         self.assertDictEqual(ret, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_compare_lists_changes_old(self):
         ret = salt.utils.data.compare_lists(old=[1, 2, 3, "a", "b", "c"], new=[1, 2, 3])
         expected = {"old": ["a", "b", "c"]}
         self.assertDictEqual(ret, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_decode(self):
         """
         Companion to test_decode_to_str, they should both be kept up-to-date
@@ -345,6 +357,7 @@ class DataTestCase(TestCase):
         self.assertEqual(salt.utils.data.decode(BYTES, keep=True), BYTES)
         self.assertRaises(UnicodeDecodeError, salt.utils.data.decode, BYTES, keep=False)
 
+    @skipIf(True, "FASTTEST skip")
     def test_decode_to_str(self):
         """
         Companion to test_decode, they should both be kept up-to-date with one
@@ -461,6 +474,7 @@ class DataTestCase(TestCase):
                 to_str=True,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_decode_fallback(self):
         """
         Test fallback to utf-8
@@ -468,6 +482,7 @@ class DataTestCase(TestCase):
         with patch.object(builtins, "__salt_system_encoding__", "ascii"):
             self.assertEqual(salt.utils.data.decode(_b("яйца")), "яйца")
 
+    @skipIf(True, "FASTTEST skip")
     def test_encode(self):
         """
         NOTE: This uses the lambda "_b" defined above in the global scope,
@@ -554,6 +569,7 @@ class DataTestCase(TestCase):
         self.assertEqual(salt.utils.data.encode(BYTES, keep=True), BYTES)
         self.assertEqual(salt.utils.data.encode(BYTES, keep=False), BYTES)
 
+    @skipIf(True, "FASTTEST skip")
     def test_encode_keep(self):
         """
         Whereas we tested the keep argument in test_decode, it is much easier
@@ -618,6 +634,7 @@ class DataTestCase(TestCase):
                 preserve_tuples=True,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_encode_fallback(self):
         """
         Test fallback to utf-8
@@ -627,6 +644,7 @@ class DataTestCase(TestCase):
         with patch.object(builtins, "__salt_system_encoding__", "CP1252"):
             self.assertEqual(salt.utils.data.encode("Ψ"), _b("Ψ"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_repack_dict(self):
         list_of_one_element_dicts = [
             {"dict_key_1": "dict_val_1"},
@@ -650,6 +668,7 @@ class DataTestCase(TestCase):
         ret = salt.utils.data.repack_dictlist(LOREM_IPSUM)
         self.assertDictEqual(ret, {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_stringify(self):
         self.assertRaises(TypeError, salt.utils.data.stringify, 9)
         self.assertEqual(
@@ -659,6 +678,7 @@ class DataTestCase(TestCase):
             ["one", "two", "three", "4", "5"],
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_json_query(self):
         # Raises exception if jmespath module is not found
         with patch("salt.utils.data.jmespath", None):
@@ -684,6 +704,7 @@ class FilterFalseyTestCase(TestCase):
     Test suite for salt.utils.data.filter_falsey
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_nop(self):
         """
         Test cases where nothing will be done.
@@ -741,6 +762,7 @@ class FilterFalseyTestCase(TestCase):
         new_list = salt.utils.data.filter_falsey(old_list, ignore_types=[type({})])
         self.assertEqual(old_list, new_list)
 
+    @skipIf(True, "FASTTEST skip")
     def test_filter_dict_no_recurse(self):
         """
         Test filtering a dictionary without recursing.
@@ -761,6 +783,7 @@ class FilterFalseyTestCase(TestCase):
         self.assertEqual(expect_dict, new_dict)
         self.assertIs(type(expect_dict), type(new_dict))
 
+    @skipIf(True, "FASTTEST skip")
     def test_filter_dict_recurse(self):
         """
         Test filtering a dictionary with recursing.
@@ -780,6 +803,7 @@ class FilterFalseyTestCase(TestCase):
         self.assertEqual(expect_dict, new_dict)
         self.assertIs(type(expect_dict), type(new_dict))
 
+    @skipIf(True, "FASTTEST skip")
     def test_filter_list_no_recurse(self):
         """
         Test filtering a list without recursing.
@@ -803,6 +827,7 @@ class FilterFalseyTestCase(TestCase):
         self.assertEqual(old_list, new_list)
         self.assertIs(type(old_list), type(new_list))
 
+    @skipIf(True, "FASTTEST skip")
     def test_filter_list_recurse(self):
         """
         Test filtering a list with recursing.
@@ -822,6 +847,7 @@ class FilterFalseyTestCase(TestCase):
         self.assertEqual(expect_list, new_list)
         self.assertIs(type(expect_list), type(new_list))
 
+    @skipIf(True, "FASTTEST skip")
     def test_filter_set_no_recurse(self):
         """
         Test filtering a set without recursing.
@@ -833,6 +859,7 @@ class FilterFalseyTestCase(TestCase):
         self.assertEqual(expect_set, new_set)
         self.assertIs(type(expect_set), type(new_set))
 
+    @skipIf(True, "FASTTEST skip")
     def test_filter_ordereddict_no_recurse(self):
         """
         Test filtering an OrderedDict without recursing.
@@ -876,6 +903,7 @@ class FilterFalseyTestCase(TestCase):
         self.assertEqual(expect_dict, new_dict)
         self.assertIs(type(expect_dict), type(new_dict))
 
+    @skipIf(True, "FASTTEST skip")
     def test_filter_ordereddict_recurse(self):
         """
         Test filtering an OrderedDict with recursing.
@@ -904,6 +932,7 @@ class FilterFalseyTestCase(TestCase):
         self.assertEqual(expect_dict, new_dict)
         self.assertIs(type(expect_dict), type(new_dict))
 
+    @skipIf(True, "FASTTEST skip")
     def test_filter_list_recurse_limit(self):
         """
         Test filtering a list with recursing, but with a limited depth.
@@ -914,6 +943,7 @@ class FilterFalseyTestCase(TestCase):
         new_list = salt.utils.data.filter_falsey(old_list, recurse_depth=2)
         self.assertEqual([[[[None]]]], new_list)
 
+    @skipIf(True, "FASTTEST skip")
     def test_filter_dict_recurse_limit(self):
         """
         Test filtering a dict with recursing, but with a limited depth.
@@ -927,6 +957,7 @@ class FilterFalseyTestCase(TestCase):
         new_dict = salt.utils.data.filter_falsey(old_dict, recurse_depth=2)
         self.assertEqual({"foo": {"bar": {"baz": {"four": None}}}}, new_dict)
 
+    @skipIf(True, "FASTTEST skip")
     def test_filter_exclude_types(self):
         """
         Test filtering a list recursively, but also ignoring (i.e. not filtering)
@@ -996,6 +1027,7 @@ class FilterRecursiveDiff(TestCase):
     Test suite for salt.utils.data.recursive_diff
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_equality(self):
         """
         Test cases where equal lists are compared.
@@ -1006,6 +1038,7 @@ class FilterRecursiveDiff(TestCase):
         test_list = [[0], [1], [0, 1, 2]]
         self.assertEqual({}, salt.utils.data.recursive_diff(test_list, test_list))
 
+    @skipIf(True, "FASTTEST skip")
     def test_dict_equality(self):
         """
         Test cases where equal dicts are compared.
@@ -1013,6 +1046,7 @@ class FilterRecursiveDiff(TestCase):
         test_dict = {"foo": "bar", "bar": {"baz": {"qux": "quux"}}, "frop": 0}
         self.assertEqual({}, salt.utils.data.recursive_diff(test_dict, test_dict))
 
+    @skipIf(True, "FASTTEST skip")
     def test_ordereddict_equality(self):
         """
         Test cases where equal OrderedDicts are compared.
@@ -1026,6 +1060,7 @@ class FilterRecursiveDiff(TestCase):
         )
         self.assertEqual({}, salt.utils.data.recursive_diff(test_dict, test_dict))
 
+    @skipIf(True, "FASTTEST skip")
     def test_mixed_equality(self):
         """
         Test cases where mixed nested lists and dicts are compared.
@@ -1037,6 +1072,7 @@ class FilterRecursiveDiff(TestCase):
         }
         self.assertEqual({}, salt.utils.data.recursive_diff(test_data, test_data))
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_equality(self):
         """
         Test cases where equal sets are compared.
@@ -1050,6 +1086,7 @@ class FilterRecursiveDiff(TestCase):
         set_two = set([3, 2, 1, 0])
         self.assertEqual({}, salt.utils.data.recursive_diff(set_one, set_two))
 
+    @skipIf(True, "FASTTEST skip")
     def test_tuple_equality(self):
         """
         Test cases where equal tuples are compared.
@@ -1057,6 +1094,7 @@ class FilterRecursiveDiff(TestCase):
         test_tuple = (0, 1, 2, 3, "foo")
         self.assertEqual({}, salt.utils.data.recursive_diff(test_tuple, test_tuple))
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_inequality(self):
         """
         Test cases where two inequal lists are compared.
@@ -1094,6 +1132,7 @@ class FilterRecursiveDiff(TestCase):
             expected_result, salt.utils.data.recursive_diff(list_two, list_one)
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_dict_inequality(self):
         """
         Test cases where two inequal dicts are compared.
@@ -1120,6 +1159,7 @@ class FilterRecursiveDiff(TestCase):
             expected_result, salt.utils.data.recursive_diff(dict_two, dict_one)
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_ordereddict_inequality(self):
         """
         Test cases where two inequal OrderedDicts are compared.
@@ -1131,6 +1171,7 @@ class FilterRecursiveDiff(TestCase):
             expected_result, salt.utils.data.recursive_diff(odict_one, odict_two)
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_inequality(self):
         """
         Test cases where two inequal sets are compared.
@@ -1159,6 +1200,7 @@ class FilterRecursiveDiff(TestCase):
             expected_result, salt.utils.data.recursive_diff(set_one, set_two)
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_mixed_inequality(self):
         """
         Test cases where two mixed dicts/iterables that are different are compared.
@@ -1208,6 +1250,7 @@ class FilterRecursiveDiff(TestCase):
             expected_result, salt.utils.data.recursive_diff(mixed_two, mixed_one)
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_tuple_inequality(self):
         """
         Test cases where two tuples that are different are compared.
@@ -1219,6 +1262,7 @@ class FilterRecursiveDiff(TestCase):
             expected_result, salt.utils.data.recursive_diff(tuple_one, tuple_two)
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_vs_set(self):
         """
         Test case comparing a list with a set, will be compared unordered.
@@ -1233,6 +1277,7 @@ class FilterRecursiveDiff(TestCase):
             expected_result, salt.utils.data.recursive_diff(mixed_two, mixed_one)
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_dict_vs_ordereddict(self):
         """
         Test case comparing a dict with an ordereddict, will be compared unordered.
@@ -1246,6 +1291,7 @@ class FilterRecursiveDiff(TestCase):
         self.assertEqual({}, salt.utils.data.recursive_diff(test_dict, test_odict2))
         self.assertEqual({}, salt.utils.data.recursive_diff(test_odict2, test_dict))
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_ignore_ignored(self):
         """
         Test case comparing two lists with ignore-list supplied (which is not used
@@ -1259,6 +1305,7 @@ class FilterRecursiveDiff(TestCase):
             salt.utils.data.recursive_diff(list_one, list_two, ignore_keys=[1, 3]),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_dict_ignore(self):
         """
         Test case comparing two dicts with ignore-list supplied.
@@ -1271,6 +1318,7 @@ class FilterRecursiveDiff(TestCase):
             salt.utils.data.recursive_diff(dict_one, dict_two, ignore_keys=["foo"]),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_ordereddict_ignore(self):
         """
         Test case comparing two OrderedDicts with ignore-list supplied.
@@ -1288,6 +1336,7 @@ class FilterRecursiveDiff(TestCase):
             salt.utils.data.recursive_diff(odict_one, odict_two, ignore_keys=["foo"]),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_dict_vs_ordereddict_ignore(self):
         """
         Test case comparing a dict with an OrderedDict with ignore-list supplied.
@@ -1300,6 +1349,7 @@ class FilterRecursiveDiff(TestCase):
             salt.utils.data.recursive_diff(dict_one, odict_two, ignore_keys=["foo"]),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_mixed_nested_ignore(self):
         """
         Test case comparing mixed, nested items with ignore-list supplied.
@@ -1312,6 +1362,7 @@ class FilterRecursiveDiff(TestCase):
             salt.utils.data.recursive_diff(dict_one, dict_two, ignore_keys=["foo"]),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_ordered_dict_unequal_length(self):
         """
         Test case comparing two OrderedDicts of unequal length.
@@ -1323,6 +1374,7 @@ class FilterRecursiveDiff(TestCase):
             expected_result, salt.utils.data.recursive_diff(odict_one, odict_two)
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_unequal_length(self):
         """
         Test case comparing two lists of unequal length.
@@ -1334,6 +1386,7 @@ class FilterRecursiveDiff(TestCase):
             expected_result, salt.utils.data.recursive_diff(list_one, list_two)
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_unequal_length(self):
         """
         Test case comparing two sets of unequal length.
@@ -1346,6 +1399,7 @@ class FilterRecursiveDiff(TestCase):
             expected_result, salt.utils.data.recursive_diff(set_one, set_two)
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_tuple_unequal_length(self):
         """
         Test case comparing two tuples of unequal length.
@@ -1358,6 +1412,7 @@ class FilterRecursiveDiff(TestCase):
             expected_result, salt.utils.data.recursive_diff(tuple_one, tuple_two)
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_unordered(self):
         """
         Test case comparing two lists unordered.
@@ -1370,6 +1425,7 @@ class FilterRecursiveDiff(TestCase):
             salt.utils.data.recursive_diff(list_one, list_two, ignore_order=True),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_mixed_nested_unordered(self):
         """
         Test case comparing nested dicts/lists unordered.
@@ -1389,6 +1445,7 @@ class FilterRecursiveDiff(TestCase):
             expected_result, salt.utils.data.recursive_diff(dict_one, dict_two)
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_ordered_dict_unordered(self):
         """
         Test case comparing OrderedDicts unordered.
@@ -1401,6 +1458,7 @@ class FilterRecursiveDiff(TestCase):
             salt.utils.data.recursive_diff(odict_one, odict_two, ignore_order=True),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_ignore_missing_keys_dict(self):
         """
         Test case ignoring missing keys on a comparison of dicts.
@@ -1415,6 +1473,7 @@ class FilterRecursiveDiff(TestCase):
             ),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_ignore_missing_keys_ordered_dict(self):
         """
         Test case not ignoring missing keys on a comparison of OrderedDicts.
@@ -1429,6 +1488,7 @@ class FilterRecursiveDiff(TestCase):
             ),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_ignore_missing_keys_recursive(self):
         """
         Test case ignoring missing keys on a comparison of nested dicts.

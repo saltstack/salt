@@ -12,7 +12,7 @@ from salt.ext.six.moves import StringIO
 from tests.support.mock import MagicMock
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class TemplateTestCase(TestCase):
@@ -23,6 +23,7 @@ class TemplateTestCase(TestCase):
         "mako": "fake_make_func",
     }
 
+    @skipIf(True, "FASTTEST skip")
     def test_compile_template_bad_type(self):
         """
         Test to ensure that unsupported types cannot be passed to the template compiler
@@ -30,6 +31,7 @@ class TemplateTestCase(TestCase):
         ret = template.compile_template(["1", "2", "3"], None, None, None, None)
         self.assertDictEqual(ret, {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_compile_template_preserves_windows_newlines(self):
         """
         Test to ensure that a file with Windows newlines, when rendered by a
@@ -84,6 +86,7 @@ class TemplateTestCase(TestCase):
         ).read()
         self.assertEqual(ret, input_data_windows)
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_render_pipe_str(self):
         """
         Check that all renderers specified in the pipe string are available.
@@ -93,6 +96,7 @@ class TemplateTestCase(TestCase):
         self.assertIn(("fake_json_func", ""), ret)
         self.assertNotIn(("OBVIOUSLY_NOT_HERE", ""), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_renderer_blacklisting(self):
         """
         Check that all renderers specified in the pipe string are available.

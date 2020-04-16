@@ -17,7 +17,7 @@ import salt.modules.ilo as ilo
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -37,6 +37,7 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
 
     # '__execute_cmd' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_execute_cmd(self):
         """
         Test if __execute_command opens the temporary file
@@ -49,6 +50,7 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'global_settings' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_global_settings(self):
         """
         Test if it shows global_settings
@@ -61,6 +63,7 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_http_port' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_http_port(self):
         """
         Test if it configure the port HTTP should listen on
@@ -82,6 +85,7 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_https_port' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_https_port(self):
         """
         Test if it configure the port HTTPS should listen on
@@ -105,6 +109,7 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'enable_ssh' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_enable_ssh(self):
         """
         Test if it enable the SSH daemon
@@ -126,6 +131,7 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'disable_ssh' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_disable_ssh(self):
         """
         Test if it disable the SSH daemon
@@ -147,6 +153,7 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_ssh_port' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_ssh_port(self):
         """
         Test if it enable SSH on a user defined port
@@ -170,6 +177,7 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_ssh_key' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_ssh_key(self):
         """
         Test if it configure SSH public keys for specific users
@@ -184,6 +192,7 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete_ssh_key' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_ssh_key(self):
         """
         Test if it delete a users SSH key from the ILO
@@ -198,6 +207,7 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_users' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_users(self):
         """
         Test if it list all users
@@ -209,6 +219,7 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_users_info' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_users_info(self):
         """
         Test if it List all users in detail
@@ -221,6 +232,7 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'create_user' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_user(self):
         """
         Test if it create user
@@ -236,6 +248,7 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete_user' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_user(self):
         """
         Test if it delete a user
@@ -248,6 +261,7 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_user' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_user(self):
         """
         Test if it returns local user information, excluding the password
@@ -259,6 +273,7 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'change_username' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_change_username(self):
         """
         Test if it change a username
@@ -273,6 +288,7 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'change_password' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_change_password(self):
         """
         Test if it reset a users password
@@ -287,6 +303,7 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'network' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_network(self):
         """
         Test if it grab the current network settings
@@ -299,6 +316,7 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'configure_network' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_configure_network(self):
         """
         Test if it configure Network Interface
@@ -332,6 +350,7 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'enable_dhcp' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_enable_dhcp(self):
         """
         Test if it enable DHCP
@@ -353,6 +372,7 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'disable_dhcp' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_disable_dhcp(self):
         """
         Test if it disable DHCP
@@ -374,6 +394,7 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'configure_snmp' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_configure_snmp(self):
         """
         Test if it configure SNMP

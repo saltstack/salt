@@ -11,7 +11,7 @@ import salt.tokens.localfs
 import salt.utils.files
 from tests.support.helpers import with_tempdir
 from tests.support.mock import patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class CalledWith(object):
@@ -29,6 +29,7 @@ class CalledWith(object):
 
 class WriteTokenTest(TestCase):
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_write_token(self, tmpdir):
         """
         Validate tokens put in place with an atomic move
@@ -53,6 +54,7 @@ class TestLocalFS(TestCase):
         self.expected_data = {"this": "is", "some": "token data"}
 
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_get_token_should_return_token_if_exists(self, tempdir):
         opts = {"token_dir": tempdir}
         tok = salt.tokens.localfs.mk_token(opts=opts, tdata=self.expected_data,)[
@@ -62,6 +64,7 @@ class TestLocalFS(TestCase):
         self.assertDictEqual(self.expected_data, actual_data)
 
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_get_token_should_raise_SaltDeserializationError_if_token_file_is_empty(
         self, tempdir
     ):
@@ -75,6 +78,7 @@ class TestLocalFS(TestCase):
             salt.tokens.localfs.get_token(opts=opts, tok=tok)
 
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_get_token_should_raise_SaltDeserializationError_if_token_file_is_malformed(
         self, tempdir
     ):

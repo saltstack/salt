@@ -6,13 +6,14 @@ import salt.executors.splay as splay_exec
 
 # Import Salt libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class SplayTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {splay_exec: {"__grains__": {"id": "foo"}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test__get_hash(self):
         # We just want to make sure that this function does not result in an
         # error due to passing a unicode value to bytearray()

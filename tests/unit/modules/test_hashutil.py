@@ -12,6 +12,7 @@ import salt.loader
 # Import salt testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import RUNTIME_VARS
+from tests.support.unit import skipIf
 
 
 class HashutilTestCase(ModuleCase):
@@ -34,36 +35,44 @@ class HashutilTestCase(ModuleCase):
         )
         self.hashutil = salt.loader.raw_mod(minion_opts, "hashutil", None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_base64_encodestring(self):
         ret = self.hashutil["hashutil.base64_encodestring"](self.the_string)
         self.assertEqual(ret, self.the_string_base64)
 
+    @skipIf(True, "FASTTEST skip")
     def test_base64_decodestring(self):
         ret = self.hashutil["hashutil.base64_decodestring"](self.the_string_base64)
         self.assertEqual(ret, self.the_string)
 
+    @skipIf(True, "FASTTEST skip")
     def test_md5_digest(self):
         ret = self.hashutil["hashutil.md5_digest"](self.the_string)
         self.assertEqual(ret, self.the_string_md5)
 
+    @skipIf(True, "FASTTEST skip")
     def test_sha256_digest(self):
         ret = self.hashutil["hashutil.sha256_digest"](self.the_string)
         self.assertEqual(ret, self.the_string_sha256)
 
+    @skipIf(True, "FASTTEST skip")
     def test_sha512_digest(self):
         ret = self.hashutil["hashutil.sha512_digest"](self.the_string)
         self.assertEqual(ret, self.the_string_sha512)
 
+    @skipIf(True, "FASTTEST skip")
     def test_hmac_signature(self):
         ret = self.hashutil["hashutil.hmac_signature"](
             self.the_string, "shared secret", self.the_string_hmac
         )
         self.assertTrue(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_hmac_compute(self):
         ret = self.hashutil["hashutil.hmac_compute"](self.the_string, "shared secret")
         self.assertEqual(ret, self.the_string_hmac_compute)
 
+    @skipIf(True, "FASTTEST skip")
     def test_github_signature(self):
         ret = self.hashutil["hashutil.github_signature"](
             self.the_string, "shared secret", self.the_string_github

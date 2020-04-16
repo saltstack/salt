@@ -10,7 +10,7 @@ from salt.utils.odict import OrderedDict
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class SmartOsTestCase(TestCase, LoaderModuleMockMixin):
@@ -21,6 +21,7 @@ class SmartOsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {smartos: {"__opts__": {"test": False}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_config_present_does_not_exist(self):
         """
         Test salt.states.smartos.config_present
@@ -36,6 +37,7 @@ class SmartOsTestCase(TestCase, LoaderModuleMockMixin):
             "comment"
         ] == 'Could not add property {0} with value "{1}" to config'.format(name, value)
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_vmconfig_vrrp(self):
         """
         Test _parse_vmconfig's vrid -> mac convertor

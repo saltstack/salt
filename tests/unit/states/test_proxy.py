@@ -9,7 +9,7 @@ import salt.states.proxy as proxy
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ProxyTestCase(TestCase, LoaderModuleMockMixin):
@@ -20,6 +20,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {proxy: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_proxy_macos(self):
         """
             Test to make sure we can set the proxy settings on macOS
@@ -89,6 +90,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
                 set_proxy_mock.assert_has_calls(calls)
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_proxy_macos_same(self):
         """
             Test to make sure we can set the proxy settings on macOS
@@ -130,6 +132,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
                 assert not set_proxy_mock.called
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_proxy_windows(self):
         """
             Test to make sure we can set the proxy settings on Windows
@@ -166,6 +169,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_proxy_windows_same(self):
         """
             Test to make sure we can set the proxy settings on Windows

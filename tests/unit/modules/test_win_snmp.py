@@ -16,7 +16,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 COMMUNITY_NAMES = {"TestCommunity": "Read Create"}
 
@@ -29,6 +29,7 @@ class WinSnmpTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {win_snmp: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_agent_service_types(self):
         """
         Test - Get the sysServices types that can be configured.
@@ -36,6 +37,7 @@ class WinSnmpTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_snmp.__salt__):
             self.assertIsInstance(win_snmp.get_agent_service_types(), list)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_permission_types(self):
         """
         Test - Get the permission types that can be configured for communities.
@@ -43,6 +45,7 @@ class WinSnmpTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_snmp.__salt__):
             self.assertIsInstance(win_snmp.get_permission_types(), list)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_auth_traps_enabled(self):
         """
         Test - Determine whether the host is configured to send authentication traps.
@@ -51,6 +54,7 @@ class WinSnmpTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_snmp.__salt__, {"reg.read_value": mock_value}):
             self.assertTrue(win_snmp.get_auth_traps_enabled())
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_auth_traps_enabled(self):
         """
         Test - Manage the sending of authentication traps.
@@ -62,6 +66,7 @@ class WinSnmpTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(win_snmp.set_auth_traps_enabled(**kwargs))
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_community_names(self):
         """
         Test - Get the current accepted SNMP community names and their permissions.
@@ -74,6 +79,7 @@ class WinSnmpTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(win_snmp.get_community_names(), COMMUNITY_NAMES)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_community_names_gpo(self):
         """
         Test - Get the current accepted SNMP community names and their permissions.
@@ -88,6 +94,7 @@ class WinSnmpTestCase(TestCase, LoaderModuleMockMixin):
                 win_snmp.get_community_names(), {"TestCommunity": "Managed by GPO"}
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_community_names(self):
         """
         Test - Manage the SNMP accepted community names and their permissions.
@@ -104,6 +111,7 @@ class WinSnmpTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(win_snmp.set_community_names(**kwargs))
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_community_names_gpo(self):
         """
         Test - Manage the SNMP accepted community names and their permissions.

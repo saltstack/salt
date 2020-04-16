@@ -12,7 +12,7 @@ import salt.modules.drac as drac
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class DracTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {drac: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_system_info(self):
         """
         Tests to return System information
@@ -33,6 +34,7 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(drac, "__parse_drac", mock):
                 self.assertEqual(drac.system_info(), "ABC")
 
+    @skipIf(True, "FASTTEST skip")
     def test_network_info(self):
         """
         Tests to return Network Configuration
@@ -43,6 +45,7 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(drac, "__parse_drac", mock):
                 self.assertEqual(drac.network_info(), "ABC")
 
+    @skipIf(True, "FASTTEST skip")
     def test_nameservers(self):
         """
         tests for configure the nameservers on the DRAC
@@ -57,6 +60,7 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(drac, "__execute_cmd", mock):
             self.assertTrue(drac.nameservers("a"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_syslog(self):
         """
         Tests for configure syslog remote logging, by default syslog will
@@ -72,6 +76,7 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(drac, "__execute_cmd", mock):
             self.assertTrue(drac.syslog("server", False))
 
+    @skipIf(True, "FASTTEST skip")
     def test_email_alerts(self):
         """
         Test to Enable/Disable email alerts
@@ -84,6 +89,7 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(drac, "__execute_cmd", mock):
             self.assertTrue(drac.email_alerts(False))
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_users(self):
         """
         Test for list all DRAC users
@@ -94,6 +100,7 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(drac.__salt__, {"cmd.run_all": mock}):
             self.assertEqual(drac.list_users(), {"value": {"index": 16}})
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_user(self):
         """
         Tests to delete a user
@@ -104,6 +111,7 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertFalse(drac.delete_user("username", False))
 
+    @skipIf(True, "FASTTEST skip")
     def test_change_password(self):
         """
         Tests to change users password
@@ -114,6 +122,7 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertFalse(drac.change_password("username", "password", False), False)
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_user(self):
         """
         Tests to create user accounts
@@ -199,6 +208,7 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
                             )
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_permissions(self):
         """
         Test to configure users permissions
@@ -207,6 +217,7 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(drac, "__execute_cmd", mock):
             self.assertTrue(drac.set_permissions("username", "A,B,C", 1))
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_snmp(self):
         """
         Test to configure SNMP community string
@@ -215,6 +226,7 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(drac, "__execute_cmd", mock):
             self.assertTrue(drac.set_snmp("username"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_network(self):
         """
         Test to configure Network
@@ -223,6 +235,7 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(drac, "__execute_cmd", mock):
             self.assertTrue(drac.set_network("ip", "netmask", "gateway"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_server_reboot(self):
         """
         Tests for issues a power-cycle operation on the managed server.
@@ -233,6 +246,7 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(drac, "__execute_cmd", mock):
             self.assertTrue(drac.server_reboot())
 
+    @skipIf(True, "FASTTEST skip")
     def test_server_poweroff(self):
         """
         Tests for powers down the managed server.
@@ -241,6 +255,7 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(drac, "__execute_cmd", mock):
             self.assertTrue(drac.server_poweroff())
 
+    @skipIf(True, "FASTTEST skip")
     def test_server_poweron(self):
         """
         Tests for powers up the managed server.
@@ -249,6 +264,7 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(drac, "__execute_cmd", mock):
             self.assertTrue(drac.server_poweron())
 
+    @skipIf(True, "FASTTEST skip")
     def test_server_hardreset(self):
         """
         Tests for performs a reset (reboot) operation on the managed server.
@@ -257,6 +273,7 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(drac, "__execute_cmd", mock):
             self.assertTrue(drac.server_hardreset())
 
+    @skipIf(True, "FASTTEST skip")
     def test_server_pxe(self):
         """
         Tests to configure server to PXE perform a one off PXE boot

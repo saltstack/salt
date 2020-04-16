@@ -14,7 +14,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 TAPS_STRING = "homebrew/dupes\nhomebrew/science\nhomebrew/x11"
 TAPS_LIST = ["homebrew/dupes", "homebrew/science", "homebrew/x11"]
@@ -31,6 +31,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
 
     # '_list_taps' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_taps(self):
         """
         Tests the return of the list of taps
@@ -46,6 +47,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
 
     # '_tap' function tests: 3
 
+    @skipIf(True, "FASTTEST skip")
     def test_tap_installed(self):
         """
         Tests if tap argument is already installed or not
@@ -55,6 +57,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(mac_brew._tap("homebrew/science"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_tap_failure(self):
         """
         Tests if the tap installation failed
@@ -74,6 +77,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
         ), patch("salt.modules.mac_brew_pkg._list_taps", MagicMock(return_value={})):
             self.assertFalse(mac_brew._tap("homebrew/test"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_tap(self):
         """
         Tests adding unofficial GitHub repos to the list of brew taps
@@ -95,6 +99,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
 
     # '_homebrew_bin' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_homebrew_bin(self):
         """
         Tests the path to the homebrew binary
@@ -107,12 +112,14 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
     # Only tested a few basics
     # Full functionality should be tested in integration phase
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_pkgs_removed(self):
         """
         Tests removed implementation
         """
         self.assertEqual(mac_brew.list_pkgs(removed=True), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_pkgs_versions_true(self):
         """
         Tests if pkg.list_pkgs is already in context and is a list
@@ -121,6 +128,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(mac_brew.__context__, {"pkg.list_pkgs": mock_context}):
             self.assertEqual(mac_brew.list_pkgs(versions_as_list=True), mock_context)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_pkgs_homebrew_cask_pakages(self):
         """
         Tests if pkg.list_pkgs list properly homebrew cask packages
@@ -195,6 +203,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'version' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_version(self):
         """
         Tests version name returned
@@ -210,6 +219,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
     # Only tested a few basics
     # Full functionality should be tested in integration phase
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove(self):
         """
         Tests if package to be removed exists
@@ -222,6 +232,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'refresh_db' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_refresh_db_failure(self):
         """
         Tests an update of homebrew package repository failure
@@ -239,6 +250,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(salt.utils.pkg, "clear_rtag", Mock()):
                 self.assertRaises(CommandExecutionError, mac_brew.refresh_db)
 
+    @skipIf(True, "FASTTEST skip")
     def test_refresh_db(self):
         """
         Tests a successful update of homebrew package repository
@@ -258,6 +270,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
     # Only tested a few basics
     # Full functionality should be tested in integration phase
 
+    @skipIf(True, "FASTTEST skip")
     def test_install(self):
         """
         Tests if package to be installed exists

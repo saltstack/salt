@@ -12,7 +12,7 @@ import salt.modules.webutil as htpasswd
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class HtpasswdTestCase(TestCase, LoaderModuleMockMixin):
@@ -25,6 +25,7 @@ class HtpasswdTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'useradd' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_useradd(self):
         """
         Test if it adds an HTTP user using the htpasswd command
@@ -40,6 +41,7 @@ class HtpasswdTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'userdel' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_userdel(self):
         """
         Test if it delete an HTTP user from the specified htpasswd file.
@@ -50,6 +52,7 @@ class HtpasswdTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(htpasswd.userdel("/etc/httpd/htpasswd", "larry"), ["Salt"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_userdel_missing_htpasswd(self):
         """
         Test if it returns error when no htpasswd file exists

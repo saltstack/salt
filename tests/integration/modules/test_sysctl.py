@@ -17,12 +17,14 @@ class SysctlModuleTest(ModuleCase):
         if not ret:
             self.skipTest("sysctl not found")
 
+    @skipIf(True, "FASTTEST skip")
     def test_show(self):
         ret = self.run_function("sysctl.show")
         self.assertIsInstance(ret, dict, "sysctl.show return wrong type")
         self.assertGreater(len(ret), 10, "sysctl.show return few data")
 
     @skipIf(not sys.platform.startswith("linux"), "Linux specific")
+    @skipIf(True, "FASTTEST skip")
     def test_show_linux(self):
         ret = self.run_function("sysctl.show")
         self.assertIn("kernel.ostype", ret, "kernel.ostype absent")
@@ -44,6 +46,7 @@ class SysctlModuleTest(ModuleCase):
         self.assertEqual(ret.get("kern.ostype"), "OpenBSD", "Incorrect kern.ostype")
 
     @skipIf(not sys.platform.startswith("darwin"), "Darwin (macOS) specific")
+    @skipIf(True, "FASTTEST skip")
     def test_show_darwin(self):
         ret = self.run_function("sysctl.show")
         self.assertIn("kern.ostype", ret, "kern.ostype absent")

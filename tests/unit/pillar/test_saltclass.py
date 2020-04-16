@@ -10,7 +10,7 @@ import salt.pillar.saltclass as saltclass
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 base_path = os.path.dirname(os.path.realpath(__file__))
 fake_minion_id = "fake_id"
@@ -51,6 +51,8 @@ class SaltclassPillarTestCase(TestCase, LoaderModuleMockMixin):
         # Else give the parsed content result
         self.assertListEqual(parsed_ret, expected_ret)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_succeeds(self):
         ret = ["default.users", "default.motd", "default.empty", "default", "roles.app"]
         self._runner(ret)
@@ -82,6 +84,8 @@ class SaltclassPillarTestCaseListExpansion(TestCase, LoaderModuleMockMixin):
         # Else give the parsed content result
         self.assertListEqual(parsed_ret, expected_ret)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_succeeds(self):
         ret = [{"a": "192.168.10.10"}, "192.168.10.20"]
         self._runner(ret)

@@ -13,7 +13,7 @@ from salt.cloud.clouds import saltify
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import ANY, MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 TEST_PROFILES = {
     "testprofile1": NotImplemented,
@@ -56,6 +56,7 @@ class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
         }
         return {saltify: saltify_globals}
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_no_deploy(self):
         """
         Test if deployment fails. This is the most basic test as saltify doesn't contain much logic
@@ -64,6 +65,7 @@ class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
             vm = {"deploy": False, "driver": "saltify", "name": "dummy"}
             self.assertTrue(saltify.create(vm))
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_and_deploy(self):
         """
         Test if deployment can be done.
@@ -82,6 +84,7 @@ class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
             mock_cmd.assert_called_once_with(vm_, ANY)
             self.assertTrue(result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_wake_on_lan(self):
         """
         Test if wake on lan works
@@ -112,18 +115,21 @@ class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
                     mock_sleep.assert_any_call(0.01)
                     self.assertTrue(result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_avail_locations(self):
         """
         Test the avail_locations will always return {}
         """
         self.assertEqual(saltify.avail_locations(), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_avail_sizes(self):
         """
         Test the avail_sizes will always return {}
         """
         self.assertEqual(saltify.avail_sizes(), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_avail_images(self):
         """
         Test the avail_images will return profiles
@@ -131,6 +137,7 @@ class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
         testlist = list(TEST_PROFILE_NAMES)  # copy
         self.assertEqual(saltify.avail_images()["Profiles"].sort(), testlist.sort())
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_nodes(self):
         """
         Test list_nodes will return required fields only
@@ -164,6 +171,7 @@ class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
         with patch("salt.client.LocalClient", return_value=lcl):
             self.assertEqual(saltify.list_nodes(), expected_result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_saltify_reboot(self):
         mm_cmd = MagicMock(return_value=True)
         lcl = salt.client.LocalClient()
@@ -173,6 +181,7 @@ class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
             mm_cmd.assert_called_with("nodeS1", "system.reboot")
             self.assertTrue(result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_saltify_destroy(self):
         # destroy calls local.cmd several times and expects
         # different results, so we will provide a list of

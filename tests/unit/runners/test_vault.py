@@ -16,7 +16,7 @@ from salt.ext import six
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import ANY, MagicMock, Mock, call, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -41,6 +41,7 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
     def tearDown(self):
         del self.grains
 
+    @skipIf(True, "FASTTEST skip")
     def test_pattern_list_expander(self):
         """
         Ensure _expand_pattern_lists works as intended:
@@ -80,6 +81,7 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
                 log.debug("Difference:\n\t%s", diff)
             self.assertEqual(output, correct_output)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_policies_for_nonexisting_minions(self):
         minion_id = "salt_master"
         # For non-existing minions, or the master-minion, grains will be None
@@ -104,6 +106,7 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
                     log.debug("Difference:\n\t%s", diff)
                 self.assertEqual(output, correct_output)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_policies(self):
         """
         Ensure _get_policies works as intended, including expansion of lists
@@ -148,6 +151,7 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
                     log.debug("Difference:\n\t%s", diff)
                 self.assertEqual(output, correct_output)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_token_create_url(self):
         """
         Ensure _get_token_create_url parses config correctly
@@ -211,6 +215,8 @@ class VaultTokenAuthTest(TestCase, LoaderModuleMockMixin):
         "salt.runners.vault._get_token_create_url",
         MagicMock(return_value="http://fake_url"),
     )
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_generate_token(self):
         """
         Basic tests for test_generate_token: all exits
@@ -275,6 +281,8 @@ class VaultAppRoleAuthTest(TestCase, LoaderModuleMockMixin):
         "salt.runners.vault._get_token_create_url",
         MagicMock(return_value="http://fake_url"),
     )
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_generate_token(self):
         """
         Basic test for test_generate_token with approle (two vault calls)

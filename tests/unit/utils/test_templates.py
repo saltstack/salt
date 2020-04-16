@@ -32,21 +32,25 @@ class RenderTestCase(TestCase):
         }
 
     ### Tests for Jinja (whitespace-friendly)
+    @skipIf(True, "FASTTEST skip")
     def test_render_jinja_sanity(self):
         tmpl = """OK"""
         res = salt.utils.templates.render_jinja_tmpl(tmpl, dict(self.context))
         self.assertEqual(res, "OK")
 
+    @skipIf(True, "FASTTEST skip")
     def test_render_jinja_evaluate(self):
         tmpl = """{{ "OK" }}"""
         res = salt.utils.templates.render_jinja_tmpl(tmpl, dict(self.context))
         self.assertEqual(res, "OK")
 
+    @skipIf(True, "FASTTEST skip")
     def test_render_jinja_evaluate_multi(self):
         tmpl = """{% if 1 -%}OK{%- endif %}"""
         res = salt.utils.templates.render_jinja_tmpl(tmpl, dict(self.context))
         self.assertEqual(res, "OK")
 
+    @skipIf(True, "FASTTEST skip")
     def test_render_jinja_variable(self):
         tmpl = """{{ var }}"""
 
@@ -56,16 +60,19 @@ class RenderTestCase(TestCase):
         self.assertEqual(res, "OK")
 
     ### Tests for mako template
+    @skipIf(True, "FASTTEST skip")
     def test_render_mako_sanity(self):
         tmpl = """OK"""
         res = salt.utils.templates.render_mako_tmpl(tmpl, dict(self.context))
         self.assertEqual(res, "OK")
 
+    @skipIf(True, "FASTTEST skip")
     def test_render_mako_evaluate(self):
         tmpl = """${ "OK" }"""
         res = salt.utils.templates.render_mako_tmpl(tmpl, dict(self.context))
         self.assertEqual(res, "OK")
 
+    @skipIf(True, "FASTTEST skip")
     def test_render_mako_evaluate_multi(self):
         tmpl = """
         % if 1:
@@ -76,6 +83,7 @@ class RenderTestCase(TestCase):
         stripped = res.strip()
         self.assertEqual(stripped, "OK")
 
+    @skipIf(True, "FASTTEST skip")
     def test_render_mako_variable(self):
         tmpl = """${ var }"""
 
@@ -125,21 +133,25 @@ class RenderTestCase(TestCase):
         self.assertEqual(res, "OK")
 
     ### Tests for genshi template (xml-based)
+    @skipIf(True, "FASTTEST skip")
     def test_render_genshi_sanity(self):
         tmpl = """<RU>OK</RU>"""
         res = salt.utils.templates.render_genshi_tmpl(tmpl, dict(self.context))
         self.assertEqual(res, "<RU>OK</RU>")
 
+    @skipIf(True, "FASTTEST skip")
     def test_render_genshi_evaluate(self):
         tmpl = """<RU>${ "OK" }</RU>"""
         res = salt.utils.templates.render_genshi_tmpl(tmpl, dict(self.context))
         self.assertEqual(res, "<RU>OK</RU>")
 
+    @skipIf(True, "FASTTEST skip")
     def test_render_genshi_evaluate_condition(self):
         tmpl = """<RU xmlns:py="http://genshi.edgewall.org/" py:if="1">OK</RU>"""
         res = salt.utils.templates.render_genshi_tmpl(tmpl, dict(self.context))
         self.assertEqual(res, "<RU>OK</RU>")
 
+    @skipIf(True, "FASTTEST skip")
     def test_render_genshi_variable(self):
         tmpl = """<RU>$var</RU>"""
 
@@ -148,6 +160,7 @@ class RenderTestCase(TestCase):
         res = salt.utils.templates.render_genshi_tmpl(tmpl, ctx)
         self.assertEqual(res, "<RU>OK</RU>")
 
+    @skipIf(True, "FASTTEST skip")
     def test_render_genshi_variable_replace(self):
         tmpl = """<RU xmlns:py="http://genshi.edgewall.org/" py:content="var">not ok</RU>"""
 
@@ -157,16 +170,19 @@ class RenderTestCase(TestCase):
         self.assertEqual(res, "<RU>OK</RU>")
 
     ### Tests for cheetah template (line-oriented and xml-friendly)
+    @skipIf(True, "FASTTEST skip")
     def test_render_cheetah_sanity(self):
         tmpl = """OK"""
         res = salt.utils.templates.render_cheetah_tmpl(tmpl, dict(self.context))
         self.assertEqual(res, "OK")
 
+    @skipIf(True, "FASTTEST skip")
     def test_render_cheetah_evaluate(self):
         tmpl = """<%="OK"%>"""
         res = salt.utils.templates.render_cheetah_tmpl(tmpl, dict(self.context))
         self.assertEqual(res, "OK")
 
+    @skipIf(True, "FASTTEST skip")
     def test_render_cheetah_evaluate_xml(self):
         tmpl = """
         <% if 1: %>
@@ -177,6 +193,7 @@ class RenderTestCase(TestCase):
         stripped = res.strip()
         self.assertEqual(stripped, "OK")
 
+    @skipIf(True, "FASTTEST skip")
     def test_render_cheetah_evaluate_text(self):
         tmpl = """
         #if 1
@@ -188,6 +205,7 @@ class RenderTestCase(TestCase):
         stripped = res.strip()
         self.assertEqual(stripped, "OK")
 
+    @skipIf(True, "FASTTEST skip")
     def test_render_cheetah_variable(self):
         tmpl = """$var"""
 
@@ -207,6 +225,7 @@ class MockRender(object):
 
 class WrapRenderTestCase(TestCase):
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_wrap_issue_56119_a(self, tempdir):
         slsfile = os.path.join(tempdir, "foo")
         with salt.utils.files.fopen(slsfile, "w") as fp:
@@ -219,6 +238,7 @@ class WrapRenderTestCase(TestCase):
         assert render.context["tpldir"] == "foo/bar", render.context["tpldir"]
 
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_wrap_issue_56119_b(self, tempdir):
         slsfile = os.path.join(tempdir, "foo")
         with salt.utils.files.fopen(slsfile, "w") as fp:

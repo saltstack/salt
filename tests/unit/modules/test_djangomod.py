@@ -11,7 +11,7 @@ import salt.modules.djangomod as djangomod
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
@@ -27,6 +27,7 @@ class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'command' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_command(self):
         """
         Test if it runs arbitrary django management command
@@ -37,6 +38,7 @@ class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'syncdb' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_syncdb(self):
         """
         Test if it runs the Django-Admin syncdb command
@@ -47,6 +49,7 @@ class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'migrate' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_migrate(self):
         """
         Test if it runs the Django-Admin migrate command
@@ -57,6 +60,7 @@ class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'createsuperuser' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_createsuperuser(self):
         """
         Test if it create a super user for the database.
@@ -71,6 +75,7 @@ class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'loaddata' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_loaddata(self):
         """
         Test if it loads fixture data
@@ -81,6 +86,7 @@ class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'collectstatic' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_collectstatic(self):
         """
         Test if it collect static files from each of your applications
@@ -102,6 +108,7 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
         self.addCleanup(patcher.stop)
         return {djangomod: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_django_admin_cli_command(self):
         mock = MagicMock()
         with patch.dict(djangomod.__salt__, {"cmd.run": mock}):
@@ -113,6 +120,7 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
                 runas=None,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_django_admin_cli_command_with_args(self):
         mock = MagicMock()
         with patch.dict(djangomod.__salt__, {"cmd.run": mock}):
@@ -134,6 +142,7 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
                 runas=None,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_django_admin_cli_command_with_kwargs(self):
         mock = MagicMock()
         with patch.dict(djangomod.__salt__, {"cmd.run": mock}):
@@ -148,6 +157,7 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
                 runas=None,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_django_admin_cli_command_with_kwargs_ignore_dunder(self):
         mock = MagicMock()
         with patch.dict(djangomod.__salt__, {"cmd.run": mock}):
@@ -161,6 +171,7 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
                 runas=None,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_django_admin_cli_syncdb(self):
         mock = MagicMock()
         with patch.dict(djangomod.__salt__, {"cmd.run": mock}):
@@ -172,6 +183,7 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
                 runas=None,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_django_admin_cli_syncdb_migrate(self):
         mock = MagicMock()
         with patch.dict(djangomod.__salt__, {"cmd.run": mock}):
@@ -183,6 +195,7 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
                 runas=None,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_django_admin_cli_migrate(self):
         mock = MagicMock()
         with patch.dict(djangomod.__salt__, {"cmd.run": mock}):
@@ -194,6 +207,7 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
                 runas=None,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_django_admin_cli_createsuperuser(self):
         mock = MagicMock()
         with patch.dict(djangomod.__salt__, {"cmd.run": mock}):
@@ -222,6 +236,7 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
                 "django-admin.py loaddata --settings=settings.py app1 app2",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_django_admin_cli_collectstatic(self):
         mock = MagicMock()
         with patch.dict(djangomod.__salt__, {"cmd.run": mock}):

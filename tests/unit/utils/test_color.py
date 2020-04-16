@@ -11,10 +11,11 @@ import salt.utils.color
 from salt.ext import six
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ColorUtilsTestCase(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_get_colors(self):
         ret = salt.utils.color.get_colors()
         self.assertEqual("\x1b[0;37m", six.text_type(ret["LIGHT_GRAY"]))

@@ -13,7 +13,7 @@ from salt.ext.six.moves import builtins, range  # pylint: disable=redefined-buil
 
 # Import Salt libs
 from tests.support.mock import patch
-from tests.support.unit import LOREM_IPSUM, TestCase
+from tests.support.unit import LOREM_IPSUM, TestCase, skipIf
 
 UNICODE = "中国語 (繁体)"
 STR = BYTES = UNICODE.encode("utf-8")
@@ -90,18 +90,22 @@ fi
 
 
 class TestBuildWhitespaceRegex(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_single_quotes(self):
         regex = salt.utils.stringutils.build_whitespace_split_regex(SINGLE_TXT)
         self.assertTrue(re.search(regex, MATCH))
 
+    @skipIf(True, "FASTTEST skip")
     def test_double_quotes(self):
         regex = salt.utils.stringutils.build_whitespace_split_regex(DOUBLE_TXT)
         self.assertTrue(re.search(regex, MATCH))
 
+    @skipIf(True, "FASTTEST skip")
     def test_single_and_double_quotes(self):
         regex = salt.utils.stringutils.build_whitespace_split_regex(SINGLE_DOUBLE_TXT)
         self.assertTrue(re.search(regex, MATCH))
 
+    @skipIf(True, "FASTTEST skip")
     def test_issue_2227(self):
         regex = salt.utils.stringutils.build_whitespace_split_regex(
             SINGLE_DOUBLE_SAME_LINE_TXT
@@ -110,6 +114,7 @@ class TestBuildWhitespaceRegex(TestCase):
 
 
 class StringutilsTestCase(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_contains_whitespace(self):
         does_contain_whitespace = "A brown fox jumped over the red hen."
         does_not_contain_whitespace = "Abrownfoxjumpedovertheredhen."
@@ -121,6 +126,7 @@ class StringutilsTestCase(TestCase):
             salt.utils.stringutils.contains_whitespace(does_not_contain_whitespace)
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_to_num(self):
         self.assertEqual(7, salt.utils.stringutils.to_num("7"))
         self.assertIsInstance(salt.utils.stringutils.to_num("7"), int)
@@ -129,6 +135,7 @@ class StringutilsTestCase(TestCase):
         self.assertEqual(salt.utils.stringutils.to_num("Seven"), "Seven")
         self.assertIsInstance(salt.utils.stringutils.to_num("Seven"), six.text_type)
 
+    @skipIf(True, "FASTTEST skip")
     def test_to_none(self):
         self.assertIsNone(salt.utils.stringutils.to_none(""))
         self.assertIsNone(salt.utils.stringutils.to_none("  "))
@@ -136,6 +143,7 @@ class StringutilsTestCase(TestCase):
         self.assertIsNotNone(salt.utils.stringutils.to_none("None"))
         self.assertIsNotNone(salt.utils.stringutils.to_none(0))
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_binary(self):
         self.assertFalse(salt.utils.stringutils.is_binary(LOREM_IPSUM))
         # Also test bytestring
@@ -175,6 +183,7 @@ class StringutilsTestCase(TestCase):
             salt.utils.stringutils.is_binary(salt.utils.stringutils.to_bytes(bin_str))
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_to_str(self):
         for x in (123, (1, 2, 3), [1, 2, 3], {1: 23}, None):
             self.assertRaises(TypeError, salt.utils.stringutils.to_str, x)
@@ -222,6 +231,7 @@ class StringutilsTestCase(TestCase):
                     salt.utils.stringutils.to_str("Ψ"), "Ψ".encode("utf-8")
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_to_bytes(self):
         for x in (123, (1, 2, 3), [1, 2, 3], {1: 23}, None):
             self.assertRaises(TypeError, salt.utils.stringutils.to_bytes, x)
@@ -240,6 +250,7 @@ class StringutilsTestCase(TestCase):
             self.assertEqual(salt.utils.stringutils.to_bytes(bytearray(BYTES)), BYTES)
             self.assertEqual(salt.utils.stringutils.to_bytes(UNICODE, "utf-8"), BYTES)
 
+    @skipIf(True, "FASTTEST skip")
     def test_to_unicode(self):
         self.assertEqual(
             salt.utils.stringutils.to_unicode(EGGS, normalize=True), "яйца"
@@ -277,12 +288,14 @@ class StringutilsTestCase(TestCase):
                     salt.utils.stringutils.to_unicode("Ψ".encode("utf-8")), "Ψ"
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_to_unicode_multi_encoding(self):
         result = salt.utils.stringutils.to_unicode(
             LATIN1_BYTES, encoding=("utf-8", "latin1")
         )
         assert result == LATIN1_UNICODE
 
+    @skipIf(True, "FASTTEST skip")
     def test_build_whitespace_split_regex(self):
         # With 3.7+,  re.escape only escapes special characters, no longer
         # escaping all characters other than ASCII letters, numbers and
@@ -302,6 +315,7 @@ class StringutilsTestCase(TestCase):
         )
         self.assertEqual(ret, expected_regex)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_context(self):
         expected_context = textwrap.dedent(
             """\
@@ -314,30 +328,35 @@ class StringutilsTestCase(TestCase):
         ret = salt.utils.stringutils.get_context(LOREM_IPSUM, 1, num_lines=1)
         self.assertEqual(ret, expected_context)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_context_has_enough_context(self):
         template = "1\n2\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\ne\nf"
         context = salt.utils.stringutils.get_context(template, 8)
         expected = "---\n[...]\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\n[...]\n---"
         self.assertEqual(expected, context)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_context_at_top_of_file(self):
         template = "1\n2\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\ne\nf"
         context = salt.utils.stringutils.get_context(template, 1)
         expected = "---\n1\n2\n3\n4\n5\n6\n[...]\n---"
         self.assertEqual(expected, context)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_context_at_bottom_of_file(self):
         template = "1\n2\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\ne\nf"
         context = salt.utils.stringutils.get_context(template, 15)
         expected = "---\n[...]\na\nb\nc\nd\ne\nf\n---"
         self.assertEqual(expected, context)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_context_2_context_lines(self):
         template = "1\n2\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\ne\nf"
         context = salt.utils.stringutils.get_context(template, 8, num_lines=2)
         expected = "---\n[...]\n6\n7\n8\n9\na\n[...]\n---"
         self.assertEqual(expected, context)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_context_with_marker(self):
         template = "1\n2\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\ne\nf"
         context = salt.utils.stringutils.get_context(
@@ -346,6 +365,7 @@ class StringutilsTestCase(TestCase):
         expected = "---\n[...]\n6\n7\n8 <---\n9\na\n[...]\n---"
         self.assertEqual(expected, context)
 
+    @skipIf(True, "FASTTEST skip")
     def test_expr_match(self):
         val = "foo/bar/baz"
         # Exact match
@@ -359,6 +379,7 @@ class StringutilsTestCase(TestCase):
         # Regex non-match
         self.assertFalse(salt.utils.stringutils.expr_match(val, r"foo/\w/baz"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_whitelist_blacklist(self):
         """
         Ensure that whitelist matching works on both PY2 and PY3

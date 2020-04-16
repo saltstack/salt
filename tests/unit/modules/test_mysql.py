@@ -95,6 +95,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {mysql: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_exists(self):
         """
         Test to see if mysql module properly forms the MySQL query to see if a user exists
@@ -220,6 +221,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                         ret = mysql.user_create("testuser")
                         self.assertEqual(False, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_create(self):
         """
         Test the creation of a MySQL user in mysql exec module
@@ -292,6 +294,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                     unix_socket=True,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_chpass(self):
         """
         Test changing a MySQL user password in mysql exec module
@@ -338,6 +341,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                         )
                         connect_mock.assert_has_calls(calls, any_order=True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_remove(self):
         """
         Test the removal of a MySQL user in mysql exec module
@@ -352,6 +356,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                 "testuser",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_db_check(self):
         """
         Test MySQL db check function in mysql exec module
@@ -363,6 +368,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
             "my`'\" table",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_db_repair(self):
         """
         Test MySQL db repair function in mysql exec module
@@ -374,6 +380,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
             "my`'\" table",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_db_optimize(self):
         """
         Test MySQL db optimize function in mysql exec module
@@ -385,6 +392,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
             "my`'\" table",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_db_remove(self):
         """
         Test MySQL db remove function in mysql exec module
@@ -394,6 +402,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                 mysql.db_remove, "DROP DATABASE `test``'\" db`;", "test`'\" db"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_db_tables(self):
         """
         Test MySQL db_tables function in mysql exec module
@@ -403,6 +412,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                 mysql.db_tables, "SHOW TABLES IN `test``'\" db`", "test`'\" db"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_db_exists(self):
         """
         Test MySQL db_exists function in mysql exec module
@@ -416,6 +426,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
             'test%_`" db',
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_db_create(self):
         """
         Test MySQL db_create function in mysql exec module
@@ -426,12 +437,14 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
             "test`'\" db",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_list(self):
         """
         Test MySQL user_list function in mysql exec module
         """
         self._test_call(mysql.user_list, "SELECT User,Host FROM mysql.user")
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_info(self):
         """
         Test to see if the mysql execution module correctly forms the SQL for information on a MySQL user.
@@ -445,6 +458,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
             "mytestuser",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_grants(self):
         """
         Test to ensure the mysql user_grants function returns properly formed SQL for a basic query
@@ -459,6 +473,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                 "testuser",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_grant_exists_true(self):
         """
         Test to ensure that we can find a grant that exists
@@ -479,6 +494,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(ret, True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_grant_exists_false(self):
         """
         Test to ensure that we don't find a grant that doesn't exist
@@ -498,6 +514,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(ret, False)
 
+    @skipIf(True, "FASTTEST skip")
     def test_grant_exists_all(self):
         """
         Test to ensure that we can find a grant that exists
@@ -553,24 +570,28 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
             "localhost",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_processlist(self):
         """
         Test processlist function in mysql exec module
         """
         self._test_call(mysql.processlist, "SHOW FULL PROCESSLIST")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_master_status(self):
         """
         Test get_master_status in the mysql execution module
         """
         self._test_call(mysql.get_master_status, "SHOW MASTER STATUS")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_slave_status(self):
         """
         Test get_slave_status in the mysql execution module
         """
         self._test_call(mysql.get_slave_status, "SHOW SLAVE STATUS")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_slave_status_bad_server(self):
         """
         Test get_slave_status in the mysql execution module, simulating a broken server
@@ -586,11 +607,13 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
     def test_free_slave(self):
         pass
 
+    @skipIf(True, "FASTTEST skip")
     def test_query(self):
         self._test_call(
             mysql.query, "SELECT * FROM testdb", "testdb", "SELECT * FROM testdb"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_query_error(self):
         connect_mock = MagicMock()
         with patch.object(mysql, "_connect", connect_mock):
@@ -606,6 +629,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
             expected = "MySQL Error 9999: Something Went Wrong"
             self.assertEqual(mysql.__context__["mysql.error"], expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_plugin_add(self):
         """
         Test the adding/installing a MySQL / MariaDB plugin
@@ -617,6 +641,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                 "auth_socket",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_plugin_remove(self):
         """
         Test the removing/uninstalling a MySQL / MariaDB plugin
@@ -626,6 +651,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                 mysql.plugin_remove, "UNINSTALL PLUGIN auth_socket", "auth_socket",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_plugin_status(self):
         """
         Test checking the status of a MySQL / MariaDB plugin
@@ -639,6 +665,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
             "auth_socket",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_sanitize_comment(self):
         """
         Test comment sanitization

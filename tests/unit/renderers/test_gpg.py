@@ -12,7 +12,7 @@ from salt.exceptions import SaltRenderError
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class GPGTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {gpg: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test__get_gpg_exec(self):
         """
         test _get_gpg_exec
@@ -35,6 +36,7 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
         with patch("salt.utils.path.which", MagicMock(return_value=False)):
             self.assertRaises(SaltRenderError, gpg._get_gpg_exec)
 
+    @skipIf(True, "FASTTEST skip")
     def test__decrypt_ciphertext(self):
         """
         test _decrypt_ciphertext
@@ -68,6 +70,7 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(gpg._decrypt_ciphertexts(crypted), crypted)
                 self.assertEqual(gpg._decrypt_ciphertexts(multicrypted), multicrypted)
 
+    @skipIf(True, "FASTTEST skip")
     def test__decrypt_object(self):
         """
         test _decrypt_object
@@ -90,6 +93,7 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(gpg._decrypt_object(crypted_list), secret_list)
             self.assertEqual(gpg._decrypt_object(None), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_render(self):
         """
         test render
@@ -107,6 +111,7 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
                 ):
                     self.assertEqual(gpg.render(crypted), secret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_multi_render(self):
         key_dir = "/etc/salt/gpgkeys"
         secret = "Use more salt."
@@ -135,6 +140,7 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
                 ):
                     self.assertEqual(gpg.render(crypted), expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_render_with_binary_data_should_return_binary_data(self):
         key_dir = "/etc/salt/gpgkeys"
         secret = b"Use\x8b more\x8b salt."
@@ -163,6 +169,7 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
                 ):
                     self.assertEqual(gpg.render(crypted, encoding="utf-8"), expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_render_with_translate_newlines_should_translate_newlines(self):
         key_dir = "/etc/salt/gpgkeys"
         secret = b"Use\x8b more\x8b salt."

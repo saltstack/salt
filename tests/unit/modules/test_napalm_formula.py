@@ -13,7 +13,7 @@ import salt.modules.napalm_formula as napalm_formula
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class TestModulesNAPALMFormula(TestCase, LoaderModuleMockMixin):
@@ -85,6 +85,7 @@ class TestModulesNAPALMFormula(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {napalm_formula: {"__grains__": {"os": "eos"}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_container_path(self):
         paths = [
             "interfaces:interface:Ethernet1:config",
@@ -97,10 +98,12 @@ class TestModulesNAPALMFormula(TestCase, LoaderModuleMockMixin):
         ret = napalm_formula.container_path(self.model)
         self.assertEqual(set(ret), set(paths))
 
+    @skipIf(True, "FASTTEST skip")
     def test_setval(self):
         dict_ = {"foo": {"bar": {"baz": True}}}
         self.assertEqual(dict_, napalm_formula.setval("foo:bar:baz", True))
 
+    @skipIf(True, "FASTTEST skip")
     def test_defaults(self):
         expected_result = {
             "interfaces": {
@@ -163,17 +166,20 @@ class TestModulesNAPALMFormula(TestCase, LoaderModuleMockMixin):
         ret = napalm_formula.defaults(self.model, self.defaults)
         self.assertEqual(ret, expected_result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_render_field(self):
         config = {"description": "Interface description"}
         ret = napalm_formula.render_field(config, "description", quotes=True)
         self.assertEqual(ret, 'description "Interface description"')
 
+    @skipIf(True, "FASTTEST skip")
     def test_render_field_junos(self):
         config = {"description": "Interface description"}
         with patch.dict(napalm_formula.__grains__, {"os": "junos"}):
             ret = napalm_formula.render_field(config, "description", quotes=True)
             self.assertEqual(ret, 'description "Interface description";')
 
+    @skipIf(True, "FASTTEST skip")
     def test_render_fields(self):
         config = {"mtu": 2048, "description": "Interface description"}
         expected_render = textwrap.dedent(

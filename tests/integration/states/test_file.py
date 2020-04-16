@@ -142,7 +142,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         if user in str(self.run_function("user.list_users")):
             self.run_function("user.delete", [user])
 
-    @skipIf(True, "SLOWTEST skip")
     def test_symlink(self):
         """
         file.symlink
@@ -161,7 +160,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state("file.symlink", name=name, target=tgt)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_test_symlink(self):
         """
         file.symlink test interface
@@ -171,7 +169,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state("file.symlink", test=True, name=name, target=tgt)
         self.assertSaltNoneReturn(ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_absent_file(self):
         """
         file.absent
@@ -183,7 +180,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertFalse(os.path.isfile(name))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_absent_dir(self):
         """
         file.absent
@@ -196,7 +192,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertFalse(os.path.isdir(name))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_absent_link(self):
         """
         file.absent
@@ -221,7 +216,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 self.run_function("file.remove", [name])
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_test_absent(self, name):
         """
         file.absent test interface
@@ -232,7 +226,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltNoneReturn(ret)
         self.assertTrue(os.path.isfile(name))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_managed(self):
         """
         file.managed
@@ -247,7 +240,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(master_data, minion_data)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_managed_file_mode(self):
         """
         file.managed, correct file permissions
@@ -269,7 +261,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @skipIf(IS_WINDOWS, "Windows does not report any file modes. Skipping.")
-    @skipIf(True, "SLOWTEST skip")
     def test_managed_file_mode_keep(self):
         """
         Test using "mode: keep" in a file.managed state
@@ -277,7 +268,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         _test_managed_file_mode_keep_helper(self, local=False)
 
     @skipIf(IS_WINDOWS, "Windows does not report any file modes. Skipping.")
-    @skipIf(True, "SLOWTEST skip")
     def test_managed_file_mode_keep_local_source(self):
         """
         Test using "mode: keep" in a file.managed state, with a local file path
@@ -285,7 +275,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         """
         _test_managed_file_mode_keep_helper(self, local=True)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_managed_file_mode_file_exists_replace(self):
         """
         file.managed, existing file with replace=True, change permissions
@@ -321,7 +310,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(oct(desired_mode), oct(resulting_mode))
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_managed_file_mode_file_exists_noreplace(self):
         """
         file.managed, existing file with replace=False, change permissions
@@ -354,7 +342,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(oct(desired_mode), oct(resulting_mode))
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_managed_file_with_grains_data(self):
         """
         Test to ensure we can render grains data into a managed
@@ -375,7 +362,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             match = "^minion\n"
         self.assertTrue(re.match(match, file_contents[0]))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_managed_file_with_pillar_sls(self):
         """
         Test to ensure pillar data in sls file
@@ -394,7 +380,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         check_file = self.run_function("file.file_exists", [file_pillar])
         self.assertTrue(check_file)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_managed_file_with_pillardefault_sls(self):
         """
         Test to ensure when pillar data is not available
@@ -414,7 +399,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(check_file)
 
     @skip_if_not_root
-    @skipIf(True, "SLOWTEST skip")
     def test_managed_dir_mode(self):
         """
         Tests to ensure that file.managed creates directories with the
@@ -448,7 +432,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertEqual(desired_owner, resulting_owner)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_test_managed(self):
         """
         file.managed test interface
@@ -460,7 +443,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltNoneReturn(ret)
         self.assertFalse(os.path.isfile(name))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_managed_show_changes_false(self):
         """
         file.managed test interface
@@ -476,7 +458,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         changes = next(six.itervalues(ret))["changes"]
         self.assertEqual("<show_changes=False>", changes["diff"])
 
-    @skipIf(True, "SLOWTEST skip")
     def test_managed_show_changes_true(self):
         """
         file.managed test interface
@@ -491,7 +472,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertIn("diff", changes)
 
     @skipIf(IS_WINDOWS, "Don't know how to fix for Windows")
-    @skipIf(True, "SLOWTEST skip")
     def test_managed_escaped_file_path(self):
         """
         file.managed test that 'salt://|' protects unusual characters in file path
@@ -531,7 +511,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function("state.sls", [state_name])
         self.assertTrue(ret[state_key]["result"])
 
-    @skipIf(True, "SLOWTEST skip")
     def test_managed_contents(self):
         """
         test file.managed with contents that is a boolean, string, integer,
@@ -603,7 +582,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 if os.path.exists(managed_files[typ]):
                     os.remove(managed_files[typ])
 
-    @skipIf(True, "SLOWTEST skip")
     def test_managed_contents_with_contents_newline(self):
         """
         test file.managed with contents by using the default content_newline
@@ -620,7 +598,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             last_line = fp_.read()
             self.assertEqual((contents + os.linesep), last_line)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_managed_contents_with_contents_newline_false(self):
         """
         test file.managed with contents by using the non default content_newline
@@ -637,7 +614,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             last_line = fp_.read()
             self.assertEqual(contents, last_line)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_managed_multiline_contents_with_contents_newline(self):
         """
         test file.managed with contents by using the non default content_newline
@@ -654,7 +630,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             last_line = fp_.read()
             self.assertEqual((contents + os.linesep), last_line)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_managed_multiline_contents_with_contents_newline_false(self):
         """
         test file.managed with contents by using the non default content_newline
@@ -674,7 +649,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
     @skip_if_not_root
     @skipIf(IS_WINDOWS, 'Windows does not support "mode" kwarg. Skipping.')
     @skipIf(not salt.utils.path.which("visudo"), "sudo is missing")
-    @skipIf(True, "SLOWTEST skip")
     def test_managed_check_cmd(self):
         """
         Test file.managed passing a basic check_cmd kwarg. See Issue #38111.
@@ -702,7 +676,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             if os.path.exists("/tmp/sudoers"):
                 os.remove("/tmp/sudoers")
 
-    @skipIf(True, "SLOWTEST skip")
     def test_managed_local_source_with_source_hash(self):
         """
         Make sure that we enforce the source_hash even with local files
@@ -763,7 +736,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         finally:
             remove_file()
 
-    @skipIf(True, "SLOWTEST skip")
     def test_managed_local_source_does_not_exist(self):
         """
         Make sure that we exit gracefully when a local source doesn't exist
@@ -782,7 +754,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             # Check that we identified a hash mismatch
             self.assertIn("does not exist", ret["comment"])
 
-    @skipIf(True, "SLOWTEST skip")
     def test_managed_unicode_jinja_with_tojson_filter(self):
         """
         Using {{ varname }} with a list or dictionary which contains unicode
@@ -826,7 +797,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         )
         assert managed == expected, "{0!r} != {1!r}".format(managed, expected)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_managed_source_hash_indifferent_case(self):
         """
         Test passing a source_hash as an uppercase hash.
@@ -875,7 +845,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 os.remove(name)
 
     @with_tempfile(create=False)
-    @skipIf(True, "SLOWTEST skip")
     def test_managed_latin1_diff(self, name):
         """
         Tests that latin-1 file contents are represented properly in the diff
@@ -897,7 +866,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         assert "+räksmörgås" in diff_lines, diff_lines
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_managed_keep_source_false_salt(self, name):
         """
         This test ensures that we properly clean the cached file if keep_source
@@ -919,7 +887,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
     @with_tempfile(create=False)
     @with_tempfile(create=False)
-    @skipIf(True, "SLOWTEST skip")
     def test_file_managed_onchanges(self, file1, file2):
         """
         Test file.managed state with onchanges
@@ -958,7 +925,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
     @with_tempfile(create=False)
     @with_tempfile(create=False)
-    @skipIf(True, "SLOWTEST skip")
     def test_file_managed_prereq(self, file1, file2):
         """
         Test file.managed state with prereq
@@ -992,7 +958,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         # The state watching 'three' should not have been run
         assert ret["four"]["comment"] == "No changes detected", ret["four"]["comment"]
 
-    @skipIf(True, "SLOWTEST skip")
     def test_directory(self):
         """
         file.directory
@@ -1002,7 +967,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertTrue(os.path.isdir(name))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_directory_symlink_dry_run(self):
         """
         Ensure that symlinks are followed when file.directory is run with
@@ -1041,7 +1005,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
     @skip_if_not_root
     @skipIf(IS_WINDOWS, "Mode not available in Windows")
-    @skipIf(True, "SLOWTEST skip")
     def test_directory_max_depth(self):
         """
         file.directory
@@ -1096,7 +1059,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         finally:
             shutil.rmtree(top)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_test_directory(self):
         """
         file.directory
@@ -1107,7 +1069,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(os.path.isdir(name))
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_directory_clean(self, base_dir):
         """
         file.directory with clean=True
@@ -1132,7 +1093,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(os.path.exists(straydir))
         self.assertTrue(os.path.isdir(name))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_directory_is_idempotent(self):
         """
         Ensure the file.directory state produces no changes when rerun.
@@ -1159,7 +1119,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltStateChangesEqual(ret, {})
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_directory_clean_exclude(self, base_dir):
         """
         file.directory with clean=True and exclude_pat set
@@ -1199,7 +1158,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
     @skipIf(IS_WINDOWS, "Skip on windows")
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_test_directory_clean_exclude(self, base_dir):
         """
         file.directory with test=True, clean=True and exclude_pat set
@@ -1246,7 +1204,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertNotIn(keepfile, comment)
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_directory_clean_require_in(self, name):
         """
         file.directory test with clean=True and require_in file
@@ -1285,7 +1242,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(os.path.exists(wrong_file))
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_directory_clean_require_in_with_id(self, name):
         """
         file.directory test with clean=True and require_in file with an ID
@@ -1330,7 +1286,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         "WAR ROOM TEMPORARY SKIP, Test is flaky on macosx",
     )
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_directory_clean_require_with_name(self, name):
         """
         file.directory test with clean=True and require with a file state
@@ -1372,7 +1327,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(os.path.exists(good_file))
         self.assertFalse(os.path.exists(wrong_file))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_directory_broken_symlink(self):
         """
         Ensure that file.directory works even if a directory
@@ -1410,7 +1364,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 self.run_function("file.remove", [tmp_dir])
 
     @with_tempdir(create=False)
-    @skipIf(True, "SLOWTEST skip")
     def test_recurse(self, name):
         """
         file.recurse
@@ -1421,7 +1374,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
     @with_tempdir(create=False)
     @with_tempdir(create=False)
-    @skipIf(True, "SLOWTEST skip")
     def test_recurse_specific_env(self, dir1, dir2):
         """
         file.recurse passing __env__
@@ -1440,7 +1392,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
     @with_tempdir(create=False)
     @with_tempdir(create=False)
-    @skipIf(True, "SLOWTEST skip")
     def test_recurse_specific_env_in_url(self, dir1, dir2):
         """
         file.recurse passing __env__
@@ -1458,7 +1409,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(os.path.isfile(os.path.join(dir2, "32", "scene")))
 
     @with_tempdir(create=False)
-    @skipIf(True, "SLOWTEST skip")
     def test_test_recurse(self, name):
         """
         file.recurse test interface
@@ -1472,7 +1422,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
     @with_tempdir(create=False)
     @with_tempdir(create=False)
-    @skipIf(True, "SLOWTEST skip")
     def test_test_recurse_specific_env(self, dir1, dir2):
         """
         file.recurse test interface
@@ -1492,7 +1441,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(os.path.exists(dir2))
 
     @with_tempdir(create=False)
-    @skipIf(True, "SLOWTEST skip")
     def test_recurse_template(self, name):
         """
         file.recurse with jinja template enabled
@@ -1511,7 +1459,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertIn(_ts, contents)
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_recurse_clean(self, name):
         """
         file.recurse with clean=True
@@ -1533,7 +1480,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(os.path.isfile(os.path.join(name, "scene33")))
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_recurse_clean_specific_env(self, name):
         """
         file.recurse with clean=True and __env__=prod
@@ -1556,7 +1502,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
     @skipIf(IS_WINDOWS, "Skip on windows")
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_recurse_issue_34945(self, base_dir):
         """
         This tests the case where the source dir for the file.recurse state
@@ -1586,7 +1531,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(dir_mode, actual_dir_mode)
 
     @with_tempdir(create=False)
-    @skipIf(True, "SLOWTEST skip")
     def test_recurse_issue_40578(self, name):
         """
         This ensures that the state doesn't raise an exception when it
@@ -1607,7 +1551,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_replace(self, name):
         """
         file.replace
@@ -1625,7 +1568,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_replace_issue_18612(self, base_dir):
         """
         Test the (mis-)behaviour of file.replace as described in #18612:
@@ -1670,7 +1612,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(item)
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_replace_issue_18612_prepend(self, base_dir):
         """
         Test the (mis-)behaviour of file.replace as described in #18612:
@@ -1719,7 +1660,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(item)
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_replace_issue_18612_append(self, base_dir):
         """
         Test the (mis-)behaviour of file.replace as described in #18612:
@@ -1768,7 +1708,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(item)
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_replace_issue_18612_append_not_found_content(self, base_dir):
         """
         Test the (mis-)behaviour of file.replace as described in #18612:
@@ -1818,7 +1757,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(item)
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_replace_issue_18612_change_mid_line_with_comment(self, base_dir):
         """
         Test the (mis-)behaviour of file.replace as described in #18612:
@@ -1868,7 +1806,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(item)
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_replace_issue_18841_no_changes(self, base_dir):
         """
         Test the (mis-)behaviour of file.replace as described in #18841:
@@ -1927,7 +1864,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         # ensure, all 'file.replace' runs reported success
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_serialize(self):
         """
         Test to ensure that file.serialize returns a data structure that's
@@ -1967,7 +1903,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(serialized_file, expected_file)
 
     @with_tempfile(create=False)
-    @skipIf(True, "SLOWTEST skip")
     def test_serializer_deserializer_opts(self, name):
         """
         Test the serializer_opts and deserializer_opts options
@@ -2018,7 +1953,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         assert serialized_data["foo"]["bar"] == merged["foo"]["bar"]
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_replace_issue_18841_omit_backup(self, base_dir):
         """
         Test the (mis-)behaviour of file.replace as described in #18841:
@@ -2077,7 +2011,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_comment(self, name):
         """
         file.comment
@@ -2112,7 +2045,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_test_comment(self, name):
         """
         file.comment test interface
@@ -2125,7 +2057,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltNoneReturn(ret)
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_uncomment(self, name):
         """
         file.uncomment
@@ -2138,7 +2069,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_test_uncomment(self, name):
         """
         file.comment test interface
@@ -2151,8 +2081,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltNoneReturn(ret)
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
     def test_append(self, name):
         """
         file.append
@@ -2165,7 +2093,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_test_append(self, name):
         """
         file.append test interface
@@ -2178,7 +2105,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltNoneReturn(ret)
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_append_issue_1864_makedirs(self, base_dir):
         """
         file.append but create directories if needed as an option, and create
@@ -2203,7 +2129,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(os.path.isfile(name))
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_prepend_issue_27401_makedirs(self, base_dir):
         """
         file.prepend but create directories if needed as an option, and create
@@ -2228,7 +2153,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(os.path.isfile(name))
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_touch(self, name):
         """
         file.touch
@@ -2238,7 +2162,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @with_tempfile(create=False)
-    @skipIf(True, "SLOWTEST skip")
     def test_test_touch(self, name):
         """
         file.touch test interface
@@ -2248,7 +2171,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltNoneReturn(ret)
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_touch_directory(self, base_dir):
         """
         file.touch a directory
@@ -2261,7 +2183,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(os.path.isdir(name))
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_issue_2227_file_append(self, base_dir):
         """
         Text to append includes a percent symbol
@@ -2303,7 +2224,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             raise
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_issue_2401_file_comment(self, base_dir):
         # Get a path to the temporary file
         tmp_file = os.path.join(base_dir, "issue-2041-comment.txt")
@@ -2333,7 +2253,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             raise
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_issue_2379_file_append(self, base_dir):
         # Get a path to the temporary file
         tmp_file = os.path.join(base_dir, "issue-2379-file-append.txt")
@@ -2363,7 +2282,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
     @skipIf(IS_WINDOWS, "Mode not available in Windows")
     @with_tempdir(create=False)
     @with_tempdir(create=False)
-    @skipIf(True, "SLOWTEST skip")
     def test_issue_2726_mode_kwarg(self, dir1, dir2):
         # Let's test for the wrong usage approach
         bad_mode_kwarg_testfile = os.path.join(dir1, "bad_mode_kwarg", "testfile")
@@ -2398,7 +2316,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_issue_8343_accumulated_require_in(self, base_dir):
         template_path = os.path.join(RUNTIME_VARS.TMP_STATE_TREE, "issue-8343.sls")
         testcase_filedest = os.path.join(base_dir, "issue-8343.txt")
@@ -2477,7 +2394,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
     @skipIf(
         salt.utils.platform.is_darwin() and six.PY2, "This test hangs on OS X on Py2"
     )
-    @skipIf(True, "SLOWTEST skip")
     def test_issue_11003_immutable_lazy_proxy_sum(self, base_dir):
         # causes the Import-Module ServerManager error on Windows
         template_path = os.path.join(RUNTIME_VARS.TMP_STATE_TREE, "issue-11003.sls")
@@ -2535,7 +2451,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(block_contents, [])
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_issue_8947_utf8_sls(self, base_dir):
         """
         Test some file operation with utf-8 characters on the sls
@@ -2662,7 +2577,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         TEST_SYSTEM_USER, TEST_SYSTEM_GROUP, on_existing="delete", delete=True
     )
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_issue_12209_follow_symlinks(self, tempdir, user, group):
         """
         Ensure that symlinks are properly chowned when recursing (following
@@ -2704,7 +2618,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         TEST_SYSTEM_USER, TEST_SYSTEM_GROUP, on_existing="delete", delete=True
     )
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_issue_12209_no_follow_symlinks(self, tempdir, user, group):
         """
         Ensure that symlinks are properly chowned when recursing (not following
@@ -2739,7 +2652,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
     @with_tempfile(create=False)
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_template_local_file(self, source, dest):
         """
         Test a file.managed state with a local file as the source. Test both
@@ -2759,7 +2671,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_template_local_file_noclobber(self, source):
         """
         Test the case where a source file is in the minion's local filesystem,
@@ -2783,7 +2694,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
     @with_tempfile(create=False)
     @with_tempfile(create=False)
-    @skipIf(True, "SLOWTEST skip")
     def test_issue_25250_force_copy_deletes(self, source, dest):
         """
         ensure force option in copy state does not delete target file
@@ -2801,7 +2711,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
     @destructiveTest
     @skipIf(IS_WINDOWS, "Windows does not report any file modes. Skipping.")
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_file_copy_make_dirs(self, source):
         """
         ensure make_dirs creates correct user perms
@@ -2828,7 +2737,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual(user_check, user)
             self.assertEqual(salt.utils.files.normalize_mode(mode_check), mode)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_contents_pillar_with_pillar_list(self):
         """
         This tests for any regressions for this issue:
@@ -2845,7 +2753,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
     @with_system_user_and_group(
         TEST_SYSTEM_USER, TEST_SYSTEM_GROUP, on_existing="delete", delete=True
     )
-    @skipIf(True, "SLOWTEST skip")
     def test_owner_after_setuid(self, user, group):
 
         """
@@ -2884,7 +2791,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(desired["group"], result["group"])
         self.assertEqual(desired["mode"], result["mode"].lstrip("0Oo"))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_binary_contents(self):
         """
         This tests to ensure that binary contents do not cause a traceback.
@@ -2899,7 +2805,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             except OSError:
                 pass
 
-    @skipIf(True, "SLOWTEST skip")
     def test_binary_contents_twice(self):
         """
         This test ensures that after a binary file is created, salt can confirm
@@ -2927,7 +2832,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         TEST_SYSTEM_USER, TEST_SYSTEM_GROUP, on_existing="delete", delete=True
     )
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_issue_48336_file_managed_mode_setuid(self, tempdir, user, group):
         """
         Ensure that mode is correct with changing of ownership and group
@@ -2954,7 +2858,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(grp.getgrgid(temp_file_stats.st_gid).gr_name, group)
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_issue_48557(self, tempdir):
         tempfile = os.path.join(tempdir, "temp_file_issue_48557")
         with salt.utils.files.fopen(tempfile, "wb") as fp:
@@ -2971,7 +2874,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_issue_50221(self, name):
         expected = "abc{0}{0}{0}".format(os.linesep)
         ret = self.run_function("pillar.get", ["issue-50221"])
@@ -2982,7 +2884,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             contents = fp.read()
         assert contents == expected
 
-    @skipIf(True, "SLOWTEST skip")
     def test_managed_file_issue_51208(self):
         """
         Test to ensure we can handle a file with escaped double-quotes
@@ -3132,7 +3033,6 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
             return salt.utils.stringutils.to_unicode(fp_.read())
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_prepend(self, name):
         """
         Test blockreplace when prepend_if_not_found=True and block doesn't
@@ -3200,7 +3100,6 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(self._read(name), expected)
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_prepend_append_newline(self, name):
         """
         Test blockreplace when prepend_if_not_found=True and block doesn't
@@ -3280,7 +3179,6 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(self._read(name), expected)
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_prepend_no_append_newline(self, name):
         """
         Test blockreplace when prepend_if_not_found=True and block doesn't
@@ -3359,8 +3257,6 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(self._read(name), expected)
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
     def test_append(self, name):
         """
         Test blockreplace when append_if_not_found=True and block doesn't
@@ -3428,7 +3324,6 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(self._read(name), expected)
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_append_append_newline(self, name):
         """
         Test blockreplace when append_if_not_found=True and block doesn't
@@ -3508,7 +3403,6 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(self._read(name), expected)
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_append_no_append_newline(self, name):
         """
         Test blockreplace when append_if_not_found=True and block doesn't
@@ -3587,7 +3481,6 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(self._read(name), expected)
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_prepend_auto_line_separator(self, name):
         """
         This tests the line separator auto-detection when prepending the block
@@ -3653,7 +3546,6 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_append_auto_line_separator(self, name):
         """
         This tests the line separator auto-detection when appending the block
@@ -3719,7 +3611,6 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_non_matching_block(self, name):
         """
         Test blockreplace when block exists but its contents are not a
@@ -3774,7 +3665,6 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(self._read(name), self.with_matching_block)
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_non_matching_block_append_newline(self, name):
         """
         Test blockreplace when block exists but its contents are not a
@@ -3833,7 +3723,6 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(self._read(name), self.with_matching_block)
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_non_matching_block_no_append_newline(self, name):
         """
         Test blockreplace when block exists but its contents are not a
@@ -3896,7 +3785,6 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_non_matching_block_and_marker_not_after_newline(self, name):
         """
         Test blockreplace when block exists but its contents are not a
@@ -3951,7 +3839,6 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(self._read(name), self.with_matching_block)
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_non_matching_block_and_marker_not_after_newline_append_newline(self, name):
         """
         Test blockreplace when block exists but its contents are not a match,
@@ -4011,7 +3898,6 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(self._read(name), self.with_matching_block)
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_non_matching_block_and_marker_not_after_newline_no_append_newline(
         self, name
     ):
@@ -4077,7 +3963,6 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_matching_block(self, name):
         """
         Test blockreplace when block exists and its contents are a match. No
@@ -4132,7 +4017,6 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(self._read(name), self.with_matching_block)
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_matching_block_append_newline(self, name):
         """
         Test blockreplace when block exists and its contents are a match. Test
@@ -4193,7 +4077,6 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(self._read(name), self.with_matching_block)
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_matching_block_no_append_newline(self, name):
         """
         Test blockreplace when block exists and its contents are a match. Test
@@ -4260,7 +4143,6 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_matching_block_and_marker_not_after_newline(self, name):
         """
         Test blockreplace when block exists and its contents are a match, but
@@ -4315,7 +4197,6 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(self._read(name), self.with_matching_block)
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_matching_block_and_marker_not_after_newline_append_newline(self, name):
         """
         Test blockreplace when block exists and its contents are a match, but
@@ -4377,7 +4258,6 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(self._read(name), self.with_matching_block)
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_matching_block_and_marker_not_after_newline_no_append_newline(self, name):
         """
         Test blockreplace when block exists and its contents are a match, but
@@ -4441,7 +4321,6 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
     def test_issue_49043(self, name):
         ret = self.run_function("state.sls", mods="issue-49043", pillar={"name": name},)
         log.error("ret = %s", repr(ret))
@@ -4494,7 +4373,6 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
         log.debug("ret = %s", ret)
         return ret
 
-    @skipIf(True, "SLOWTEST skip")
     def test_file_managed_http_source_no_hash(self):
         """
         Test a remote file with no hash
@@ -4505,7 +4383,6 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
         # This should fail because no hash was provided
         self.assertSaltFalseReturn(ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_file_managed_http_source(self):
         """
         Test a remote file with no hash
@@ -4519,7 +4396,6 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_file_managed_http_source_skip_verify(self):
         """
         Test a remote file using skip_verify
@@ -4529,7 +4405,6 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_file_managed_keep_source_false_http(self):
         """
         This test ensures that we properly clean the cached file if keep_source
@@ -4661,7 +4536,6 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
 
         self.addCleanup(shutil.rmtree, self.base_dir, ignore_errors=True)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_patch_single_file(self):
         """
         Test file.patch using a patch applied to a single file
@@ -4683,7 +4557,6 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["comment"], "Patch was already applied")
         self.assertEqual(ret["changes"], {})
 
-    @skipIf(True, "SLOWTEST skip")
     def test_patch_directory(self):
         """
         Test file.patch using a patch applied to a directory, with changes
@@ -4707,7 +4580,6 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["comment"], "Patch was already applied")
         self.assertEqual(ret["changes"], {})
 
-    @skipIf(True, "SLOWTEST skip")
     def test_patch_strip_parsing(self):
         """
         Test that we successfuly parse -p/--strip when included in the options
@@ -4745,6 +4617,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["comment"], "Patch was already applied")
         self.assertEqual(ret["changes"], {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_patch_saltenv(self):
         """
         Test that we attempt to download the patch from a non-base saltenv
@@ -4762,7 +4635,6 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
             "Source file {0} not found in saltenv 'prod'".format(self.math_patch),
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_patch_single_file_failure(self):
         """
         Test file.patch using a patch applied to a single file. This tests a
@@ -4796,7 +4668,6 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
             ret["comment"], "saving rejects to (file )?{0}".format(reject_file)
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_patch_directory_failure(self):
         """
         Test file.patch using a patch applied to a directory, with changes
@@ -4830,7 +4701,6 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
             ret["comment"], "saving rejects to (file )?{0}".format(reject_file)
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_patch_single_file_remote_source(self):
         """
         Test file.patch using a patch applied to a single file, with the patch
@@ -4869,7 +4739,6 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["comment"], "Patch was already applied")
         self.assertEqual(ret["changes"], {})
 
-    @skipIf(True, "SLOWTEST skip")
     def test_patch_directory_remote_source(self):
         """
         Test file.patch using a patch applied to a directory, with changes
@@ -4912,7 +4781,6 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["comment"], "Patch was already applied")
         self.assertEqual(ret["changes"], {})
 
-    @skipIf(True, "SLOWTEST skip")
     def test_patch_single_file_template(self):
         """
         Test file.patch using a patch applied to a single file, with jinja
@@ -4943,7 +4811,6 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["comment"], "Patch was already applied")
         self.assertEqual(ret["changes"], {})
 
-    @skipIf(True, "SLOWTEST skip")
     def test_patch_directory_template(self):
         """
         Test file.patch using a patch applied to a directory, with changes
@@ -4978,7 +4845,6 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["comment"], "Patch was already applied")
         self.assertEqual(ret["changes"], {})
 
-    @skipIf(True, "SLOWTEST skip")
     def test_patch_single_file_remote_source_template(self):
         """
         Test file.patch using a patch applied to a single file, with the patch
@@ -5025,7 +4891,6 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["comment"], "Patch was already applied")
         self.assertEqual(ret["changes"], {})
 
-    @skipIf(True, "SLOWTEST skip")
     def test_patch_directory_remote_source_template(self):
         """
         Test file.patch using a patch applied to a directory, with changes
@@ -5077,7 +4942,6 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["comment"], "Patch was already applied")
         self.assertEqual(ret["changes"], {})
 
-    @skipIf(True, "SLOWTEST skip")
     def test_patch_test_mode(self):
         """
         Test file.patch using test=True
@@ -5150,14 +5014,12 @@ class WinFileTest(ModuleCase):
     def tearDown(self):
         self.run_state("file.absent", name=WIN_TEST_FILE)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_file_managed(self):
         """
         Test file.managed on Windows
         """
         self.assertTrue(self.run_state("file.exists", name=WIN_TEST_FILE))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_file_copy(self):
         """
         Test file.copy on Windows
@@ -5167,7 +5029,6 @@ class WinFileTest(ModuleCase):
         )
         self.assertTrue(ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_file_comment(self):
         """
         Test file.comment on Windows
@@ -5176,7 +5037,6 @@ class WinFileTest(ModuleCase):
         with salt.utils.files.fopen(WIN_TEST_FILE, "r") as fp_:
             self.assertTrue(fp_.read().startswith("#Only"))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_file_replace(self):
         """
         Test file.replace on Windows
@@ -5187,7 +5047,6 @@ class WinFileTest(ModuleCase):
         with salt.utils.files.fopen(WIN_TEST_FILE, "r") as fp_:
             self.assertIn("testing", fp_.read())
 
-    @skipIf(True, "SLOWTEST skip")
     def test_file_absent(self):
         """
         Test file.absent on Windows

@@ -11,7 +11,7 @@ from salt.cloud.clouds import linode
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class LinodeTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class LinodeTestCase(TestCase, LoaderModuleMockMixin):
 
     # _validate_name tests
 
+    @skipIf(True, "FASTTEST skip")
     def test_validate_name_first_character_invalid(self):
         """
         Tests when name starts with an invalid character.
@@ -34,6 +35,7 @@ class LinodeTestCase(TestCase, LoaderModuleMockMixin):
         # Test when name begins with an underscore
         self.assertFalse(linode._validate_name("_foo"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_validate_name_last_character_invalid(self):
         """
         Tests when name ends with an invalid character.
@@ -44,6 +46,7 @@ class LinodeTestCase(TestCase, LoaderModuleMockMixin):
         # Test when name ends with an underscore
         self.assertFalse(linode._validate_name("foo_"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_validate_name_too_short(self):
         """
         Tests when name has less than three letters.
@@ -57,6 +60,7 @@ class LinodeTestCase(TestCase, LoaderModuleMockMixin):
         # Test when name is three letters long (valid)
         self.assertTrue(linode._validate_name("abc"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_validate_name_too_long(self):
         """
         Tests when name has more than 48 letters.
@@ -71,6 +75,7 @@ class LinodeTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(len(long_name), 49)
         self.assertFalse(linode._validate_name(long_name))
 
+    @skipIf(True, "FASTTEST skip")
     def test_validate_name_invalid_characters(self):
         """
         Tests when name contains invalid characters.
@@ -84,6 +89,7 @@ class LinodeTestCase(TestCase, LoaderModuleMockMixin):
         # Test when name contains spaces
         self.assertFalse(linode._validate_name("foo bar"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_validate_name_valid_characters(self):
         """
         Tests when name contains valid characters.

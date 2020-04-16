@@ -9,7 +9,7 @@ from salt.pillar import extra_minion_data_in_pillar
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ExtraMinionDataInPillarTestCase(TestCase, LoaderModuleMockMixin):
@@ -29,6 +29,7 @@ class ExtraMinionDataInPillarTestCase(TestCase, LoaderModuleMockMixin):
             "key4": {"subkey4": "value4"},
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_extra_values_none_or_empty(self):
         ret = extra_minion_data_in_pillar.ext_pillar(
             "fake_id", self.pillar, "fake_include", None
@@ -39,6 +40,7 @@ class ExtraMinionDataInPillarTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(ret, {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_include_all(self):
         for include_all in ["*", "<all>"]:
             ret = extra_minion_data_in_pillar.ext_pillar(
@@ -46,6 +48,7 @@ class ExtraMinionDataInPillarTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(ret, self.extra_minion_data)
 
+    @skipIf(True, "FASTTEST skip")
     def test_include_specific_keys(self):
         # Tests partially existing key, key with and without subkey,
         ret = extra_minion_data_in_pillar.ext_pillar(

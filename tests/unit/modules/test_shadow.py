@@ -46,6 +46,7 @@ class LinuxShadowTest(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {shadow: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_gen_password(self):
         """
         Test shadow.gen_password
@@ -60,6 +61,7 @@ class LinuxShadowTest(TestCase, LoaderModuleMockMixin):
             )
 
     @skip_if_not_root
+    @skipIf(True, "FASTTEST skip")
     def test_list_users(self):
         """
         Test if it returns a list of all users

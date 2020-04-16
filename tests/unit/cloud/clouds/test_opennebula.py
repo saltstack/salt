@@ -40,6 +40,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_avail_images_action(self):
         """
         Tests that a SaltCloudSystemExit error is raised when trying to call
@@ -47,6 +48,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.avail_images, "action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_avail_locations_action(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call avail_locations
@@ -54,6 +56,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.avail_locations, "action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_avail_sizes_action(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call avail_sizes
@@ -61,12 +64,14 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.avail_sizes, "action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_avail_sizes(self):
         """
         Tests that avail_sizes returns an empty dictionary.
         """
         self.assertEqual(opennebula.avail_sizes(call="foo"), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_clusters_action(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_clusters
@@ -74,6 +79,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.list_clusters, "action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_datastores_action(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_datastores
@@ -81,6 +87,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.list_datastores, "action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_hosts_action(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_datastores
@@ -88,6 +95,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.list_hosts, "action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_nodes_action(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_nodes
@@ -95,6 +103,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.list_nodes, "action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_nodes_full_action(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_nodes_full
@@ -102,6 +111,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.list_nodes_full, "action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_nodes_select_action(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_nodes_full
@@ -109,6 +119,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.list_nodes_select, "action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_security_groups_action(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call
@@ -118,6 +129,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.list_security_groups, "action"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_templates_action(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_templates
@@ -125,6 +137,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.list_templates, "action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_vns_action(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_vns
@@ -132,6 +145,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.list_vns, "action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_reboot_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call reboot
@@ -139,6 +153,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.reboot, "my-vm", "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_start_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call start
@@ -146,6 +161,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.start, "my-vm", "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_stop_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call stop
@@ -153,6 +169,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.stop, "my-vm", "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_cluster_id_action(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call
@@ -160,6 +177,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.get_cluster_id, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_cluster_id_no_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when no name is provided.
@@ -168,6 +186,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.get_cluster_id, None, call="foo"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_cluster_id_not_found(self):
         """
         Tests that a SaltCloudSystemExit is raised when no name is provided.
@@ -183,6 +202,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
                 call="function",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_cluster_id_success(self):
         """
         Tests that the function returns successfully.
@@ -195,6 +215,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             mock_kwargs = {"name": "test-cluster"}
             self.assertEqual(opennebula.get_cluster_id(mock_kwargs, "foo"), mock_id)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_datastore_id_action(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call
@@ -204,6 +225,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.get_datastore_id, call="action"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_datastore_id_no_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when no name is provided.
@@ -212,6 +234,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.get_datastore_id, None, call="foo"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_datastore_id_not_found(self):
         """
         Tests that a SaltCloudSystemExit is raised when no name is provided.
@@ -227,6 +250,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
                 call="function",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_datastore_id_success(self):
         """
         Tests that the function returns successfully.
@@ -239,6 +263,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             mock_kwargs = {"name": "test-datastore"}
             self.assertEqual(opennebula.get_datastore_id(mock_kwargs, "foo"), mock_id)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_host_id_action(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call
@@ -246,12 +271,14 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.get_host_id, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_host_id_no_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when no name is provided.
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.get_host_id, None, call="foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_host_id_not_found(self):
         """
         Tests that a SaltCloudSystemExit is raised when no name is provided.
@@ -267,6 +294,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
                 call="function",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_host_id_success(self):
         """
         Tests that the function returns successfully.
@@ -279,6 +307,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             mock_kwargs = {"name": "test-host"}
             self.assertEqual(opennebula.get_host_id(mock_kwargs, "foo"), mock_id)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_image_not_found(self):
         """
         Tests that a SaltCloudNotFound is raised when the image doesn't exist.
@@ -291,6 +320,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             ):
                 self.assertRaises(SaltCloudNotFound, opennebula.get_image, "my-vm")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_image_success(self):
         """
         Tests that the image is returned successfully.
@@ -304,6 +334,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             ):
                 self.assertEqual(opennebula.get_image("my-vm"), 0)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_image_id_action(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call
@@ -311,6 +342,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.get_image_id, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_image_id_no_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when no name is provided.
@@ -319,6 +351,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.get_image_id, None, call="foo"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_image_id_not_found(self):
         """
         Tests that a SaltCloudSystemExit is raised when no name is provided.
@@ -334,6 +367,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
                 call="function",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_image_id_success(self):
         """
         Tests that the function returns successfully.
@@ -346,6 +380,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             mock_kwargs = {"name": "test-image"}
             self.assertEqual(opennebula.get_image_id(mock_kwargs, "foo"), mock_id)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_location_not_found(self):
         """
         Tests that a SaltCloudNotFound is raised when the location doesn't exist.
@@ -358,6 +393,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             ):
                 self.assertRaises(SaltCloudNotFound, opennebula.get_location, "my-vm")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_location_success(self):
         """
         Tests that the image is returned successfully.
@@ -371,6 +407,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             ):
                 self.assertEqual(opennebula.get_location("my-host"), 0)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_secgroup_id_action(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call
@@ -380,6 +417,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.get_secgroup_id, call="action"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_secgroup_id_no_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when no name is provided.
@@ -388,6 +426,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.get_secgroup_id, None, call="foo"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_secgroup_id_not_found(self):
         """
         Tests that a SaltCloudSystemExit is raised when no name is provided.
@@ -403,6 +442,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
                 call="function",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_secgroup_id_success(self):
         """
         Tests that the function returns successfully.
@@ -415,6 +455,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             mock_kwargs = {"name": "test-secgroup"}
             self.assertEqual(opennebula.get_secgroup_id(mock_kwargs, "foo"), mock_id)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_template_id_action(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call
@@ -424,6 +465,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.get_template_id, call="action"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_template_id_no_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when no name is provided.
@@ -432,6 +474,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.get_template_id, None, call="foo"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_template_id_not_found(self):
         """
         Tests that a SaltCloudSystemExit is raised when no name is provided.
@@ -447,6 +490,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
                 call="function",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_template_id_success(self):
         """
         Tests that the function returns successfully.
@@ -459,6 +503,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             mock_kwargs = {"name": "test-template"}
             self.assertEqual(opennebula.get_template_id(mock_kwargs, "foo"), mock_id)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_vm_id_action(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call
@@ -466,12 +511,14 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.get_vm_id, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_vm_id_no_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when no name is provided.
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.get_vm_id, None, call="foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_vm_id_not_found(self):
         """
         Tests that a SaltCloudSystemExit is raised when no name is provided.
@@ -487,6 +534,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
                 call="function",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_vm_id_success(self):
         """
         Tests that the function returns successfully.
@@ -499,6 +547,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             mock_kwargs = {"name": "test-vm"}
             self.assertEqual(opennebula.get_vm_id(mock_kwargs, "foo"), mock_id)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_vn_id_action(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call
@@ -506,12 +555,14 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.get_vn_id, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_vn_id_no_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when no name is provided.
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.get_vn_id, None, call="foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_vn_id_not_found(self):
         """
         Tests that a SaltCloudSystemExit is raised when no name is provided.
@@ -527,6 +578,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
                 call="function",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_vn_id_success(self):
         """
         Tests that the function returns successfully.
@@ -541,12 +593,14 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
 
     # TODO: Write tests for create function
 
+    @skipIf(True, "FASTTEST skip")
     def test_destroy_function_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when --function or -f is provided.
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.destroy, "my-vm", "function")
 
+    @skipIf(True, "FASTTEST skip")
     def test_image_allocate_function_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -554,6 +608,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.image_allocate, "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_image_allocate_no_name_or_datastore_id(self):
         """
         Tests that a SaltCloudSystemExit is raised when a neither a datastore_id
@@ -561,6 +616,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.image_allocate, "function")
 
+    @skipIf(True, "FASTTEST skip")
     def test_image_allocate_no_path_or_data(self):
         """
         Tests that a SaltCloudSystemExit is raised when neither the path nor data args
@@ -573,6 +629,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"datastore_id": "5"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_image_clone_function_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -580,12 +637,14 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.image_clone, "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_image_clone_no_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when a name isn't provided.
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.image_clone, "function")
 
+    @skipIf(True, "FASTTEST skip")
     def test_image_clone_no_image_id_or_image_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when neither the image_id nor
@@ -617,6 +676,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(expected, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_image_delete_function_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -624,6 +684,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.image_delete, "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_image_delete_no_name_or_image_id(self):
         """
         Tests that a SaltCloudSystemExit is raised when a neither an image_id
@@ -631,6 +692,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.image_delete, "function")
 
+    @skipIf(True, "FASTTEST skip")
     def test_image_info_function_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -638,6 +700,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.image_info, "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_image_info_no_image_id_or_image_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when a neither an image_id
@@ -645,6 +708,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.image_info, "function")
 
+    @skipIf(True, "FASTTEST skip")
     def test_image_persist_function_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -652,12 +716,14 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.image_persistent, "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_image_persist_no_persist(self):
         """
         Tests that a SaltCloudSystemExit is raised when the persist kwarg is missing.
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.image_persistent, "function")
 
+    @skipIf(True, "FASTTEST skip")
     def test_image_persist_no_name_or_image_id(self):
         """
         Tests that a SaltCloudSystemExit is raised when a neither an image_id
@@ -670,6 +736,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"persist": False},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_image_snapshot_delete_function_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -679,6 +746,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.image_snapshot_delete, call="foo"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_image_snapshot_delete_no_snapshot_id(self):
         """
         Tests that a SaltCloudSystemExit is raised when the snapshot_id kwarg is
@@ -691,6 +759,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs=None,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_image_snapshot_delete_no_image_name_or_image_id(self):
         """
         Tests that a SaltCloudSystemExit is raised when the image_id and image_name
@@ -703,6 +772,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"snapshot_id": 0},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_image_snapshot_revert_function_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -712,6 +782,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.image_snapshot_revert, call="foo"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_image_snapshot_revert_no_snapshot_id(self):
         """
         Tests that a SaltCloudSystemExit is raised when the snapshot_id kwarg is
@@ -724,6 +795,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs=None,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_image_snapshot_revert_no_image_name_or_image_id(self):
         """
         Tests that a SaltCloudSystemExit is raised when the image_id and image_name
@@ -736,6 +808,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"snapshot_id": 0},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_image_snapshot_flatten_function_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -745,6 +818,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.image_snapshot_flatten, call="foo"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_image_snapshot_flatten_no_snapshot_id(self):
         """
         Tests that a SaltCloudSystemExit is raised when the snapshot_id kwarg is
@@ -757,6 +831,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs=None,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_image_snapshot_flatten_no_image_name_or_image_id(self):
         """
         Tests that a SaltCloudSystemExit is raised when the image_id and image_name
@@ -769,6 +844,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"snapshot_id": 0},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_image_update_function_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -776,6 +852,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.image_update, "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_image_update_no_update_type(self):
         """
         Tests that a SaltCloudSystemExit is raised when the update_type kwarg is
@@ -783,6 +860,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.image_update, "function")
 
+    @skipIf(True, "FASTTEST skip")
     def test_image_update_bad_update_type_value(self):
         """
         Tests that a SaltCloudSystemExit is raised when the update_type kwarg is
@@ -795,6 +873,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"update_type": "foo"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_image_update_no_image_id_or_image_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when the image_id and image_name
@@ -807,6 +886,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"update_type": "merge"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_image_update_no_data_or_path(self):
         """
         Tests that a SaltCloudSystemExit is raised when the data and path
@@ -819,6 +899,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"update_type": "merge", "image_id": "0"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_instance_action_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -828,6 +909,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.show_instance, VM_NAME, call="foo"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_instance_success(self):
         """
         Tests that the node was found successfully.
@@ -839,6 +921,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             ret = {"my-vm": {"name": "my-vm", "id": 0}}
             self.assertEqual(opennebula.show_instance("my-vm", call="action"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_secgroup_allocate_function_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -846,6 +929,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.secgroup_allocate, "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_secgroup_allocate_no_data_or_path(self):
         """
         Tests that a SaltCloudSystemExit is raised when the data and path
@@ -853,6 +937,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.secgroup_allocate, "function")
 
+    @skipIf(True, "FASTTEST skip")
     def test_secgroup_clone_function_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -860,6 +945,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.secgroup_clone, "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_secgroup_clone_no_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when the name kwarg is
@@ -867,6 +953,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.secgroup_clone, "function")
 
+    @skipIf(True, "FASTTEST skip")
     def test_secgroup_clone_no_secgroup_id_or_secgroup_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when the secgroup_id and
@@ -879,6 +966,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"name": "test"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_secgroup_delete_function_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -886,6 +974,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.secgroup_delete, "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_secgroup_delete_no_secgroup_id_or_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when the secgroup_id and
@@ -893,6 +982,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.secgroup_clone, "function")
 
+    @skipIf(True, "FASTTEST skip")
     def test_secgroup_info_function_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -900,6 +990,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.secgroup_info, "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_secgroup_info_no_secgroup_id_or_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when the secgroup_id and
@@ -907,6 +998,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.secgroup_info, "function")
 
+    @skipIf(True, "FASTTEST skip")
     def test_secgroup_update_function_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -914,6 +1006,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.secgroup_update, "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_secgroup_update_no_update_type(self):
         """
         Tests that a SaltCloudSystemExit is raised when the update_type arg is
@@ -921,6 +1014,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.secgroup_update, "function")
 
+    @skipIf(True, "FASTTEST skip")
     def test_secgroup_update_bad_update_type_value(self):
         """
         Tests that a SaltCloudSystemExit is raised when the update_type contains
@@ -933,6 +1027,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"update_type": "foo"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_secgroup_update_no_secgroup_id_or_secgroup_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when the secgroup_id and
@@ -945,6 +1040,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"update_type": "merge"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_secgroup_update_no_data_or_path(self):
         """
         Tests that a SaltCloudSystemExit is raised when the data and
@@ -957,6 +1053,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"update_type": "merge", "secgroup_id": "0"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_template_allocate_function_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -964,6 +1061,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.template_allocate, "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_template_allocate_no_data_or_path(self):
         """
         Tests that a SaltCloudSystemExit is raised when the data and
@@ -971,6 +1069,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.template_allocate, "function")
 
+    @skipIf(True, "FASTTEST skip")
     def test_template_clone_function_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -978,12 +1077,14 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.template_clone, "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_template_clone_no_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when the name arg is missing.
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.template_clone, "function")
 
+    @skipIf(True, "FASTTEST skip")
     def test_template_clone_no_template_name_or_template_id(self):
         """
         Tests that a SaltCloudSystemExit is raised when the template_name and
@@ -996,6 +1097,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"name": "foo"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_template_delete_function_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1003,6 +1105,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.template_delete, "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_template_delete_no_name_or_template_id(self):
         """
         Tests that a SaltCloudSystemExit is raised when the name and
@@ -1010,6 +1113,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.template_delete, "function")
 
+    @skipIf(True, "FASTTEST skip")
     def test_template_instantiate_function_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1017,6 +1121,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.template_instantiate, "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_template_instantiate_no_vm_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when the vm_name arg is missing.
@@ -1025,6 +1130,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.template_instantiate, "function", None
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_template_instantiate_no_template_id_or_template_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when the template_name and
@@ -1037,6 +1143,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"vm_name": "test"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_template_update_function_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1044,6 +1151,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.template_update, call="foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_template_update_bad_update_type_value(self):
         """
         Tests that a SaltCloudSystemExit is raised when the update_type contains
@@ -1056,6 +1164,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"update_type": "foo"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_template_update_no_template_id_or_template_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when the template_id and the
@@ -1068,6 +1177,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"update_type": "merge"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_template_update_no_data_or_path(self):
         """
         Tests that a SaltCloudSystemExit is raised when the data and the
@@ -1080,6 +1190,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"update_type": "merge", "template_id": "0"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_action_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1089,6 +1200,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vm_action, VM_NAME, call="foo"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_action_no_action(self):
         """
         Tests that a SaltCloudSystemExit is raised when the action arg is missing
@@ -1097,6 +1209,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vm_action, VM_NAME, call="action"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_allocate_function_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1104,6 +1217,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.vm_allocate, "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_allocate_no_data_or_path(self):
         """
         Tests that a SaltCloudSystemExit is raised when the data and
@@ -1111,6 +1225,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.vm_allocate, "function")
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_attach_action_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1120,6 +1235,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vm_attach, VM_NAME, call="foo"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_attach_no_data_or_path(self):
         """
         Tests that a SaltCloudSystemExit is raised when the data and
@@ -1129,6 +1245,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vm_attach, VM_NAME, call="action"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_attach_nic_action_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1138,6 +1255,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vm_attach_nic, VM_NAME, call="foo"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_attach_nic_no_data_or_path(self):
         """
         Tests that a SaltCloudSystemExit is raised when the data and
@@ -1147,6 +1265,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vm_attach_nic, VM_NAME, call="action"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_deploy_action_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1156,6 +1275,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vm_deploy, VM_NAME, call="foo"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_deploy_no_host_id_or_host_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when the host_id and the
@@ -1169,6 +1289,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs=None,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_detach_action_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1178,6 +1299,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vm_detach, VM_NAME, call="foo"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_detach_no_disk_id(self):
         """
         Tests that a SaltCloudSystemExit is raised when the disk_id ar is missing.
@@ -1186,6 +1308,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vm_detach, VM_NAME, call="action"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_detach_nic_action_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1195,6 +1318,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vm_detach_nic, VM_NAME, call="foo"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_detach_nic_no_nic_id(self):
         """
         Tests that a SaltCloudSystemExit is raised when the nic_id arg is missing.
@@ -1203,6 +1327,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vm_detach_nic, VM_NAME, call="action"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_disk_save_action_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1212,6 +1337,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vm_disk_save, VM_NAME, call="foo"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_disk_save_no_disk_id(self):
         """
         Tests that a SaltCloudSystemExit is raised when the disk_id arg is missing.
@@ -1224,6 +1350,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"image_name": "foo"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_disk_save_no_image_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when the image_name arg is missing.
@@ -1236,6 +1363,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"disk_id": "0"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_disk_snapshot_create_action_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1245,6 +1373,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vm_disk_snapshot_create, VM_NAME, call="foo"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_disk_snapshot_create_no_disk_id(self):
         """
         Tests that a SaltCloudSystemExit is raised when the disk_id arg is missing.
@@ -1257,6 +1386,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"description": "foo"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_disk_snapshot_create_no_description(self):
         """
         Tests that a SaltCloudSystemExit is raised when the image_name arg is missing.
@@ -1269,6 +1399,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"disk_id": "0"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_disk_snapshot_delete_action_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1278,6 +1409,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vm_disk_snapshot_delete, VM_NAME, call="foo"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_disk_snapshot_delete_no_disk_id(self):
         """
         Tests that a SaltCloudSystemExit is raised when the disk_id arg is missing.
@@ -1290,6 +1422,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"snapshot_id": "0"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_disk_snapshot_delete_no_snapshot_id(self):
         """
         Tests that a SaltCloudSystemExit is raised when the snapshot_id arg is missing.
@@ -1302,6 +1435,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"disk_id": "0"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_disk_snapshot_revert_action_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1311,6 +1445,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vm_disk_snapshot_revert, VM_NAME, call="foo"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_disk_snapshot_revert_no_disk_id(self):
         """
         Tests that a SaltCloudSystemExit is raised when the disk_id arg is missing.
@@ -1323,6 +1458,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"snapshot_id": "0"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_disk_snapshot_revert_no_snapshot_id(self):
         """
         Tests that a SaltCloudSystemExit is raised when the snapshot_id arg is missing.
@@ -1335,6 +1471,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"disk_id": "0"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_info_action_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1342,6 +1479,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.vm_info, VM_NAME, call="foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_migrate_action_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1351,6 +1489,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vm_migrate, VM_NAME, call="foo"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_migrate_no_datastore_id_or_datastore_name(self):
         """
         Tests that a SaltCLoudSystemExit is raised when the datastore_id and the
@@ -1364,6 +1503,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs=None,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_migrate_no_host_id_or_host_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when the the host_id and the
@@ -1377,6 +1517,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"datastore_id": "0"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_monitoring_action_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1386,6 +1527,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vm_monitoring, VM_NAME, call="foo"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_resize_action_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1395,6 +1537,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vm_resize, VM_NAME, call="foo"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_resize_no_data_or_path(self):
         """
         Tests that a SaltCloudSystemExit is raised when the data and path args
@@ -1408,6 +1551,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs=None,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_snapshot_create_action_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1417,6 +1561,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vm_snapshot_create, VM_NAME, call="foo"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_snapshot_create_no_snapshot_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when the snapshot_name arg
@@ -1430,6 +1575,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs=None,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_snapshot_delete_action_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1439,6 +1585,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vm_snapshot_delete, VM_NAME, call="foo"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_snapshot_delete_no_snapshot_id(self):
         """
         Tests that a SaltCloudSystemExit is raised when the snapshot_id arg
@@ -1452,6 +1599,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs=None,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_snapshot_revert_action_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1461,6 +1609,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vm_snapshot_revert, VM_NAME, call="foo"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_snapshot_revert_no_snapshot_id(self):
         """
         Tests that a SaltCloudSystemExit is raised when the snapshot_id arg
@@ -1474,6 +1623,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs=None,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_update_action_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1483,6 +1633,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vm_update, VM_NAME, call="foo"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_update_no_update_type(self):
         """
         Tests that a SaltCloudSystemExit is raised when the update_type arg
@@ -1496,6 +1647,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs=None,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_update_bad_update_type_value(self):
         """
         Tests that a SaltCloudSystemExit is raised when the update_type kwarg is
@@ -1509,6 +1661,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"update_type": "foo"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_update_no_data_or_path(self):
         """
         Tests that a SaltCloudSystemExit is raised when the data and path args
@@ -1522,6 +1675,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"update_type": "merge"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vn_add_ar_function_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1529,6 +1683,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.vn_add_ar, call="foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_vn_add_ar_no_vn_id_or_vn_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when the vn_id and vn_name
@@ -1538,6 +1693,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vn_add_ar, call="function", kwargs=None
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vn_add_ar_no_path_or_data(self):
         """
         Tests that a SaltCloudSystemExit is raised when the path and data
@@ -1550,6 +1706,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"vn_id": "0"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vn_allocate_function_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1557,6 +1714,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.vn_allocate, call="foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_vn_allocate_no_data_or_path(self):
         """
         Tests that a SaltCloudSystemExit is raised when the path and data
@@ -1566,6 +1724,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vn_allocate, call="function", kwargs=None
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vn_delete_function_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1573,6 +1732,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.vn_delete, call="foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_vn_delete_no_vn_id_or_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when the vn_id and name
@@ -1582,6 +1742,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vn_delete, call="function", kwargs=None
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vn_free_ar_function_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1589,6 +1750,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.vn_free_ar, call="foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_vn_free_ar_no_ar_id(self):
         """
         Tests that a SaltCloudSystemExit is raised when the ar_id is missing.
@@ -1597,6 +1759,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vn_free_ar, call="function", kwargs=None
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vn_free_ar_no_vn_id_or_vn_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when the vn_id and vn_name
@@ -1609,6 +1772,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"ar_id": "0"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vn_hold_function_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1616,6 +1780,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.vn_hold, call="foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_vn_hold_no_vn_id_or_vn_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when the vn_id and vn_name
@@ -1625,6 +1790,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vn_hold, call="function", kwargs=None
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vn_hold_no_data_or_path(self):
         """
         Tests that a SaltCloudSystemExit is raised when the data and path
@@ -1637,6 +1803,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"vn_id": "0"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vn_info_function_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1644,6 +1811,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.vn_info, call="foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_vn_info_no_vn_id_or_vn_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when the vn_id and vn_name
@@ -1653,6 +1821,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vn_info, call="function", kwargs=None
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vn_release_function_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1660,6 +1829,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.vn_release, call="foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_vn_release_no_vn_id_or_vn_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when the vn_id and vn_name
@@ -1669,6 +1839,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vn_release, call="function", kwargs=None
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vn_release_no_data_or_path(self):
         """
         Tests that a SaltCloudSystemExit is raised when the data and path
@@ -1681,6 +1852,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             kwargs={"vn_id": "0"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vn_reserve_function_error(self):
         """
         Tests that a SaltCloudSystemExit is raised when something other than
@@ -1688,6 +1860,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, opennebula.vn_reserve, call="foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_vn_reserve_no_vn_id_or_vn_name(self):
         """
         Tests that a SaltCloudSystemExit is raised when the vn_id and vn_name
@@ -1697,6 +1870,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, opennebula.vn_reserve, call="function", kwargs=None
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vn_reserve_no_data_or_path(self):
         """
         Tests that a SaltCloudSystemExit is raised when the data and path
@@ -1710,6 +1884,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         )
 
     @skipIf(not HAS_XML_LIBS, "cannot find lxml python library")
+    @skipIf(True, "FASTTEST skip")
     def test__get_xml(self):
         """
         Tests that invalid XML raises SaltCloudSystemExit.

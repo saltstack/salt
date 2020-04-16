@@ -11,7 +11,7 @@ import salt.states.portage_config as portage_config
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PortageConfigTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class PortageConfigTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'mod_init' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_mod_init(self):
         """
         Test to enforce a nice structure on the configuration files.
@@ -40,6 +41,7 @@ class PortageConfigTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'flags' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_flags(self):
         """
         Test to enforce the given flags on the given package or ``DEPEND`` atom.

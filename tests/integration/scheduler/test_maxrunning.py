@@ -18,6 +18,7 @@ from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf
 
 try:
     import croniter  # pylint: disable=W0611
@@ -54,6 +55,7 @@ class SchedulerMaxRunningTest(ModuleCase, SaltReturnAssertsMixin):
     def tearDown(self):
         self.schedule.reset()
 
+    @skipIf(True, "FASTTEST skip")
     def test_maxrunning_minion(self):
         """
         verify that scheduled job runs
@@ -107,6 +109,7 @@ class SchedulerMaxRunningTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual("maxrunning", ret["_skip_reason"])
         self.assertEqual(False, ret["run"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_maxrunning_master(self):
         """
         verify that scheduled job runs

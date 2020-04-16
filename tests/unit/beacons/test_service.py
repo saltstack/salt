@@ -11,7 +11,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 
 # Salt testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 PATCH_OPTS = dict(autospec=True, spec_set=True)
 
@@ -26,6 +26,7 @@ class ServiceBeaconTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {service_beacon: {"__context__": {}, "__salt__": {}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_non_list_config(self):
         config = {}
 
@@ -35,6 +36,7 @@ class ServiceBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret, (False, "Configuration for service beacon must be a list.")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_empty_config(self):
         config = [{}]
 
@@ -44,6 +46,7 @@ class ServiceBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret, (False, "Configuration for service beacon requires services.")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_service_running(self):
         with patch.dict(
             service_beacon.__salt__, {"service.status": MagicMock(return_value=True)}
@@ -66,6 +69,7 @@ class ServiceBeaconTestCase(TestCase, LoaderModuleMockMixin):
                 ],
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_service_not_running(self):
         with patch.dict(
             service_beacon.__salt__, {"service.status": MagicMock(return_value=False)}

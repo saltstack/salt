@@ -80,6 +80,7 @@ class TestMsgpack(TestCase):
         (1 << 23),
     ]
 
+    @skipIf(True, "FASTTEST skip")
     def test_version(self):
         """
         Verify that the version exists and returns a value in the expected format
@@ -88,6 +89,7 @@ class TestMsgpack(TestCase):
         self.assertTrue(isinstance(version, tuple))
         self.assertGreater(version, (0, 0, 0))
 
+    @skipIf(True, "FASTTEST skip")
     def test_Packer(self):
         data = os.urandom(1024)
         packer = salt.utils.msgpack.Packer()
@@ -103,6 +105,7 @@ class TestMsgpack(TestCase):
         unpacked = msgpack.unpackb(packed)
         self.assertEqual(data, unpacked)
 
+    @skipIf(True, "FASTTEST skip")
     def test_Unpacker(self):
         data = os.urandom(1024)
         packer = msgpack.Packer()
@@ -118,6 +121,7 @@ class TestMsgpack(TestCase):
         unpacked = msgpack.unpackb(packed)
         self.assertEqual(data, unpacked)
 
+    @skipIf(True, "FASTTEST skip")
     def test_array_size(self):
         sizes = [0, 5, 50, 1000]
         bio = BytesIO()
@@ -132,6 +136,7 @@ class TestMsgpack(TestCase):
         for size in sizes:
             self.assertEqual(unpacker.unpack(), list(range(size)))
 
+    @skipIf(True, "FASTTEST skip")
     def test_manual_reset(self):
         sizes = [0, 5, 50, 1000]
         packer = salt.utils.msgpack.Packer(autoreset=False)
@@ -148,6 +153,7 @@ class TestMsgpack(TestCase):
         packer.reset()
         self.assertEqual(packer.bytes(), b"")
 
+    @skipIf(True, "FASTTEST skip")
     def test_map_size(self):
         sizes = [0, 5, 50, 1000]
         bio = BytesIO()
@@ -166,6 +172,7 @@ class TestMsgpack(TestCase):
         for size in sizes:
             self.assertEqual(unpacker.unpack(), dict((i, i * 2) for i in range(size)))
 
+    @skipIf(True, "FASTTEST skip")
     def test_exceptions(self):
         # Verify that this exception exists
         self.assertTrue(salt.utils.msgpack.exceptions.PackValueError)
@@ -173,6 +180,7 @@ class TestMsgpack(TestCase):
         self.assertTrue(salt.utils.msgpack.exceptions.PackValueError)
         self.assertTrue(salt.utils.msgpack.exceptions.UnpackValueError)
 
+    @skipIf(True, "FASTTEST skip")
     def test_function_aliases(self):
         """
         Fail if core functionality from msgpack is missing in the utility
@@ -228,11 +236,13 @@ class TestMsgpack(TestCase):
         unpacked = unpack_func(buffer)
         self.assertEqual(data, unpacked.decode())
 
+    @skipIf(True, "FASTTEST skip")
     def test_buffered_base_pack(self):
         self._test_buffered_base(
             pack_func=salt.utils.msgpack.pack, unpack_func=msgpack.unpack
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_buffered_base_unpack(self):
         self._test_buffered_base(
             pack_func=msgpack.pack, unpack_func=salt.utils.msgpack.unpack

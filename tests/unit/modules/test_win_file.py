@@ -62,6 +62,7 @@ class WinFileTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_issue_43328_stats(self):
         """
         Make sure that a CommandExecutionError is raised if the file does NOT
@@ -70,6 +71,7 @@ class WinFileTestCase(TestCase, LoaderModuleMockMixin):
         with patch("os.path.exists", return_value=False):
             self.assertRaises(CommandExecutionError, win_file.stats, self.FAKE_PATH)
 
+    @skipIf(True, "FASTTEST skip")
     def test_issue_43328_check_perms_no_ret(self):
         """
         Make sure that a CommandExecutionError is raised if the file does NOT
@@ -82,6 +84,7 @@ class WinFileTestCase(TestCase, LoaderModuleMockMixin):
 
     @skipIf(not salt.utils.platform.is_windows(), "Skip on Non-Windows systems")
     @skipIf(WIN_VER < 6, "Symlinks not supported on Vista an lower")
+    @skipIf(True, "FASTTEST skip")
     def test_issue_52002_check_file_remove_symlink(self):
         """
         Make sure that directories including symlinks or symlinks can be removed
@@ -136,6 +139,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
     def tearDown(self):
         os.remove(self.temp_file)
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_perms_set_owner_test_true(self):
         """
         Test setting the owner of a file with test=True
@@ -152,6 +156,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertDictEqual(expected, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_perms_set_owner(self):
         """
         Test setting the owner of a file
@@ -167,6 +172,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertDictEqual(expected, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_perms_deny_test_true(self):
         """
         Test setting deny perms on a file with test=True
@@ -185,6 +191,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertDictEqual(expected, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_perms_deny(self):
         """
         Test setting deny perms on a file
@@ -202,6 +209,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertDictEqual(expected, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_perms_grant_test_true(self):
         """
         Test setting grant perms on a file with test=True
@@ -220,6 +228,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertDictEqual(expected, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_perms_grant(self):
         """
         Test setting grant perms on a file
@@ -237,6 +246,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertDictEqual(expected, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_perms_inheritance_false_test_true(self):
         """
         Test setting inheritance to False with test=True
@@ -251,6 +261,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
             ret = win_file.check_perms(path=self.temp_file, inheritance=False)
             self.assertDictEqual(expected, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_perms_inheritance_false(self):
         """
         Test setting inheritance to False
@@ -264,6 +275,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         ret = win_file.check_perms(path=self.temp_file, inheritance=False)
         self.assertDictEqual(expected, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_perms_inheritance_true(self):
         """
         Test setting inheritance to true when it's already true (default)
@@ -277,6 +289,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         ret = win_file.check_perms(path=self.temp_file, inheritance=True)
         self.assertDictEqual(expected, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_perms_reset_test_true(self):
         """
         Test resetting perms with test=True. This shows minimal changes
@@ -320,6 +333,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertDictEqual(expected, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_perms_reset(self):
         """
         Test resetting perms on a File
@@ -362,6 +376,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertDictEqual(expected, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_stat(self):
         with patch("os.path.exists", MagicMock(return_value=True)), patch(
             "salt.modules.win_file._resolve_symlink",

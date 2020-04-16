@@ -38,6 +38,7 @@ class CassandraCQLReturnerTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {cassandra_cql: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_returns_opts_if_specified(self):
         """
         If ssl options are present then check that they are parsed and returned
@@ -64,6 +65,7 @@ class CassandraCQLReturnerTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )  # pylint: disable=no-member
 
+    @skipIf(True, "FASTTEST skip")
     def test_invalid_protocol_version(self):
         """
         Check that the protocol version is imported only if it isvalid
@@ -84,6 +86,7 @@ class CassandraCQLReturnerTestCase(TestCase, LoaderModuleMockMixin):
             with self.assertRaises(CommandExecutionError):
                 cassandra_cql._get_ssl_opts()  # pylint: disable=protected-access
 
+    @skipIf(True, "FASTTEST skip")
     def test_unspecified_opts(self):
         """
         Check that it returns None when ssl opts aren't specified

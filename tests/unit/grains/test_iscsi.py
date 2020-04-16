@@ -13,7 +13,7 @@ import salt.grains.iscsi as iscsi
 from tests.support.mock import MagicMock, mock_open, patch
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class IscsiGrainsTestCase(TestCase):
@@ -21,6 +21,7 @@ class IscsiGrainsTestCase(TestCase):
     Test cases for iscsi grains
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_windows_iscsi_iqn_grains(self):
         cmd_run_mock = MagicMock(
             return_value={
@@ -36,6 +37,7 @@ class IscsiGrainsTestCase(TestCase):
             _grains.get("iscsi_iqn"), ["iqn.1991-05.com.microsoft:simon-x1"]
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_aix_iscsi_iqn_grains(self):
         cmd_run_mock = MagicMock(
             return_value="initiator_name iqn.localhost.hostid.7f000001"
@@ -47,6 +49,7 @@ class IscsiGrainsTestCase(TestCase):
 
         self.assertEqual(_grains.get("iscsi_iqn"), ["iqn.localhost.hostid.7f000001"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_linux_iscsi_iqn_grains(self):
         _iscsi_file = textwrap.dedent(
             """\
@@ -73,6 +76,7 @@ class IscsiGrainsTestCase(TestCase):
         ),
     )
     @patch("salt.grains.iscsi.log", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_linux_iqn_non_root(self):
         """
         Test if linux_iqn is running on salt-master as non-root
@@ -88,6 +92,7 @@ class IscsiGrainsTestCase(TestCase):
 
     @patch("salt.utils.files.fopen", MagicMock(side_effect=IOError(errno.ENOENT, "")))
     @patch("salt.grains.iscsi.log", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_linux_iqn_no_iscsii_initiator(self):
         """
         Test if linux_iqn is running on salt-master as root.

@@ -5,9 +5,11 @@ Pillar include tests
 from __future__ import absolute_import, unicode_literals
 
 from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
 
 
 class PillarIncludeTest(ModuleCase):
+    @skipIf(True, "FASTTEST skip")
     def test_pillar_include(self):
         """
         Test pillar include
@@ -18,6 +20,7 @@ class PillarIncludeTest(ModuleCase):
         assert "b" in ret["element"]
         assert ret["element"]["b"] == {"b": ["Entry B"]}
 
+    @skipIf(True, "FASTTEST skip")
     def test_pillar_glob_include(self):
         """
         Test pillar include via glob pattern

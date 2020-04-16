@@ -8,7 +8,7 @@ import salt.beacons.bonjour_announce as bonjour_announce
 from tests.support.mixins import LoaderModuleMockMixin
 
 # Salt testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class BonjourAnnounceBeaconTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class BonjourAnnounceBeaconTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_non_list_config(self):
         config = {}
 
@@ -33,6 +34,7 @@ class BonjourAnnounceBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret, (False, "Configuration for bonjour_announce beacon must be a list.")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_empty_config(self):
         config = [{}]
 

@@ -12,7 +12,7 @@ import salt.utils.decorators as decorators
 from salt.exceptions import CommandExecutionError, SaltConfigurationError
 from salt.version import SaltStackVersion
 from tests.support.mock import patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class DummyLogger(object):
@@ -72,6 +72,7 @@ class DecoratorsTest(TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_deprecated_version_eol(self):
         """
         Use of is_deprecated will result to the exception,
@@ -88,6 +89,7 @@ class DecoratorsTest(TestCase):
             self.messages, ['The lifetime of the function "old_function" expired.']
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_deprecated_with_successor_eol(self):
         """
         Use of is_deprecated will result to the exception,
@@ -110,6 +112,7 @@ class DecoratorsTest(TestCase):
             ],
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_deprecated(self):
         """
         Use of is_deprecated will result to the log message,
@@ -129,6 +132,7 @@ class DecoratorsTest(TestCase):
             ],
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_deprecated_with_successor(self):
         """
         Use of is_deprecated will result to the log message,
@@ -151,6 +155,7 @@ class DecoratorsTest(TestCase):
             ],
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_with_deprecated_notfound(self):
         """
         Test with_deprecated should raise an exception, if a same name
@@ -172,6 +177,7 @@ class DecoratorsTest(TestCase):
             ],
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_with_deprecated_notfound_in_pillar(self):
         """
         Test with_deprecated should raise an exception, if a same name
@@ -193,6 +199,7 @@ class DecoratorsTest(TestCase):
             ],
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_with_deprecated_found(self):
         """
         Test with_deprecated should not raise an exception, if a same name
@@ -212,6 +219,7 @@ class DecoratorsTest(TestCase):
         ]
         self.assertEqual(self.messages, log_msg)
 
+    @skipIf(True, "FASTTEST skip")
     def test_with_deprecated_found_in_pillar(self):
         """
         Test with_deprecated should not raise an exception, if a same name
@@ -231,6 +239,7 @@ class DecoratorsTest(TestCase):
         ]
         self.assertEqual(self.messages, log_msg)
 
+    @skipIf(True, "FASTTEST skip")
     def test_with_deprecated_found_eol(self):
         """
         Test with_deprecated should raise an exception, if a same name
@@ -254,6 +263,7 @@ class DecoratorsTest(TestCase):
             ],
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_with_deprecated_found_eol_in_pillar(self):
         """
         Test with_deprecated should raise an exception, if a same name
@@ -277,6 +287,7 @@ class DecoratorsTest(TestCase):
             ],
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_with_deprecated_no_conf(self):
         """
         Test with_deprecated should not raise an exception, if a same name
@@ -291,6 +302,7 @@ class DecoratorsTest(TestCase):
         self.assertEqual(depr(self.new_function)(), self.new_function())
         self.assertFalse(self.messages)
 
+    @skipIf(True, "FASTTEST skip")
     def test_with_deprecated_with_name(self):
         """
         Test with_deprecated should not raise an exception, if a different name
@@ -313,6 +325,7 @@ class DecoratorsTest(TestCase):
             ],
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_with_deprecated_with_name_eol(self):
         """
         Test with_deprecated should raise an exception, if a different name
@@ -338,6 +351,7 @@ class DecoratorsTest(TestCase):
             ],
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_with_deprecated_opt_in_default(self):
         """
         Test with_deprecated using opt-in policy,
@@ -355,6 +369,7 @@ class DecoratorsTest(TestCase):
             'deprecated version and will expire in version "Beryllium".'
         ]
 
+    @skipIf(True, "FASTTEST skip")
     def test_with_deprecated_opt_in_use_superseded(self):
         """
         Test with_deprecated using opt-in policy,
@@ -370,6 +385,7 @@ class DecoratorsTest(TestCase):
         assert depr(self.new_function)() == self.new_function()
         assert not self.messages
 
+    @skipIf(True, "FASTTEST skip")
     def test_with_deprecated_opt_in_use_superseded_in_pillar(self):
         """
         Test with_deprecated using opt-in policy,
@@ -385,6 +401,7 @@ class DecoratorsTest(TestCase):
         assert depr(self.new_function)() == self.new_function()
         assert not self.messages
 
+    @skipIf(True, "FASTTEST skip")
     def test_with_deprecated_opt_in_use_superseded_and_deprecated(self):
         """
         Test with_deprecated misconfiguration.
@@ -398,6 +415,7 @@ class DecoratorsTest(TestCase):
         with self.assertRaises(SaltConfigurationError):
             assert depr(self.new_function)() == self.new_function()
 
+    @skipIf(True, "FASTTEST skip")
     def test_with_deprecated_opt_in_use_superseded_and_deprecated_in_pillar(self):
         """
         Test with_deprecated misconfiguration.
@@ -411,22 +429,27 @@ class DecoratorsTest(TestCase):
         with self.assertRaises(SaltConfigurationError):
             assert depr(self.new_function)() == self.new_function()
 
+    @skipIf(True, "FASTTEST skip")
     def test_with_depreciated_should_wrap_function(self):
         wrapped = decorators.with_deprecated({}, "Beryllium")(self.old_function)
         assert wrapped.__module__ == self.old_function.__module__
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_deprecated_should_wrap_function(self):
         wrapped = decorators.is_deprecated({}, "Beryllium")(self.old_function)
         assert wrapped.__module__ == self.old_function.__module__
 
+    @skipIf(True, "FASTTEST skip")
     def test_ensure_unicode_args_should_wrap_function(self):
         wrapped = decorators.ensure_unicode_args(self.old_function)
         assert wrapped.__module__ == self.old_function.__module__
 
+    @skipIf(True, "FASTTEST skip")
     def test_ignores_kwargs_should_wrap_function(self):
         wrapped = decorators.ignores_kwargs("foo", "bar")(self.old_function)
         assert wrapped.__module__ == self.old_function.__module__
 
+    @skipIf(True, "FASTTEST skip")
     def test_memoize_should_wrap_function(self):
         wrapped = decorators.memoize(self.old_function)
         assert wrapped.__module__ == self.old_function.__module__

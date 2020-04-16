@@ -35,6 +35,7 @@ class DDNSTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {ddns: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_host(self):
         """
         Test cases for Add, replace, or update the A
@@ -47,6 +48,7 @@ class DDNSTestCase(TestCase, LoaderModuleMockMixin):
             ddns_update.return_value = True
             self.assertTrue(ddns.add_host(zone="A", name="B", ttl=1, ip="172.27.0.0"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_host(self):
         """
         Tests for delete the forward and reverse records for a host.
@@ -57,6 +59,7 @@ class DDNSTestCase(TestCase, LoaderModuleMockMixin):
                 mock.answer = [{"address": "localhost"}]
                 self.assertFalse(ddns.delete_host(zone="A", name="B"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_update(self):
         """
         Test to add, replace, or update a DNS record.
@@ -103,6 +106,7 @@ class DDNSTestCase(TestCase, LoaderModuleMockMixin):
                                 ddns.update("zone", "name", 1, "AAAA", "::1")
                             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete(self):
         """
         Test to delete a DNS record.

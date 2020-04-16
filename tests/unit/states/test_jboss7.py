@@ -12,7 +12,7 @@ from salt.ext import six
 # Import Salt testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
@@ -37,6 +37,7 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_should_not_redeploy_unchanged(self):
         # given
         parameters = {
@@ -112,6 +113,7 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
             self.assertFalse(jboss7_undeploy_mock.called)
             self.assertFalse(jboss7_deploy_mock.called)
 
+    @skipIf(True, "FASTTEST skip")
     def test_should_redeploy_changed(self):
         # given
         parameters = {
@@ -187,6 +189,7 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(jboss7_undeploy_mock.called)
             self.assertTrue(jboss7_deploy_mock.called)
 
+    @skipIf(True, "FASTTEST skip")
     def test_should_deploy_different_artifact(self):
         # given
         parameters = {
@@ -262,6 +265,7 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
             self.assertFalse(jboss7_undeploy_mock.called)
             self.assertTrue(jboss7_deploy_mock.called)
 
+    @skipIf(True, "FASTTEST skip")
     def test_should_redploy_undeploy_force(self):
         # given
         parameters = {
@@ -337,6 +341,7 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(jboss7_undeploy_mock.called)
             self.assertTrue(jboss7_deploy_mock.called)
 
+    @skipIf(True, "FASTTEST skip")
     def test_should_create_new_datasource_if_not_exists(self):
         # given
         datasource_properties = {"connection-url": "jdbc:/old-connection-url"}
@@ -383,6 +388,7 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
             self.assertFalse(update_mock.called)
             self.assertEqual(result["comment"], "Datasource created.")
 
+    @skipIf(True, "FASTTEST skip")
     def test_should_update_the_datasource_if_exists(self):
         ds_status = {"updated": False}
 
@@ -429,6 +435,7 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(read_mock.called)
             self.assertEqual(result["comment"], "Datasource updated.")
 
+    @skipIf(True, "FASTTEST skip")
     def test_should_recreate_the_datasource_if_specified(self):
         read_mock = MagicMock(
             return_value={
@@ -465,6 +472,7 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(result["changes"]["removed"], "appDS")
             self.assertEqual(result["changes"]["created"], "appDS")
 
+    @skipIf(True, "FASTTEST skip")
     def test_should_inform_if_the_datasource_has_not_changed(self):
         read_mock = MagicMock(
             return_value={
@@ -500,6 +508,7 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
             self.assertFalse(create_mock.called)
             self.assertEqual(result["comment"], "Datasource not changed.")
 
+    @skipIf(True, "FASTTEST skip")
     def test_should_create_binding_if_not_exists(self):
         # given
         binding_status = {"created": False}
@@ -540,6 +549,7 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(result["changes"], {"added": "env:DEV\n"})
             self.assertEqual(result["comment"], "Bindings changed.")
 
+    @skipIf(True, "FASTTEST skip")
     def test_should_update_bindings_if_exists_and_different(self):
         # given
         binding_status = {"updated": False}
@@ -579,6 +589,7 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(result["changes"], {"changed": "env:DEV->DEV2\n"})
             self.assertEqual(result["comment"], "Bindings changed.")
 
+    @skipIf(True, "FASTTEST skip")
     def test_should_not_update_bindings_if_same(self):
         # given
         read_mock = MagicMock(
@@ -606,6 +617,7 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(result["changes"], {})
             self.assertEqual(result["comment"], "Bindings not changed.")
 
+    @skipIf(True, "FASTTEST skip")
     def test_should_raise_exception_if_cannot_create_binding(self):
         def read_func(jboss_config, binding_name, profile):
             return {"success": False, "err_code": "JBAS014807"}
@@ -637,6 +649,7 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
             except CommandExecutionError as e:
                 self.assertEqual(six.text_type(e), "Incorrect binding name.")
 
+    @skipIf(True, "FASTTEST skip")
     def test_should_raise_exception_if_cannot_update_binding(self):
         def read_func(jboss_config, binding_name, profile):
             return {"success": True, "result": {"value": "DEV"}}
@@ -669,6 +682,7 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
             except CommandExecutionError as e:
                 self.assertEqual(six.text_type(e), "Incorrect binding name.")
 
+    @skipIf(True, "FASTTEST skip")
     def test_datasource_exist_create_datasource_good_code(self):
         jboss_config = {
             "cli_path": "/home/ch44d/Desktop/wildfly-18.0.0.Final/bin/jboss-cli.sh",
@@ -712,6 +726,7 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
             read_datasource.assert_called_once()
             create_datasource.assert_called_once()
 
+    @skipIf(True, "FASTTEST skip")
     def test_datasource_exist_create_datasource_bad_code(self):
         jboss_config = {
             "cli_path": "/home/ch44d/Desktop/wildfly-18.0.0.Final/bin/jboss-cli.sh",

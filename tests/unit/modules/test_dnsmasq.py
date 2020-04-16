@@ -16,7 +16,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class DnsmasqTestCase(TestCase, LoaderModuleMockMixin):
@@ -27,6 +27,7 @@ class DnsmasqTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {dnsmasq: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_version(self):
         """
         test to show installed version of dnsmasq.
@@ -35,6 +36,7 @@ class DnsmasqTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(dnsmasq.__salt__, {"cmd.run": mock}):
             self.assertEqual(dnsmasq.version(), "C")
 
+    @skipIf(True, "FASTTEST skip")
     def test_fullversion(self):
         """
         Test to Show installed version of dnsmasq and compile options.
@@ -46,6 +48,7 @@ class DnsmasqTestCase(TestCase, LoaderModuleMockMixin):
                 {"version": "C", "compile options": ["G", "H", "I"]},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_config(self):
         """
         test to show installed version of dnsmasq.
@@ -56,6 +59,7 @@ class DnsmasqTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(os, "listdir", mock):
                 self.assertDictEqual(dnsmasq.set_config(), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_config_filter_pub_kwargs(self):
         """
         Test that the kwargs returned from running the set_config function
@@ -77,6 +81,7 @@ class DnsmasqTestCase(TestCase, LoaderModuleMockMixin):
                 )
             self.assertEqual(ret, {"domain": mock_domain, "address": mock_address})
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_config(self):
         """
         test to dumps all options from the config file.
@@ -87,6 +92,7 @@ class DnsmasqTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(os, "listdir", mock):
                 self.assertDictEqual(dnsmasq.get_config(), {"conf-dir": "A"})
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_dnsmasq_no_file(self):
         """
         Tests that a CommandExecutionError is when a filename that doesn't exist is
@@ -94,6 +100,7 @@ class DnsmasqTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(CommandExecutionError, dnsmasq._parse_dnamasq, "filename")
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_dnamasq(self):
         """
         test for generic function for parsing dnsmasq files including includes.

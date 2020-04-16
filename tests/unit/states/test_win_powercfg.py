@@ -9,7 +9,7 @@ import salt.states.win_powercfg as powercfg
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
@@ -20,6 +20,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {powercfg: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_monitor(self):
         """
         Test to make sure we can set the monitor timeout value
@@ -43,6 +44,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(powercfg.__opts__, {"test": False}):
                 self.assertEqual(powercfg.set_timeout("monitor", 0), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_monitor_already_set(self):
         """
         Test to make sure we can set the monitor timeout value
@@ -59,6 +61,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(powercfg.set_timeout("monitor", 0), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_monitor_test_true_with_change(self):
         """
         Test to make sure set monitor works correctly with test=True with
@@ -78,6 +81,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(powercfg.__opts__, {"test": True}):
                 self.assertEqual(powercfg.set_timeout("monitor", 0), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_fail_invalid_setting(self):
         """
         Test to make sure we can set the monitor timeout value
@@ -90,6 +94,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
         }
         self.assertEqual(powercfg.set_timeout("fakesetting", 0), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_fail_invalid_power(self):
         """
         Test to make sure we can set the monitor timeout value

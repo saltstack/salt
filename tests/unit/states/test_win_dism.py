@@ -9,13 +9,14 @@ import salt.states.win_dism as dism
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class WinDismTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {dism: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_capability_installed(self):
         """
             Test capability installed state
@@ -47,6 +48,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_capability_installed_failure(self):
         """
             Test installing a capability which fails with DISM
@@ -78,6 +80,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_capability_installed_installed(self):
         """
             Test installing a capability already installed
@@ -107,6 +110,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                 assert not mock_add.called
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_capability_removed(self):
         """
             Test capability removed state
@@ -136,6 +140,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                 mock_remove.assert_called_once_with("Capa2", None, False)
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_capability_removed_failure(self):
         """
             Test removing a capability which fails with DISM
@@ -165,6 +170,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                 mock_remove.assert_called_once_with("Capa2", None, False)
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_capability_removed_removed(self):
         """
             Test removing a capability already removed
@@ -193,6 +199,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
             assert not mock_remove.called
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_feature_installed(self):
         """
             Test installing a feature with DISM
@@ -221,6 +228,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_feature_installed_failure(self):
         """
             Test installing a feature which fails with DISM
@@ -249,6 +257,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_feature_installed_installed(self):
         """
             Test installing a feature already installed
@@ -274,6 +283,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
             assert not mock_add.called
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_feature_removed(self):
         """
             Test removing a feature with DISM
@@ -303,6 +313,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                 mock_remove.assert_called_once_with("Feat2", False, None, False)
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_feature_removed_failure(self):
         """
             Test removing a feature which fails with DISM
@@ -332,6 +343,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                 mock_remove.assert_called_once_with("Feat2", False, None, False)
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_feature_removed_removed(self):
         """
             Test removing a feature already removed
@@ -360,6 +372,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
             assert not mock_remove.called
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_package_installed(self):
         """
             Test installing a package with DISM
@@ -392,6 +405,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                     mock_add.assert_called_once_with("Pack2", False, False, None, False)
                     self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_package_installed_failure(self):
         """
             Test installing a package which fails with DISM
@@ -424,6 +438,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                     mock_add.assert_called_once_with("Pack2", False, False, None, False)
                     self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_package_installed_installed(self):
         """
             Test installing a package already installed
@@ -456,6 +471,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                     assert not mock_add.called
                     self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_package_removed(self):
         """
             Test removing a package with DISM
@@ -488,6 +504,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                     mock_remove.assert_called_once_with("Pack2", None, False)
                     self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_package_removed_failure(self):
         """
             Test removing a package which fails with DISM
@@ -520,6 +537,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                     mock_remove.assert_called_once_with("Pack2", None, False)
                     self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_package_removed_removed(self):
         """
             Test removing a package already removed

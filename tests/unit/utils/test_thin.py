@@ -81,6 +81,7 @@ class SSHThinTestCase(TestCase):
     @patch("salt.exceptions.SaltSystemExit", Exception)
     @patch("salt.utils.thin.log", MagicMock())
     @patch("salt.utils.thin.os.path.isfile", MagicMock(return_value=False))
+    @skipIf(True, "FASTTEST skip")
     def test_get_ext_tops_cfg_missing_dependencies(self):
         """
         Test thin.get_ext_tops contains all required dependencies.
@@ -99,6 +100,7 @@ class SSHThinTestCase(TestCase):
     @patch("salt.exceptions.SaltSystemExit", Exception)
     @patch("salt.utils.thin.log", MagicMock())
     @patch("salt.utils.thin.os.path.isfile", MagicMock(return_value=False))
+    @skipIf(True, "FASTTEST skip")
     def test_get_ext_tops_cfg_missing_interpreter(self):
         """
         Test thin.get_ext_tops contains interpreter configuration.
@@ -113,6 +115,7 @@ class SSHThinTestCase(TestCase):
     @patch("salt.exceptions.SaltSystemExit", Exception)
     @patch("salt.utils.thin.log", MagicMock())
     @patch("salt.utils.thin.os.path.isfile", MagicMock(return_value=False))
+    @skipIf(True, "FASTTEST skip")
     def test_get_ext_tops_cfg_wrong_interpreter(self):
         """
         Test thin.get_ext_tops contains correct interpreter configuration.
@@ -131,6 +134,7 @@ class SSHThinTestCase(TestCase):
     @patch("salt.exceptions.SaltSystemExit", Exception)
     @patch("salt.utils.thin.log", MagicMock())
     @patch("salt.utils.thin.os.path.isfile", MagicMock(return_value=False))
+    @skipIf(True, "FASTTEST skip")
     def test_get_ext_tops_cfg_interpreter(self):
         """
         Test thin.get_ext_tops interpreter configuration.
@@ -167,6 +171,7 @@ class SSHThinTestCase(TestCase):
     @patch("salt.exceptions.SaltSystemExit", Exception)
     @patch("salt.utils.thin.log", MagicMock())
     @patch("salt.utils.thin.os.path.isfile", MagicMock(return_value=False))
+    @skipIf(True, "FASTTEST skip")
     def test_get_ext_tops_dependency_config_check(self):
         """
         Test thin.get_ext_tops dependencies are importable
@@ -207,6 +212,7 @@ class SSHThinTestCase(TestCase):
     @patch("salt.exceptions.SaltSystemExit", Exception)
     @patch("salt.utils.thin.log", MagicMock())
     @patch("salt.utils.thin.os.path.isfile", MagicMock(return_value=True))
+    @skipIf(True, "FASTTEST skip")
     def test_get_ext_tops_config_pass(self):
         """
         Test thin.get_ext_tops configuration
@@ -234,6 +240,7 @@ class SSHThinTestCase(TestCase):
 
     @patch("salt.utils.thin.sys.argv", [None, '{"foo": "bar"}'])
     @patch("salt.utils.thin.get_tops", lambda **kw: kw)
+    @skipIf(True, "FASTTEST skip")
     def test_gte(self):
         """
         Test thin.gte external call for processing the info about tops per interpreter.
@@ -242,6 +249,7 @@ class SSHThinTestCase(TestCase):
         """
         assert salt.utils.json.loads(thin.gte()).get("foo") == "bar"
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_dep_path(self):
         """
         Test thin._add_dependency function to setup dependency paths
@@ -253,6 +261,7 @@ class SSHThinTestCase(TestCase):
         assert "__init__" not in container[1]
         assert container == ["/foo/bar.py", "/something/else"]
 
+    @skipIf(True, "FASTTEST skip")
     def test_thin_path(self):
         """
         Test thin.thin_path returns the expected path.
@@ -263,6 +272,7 @@ class SSHThinTestCase(TestCase):
         expected = os.path.join(path, "thin", "thin.tgz")
         self.assertEqual(thin.thin_path(path), expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_salt_call_script(self):
         """
         Test get salt-call script rendered.
@@ -280,6 +290,7 @@ class SSHThinTestCase(TestCase):
                 data = salt.utils.json.loads(line.replace("syspaths = ", ""))
                 assert data == ["foo", "bar"]
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_ext_namespaces_empty(self):
         """
         Test thin._get_ext_namespaces function returns an empty dictionary on nothing
@@ -288,6 +299,7 @@ class SSHThinTestCase(TestCase):
         for obj in [None, {}, []]:
             assert thin._get_ext_namespaces(obj) == {}
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_ext_namespaces(self):
         """
         Test thin._get_ext_namespaces function returns namespaces properly out of the config.
@@ -297,6 +309,7 @@ class SSHThinTestCase(TestCase):
         assert thin._get_ext_namespaces(cfg).get("ns") == (2, 7,)
         assert isinstance(thin._get_ext_namespaces(cfg).get("ns"), tuple)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_ext_namespaces_failure(self):
         """
         Test thin._get_ext_namespaces function raises an exception
@@ -355,6 +368,7 @@ class SSHThinTestCase(TestCase):
         type(str("concurrent"), (), {"__file__": "/site-packages/concurrent"}),
     )
     @patch("salt.utils.thin.log", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_get_tops(self):
         """
         Test thin.get_tops to get top directories, based on the interpreter.
@@ -428,6 +442,7 @@ class SSHThinTestCase(TestCase):
         type(str("concurrent"), (), {"__file__": "/site-packages/concurrent"}),
     )
     @patch("salt.utils.thin.log", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_get_tops_extra_mods(self):
         """
         Test thin.get_tops to get extra-modules alongside the top directories, based on the interpreter.
@@ -511,6 +526,7 @@ class SSHThinTestCase(TestCase):
         type(str("concurrent"), (), {"__file__": "/site-packages/concurrent"}),
     )
     @patch("salt.utils.thin.log", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_get_tops_so_mods(self):
         """
         Test thin.get_tops to get extra-modules alongside the top directories, based on the interpreter.
@@ -548,6 +564,7 @@ class SSHThinTestCase(TestCase):
 
     @patch("salt.utils.thin.gen_thin", MagicMock(return_value="/path/to/thin/thin.tgz"))
     @patch("salt.utils.hashutils.get_hash", MagicMock(return_value=12345))
+    @skipIf(True, "FASTTEST skip")
     def test_thin_sum(self):
         """
         Test thin.thin_sum function.
@@ -564,6 +581,7 @@ class SSHThinTestCase(TestCase):
 
     @patch("salt.utils.thin.gen_min", MagicMock(return_value="/path/to/thin/min.tgz"))
     @patch("salt.utils.hashutils.get_hash", MagicMock(return_value=12345))
+    @skipIf(True, "FASTTEST skip")
     def test_min_sum(self):
         """
         Test thin.thin_sum function.
@@ -580,6 +598,7 @@ class SSHThinTestCase(TestCase):
 
     @patch("salt.utils.thin.sys.version_info", (2, 5))
     @patch("salt.exceptions.SaltSystemExit", Exception)
+    @skipIf(True, "FASTTEST skip")
     def test_gen_thin_fails_ancient_python_version(self):
         """
         Test thin.gen_thin function raises an exception
@@ -628,6 +647,7 @@ class SSHThinTestCase(TestCase):
     @patch("salt.utils.thin.shutil", MagicMock())
     @patch("salt.utils.path.which", MagicMock(return_value=""))
     @patch("salt.utils.thin._get_thintar_prefix", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_gen_thin_python_exist_or_not(self):
         """
         Test thin.gen_thin function if the opposite python
@@ -694,6 +714,7 @@ class SSHThinTestCase(TestCase):
     @patch("salt.utils.thin._six.PY2", False)
     @patch("salt.utils.thin.sys.version_info", _version_info(None, 3, 6))
     @patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/python"))
+    @skipIf(True, "FASTTEST skip")
     def test_gen_thin_compression_fallback_py3(self):
         """
         Test thin.gen_thin function if fallbacks to the gzip compression, once setup wrong.
@@ -746,6 +767,7 @@ class SSHThinTestCase(TestCase):
     @patch("salt.utils.thin._six.PY2", False)
     @patch("salt.utils.thin.sys.version_info", _version_info(None, 3, 6))
     @patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/python"))
+    @skipIf(True, "FASTTEST skip")
     def test_gen_thin_control_files_written_py3(self):
         """
         Test thin.gen_thin function if control files are written (version, salt-call etc).
@@ -808,6 +830,7 @@ class SSHThinTestCase(TestCase):
     @patch("salt.utils.thin.sys.version_info", _version_info(None, 3, 6))
     @patch("salt.utils.hashutils.DigestCollector", MagicMock())
     @patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/python"))
+    @skipIf(True, "FASTTEST skip")
     def test_gen_thin_main_content_files_written_py3(self):
         """
         Test thin.gen_thin function if main content files are written.
@@ -883,6 +906,7 @@ class SSHThinTestCase(TestCase):
     @patch("salt.utils.thin.sys.version_info", _version_info(None, 3, 6))
     @patch("salt.utils.hashutils.DigestCollector", MagicMock())
     @patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/python"))
+    @skipIf(True, "FASTTEST skip")
     def test_gen_thin_ext_alternative_content_files_written_py3(self):
         """
         Test thin.gen_thin function if external alternative content files are written.
@@ -904,6 +928,7 @@ class SSHThinTestCase(TestCase):
             files.pop(files.index(arcname))
         self.assertFalse(files)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_supported_py_config_typecheck(self):
         """
         Test collecting proper py-versions. Should return bytes type.
@@ -914,6 +939,7 @@ class SSHThinTestCase(TestCase):
         out = thin._get_supported_py_config(tops=tops, extended_cfg=ext_cfg)
         assert type(salt.utils.stringutils.to_bytes("")) == type(out)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_supported_py_config_base_tops(self):
         """
         Test collecting proper py-versions. Should return proper base tops.
@@ -932,6 +958,7 @@ class SSHThinTestCase(TestCase):
         for t_line in ["py3:3:0", "py2:2:7"]:
             self.assertIn(t_line, out)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_supported_py_config_ext_tops(self):
         """
         Test collecting proper py-versions. Should return proper ext conf tops.

@@ -9,13 +9,14 @@ import salt.states.mac_keychain as keychain
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class KeychainTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {keychain: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_cert(self):
         """
             Test installing a certificate into the macOS keychain
@@ -46,6 +47,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_cert(self):
         """
             Test installing a certificate into the macOS keychain when it's
@@ -77,6 +79,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
             assert not install_mock.called
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_uninstall_cert(self):
         """
             Test uninstalling a certificate into the macOS keychain when it's
@@ -108,6 +111,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_uninstalled_cert(self):
         """
             Test uninstalling a certificate into the macOS keychain when it's
@@ -137,6 +141,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
             assert not uninstall_mock.called
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_default_keychain(self):
         """
             Test setting the default keychain
@@ -168,6 +173,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_default_keychain_set_already(self):
         """
             Test setting the default keychain when it's already set
@@ -197,6 +203,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
                 assert not set_mock.called
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_default_keychain_missing(self):
         """
             Test setting the default keychain when the keychain is missing
@@ -213,6 +220,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
             out = keychain.default_keychain("/path/to/cert.p12", "system", "frank")
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_cert_salt_fileserver(self):
         """
             Test installing a certificate into the macOS keychain from the salt
@@ -248,6 +256,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_cert_hash_different(self):
         """
             Test installing a certificate into the macOS keychain when it's

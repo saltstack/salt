@@ -54,7 +54,6 @@ class MacKeychainModuleTest(ModuleCase):
         if self.cert_alias in certs_list:
             self.run_function("keychain.uninstall", [self.cert_alias])
 
-    @skipIf(True, "SLOWTEST skip")
     def test_mac_keychain_install(self):
         """
         Tests that attempts to install a certificate
@@ -66,7 +65,6 @@ class MacKeychainModuleTest(ModuleCase):
         certs_list = self.run_function("keychain.list_certs")
         self.assertIn(self.cert_alias, certs_list)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_mac_keychain_uninstall(self):
         """
         Tests that attempts to uninstall a certificate
@@ -88,7 +86,6 @@ class MacKeychainModuleTest(ModuleCase):
         except CommandExecutionError:
             self.run_function("keychain.uninstall", [self.cert_alias])
 
-    @skipIf(True, "SLOWTEST skip")
     def test_mac_keychain_get_friendly_name(self):
         """
         Test that attempts to get friendly name of a cert
@@ -104,7 +101,6 @@ class MacKeychainModuleTest(ModuleCase):
         )
         self.assertEqual(get_name, self.cert_alias)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_mac_keychain_get_default_keychain(self):
         """
         Test that attempts to get the default keychain
@@ -115,6 +111,7 @@ class MacKeychainModuleTest(ModuleCase):
         )
         self.assertEqual(salt_get_keychain, sys_get_keychain)
 
+    @skipIf(True, "FASTTEST skip")
     def test_mac_keychain_list_certs(self):
         """
         Test that attempts to list certs

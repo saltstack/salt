@@ -96,7 +96,7 @@ def spin(func):
 
 class TestProcessManager(TestCase):
     @spin
-    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_basic(self):
         """
         Make sure that the process is alive 2s later
@@ -119,6 +119,7 @@ class TestProcessManager(TestCase):
                 process_manager.kill_children()
 
     @spin
+    @skipIf(True, "FASTTEST skip")
     def test_kill(self):
         process_manager = salt.utils.process.ProcessManager()
         process_manager.add_process(self.spin_kill)
@@ -144,6 +145,7 @@ class TestProcessManager(TestCase):
                 process_manager.kill_children()
 
     @die
+    @skipIf(True, "FASTTEST skip")
     def test_restarting(self):
         """
         Make sure that the process is alive 2s later
@@ -167,6 +169,7 @@ class TestProcessManager(TestCase):
 
     @skipIf(sys.version_info < (2, 7), "Needs > Py 2.7 due to bug in stdlib")
     @incr
+    @skipIf(True, "FASTTEST skip")
     def test_counter(self):
         counter = multiprocessing.Value("i", 0)
         process_manager = salt.utils.process.ProcessManager()
@@ -189,7 +192,7 @@ class TestProcessManager(TestCase):
 
 
 class TestThreadPool(TestCase):
-    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_basic(self):
         """
         Make sure the threadpool can do things
@@ -207,7 +210,6 @@ class TestThreadPool(TestCase):
         self.assertEqual(counter.value, 1)
         self.assertEqual(pool._job_queue.qsize(), 0)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_full_queue(self):
         """
         Make sure that a full threadpool acts as we expect
@@ -234,6 +236,7 @@ class TestThreadPool(TestCase):
 
 
 class TestProcess(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_daemonize_if(self):
         # pylint: disable=assignment-from-none
         with patch("sys.argv", ["salt-call"]):
@@ -258,6 +261,8 @@ class TestProcessCallbacks(TestCase):
     def process_target(evt):
         evt.set()
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_callbacks(self):
         "Validate Process call after fork and finalize methods"
         teardown_to_mock = "salt.log.setup.shutdown_multiprocessing_logging"
@@ -270,6 +275,8 @@ class TestProcessCallbacks(TestCase):
         mb.assert_called()
         ma.assert_called()
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_callbacks_called_when_run_overriden(self):
         "Validate Process sub classes call after fork and finalize methods when run is overridden"
 
@@ -304,6 +311,7 @@ class TestSignalHandlingProcess(TestCase):
     def children(cls, *args, **kwargs):
         raise psutil.NoSuchProcess(1)
 
+    @skipIf(True, "FASTTEST skip")
     def test_process_does_not_exist(self):
         try:
             with patch("psutil.Process", self.Process):
@@ -312,6 +320,7 @@ class TestSignalHandlingProcess(TestCase):
         except psutil.NoSuchProcess:
             assert False, "psutil.NoSuchProcess raised"
 
+    @skipIf(True, "FASTTEST skip")
     def test_process_children_do_not_exist(self):
         try:
             with patch("psutil.Process.children", self.children):
@@ -348,7 +357,6 @@ class TestSignalHandlingProcess(TestCase):
             pass
 
     @skipIf(sys.platform.startswith("win"), "No os.fork on Windows")
-    @skipIf(True, "SLOWTEST skip")
     def test_signal_processing_regression_test(self):
         evt = multiprocessing.Event()
         sh_proc = salt.utils.process.SignalHandlingProcess(
@@ -378,7 +386,6 @@ class TestSignalHandlingProcess(TestCase):
         p.join()
 
     @skipIf(sys.platform.startswith("win"), "Required signals not supported on windows")
-    @skipIf(True, "SLOWTEST skip")
     def test_signal_processing_handle_signals_called(self):
         "Validate SignalHandlingProcess handles signals"
         # Gloobal event to stop all processes we're creating
@@ -431,6 +438,8 @@ class TestSignalHandlingProcessCallbacks(TestCase):
     def process_target(evt):
         evt.set()
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_callbacks(self):
         "Validate SignalHandlingProcess call after fork and finalize methods"
 
@@ -449,6 +458,8 @@ class TestSignalHandlingProcessCallbacks(TestCase):
         ma.assert_called()
         mb.assert_called()
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_callbacks_called_when_run_overriden(self):
         "Validate SignalHandlingProcess sub classes call after fork and finalize methods when run is overridden"
 
@@ -474,6 +485,7 @@ class TestSignalHandlingProcessCallbacks(TestCase):
 
 
 class TestDup2(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_dup2_no_fileno(self):
         "The dup2 method does not fail on streams without fileno support"
         f1 = io.StringIO("some initial text data")
@@ -507,7 +519,6 @@ class TestProcessList(TestCase):
                 raise Exception("Process did not finishe before timeout")
             time.sleep(0.3)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_process_list_process(self):
         plist = salt.utils.process.SubprocessList()
         proc = multiprocessing.Process(target=null_target)
@@ -519,6 +530,7 @@ class TestProcessList(TestCase):
         plist.cleanup()
         assert proc not in plist.processes
 
+    @skipIf(True, "FASTTEST skip")
     def test_process_list_thread(self):
         plist = salt.utils.process.SubprocessList()
         thread = threading.Thread(target=null_target)
@@ -530,7 +542,6 @@ class TestProcessList(TestCase):
         plist.cleanup()
         assert thread not in plist.processes
 
-    @skipIf(True, "SLOWTEST skip")
     def test_process_list_cleanup(self):
         plist = salt.utils.process.SubprocessList()
         event = multiprocessing.Event()
@@ -576,6 +587,7 @@ class TestDeprecatedClassNames(TestCase):
 
         return _patched_warn_until_date
 
+    @skipIf(True, "FASTTEST skip")
     def test_multiprocessing_process_warning(self):
         # We *always* want *all* warnings thrown on this module
         warnings.filterwarnings("always", "", DeprecationWarning, __name__)
@@ -605,6 +617,7 @@ class TestDeprecatedClassNames(TestCase):
             if proc is not None:
                 del proc
 
+    @skipIf(True, "FASTTEST skip")
     def test_multiprocessing_process_runtime_error(self):
         fake_utcnow = datetime.date(2022, 1, 1)
 
@@ -633,6 +646,7 @@ class TestDeprecatedClassNames(TestCase):
             if proc is not None:
                 del proc
 
+    @skipIf(True, "FASTTEST skip")
     def test_signal_handling_multiprocessing_process_warning(self):
         # We *always* want *all* warnings thrown on this module
         warnings.filterwarnings("always", "", DeprecationWarning, __name__)
@@ -662,6 +676,7 @@ class TestDeprecatedClassNames(TestCase):
             if proc is not None:
                 del proc
 
+    @skipIf(True, "FASTTEST skip")
     def test_signal_handling_multiprocessing_process_runtime_error(self):
         fake_utcnow = datetime.date(2022, 1, 1)
 

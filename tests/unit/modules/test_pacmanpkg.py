@@ -12,7 +12,7 @@ import salt.modules.pacmanpkg as pacman
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PacmanTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class PacmanTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {pacman: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_pkgs(self):
         """
         Test if it list the packages currently installed in a dict
@@ -47,6 +48,7 @@ class PacmanTestCase(TestCase, LoaderModuleMockMixin):
         sortmock.assert_called_with(mock_ret)
         stringifymock.assert_called_with(mock_ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_pkgs_as_list(self):
         """
         Test if it lists the packages currently installed in a dict
@@ -71,6 +73,7 @@ class PacmanTestCase(TestCase, LoaderModuleMockMixin):
         sortmock.assert_called_with(mock_ret)
         self.assertTrue(stringifymock.call_count == 0)
 
+    @skipIf(True, "FASTTEST skip")
     def test_group_list(self):
         """
         Test if it lists the available groups
@@ -102,6 +105,7 @@ class PacmanTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_group_info(self):
         """
         Test if it shows the packages in a group
@@ -126,6 +130,7 @@ class PacmanTestCase(TestCase, LoaderModuleMockMixin):
                 pacman.group_info("testgroup")["default"], ["pkg1", "pkg2"]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_group_diff(self):
         """
         Test if it shows the difference between installed and target group contents

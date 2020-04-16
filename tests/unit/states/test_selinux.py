@@ -11,7 +11,7 @@ import salt.states.selinux as selinux
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class SelinuxTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class SelinuxTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'mode' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_mode(self):
         """
         Test to verifies the mode SELinux is running in,
@@ -84,6 +85,7 @@ class SelinuxTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'boolean' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_boolean(self):
         """
         Test to set up an SELinux boolean.

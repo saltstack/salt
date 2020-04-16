@@ -81,6 +81,7 @@ class AutoKeyTest(TestCase):
         return fmode
 
     @patch_check_permissions(uid=0, is_windows=True)
+    @skipIf(True, "FASTTEST skip")
     def test_check_permissions_windows(self):
         """
         Assert that all files are accepted on windows
@@ -92,6 +93,7 @@ class AutoKeyTest(TestCase):
         self.assertTrue(self.auto_key.check_permissions("testfile"))
 
     @patch_check_permissions(permissive_pki=True)
+    @skipIf(True, "FASTTEST skip")
     def test_check_permissions_others_can_write(self):
         """
         Assert that no file is accepted, when others can write to it
@@ -103,6 +105,7 @@ class AutoKeyTest(TestCase):
             self.assertFalse(self.auto_key.check_permissions("testfile"))
 
     @patch_check_permissions()
+    @skipIf(True, "FASTTEST skip")
     def test_check_permissions_group_can_write_not_permissive(self):
         """
         Assert that a file is accepted, when group can write to it and perkissive_pki_access=False
@@ -114,6 +117,7 @@ class AutoKeyTest(TestCase):
             self.assertFalse(self.auto_key.check_permissions("testfile"))
 
     @patch_check_permissions(permissive_pki=True)
+    @skipIf(True, "FASTTEST skip")
     def test_check_permissions_group_can_write_permissive(self):
         """
         Assert that a file is accepted, when group can write to it and perkissive_pki_access=True
@@ -122,6 +126,7 @@ class AutoKeyTest(TestCase):
         self.assertTrue(self.auto_key.check_permissions("testfile"))
 
     @patch_check_permissions(uid=0, permissive_pki=True)
+    @skipIf(True, "FASTTEST skip")
     def test_check_permissions_group_can_write_permissive_root_in_group(self):
         """
         Assert that a file is accepted, when group can write to it, perkissive_pki_access=False,
@@ -131,6 +136,7 @@ class AutoKeyTest(TestCase):
         self.assertTrue(self.auto_key.check_permissions("testfile"))
 
     @patch_check_permissions(uid=0, permissive_pki=True)
+    @skipIf(True, "FASTTEST skip")
     def test_check_permissions_group_can_write_permissive_root_not_in_group(self):
         """
         Assert that no file is accepted, when group can write to it, perkissive_pki_access=False,
@@ -143,6 +149,7 @@ class AutoKeyTest(TestCase):
             self.assertFalse(self.auto_key.check_permissions("testfile"))
 
     @patch_check_permissions()
+    @skipIf(True, "FASTTEST skip")
     def test_check_permissions_only_owner_can_write(self):
         """
         Assert that a file is accepted, when only the owner can write to it
@@ -151,6 +158,7 @@ class AutoKeyTest(TestCase):
         self.assertTrue(self.auto_key.check_permissions("testfile"))
 
     @patch_check_permissions(uid=0)
+    @skipIf(True, "FASTTEST skip")
     def test_check_permissions_only_owner_can_write_root(self):
         """
         Assert that a file is accepted, when only the owner can write to it and salt is root
@@ -187,6 +195,7 @@ class AutoKeyTest(TestCase):
         ) as mock_permissions:
             test_func(mock_walk, mock_open, mock_permissions)
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_autosign_grains_no_grains(self):
         """
         Asserts that autosigning from grains fails when no grain values are passed.
@@ -205,6 +214,7 @@ class AutoKeyTest(TestCase):
 
         self._test_check_autosign_grains(test_func)
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_autosign_grains_no_autosign_grains_dir(self):
         """
         Asserts that autosigning from grains fails when the \'autosign_grains_dir\' config option
@@ -221,6 +231,7 @@ class AutoKeyTest(TestCase):
 
         self._test_check_autosign_grains(test_func, autosign_grains_dir=None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_autosign_grains_accept(self):
         """
         Asserts that autosigning from grains passes when a matching grain value is in an
@@ -235,6 +246,7 @@ class AutoKeyTest(TestCase):
         file_content = "#test_ignore\ntest_value"
         self._test_check_autosign_grains(test_func, file_content=file_content)
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_autosign_grains_accept_not(self):
         """
         Asserts that autosigning from grains fails when the grain value is not in the
@@ -249,6 +261,7 @@ class AutoKeyTest(TestCase):
         file_content = "#test_invalid\ntest_value"
         self._test_check_autosign_grains(test_func, file_content=file_content)
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_autosign_grains_invalid_file_permissions(self):
         """
         Asserts that autosigning from grains fails when the grain file has the wrong permissions.
@@ -276,7 +289,6 @@ class LocalFuncsTestCase(TestCase):
 
     # runner tests
 
-    @skipIf(True, "SLOWTEST skip")
     def test_runner_token_not_authenticated(self):
         """
         Asserts that a TokenAuthenticationError is returned when the token can't authenticate.
@@ -290,7 +302,6 @@ class LocalFuncsTestCase(TestCase):
         ret = self.local_funcs.runner({"token": "asdfasdfasdfasdf"})
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_runner_token_authorization_error(self):
         """
         Asserts that a TokenAuthenticationError is returned when the token authenticates, but is
@@ -314,7 +325,6 @@ class LocalFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_runner_token_salt_invocation_error(self):
         """
         Asserts that a SaltInvocationError is returned when the token authenticates, but the
@@ -339,7 +349,6 @@ class LocalFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_runner_eauth_not_authenticated(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user can't authenticate.
@@ -354,7 +363,6 @@ class LocalFuncsTestCase(TestCase):
         ret = self.local_funcs.runner({"eauth": "foo"})
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_runner_eauth_authorization_error(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user authenticates, but is
@@ -375,7 +383,6 @@ class LocalFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_runner_eauth_salt_invocation_error(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user authenticates, but the
@@ -404,7 +411,6 @@ class LocalFuncsTestCase(TestCase):
 
     # wheel tests
 
-    @skipIf(True, "SLOWTEST skip")
     def test_wheel_token_not_authenticated(self):
         """
         Asserts that a TokenAuthenticationError is returned when the token can't authenticate.
@@ -418,7 +424,6 @@ class LocalFuncsTestCase(TestCase):
         ret = self.local_funcs.wheel({"token": "asdfasdfasdfasdf"})
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_wheel_token_authorization_error(self):
         """
         Asserts that a TokenAuthenticationError is returned when the token authenticates, but is
@@ -442,7 +447,6 @@ class LocalFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_wheel_token_salt_invocation_error(self):
         """
         Asserts that a SaltInvocationError is returned when the token authenticates, but the
@@ -467,7 +471,6 @@ class LocalFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_wheel_eauth_not_authenticated(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user can't authenticate.
@@ -482,7 +485,6 @@ class LocalFuncsTestCase(TestCase):
         ret = self.local_funcs.wheel({"eauth": "foo"})
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_wheel_eauth_authorization_error(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user authenticates, but is
@@ -503,7 +505,6 @@ class LocalFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_wheel_eauth_salt_invocation_error(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user authenticates, but the
@@ -530,7 +531,6 @@ class LocalFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_wheel_user_not_authenticated(self):
         """
         Asserts that an UserAuthenticationError is returned when the user can't authenticate.
@@ -547,7 +547,6 @@ class LocalFuncsTestCase(TestCase):
 
     # publish tests
 
-    @skipIf(True, "SLOWTEST skip")
     def test_publish_user_is_blacklisted(self):
         """
         Asserts that an AuthorizationError is returned when the user has been blacklisted.
@@ -565,7 +564,6 @@ class LocalFuncsTestCase(TestCase):
                 mock_ret, self.local_funcs.publish({"user": "foo", "fun": "test.arg"})
             )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_publish_cmd_blacklisted(self):
         """
         Asserts that an AuthorizationError is returned when the command has been blacklisted.
@@ -585,7 +583,6 @@ class LocalFuncsTestCase(TestCase):
                 mock_ret, self.local_funcs.publish({"user": "foo", "fun": "test.arg"})
             )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_publish_token_not_authenticated(self):
         """
         Asserts that an AuthenticationError is returned when the token can't authenticate.
@@ -609,7 +606,6 @@ class LocalFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.local_funcs.publish(load))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_publish_token_authorization_error(self):
         """
         Asserts that an AuthorizationError is returned when the token authenticates, but is not
@@ -642,7 +638,6 @@ class LocalFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.local_funcs.publish(load))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_publish_eauth_not_authenticated(self):
         """
         Asserts that an AuthenticationError is returned when the user can't authenticate.
@@ -666,7 +661,6 @@ class LocalFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.local_funcs.publish(load))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_publish_eauth_authorization_error(self):
         """
         Asserts that an AuthorizationError is returned when the user authenticates, but is not
@@ -696,7 +690,6 @@ class LocalFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.local_funcs.publish(load))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_publish_user_not_authenticated(self):
         """
         Asserts that an AuthenticationError is returned when the user can't authenticate.
@@ -715,7 +708,6 @@ class LocalFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.local_funcs.publish(load))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_publish_user_authenticated_missing_auth_list(self):
         """
         Asserts that an AuthenticationError is returned when the user has an effective user id and is
@@ -746,7 +738,6 @@ class LocalFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.local_funcs.publish(load))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_publish_user_authorization_error(self):
         """
         Asserts that an AuthorizationError is returned when the user authenticates, but is not
@@ -804,7 +795,6 @@ class RemoteFuncsTestCase(TestCase):
         self.funcs = masterapi.RemoteFuncs(opts)
         self.funcs.cache = FakeCache()
 
-    @skipIf(True, "SLOWTEST skip")
     def test_mine_get(self, tgt_type_key="tgt_type"):
         """
         Asserts that ``mine_get`` gives the expected results.
@@ -831,7 +821,6 @@ class RemoteFuncsTestCase(TestCase):
             )
         self.assertDictEqual(ret, dict(webserver="2001:db8::1:3"))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_mine_get_pre_nitrogen_compat(self):
         """
         Asserts that pre-Nitrogen API key ``expr_form`` is still accepted.
@@ -840,7 +829,6 @@ class RemoteFuncsTestCase(TestCase):
         """
         self.test_mine_get(tgt_type_key="expr_form")
 
-    @skipIf(True, "SLOWTEST skip")
     def test_mine_get_dict_str(self, tgt_type_key="tgt_type"):
         """
         Asserts that ``mine_get`` gives the expected results when request
@@ -876,7 +864,6 @@ class RemoteFuncsTestCase(TestCase):
             ),
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_mine_get_dict_list(self, tgt_type_key="tgt_type"):
         """
         Asserts that ``mine_get`` gives the expected results when request
@@ -912,7 +899,6 @@ class RemoteFuncsTestCase(TestCase):
             ),
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_mine_get_acl_allowed(self):
         """
         Asserts that ``mine_get`` gives the expected results when this is allowed
@@ -949,7 +935,6 @@ class RemoteFuncsTestCase(TestCase):
             )
         self.assertDictEqual(ret, {"ip_addr": {"webserver": "2001:db8::1:4"}})
 
-    @skipIf(True, "SLOWTEST skip")
     def test_mine_get_acl_rejected(self):
         """
         Asserts that ``mine_get`` gives the expected results when this is rejected

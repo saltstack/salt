@@ -11,7 +11,7 @@ import salt.states.pdbedit as pdbedit
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PdbeditTestCase(TestCase, LoaderModuleMockMixin):
@@ -22,6 +22,7 @@ class PdbeditTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {pdbedit: {}, pdbedit_mod: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_generate_absent(self):
         """
         Test salt.states.pdbedit.absent when

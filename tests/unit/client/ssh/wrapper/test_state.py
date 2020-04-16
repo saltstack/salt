@@ -8,12 +8,13 @@ from __future__ import absolute_import
 from salt.client.ssh.wrapper import state
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 # Import python libs
 
 
 class StateTests(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_parse_mods(self):
         """
         Test _parse_mods

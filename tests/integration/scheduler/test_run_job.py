@@ -18,6 +18,7 @@ from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf
 
 try:
     import croniter  # pylint: disable=W0611
@@ -54,6 +55,7 @@ class SchedulerRunJobTest(ModuleCase, SaltReturnAssertsMixin):
     def tearDown(self):
         self.schedule.reset()
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_job(self):
         """
         verify that scheduled job runs

@@ -19,7 +19,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PuppetTestCase(TestCase, LoaderModuleMockMixin):
@@ -30,6 +30,7 @@ class PuppetTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {puppet: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_run(self):
         """
         Test to execute a puppet run
@@ -43,6 +44,7 @@ class PuppetTestCase(TestCase, LoaderModuleMockMixin):
             ):
                 self.assertTrue(puppet.run())
 
+    @skipIf(True, "FASTTEST skip")
     def test_noop(self):
         """
         Test to execute a puppet noop run
@@ -51,6 +53,7 @@ class PuppetTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(puppet, "run", mock):
             self.assertDictEqual(puppet.noop(), {"stderr": "A", "stdout": "B"})
 
+    @skipIf(True, "FASTTEST skip")
     def test_enable(self):
         """
         Test to enable the puppet agent
@@ -67,6 +70,7 @@ class PuppetTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertFalse(puppet.enable())
 
+    @skipIf(True, "FASTTEST skip")
     def test_disable(self):
         """
         Test to disable the puppet agent
@@ -87,6 +91,7 @@ class PuppetTestCase(TestCase, LoaderModuleMockMixin):
                 except StopIteration:
                     pass
 
+    @skipIf(True, "FASTTEST skip")
     def test_status(self):
         """
         Test to display puppet agent status
@@ -129,6 +134,7 @@ class PuppetTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(os.path, "isfile", mock):
                 self.assertEqual(puppet.status(), "Stopped")
 
+    @skipIf(True, "FASTTEST skip")
     def test_summary(self):
         """
         Test to show a summary of the last puppet agent run
@@ -144,6 +150,7 @@ class PuppetTestCase(TestCase, LoaderModuleMockMixin):
             ) as m_open:
                 self.assertRaises(CommandExecutionError, puppet.summary)
 
+    @skipIf(True, "FASTTEST skip")
     def test_plugin_sync(self):
         """
         Test to runs a plugin synch between the puppet master and agent
@@ -156,6 +163,7 @@ class PuppetTestCase(TestCase, LoaderModuleMockMixin):
 
                 self.assertTrue(puppet.plugin_sync())
 
+    @skipIf(True, "FASTTEST skip")
     def test_facts(self):
         """
         Test to run facter and return the results
@@ -166,6 +174,7 @@ class PuppetTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(puppet, "_format_fact", mock):
                 self.assertDictEqual(puppet.facts(), {"a": "b", "c": "d"})
 
+    @skipIf(True, "FASTTEST skip")
     def test_fact(self):
         """
         Test to run facter for a specific fact

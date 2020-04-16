@@ -7,7 +7,7 @@ from __future__ import absolute_import
 from salt import acl
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ClientACLTestCase(TestCase):
@@ -29,6 +29,7 @@ class ClientACLTestCase(TestCase):
         del self.blacklist
         del self.whitelist
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_is_blacklisted(self):
         """
         test user_is_blacklisted
@@ -53,6 +54,7 @@ class ClientACLTestCase(TestCase):
         self.assertFalse(client_acl.user_is_blacklisted("NotHomer"))
         self.assertFalse(client_acl.user_is_blacklisted("HomerSimpson"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_cmd_is_blacklisted(self):
         """
         test cmd_is_blacklisted
@@ -72,6 +74,7 @@ class ClientACLTestCase(TestCase):
             client_acl.cmd_is_blacklisted(["state.highstate", "state.sls"])
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_is_whitelisted(self):
         """
         test user_is_whitelisted
@@ -83,6 +86,7 @@ class ClientACLTestCase(TestCase):
         self.assertFalse(client_acl.user_is_whitelisted("three"))
         self.assertFalse(client_acl.user_is_whitelisted("hans"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_cmd_is_whitelisted(self):
         """
         test cmd_is_whitelisted

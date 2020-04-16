@@ -14,7 +14,7 @@ import salt.states.virtualenv_mod as virtualenv_mod
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class VirtualenvModTestCase(TestCase, LoaderModuleMockMixin):
@@ -25,6 +25,7 @@ class VirtualenvModTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {virtualenv_mod: {"__env__": "base"}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed(self):
         """
             Test to create a virtualenv and optionally manage it with pip

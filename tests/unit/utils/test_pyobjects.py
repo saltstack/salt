@@ -181,6 +181,8 @@ class StateTests(TestCase):
     def setUp(self):
         Registry.empty()
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_serialization(self):
         f = State(
             "/usr/local/bin/pydmesg",
@@ -192,6 +194,8 @@ class StateTests(TestCase):
 
         self.assertEqual(f(), pydmesg_expected)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_factory_serialization(self):
         File.managed(
             "/usr/local/bin/pydmesg", require=File("/usr/local/bin"), **pydmesg_kwargs
@@ -199,6 +203,8 @@ class StateTests(TestCase):
 
         self.assertEqual(Registry.states["/usr/local/bin/pydmesg"], pydmesg_expected)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_context_manager(self):
         with File("/usr/local/bin"):
             pydmesg = File.managed("/usr/local/bin/pydmesg", **pydmesg_kwargs)
@@ -225,6 +231,8 @@ class StateTests(TestCase):
                     },
                 )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_salt_data(self):
         File.managed(
             "/usr/local/bin/pydmesg", require=File("/usr/local/bin"), **pydmesg_kwargs
@@ -236,6 +244,8 @@ class StateTests(TestCase):
 
         self.assertEqual(Registry.states, OrderedDict())
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_duplicates(self):
         def add_dup():
             File.managed("dup", name="/dup")
@@ -325,7 +335,6 @@ class RendererMixin(object):
 
 
 class RendererTests(RendererMixin, StateTests, MapBuilder):
-    @skipIf(True, "SLOWTEST skip")
     def test_basic(self):
         ret = self.render(basic_template)
         self.assertEqual(
@@ -347,19 +356,16 @@ class RendererTests(RendererMixin, StateTests, MapBuilder):
         )
         self.assertEqual(Registry.states, OrderedDict())
 
-    @skipIf(True, "SLOWTEST skip")
     def test_invalid_function(self):
         def _test():
             self.render(invalid_template)
 
         self.assertRaises(InvalidFunction, _test)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_include(self):
         ret = self.render(include_template)
         self.assertEqual(ret, OrderedDict([("include", ["http"])]))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_extend(self):
         ret = self.render(
             extend_template, {"grains": {"os_family": "Debian", "os": "Debian"}}
@@ -388,7 +394,6 @@ class RendererTests(RendererMixin, StateTests, MapBuilder):
             ),
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_sls_imports(self):
         def render_and_assert(template):
             ret = self.render(
@@ -415,7 +420,6 @@ class RendererTests(RendererMixin, StateTests, MapBuilder):
         self.write_template_file("recursive_map.sls", recursive_map_template)
         render_and_assert(recursive_import_template)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_import_scope(self):
         self.write_template_file("map.sls", self.build_map())
         self.write_template_file("recursive_map.sls", recursive_map_template)
@@ -428,18 +432,15 @@ class RendererTests(RendererMixin, StateTests, MapBuilder):
 
         self.assertRaises(NameError, do_render)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_random_password(self):
         """Test for https://github.com/saltstack/salt/issues/21796"""
         ret = self.render(random_password_template)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_import_random_password(self):
         """Import test for https://github.com/saltstack/salt/issues/21796"""
         self.write_template_file("password.sls", random_password_template)
         ret = self.render(random_password_import_template)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_requisite_implicit_list(self):
         """Ensure that the implicit list characteristic works as expected"""
         ret = self.render(
@@ -517,7 +518,6 @@ class MapTests(RendererMixin, TestCase, MapBuilder):
         else:
             raise AssertionError("both dicts are equal")
 
-    @skipIf(True, "SLOWTEST skip")
     def test_map(self):
         """
         Test declarative ordering
@@ -561,7 +561,6 @@ class MapTests(RendererMixin, TestCase, MapBuilder):
         ret = self.samba_with_grains(template, self.ubuntu_grains)
         self.assert_not_equal(ret, *self.ubuntu_attrs)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_map_with_priority(self):
         """
         With declarative ordering, the debian service name would override the
@@ -590,6 +589,7 @@ class MapTests(RendererMixin, TestCase, MapBuilder):
 
 
 class SaltObjectTests(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_salt_object(self):
         def attr_fail():
             Salt.fail.blah()

@@ -11,7 +11,7 @@ from salt.utils.odict import OrderedDict
 # Import salt testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class JBoss7TestCase(TestCase, LoaderModuleMockMixin):
@@ -26,6 +26,7 @@ class JBoss7TestCase(TestCase, LoaderModuleMockMixin):
             jboss7: {"__salt__": {"jboss7_cli.run_operation": self.org_run_operation}}
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_simple_binding(self):
         jboss7.create_simple_binding(self.jboss_config, "java:global/env", "DEV")
 
@@ -34,6 +35,7 @@ class JBoss7TestCase(TestCase, LoaderModuleMockMixin):
             '/subsystem=naming/binding="java:global/env":add(binding-type=simple, value="DEV")',
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_simple_binding_with_backslash(self):
         jboss7.create_simple_binding(self.jboss_config, "java:global/env", r"DEV\2")
 
@@ -42,6 +44,7 @@ class JBoss7TestCase(TestCase, LoaderModuleMockMixin):
             r'/subsystem=naming/binding="java:global/env":add(binding-type=simple, value="DEV\\\\2")',
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_binding(self):
         jboss7.update_simple_binding(self.jboss_config, "java:global/env", "INT")
 
@@ -50,6 +53,7 @@ class JBoss7TestCase(TestCase, LoaderModuleMockMixin):
             '/subsystem=naming/binding="java:global/env":write-attribute(name=value, value="INT")',
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_binding_with_backslash(self):
         jboss7.update_simple_binding(self.jboss_config, "java:global/env", r"INT\2")
 
@@ -58,6 +62,7 @@ class JBoss7TestCase(TestCase, LoaderModuleMockMixin):
             r'/subsystem=naming/binding="java:global/env":write-attribute(name=value, value="INT\\\\2")',
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_read_binding(self):
         def cli_command_response(jboss_config, cli_command):
             if (
@@ -75,6 +80,7 @@ class JBoss7TestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(result["outcome"], "success")
         self.assertEqual(result["result"]["value"], "DEV")
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_datasource_all_properties_included(self):
         def cli_command_response(jboss_config, cli_command, fail_on_error=False):
             if (
@@ -111,6 +117,7 @@ class JBoss7TestCase(TestCase, LoaderModuleMockMixin):
             fail_on_error=False,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_datasource_format_boolean_value_when_string(self):
         def cli_command_response(jboss_config, cli_command, fail_on_error=False):
             if (
@@ -134,6 +141,7 @@ class JBoss7TestCase(TestCase, LoaderModuleMockMixin):
             fail_on_error=False,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_datasource_format_boolean_value_when_boolean(self):
         def cli_command_response(jboss_config, cli_command, fail_on_error=False):
             if (
@@ -157,6 +165,7 @@ class JBoss7TestCase(TestCase, LoaderModuleMockMixin):
             fail_on_error=False,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_datasource_format_int_value_when_int(self):
         def cli_command_response(jboss_config, cli_command, fail_on_error=False):
             if (
@@ -180,6 +189,7 @@ class JBoss7TestCase(TestCase, LoaderModuleMockMixin):
             fail_on_error=False,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_datasource_format_int_value_when_string(self):
         def cli_command_response(jboss_config, cli_command, fail_on_error=False):
             if (
@@ -203,6 +213,7 @@ class JBoss7TestCase(TestCase, LoaderModuleMockMixin):
             fail_on_error=False,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_read_datasource(self):
         def cli_command_response(jboss_config, cli_command):
             if (
@@ -233,6 +244,7 @@ class JBoss7TestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ds_properties["user-name"], "app")
         self.assertEqual(ds_properties["password"], "app_password")
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_datasource(self):
         datasource_properties = {
             "driver-name": "mysql",

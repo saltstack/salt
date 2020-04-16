@@ -14,7 +14,7 @@ import salt.utils.path
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class AtTestCase(TestCase, LoaderModuleMockMixin):
@@ -42,6 +42,7 @@ class AtTestCase(TestCase, LoaderModuleMockMixin):
     def tearDownClass(cls):
         del cls.atq_output
 
+    @skipIf(True, "FASTTEST skip")
     def test_atq_not_available(self):
         """
         Tests the at.atq not available for any type of os_family.
@@ -53,6 +54,7 @@ class AtTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(at.__grains__, {"os_family": ""}):
                 self.assertEqual(at.atq(), "'at.atq' is not available.")
 
+    @skipIf(True, "FASTTEST skip")
     def test_atq_no_jobs_available(self):
         """
         Tests the no jobs available for any type of os_family.
@@ -64,6 +66,7 @@ class AtTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(at.__grains__, {"os_family": ""}):
                 self.assertDictEqual(at.atq(), {"jobs": []})
 
+    @skipIf(True, "FASTTEST skip")
     def test_atq_list(self):
         """
         Tests the list all queued and running jobs.
@@ -126,6 +129,7 @@ class AtTestCase(TestCase, LoaderModuleMockMixin):
                     },
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_atrm(self):
         """
         Tests for remove jobs from the queue.
@@ -152,6 +156,7 @@ class AtTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(at, "_cmd", return_value=None):
                 self.assertEqual(at.atrm(101), "'at.atrm' is not available.")
 
+    @skipIf(True, "FASTTEST skip")
     def test_jobcheck(self):
         """
         Tests for check the job from queue.
@@ -182,6 +187,7 @@ class AtTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_at(self):
         """
         Tests for add a job to the queue.
@@ -238,6 +244,7 @@ class AtTestCase(TestCase, LoaderModuleMockMixin):
                             "'at.at' is not available.",
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_atc(self):
         """
             Tests for atc

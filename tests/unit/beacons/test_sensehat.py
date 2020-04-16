@@ -9,7 +9,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock
 
 # Salt testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class SensehatBeaconTestCase(TestCase, LoaderModuleMockMixin):
@@ -38,6 +38,7 @@ class SensehatBeaconTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_non_list_config(self):
         config = {}
 
@@ -47,6 +48,7 @@ class SensehatBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret, (False, "Configuration for sensehat beacon must be a list.")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_empty_config(self):
         config = [{}]
 
@@ -56,6 +58,7 @@ class SensehatBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret, (False, "Configuration for sensehat beacon requires sensors.")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_sensehat_humidity_match(self):
 
         config = [{"sensors": {"humidity": "70%"}}]
@@ -66,6 +69,7 @@ class SensehatBeaconTestCase(TestCase, LoaderModuleMockMixin):
         ret = sensehat.beacon(config)
         self.assertEqual(ret, [{"tag": "sensehat/humidity", "humidity": 80}])
 
+    @skipIf(True, "FASTTEST skip")
     def test_sensehat_temperature_match(self):
 
         config = [{"sensors": {"temperature": 20}}]
@@ -76,6 +80,7 @@ class SensehatBeaconTestCase(TestCase, LoaderModuleMockMixin):
         ret = sensehat.beacon(config)
         self.assertEqual(ret, [{"tag": "sensehat/temperature", "temperature": 30}])
 
+    @skipIf(True, "FASTTEST skip")
     def test_sensehat_temperature_match_range(self):
 
         config = [{"sensors": {"temperature": [20, 29]}}]
@@ -86,6 +91,7 @@ class SensehatBeaconTestCase(TestCase, LoaderModuleMockMixin):
         ret = sensehat.beacon(config)
         self.assertEqual(ret, [{"tag": "sensehat/temperature", "temperature": 30}])
 
+    @skipIf(True, "FASTTEST skip")
     def test_sensehat_pressure_match(self):
 
         config = [{"sensors": {"pressure": "1400"}}]
@@ -96,6 +102,7 @@ class SensehatBeaconTestCase(TestCase, LoaderModuleMockMixin):
         ret = sensehat.beacon(config)
         self.assertEqual(ret, [{"tag": "sensehat/pressure", "pressure": 1500}])
 
+    @skipIf(True, "FASTTEST skip")
     def test_sensehat_no_match(self):
 
         config = [{"sensors": {"pressure": "1600"}}]

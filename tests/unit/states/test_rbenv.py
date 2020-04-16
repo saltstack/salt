@@ -11,7 +11,7 @@ import salt.states.rbenv as rbenv
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class RbenvTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class RbenvTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'installed' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed(self):
         """
         Test to verify that the specified ruby is installed with rbenv.
@@ -123,6 +124,7 @@ class RbenvTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
         Test to verify that the specified ruby is not installed with rbenv.
@@ -232,6 +234,7 @@ class RbenvTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'install_rbenv' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_rbenv(self):
         """
         Test to install rbenv if not installed.

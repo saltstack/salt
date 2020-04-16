@@ -11,7 +11,7 @@ import salt.states.makeconf as makeconf
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MakeconfTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class MakeconfTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_present(self):
         """
         Test to verify that the variable is in the ``make.conf``
@@ -41,6 +42,7 @@ class MakeconfTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
         Test to verify that the variable is not in the ``make.conf``.

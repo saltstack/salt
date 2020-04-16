@@ -11,7 +11,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
 
 # Salt testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 STUB_DISK_PARTITION = [
     namedtuple("partition", "device mountpoint fstype, opts")(
@@ -49,6 +49,7 @@ class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {}
 
+    @skipIf(True, "FASTTEST skip")
     def test_non_list_config(self):
         config = {}
 
@@ -58,6 +59,7 @@ class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret, (False, "Configuration for diskusage beacon must be a list.")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_empty_config(self):
         config = [{}]
 
@@ -65,6 +67,7 @@ class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(ret, (True, "Valid beacon configuration"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_diskusage_match(self):
         disk_usage_mock = Mock(side_effect=STUB_DISK_USAGE)
         with patch(
@@ -83,6 +86,7 @@ class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret = diskusage.beacon(config)
             self.assertEqual(ret, [{"diskusage": 50, "mount": "/"}])
 
+    @skipIf(True, "FASTTEST skip")
     def test_diskusage_nomatch(self):
         disk_usage_mock = Mock(side_effect=STUB_DISK_USAGE)
         with patch(
@@ -101,6 +105,7 @@ class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret = diskusage.beacon(config)
             self.assertNotEqual(ret, [{"diskusage": 50, "mount": "/"}])
 
+    @skipIf(True, "FASTTEST skip")
     def test_diskusage_match_regex(self):
         disk_usage_mock = Mock(side_effect=STUB_DISK_USAGE)
         with patch(
@@ -119,6 +124,7 @@ class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret = diskusage.beacon(config)
             self.assertEqual(ret, [{"diskusage": 50, "mount": "/"}])
 
+    @skipIf(True, "FASTTEST skip")
     def test_diskusage_windows_single_slash(self):
         r"""
         This tests new behavior (C:\)
@@ -138,6 +144,7 @@ class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
                 ret = diskusage.beacon(config)
                 self.assertEqual(ret, [{"diskusage": 50, "mount": "C:\\"}])
 
+    @skipIf(True, "FASTTEST skip")
     def test_diskusage_windows_double_slash(self):
         """
         This tests original behavior (C:\\)
@@ -157,6 +164,7 @@ class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
                 ret = diskusage.beacon(config)
                 self.assertEqual(ret, [{"diskusage": 50, "mount": "C:\\"}])
 
+    @skipIf(True, "FASTTEST skip")
     def test_diskusage_windows_lowercase(self):
         r"""
         This tests lowercase drive letter (c:\)
@@ -176,6 +184,7 @@ class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
                 ret = diskusage.beacon(config)
                 self.assertEqual(ret, [{"diskusage": 50, "mount": "C:\\"}])
 
+    @skipIf(True, "FASTTEST skip")
     def test_diskusage_windows_match_regex(self):
         disk_usage_mock = Mock(return_value=WINDOWS_STUB_DISK_USAGE)
         with patch("salt.utils.platform.is_windows", MagicMock(return_value=True)):

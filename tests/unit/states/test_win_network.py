@@ -12,7 +12,7 @@ import salt.states.win_network as win_network
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {win_network: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed_missing_parameters(self):
         """
         Test to ensure that the named interface is configured properly.
@@ -36,6 +37,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
         }
         self.assertDictEqual(win_network.managed("salt"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed_static_enabled_false(self):
         ret = {
             "name": "salt",
@@ -52,6 +54,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
                 ret,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed_test_true(self):
         ret = {
             "name": "salt",
@@ -67,6 +70,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
                 win_network.managed("salt", dns_proto="static", ip_proto="static"), ret
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed_validate_errors(self):
         ret = {
             "name": "salt",
@@ -86,6 +90,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
                 win_network.managed("salt", dns_proto="static", ip_proto="static"), ret
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed_get_current_config_failed(self):
         ret = {
             "name": "salt",
@@ -105,6 +110,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
                 win_network.managed("salt", dns_proto="dhcp", ip_proto="dhcp"), ret
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed_test_true_no_changes(self):
         ret = {
             "name": "salt",
@@ -130,6 +136,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
                 win_network.managed("salt", dns_proto="dhcp", ip_proto="dhcp"), ret
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed_test_true_changes(self):
         ret = {
             "name": "salt",
@@ -158,6 +165,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
                 win_network.managed("salt", dns_proto="dhcp", ip_proto="dhcp"), ret
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed_failed(self):
         ret = {
             "name": "salt",
@@ -189,6 +197,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
                 win_network.managed("salt", dns_proto="dhcp", ip_proto="dhcp"), ret
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed(self):
         ret = {
             "name": "salt",
@@ -232,6 +241,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
                 win_network.managed("salt", dns_proto="dhcp", ip_proto="dhcp"), ret
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed_static_dns_clear(self):
         expected = {
             "name": "salt",
@@ -270,6 +280,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertDictEqual(ret, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed_static_dns(self):
         expected = {
             "name": "salt",
@@ -311,6 +322,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertDictEqual(ret, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed_static_dns_no_action(self):
         expected = {
             "name": "salt",

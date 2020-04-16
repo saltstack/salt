@@ -37,6 +37,7 @@ class EtcdUtilTestCase(TestCase):
 
     # 'get_' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_read(self):
         """
         Test to make sure we interact with etcd correctly
@@ -75,6 +76,7 @@ class EtcdUtilTestCase(TestCase):
             etcd_client.read.side_effect = MaxRetryError(None, None)
             self.assertRaises(etcd.EtcdConnectionFailed, client.read, "salt")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get(self):
         """
         Test if it get a value from etcd, by direct path
@@ -104,6 +106,7 @@ class EtcdUtilTestCase(TestCase):
                 mock.side_effect = Exception
                 self.assertRaises(Exception, client.get, "some-error")
 
+    @skipIf(True, "FASTTEST skip")
     def test_tree(self):
         """
         Test recursive gets
@@ -139,6 +142,7 @@ class EtcdUtilTestCase(TestCase):
                 mock.side_effect = Exception
                 self.assertRaises(Exception, client.tree, "some-error")
 
+    @skipIf(True, "FASTTEST skip")
     def test_ls(self):
         with patch("etcd.Client") as mock:
             client = etcd_util.EtcdClient({})
@@ -163,6 +167,7 @@ class EtcdUtilTestCase(TestCase):
                 mock.side_effect = Exception
                 self.assertRaises(Exception, client.tree, "some-error")
 
+    @skipIf(True, "FASTTEST skip")
     def test_write(self):
         with patch("etcd.Client", autospec=True) as mock:
             client = etcd_util.EtcdClient({})
@@ -221,6 +226,7 @@ class EtcdUtilTestCase(TestCase):
             etcd_client.write.side_effect = Exception
             self.assertRaises(Exception, client.set, "some-key", "some-val")
 
+    @skipIf(True, "FASTTEST skip")
     def test_flatten(self):
         with patch("etcd.Client", autospec=True) as mock:
             client = etcd_util.EtcdClient({})
@@ -260,6 +266,7 @@ class EtcdUtilTestCase(TestCase):
             self.assertEqual(client._flatten(some_data, path="/"), result_root)
             self.assertEqual(client._flatten(some_data), result_nopath)
 
+    @skipIf(True, "FASTTEST skip")
     def test_update(self):
         with patch("etcd.Client", autospec=True) as mock:
             client = etcd_util.EtcdClient({})
@@ -300,6 +307,7 @@ class EtcdUtilTestCase(TestCase):
                 client._flatten.assert_called_with(some_data, "/test")
                 self.assertEqual(write_mock.call_count, 5)
 
+    @skipIf(True, "FASTTEST skip")
     def test_rm(self):
         with patch("etcd.Client", autospec=True) as mock:
             etcd_client = mock.return_value
@@ -326,6 +334,7 @@ class EtcdUtilTestCase(TestCase):
             etcd_client.delete.side_effect = Exception
             self.assertRaises(Exception, client.rm, "some-dir")
 
+    @skipIf(True, "FASTTEST skip")
     def test_watch(self):
         with patch("etcd.Client", autospec=True) as client_mock:
             client = etcd_util.EtcdClient({})

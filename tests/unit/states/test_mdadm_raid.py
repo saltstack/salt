@@ -12,7 +12,7 @@ import salt.states.mdadm_raid as mdadm
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MdadmTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {mdadm: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_present(self):
         """
             Test to verify that the raid is present
@@ -223,6 +224,7 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(mdadm.__opts__, {"test": False}):
                 self.assertDictEqual(mdadm.present("salt", 5, ["dev0", "dev1"]), ret[7])
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
             Test to verify that the raid is absent

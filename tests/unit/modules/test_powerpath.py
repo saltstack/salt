@@ -11,7 +11,7 @@ import salt.modules.powerpath as powerpath
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PowerpathTestCase(TestCase, LoaderModuleMockMixin):
@@ -22,6 +22,7 @@ class PowerpathTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {powerpath: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_has_powerpath(self):
         """
         Test for powerpath
@@ -33,6 +34,7 @@ class PowerpathTestCase(TestCase, LoaderModuleMockMixin):
             mock_exists.return_value = False
             self.assertFalse(powerpath.has_powerpath())
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_licenses(self):
         """
         Test to returns a list of applied powerpath license keys
@@ -42,6 +44,7 @@ class PowerpathTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertListEqual(powerpath.list_licenses(), [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_license(self):
         """
         Test to add a license
@@ -64,6 +67,7 @@ class PowerpathTestCase(TestCase, LoaderModuleMockMixin):
                     {"output": "stderr", "result": False, "retcode": 1},
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_license(self):
         """
         Test to remove a license

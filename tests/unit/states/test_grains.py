@@ -23,7 +23,7 @@ from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class GrainsTestCase(TestCase, LoaderModuleMockMixin):
@@ -82,6 +82,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'exists' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_exists_missing(self):
         with self.setGrains({"a": "aval"}):
             ret = grains.exists(name="foo")
@@ -89,6 +90,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(ret["comment"], "Grain does not exist")
             self.assertEqual(ret["changes"], {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_exists_found(self):
         with self.setGrains({"a": "aval", "foo": "bar"}):
             # Grain already set
@@ -99,6 +101,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'make_hashable' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_make_hashable(self):
         with self.setGrains({"cmplx_lst_grain": [{"a": "aval"}, {"foo": "bar"}]}):
             hashable_list = {"cmplx_lst_grain": [{"a": "aval"}, {"foo": "bar"}]}
@@ -111,6 +114,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'present' function tests: 12
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_add(self):
         # Set a non existing grain
         with self.setGrains({"a": "aval"}):
@@ -151,6 +155,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 + "      bar: is a dict\n"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_add_key_to_existing(self):
         with self.setGrains({"a": "aval", "foo": {"k1": "v1"}}):
             # Fails setting a grain to a dict
@@ -165,6 +170,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 "a: aval\n" + "foo:\n" + "  k1: v1\n" + "  k2: v2\n"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_already_set(self):
         with self.setGrains({"a": "aval", "foo": "bar"}):
             # Grain already set
@@ -194,6 +200,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 grains.__grains__, {"a": "aval", "foo": {"is": {"nested": "bar"}}}
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_overwrite(self):
         with self.setGrains({"a": "aval", "foo": "bar"}):
             # Overwrite an existing grain
@@ -235,6 +242,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 "a: aval\n" + "foo:\n" + "  is:\n" + "    nested: null\n"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_fail_overwrite(self):
         with self.setGrains({"a": "aval", "foo": {"is": {"nested": "val"}}}):
             # Overwrite an existing grain
@@ -262,6 +270,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 grains.__grains__, {"a": "aval", "foo": {"is": {"nested": "val"}}}
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_fails_to_set_dict_or_list(self):
         with self.setGrains({"a": "aval", "foo": "bar"}):
             # Fails to overwrite a grain to a list
@@ -321,6 +330,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 grains.__grains__, {"a": "aval", "foo": {"is": {"nested": "bar"}}}
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_fail_merge_dict(self):
         with self.setGrains({"a": "aval", "foo": {"k1": "v1"}}):
             # Fails setting a grain to a dict
@@ -335,6 +345,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(grains.__grains__, {"a": "aval", "foo": {"k1": "v1"}})
             self.assertGrainFileContent("a: aval\n" + "foo:\n" + "  k1: v1\n")
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_force_to_set_dict_or_list(self):
         with self.setGrains({"a": "aval", "foo": "bar"}):
             # Force to overwrite a grain to a list
@@ -419,6 +430,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 + "      k1: v1\n"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_fails_to_convert_value_to_key(self):
         with self.setGrains({"a": "aval", "foo": "bar"}):
             # Fails converting a value to a nested grain key
@@ -432,6 +444,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(ret["changes"], {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_overwrite_test(self):
         with patch.dict(grains.__opts__, {"test": True}):
             with self.setGrains({"a": "aval", "foo": "bar"}):
@@ -442,6 +455,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(grains.__grains__, {"a": "aval", "foo": "bar"})
                 self.assertGrainFileContent("a: aval\n" + "foo: bar\n")
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_convert_value_to_key(self):
         with self.setGrains({"a": "aval", "foo": "is"}):
             # Converts a value to a nested grain key
@@ -493,6 +507,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 + "- correct\n"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_unknown_failure(self):
         with patch("salt.modules.grains.setval") as mocked_setval:
             mocked_setval.return_value = "Failed to set grain foo"
@@ -507,6 +522,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'absent' function tests: 6
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_already(self):
         # Unset a non existent grain
         with self.setGrains({"a": "aval"}):
@@ -526,6 +542,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(grains.__grains__, {"a": "aval"})
             self.assertGrainFileContent("a: aval\n")
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_unset(self):
         # Unset a grain
         with self.setGrains({"a": "aval", "foo": "bar"}):
@@ -584,6 +601,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 "a: aval\n" + "foo:\n" + "- order\n" + "- is: nested\n" + "- correct\n"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_unset_test(self):
         with patch.dict(grains.__opts__, {"test": True}):
             with self.setGrains({"a": "aval", "foo": "bar"}):
@@ -594,6 +612,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(grains.__grains__, {"a": "aval", "foo": "bar"})
                 self.assertGrainFileContent("a: aval\n" + "foo: bar\n")
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_fails_nested_complex_grain(self):
         # Unset a nested complex grain
         with self.setGrains(
@@ -619,6 +638,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 + "- correct\n"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_force_nested_complex_grain(self):
         # Unset a nested complex grain
         with self.setGrains(
@@ -636,6 +656,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 "a: aval\n" + "foo:\n" + "- order\n" + "- is: null\n" + "- correct\n"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_delete(self):
         # Delete a grain
         with self.setGrains({"a": "aval", "foo": "bar"}):
@@ -685,6 +706,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'append' function tests: 6
 
+    @skipIf(True, "FASTTEST skip")
     def test_append(self):
         # Append to an existing list
         with self.setGrains({"a": "aval", "foo": ["bar"]}):
@@ -695,6 +717,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(grains.__grains__, {"a": "aval", "foo": ["bar", "baz"]})
             self.assertGrainFileContent("a: aval\n" + "foo:\n" + "- bar\n" + "- baz\n")
 
+    @skipIf(True, "FASTTEST skip")
     def test_append_nested(self):
         # Append to an existing nested list
         with self.setGrains({"a": "aval", "foo": {"list": ["bar"]}}):
@@ -709,6 +732,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 "a: aval\n" + "foo:\n" + "  list:\n" + "  - bar\n" + "  - baz\n"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_append_already(self):
         # Append to an existing list
         with self.setGrains({"a": "aval", "foo": ["bar"]}):
@@ -721,6 +745,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(grains.__grains__, {"a": "aval", "foo": ["bar"]})
             self.assertGrainFileContent("a: aval\n" + "foo:\n" + "- bar\n")
 
+    @skipIf(True, "FASTTEST skip")
     def test_append_fails_not_a_list(self):
         # Fail to append to an existing grain, not a list
         with self.setGrains({"a": "aval", "foo": {"bar": "val"}}):
@@ -730,6 +755,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(ret["changes"], {})
             self.assertEqual(grains.__grains__, {"a": "aval", "foo": {"bar": "val"}})
 
+    @skipIf(True, "FASTTEST skip")
     def test_append_convert_to_list(self):
         # Append to an existing grain, converting to a list
         with self.setGrains({"a": "aval", "foo": {"bar": "val"}}):
@@ -762,6 +788,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 "a: aval\n" + "foo:\n" + "- bar: val\n" + "  other: value\n" + "- baz\n"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_append_fails_inexistent(self):
         # Append to a non existing grain
         with self.setGrains({"a": "aval"}):
@@ -771,6 +798,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(ret["changes"], {})
             self.assertEqual(grains.__grains__, {"a": "aval"})
 
+    @skipIf(True, "FASTTEST skip")
     def test_append_convert_to_list_empty(self):
         # Append to an existing list
         with self.setGrains({"foo": None}):
@@ -783,6 +811,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_present' function tests: 7
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_present(self):
         with self.setGrains({"a": "aval", "foo": ["bar"]}):
             ret = grains.list_present(name="foo", value="baz")
@@ -792,6 +821,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(grains.__grains__, {"a": "aval", "foo": ["bar", "baz"]})
             self.assertGrainFileContent("a: aval\n" + "foo:\n" + "- bar\n" + "- baz\n")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_present_nested(self):
         with self.setGrains({"a": "aval", "foo": {"is": {"nested": ["bar"]}}}):
             ret = grains.list_present(name="foo,is,nested", value="baz", delimiter=",")
@@ -813,6 +843,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 + "    - baz\n"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_present_inexistent(self):
         with self.setGrains({"a": "aval"}):
             ret = grains.list_present(name="foo", value="baz")
@@ -822,6 +853,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(grains.__grains__, {"a": "aval", "foo": ["baz"]})
             self.assertGrainFileContent("a: aval\n" + "foo:\n" + "- baz\n")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_present_inexistent_nested(self):
         with self.setGrains({"a": "aval"}):
             ret = grains.list_present(name="foo:is:nested", value="baz")
@@ -837,6 +869,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 "a: aval\n" + "foo:\n" + "  is:\n" + "    nested:\n" + "    - baz\n"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_present_not_a_list(self):
         with self.setGrains({"a": "aval", "foo": "bar"}):
             ret = grains.list_present(name="foo", value="baz")
@@ -846,6 +879,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(grains.__grains__, {"a": "aval", "foo": "bar"})
             self.assertGrainFileContent("a: aval\n" + "foo: bar\n")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_present_nested_already(self):
         with self.setGrains({"a": "aval", "b": {"foo": ["bar"]}}):
             ret = grains.list_present(name="b:foo", value="bar")
@@ -855,6 +889,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(grains.__grains__, {"a": "aval", "b": {"foo": ["bar"]}})
             self.assertGrainFileContent("a: aval\n" + "b:\n" + "  foo:\n" + "  - bar\n")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_present_already(self):
         with self.setGrains({"a": "aval", "foo": ["bar"]}):
             ret = grains.list_present(name="foo", value="bar")
@@ -864,6 +899,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(grains.__grains__, {"a": "aval", "foo": ["bar"]})
             self.assertGrainFileContent("a: aval\n" + "foo:\n" + "- bar\n")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_present_unknown_failure(self):
         with self.setGrains({"a": "aval", "foo": ["bar"]}):
             # Unknown reason failure
@@ -878,6 +914,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_absent' function tests: 6
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_absent(self):
         with self.setGrains({"a": "aval", "foo": ["bar"]}):
             ret = grains.list_absent(name="foo", value="bar")
@@ -887,6 +924,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(grains.__grains__, {"a": "aval", "foo": []})
             self.assertGrainFileContent("a: aval\n" + "foo: []\n")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_absent_nested(self):
         with self.setGrains({"a": "aval", "foo": {"list": ["bar"]}}):
             ret = grains.list_absent(name="foo:list", value="bar")
@@ -898,6 +936,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(grains.__grains__, {"a": "aval", "foo": {"list": []}})
             self.assertGrainFileContent("a: aval\n" + "foo:\n" + "  list: []\n")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_absent_inexistent(self):
         with self.setGrains({"a": "aval"}):
             ret = grains.list_absent(name="foo", value="baz")
@@ -907,6 +946,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(grains.__grains__, {"a": "aval"})
             self.assertGrainFileContent("a: aval\n")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_absent_inexistent_nested(self):
         with self.setGrains({"a": "aval"}):
             ret = grains.list_absent(name="foo:list", value="baz")
@@ -916,6 +956,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(grains.__grains__, {"a": "aval"})
             self.assertGrainFileContent("a: aval\n")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_absent_not_a_list(self):
         with self.setGrains({"a": "aval", "foo": "bar"}):
             ret = grains.list_absent(name="foo", value="bar")
@@ -925,6 +966,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(grains.__grains__, {"a": "aval", "foo": "bar"})
             self.assertGrainFileContent("a: aval\n" + "foo: bar\n")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_absent_already(self):
         with self.setGrains({"a": "aval", "foo": ["bar"]}):
             ret = grains.list_absent(name="foo", value="baz")

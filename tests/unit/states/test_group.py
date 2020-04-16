@@ -13,7 +13,7 @@ from salt.utils.odict import OrderedDict
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class GroupTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class GroupTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {group: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_present(self):
         """
             Test to ensure that a group is present
@@ -86,6 +87,7 @@ class GroupTestCase(TestCase, LoaderModuleMockMixin):
                         ret.update({"comment": "Failed to create new group salt"})
                         self.assertDictEqual(group.present("salt"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
             Test to ensure that the named group is absent

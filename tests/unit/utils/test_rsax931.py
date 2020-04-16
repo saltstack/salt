@@ -10,7 +10,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 from salt.utils.rsax931 import RSAX931Signer, RSAX931Verifier
 
 # salt testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class RSAX931Test(TestCase):
@@ -81,6 +81,7 @@ class RSAX931Test(TestCase):
         b"\x4c\x9b\xf4\xee"
     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_signer(self):
         with self.assertRaises(ValueError):
             signer = RSAX931Signer("bogus key data")
@@ -94,6 +95,7 @@ class RSAX931Test(TestCase):
         sig = signer.sign(RSAX931Test.hello_world)
         self.assertEqual(RSAX931Test.hello_world_sig, sig)
 
+    @skipIf(True, "FASTTEST skip")
     def test_verifier(self):
         with self.assertRaises(ValueError):
             verifier = RSAX931Verifier("bogus key data")

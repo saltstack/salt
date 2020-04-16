@@ -138,6 +138,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         }
         return return_data
 
+    @skipIf(True, "FASTTEST skip")
     def test_configmap_present__fail(self):
         error = kubernetes.configmap_present(
             name="testme", data={1: 1}, source="salt://beyond/oblivion.jinja",
@@ -152,6 +153,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
             error,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_configmap_present__create_test_true(self):
         # Create a new configmap with test=True
         with self.mock_func("show_configmap", return_value=None, test=True):
@@ -168,6 +170,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 ret,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_configmap_present__create(self):
         # Create a new configmap
         with self.mock_func("show_configmap", return_value=None):
@@ -186,6 +189,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     actual,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_configmap_present__create_no_data(self):
         # Create a new configmap with no 'data' attribute
         with self.mock_func("show_configmap", return_value=None):
@@ -202,6 +206,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     actual,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_configmap_present__replace_test_true(self):
         cm = self.make_configmap(
             name="settings",
@@ -224,6 +229,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 ret,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_configmap_present__replace(self):
         cm = self.make_configmap(name="settings", data={"action": "make=war"})
         # Replace an existing configmap
@@ -244,6 +250,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     actual,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_configmap_absent__noop_test_true(self):
         # Nothing to delete with test=True
         with self.mock_func("show_configmap", return_value=None, test=True):
@@ -258,6 +265,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 actual,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_configmap_absent__test_true(self):
         # Configmap exists with test=True
         cm = self.make_configmap(name="deleteme", namespace="default")
@@ -273,6 +281,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 actual,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_configmap_absent__noop(self):
         # Nothing to delete
         with self.mock_func("show_configmap", return_value=None):
@@ -287,6 +296,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 actual,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_configmap_absent(self):
         # Configmap exists, delete it!
         cm = self.make_configmap(name="deleteme", namespace="default")
@@ -309,6 +319,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     actual,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_secret_present__fail(self):
         actual = kubernetes.secret_present(
             name="sekret", data={"password": "monk3y"}, source="salt://nope.jinja",
@@ -323,6 +334,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
             actual,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_secret_present__exists_test_true(self):
         secret = self.make_secret(name="sekret")
         new_secret = secret.copy()
@@ -343,6 +355,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     actual,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_secret_present__exists(self):
         # Secret exists and gets replaced
         secret = self.make_secret(name="sekret", data={"password": "booyah"})
@@ -361,6 +374,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     actual,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_secret_present__create(self):
         # Secret exists and gets replaced
         secret = self.make_secret(name="sekret", data={"password": "booyah"})
@@ -379,6 +393,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     actual,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_secret_present__create_no_data(self):
         # Secret exists and gets replaced
         secret = self.make_secret(name="sekret")
@@ -395,6 +410,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     actual,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_secret_present__create_test_true(self):
         # Secret exists and gets replaced with test=True
         secret = self.make_secret(name="sekret")
@@ -411,6 +427,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     actual,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_secret_absent__noop_test_true(self):
         with self.mock_func("show_secret", return_value=None, test=True):
             actual = kubernetes.secret_absent(name="sekret")
@@ -424,6 +441,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 actual,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_secret_absent__noop(self):
         with self.mock_func("show_secret", return_value=None):
             actual = kubernetes.secret_absent(name="passwords")
@@ -437,6 +455,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 actual,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_secret_absent__delete_test_true(self):
         secret = self.make_secret(name="credentials", data={"redis": "letmein"})
         with self.mock_func("show_secret", return_value=secret):
@@ -452,6 +471,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     actual,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_secret_absent__delete(self):
         secret = self.make_secret(name="foobar", data={"redis": "letmein"})
         deleted = {
@@ -482,6 +502,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     actual,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_node_label_present__add_test_true(self):
         labels = self.make_node_labels()
         with self.mock_func("node_labels", return_value=labels, test=True):
@@ -498,6 +519,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 actual,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_node_label_present__add(self):
         node_data = self.make_node()
         # Remove some of the defaults to make it simpler
@@ -531,6 +553,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     actual,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_node_label_present__already_set(self):
         node_data = self.make_node()
         labels = node_data["metadata"]["labels"]
@@ -551,6 +574,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     actual,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_node_label_present__update_test_true(self):
         node_data = self.make_node()
         labels = node_data["metadata"]["labels"]
@@ -571,6 +595,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     actual,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_node_label_present__update(self):
         node_data = self.make_node()
         # Remove some of the defaults to make it simpler
@@ -604,6 +629,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     actual,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_node_label_absent__noop_test_true(self):
         labels = self.make_node_labels()
         with self.mock_func("node_labels", return_value=labels, test=True):
@@ -620,6 +646,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 actual,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_node_label_absent__noop(self):
         labels = self.make_node_labels()
         with self.mock_func("node_labels", return_value=labels):
@@ -636,6 +663,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 actual,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_node_label_absent__delete_test_true(self):
         labels = self.make_node_labels()
         with self.mock_func("node_labels", return_value=labels, test=True):
@@ -652,6 +680,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 actual,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_node_label_absent__delete(self):
         node_data = self.make_node()
         labels = node_data["metadata"]["labels"].copy()
@@ -678,6 +707,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     actual,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_namespace_present__create_test_true(self):
         with self.mock_func("show_namespace", return_value=None, test=True):
             actual = kubernetes.namespace_present(name="saltstack")
@@ -691,6 +721,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 actual,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_namespace_present__create(self):
         namespace_data = self.make_namespace(name="saltstack")
         with self.mock_func("show_namespace", return_value=None):
@@ -706,6 +737,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     actual,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_namespace_present__noop_test_true(self):
         namespace_data = self.make_namespace(name="saltstack")
         with self.mock_func("show_namespace", return_value=namespace_data, test=True):
@@ -720,6 +752,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 actual,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_namespace_present__noop(self):
         namespace_data = self.make_namespace(name="saltstack")
         with self.mock_func("show_namespace", return_value=namespace_data):
@@ -734,6 +767,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 actual,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_namespace_absent__noop_test_true(self):
         with self.mock_func("show_namespace", return_value=None, test=True):
             actual = kubernetes.namespace_absent(name="salt")
@@ -747,6 +781,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 actual,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_namespace_absent__noop(self):
         with self.mock_func("show_namespace", return_value=None):
             actual = kubernetes.namespace_absent(name="salt")
@@ -760,6 +795,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 actual,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_namespace_absent__delete_test_true(self):
         namespace_data = self.make_namespace(name="salt")
         with self.mock_func("show_namespace", return_value=namespace_data, test=True):
@@ -774,6 +810,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 actual,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_namespace_absent__delete_code_200(self):
         namespace_data = self.make_namespace(name="salt")
         deleted = namespace_data.copy()
@@ -794,6 +831,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     actual,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_namespace_absent__delete_status_terminating(self):
         namespace_data = self.make_namespace(name="salt")
         deleted = namespace_data.copy()
@@ -819,6 +857,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     actual,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_namespace_absent__delete_status_phase_terminating(self):
         # This is what kubernetes 1.8.0 looks like when deleting namespaces
         namespace_data = self.make_namespace(name="salt")
@@ -841,6 +880,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     actual,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_namespace_absent__delete_error(self):
         namespace_data = self.make_namespace(name="salt")
         deleted = namespace_data.copy()

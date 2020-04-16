@@ -11,7 +11,7 @@ import salt.modules.svn as svn
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class SvnTestCase(TestCase, LoaderModuleMockMixin):
@@ -22,6 +22,7 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {svn: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_info(self):
         """
         Test to display the Subversion information from the checkout.
@@ -40,6 +41,7 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertListEqual(svn.info("cwd", fmt="dict"), [{}, {}])
 
+    @skipIf(True, "FASTTEST skip")
     def test_checkout(self):
         """
         Test to download a working copy of the remote Subversion repository
@@ -49,6 +51,7 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(svn.__salt__, {"cmd.run_all": mock}):
             self.assertTrue(svn.checkout("cwd", "remote"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_switch(self):
         """
         Test to switch a working copy of a remote Subversion repository
@@ -58,6 +61,7 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(svn.__salt__, {"cmd.run_all": mock}):
             self.assertTrue(svn.switch("cwd", "remote"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_update(self):
         """
         Test to update the current directory, files, or directories from
@@ -67,6 +71,7 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(svn.__salt__, {"cmd.run_all": mock}):
             self.assertTrue(svn.update("cwd"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_diff(self):
         """
         Test to return the diff of the current directory, files, or
@@ -76,6 +81,7 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(svn.__salt__, {"cmd.run_all": mock}):
             self.assertTrue(svn.diff("cwd"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_commit(self):
         """
         Test to commit the current directory, files, or directories to
@@ -85,6 +91,7 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(svn.__salt__, {"cmd.run_all": mock}):
             self.assertTrue(svn.commit("cwd"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_add(self):
         """
         Test to add files to be tracked by the Subversion working-copy
@@ -94,6 +101,7 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(svn.__salt__, {"cmd.run_all": mock}):
             self.assertTrue(svn.add("cwd", False))
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove(self):
         """
         Test to remove files and directories from the Subversion repository
@@ -102,6 +110,7 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(svn.__salt__, {"cmd.run_all": mock}):
             self.assertTrue(svn.remove("cwd", False))
 
+    @skipIf(True, "FASTTEST skip")
     def test_status(self):
         """
         Test to display the status of the current directory, files, or
@@ -111,6 +120,7 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(svn.__salt__, {"cmd.run_all": mock}):
             self.assertTrue(svn.status("cwd"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_export(self):
         """
         Test to create an unversioned copy of a tree.

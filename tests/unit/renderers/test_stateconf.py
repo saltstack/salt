@@ -19,7 +19,7 @@ from salt.ext.six.moves import StringIO
 from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 REQUISITES = ["require", "require_in", "use", "use_in", "watch", "watch_in"]
 
@@ -68,6 +68,7 @@ class StateConfigRendererTestCase(TestCase):
             **kws
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_state_config(self):
         result = self._render_sls(
             """
@@ -97,6 +98,7 @@ test:
             result["test"]["cmd.run"][0]["name"], "echo name1=value1 name2=value2 value"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_sls_dir(self):
         result = self._render_sls(
             """
@@ -112,6 +114,7 @@ test:
             "echo sls_dir=path{0}to".format(os.sep),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_states_declared_with_shorthand_no_args(self):
         result = self._render_sls(
             """
@@ -131,6 +134,7 @@ test2:
             self.assertEqual(len(args), 0)
         self.assertEqual(result["test"]["cmd.run"][0]["name"], "echo testing")
 
+    @skipIf(True, "FASTTEST skip")
     def test_adding_state_name_arg_for_dot_state_id(self):
         result = self._render_sls(
             """
@@ -146,6 +150,7 @@ test2:
         self.assertEqual(result["test::test"]["pkg.installed"][0]["name"], "test")
         self.assertEqual(result["test::test2"]["pkg.installed"][0]["name"], "vim")
 
+    @skipIf(True, "FASTTEST skip")
     def test_state_prefix(self):
         result = self._render_sls(
             """
@@ -166,6 +171,7 @@ state_id:
         self.assertTrue("test::test" in result)
         self.assertTrue("state_id" in result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_dot_state_id_in_requisites(self):
         for req in REQUISITES:
             result = self._render_sls(
@@ -194,6 +200,7 @@ state_id:
                 result["state_id"]["cmd.run"][2][req][0]["cmd"], "test::test"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_relative_include_with_requisites(self):
         for req in REQUISITES:
             result = self._render_sls(
@@ -219,6 +226,7 @@ state_id:
                 "test.utils::some_state",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_relative_include_and_extend(self):
         result = self._render_sls(
             """
@@ -235,6 +243,7 @@ extend:
         )
         self.assertTrue("test.utils::some_state" in result["extend"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_multilevel_relative_include_with_requisites(self):
         for req in REQUISITES:
             result = self._render_sls(
@@ -263,6 +272,7 @@ state_id:
                 "test.utils::some_state",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_multilevel_relative_include_beyond_top_level(self):
         self.assertRaises(
             SaltRenderError,
@@ -274,6 +284,7 @@ include:
             sls="test.work",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_start_state_generation(self):
         result = self._render_sls(
             """
@@ -294,6 +305,7 @@ B:
             result["test::start"]["stateconf.set"][0]["require_in"][0]["cmd"], "A"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_goal_state_generation(self):
         result = self._render_sls(
             """
@@ -313,6 +325,7 @@ B:
         reqs = result["test.goalstate::goal"]["stateconf.set"][0]["require"]
         self.assertEqual(set([next(six.itervalues(i)) for i in reqs]), set("ABCDE"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_implicit_require_with_goal_state(self):
         result = self._render_sls(
             """
@@ -370,6 +383,7 @@ G:
             [next(six.itervalues(i)) for i in goal_args[0]["require"]], list("ABCDEFG")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_slsdir(self):
         result = self._render_sls(
             """

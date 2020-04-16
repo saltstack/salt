@@ -35,6 +35,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {service: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_running(self):
         """
             Test to verify that the service is running
@@ -182,6 +183,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
                     ):
                         self.assertDictEqual(service.running("salt", True), ret[6])
 
+    @skipIf(True, "FASTTEST skip")
     def test_dead(self):
         """
             Test to ensure that the named service is dead
@@ -297,6 +299,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
                     with patch.object(service, "_disable", MagicMock(return_value={})):
                         self.assertDictEqual(service.dead("salt", False), ret[4])
 
+    @skipIf(True, "FASTTEST skip")
     def test_dead_with_missing_service(self):
         """
         Tests the case in which a service.dead state is executed on a state
@@ -319,6 +322,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_enabled(self):
         """
             Test to verify that the service is enabled
@@ -328,6 +332,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(service, "_enable", mock):
             self.assertDictEqual(service.enabled("salt"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_disabled(self):
         """
             Test to verify that the service is disabled
@@ -337,6 +342,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(service, "_disable", mock):
             self.assertDictEqual(service.disabled("salt"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_mod_watch(self):
         """
             Test to the service watcher, called to invoke the watch command.
@@ -438,7 +444,6 @@ class ServiceTestCaseFunctional(TestCase, LoaderModuleMockMixin):
         if self.post_srv_disable:
             self.modules["service.disable"](self.service_name)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_running_with_reload(self):
         with patch.dict(service.__opts__, {"test": False}):
             service.dead(self.service_name, enable=False)

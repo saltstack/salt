@@ -64,6 +64,7 @@ class MinionsTestCase(TestCase):
     TestCase for salt.utils.minions module functions
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_nodegroup_comp(self):
         """
         Test a simple string nodegroup
@@ -82,6 +83,7 @@ class CkMinionsTestCase(TestCase):
     def setUp(self):
         self.ckminions = salt.utils.minions.CkMinions({"minion_data_cache": True})
 
+    @skipIf(True, "FASTTEST skip")
     def test_spec_check(self):
         # Test spec-only rule
         auth_list = ["@runner"]
@@ -268,6 +270,7 @@ class CkMinionsTestCase(TestCase):
         "salt.utils.minions.CkMinions._pki_minions",
         MagicMock(return_value=["alpha", "beta", "gamma"]),
     )
+    @skipIf(True, "FASTTEST skip")
     def test_auth_check(self):
         # Test function-only rule
         auth_list = ["test.ping"]
@@ -358,6 +361,7 @@ class CkMinionsTestCase(TestCase):
     sys.version_info < (2, 7), "Python 2.7 needed for dictionary equality assertions"
 )
 class TargetParseTestCase(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_parse_grains_target(self):
         """
         Ensure proper parsing for grains
@@ -366,6 +370,7 @@ class TargetParseTestCase(TestCase):
         ret = salt.utils.minions.parse_target(g_tgt)
         self.assertDictEqual(ret, {"engine": "G", "pattern": "a:b", "delimiter": None})
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_grains_pcre_target(self):
         """
         Ensure proper parsing for grains PCRE matching
@@ -374,6 +379,7 @@ class TargetParseTestCase(TestCase):
         ret = salt.utils.minions.parse_target(p_tgt)
         self.assertDictEqual(ret, {"engine": "P", "pattern": "a:b", "delimiter": None})
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_pillar_pcre_target(self):
         """
         Ensure proper parsing for pillar PCRE matching
@@ -382,6 +388,7 @@ class TargetParseTestCase(TestCase):
         ret = salt.utils.minions.parse_target(j_tgt)
         self.assertDictEqual(ret, {"engine": "J", "pattern": "a:b", "delimiter": None})
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_list_target(self):
         """
         Ensure proper parsing for list matching
@@ -390,6 +397,7 @@ class TargetParseTestCase(TestCase):
         ret = salt.utils.minions.parse_target(l_tgt)
         self.assertDictEqual(ret, {"engine": "L", "pattern": "a:b", "delimiter": None})
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_nodegroup_target(self):
         """
         Ensure proper parsing for pillar matching
@@ -398,6 +406,7 @@ class TargetParseTestCase(TestCase):
         ret = salt.utils.minions.parse_target(n_tgt)
         self.assertDictEqual(ret, {"engine": "N", "pattern": "a:b", "delimiter": None})
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_subnet_target(self):
         """
         Ensure proper parsing for subnet matching
@@ -406,6 +415,7 @@ class TargetParseTestCase(TestCase):
         ret = salt.utils.minions.parse_target(s_tgt)
         self.assertDictEqual(ret, {"engine": "S", "pattern": "a:b", "delimiter": None})
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_minion_pcre_target(self):
         """
         Ensure proper parsing for minion PCRE matching
@@ -414,6 +424,7 @@ class TargetParseTestCase(TestCase):
         ret = salt.utils.minions.parse_target(e_tgt)
         self.assertDictEqual(ret, {"engine": "E", "pattern": "a:b", "delimiter": None})
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_range_target(self):
         """
         Ensure proper parsing for range matching
@@ -422,6 +433,7 @@ class TargetParseTestCase(TestCase):
         ret = salt.utils.minions.parse_target(r_tgt)
         self.assertDictEqual(ret, {"engine": "R", "pattern": "a:b", "delimiter": None})
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_multiword_target(self):
         """
         Ensure proper parsing for multi-word targets
@@ -439,6 +451,7 @@ class NodegroupCompTest(TestCase):
     salt.utils.minions.nodgroup_comp()
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_simple_nodegroup(self):
         """
         Smoke test a very simple nodegroup. No recursion.
@@ -455,6 +468,7 @@ class NodegroupCompTest(TestCase):
         ]
         self.assertListEqual(ret, expected_ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_simple_expression_nodegroup(self):
         """
         Smoke test a nodegroup with a simple expression. No recursion.
@@ -465,6 +479,7 @@ class NodegroupCompTest(TestCase):
         expected_ret = ["E@[foo,bar,baz].domain.com"]
         self.assertListEqual(ret, expected_ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_simple_recurse(self):
         """
         Test a case where one nodegroup contains a second nodegroup
@@ -488,6 +503,7 @@ class NodegroupCompTest(TestCase):
         ]
         self.assertListEqual(ret, expected_ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_circular_nodegroup_reference(self):
         """
         Test to see what happens if A refers to B

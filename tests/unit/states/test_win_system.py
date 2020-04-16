@@ -12,7 +12,7 @@ import salt.states.win_system as win_system
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {win_system: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_computer_desc(self):
         """
             Test to manage the computer's description field
@@ -56,6 +57,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                     )
                     self.assertDictEqual(win_system.computer_desc("salt"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_computer_name(self):
         """
             Test to manage the computer's name
@@ -101,6 +103,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                         )
                         self.assertDictEqual(win_system.computer_name("salt"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_hostname(self):
         ret = {"name": "salt", "changes": {}, "result": True, "comment": ""}
 

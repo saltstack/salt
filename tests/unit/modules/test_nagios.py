@@ -13,7 +13,7 @@ import salt.modules.nagios as nagios
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class NagiosTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class NagiosTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {nagios: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_run(self):
         """
         Test for Run nagios plugin and return all
@@ -32,6 +33,7 @@ class NagiosTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(nagios, "_execute_cmd", return_value="A"):
             self.assertEqual(nagios.run("plugin"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_retcode(self):
         """
         Test for Run one nagios plugin and return retcode of the execution
@@ -41,6 +43,7 @@ class NagiosTestCase(TestCase, LoaderModuleMockMixin):
                 nagios.retcode("plugin", key_name="key"), {"key": {"status": "A"}}
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_all(self):
         """
         Test for Run nagios plugin and return all
@@ -49,6 +52,7 @@ class NagiosTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(nagios, "_execute_cmd", return_value="A"):
             self.assertEqual(nagios.run_all("plugin"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_retcode_pillar(self):
         """
         Test for Run one or more nagios plugins from pillar data and
@@ -57,6 +61,7 @@ class NagiosTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(nagios.__salt__, {"pillar.get": MagicMock(return_value={})}):
             self.assertEqual(nagios.retcode_pillar("pillar_name"), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_pillar(self):
         """
         Test for Run one or more nagios plugins from pillar data
@@ -65,6 +70,7 @@ class NagiosTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(nagios, "_execute_pillar", return_value="A"):
             self.assertEqual(nagios.run_pillar("pillar"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_all_pillar(self):
         """
         Test for Run one or more nagios plugins from pillar data
@@ -73,6 +79,7 @@ class NagiosTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(nagios, "_execute_pillar", return_value="A"):
             self.assertEqual(nagios.run_all_pillar("pillar"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_plugins(self):
         """
         Test for List all the nagios plugins

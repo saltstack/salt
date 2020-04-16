@@ -169,6 +169,7 @@ class BotoIoTThingTypeTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
     TestCase for salt.modules.boto_iot module
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_checking_if_a_thing_type_exists_and_a_thing_type_exists_the_thing_type_exists_method_returns_true(
         self,
     ):
@@ -182,6 +183,7 @@ class BotoIoTThingTypeTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertTrue(result["exists"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_checking_if_a_thing_type_exists_and_a_thing_type_does_not_exist_the_thing_type_exists_method_returns_false(
         self,
     ):
@@ -195,6 +197,7 @@ class BotoIoTThingTypeTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertFalse(result["exists"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_checking_if_a_thing_type_exists_and_boto3_returns_an_error_the_thing_type_exists_method_returns_error(
         self,
     ):
@@ -213,6 +216,7 @@ class BotoIoTThingTypeTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
             error_message.format("describe_thing_type"),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_thing_type_and_thing_type_exists_the_describe_thing_type_method_returns_thing_type(
         self,
     ):
@@ -226,6 +230,7 @@ class BotoIoTThingTypeTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertEqual(result.get("thing_type"), thing_type_ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_thing_type_and_thing_type_does_not_exists_the_describe_thing_type_method_returns_none(
         self,
     ):
@@ -239,6 +244,7 @@ class BotoIoTThingTypeTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertEqual(result.get("thing_type"), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_thing_type_and_boto3_returns_error_an_error_the_describe_thing_type_method_returns_error(
         self,
     ):
@@ -254,6 +260,7 @@ class BotoIoTThingTypeTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
             error_message.format("describe_thing_type"),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_a_thing_type_succeeds_the_create_thing_type_method_returns_true(
         self,
     ):
@@ -270,6 +277,7 @@ class BotoIoTThingTypeTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         self.assertTrue(result["created"])
         self.assertTrue(result["thingTypeArn"], thing_type_arn)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_a_thing_type_fails_the_create_thing_type_method_returns_error(
         self,
     ):
@@ -290,6 +298,7 @@ class BotoIoTThingTypeTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
             error_message.format("create_thing_type"),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deprecating_a_thing_type_succeeds_the_deprecate_thing_type_method_returns_true(
         self,
     ):
@@ -304,6 +313,7 @@ class BotoIoTThingTypeTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         self.assertTrue(result.get("deprecated"))
         self.assertEqual(result.get("error"), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deprecating_a_thing_type_fails_the_deprecate_thing_type_method_returns_error(
         self,
     ):
@@ -323,6 +333,7 @@ class BotoIoTThingTypeTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
             error_message.format("deprecate_thing_type"),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_a_thing_type_succeeds_the_delete_thing_type_method_returns_true(
         self,
     ):
@@ -337,6 +348,7 @@ class BotoIoTThingTypeTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         self.assertTrue(result.get("deleted"))
         self.assertEqual(result.get("error"), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_a_thing_type_fails_the_delete_thing_type_method_returns_error(
         self,
     ):
@@ -361,6 +373,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
     TestCase for salt.modules.boto_iot module
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_checking_if_a_policy_exists_and_a_policy_exists_the_policy_exists_method_returns_true(
         self,
     ):
@@ -374,6 +387,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertTrue(result["exists"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_checking_if_a_policy_exists_and_a_policy_does_not_exist_the_policy_exists_method_returns_false(
         self,
     ):
@@ -385,6 +399,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertFalse(result["exists"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_checking_if_a_policy_exists_and_boto3_returns_an_error_the_policy_exists_method_returns_error(
         self,
     ):
@@ -398,6 +413,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
             result.get("error", {}).get("message"), error_message.format("get_policy")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_a_policy_succeeds_the_create_policy_method_returns_true(
         self,
     ):
@@ -413,6 +429,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertTrue(result["created"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_a_policy_fails_the_create_policy_method_returns_error(
         self,
     ):
@@ -432,6 +449,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
             error_message.format("create_policy"),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_a_policy_succeeds_the_delete_policy_method_returns_true(
         self,
     ):
@@ -442,6 +460,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertTrue(result["deleted"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_a_policy_fails_the_delete_policy_method_returns_false(
         self,
     ):
@@ -454,6 +473,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         result = boto_iot.delete_policy(policyName="testpolicy", **conn_parameters)
         self.assertFalse(result["deleted"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_policy_it_returns_the_dict_of_properties_returns_true(
         self,
     ):
@@ -468,6 +488,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertTrue(result["policy"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_policy_it_returns_the_dict_of_properties_returns_false(
         self,
     ):
@@ -479,6 +500,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertFalse(result["policy"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_policy_on_client_error_it_returns_error(self):
         """
         Tests describing parameters failure
@@ -487,6 +509,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         result = boto_iot.describe_policy(policyName="testpolicy", **conn_parameters)
         self.assertTrue("error" in result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_checking_if_a_policy_version_exists_and_a_policy_version_exists_the_policy_version_exists_method_returns_true(
         self,
     ):
@@ -500,6 +523,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertTrue(result["exists"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_checking_if_a_policy_version_exists_and_a_policy_version_does_not_exist_the_policy_version_exists_method_returns_false(
         self,
     ):
@@ -513,6 +537,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertFalse(result["exists"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_checking_if_a_policy_version_exists_and_boto3_returns_an_error_the_policy_version_exists_method_returns_error(
         self,
     ):
@@ -531,6 +556,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
             error_message.format("get_policy_version"),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_a_policy_version_succeeds_the_create_policy_version_method_returns_true(
         self,
     ):
@@ -546,6 +572,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertTrue(result["created"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_a_policy_version_fails_the_create_policy_version_method_returns_error(
         self,
     ):
@@ -565,6 +592,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
             error_message.format("create_policy_version"),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_a_policy_version_succeeds_the_delete_policy_version_method_returns_true(
         self,
     ):
@@ -577,6 +605,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertTrue(result["deleted"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_a_policy_version_fails_the_delete_policy_version_method_returns_false(
         self,
     ):
@@ -591,6 +620,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         )
         self.assertFalse(result["deleted"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_policy_version_it_returns_the_dict_of_properties_returns_true(
         self,
     ):
@@ -605,6 +635,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertTrue(result["policy"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_policy_version_it_returns_the_dict_of_properties_returns_false(
         self,
     ):
@@ -618,6 +649,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertFalse(result["policy"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_policy_version_on_client_error_it_returns_error(self):
         """
         Tests describing parameters failure
@@ -630,6 +662,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         )
         self.assertTrue("error" in result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_listing_policies_succeeds_the_list_policies_method_returns_true(
         self,
     ):
@@ -641,6 +674,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertTrue(result["policies"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_listing_policy_fails_the_list_policy_method_returns_false(self):
         """
         tests False no policy listed.
@@ -649,6 +683,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         result = boto_iot.list_policies(**conn_parameters)
         self.assertFalse(result["policies"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_listing_policy_fails_the_list_policy_method_returns_error(self):
         """
         tests False policy error.
@@ -662,6 +697,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
             error_message.format("list_policies"),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_listing_policy_versions_succeeds_the_list_policy_versions_method_returns_true(
         self,
     ):
@@ -675,6 +711,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertTrue(result["policyVersions"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_listing_policy_versions_fails_the_list_policy_versions_method_returns_false(
         self,
     ):
@@ -687,6 +724,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         )
         self.assertFalse(result["policyVersions"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_listing_policy_versions_fails_the_list_policy_versions_method_returns_error(
         self,
     ):
@@ -704,6 +742,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
             error_message.format("list_policy_versions"),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_setting_default_policy_version_succeeds_the_set_default_policy_version_method_returns_true(
         self,
     ):
@@ -716,6 +755,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertTrue(result["changed"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_set_default_policy_version_fails_the_set_default_policy_version_method_returns_error(
         self,
     ):
@@ -733,6 +773,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
             error_message.format("set_default_policy_version"),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_list_principal_policies_succeeds_the_list_principal_policies_method_returns_true(
         self,
     ):
@@ -746,6 +787,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertTrue(result["policies"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_list_principal_policies_fails_the_list_principal_policies_method_returns_error(
         self,
     ):
@@ -763,6 +805,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
             error_message.format("list_principal_policies"),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_attach_principal_policy_succeeds_the_attach_principal_policy_method_returns_true(
         self,
     ):
@@ -777,6 +820,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertTrue(result["attached"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_attach_principal_policy_version_fails_the_attach_principal_policy_version_method_returns_error(
         self,
     ):
@@ -796,6 +840,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
             error_message.format("attach_principal_policy"),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_detach_principal_policy_succeeds_the_detach_principal_policy_method_returns_true(
         self,
     ):
@@ -810,6 +855,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertTrue(result["detached"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_detach_principal_policy_version_fails_the_detach_principal_policy_version_method_returns_error(
         self,
     ):
@@ -843,6 +889,7 @@ class BotoIoTTopicRuleTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
     TestCase for salt.modules.boto_iot module
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_checking_if_a_topic_rule_exists_and_a_topic_rule_exists_the_topic_rule_exists_method_returns_true(
         self,
     ):
@@ -856,6 +903,7 @@ class BotoIoTTopicRuleTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertTrue(result["exists"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_checking_if_a_rule_exists_and_a_rule_does_not_exist_the_topic_rule_exists_method_returns_false(
         self,
     ):
@@ -867,6 +915,7 @@ class BotoIoTTopicRuleTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertFalse(result["exists"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_checking_if_a_topic_rule_exists_and_boto3_returns_an_error_the_topic_rule_exists_method_returns_error(
         self,
     ):
@@ -883,6 +932,7 @@ class BotoIoTTopicRuleTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
             error_message.format("get_topic_rule"),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_a_topic_rule_succeeds_the_create_topic_rule_method_returns_true(
         self,
     ):
@@ -900,6 +950,7 @@ class BotoIoTTopicRuleTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertTrue(result["created"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_a_topic_rule_fails_the_create_topic_rule_method_returns_error(
         self,
     ):
@@ -921,6 +972,7 @@ class BotoIoTTopicRuleTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
             error_message.format("create_topic_rule"),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_replacing_a_topic_rule_succeeds_the_replace_topic_rule_method_returns_true(
         self,
     ):
@@ -938,6 +990,7 @@ class BotoIoTTopicRuleTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertTrue(result["replaced"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_replacing_a_topic_rule_fails_the_replace_topic_rule_method_returns_error(
         self,
     ):
@@ -959,6 +1012,7 @@ class BotoIoTTopicRuleTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
             error_message.format("replace_topic_rule"),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_a_topic_rule_succeeds_the_delete_topic_rule_method_returns_true(
         self,
     ):
@@ -969,6 +1023,7 @@ class BotoIoTTopicRuleTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertTrue(result["deleted"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_a_topic_rule_fails_the_delete_topic_rule_method_returns_false(
         self,
     ):
@@ -981,6 +1036,7 @@ class BotoIoTTopicRuleTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         result = boto_iot.delete_topic_rule(ruleName="testrule", **conn_parameters)
         self.assertFalse(result["deleted"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_topic_rule_it_returns_the_dict_of_properties_returns_true(
         self,
     ):
@@ -995,6 +1051,7 @@ class BotoIoTTopicRuleTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertTrue(result["rule"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_topic_rule_on_client_error_it_returns_error(self):
         """
         Tests describing parameters failure
@@ -1005,6 +1062,7 @@ class BotoIoTTopicRuleTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         result = boto_iot.describe_topic_rule(ruleName="testrule", **conn_parameters)
         self.assertTrue("error" in result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_listing_topic_rules_succeeds_the_list_topic_rules_method_returns_true(
         self,
     ):
@@ -1016,6 +1074,7 @@ class BotoIoTTopicRuleTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertTrue(result["rules"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_listing_topic_rules_fails_the_list_topic_rules_method_returns_error(
         self,
     ):

@@ -19,7 +19,7 @@ import tests.unit.modules.test_heat
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class HeatTestCase(TestCase, LoaderModuleMockMixin):
@@ -60,6 +60,7 @@ class HeatTestCase(TestCase, LoaderModuleMockMixin):
                 "salt.modules.file.check_perms", win_file.check_perms
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_heat_deployed(self):
         """
         Test salt.states.heat.deployed method
@@ -105,6 +106,7 @@ class HeatTestCase(TestCase, LoaderModuleMockMixin):
             )
         assert ret == exp_ret
 
+    @skipIf(True, "FASTTEST skip")
     def test_heat_deployed_environment(self):
         """
         Test salt.states.heat.deployed method
@@ -154,6 +156,7 @@ class HeatTestCase(TestCase, LoaderModuleMockMixin):
             )
         assert ret == exp_ret
 
+    @skipIf(True, "FASTTEST skip")
     def test_heat_deployed_environment_error(self):
         """
         Test salt.states.heat.deployed method

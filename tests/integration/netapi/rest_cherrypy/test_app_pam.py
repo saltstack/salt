@@ -57,7 +57,6 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
             self.run_function("user.delete", [USERA], remove=True)
             self.skipTest("Could not add user or password, skipping test")
 
-    @skipIf(True, "SLOWTEST skip")
     def test_bad_pwd_pam_chsh_service(self):
         """
         Test login while specifying chsh service with bad passwd
@@ -76,7 +75,6 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
         )
         self.assertEqual(response.status, "401 Unauthorized")
 
-    @skipIf(True, "SLOWTEST skip")
     def test_bad_pwd_pam_login_service(self):
         """
         Test login while specifying login service with bad passwd
@@ -95,7 +93,6 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
         )
         self.assertEqual(response.status, "401 Unauthorized")
 
-    @skipIf(True, "SLOWTEST skip")
     def test_good_pwd_pam_chsh_service(self):
         """
         Test login while specifying chsh service with good passwd
@@ -113,7 +110,6 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
         )
         self.assertEqual(response.status, "200 OK")
 
-    @skipIf(True, "SLOWTEST skip")
     def test_good_pwd_pam_login_service(self):
         """
         Test login while specifying login service with good passwd

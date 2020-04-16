@@ -8,7 +8,7 @@ import salt.states.apache_site as apache_site
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ApacheSiteTestCase(TestCase, LoaderModuleMockMixin):
@@ -21,6 +21,7 @@ class ApacheSiteTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'enabled' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_enabled(self):
         """
         Test to ensure an Apache site is enabled.
@@ -53,6 +54,7 @@ class ApacheSiteTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'disabled' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_disabled(self):
         """
         Test to ensure an Apache site is disabled.

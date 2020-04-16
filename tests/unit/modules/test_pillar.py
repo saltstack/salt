@@ -12,7 +12,7 @@ from salt.utils.odict import OrderedDict
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 pillar_value_1 = dict(a=1, b="very secret")
 
@@ -21,6 +21,7 @@ class PillarModuleTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {pillarmod: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_obfuscate_inner_recursion(self):
         self.assertEqual(
             pillarmod._obfuscate_inner(
@@ -29,6 +30,7 @@ class PillarModuleTestCase(TestCase, LoaderModuleMockMixin):
             dict(a=["<int>", "<int>"], b=dict(pwd="<str>", deeper=("<str>", "<int>"))),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_obfuscate_inner_more_types(self):
         self.assertEqual(
             pillarmod._obfuscate_inner(OrderedDict([("key", "value")])),
@@ -39,10 +41,12 @@ class PillarModuleTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(pillarmod._obfuscate_inner((1, 2)), ("<int>", "<int>"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_obfuscate(self):
         with patch("salt.modules.pillar.items", MagicMock(return_value=pillar_value_1)):
             self.assertEqual(pillarmod.obfuscate(), dict(a="<int>", b="<str>"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_ls(self):
         with patch("salt.modules.pillar.items", MagicMock(return_value=pillar_value_1)):
             ls = sorted(pillarmod.ls())
@@ -51,6 +55,7 @@ class PillarModuleTestCase(TestCase, LoaderModuleMockMixin):
             else:
                 self.assertEqual(ls, ["a", "b"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_pillar_get_default_merge(self):
         defaults = {
             "int": 1,
@@ -108,6 +113,7 @@ class PillarModuleTestCase(TestCase, LoaderModuleMockMixin):
                 ["foo", "bar", "baz"],
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_pillar_get_default_merge_regression_38558(self):
         """Test for pillar.get(key=..., default=..., merge=True)
 
@@ -130,6 +136,7 @@ class PillarModuleTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual({"l2": {"l3": 42}}, res)
             self.assertEqual({"l2": {"l3": 43}}, default)
 
+    @skipIf(True, "FASTTEST skip")
     def test_pillar_get_default_merge_regression_39062(self):
         """
         Confirm that we do not raise an exception if default is None and

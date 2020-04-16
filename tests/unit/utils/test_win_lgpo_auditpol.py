@@ -28,27 +28,30 @@ class WinLgpoAuditpolTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_settings(self):
         names = win_lgpo_auditpol._get_valid_names()
         ret = win_lgpo_auditpol.get_settings(category="All")
         for name in names:
             self.assertIn(name, [k.lower() for k in ret])
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_settings_invalid_category(self):
         self.assertRaises(
             KeyError, win_lgpo_auditpol.get_settings, category="Fake Category"
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_get_setting(self):
         names = win_lgpo_auditpol._get_valid_names()
         for name in names:
             ret = win_lgpo_auditpol.get_setting(name)
             self.assertIn(ret, settings)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_setting_invalid_name(self):
         self.assertRaises(KeyError, win_lgpo_auditpol.get_setting, name="Fake Name")
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_setting(self):
         names = ["Credential Validation", "IPsec Driver", "File System", "SAM"]
         mock_set = MagicMock(return_value={"retcode": 0, "stdout": "Success"})
@@ -68,6 +71,7 @@ class WinLgpoAuditpolTestCase(TestCase, LoaderModuleMockMixin):
                     mock_set.assert_called_once_with(cmd=cmd, python_shell=True)
                     mock_set.reset_mock()
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_setting_invalid_setting(self):
         names = ["Credential Validation", "IPsec Driver", "File System"]
         with patch.object(
@@ -82,6 +86,7 @@ class WinLgpoAuditpolTestCase(TestCase, LoaderModuleMockMixin):
                 value="No Auditing",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_setting_invalid_value(self):
         names = ["Credential Validation", "IPsec Driver", "File System"]
         with patch.object(
@@ -96,6 +101,7 @@ class WinLgpoAuditpolTestCase(TestCase, LoaderModuleMockMixin):
                 value="Fake Value",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_auditpol_dump(self):
         names = win_lgpo_auditpol._get_valid_names()
         dump = win_lgpo_auditpol.get_auditpol_dump()

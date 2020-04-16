@@ -9,13 +9,14 @@ import salt.modules.macdefaults as macdefaults
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MacDefaultsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {macdefaults: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_write_default(self):
         """
             Test writing a default setting
@@ -28,6 +29,7 @@ class MacDefaultsTestCase(TestCase, LoaderModuleMockMixin):
                 runas=None,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_write_with_user(self):
         """
             Test writing a default setting with a specific user
@@ -42,6 +44,7 @@ class MacDefaultsTestCase(TestCase, LoaderModuleMockMixin):
                 runas="frank",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_write_default_boolean(self):
         """
             Test writing a default setting
@@ -54,6 +57,7 @@ class MacDefaultsTestCase(TestCase, LoaderModuleMockMixin):
                 runas=None,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_read_default(self):
         """
             Test reading a default setting
@@ -65,6 +69,7 @@ class MacDefaultsTestCase(TestCase, LoaderModuleMockMixin):
                 'defaults read "com.apple.CrashReporter" "Crash"', runas=None
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_read_default_with_user(self):
         """
             Test reading a default setting as a specific user
@@ -76,6 +81,7 @@ class MacDefaultsTestCase(TestCase, LoaderModuleMockMixin):
                 'defaults read "com.apple.CrashReporter" "Crash"', runas="frank"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_default(self):
         """
             Test delete a default setting
@@ -89,6 +95,7 @@ class MacDefaultsTestCase(TestCase, LoaderModuleMockMixin):
                 runas=None,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_default_with_user(self):
         """
             Test delete a default setting as a specific user

@@ -12,7 +12,7 @@ import salt.states.locale as locale
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class LocaleTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class LocaleTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {locale: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_system(self):
         """
             Test to set the locale for the system
@@ -68,6 +69,7 @@ class LocaleTestCase(TestCase, LoaderModuleMockMixin):
 
                     self.assertDictEqual(locale.system("saltstack"), ret[3])
 
+    @skipIf(True, "FASTTEST skip")
     def test_present(self):
         """
             Test to generate a locale if it is not present

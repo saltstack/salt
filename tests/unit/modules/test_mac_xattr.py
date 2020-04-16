@@ -12,13 +12,14 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class XAttrTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {xattr: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_list(self):
         """
         Test xattr.list
@@ -32,6 +33,7 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(xattr.list_("path/to/file"), expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_missing(self):
         """
         Test listing attributes of a missing file
@@ -42,6 +44,7 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertRaises(CommandExecutionError, xattr.list_, "/path/to/file")
 
+    @skipIf(True, "FASTTEST skip")
     def test_read(self):
         """
         Test reading a specific attribute from a file
@@ -54,6 +57,7 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
                 xattr.read("/path/to/file", "com.attr"), "expected results"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_read_hex(self):
         """
         Test reading a specific attribute from a file
@@ -71,6 +75,7 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
                 ["xattr", "-p", "-x", "com.attr", "/path/to/file"]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_read_missing(self):
         """
         Test reading a specific attribute from a file
@@ -83,6 +88,7 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
                 CommandExecutionError, xattr.read, "/path/to/file", "attribute"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_write(self):
         """
         Test writing a specific attribute to a file
@@ -93,6 +99,7 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(xattr.write("/path/to/file", "spongebob", "squarepants"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_write_missing(self):
         """
         Test writing a specific attribute to a file
@@ -109,6 +116,7 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
                 "value",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete(self):
         """
         Test deleting a specific attribute from a file
@@ -119,6 +127,7 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(xattr.delete("/path/to/file", "attribute"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_missing(self):
         """
         Test deleting a specific attribute from a file
@@ -131,6 +140,7 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
                 CommandExecutionError, xattr.delete, "/path/to/file", "attribute"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_clear(self):
         """
         Test clearing all attributes on a file
@@ -141,6 +151,7 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(xattr.clear("/path/to/file"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_clear_missing(self):
         """
         Test clearing all attributes on a file

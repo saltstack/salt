@@ -14,7 +14,7 @@ from salt.exceptions import SaltInvocationError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class GlusterResults(object):
@@ -488,6 +488,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'peer_status' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_peer_status(self):
         """
         Test gluster peer status
@@ -505,6 +506,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'peer' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_peer(self):
         """
         Test if gluster peer call is successful.
@@ -522,6 +524,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'create_volume' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_volume(self):
         """
         Test if it creates a glusterfs volume.
@@ -565,6 +568,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_volumes' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_volumes(self):
         """
         Test if it list configured volumes
@@ -579,6 +583,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'status' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_status(self):
         """
         Test if it check the status of a gluster volume.
@@ -622,6 +627,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'start_volume' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_volume_info(self):
         """
         Test if it returns the volume info.
@@ -656,6 +662,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(glusterfs.__salt__, {"cmd.run": mock}):
             self.assertDictEqual(glusterfs.info("myvol1"), res)
 
+    @skipIf(True, "FASTTEST skip")
     def test_start_volume(self):
         """
         Test if it start a gluster volume.
@@ -688,6 +695,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'stop_volume' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_stop_volume(self):
         """
         Test if it stop a gluster volume.
@@ -717,6 +725,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete_volume' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_volume(self):
         """
         Test if it deletes a gluster volume.
@@ -751,6 +760,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'add_volume_bricks' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_volume_bricks(self):
         """
         Test if it add brick(s) to an existing volume
@@ -794,6 +804,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_op_version' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_op_version(self):
         """
         Test retrieving the glusterfs op-version
@@ -811,6 +822,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_max_op_version' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_max_op_version(self):
         """
         Test retrieving the glusterfs max-op-version.
@@ -828,6 +840,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_op_version' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_op_version(self):
         """
         Test setting the glusterfs op-version

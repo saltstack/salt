@@ -11,7 +11,7 @@ import salt.states.ipmi as ipmi
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class IpmiTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class IpmiTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'boot_device' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_boot_device(self):
         """
         Test to request power state change.
@@ -59,6 +60,7 @@ class IpmiTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'power' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_power(self):
         """
         Test to request power state change
@@ -92,6 +94,7 @@ class IpmiTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'user_present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_present(self):
         """
         Test to ensure IPMI user and user privileges.
@@ -146,6 +149,7 @@ class IpmiTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'user_absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_absent(self):
         """
         Test to delete all user (uid) records having the matching name.

@@ -14,7 +14,7 @@ import salt.utils.platform
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 TEMP_DATABASE_FILE = "/tmp/salt-tests-tmpdir/test_vagrant.sqlite"
 
@@ -40,12 +40,14 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
         }
         return {vagrant: vagrant_globals}
 
+    @skipIf(True, "FASTTEST skip")
     def test_vagrant_get_vm_info_not_found(self):
         mock_sdb = MagicMock(return_value=None)
         with patch.dict(vagrant.__utils__, {"sdb.sdb_get": mock_sdb}):
             with self.assertRaises(salt.exceptions.SaltInvocationError):
                 vagrant.get_vm_info("thisNameDoesNotExist")
 
+    @skipIf(True, "FASTTEST skip")
     def test_vagrant_init_positional(self):
         path_nowhere = os.path.join(os.sep, "tmp", "nowhere")
         if salt.utils.platform.is_windows():
@@ -79,6 +81,7 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
                 "sdb://vagrant_sdb_data/test1", expected, self.LOCAL_OPTS
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vagrant_get_vm_info(self):
         testdict = {"testone": "one", "machine": "two"}
         mock_sdb = MagicMock(return_value=testdict)
@@ -86,6 +89,7 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
             resp = vagrant.get_vm_info("test1")
             self.assertEqual(resp, testdict)
 
+    @skipIf(True, "FASTTEST skip")
     def test_vagrant_init_dict(self):
         testdict = dict(
             cwd="/tmp/anywhere",
@@ -102,6 +106,7 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
                 "sdb://vagrant_sdb_data/test2", expected, self.LOCAL_OPTS
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vagrant_init_arg_override(self):
         testdict = dict(
             cwd="/tmp/there",
@@ -130,6 +135,7 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
                 "sdb://vagrant_sdb_data/test3", expected, self.LOCAL_OPTS
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vagrant_get_ssh_config_fails(self):
         mock_sdb = MagicMock(return_value=None)
         with patch.dict(vagrant.__utils__, {"sdb.sdb_set": mock_sdb}):
@@ -139,6 +145,7 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
                 with self.assertRaises(salt.exceptions.SaltInvocationError):
                     vagrant.get_ssh_config("test3")  # has not been started
 
+    @skipIf(True, "FASTTEST skip")
     def test_vagrant_destroy(self):
         path_mydir = os.path.join(os.sep, "my", "dir")
         if salt.utils.platform.is_windows():
@@ -164,6 +171,7 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
                         cmd, runas=None, cwd=path_mydir, output_loglevel="info"
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vagrant_start(self):
         mock_cmd = MagicMock(return_value={"retcode": 0})
         with patch.dict(vagrant.__salt__, {"cmd.run_all": mock_cmd}):

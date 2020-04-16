@@ -16,7 +16,7 @@ from salt.utils.odict import OrderedDict
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class TestTestCase(TestCase, LoaderModuleMockMixin):
@@ -27,6 +27,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {test: {"__low__": {"__reqs__": {"watch": ""}}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_succeed_without_changes(self):
         """
             Test to returns successful.
@@ -36,6 +37,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({"comment": "Success!"})
             self.assertDictEqual(test.succeed_without_changes("salt"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_fail_without_changes(self):
         """
             Test to returns failure.
@@ -45,6 +47,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({"comment": "Failure!"})
             self.assertDictEqual(test.fail_without_changes("salt"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_succeed_with_changes(self):
         """
             Test to returns successful and changes is not empty
@@ -65,6 +68,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertDictEqual(test.succeed_with_changes("salt"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_fail_with_changes(self):
         """
             Test to returns failure and changes is not empty.
@@ -85,6 +89,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertDictEqual(test.succeed_with_changes("salt"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_configurable_test_state(self):
         """
         Test test.configurable_test_state with and without comment
@@ -118,6 +123,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
             ret = test.configurable_test_state(mock_name, comment=mock_comment)
             self.assertDictEqual(ret, mock_ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_configurable_test_state_changes(self):
         """
         Test test.configurable_test_state with permutations of changes and with
@@ -175,6 +181,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
                 changes="Cheese",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_configurable_test_state_result(self):
         """
         Test test.configurable_test_state with permutations of result and with
@@ -232,6 +239,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
                 result="Cheese",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_configurable_test_state_warnings(self):
         """
         Test test.configurable_test_state with and without warnings
@@ -281,6 +289,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertDictEqual(ret, mock_ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_configurable_test_state_test(self):
         """
         Test test.configurable_test_state with test=True with and without
@@ -341,6 +350,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertDictEqual(ret, mock_ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_mod_watch(self):
         """
             Test to call this function via a watch statement
@@ -354,6 +364,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertDictEqual(test.mod_watch("salt"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_pillar_present(self):
         """
             Test to ensure the check_pillar function
@@ -366,6 +377,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(test.__salt__, {"pillar.get": pillar_mock}):
             self.assertEqual(test.check_pillar("salt", present="my_pillar"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_pillar_string(self):
         """
             Test to ensure the check_pillar function
@@ -403,6 +415,7 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(test.__salt__, {"pillar.get": pillar_mock}):
             self.assertFalse(test.check_pillar("salt", string="my_pillar")["result"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_pillar_dictionary(self):
         """
             Test to ensure the check_pillar function

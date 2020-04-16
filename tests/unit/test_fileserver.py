@@ -9,10 +9,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 from salt import fileserver
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MapDiffTestCase(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_diff_with_diffent_keys(self):
         """
         Test that different maps are indeed reported different
@@ -21,6 +22,7 @@ class MapDiffTestCase(TestCase):
         map2 = {"file2": 1234}
         assert fileserver.diff_mtime_map(map1, map2) is True
 
+    @skipIf(True, "FASTTEST skip")
     def test_diff_with_diffent_values(self):
         """
         Test that different maps are indeed reported different

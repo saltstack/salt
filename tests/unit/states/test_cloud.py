@@ -12,7 +12,7 @@ import salt.utils.cloud
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class CloudTestCase(TestCase, LoaderModuleMockMixin):
@@ -25,6 +25,7 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_present(self):
         """
         Test to spin up a single instance on a cloud provider, using salt-cloud.
@@ -78,6 +79,7 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
         Test to ensure that no instances with the specified names exist.
@@ -127,6 +129,7 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'profile' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_profile(self):
         """
         Test to create a single instance on a cloud provider,
@@ -188,6 +191,7 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'volume_present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_volume_present(self):
         """
         Test to check that a block volume exists.
@@ -230,6 +234,7 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'volume_absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_volume_absent(self):
         """
         Test to check that a block volume exists.
@@ -266,6 +271,7 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'volume_attached' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_volume_attached(self):
         """
         Test to check if a block volume is attached.
@@ -338,6 +344,7 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'volume_detached' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_volume_detached(self):
         """
         Test to check if a block volume is detached.

@@ -15,7 +15,7 @@ import salt.returners.telegram_return as telegram
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class TelegramReturnerTestCase(TestCase, LoaderModuleMockMixin):
@@ -26,6 +26,7 @@ class TelegramReturnerTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {telegram: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_returner(self):
         """
         Test to see if the Telegram returner sends a message

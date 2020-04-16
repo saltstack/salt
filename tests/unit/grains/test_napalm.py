@@ -11,7 +11,7 @@ import tests.support.napalm as napalm_test_support
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 import salt.grains.napalm as napalm_grains  # NOQA
 import salt.proxy.napalm as napalm_proxy  # NOQA
@@ -47,42 +47,52 @@ class NapalmGrainsTestCase(TestCase, LoaderModuleMockMixin):
 
         return {napalm_grains: module_globals}
 
+    @skipIf(True, "FASTTEST skip")
     def test_os(self):
         ret = napalm_grains.getos(proxy=napalm_proxy)
         assert ret["os"] == "cisco"
 
+    @skipIf(True, "FASTTEST skip")
     def test_os_version(self):
         ret = napalm_grains.version(proxy=napalm_proxy)
         assert ret["version"] == "1.2.3"
 
+    @skipIf(True, "FASTTEST skip")
     def test_model(self):
         ret = napalm_grains.model(proxy=napalm_proxy)
         assert ret["model"] == "test_model"
 
+    @skipIf(True, "FASTTEST skip")
     def test_serial(self):
         ret = napalm_grains.serial(proxy=napalm_proxy)
         assert ret["serial"] == "123456"
 
+    @skipIf(True, "FASTTEST skip")
     def test_vendor(self):
         ret = napalm_grains.vendor(proxy=napalm_proxy)
         assert ret["vendor"] == "cisco"
 
+    @skipIf(True, "FASTTEST skip")
     def test_uptime(self):
         ret = napalm_grains.uptime(proxy=napalm_proxy)
         assert ret["uptime"] == "Forever"
 
+    @skipIf(True, "FASTTEST skip")
     def test_interfaces(self):
         ret = napalm_grains.interfaces(proxy=napalm_proxy)
         assert ret["interfaces"] == napalm_test_support.TEST_INTERFACES
 
+    @skipIf(True, "FASTTEST skip")
     def test_username(self):
         ret = napalm_grains.username(proxy=napalm_proxy)
         assert ret["username"] == "admin"
 
+    @skipIf(True, "FASTTEST skip")
     def test_hostname(self):
         ret = napalm_grains.hostname(proxy=napalm_proxy)
         assert ret["hostname"] == "test-device.com"
 
+    @skipIf(True, "FASTTEST skip")
     def test_host(self):
         ret = napalm_grains.host(proxy=napalm_proxy)
         assert ret["host"] == "test-device.com"

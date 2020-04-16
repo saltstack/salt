@@ -54,6 +54,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
 
         return {win_system: modules_globals}
 
+    @skipIf(True, "FASTTEST skip")
     def test_halt(self):
         """
             Test to halt a running system
@@ -62,6 +63,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(win_system, "shutdown", mock):
             self.assertEqual(win_system.halt(), "salt")
 
+    @skipIf(True, "FASTTEST skip")
     def test_init(self):
         """
             Test to change the system runlevel on sysV compatible systems
@@ -69,6 +71,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(win_system.init(3), "Not implemented on Windows at this time.")
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @skipIf(True, "FASTTEST skip")
     def test_poweroff(self):
         """
             Test to poweroff a running system
@@ -78,6 +81,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(win_system.poweroff(), "salt")
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @skipIf(True, "FASTTEST skip")
     def test_reboot(self):
         """
             Test to reboot the system
@@ -88,6 +92,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(win_system.reboot(), True)
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @skipIf(True, "FASTTEST skip")
     def test_reboot_with_timeout_in_minutes(self):
         """
             Test to reboot the system with a timeout
@@ -101,6 +106,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             )
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @skipIf(True, "FASTTEST skip")
     def test_reboot_with_timeout_in_seconds(self):
         """
             Test to reboot the system with a timeout
@@ -114,6 +120,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             )
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @skipIf(True, "FASTTEST skip")
     def test_reboot_with_wait(self):
         """
             Test to reboot the system with a timeout and
@@ -126,6 +133,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             time.assert_called_with(330)
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @skipIf(True, "FASTTEST skip")
     def test_shutdown(self):
         """
             Test to shutdown a running system
@@ -136,6 +144,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(win_system.shutdown(), True)
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @skipIf(True, "FASTTEST skip")
     def test_shutdown_hard(self):
         """
             Test to shutdown a running system with no timeout or warning
@@ -147,6 +156,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             shutdown.assert_called_with(timeout=0)
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @skipIf(True, "FASTTEST skip")
     def test_set_computer_name(self):
         """
             Test to set the Windows computer name
@@ -175,6 +185,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             self.assertFalse(win_system.set_computer_name("salt"))
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @skipIf(True, "FASTTEST skip")
     def test_get_pending_computer_name(self):
         """
             Test to get a pending computer name.
@@ -191,6 +202,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(win_system.get_pending_computer_name(), "salt_pending")
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @skipIf(True, "FASTTEST skip")
     def test_get_computer_name(self):
         """
             Test to get the Windows computer name
@@ -203,6 +215,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             self.assertFalse(win_system.get_computer_name())
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @skipIf(True, "FASTTEST skip")
     def test_set_computer_desc(self):
         """
             Test to set the Windows computer description
@@ -223,6 +236,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             )
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @skipIf(True, "FASTTEST skip")
     def test_get_computer_desc(self):
         """
             Test to get the Windows computer description
@@ -237,6 +251,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             self.assertFalse(win_system.get_computer_desc())
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @skipIf(True, "FASTTEST skip")
     def test_join_domain(self):
         """
             Test to join a computer to an Active Directory domain
@@ -260,6 +275,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                     "Already joined to saltstack",
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_system_time(self):
         """
             Test to get system time
@@ -275,6 +291,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(re.search(r"^\d{2}:\d{2} \w{2}$", win_tm))
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @skipIf(True, "FASTTEST skip")
     def test_set_system_time(self):
         """
             Test to set system time
@@ -286,6 +303,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             self.assertFalse(win_system.set_system_time("11:31:15 AM"))
             self.assertTrue(win_system.set_system_time("11:31:15 AM"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_system_date(self):
         """
             Test to get system date
@@ -294,6 +312,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(win_system.get_system_date(), date)
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @skipIf(True, "FASTTEST skip")
     def test_set_system_date(self):
         """
             Test to set system date
@@ -305,6 +324,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             self.assertFalse(win_system.set_system_date("03-28-13"))
             self.assertTrue(win_system.set_system_date("03-28-13"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_start_time_service(self):
         """
             Test to start the Windows time service
@@ -313,6 +333,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_system.__salt__, {"service.start": mock}):
             self.assertTrue(win_system.start_time_service())
 
+    @skipIf(True, "FASTTEST skip")
     def test_stop_time_service(self):
         """
             Test to stop the windows time service
@@ -321,6 +342,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_system.__salt__, {"service.stop": mock}):
             self.assertTrue(win_system.stop_time_service())
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_hostname(self):
         """
             Test setting a new hostname
@@ -335,6 +357,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             cmd="wmic computersystem where name='MINION' call rename name='NEW'"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_hostname(self):
         """
             Test setting a new hostname
@@ -346,7 +369,6 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         cmd_run_mock.assert_called_once_with(cmd="hostname")
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
-    @skipIf(True, "SLOWTEST skip")
     def test_get_system_info(self):
         fields = [
             "bios_caption",

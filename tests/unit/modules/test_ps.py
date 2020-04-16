@@ -133,22 +133,26 @@ class PsTestCase(TestCase):
             self.mocked_proc.pid = 9999999999
 
     @skipIf(not ps.PSUTIL2, "Only run for psutil 2.x")
+    @skipIf(True, "FASTTEST skip")
     def test__get_proc_cmdline(self):
         cmdline = ["echo", "питон"]
         ret = ps._get_proc_cmdline(DummyProcess(cmdline=cmdline))
         assert ret == cmdline, ret
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_pid_list(self):
         with patch(
             "salt.utils.psutil_compat.pids", MagicMock(return_value=STUB_PID_LIST)
         ):
             self.assertListEqual(STUB_PID_LIST, ps.get_pid_list())
 
+    @skipIf(True, "FASTTEST skip")
     def test_kill_pid(self):
         with patch("salt.utils.psutil_compat.Process") as send_signal_mock:
             ps.kill_pid(0, signal=999)
             self.assertEqual(send_signal_mock.call_args, call(0))
 
+    @skipIf(True, "FASTTEST skip")
     def test_pkill(self):
         with patch("salt.utils.psutil_compat.Process.send_signal"), patch(
             "salt.utils.psutil_compat.process_iter",
@@ -159,6 +163,7 @@ class PsTestCase(TestCase):
             ps.pkill(_get_proc_name(self.mocked_proc), signal=test_signal)
             self.assertEqual(self.mocked_proc.send_signal.call_args, call(test_signal))
 
+    @skipIf(True, "FASTTEST skip")
     def test_pgrep(self):
         with patch(
             "salt.utils.psutil_compat.process_iter",
@@ -169,10 +174,12 @@ class PsTestCase(TestCase):
                 ps.pgrep(_get_proc_name(self.mocked_proc)),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_cpu_percent(self):
         with patch("salt.utils.psutil_compat.cpu_percent", MagicMock(return_value=1)):
             self.assertEqual(ps.cpu_percent(), 1)
 
+    @skipIf(True, "FASTTEST skip")
     def test_cpu_times(self):
         with patch(
             "salt.utils.psutil_compat.cpu_times", MagicMock(return_value=STUB_CPU_TIMES)
@@ -184,6 +191,7 @@ class PsTestCase(TestCase):
     @skipIf(
         HAS_PSUTIL_VERSION is False, "psutil 0.6.0 or greater is required for this test"
     )
+    @skipIf(True, "FASTTEST skip")
     def test_virtual_memory(self):
         with patch(
             "salt.utils.psutil_compat.virtual_memory",
@@ -203,6 +211,7 @@ class PsTestCase(TestCase):
     @skipIf(
         HAS_PSUTIL_VERSION is False, "psutil 0.6.0 or greater is required for this test"
     )
+    @skipIf(True, "FASTTEST skip")
     def test_swap_memory(self):
         with patch(
             "salt.utils.psutil_compat.swap_memory",
@@ -220,6 +229,7 @@ class PsTestCase(TestCase):
                 ps.swap_memory(),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_disk_partitions(self):
         with patch(
             "salt.utils.psutil_compat.disk_partitions",
@@ -235,6 +245,7 @@ class PsTestCase(TestCase):
                 ps.disk_partitions()[0],
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_disk_usage(self):
         with patch(
             "salt.utils.psutil_compat.disk_usage",
@@ -245,6 +256,7 @@ class PsTestCase(TestCase):
                 ps.disk_usage("DUMMY_PATH"),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_disk_partition_usage(self):
         with patch(
             "salt.utils.psutil_compat.disk_partitions",
@@ -260,6 +272,7 @@ class PsTestCase(TestCase):
                 ps.disk_partitions()[0],
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_network_io_counters(self):
         with patch(
             "salt.utils.psutil_compat.net_io_counters",
@@ -279,6 +292,7 @@ class PsTestCase(TestCase):
                 ps.network_io_counters(),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_disk_io_counters(self):
         with patch(
             "salt.utils.psutil_compat.disk_io_counters",
@@ -296,6 +310,7 @@ class PsTestCase(TestCase):
                 ps.disk_io_counters(),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_users(self):
         with patch(
             "salt.utils.psutil_compat.users", MagicMock(return_value=[STUB_USER])

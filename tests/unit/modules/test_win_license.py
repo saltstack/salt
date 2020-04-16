@@ -9,13 +9,14 @@ import salt.modules.win_license as win_license
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class LicenseTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {win_license: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed(self):
         """
             Test to see if the given license key is installed
@@ -26,6 +27,7 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
             mock.assert_called_once_with(r"cscript C:\Windows\System32\slmgr.vbs /dli")
             self.assertTrue(out)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_diff(self):
         """
             Test to see if the given license key is installed when the key is different
@@ -36,6 +38,7 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
             mock.assert_called_once_with(r"cscript C:\Windows\System32\slmgr.vbs /dli")
             self.assertFalse(out)
 
+    @skipIf(True, "FASTTEST skip")
     def test_install(self):
         """
             Test installing the given product key
@@ -48,6 +51,7 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
                 "AAAAA-AAAAA-AAAAA-AAAA-AAAAA-ABCDE"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_uninstall(self):
         """
             Test uninstalling the given product key
@@ -57,6 +61,7 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
             win_license.uninstall()
             mock.assert_called_once_with(r"cscript C:\Windows\System32\slmgr.vbs /upk")
 
+    @skipIf(True, "FASTTEST skip")
     def test_activate(self):
         """
             Test activating the current product key
@@ -66,6 +71,7 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
             win_license.activate()
             mock.assert_called_once_with(r"cscript C:\Windows\System32\slmgr.vbs /ato")
 
+    @skipIf(True, "FASTTEST skip")
     def test_licensed(self):
         """
             Test checking if the minion is licensed
@@ -75,6 +81,7 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
             win_license.licensed()
             mock.assert_called_once_with(r"cscript C:\Windows\System32\slmgr.vbs /dli")
 
+    @skipIf(True, "FASTTEST skip")
     def test_info(self):
         """
             Test getting the info about the current license key

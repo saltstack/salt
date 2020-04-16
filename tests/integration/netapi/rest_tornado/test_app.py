@@ -55,6 +55,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.application = application
         return application
 
+    @skipIf(True, "FASTTEST skip")
     def test_root(self):
         """
         Test the root path which returns the list of clients we support
@@ -68,7 +69,6 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         )
         self.assertEqual(response_obj["return"], "Welcome")
 
-    @skipIf(True, "SLOWTEST skip")
     def test_post_no_auth(self):
         """
         Test post with no auth token, should 401
@@ -117,6 +117,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
             response_obj["return"][0], {"minion": True, "sub_minion": True}
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_simple_local_post_no_tgt(self):
         """
         POST job with invalid tgt
@@ -175,6 +176,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
             response_obj["return"][0], {"minion": True, "sub_minion": True}
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_simple_local_post_invalid_request(self):
         """
         Test a basic API of /
@@ -194,6 +196,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertEqual(response.code, 400)
 
     # local_async tests
+    @skipIf(True, "FASTTEST skip")
     def test_simple_local_async_post(self):
         low = [{"client": "local_async", "tgt": "*", "fun": "test.ping"}]
         response = self.fetch(
@@ -223,6 +226,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertIn("jid", ret[0])
         self.assertEqual(ret[0]["minions"], sorted(["minion", "sub_minion"]))
 
+    @skipIf(True, "FASTTEST skip")
     def test_multi_local_async_post(self):
         low = [
             {"client": "local_async", "tgt": "*", "fun": "test.ping"},
@@ -258,7 +262,6 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertEqual(ret[0]["minions"], sorted(["minion", "sub_minion"]))
         self.assertEqual(ret[1]["minions"], sorted(["minion", "sub_minion"]))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_multi_local_async_post_multitoken(self):
         low = [
             {"client": "local_async", "tgt": "*", "fun": "test.ping"},
@@ -308,7 +311,6 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertEqual(ret[0]["minions"], sorted(["minion", "sub_minion"]))
         self.assertEqual(ret[1]["minions"], sorted(["minion", "sub_minion"]))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_simple_local_async_post_no_tgt(self):
         low = [
             {"client": "local_async", "tgt": "minion_we_dont_have", "fun": "test.ping"}
@@ -361,7 +363,6 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertEqual(response_obj["return"], [{"minion": True, "sub_minion": True}])
 
     # runner tests
-    @skipIf(True, "SLOWTEST skip")
     def test_simple_local_runner_post(self):
         low = [{"client": "runner", "fun": "manage.up"}]
         response = self.fetch(
@@ -390,6 +391,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         )
 
     # runner_async tests
+    @skipIf(True, "FASTTEST skip")
     def test_simple_local_runner_async_post(self):
         low = [{"client": "runner_async", "fun": "manage.up"}]
         response = self.fetch(
@@ -439,7 +441,6 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
             self.assertEqual(minion_id, grains["id"])
 
     @skipIf(True, "to be re-enabled when #23623 is merged")
-    @skipIf(True, "SLOWTEST skip")
     def test_get(self):
         response = self.fetch(
             "/minions/minion",
@@ -453,6 +454,7 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
         # check a single grain
         self.assertEqual(response_obj["return"][0]["minion"]["id"], "minion")
 
+    @skipIf(True, "FASTTEST skip")
     def test_post(self):
         low = [{"tgt": "*minion", "fun": "test.ping"}]
         response = self.fetch(
@@ -474,7 +476,6 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertIn("jid", ret[0])
         self.assertEqual(ret[0]["minions"], sorted(["minion", "sub_minion"]))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_post_with_client(self):
         # get a token for this test
         low = [{"client": "local_async", "tgt": "*minion", "fun": "test.ping"}]
@@ -497,7 +498,6 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertIn("jid", ret[0])
         self.assertEqual(ret[0]["minions"], sorted(["minion", "sub_minion"]))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_post_with_incorrect_client(self):
         """
         The /minions endpoint is asynchronous only, so if you try something else
@@ -529,7 +529,6 @@ class TestJobsSaltAPIHandler(_SaltnadoIntegrationTestCase):
         return application
 
     @skipIf(True, "to be re-enabled when #23623 is merged")
-    @skipIf(True, "SLOWTEST skip")
     def test_get(self):
         # test with no JID
         self.http_client.fetch(
@@ -586,7 +585,6 @@ class TestRunSaltAPIHandler(_SaltnadoIntegrationTestCase):
         return application
 
     @skipIf(True, "to be re-enabled when #23623 is merged")
-    @skipIf(True, "SLOWTEST skip")
     def test_get(self):
         low = [{"client": "local", "tgt": "*", "fun": "test.ping"}]
         response = self.fetch(
@@ -616,7 +614,6 @@ class TestEventsSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.events_to_fire = 0
         return application
 
-    @skipIf(True, "SLOWTEST skip")
     def test_get(self):
         self.events_to_fire = 5
         response = self.fetch(
@@ -666,6 +663,7 @@ class TestWebhookSaltAPIHandler(_SaltnadoIntegrationTestCase):
         return application
 
     @skipIf(True, "Skipping until we can devote more resources to debugging this test.")
+    @skipIf(True, "FASTTEST skip")
     def test_post(self):
         self._future_resolved = threading.Event()
         try:

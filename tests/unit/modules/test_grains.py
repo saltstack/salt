@@ -19,7 +19,7 @@ from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
@@ -35,6 +35,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_filter_by(self):
         with patch.dict(
             grainsmod.__grains__,
@@ -190,6 +191,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
                 ),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_append_not_a_list(self):
         # Failing append to an existing string, without convert
         with patch.dict(grainsmod.__grains__, {"b": "bval"}):
@@ -203,6 +205,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(res, "The key b is not a valid list")
                 self.assertEqual(grainsmod.__grains__, {"b": {"b1": "bval1"}})
 
+    @skipIf(True, "FASTTEST skip")
     def test_append_already_in_list(self):
         # Append an existing value
         with patch.dict(grainsmod.__grains__, {"a_list": ["a", "b", "c"], "b": "bval"}):
@@ -212,6 +215,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
                 grainsmod.__grains__, {"a_list": ["a", "b", "c"], "b": "bval"}
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_append_ok(self):
         # Append to an existing list
         with patch.dict(grainsmod.__grains__, {"a_list": ["a", "b", "c"], "b": "bval"}):
@@ -239,6 +243,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(res, {"b": [{"b1": "bval1"}, "d"]})
             self.assertEqual(grainsmod.__grains__, {"b": [{"b1": "bval1"}, "d"]})
 
+    @skipIf(True, "FASTTEST skip")
     def test_append_nested_not_a_list(self):
         # Failing append to an existing string, without convert
         with patch.dict(grainsmod.__grains__, {"a": {"b": "bval"}}):
@@ -252,6 +257,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(res, "The key a:b is not a valid list")
             self.assertEqual(grainsmod.__grains__, {"a": {"b": {"b1": "bval1"}}})
 
+    @skipIf(True, "FASTTEST skip")
     def test_append_nested_already_in_list(self):
         # Append an existing value
         with patch.dict(
@@ -263,6 +269,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
                 grainsmod.__grains__, {"a": {"a_list": ["a", "b", "c"], "b": "bval"}}
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_append_nested_ok(self):
         # Append to an existing list
         with patch.dict(
@@ -295,6 +302,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(res, {"a": {"b": [{"b1": "bval1"}, "d"]}})
             self.assertEqual(grainsmod.__grains__, {"a": {"b": [{"b1": "bval1"}, "d"]}})
 
+    @skipIf(True, "FASTTEST skip")
     def test_append_to_an_element_of_a_list(self):
         # Append to an element in a list
         # It currently fails silently
@@ -303,6 +311,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(res, {"a": ["b", "c"]})
             self.assertEqual(grainsmod.__grains__, {"a": ["b", "c"]})
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_value_already_set(self):
         # Set a grain to the same simple value
         with patch.dict(grainsmod.__grains__, {"a": 12, "c": 8}):
@@ -329,6 +338,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
                 grainsmod.__grains__, {"a": "aval", "b": {"nested": "val"}, "c": 8}
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_fail_replacing_existing_complex_key(self):
         # Fails to set a complex value without 'force'
         with patch.dict(grainsmod.__grains__, {"a": "aval", "c": 8}):
@@ -368,6 +378,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
                 {"a": "aval", "b": ["l1", {"l2": ["val1"]}], "c": 8},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_nested_fails_replace_simple_value(self):
         # Fails to replace a simple value with a new dictionary consisting
         # of the specified key and value
@@ -382,6 +393,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(grainsmod.__grains__, {"a": "aval", "b": "l1", "c": 8})
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_simple_value(self):
         with patch.dict(grainsmod.__grains__, {"a": ["b", "c"], "c": 8}):
             res = grainsmod.set("b", "bval")
@@ -391,6 +403,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
                 grainsmod.__grains__, {"a": ["b", "c"], "b": "bval", "c": 8}
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_replace_value(self):
         with patch.dict(grainsmod.__grains__, {"a": "aval", "c": 8}):
             res = grainsmod.set("a", 12)
@@ -398,6 +411,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(res["changes"], {"a": 12})
             self.assertEqual(grainsmod.__grains__, {"a": 12, "c": 8})
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_None_ok(self):
         with patch.dict(grainsmod.__grains__, {"a": "aval", "c": 8}):
             res = grainsmod.set("b", None)
@@ -405,6 +419,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(res["changes"], {"b": None})
             self.assertEqual(grainsmod.__grains__, {"a": "aval", "b": None, "c": 8})
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_None_ok_destructive(self):
         with patch.dict(grainsmod.__grains__, {"a": "aval", "c": 8}):
             res = grainsmod.set("b", None, destructive=True)
@@ -412,6 +427,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(res["changes"], {"b": None})
             self.assertEqual(grainsmod.__grains__, {"a": "aval", "c": 8})
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_None_replace_ok(self):
         with patch.dict(grainsmod.__grains__, {"a": "aval", "c": 8}):
             res = grainsmod.set("a", None)
@@ -419,6 +435,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(res["changes"], {"a": None})
             self.assertEqual(grainsmod.__grains__, {"a": None, "c": 8})
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_None_force_destructive(self):
         with patch.dict(grainsmod.__grains__, {"a": "aval", "c": 8}):
             res = grainsmod.set("a", None, force=True, destructive=True)
@@ -426,6 +443,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(res["changes"], {"a": None})
             self.assertEqual(grainsmod.__grains__, {"c": 8})
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_replace_value_was_complex_force(self):
         with patch.dict(grainsmod.__grains__, {"a": ["item", 12], "c": 8}):
             res = grainsmod.set("a", "aval", force=True)
@@ -433,6 +451,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(res["changes"], {"a": "aval"})
             self.assertEqual(grainsmod.__grains__, {"a": "aval", "c": 8})
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_complex_value_force(self):
         with patch.dict(grainsmod.__grains__, {"a": "aval", "c": 8}):
             res = grainsmod.set("a", ["item", 12], force=True)
@@ -440,6 +459,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(res["changes"], {"a": ["item", 12]})
             self.assertEqual(grainsmod.__grains__, {"a": ["item", 12], "c": 8})
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_nested_create(self):
         with patch.dict(grainsmod.__grains__, {"a": "aval", "c": 8}):
             res = grainsmod.set("b,nested", "val", delimiter=",")
@@ -449,6 +469,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
                 grainsmod.__grains__, {"a": "aval", "b": {"nested": "val"}, "c": 8}
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_nested_update_dict(self):
         with patch.dict(
             grainsmod.__grains__, {"a": "aval", "b": {"nested": "val"}, "c": 8}
@@ -460,6 +481,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
                 grainsmod.__grains__, {"a": "aval", "b": {"nested": "val2"}, "c": 8}
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_nested_update_dict_remove_key(self):
         with patch.dict(
             grainsmod.__grains__, {"a": "aval", "b": {"nested": "val"}, "c": 8}
@@ -469,6 +491,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(res["changes"], {"b": {}})
             self.assertEqual(grainsmod.__grains__, {"a": "aval", "b": {}, "c": 8})
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_nested_update_dict_new_key(self):
         with patch.dict(
             grainsmod.__grains__, {"a": "aval", "b": {"nested": "val"}, "c": 8}
@@ -481,6 +504,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
                 {"a": "aval", "b": {"b2": "val2", "nested": "val"}, "c": 8},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_nested_list_replace_key(self):
         with patch.dict(
             grainsmod.__grains__, {"a": "aval", "b": ["l1", "l2", "l3"], "c": 8}
@@ -493,6 +517,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
                 {"a": "aval", "b": ["l1", {"l2": "val2"}, "l3"], "c": 8},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_nested_list_update_dict_key(self):
         with patch.dict(
             grainsmod.__grains__, {"a": "aval", "b": ["l1", {"l2": "val1"}], "c": 8}
@@ -504,6 +529,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
                 grainsmod.__grains__, {"a": "aval", "b": ["l1", {"l2": "val2"}], "c": 8}
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_nested_list_update_dict_key_overwrite(self):
         with patch.dict(
             grainsmod.__grains__, {"a": "aval", "b": ["l1", {"l2": ["val1"]}], "c": 8}
@@ -515,6 +541,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
                 grainsmod.__grains__, {"a": "aval", "b": ["l1", {"l2": "val2"}], "c": 8}
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_nested_list_append_dict_key(self):
         with patch.dict(
             grainsmod.__grains__, {"a": "aval", "b": ["l1", {"l2": "val2"}], "c": 8}
@@ -529,6 +556,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
                 {"a": "aval", "b": ["l1", {"l2": "val2"}, {"l3": "val3"}], "c": 8},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_nested_existing_value_is_the_key(self):
         with patch.dict(grainsmod.__grains__, {"a": "aval", "b": "l3", "c": 8}):
             res = grainsmod.set("b,l3", "val3", delimiter=",")
@@ -538,6 +566,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
                 grainsmod.__grains__, {"a": "aval", "b": {"l3": "val3"}, "c": 8}
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_nested_existing_value_overwrite(self):
         with patch.dict(grainsmod.__grains__, {"a": "aval", "b": "l1", "c": 8}):
             res = grainsmod.set("b,l3", "val3", delimiter=",", force=True)
@@ -547,6 +576,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
                 grainsmod.__grains__, {"a": "aval", "b": {"l3": "val3"}, "c": 8}
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_deeply_nested_update(self):
         with patch.dict(
             grainsmod.__grains__,
@@ -562,6 +592,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
                 {"a": "aval", "b": {"l1": ["l21", "l22", {"l23": "val"}]}, "c": 8},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_deeply_nested_create(self):
         with patch.dict(
             grainsmod.__grains__,
@@ -598,6 +629,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_ordered(self):
         with patch.dict(
             grainsmod.__grains__,
@@ -642,6 +674,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
                 )
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_unordered(self):
         with patch.dict(
             grainsmod.__grains__,
@@ -677,6 +710,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
                 )
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_equals(self):
         with patch.dict(
             grainsmod.__grains__,

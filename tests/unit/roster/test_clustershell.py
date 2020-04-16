@@ -28,6 +28,7 @@ class ClusterShellTestCase(TestCase):
     Test cases for clustershell roster
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_targets(self):
         mock_socket = MagicMock()
         mock_nodeset = MagicMock()

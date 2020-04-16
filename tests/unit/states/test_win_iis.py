@@ -14,7 +14,7 @@ import salt.states.win_iis as win_iis
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class WinIisTestCase(TestCase, LoaderModuleMockMixin):
@@ -35,6 +35,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
             "result": result,
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_webconfiguration_settings_no_settings(self):
         name = "IIS"
         settings = {}
@@ -44,6 +45,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         actual_ret = win_iis.webconfiguration_settings(name, settings)
         self.assertEqual(expected_ret, actual_ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_webconfiguration_settings_collection_failure(self):
         name = "IIS:\\"
         settings = {
@@ -97,6 +99,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
             actual_ret = win_iis.webconfiguration_settings(name, settings)
         self.assertEqual(expected_ret, actual_ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_webconfiguration_settings_collection(self):
         name = "IIS:\\"
         settings = {

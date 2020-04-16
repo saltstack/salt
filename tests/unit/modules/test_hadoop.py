@@ -12,7 +12,7 @@ import salt.modules.hadoop as hadoop
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class HadoopTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class HadoopTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {hadoop: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_version(self):
         """
         Test for Return version from hadoop version
@@ -31,6 +32,7 @@ class HadoopTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(hadoop.__salt__, {"cmd.run": mock}):
             self.assertEqual(hadoop.version(), "B")
 
+    @skipIf(True, "FASTTEST skip")
     def test_dfs(self):
         """
         Test for Execute a command on DFS
@@ -40,6 +42,7 @@ class HadoopTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(hadoop.dfs(), "Error: command must be provided")
 
+    @skipIf(True, "FASTTEST skip")
     def test_dfs_present(self):
         """
         Test for Check if a file or directory is present on the distributed FS.
@@ -50,6 +53,7 @@ class HadoopTestCase(TestCase, LoaderModuleMockMixin):
             self.assertFalse(hadoop.dfs_present("path"))
             self.assertTrue(hadoop.dfs_present("path"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_dfs_absent(self):
         """
         Test for Check if a file or directory is absent on the distributed FS.
@@ -60,6 +64,7 @@ class HadoopTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(hadoop.dfs_absent("path"))
             self.assertFalse(hadoop.dfs_absent("path"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_namenode_format(self):
         """
         Test for Format a name node

@@ -11,7 +11,7 @@ import salt.states.boto_route53 as boto_route53
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
 
     # 'present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_present(self):
         """
         Test to ensure the Route53 record is present.
@@ -68,6 +69,7 @@ class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
 
     # 'absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
         Test to ensure the Route53 record is deleted.

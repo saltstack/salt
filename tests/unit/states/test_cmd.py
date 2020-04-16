@@ -14,7 +14,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class CmdTestCase(TestCase, LoaderModuleMockMixin):
@@ -27,6 +27,7 @@ class CmdTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'mod_run_check' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_mod_run_check(self):
         """
         Test to execute the onlyif and unless logic.
@@ -94,6 +95,7 @@ class CmdTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'wait' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_wait(self):
         """
         Test to run the given command only if the watch statement calls it.
@@ -106,6 +108,7 @@ class CmdTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'wait_script' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_wait_script(self):
         """
         Test to download a script from a remote source and execute it
@@ -119,6 +122,7 @@ class CmdTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'run' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_run(self):
         """
         Test to run a command if certain circumstances are met.
@@ -160,6 +164,7 @@ class CmdTestCase(TestCase, LoaderModuleMockMixin):
                     ret.update({"comment": comt, "result": True, "skip_watch": True})
                     self.assertDictEqual(cmd.run(name, onlyif=""), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_root(self):
         """
         Test to run a command with a different root
@@ -186,6 +191,7 @@ class CmdTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'script' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_script(self):
         """
         Test to download a script and execute it with specified arguments.
@@ -236,6 +242,7 @@ class CmdTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'call' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_call(self):
         """
         Test to invoke a pre-defined Python function with arguments
@@ -282,6 +289,7 @@ class CmdTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'wait_call' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_wait_call(self):
         """
         Test to run wait_call.
@@ -295,6 +303,7 @@ class CmdTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'mod_watch' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_mod_watch(self):
         """
         Test to execute a cmd function based on a watch call

@@ -14,7 +14,7 @@ import salt.modules.genesis as genesis
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class GenesisTestCase(TestCase, LoaderModuleMockMixin):
@@ -25,6 +25,7 @@ class GenesisTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {genesis: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_bootstrap(self):
         """
         Test for Create an image for a specific platform.
@@ -180,6 +181,7 @@ class GenesisTestCase(TestCase, LoaderModuleMockMixin):
                     "root", img_format="dir", exclude_pkgs=[], pkgs=[]
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_avail_platforms(self):
         """
         Test for Return which platforms are available
@@ -187,6 +189,7 @@ class GenesisTestCase(TestCase, LoaderModuleMockMixin):
         with patch("salt.utils.path.which", MagicMock(return_value=False)):
             self.assertFalse(genesis.avail_platforms()["deb"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_pack(self):
         """
         Test for Pack up a directory structure, into a specific format
@@ -194,6 +197,7 @@ class GenesisTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(genesis, "_tar", return_value="tar"):
             self.assertEqual(genesis.pack("name", "root"), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_unpack(self):
         """
         Test for Unpack an image into a directory structure

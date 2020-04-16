@@ -16,10 +16,11 @@ from __future__ import absolute_import, unicode_literals
 import salt.utils.immutabletypes as immutabletypes
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ImmutableTypesTestCase(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_immutablelist_sum(self):
         lst = [4, 5, 6]
         imt = immutabletypes.ImmutableList([1, 2, 3])
@@ -28,6 +29,7 @@ class ImmutableTypesTestCase(TestCase):
         __radd__ = lst + imt
         self.assertEqual(__radd__, [4, 5, 6, 1, 2, 3])
 
+    @skipIf(True, "FASTTEST skip")
     def test_freeze_list_sum(self):
         lst = [4, 5, 6]
         imt = immutabletypes.freeze([1, 2, 3])
@@ -36,6 +38,7 @@ class ImmutableTypesTestCase(TestCase):
         __radd__ = lst + imt
         self.assertEqual(__radd__, [4, 5, 6, 1, 2, 3])
 
+    @skipIf(True, "FASTTEST skip")
     def test_immutablelist_imutability(self):
         frozen = immutabletypes.freeze([1, 2, 3])
         with self.assertRaises(TypeError):
@@ -44,6 +47,7 @@ class ImmutableTypesTestCase(TestCase):
         with self.assertRaises(TypeError):
             frozen[1:-1] = 5
 
+    @skipIf(True, "FASTTEST skip")
     def test_immutabledict_imutability(self):
         data = {
             1: 1,

@@ -11,7 +11,7 @@ import salt.states.pkgng as pkgng
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PkgngTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class PkgngTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'update_packaging_site' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_packaging_site(self):
         """
         Test to execute update_packaging_site.

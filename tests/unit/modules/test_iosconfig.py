@@ -14,7 +14,7 @@ from salt.utils.odict import OrderedDict
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class TestModulesIOSConfig(TestCase, LoaderModuleMockMixin):
@@ -77,6 +77,7 @@ class TestModulesIOSConfig(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {}
 
+    @skipIf(True, "FASTTEST skip")
     def test_tree(self):
         running_config_tree = OrderedDict(
             [
@@ -115,6 +116,7 @@ class TestModulesIOSConfig(TestCase, LoaderModuleMockMixin):
         tree = iosconfig.tree(config=self.running_config)
         self.assertEqual(tree, running_config_tree)
 
+    @skipIf(True, "FASTTEST skip")
     def test_clean(self):
         clean_running_config = textwrap.dedent(
             """\
@@ -135,6 +137,7 @@ class TestModulesIOSConfig(TestCase, LoaderModuleMockMixin):
         clean = iosconfig.clean(config=self.running_config)
         self.assertEqual(clean, clean_running_config)
 
+    @skipIf(True, "FASTTEST skip")
     def test_merge_tree(self):
         expected_merge_tree = OrderedDict(
             [
@@ -186,6 +189,7 @@ class TestModulesIOSConfig(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(merge_tree, expected_merge_tree)
 
+    @skipIf(True, "FASTTEST skip")
     def test_merge_text(self):
         extected_merge_text = textwrap.dedent(
             """\
@@ -213,6 +217,7 @@ class TestModulesIOSConfig(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(merge_text, extected_merge_text)
 
+    @skipIf(True, "FASTTEST skip")
     def test_merge_diff(self):
         expected_diff = textwrap.dedent(
             """\
@@ -232,6 +237,7 @@ class TestModulesIOSConfig(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(diff.splitlines()[2:], expected_diff.splitlines())
 
+    @skipIf(True, "FASTTEST skip")
     def test_diff_text(self):
         expected_diff = textwrap.dedent(
             """\

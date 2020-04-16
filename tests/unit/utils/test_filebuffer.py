@@ -17,10 +17,11 @@ from salt.utils.filebuffer import BufferedReader, InvalidFileMode
 from tests.support.paths import BASE_FILES
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class TestFileBuffer(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_read_only_mode(self):
         with self.assertRaises(InvalidFileMode):
             BufferedReader("/tmp/foo", mode="a")
@@ -34,6 +35,7 @@ class TestFileBuffer(TestCase):
         with self.assertRaises(InvalidFileMode):
             BufferedReader("/tmp/foo", mode="wb")
 
+    @skipIf(True, "FASTTEST skip")
     def test_issue_51309(self):
         """
         https://github.com/saltstack/salt/issues/51309

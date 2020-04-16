@@ -14,6 +14,7 @@ from tests.support.unit import TestCase, skipIf
 class MysqlPillarTestCase(TestCase):
     maxDiff = None
 
+    @skipIf(True, "FASTTEST skip")
     def test_001_extract_queries_legacy(self):
         return_data = mysql.MySQLExtPillar()
         args, kwargs = ["SELECT blah"], {}
@@ -34,6 +35,7 @@ class MysqlPillarTestCase(TestCase):
             qbuffer,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_002_extract_queries_list(self):
         return_data = mysql.MySQLExtPillar()
         args, kwargs = (
@@ -147,6 +149,7 @@ class MysqlPillarTestCase(TestCase):
             qbuffer,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_003_extract_queries_kwarg(self):
         return_data = mysql.MySQLExtPillar()
         args, kwargs = (
@@ -238,6 +241,7 @@ class MysqlPillarTestCase(TestCase):
             qbuffer,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_004_extract_queries_mixed(self):
         return_data = mysql.MySQLExtPillar()
         args, kwargs = (
@@ -319,6 +323,7 @@ class MysqlPillarTestCase(TestCase):
             qbuffer,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_005_extract_queries_bogus_list(self):
         # This test is specifically checking that empty queries are dropped
         return_data = mysql.MySQLExtPillar()
@@ -427,6 +432,7 @@ class MysqlPillarTestCase(TestCase):
             qbuffer,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_006_extract_queries_bogus_kwargs(self):
         # this test is cut down as most of the path matches test_*_bogus_list
         return_data = mysql.MySQLExtPillar()
@@ -458,6 +464,7 @@ class MysqlPillarTestCase(TestCase):
             qbuffer,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_011_enter_root(self):
         return_data = mysql.MySQLExtPillar()
         return_data.enter_root("test")
@@ -465,6 +472,7 @@ class MysqlPillarTestCase(TestCase):
         return_data.enter_root(None)
         self.assertEqual(return_data.result, return_data.focus)
 
+    @skipIf(True, "FASTTEST skip")
     def test_021_process_fields(self):
         return_data = mysql.MySQLExtPillar()
         return_data.process_fields(["a", "b"], 0)
@@ -489,6 +497,7 @@ class MysqlPillarTestCase(TestCase):
         self.assertEqual(return_data.num_fields, 4)
         self.assertEqual(return_data.depth, 3)
 
+    @skipIf(True, "FASTTEST skip")
     def test_111_process_results_legacy(self):
         return_data = mysql.MySQLExtPillar()
         return_data.process_fields(["a", "b"], 0)
@@ -496,6 +505,7 @@ class MysqlPillarTestCase(TestCase):
         return_data.process_results([[1, 2]])
         self.assertEqual({1: 2}, return_data.result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_112_process_results_legacy_multiple(self):
         return_data = mysql.MySQLExtPillar()
         return_data.process_fields(["a", "b"], 0)
@@ -503,6 +513,7 @@ class MysqlPillarTestCase(TestCase):
         return_data.process_results([[1, 2], [3, 4], [5, 6]])
         self.assertEqual({1: 2, 3: 4, 5: 6}, return_data.result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_121_process_results_depth_0(self):
         return_data = mysql.MySQLExtPillar()
         return_data.process_fields(["a", "b", "c", "d"], 0)
@@ -511,6 +522,7 @@ class MysqlPillarTestCase(TestCase):
         return_data.process_results([[1, 2, 3, 4], [5, 6, 7, 8]])
         self.assertEqual({1: {2: {3: 4}}, 5: {6: {7: 8}}}, return_data.result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_122_process_results_depth_1(self):
         return_data = mysql.MySQLExtPillar()
         return_data.process_fields(["a", "b", "c", "d"], 1)
@@ -522,6 +534,7 @@ class MysqlPillarTestCase(TestCase):
             return_data.result,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_123_process_results_depth_2(self):
         return_data = mysql.MySQLExtPillar()
         return_data.process_fields(["a", "b", "c", "d"], 2)
@@ -532,6 +545,7 @@ class MysqlPillarTestCase(TestCase):
             {1: {2: {"c": 3, "d": 4}}, 5: {6: {"c": 7, "d": 8}}}, return_data.result
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_124_process_results_depth_3(self):
         return_data = mysql.MySQLExtPillar()
         return_data.process_fields(["a", "b", "c", "d"], 3)
@@ -540,6 +554,7 @@ class MysqlPillarTestCase(TestCase):
         return_data.process_results([[1, 2, 3, 4], [5, 6, 7, 8]])
         self.assertEqual({1: {2: {3: 4}}, 5: {6: {7: 8}}}, return_data.result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_125_process_results_depth_4(self):
         return_data = mysql.MySQLExtPillar()
         return_data.process_fields(["a", "b", "c", "d"], 4)
@@ -548,6 +563,7 @@ class MysqlPillarTestCase(TestCase):
         return_data.process_results([[1, 2, 3, 4], [5, 6, 7, 8]])
         self.assertEqual({1: {2: {3: 4}}, 5: {6: {7: 8}}}, return_data.result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_131_process_results_overwrite_legacy_multiple(self):
         return_data = mysql.MySQLExtPillar()
         return_data.process_fields(["a", "b"], 0)
@@ -555,6 +571,7 @@ class MysqlPillarTestCase(TestCase):
         return_data.process_results([[1, 2], [3, 4], [1, 6]])
         self.assertEqual({1: 6, 3: 4}, return_data.result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_132_process_results_merge_depth_0(self):
         return_data = mysql.MySQLExtPillar()
         return_data.process_fields(["a", "b", "c", "d"], 0)
@@ -563,6 +580,7 @@ class MysqlPillarTestCase(TestCase):
         return_data.process_results([[1, 2, 3, 4], [1, 6, 7, 8]])
         self.assertEqual({1: {2: {3: 4}, 6: {7: 8}}}, return_data.result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_133_process_results_overwrite_depth_0(self):
         return_data = mysql.MySQLExtPillar()
         return_data.process_fields(["a", "b", "c", "d"], 0)
@@ -571,6 +589,7 @@ class MysqlPillarTestCase(TestCase):
         return_data.process_results([[1, 2, 3, 4], [1, 2, 3, 8]])
         self.assertEqual({1: {2: {3: 8}}}, return_data.result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_134_process_results_deepmerge_depth_0(self):
         return_data = mysql.MySQLExtPillar()
         return_data.process_fields(["a", "b", "c", "d"], 0)
@@ -579,6 +598,7 @@ class MysqlPillarTestCase(TestCase):
         return_data.process_results([[1, 2, 3, 4], [1, 2, 7, 8]])
         self.assertEqual({1: {2: {3: 4, 7: 8}}}, return_data.result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_135_process_results_overwrite_depth_1(self):
         return_data = mysql.MySQLExtPillar()
         return_data.process_fields(["a", "b", "c", "d"], 1)
@@ -587,6 +607,7 @@ class MysqlPillarTestCase(TestCase):
         return_data.process_results([[1, 2, 3, 4], [1, 6, 7, 8]])
         self.assertEqual({1: {"b": 6, "c": 7, "d": 8}}, return_data.result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_136_process_results_merge_depth_2(self):
         return_data = mysql.MySQLExtPillar()
         return_data.process_fields(["a", "b", "c", "d"], 2)
@@ -597,6 +618,7 @@ class MysqlPillarTestCase(TestCase):
             {1: {2: {"c": 3, "d": 4}, 6: {"c": 7, "d": 8}}}, return_data.result
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_137_process_results_overwrite_depth_2(self):
         return_data = mysql.MySQLExtPillar()
         return_data.process_fields(["a", "b", "c", "d"], 2)
@@ -605,6 +627,7 @@ class MysqlPillarTestCase(TestCase):
         return_data.process_results([[1, 2, 3, 4], [1, 2, 7, 8]])
         self.assertEqual({1: {2: {"c": 7, "d": 8}}}, return_data.result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_201_process_results_complexity_multiresults(self):
         return_data = mysql.MySQLExtPillar()
         return_data.process_fields(["a", "b", "c", "d"], 2)
@@ -614,6 +637,7 @@ class MysqlPillarTestCase(TestCase):
         return_data.process_results([[1, 2, 7, 8]])
         self.assertEqual({1: {2: {"c": 7, "d": 8}}}, return_data.result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_202_process_results_complexity_as_list(self):
         return_data = mysql.MySQLExtPillar()
         return_data.process_fields(["a", "b", "c", "d"], 2)
@@ -624,6 +648,7 @@ class MysqlPillarTestCase(TestCase):
         return_data.process_results([[1, 2, 7, 8]])
         self.assertEqual({1: {2: {"c": [3, 7], "d": [4, 8]}}}, return_data.result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_203_process_results_complexity_as_list_deeper(self):
         return_data = mysql.MySQLExtPillar()
         return_data.process_fields(["a", "b", "c", "d"], 0)
@@ -634,6 +659,7 @@ class MysqlPillarTestCase(TestCase):
         return_data.process_results([[1, 2, 3, 8]])
         self.assertEqual({1: {2: {3: [4, 8]}}}, return_data.result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_204_process_results_complexity_as_list_mismatch_depth(self):
         return_data = mysql.MySQLExtPillar()
         return_data.as_list = True
@@ -646,6 +672,7 @@ class MysqlPillarTestCase(TestCase):
         return_data.process_results([[1, 2, 3, 6, 7]])
         self.assertEqual({1: {2: {3: [4, 5, {6: 7}]}}}, return_data.result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_205_process_results_complexity_as_list_mismatch_depth_reversed(self):
         return_data = mysql.MySQLExtPillar()
         return_data.as_list = True
@@ -659,6 +686,7 @@ class MysqlPillarTestCase(TestCase):
         return_data.process_results([[1, 2, 3, 5]])
         self.assertEqual({1: {2: {3: [{6: 7, 8: 9}, 4, 5]}}}, return_data.result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_206_process_results_complexity_as_list_mismatch_depth_weird_order(self):
         return_data = mysql.MySQLExtPillar()
         return_data.as_list = True
@@ -674,6 +702,7 @@ class MysqlPillarTestCase(TestCase):
         return_data.process_results([[1, 2, 3, 5]])
         self.assertEqual({1: {2: {3: [{6: 7}, 4, {8: 9}, 5]}}}, return_data.result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_207_process_results_complexity_collision_mismatch_depth(self):
         return_data = mysql.MySQLExtPillar()
         return_data.as_list = False
@@ -686,6 +715,7 @@ class MysqlPillarTestCase(TestCase):
         return_data.process_results([[1, 2, 3, 6, 7]])
         self.assertEqual({1: {2: {3: {6: 7}}}}, return_data.result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_208_process_results_complexity_collision_mismatch_depth_reversed(self):
         return_data = mysql.MySQLExtPillar()
         return_data.as_list = False
@@ -699,6 +729,7 @@ class MysqlPillarTestCase(TestCase):
         return_data.process_results([[1, 2, 3, 5]])
         self.assertEqual({1: {2: {3: 5}}}, return_data.result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_209_process_results_complexity_collision_mismatch_depth_weird_order(self):
         return_data = mysql.MySQLExtPillar()
         return_data.as_list = False
@@ -714,6 +745,7 @@ class MysqlPillarTestCase(TestCase):
         return_data.process_results([[1, 2, 3, 5]])
         self.assertEqual({1: {2: {3: 5}}}, return_data.result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_20A_process_results_complexity_as_list_vary(self):
         return_data = mysql.MySQLExtPillar()
         return_data.as_list = True
@@ -728,6 +760,7 @@ class MysqlPillarTestCase(TestCase):
         return_data.process_results([[1, 2, 3, 5]])
         self.assertEqual({1: {2: {3: 5}}}, return_data.result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_207_process_results_complexity_roots_collision(self):
         return_data = mysql.MySQLExtPillar()
         return_data.as_list = False
@@ -739,6 +772,7 @@ class MysqlPillarTestCase(TestCase):
         return_data.process_results([[5, 6, 7, 8]])
         self.assertEqual({1: {5: {6: {7: 8}}}}, return_data.result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_301_process_results_with_lists(self):
         """
         Validates the following results:
@@ -795,6 +829,7 @@ class MysqlPillarTestCase(TestCase):
             else:
                 raise ValueError("Unexpected value {0}".format(x))
 
+    @skipIf(True, "FASTTEST skip")
     def test_302_process_results_with_lists_consecutive(self):
         """
         Validates the following results:

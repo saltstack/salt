@@ -17,7 +17,7 @@ from salt.ext import six
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PkgresTestCase(TestCase, LoaderModuleMockMixin):
@@ -28,6 +28,7 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {pkg_resource: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_pack_sources(self):
         """
             Test to accepts list of dicts (or a string representing a
@@ -45,6 +46,7 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
 
                 self.assertTrue(pkg_resource.pack_sources([{"A": "a"}]))
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_targets(self):
         """
             Test to parses the input to pkg.install and
@@ -90,6 +92,7 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
 
                     self.assertEqual(pkg_resource.parse_targets(), (None, None))
 
+    @skipIf(True, "FASTTEST skip")
     def test_version(self):
         """
             Test to Common interface for obtaining the version
@@ -110,12 +113,14 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
                     mock_next.side_effect = StopIteration()
                     self.assertEqual(pkg_resource.version("A"), "")
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_pkg(self):
         """
             Test to add a package to a dict of installed packages.
         """
         self.assertIsNone(pkg_resource.add_pkg({"pkgs": []}, "name", "version"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_sort_pkglist(self):
         """
             Test to accepts a dict obtained from pkg.list_pkgs() and sorts
@@ -125,6 +130,7 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertIsNone(pkg_resource.sort_pkglist({}))
 
+    @skipIf(True, "FASTTEST skip")
     def test_format_pkg_list_no_attr(self):
         """
             Test to output format of the package list with no attr parameter.
@@ -173,6 +179,7 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
                 pkg_resource.format_pkg_list(packages, False, None), expected_pkg_list
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_format_pkg_list_with_attr(self):
         """
             Test to output format of the package list with attr parameter.
@@ -258,6 +265,7 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
                     expected_pkg_list,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_stringify(self):
         """
             Test to takes a dict of package name/version information
@@ -266,6 +274,7 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertIsNone(pkg_resource.stringify({}))
 
+    @skipIf(True, "FASTTEST skip")
     def test_version_clean(self):
         """
             Test to clean the version string removing extra data.
@@ -277,6 +286,7 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(pkg_resource.version_clean("v"), "v")
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_extra_requirements(self):
         """
             Test to check if the installed package already

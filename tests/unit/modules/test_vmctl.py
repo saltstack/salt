@@ -9,7 +9,7 @@ import salt.modules.vmctl as vmctl
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class VmctlTestCase(TestCase, LoaderModuleMockMixin):
@@ -20,6 +20,7 @@ class VmctlTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {vmctl: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_disk(self):
         """
         Tests creating a new disk image.
@@ -32,6 +33,7 @@ class VmctlTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(vmctl.__salt__, {"cmd.run_all": mock_cmd}):
             self.assertTrue(vmctl.create_disk("/path/to/disk.img", "1G"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_load(self):
         """
         Tests loading a configuration file.
@@ -42,6 +44,7 @@ class VmctlTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(vmctl.__salt__, {"cmd.run_all": mock_cmd}):
             self.assertTrue(vmctl.load("/etc/vm.switches.conf"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_reload(self):
         """
         Tests reloading the configuration.
@@ -52,6 +55,7 @@ class VmctlTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(vmctl.__salt__, {"cmd.run_all": mock_cmd}):
             self.assertTrue(vmctl.reload())
 
+    @skipIf(True, "FASTTEST skip")
     def test_reset(self):
         """
         Tests resetting VMM.
@@ -66,6 +70,7 @@ class VmctlTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertTrue(res)
 
+    @skipIf(True, "FASTTEST skip")
     def test_reset_vms(self):
         """
         Tests resetting VMs.
@@ -80,6 +85,7 @@ class VmctlTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertTrue(res)
 
+    @skipIf(True, "FASTTEST skip")
     def test_reset_switches(self):
         """
         Tests resetting switches.
@@ -96,6 +102,7 @@ class VmctlTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertTrue(res)
 
+    @skipIf(True, "FASTTEST skip")
     def test_reset_all(self):
         """
         Tests resetting all.
@@ -110,6 +117,7 @@ class VmctlTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertTrue(res)
 
+    @skipIf(True, "FASTTEST skip")
     def test_start_existing_vm(self):
         """
         Tests starting a VM that is already defined.
@@ -122,6 +130,7 @@ class VmctlTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(vmctl.__salt__, {"cmd.run_all": mock_cmd}):
             self.assertDictEqual(expected, vmctl.start("4"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_start_new_vm(self):
         """
         Tests starting a new VM.
@@ -151,6 +160,7 @@ class VmctlTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertDictEqual(expected, res)
 
+    @skipIf(True, "FASTTEST skip")
     def test_status(self):
         """
         Tests getting status for all VMs.
@@ -199,6 +209,7 @@ class VmctlTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(vmctl.__salt__, {"cmd.run_all": mock_cmd}):
             self.assertEqual(expected, vmctl.status())
 
+    @skipIf(True, "FASTTEST skip")
     def test_status_single(self):
         """
         Tests getting status for a single VM.
@@ -226,6 +237,7 @@ class VmctlTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(vmctl.__salt__, {"cmd.run_all": mock_cmd}):
             self.assertEqual(expected, vmctl.status("web4"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_stop_when_running(self):
         """
         Tests stopping a VM that is running.
@@ -242,6 +254,7 @@ class VmctlTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertTrue(res["changes"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_stop_when_stopped(self):
         """
         Tests stopping a VM that is already stopped/stopping.

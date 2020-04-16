@@ -16,7 +16,7 @@ from salt.ext import six
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class WinSnmpTestCase(TestCase, LoaderModuleMockMixin):
@@ -27,6 +27,7 @@ class WinSnmpTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {win_snmp: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_agent_settings(self):
         """
         Test - Manage the SNMP sysContact, sysLocation, and sysServices settings.
@@ -59,6 +60,7 @@ class WinSnmpTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(win_snmp.__opts__, {"test": False}):
                 self.assertEqual(win_snmp.agent_settings(**kwargs), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_auth_traps_enabled(self):
         """
         Test - Manage the sending of authentication traps.
@@ -86,6 +88,7 @@ class WinSnmpTestCase(TestCase, LoaderModuleMockMixin):
                 ret["result"] = None
                 self.assertEqual(win_snmp.auth_traps_enabled(**kwargs), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_community_names(self):
         """
         Test - Manage the SNMP accepted community names and their permissions.

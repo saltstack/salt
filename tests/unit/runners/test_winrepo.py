@@ -16,7 +16,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 
 # Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 # Can't use raw string with unicode_literals, since the \u in the uninstaller
 # will be interpreted as a unicode code point and the interpreter will raise a
@@ -99,6 +99,7 @@ class WinrepoTest(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_genrepo(self):
         """
         Test winrepo.genrepo runner

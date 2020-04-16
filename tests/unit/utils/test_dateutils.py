@@ -25,6 +25,7 @@ except ImportError:
 
 
 class DateutilsTestCase(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_date_cast(self):
         now = datetime.datetime.now()
         with patch("datetime.datetime"):
@@ -43,6 +44,7 @@ class DateutilsTestCase(TestCase):
                 raise
 
     @skipIf(not HAS_TIMELIB, "'timelib' is not installed")
+    @skipIf(True, "FASTTEST skip")
     def test_strftime(self):
 
         # Taken from doctests

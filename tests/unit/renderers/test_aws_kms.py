@@ -52,6 +52,7 @@ class AWSKMSTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {aws_kms: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test__cfg_data_key(self):
         """
         _cfg_data_key returns the aws_kms:data_key from configuration.
@@ -72,6 +73,7 @@ class AWSKMSTestCase(TestCase, LoaderModuleMockMixin):
                 "_cfg_data_key did not return the data key configured in __opts__.",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test__cfg_data_key_no_key(self):
         """
         When no aws_kms:data_key is configured,
@@ -79,6 +81,7 @@ class AWSKMSTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(salt.exceptions.SaltConfigurationError, aws_kms._cfg_data_key)
 
+    @skipIf(True, "FASTTEST skip")
     def test__session_profile(self):  # pylint: disable=no-self-use
         """
         _session instantiates boto3.Session with the configured profile_name
@@ -88,6 +91,7 @@ class AWSKMSTestCase(TestCase, LoaderModuleMockMixin):
                 aws_kms._session()
                 session.assert_called_with(profile_name=AWS_PROFILE)
 
+    @skipIf(True, "FASTTEST skip")
     def test__session_noprofile(self):
         """
         _session raises a SaltConfigurationError
@@ -99,6 +103,7 @@ class AWSKMSTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertRaises(salt.exceptions.SaltConfigurationError, aws_kms._session)
 
+    @skipIf(True, "FASTTEST skip")
     def test__session_noregion(self):
         """
         _session raises a SaltConfigurationError
@@ -108,6 +113,7 @@ class AWSKMSTestCase(TestCase, LoaderModuleMockMixin):
             session.side_effect = botocore.exceptions.NoRegionError
             self.assertRaises(salt.exceptions.SaltConfigurationError, aws_kms._session)
 
+    @skipIf(True, "FASTTEST skip")
     def test__kms(self):  # pylint: disable=no-self-use
         """
         _kms calls boto3.Session.client with 'kms' as its only argument.
@@ -116,6 +122,7 @@ class AWSKMSTestCase(TestCase, LoaderModuleMockMixin):
             aws_kms._kms()
             client.assert_called_with("kms")
 
+    @skipIf(True, "FASTTEST skip")
     def test__kms_noregion(self):
         """
         _kms raises a SaltConfigurationError
@@ -125,6 +132,7 @@ class AWSKMSTestCase(TestCase, LoaderModuleMockMixin):
             session.side_effect = botocore.exceptions.NoRegionError
             self.assertRaises(salt.exceptions.SaltConfigurationError, aws_kms._kms)
 
+    @skipIf(True, "FASTTEST skip")
     def test__api_decrypt(self):  # pylint: disable=no-self-use
         """
         _api_decrypt_response calls kms.decrypt with the
@@ -139,6 +147,7 @@ class AWSKMSTestCase(TestCase, LoaderModuleMockMixin):
                     CiphertextBlob=ENCRYPTED_DATA_KEY
                 )  # pylint: disable=no-member
 
+    @skipIf(True, "FASTTEST skip")
     def test__api_decrypt_badkey(self):
         """
         _api_decrypt_response raises SaltConfigurationError
@@ -157,6 +166,7 @@ class AWSKMSTestCase(TestCase, LoaderModuleMockMixin):
                     salt.exceptions.SaltConfigurationError, aws_kms._api_decrypt
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test__plaintext_data_key(self):
         """
         _plaintext_data_key returns the 'Plaintext' value from the response.
@@ -171,6 +181,7 @@ class AWSKMSTestCase(TestCase, LoaderModuleMockMixin):
             aws_kms._plaintext_data_key()
             api_decrypt.assert_called_once()
 
+    @skipIf(True, "FASTTEST skip")
     def test__base64_plaintext_data_key(self):
         """
         _base64_plaintext_data_key returns the urlsafe base64 encoded plain text data key.
@@ -181,6 +192,7 @@ class AWSKMSTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(aws_kms._base64_plaintext_data_key(), BASE64_DATA_KEY)
 
     @skipIf(NO_FERNET, "Failed to import cryptography.fernet")
+    @skipIf(True, "FASTTEST skip")
     def test__decrypt_ciphertext(self):
         """
         test _decrypt_ciphertext
@@ -191,6 +203,7 @@ class AWSKMSTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(aws_kms._decrypt_ciphertext(crypted), PLAINTEXT_SECRET)
 
     @skipIf(NO_FERNET, "Failed to import cryptography.fernet")
+    @skipIf(True, "FASTTEST skip")
     def test__decrypt_object(self):
         """
         Test _decrypt_object
@@ -213,6 +226,7 @@ class AWSKMSTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(aws_kms._decrypt_object(None), None)
 
     @skipIf(NO_FERNET, "Failed to import cryptography.fernet")
+    @skipIf(True, "FASTTEST skip")
     def test_render(self):
         """
         Test that we can decrypt some data.

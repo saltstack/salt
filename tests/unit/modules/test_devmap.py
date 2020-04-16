@@ -14,7 +14,7 @@ import salt.modules.devmap as devmap
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class DevMapTestCase(TestCase, LoaderModuleMockMixin):
@@ -25,6 +25,7 @@ class DevMapTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {devmap: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_multipath_list(self):
         """
         Test for Device-Mapper Multipath list
@@ -33,6 +34,7 @@ class DevMapTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(devmap.__salt__, {"cmd.run": mock}):
             self.assertEqual(devmap.multipath_list(), ["A"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_multipath_flush(self):
         """
         Test for Device-Mapper Multipath flush

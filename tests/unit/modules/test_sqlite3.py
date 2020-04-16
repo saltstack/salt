@@ -11,7 +11,7 @@ import salt.modules.sqlite3 as sqlite3
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MockSqlite3(object):
@@ -66,6 +66,7 @@ class Sqlite3TestCase(TestCase, LoaderModuleMockMixin):
 
     # 'version' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_version(self):
         """
         Tests if it return version of pysqlite.
@@ -74,6 +75,7 @@ class Sqlite3TestCase(TestCase, LoaderModuleMockMixin):
 
     # 'sqlite_version' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_sqlite_version(self):
         """
         Tests if it return version of sqlite.
@@ -82,6 +84,7 @@ class Sqlite3TestCase(TestCase, LoaderModuleMockMixin):
 
     # 'modify' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_modify(self):
         """
         Tests if it issue an SQL query to sqlite3 (with no return data).
@@ -94,6 +97,7 @@ class Sqlite3TestCase(TestCase, LoaderModuleMockMixin):
 
     # 'fetch' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_fetch(self):
         """
         Tests if it retrieve data from an sqlite3 db
@@ -107,6 +111,7 @@ class Sqlite3TestCase(TestCase, LoaderModuleMockMixin):
 
     # 'tables' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_tables(self):
         """
         Tests if it show all tables in the database.
@@ -117,6 +122,7 @@ class Sqlite3TestCase(TestCase, LoaderModuleMockMixin):
 
     # 'indices' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_indices(self):
         """
         Tests if it show all indices in the database.
@@ -127,6 +133,7 @@ class Sqlite3TestCase(TestCase, LoaderModuleMockMixin):
 
     # 'indexes' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_indexes(self):
         """
         Tests if it show all indices in the database,

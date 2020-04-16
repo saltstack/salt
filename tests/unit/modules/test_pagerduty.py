@@ -15,7 +15,7 @@ import salt.utils.pagerduty
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PagerdutyTestCase(TestCase, LoaderModuleMockMixin):
@@ -28,6 +28,7 @@ class PagerdutyTestCase(TestCase, LoaderModuleMockMixin):
             pagerduty: {"__salt__": {"config.option": MagicMock(return_value=None)}}
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_services(self):
         """
         Test for List services belonging to this account
@@ -35,6 +36,7 @@ class PagerdutyTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(salt.utils.pagerduty, "list_items", return_value="A"):
             self.assertEqual(pagerduty.list_services(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_incidents(self):
         """
         Test for List incidents belonging to this account
@@ -42,6 +44,7 @@ class PagerdutyTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(salt.utils.pagerduty, "list_items", return_value="A"):
             self.assertEqual(pagerduty.list_incidents(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_users(self):
         """
         Test for List users belonging to this account
@@ -49,6 +52,7 @@ class PagerdutyTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(salt.utils.pagerduty, "list_items", return_value="A"):
             self.assertEqual(pagerduty.list_users(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_schedules(self):
         """
         Test for List schedules belonging to this account
@@ -56,6 +60,7 @@ class PagerdutyTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(salt.utils.pagerduty, "list_items", return_value="A"):
             self.assertEqual(pagerduty.list_schedules(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_windows(self):
         """
         Test for List maintenance windows belonging to this account
@@ -63,6 +68,7 @@ class PagerdutyTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(salt.utils.pagerduty, "list_items", return_value="A"):
             self.assertEqual(pagerduty.list_windows(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_policies(self):
         """
         Test for List escalation policies belonging to this account
@@ -70,6 +76,7 @@ class PagerdutyTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(salt.utils.pagerduty, "list_items", return_value="A"):
             self.assertEqual(pagerduty.list_policies(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_event(self):
         """
         Test for Create an event in PagerDuty. Designed for use in states.

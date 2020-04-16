@@ -8,7 +8,7 @@ import salt.utils.master
 from tests.support.mock import patch
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MasterPillarUtilTestCase(TestCase):
@@ -16,6 +16,7 @@ class MasterPillarUtilTestCase(TestCase):
     TestCase for salt.utils.master.MasterPillarUtil methods
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_minion_pillar(self):
         """
         test get_minion_pillar when
@@ -45,6 +46,7 @@ class MasterPillarUtilTestCase(TestCase):
             ret = pillar.get_minion_pillar()
         assert ret[minion] == pillar_data[minion]
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_minion_pillar_doesnotexist(self):
         """
         test get_minion_pillar when
@@ -74,6 +76,7 @@ class MasterPillarUtilTestCase(TestCase):
             ret = pillar.get_minion_pillar()
         assert minion not in ret
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_minion_pillar_notgt(self):
         """
         test get_minion_pillar when

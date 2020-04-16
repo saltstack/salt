@@ -11,7 +11,7 @@ import salt.sdb.yaml as sdb
 from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class TestYamlRenderer(TestCase):
@@ -19,6 +19,7 @@ class TestYamlRenderer(TestCase):
     Test case for the YAML SDB module
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_plaintext(self):
         """
         Retrieve a value from the top level of the dictionary
@@ -27,6 +28,7 @@ class TestYamlRenderer(TestCase):
         with patch("salt.sdb.yaml._get_values", MagicMock(return_value=plain)):
             self.assertEqual(sdb.get("foo"), "bar")
 
+    @skipIf(True, "FASTTEST skip")
     def test_nested(self):
         """
         Retrieve a value from a nested level of the dictionary
@@ -35,6 +37,7 @@ class TestYamlRenderer(TestCase):
         with patch("salt.sdb.yaml._get_values", MagicMock(return_value=plain)):
             self.assertEqual(sdb.get("foo:bar"), "baz")
 
+    @skipIf(True, "FASTTEST skip")
     def test_encrypted(self):
         """
         Assume the content is plaintext if GPG is not configured

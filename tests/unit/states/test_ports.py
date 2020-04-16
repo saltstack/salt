@@ -14,7 +14,7 @@ from salt.exceptions import SaltInvocationError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MockModule(object):
@@ -52,6 +52,7 @@ class PortsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'installed' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed(self):
         """
         Test to verify that the desired port is installed,

@@ -29,7 +29,6 @@ class SeedTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {seed: {}}
 
-    @skipIf(True, "SLOWTEST skip")
     def test_mkconfig_odict(self):
         with patch.dict(seed.__opts__, {"master": "foo"}):
             ddd = salt.utils.odict.OrderedDict()
@@ -40,6 +39,7 @@ class SeedTestCase(TestCase, LoaderModuleMockMixin):
                 fdata = fic.read()
                 self.assertEqual(fdata, "b: b\na: b\nmaster: foo\n")
 
+    @skipIf(True, "FASTTEST skip")
     def test_prep_bootstrap(self):
         """
         Test to update and get the random script to a random place
@@ -71,6 +71,7 @@ class SeedTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(seed.prep_bootstrap(os.sep + "MPT"), expect)
 
+    @skipIf(True, "FASTTEST skip")
     def test_apply_(self):
         """
         Test to seed a location (disk image, directory, or block device)

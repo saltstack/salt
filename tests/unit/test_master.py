@@ -9,7 +9,7 @@ import salt.master
 from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 class ClearFuncsTestCase(TestCase):
@@ -23,7 +23,6 @@ class ClearFuncsTestCase(TestCase):
 
     # runner tests
 
-    @skipIf(True, "SLOWTEST skip")
     def test_runner_token_not_authenticated(self):
         """
         Asserts that a TokenAuthenticationError is returned when the token can't authenticate.
@@ -37,7 +36,6 @@ class ClearFuncsTestCase(TestCase):
         ret = self.clear_funcs.runner({"token": "asdfasdfasdfasdf"})
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_runner_token_authorization_error(self):
         """
         Asserts that a TokenAuthenticationError is returned when the token authenticates, but is
@@ -61,7 +59,6 @@ class ClearFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_runner_token_salt_invocation_error(self):
         """
         Asserts that a SaltInvocationError is returned when the token authenticates, but the
@@ -86,7 +83,6 @@ class ClearFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_runner_eauth_not_authenticated(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user can't authenticate.
@@ -101,7 +97,6 @@ class ClearFuncsTestCase(TestCase):
         ret = self.clear_funcs.runner({"eauth": "foo"})
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_runner_eauth_authorization_error(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user authenticates, but is
@@ -122,7 +117,6 @@ class ClearFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_runner_eauth_salt_invocation_error(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user authenticates, but the
@@ -144,7 +138,6 @@ class ClearFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_runner_user_not_authenticated(self):
         """
         Asserts that an UserAuthenticationError is returned when the user can't authenticate.
@@ -160,7 +153,6 @@ class ClearFuncsTestCase(TestCase):
 
     # wheel tests
 
-    @skipIf(True, "SLOWTEST skip")
     def test_wheel_token_not_authenticated(self):
         """
         Asserts that a TokenAuthenticationError is returned when the token can't authenticate.
@@ -174,7 +166,6 @@ class ClearFuncsTestCase(TestCase):
         ret = self.clear_funcs.wheel({"token": "asdfasdfasdfasdf"})
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_wheel_token_authorization_error(self):
         """
         Asserts that a TokenAuthenticationError is returned when the token authenticates, but is
@@ -198,7 +189,6 @@ class ClearFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_wheel_token_salt_invocation_error(self):
         """
         Asserts that a SaltInvocationError is returned when the token authenticates, but the
@@ -223,7 +213,6 @@ class ClearFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_wheel_eauth_not_authenticated(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user can't authenticate.
@@ -238,7 +227,6 @@ class ClearFuncsTestCase(TestCase):
         ret = self.clear_funcs.wheel({"eauth": "foo"})
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_wheel_eauth_authorization_error(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user authenticates, but is
@@ -259,7 +247,6 @@ class ClearFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_wheel_eauth_salt_invocation_error(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user authenticates, but the
@@ -281,7 +268,6 @@ class ClearFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_wheel_user_not_authenticated(self):
         """
         Asserts that an UserAuthenticationError is returned when the user can't authenticate.
@@ -297,7 +283,6 @@ class ClearFuncsTestCase(TestCase):
 
     # publish tests
 
-    @skipIf(True, "SLOWTEST skip")
     def test_publish_user_is_blacklisted(self):
         """
         Asserts that an AuthorizationError is returned when the user has been blacklisted.
@@ -315,7 +300,6 @@ class ClearFuncsTestCase(TestCase):
                 mock_ret, self.clear_funcs.publish({"user": "foo", "fun": "test.arg"})
             )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_publish_cmd_blacklisted(self):
         """
         Asserts that an AuthorizationError is returned when the command has been blacklisted.
@@ -335,7 +319,6 @@ class ClearFuncsTestCase(TestCase):
                 mock_ret, self.clear_funcs.publish({"user": "foo", "fun": "test.arg"})
             )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_publish_token_not_authenticated(self):
         """
         Asserts that an AuthenticationError is returned when the token can't authenticate.
@@ -359,7 +342,6 @@ class ClearFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.clear_funcs.publish(load))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_publish_token_authorization_error(self):
         """
         Asserts that an AuthorizationError is returned when the token authenticates, but is not
@@ -392,7 +374,6 @@ class ClearFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.clear_funcs.publish(load))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_publish_eauth_not_authenticated(self):
         """
         Asserts that an AuthenticationError is returned when the user can't authenticate.
@@ -416,7 +397,6 @@ class ClearFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.clear_funcs.publish(load))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_publish_eauth_authorization_error(self):
         """
         Asserts that an AuthorizationError is returned when the user authenticates, but is not
@@ -446,7 +426,6 @@ class ClearFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.clear_funcs.publish(load))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_publish_user_not_authenticated(self):
         """
         Asserts that an AuthenticationError is returned when the user can't authenticate.
@@ -465,7 +444,6 @@ class ClearFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.clear_funcs.publish(load))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_publish_user_authenticated_missing_auth_list(self):
         """
         Asserts that an AuthenticationError is returned when the user has an effective user id and is
@@ -496,7 +474,6 @@ class ClearFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.clear_funcs.publish(load))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_publish_user_authorization_error(self):
         """
         Asserts that an AuthorizationError is returned when the user authenticates, but is not

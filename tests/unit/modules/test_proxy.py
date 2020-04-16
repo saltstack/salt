@@ -9,7 +9,7 @@ import salt.modules.proxy as proxy
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ProxyTestCase(TestCase, LoaderModuleMockMixin):
@@ -20,6 +20,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {proxy: {"__grains__": {"os": "Darwin"}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_http_proxy_macos(self):
         """
             Test to make sure that we correctly get the current proxy info
@@ -35,6 +36,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
             mock.assert_called_once_with("networksetup -getwebproxy Ethernet")
             self.assertEqual(expected, out)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_https_proxy_macos(self):
         """
             Test to make sure that we correctly get the current proxy info
@@ -50,6 +52,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
             mock.assert_called_once_with("networksetup -getsecurewebproxy Ethernet")
             self.assertEqual(expected, out)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_ftp_proxy_macos(self):
         """
             Test to make sure that we correctly get the current proxy info
@@ -65,6 +68,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
             mock.assert_called_once_with("networksetup -getftpproxy Ethernet")
             self.assertEqual(expected, out)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_http_proxy_macos_none(self):
         """
             Test to make sure that we correctly return when theres no proxy set
@@ -78,6 +82,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
             mock.assert_called_once_with("networksetup -getwebproxy Ethernet")
             self.assertEqual({}, out)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_http_proxy_macos(self):
         """
             Test to make sure that we correctly set the proxy info
@@ -98,6 +103,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertTrue(out)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_https_proxy_macos(self):
         """
             Test to make sure that we correctly set the proxy info
@@ -118,6 +124,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertTrue(out)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_ftp_proxy_macos(self):
         """
             Test to make sure that we correctly set the proxy info
@@ -138,6 +145,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertTrue(out)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_http_proxy_windows(self):
         """
         Test to make sure that we correctly get the current proxy info on
@@ -158,6 +166,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(expected, out)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_https_proxy_windows(self):
         """
         Test to make sure that we correctly get the current proxy info on
@@ -178,6 +187,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(expected, out)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_ftp_proxy_windows(self):
         """
         Test to make sure that we correctly get the current proxy info on
@@ -198,6 +208,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(expected, out)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_all_proxies_macos_fails(self):
         mock = MagicMock()
         with patch.dict(proxy.__salt__, {"reg.read_value": mock}):
@@ -205,6 +216,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
             assert not mock.called
             self.assertEqual(out, None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_all_proxies_windows(self):
         """
         Test to make sure that we correctly get the current proxy info on
@@ -241,6 +253,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
                 mock.assert_has_calls(calls)
                 self.assertEqual(expected, out)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_http_proxy_windows(self):
         """
         Test to make sure that we correctly set the proxy info on Windows
@@ -281,6 +294,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
                 mock_cmd.assert_called_once_with("netsh winhttp import proxy source=ie")
                 self.assertTrue(out)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_https_proxy_windows(self):
         """
         Test to make sure that we correctly set the proxy info on Windows
@@ -321,6 +335,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
                 mock_cmd.assert_called_once_with("netsh winhttp import proxy source=ie")
                 self.assertTrue(out)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_ftp_proxy_windows(self):
         """
         Test to make sure that we correctly set the proxy info on Windows
@@ -361,6 +376,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
                 mock_cmd.assert_called_once_with("netsh winhttp import proxy source=ie")
                 self.assertTrue(out)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_proxy_windows(self):
         """
         Test to make sure that we correctly set the proxy info on Windows
@@ -401,6 +417,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
                 mock_cmd.assert_called_once_with("netsh winhttp import proxy source=ie")
                 self.assertTrue(out)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_proxy_windows_no_ftp(self):
         """
         Test to make sure that we correctly set the proxy info on Windows

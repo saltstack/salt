@@ -9,13 +9,14 @@ import salt.states.win_certutil as certutil
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {certutil: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_serial(self):
         """
             Test adding a certificate to specified certificate store
@@ -47,6 +48,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
             add_mock.assert_called_once_with("/path/to/cert.cer", "TrustedPublisher")
             self.assertEqual(expected, out)
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_serial_missing(self):
         """
             Test adding a certificate to specified certificate store when the file doesn't exist
@@ -78,6 +80,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
             assert not add_mock.called
             self.assertEqual(expected, out)
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_serial_exists(self):
         """
             Test adding a certificate to specified certificate store when the cert already exists
@@ -109,6 +112,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
             assert not add_mock.called
             self.assertEqual(expected, out)
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_serial_fail(self):
         """
             Test adding a certificate when the add fails
@@ -140,6 +144,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
             add_mock.assert_called_once_with("/path/to/cert.cer", "TrustedPublisher")
             self.assertEqual(expected, out)
 
+    @skipIf(True, "FASTTEST skip")
     def test_del_serial(self):
         """
             Test deleting a certificate from a specified certificate store
@@ -171,6 +176,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
             del_mock.assert_called_once_with("/tmp/cert.cer", "TrustedPublisher")
             self.assertEqual(expected, out)
 
+    @skipIf(True, "FASTTEST skip")
     def test_del_serial_missing(self):
         """
             Test deleting a certificate to specified certificate store when the file doesn't exist
@@ -202,6 +208,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
             assert not del_mock.called
             self.assertEqual(expected, out)
 
+    @skipIf(True, "FASTTEST skip")
     def test_del_serial_doesnt_exists(self):
         """
             Test deleting a certificate to specified certificate store when the cert doesn't exists
@@ -233,6 +240,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
             assert not del_mock.called
             self.assertEqual(expected, out)
 
+    @skipIf(True, "FASTTEST skip")
     def test_del_serial_fail(self):
         """
             Test deleting a certificate from the store when the delete fails

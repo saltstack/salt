@@ -69,6 +69,7 @@ class JoyentTestCase(TestCase, LoaderModuleMockMixin):
     def tearDown(self):
         del self.vm_
 
+    @skipIf(True, "FASTTEST skip")
     def test_query_instance_init(self):
         """
         Initial provisioning, no IP assigned
@@ -80,6 +81,7 @@ class JoyentTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(joyent.__utils__["cloud.fire_event"].called_once())
         self.assertEqual(result, None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_query_instance_has_ip(self):
         """
         IP address assigned but not yet ready
@@ -90,6 +92,7 @@ class JoyentTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(joyent.__utils__["cloud.fire_event"].called_once())
         self.assertEqual(result, None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_query_instance_ready(self):
         """
         IP address assigned, and VM is ready

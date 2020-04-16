@@ -12,7 +12,7 @@ import salt.modules.znc as znc
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ZncTestCase(TestCase, LoaderModuleMockMixin):
@@ -25,6 +25,7 @@ class ZncTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'buildmod' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_buildmod(self):
         """
         Tests build module using znc-buildmod
@@ -35,6 +36,7 @@ class ZncTestCase(TestCase, LoaderModuleMockMixin):
                 "Error: The file (modules.cpp) does not exist.",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_buildmod_module(self):
         """
         Tests build module using znc-buildmod
@@ -47,6 +49,7 @@ class ZncTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'dumpconf' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_dumpconf(self):
         """
         Tests write the active configuration state to config file
@@ -59,6 +62,7 @@ class ZncTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'rehashconf' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_rehashconf(self):
         """
         Tests rehash the active configuration state from config file
@@ -71,6 +75,7 @@ class ZncTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'version' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_version(self):
         """
         Tests return server version from znc --version

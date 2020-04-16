@@ -12,7 +12,7 @@ import salt.modules.netscaler as netscaler
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MockJson(Exception):
@@ -583,6 +583,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'servicegroup_exists' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_servicegroup_exists(self):
         """
         Tests if it checks if a service group exists
@@ -602,6 +603,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'servicegroup_add' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_servicegroup_add(self):
         """
         Tests if it add a new service group
@@ -618,6 +620,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'servicegroup_delete' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_servicegroup_delete(self):
         """
         Tests if it delete a new service group
@@ -637,6 +640,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'servicegroup_server_exists' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_servicegroup_server_exists(self):
         """
         Tests if it check if a server:port combination
@@ -652,6 +656,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'servicegroup_server_up' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_servicegroup_server_up(self):
         """
         Tests if it check if a server:port combination
@@ -667,6 +672,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'servicegroup_server_enable' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_servicegroup_server_enable(self):
         """
         Tests if it enable a server:port member of a servicegroup
@@ -700,6 +706,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'servicegroup_server_disable' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_sergrp_server_disable(self):
         """
         Tests if it disable a server:port member of a servicegroup
@@ -733,6 +740,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'servicegroup_server_add' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_servicegroup_server_add(self):
         """
         Tests if it add a server:port member to a servicegroup
@@ -764,6 +772,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'servicegroup_server_delete' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_servicegroup_server_delete(self):
         """
         Tests if it remove a server:port member to a servicegroup
@@ -794,6 +803,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'service_up' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_service_up(self):
         """
         Tests if it checks if a service is UP
@@ -804,6 +814,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'service_exists' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_service_exists(self):
         """
         Tests if it checks if a service is UP
@@ -814,6 +825,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'service_enable' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_service_enable(self):
         """
         Tests if it enable a service
@@ -831,6 +843,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'service_disable' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_service_disable(self):
         """
         Tests if it disable a service
@@ -848,6 +861,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'server_exists' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_server_exists(self):
         """
         Tests if it checks if a server exists
@@ -867,6 +881,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'server_add' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_server_add(self):
         """
         Tests if it add a server
@@ -884,6 +899,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'server_delete' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_server_delete(self):
         """
         Tests if it delete a server
@@ -901,6 +917,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'server_update' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_server_update(self):
         """
         Tests if it update a server's attributes
@@ -922,6 +939,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'server_enabled' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_server_enabled(self):
         """
         Tests if it check if a server is enabled globally
@@ -933,6 +951,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'server_enable' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_server_enable(self):
         """
         Tests if it enables a server globally
@@ -953,6 +972,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'server_disable' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_server_disable(self):
         """
         Tests if it disable a server globally
@@ -974,6 +994,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'vserver_exists' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_vserver_exists(self):
         """
         Tests if it checks if a vserver exists
@@ -1000,6 +1021,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'vserver_add' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_vserver_add(self):
         """
         Tests if it add a new lb vserver
@@ -1025,6 +1047,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'vserver_delete' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_vserver_delete(self):
         """
         Tests if it delete a new lb vserver
@@ -1042,6 +1065,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'vserver_servicegroup_exists' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_vser_sergrp_exists(self):
         """
         Tests if it checks if a servicegroup is tied to a vserver
@@ -1054,6 +1078,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'vserver_servicegroup_add' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_vserver_servicegroup_add(self):
         """
         Tests if it bind a servicegroup to a vserver
@@ -1078,6 +1103,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'vserver_servicegroup_delete' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_vser_sergrp_delete(self):
         """
         Tests if it unbind a servicegroup from a vserver
@@ -1104,6 +1130,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'vserver_sslcert_exists' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_vserver_sslcert_exists(self):
         """
         Tests if it checks if a SSL certificate is tied to a vserver
@@ -1116,6 +1143,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'vserver_sslcert_add' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_vserver_sslcert_add(self):
         """
         Tests if it binds a SSL certificate to a vserver
@@ -1136,6 +1164,7 @@ class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'vserver_sslcert_delete' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_vserver_sslcert_delete(self):
         """
         Tests if it unbinds a SSL certificate from a vserver

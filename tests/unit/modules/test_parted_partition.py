@@ -18,7 +18,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PartedTestCase(TestCase, LoaderModuleMockMixin):
@@ -38,6 +38,7 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
 
     # Test __virtual__ function for module registration
 
+    @skipIf(True, "FASTTEST skip")
     def test_virtual_bails_on_windows(self):
         """
         If running windows, __virtual__ shouldn't register module
@@ -50,6 +51,7 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(err, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_virtual_bails_without_parted(self):
         """
         If parted not in PATH, __virtual__ shouldn't register module
@@ -64,6 +66,7 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(err, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_virtual_bails_without_lsblk(self):
         """
         If lsblk not in PATH, __virtual__ shouldn't register module
@@ -78,6 +81,7 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(err, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_virtual_bails_without_partprobe(self):
         """
         If partprobe not in PATH, __virtual__ shouldn't register module
@@ -92,6 +96,7 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(err, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_virtual(self):
         """
         On expected platform with correct utils in PATH, register "partition" module
@@ -105,15 +110,18 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
 
     # Test probe function
 
+    @skipIf(True, "FASTTEST skip")
     def test_probe_wo_args(self):
         parted.probe()
         self.cmdrun.assert_called_once_with("partprobe -- ")
 
+    @skipIf(True, "FASTTEST skip")
     def test_probe_w_single_arg(self):
         with patch("salt.modules.parted_partition._validate_device", MagicMock()):
             parted.probe("/dev/sda")
             self.cmdrun.assert_called_once_with("partprobe -- /dev/sda")
 
+    @skipIf(True, "FASTTEST skip")
     def test_probe_w_multiple_args(self):
         with patch("salt.modules.parted_partition._validate_device", MagicMock()):
             parted.probe("/dev/sda", "/dev/sdb")
@@ -164,9 +172,11 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
         }
         return output[k]
 
+    @skipIf(True, "FASTTEST skip")
     def test_list__without_device(self):
         self.assertRaises(TypeError, parted.list_)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list__empty_cmd_output(self):
         with patch("salt.modules.parted_partition._validate_device", MagicMock()):
             self.cmdrun_stdout.return_value = self.parted_print_output("empty")
@@ -175,6 +185,7 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
             expected = {"info": {}, "partitions": {}}
             self.assertEqual(output, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list__valid_unit_empty_cmd_output(self):
         with patch("salt.modules.parted_partition._validate_device", MagicMock()):
             self.cmdrun_stdout.return_value = self.parted_print_output("empty")
@@ -185,30 +196,35 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
             expected = {"info": {}, "partitions": {}}
             self.assertEqual(output, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list__invalid_unit(self):
         self.assertRaises(
             CommandExecutionError, parted.list_, "/dev/sda", unit="badbadbad"
         )
         self.assertFalse(self.cmdrun.called)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list__bad_header(self):
         with patch("salt.modules.parted_partition._validate_device", MagicMock()):
             self.cmdrun_stdout.return_value = self.parted_print_output("bad_header")
             self.assertRaises(CommandExecutionError, parted.list_, "/dev/sda")
             self.cmdrun_stdout.assert_called_once_with("parted -m -s /dev/sda print")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list__bad_label_info(self):
         with patch("salt.modules.parted_partition._validate_device", MagicMock()):
             self.cmdrun_stdout.return_value = self.parted_print_output("bad_label_info")
             self.assertRaises(CommandExecutionError, parted.list_, "/dev/sda")
             self.cmdrun_stdout.assert_called_once_with("parted -m -s /dev/sda print")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list__bad_partition(self):
         with patch("salt.modules.parted_partition._validate_device", MagicMock()):
             self.cmdrun_stdout.return_value = self.parted_print_output("bad_partition")
             self.assertRaises(CommandExecutionError, parted.list_, "/dev/sda")
             self.cmdrun_stdout.assert_called_once_with("parted -m -s /dev/sda print")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list__valid_cmd_output(self):
         with patch("salt.modules.parted_partition._validate_device", MagicMock()):
             self.cmdrun_stdout.return_value = self.parted_print_output("valid")
@@ -248,6 +264,7 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertEqual(output, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list__valid_unit_valid_cmd_output(self):
         with patch("salt.modules.parted_partition._validate_device", MagicMock()):
             self.cmdrun_stdout.return_value = self.parted_print_output("valid")
@@ -289,6 +306,7 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertEqual(output, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list__valid_unit_chs_valid_cmd_output(self):
         with patch("salt.modules.parted_partition._validate_device", MagicMock()):
             self.cmdrun_stdout.return_value = self.parted_print_output("valid chs")
@@ -328,6 +346,7 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertEqual(output, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list__valid_legacy_cmd_output(self):
         with patch("salt.modules.parted_partition._validate_device", MagicMock()):
             self.cmdrun_stdout.return_value = self.parted_print_output("valid_legacy")
@@ -366,6 +385,7 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertEqual(output, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list__valid_unit_valid_legacy_cmd_output(self):
         with patch("salt.modules.parted_partition._validate_device", MagicMock()):
             self.cmdrun_stdout.return_value = self.parted_print_output("valid_legacy")
@@ -406,6 +426,7 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertEqual(output, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_btrfs_fstypes(self):
         """Tests if we see btrfs as valid fs type"""
         with patch("salt.modules.parted_partition._validate_device", MagicMock()):
@@ -414,6 +435,7 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
             except CommandExecutionError:
                 self.fail("Btrfs is not in the supported fstypes")
 
+    @skipIf(True, "FASTTEST skip")
     def test_xfs_fstypes(self):
         """Tests if we see xfs as valid fs type"""
         with patch("salt.modules.parted_partition._validate_device", MagicMock()):
@@ -422,6 +444,7 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
             except CommandExecutionError:
                 self.fail("XFS is not in the supported fstypes")
 
+    @skipIf(True, "FASTTEST skip")
     def test_disk_set(self):
         with patch("salt.modules.parted_partition._validate_device", MagicMock()):
             self.cmdrun.return_value = ""
@@ -431,6 +454,7 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
             )
             assert output == []
 
+    @skipIf(True, "FASTTEST skip")
     def test_disk_toggle(self):
         with patch("salt.modules.parted_partition._validate_device", MagicMock()):
             self.cmdrun.return_value = ""

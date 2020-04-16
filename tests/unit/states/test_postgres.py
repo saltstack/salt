@@ -14,7 +14,7 @@ import salt.states.postgres_user as postgres_user
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PostgresUserTestCase(TestCase, LoaderModuleMockMixin):
@@ -41,6 +41,8 @@ class PostgresUserTestCase(TestCase, LoaderModuleMockMixin):
             },
         }
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_present__creation(self):
         # test=True
         with patch.dict(
@@ -94,6 +96,8 @@ class PostgresUserTestCase(TestCase, LoaderModuleMockMixin):
                 createdb=None,
             )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_present__update(self):
         # test=True
         with patch.dict(
@@ -160,6 +164,8 @@ class PostgresUserTestCase(TestCase, LoaderModuleMockMixin):
                 createdb=None,
             )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_present__no_update(self):
         # test=True
         with patch.dict(
@@ -233,6 +239,8 @@ class PostgresGroupTestCase(TestCase, LoaderModuleMockMixin):
             },
         }
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_present__creation(self):
         # test=True
         with patch.dict(
@@ -285,6 +293,8 @@ class PostgresGroupTestCase(TestCase, LoaderModuleMockMixin):
                 createdb=None,
             )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_present__update(self):
         # test=True
         with patch.dict(
@@ -350,6 +360,8 @@ class PostgresGroupTestCase(TestCase, LoaderModuleMockMixin):
                 createdb=None,
             )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_present__no_update(self):
         # test=True
         with patch.dict(
@@ -423,6 +435,7 @@ class PostgresExtensionTestCase(TestCase, LoaderModuleMockMixin):
             },
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_failed(self):
         """
         scenario of creating upgrading extensions with possible schema and
@@ -464,6 +477,7 @@ class PostgresExtensionTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_present(self):
         """
         scenario of creating upgrading extensions with possible schema and
@@ -516,6 +530,7 @@ class PostgresExtensionTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_presenttest(self):
         """
         scenario of creating upgrading extensions with possible schema and
@@ -569,6 +584,7 @@ class PostgresExtensionTestCase(TestCase, LoaderModuleMockMixin):
                     },
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
         scenario of creating upgrading extensions with possible schema and
@@ -604,6 +620,7 @@ class PostgresExtensionTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_failed(self):
         """
         scenario of creating upgrading extensions with possible schema and
@@ -628,6 +645,7 @@ class PostgresExtensionTestCase(TestCase, LoaderModuleMockMixin):
                     },
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_failedtest(self):
         with patch.dict(
             postgres_extension.__salt__,
@@ -673,6 +691,7 @@ class PostgresSchemaTestCase(TestCase, LoaderModuleMockMixin):
             },
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_creation(self):
         with patch.dict(
             postgres_schema.__salt__,
@@ -694,6 +713,7 @@ class PostgresSchemaTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(self.salt_stub["postgres.schema_create"].call_count, 1)
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_nocreation(self):
         with patch.dict(
             postgres_schema.__salt__,
@@ -717,6 +737,7 @@ class PostgresSchemaTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(self.salt_stub["postgres.schema_create"].call_count, 0)
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_remove(self):
         with patch.dict(
             postgres_schema.__salt__,
@@ -738,6 +759,7 @@ class PostgresSchemaTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(self.salt_stub["postgres.schema_remove"].call_count, 1)
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_noremove(self):
         with patch.dict(
             postgres_schema.__salt__,

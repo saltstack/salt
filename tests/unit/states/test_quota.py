@@ -11,7 +11,7 @@ import salt.states.quota as quota
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class QuotaTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class QuotaTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'mode' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_mode(self):
         """
         Test to set the quota for the system.

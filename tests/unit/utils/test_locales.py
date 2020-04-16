@@ -9,10 +9,11 @@ import salt.utils.locales as locales
 # Import 3rd-part libs
 from salt.ext.six.moves import reload_module
 from tests.support.mock import patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class TestLocales(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_get_encodings(self):
         # reload locales modules before and after to defeat memoization of
         # get_encodings()
@@ -23,6 +24,7 @@ class TestLocales(TestCase):
                 self.assertIn(enc, encodings)
         reload_module(locales)
 
+    @skipIf(True, "FASTTEST skip")
     def test_split_locale(self):
         self.assertDictEqual(
             locales.split_locale("ca_ES.UTF-8@valencia utf-8"),
@@ -35,6 +37,7 @@ class TestLocales(TestCase):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_join_locale(self):
         self.assertEqual(
             locales.join_locale(
@@ -49,6 +52,7 @@ class TestLocales(TestCase):
             "ca_ES.UTF-8@valencia utf-8",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_normalize_locale(self):
         self.assertEqual(
             locales.normalize_locale("ca_es.UTF-8@valencia utf-8"),

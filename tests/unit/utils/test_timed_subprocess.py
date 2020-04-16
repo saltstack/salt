@@ -7,10 +7,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 import salt.utils.timed_subprocess as timed_subprocess
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class TestTimedSubprocess(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_timedproc_with_shell_true_and_list_args(self):
         """
         This test confirms the fix for the regression introduced in 1f7d50d.

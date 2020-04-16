@@ -17,7 +17,7 @@ from salt.utils.jinja import SaltCacheLoader
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 try:
     import gnupg  # pylint: disable=unused-import
@@ -86,6 +86,7 @@ class SMTPReturnerTestCase(TestCase, LoaderModuleMockMixin):
 
     if HAS_GNUPG:
 
+        @skipIf(True, "FASTTEST skip")
         def test_returner(self):
             with patch("salt.returners.smtp_return.gnupg"), patch(
                 "salt.returners.smtp_return.smtplib.SMTP"
@@ -94,6 +95,7 @@ class SMTPReturnerTestCase(TestCase, LoaderModuleMockMixin):
 
     else:
 
+        @skipIf(True, "FASTTEST skip")
         def test_returner(self):
             with patch("salt.returners.smtp_return.smtplib.SMTP") as mocked_smtplib:
                 self._test_returner(mocked_smtplib)

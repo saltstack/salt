@@ -12,7 +12,7 @@ import salt.states.nftables as nftables
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class NftablesTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {nftables: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_chain_present(self):
         """
             Test to verify the chain is exist.
@@ -70,6 +71,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertDictEqual(nftables.chain_present("salt"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_chain_absent(self):
         """
             Test to verify the chain is absent.
@@ -96,6 +98,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertDictEqual(nftables.chain_absent("salt"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_append(self):
         """
             Test to append a rule to a chain
@@ -169,6 +172,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
                                 nftables.append("salt", table="", chain=""), ret
                             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_insert(self):
         """
             Test to insert a rule into a chain
@@ -248,6 +252,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
                                 ret,
                             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete(self):
         """
             Test to delete a rule to a chain
@@ -327,6 +332,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
                                 ret,
                             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_flush(self):
         """
             Test to flush current nftables state

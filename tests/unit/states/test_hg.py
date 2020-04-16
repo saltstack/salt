@@ -13,7 +13,7 @@ import salt.states.hg as hg
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class HgTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class HgTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {hg: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_latest(self):
         """
             Test to Make sure the repository is cloned to
@@ -50,6 +51,7 @@ class HgTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(hg, "_clone_repo", mock):
                     self.assertDictEqual(hg.latest("salt", target="c:\\salt"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_latest_update_changes(self):
         """
             Test to make sure we don't update even if we have changes
@@ -77,6 +79,7 @@ class HgTestCase(TestCase, LoaderModuleMockMixin):
                         )
                         assert update_mock.called
 
+    @skipIf(True, "FASTTEST skip")
     def test_latest_no_update_changes(self):
         """
             Test to make sure we don't update even if we have changes
@@ -109,6 +112,7 @@ class HgTestCase(TestCase, LoaderModuleMockMixin):
                         )
                         assert not update_mock.called
 
+    @skipIf(True, "FASTTEST skip")
     def test_latest_no_update_no_changes(self):
         """
             Test to Make sure the repository is cloned to

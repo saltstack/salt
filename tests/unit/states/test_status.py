@@ -11,7 +11,7 @@ import salt.states.status as status
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class StatusTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
         return {status: {}}
 
     # 'loadavg' function tests: 1
+    @skipIf(True, "FASTTEST skip")
     def test_loadavg(self):
         """
         Test to return the current load average for the specified minion.
@@ -57,6 +58,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'process' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_process(self):
         """
         Test to return whether the specified signature

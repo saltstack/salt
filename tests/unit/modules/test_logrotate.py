@@ -14,7 +14,7 @@ from salt.exceptions import SaltInvocationError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 PARSE_CONF = {
     "include files": {"rsyslog": ["/var/log/syslog"]},
@@ -33,6 +33,7 @@ class LogrotateTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'show_conf' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_conf(self):
         """
         Test if it show parsed configuration
@@ -42,6 +43,7 @@ class LogrotateTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_' function tests: 4
 
+    @skipIf(True, "FASTTEST skip")
     def test_set(self):
         """
         Test if it set a new value for a specific configuration line
@@ -53,6 +55,7 @@ class LogrotateTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(logrotate.set_("rotate", "2"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_failed(self):
         """
         Test if it fails to set a new value for a specific configuration line
@@ -63,6 +66,7 @@ class LogrotateTestCase(TestCase, LoaderModuleMockMixin):
             kwargs = {"key": "/var/log/wtmp", "value": 2}
             self.assertRaises(SaltInvocationError, logrotate.set_, **kwargs)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_setting(self):
         """
         Test if it set a new value for a specific configuration line
@@ -74,6 +78,7 @@ class LogrotateTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(logrotate.set_("/var/log/wtmp", "rotate", "2"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_setting_failed(self):
         """
         Test if it fails to set a new value for a specific configuration line

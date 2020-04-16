@@ -9,7 +9,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import Mock, patch
 
 # Salt testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
@@ -20,6 +20,7 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {adb: {"last_state": {}, "last_state_extra": {"no_devices": False}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_no_adb_command(self):
         with patch("salt.utils.path.which") as mock:
             mock.return_value = None
@@ -29,6 +30,7 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
             mock.assert_called_once_with("adb")
             self.assertFalse(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_with_adb_command(self):
         with patch("salt.utils.path.which") as mock:
             mock.return_value = "/usr/bin/adb"
@@ -38,6 +40,7 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
             mock.assert_called_once_with("adb")
             self.assertEqual(ret, "adb")
 
+    @skipIf(True, "FASTTEST skip")
     def test_non_list_config(self):
         config = {}
 
@@ -45,6 +48,7 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(ret, (False, "Configuration for adb beacon must be a list."))
 
+    @skipIf(True, "FASTTEST skip")
     def test_empty_config(self):
         config = [{}]
 
@@ -54,6 +58,7 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret, (False, "Configuration for adb beacon must include a states array.")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_invalid_states(self):
         config = [{"states": ["Random", "Failings"]}]
 
@@ -71,6 +76,7 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_device_state(self):
         config = [{"states": ["device"]}]
 
@@ -85,6 +91,7 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
                 ret, [{"device": "HTC", "state": "device", "tag": "device"}]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_device_state_change(self):
         config = [{"states": ["offline"]}]
 
@@ -107,6 +114,7 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
                 ret, [{"device": "HTC", "state": "offline", "tag": "offline"}]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_multiple_devices(self):
         config = [{"states": ["offline", "device"]}]
 
@@ -135,6 +143,7 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
                 ],
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_no_devices_with_different_states(self):
         config = [{"states": ["offline"], "no_devices_event": True}]
 
@@ -147,6 +156,7 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret = adb.beacon(config)
             self.assertEqual(ret, [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_no_devices_no_repeat(self):
         config = [{"states": ["offline", "device"], "no_devices_event": True}]
 
@@ -173,6 +183,7 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret = adb.beacon(config)
             self.assertEqual(ret, [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_no_devices(self):
         config = [{"states": ["offline", "device"], "no_devices_event": True}]
 
@@ -190,6 +201,7 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret = adb.beacon(config)
             self.assertEqual(ret, [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_device_missing(self):
         config = [{"states": ["device", "missing"]}]
 
@@ -224,6 +236,7 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret = adb.beacon(config)
             self.assertEqual(ret, [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_with_startup(self):
         config = [{"states": ["device"]}]
 
@@ -239,6 +252,7 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
                 ret, [{"device": "HTC", "state": "device", "tag": "device"}]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_with_user(self):
         config = [{"states": ["device"], "user": "fred"}]
 
@@ -255,6 +269,7 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
                 ret, [{"device": "HTC", "state": "device", "tag": "device"}]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_device_low_battery(self):
         config = [{"states": ["device"], "battery_low": 30}]
 
@@ -276,6 +291,7 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
                 ],
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_device_no_repeat(self):
         config = [{"states": ["device"], "battery_low": 30}]
 
@@ -302,6 +318,7 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret = adb.beacon(config)
             self.assertEqual(ret, [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_device_no_repeat_capacity_increase(self):
         config = [{"states": ["device"], "battery_low": 75}]
 
@@ -328,6 +345,7 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret = adb.beacon(config)
             self.assertEqual(ret, [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_device_no_repeat_with_not_found_state(self):
         config = [{"states": ["offline"], "battery_low": 30}]
 
@@ -350,6 +368,7 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret = adb.beacon(config)
             self.assertEqual(ret, [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_device_battery_charged(self):
         config = [{"states": ["device"], "battery_low": 30}]
 
@@ -367,6 +386,7 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
                 ret, [{"device": "HTC", "state": "device", "tag": "device"}]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_device_low_battery_equal(self):
         config = [{"states": ["device"], "battery_low": 25}]
 
@@ -388,6 +408,7 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
                 ],
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_device_battery_not_found(self):
         config = [{"states": ["device"], "battery_low": 25}]
 
@@ -405,6 +426,7 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
                 ret, [{"device": "HTC", "state": "device", "tag": "device"}]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_device_repeat_multi(self):
         config = [{"states": ["offline"], "battery_low": 35}]
 
@@ -439,6 +461,7 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret = adb.beacon(config)
             self.assertEqual(ret, [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_weird_batteries(self):
         config = [{"states": ["device"], "battery_low": 25}]
 
@@ -456,6 +479,7 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
                 ret, [{"device": "HTC", "state": "device", "tag": "device"}]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_multiple_batteries(self):
         config = [{"states": ["device"], "battery_low": 30}]
 
@@ -477,6 +501,7 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
                 ],
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_multiple_low_batteries(self):
         config = [{"states": ["device"], "battery_low": 30}]
 

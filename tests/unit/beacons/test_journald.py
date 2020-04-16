@@ -14,7 +14,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import Mock
 
 # Salt testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -86,6 +86,7 @@ class JournaldBeaconTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_non_list_config(self):
         config = {}
 
@@ -95,6 +96,7 @@ class JournaldBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret, (False, "Configuration for journald beacon must be a list.")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_empty_config(self):
         config = [{}]
 
@@ -102,6 +104,7 @@ class JournaldBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(ret, (True, "Valid beacon configuration"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_journald_match(self):
         config = [{"services": {"sshd": {"SYSLOG_IDENTIFIER": "sshd", "PRIORITY": 6}}}]
 

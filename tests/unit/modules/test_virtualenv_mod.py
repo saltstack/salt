@@ -20,7 +20,7 @@ from tests.support.helpers import ForceImportErrorOn, TstSuiteLoggingHandler
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
@@ -44,6 +44,7 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_issue_6029_deprecated_distribute(self):
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
 
@@ -82,6 +83,7 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
                     handler.messages,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_issue_6030_deprecated_never_download(self):
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
 
@@ -113,6 +115,7 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
                     handler.messages,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_issue_6031_multiple_extra_search_dirs(self):
         extra_search_dirs = ["/tmp/bar-1", "/tmp/bar-2", "/tmp/bar-3"]
 
@@ -150,6 +153,7 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_unapplicable_options(self):
         # ----- Virtualenv using pyvenv options ----------------------------->
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
@@ -215,6 +219,7 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
             )
         # <---- pyvenv using virtualenv options ------------------------------
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_virtualenv_version_from_shell(self):
         with ForceImportErrorOn("virtualenv"):
 
@@ -272,6 +277,7 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
                 )
             # <---- virtualenv binary returns 1.10rc1 as its version --------
 
+    @skipIf(True, "FASTTEST skip")
     def test_python_argument(self):
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
 
@@ -285,6 +291,7 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_prompt_argument(self):
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
         with patch.dict(virtualenv_mod.__salt__, {"cmd.run_all": mock}):
@@ -314,6 +321,7 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_clear_argument(self):
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
         with patch.dict(virtualenv_mod.__salt__, {"cmd.run_all": mock}):
@@ -322,6 +330,7 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
                 ["virtualenv", "--clear", "/tmp/foo"], runas=None, python_shell=False
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_upgrade_argument(self):
         # We test for pyvenv only because with virtualenv this is un
         # unsupported option.
@@ -332,6 +341,7 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
                 ["pyvenv", "--upgrade", "/tmp/foo"], runas=None, python_shell=False
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_symlinks_argument(self):
         # We test for pyvenv only because with virtualenv this is un
         # unsupported option.
@@ -342,6 +352,7 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
                 ["pyvenv", "--symlinks", "/tmp/foo"], runas=None, python_shell=False
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_virtualenv_ver(self):
         """
         test virtualenv_ver when there is no ImportError
@@ -349,6 +360,7 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
         ret = virtualenv_mod.virtualenv_ver(venv_bin="pyvenv")
         assert ret == (1, 9, 1)
 
+    @skipIf(True, "FASTTEST skip")
     def test_virtualenv_ver_importerror(self):
         """
         test virtualenv_ver when there is an ImportError
@@ -359,6 +371,7 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
                 ret = virtualenv_mod.virtualenv_ver(venv_bin="pyenv")
         assert ret == (1, 9, 1)
 
+    @skipIf(True, "FASTTEST skip")
     def test_virtualenv_ver_importerror_cmd_error(self):
         """
         test virtualenv_ver when there is an ImportError

@@ -11,7 +11,7 @@ import salt.states.keystone as keystone
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'user_present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_present(self):
         """
         Test to ensure that the keystone user is present
@@ -134,6 +135,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'user_absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_absent(self):
         """
         Test to ensure that the keystone user is absent.
@@ -158,6 +160,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'tenant_present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_tenant_present(self):
         """
         Test to ensures that the keystone tenant exists
@@ -225,6 +228,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'tenant_absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_tenant_absent(self):
         """
         Test to ensure that the keystone tenant is absent.
@@ -249,6 +253,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'role_present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_role_present(self):
         """
         Test to ensures that the keystone role exists
@@ -273,6 +278,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'role_absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_role_absent(self):
         """
         Test to ensure that the keystone role is absent.
@@ -297,6 +303,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'service_present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_service_present(self):
         """
         Test to ensure service present in Keystone catalog
@@ -322,6 +329,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'service_absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_service_absent(self):
         """
         Test to ensure that the service doesn't exist in Keystone catalog
@@ -346,6 +354,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'endpoint_present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_endpoint_present(self):
         """
         Test to ensure the specified endpoints exists for service
@@ -399,6 +408,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'endpoint_absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_endpoint_absent(self):
         """
         Test to ensure that the endpoint for a service doesn't

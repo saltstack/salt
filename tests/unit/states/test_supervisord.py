@@ -11,7 +11,7 @@ import salt.states.supervisord as supervisord
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'running' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_running(self):
         """
         Test to ensure the named service is running.
@@ -52,6 +53,7 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'dead' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_dead(self):
         """
         Test to ensure the named service is dead (not running).
@@ -67,6 +69,7 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'mod_watch' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_mod_watch(self):
         """
         Test to always restart on watch.

@@ -34,6 +34,7 @@ class TimezoneLinuxModuleTest(ModuleCase):
             self.skipTest("For Linux only")
         super(TimezoneLinuxModuleTest, self).setUp()
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_hwclock(self):
         timescale = ["UTC", "localtime"]
         ret = self.run_function("timezone.get_hwclock")
@@ -50,6 +51,7 @@ class TimezoneSolarisModuleTest(ModuleCase):
             self.skipTest("For Solaris only")
         super(TimezoneSolarisModuleTest, self).setUp()
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_hwclock(self):
         timescale = ["UTC", "localtime"]
         ret = self.run_function("timezone.get_hwclock")
@@ -66,6 +68,7 @@ class TimezoneWindowsModuleTest(ModuleCase):
         if self.pre != post:
             self.run_function("timezone.set_zone", [self.pre])
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_hwclock(self):
         timescale = ["UTC", "localtime"]
         ret = self.run_function("timezone.get_hwclock")

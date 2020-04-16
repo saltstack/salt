@@ -12,7 +12,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class NpmTestCase(TestCase, LoaderModuleMockMixin):
@@ -26,6 +26,7 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'installed' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed(self):
         """
         Test to verify that the given package is installed
@@ -70,6 +71,7 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'removed' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_removed(self):
         """
         Test to verify that the given package is not installed.
@@ -105,6 +107,7 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'bootstrap' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_bootstrap(self):
         """
         Test to bootstraps a node.js application.
@@ -131,6 +134,7 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'bootstrap' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_cache_cleaned(self):
         """
         Test to verify that the npm cache is cleaned.

@@ -14,7 +14,7 @@ import salt.modules.qemu_img as qemu_img
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class QemuimgTestCase(TestCase, LoaderModuleMockMixin):
@@ -25,6 +25,7 @@ class QemuimgTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {qemu_img: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_make_image(self):
         """
         Test for create a blank virtual machine image file

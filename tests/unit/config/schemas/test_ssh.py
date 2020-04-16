@@ -31,6 +31,7 @@ except ImportError:
 
 
 class RosterEntryConfigTest(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_config(self):
         config = ssh_schemas.RosterEntryConfig()
 
@@ -133,6 +134,7 @@ class RosterEntryConfigTest(TestCase):
             raise
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @skipIf(True, "FASTTEST skip")
     def test_config_validate(self):
         try:
             jsonschema.validate(
@@ -222,6 +224,7 @@ class RosterEntryConfigTest(TestCase):
 
 
 class RosterItemTest(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_roster_config(self):
         try:
             self.assertDictContainsSubset(
@@ -244,6 +247,7 @@ class RosterItemTest(TestCase):
             raise
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @skipIf(True, "FASTTEST skip")
     def test_roster_config_validate(self):
         try:
             jsonschema.validate(

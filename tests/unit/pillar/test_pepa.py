@@ -9,10 +9,11 @@ from collections import OrderedDict
 import salt.pillar.pepa as pepa
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PepaPillarTestCase(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_repeated_keys(self):
         # fmt: off
         expected_result = {

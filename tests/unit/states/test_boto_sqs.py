@@ -15,7 +15,7 @@ import salt.states.boto_sqs as boto_sqs
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
@@ -41,6 +41,7 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_present(self):
         """
         Test to ensure the SQS queue exists.
@@ -111,6 +112,7 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
         Test to ensure the named sqs queue is deleted.

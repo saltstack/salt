@@ -4,7 +4,7 @@ from __future__ import absolute_import
 from salt.modules import tuned
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class TunedListTestCase(TestCase, LoaderModuleMockMixin):
@@ -15,6 +15,7 @@ class TunedListTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {tuned: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_v_241(self):
         """
         Test the list_ function for older tuned-adm (v2.4.1)
@@ -54,6 +55,7 @@ Current active profile: throughput-performance"""
                 ],
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_v_271(self):
         """
         Test the list_ function for newer tuned-adm (v2.7.1)
@@ -88,6 +90,7 @@ Current active profile: virtual-guest
                 ],
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_none(self):
         """
         """

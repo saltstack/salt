@@ -21,7 +21,6 @@ from tests.support.mixins import ShellCaseCommonTestsMixin
 
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 USERA = "saltdev"
 USERA_PWD = "saltdev"
@@ -64,7 +63,6 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
             if USERA in user:
                 self.run_call("user.delete {0} remove=True".format(USERA))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_remove_key(self):
         """
         test salt-key -d usage
@@ -99,7 +97,6 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         check_key = self.run_key("-p {0}".format(min_name))
         self.assertEqual([], check_key)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_list_accepted_args(self):
         """
         test salt-key -l for accepted arguments
@@ -111,7 +108,6 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
             data = self.run_key("-l foo-{0}".format(key), catch_stderr=True)
             self.assertIn("error:", "\n".join(data[1]))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_list_all(self):
         """
         test salt-key -L
@@ -129,7 +125,6 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
             ]
         self.assertEqual(data, expect)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_list_json_out(self):
         """
         test salt-key -L --json-out
@@ -153,7 +148,6 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
             }
         self.assertEqual(ret, expect)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_list_yaml_out(self):
         """
         test salt-key -L --yaml-out
@@ -177,7 +171,6 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
             }
         self.assertEqual(ret, expect)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_list_raw_out(self):
         """
         test salt-key -L --raw-out
@@ -203,7 +196,6 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
             }
         self.assertEqual(ret, expect)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_list_acc(self):
         """
         test salt-key -l
@@ -214,7 +206,6 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
 
     @skip_if_not_root
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
     def test_list_acc_eauth(self):
         """
         test salt-key -l with eauth
@@ -229,7 +220,6 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
 
     @skip_if_not_root
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
     def test_list_acc_eauth_bad_creds(self):
         """
         test salt-key -l with eauth and bad creds
@@ -246,7 +236,6 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         self.assertEqual(data, expect)
         self._remove_user()
 
-    @skipIf(True, "SLOWTEST skip")
     def test_list_acc_wrong_eauth(self):
         """
         test salt-key -l with wrong eauth
@@ -259,7 +248,6 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         expect = r"^The specified external authentication system \"wrongeauth\" is not available\tAvailable eauth types: auto, .*"
         self.assertRegex("\t".join(data), expect)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_list_un(self):
         """
         test salt-key -l
@@ -268,7 +256,6 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         expect = ["Unaccepted Keys:"]
         self.assertEqual(data, expect)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_keys_generation(self):
         tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         arg_str = "--gen-keys minibar --gen-keys-dir {0}".format(tempdir)
@@ -285,7 +272,6 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
                     os.chmod(os.path.join(dirname, filename), 0o700)
             shutil.rmtree(tempdir)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_keys_generation_keysize_minmax(self):
         tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         arg_str = "--gen-keys minion --gen-keys-dir {0}".format(tempdir)

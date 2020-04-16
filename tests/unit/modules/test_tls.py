@@ -118,6 +118,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {tls: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_cert_base_path(self):
         """
         Test for retrieving cert base path
@@ -127,6 +128,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(tls.__salt__, {"config.option": mock_opt}):
             self.assertEqual(tls.cert_base_path(), ca_path)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_ca_cert_path(self):
         """
         Test for setting the cert base path
@@ -138,6 +140,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
             tls.set_ca_path(ca_path)
             self.assertEqual(tls.__context__, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_ca_exists(self):
         """
         Test to see if ca does not exist
@@ -152,6 +155,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertFalse(tls.ca_exists(ca_name))
 
+    @skipIf(True, "FASTTEST skip")
     def test_ca_exists_true(self):
         """
         Test to see if ca exists
@@ -166,6 +170,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(tls.ca_exists(ca_name))
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_ca_fail(self):
         """
         Test get_ca failure
@@ -180,6 +185,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertRaises(ValueError, tls.get_ca, ca_name)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_ca_text(self):
         """
         Test get_ca text
@@ -198,6 +204,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                 tls.get_ca(ca_name, as_text=True), _TLS_TEST_DATA["ca_cert"]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_ca(self):
         """
         Test get_ca
@@ -213,6 +220,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(tls.get_ca(ca_name), certp)
 
+    @skipIf(True, "FASTTEST skip")
     def test_cert_info(self):
         """
         Test cert info
@@ -313,6 +321,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(result, ret)
 
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_create_ca(self, ca_path):
         """
         Test creating CA cert
@@ -340,6 +349,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
             )
 
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_recreate_ca(self, ca_path):
         """
         Test creating CA cert when one already exists
@@ -370,6 +380,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
             )
 
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_create_csr(self, ca_path):
         """
         Test creating certificate signing request
@@ -405,6 +416,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
             )
 
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_recreate_csr(self, ca_path):
         """
         Test creating certificate signing request when one already exists
@@ -443,6 +455,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
             )
 
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_create_self_signed_cert(self, ca_path):
         """
         Test creating self signed certificate
@@ -471,6 +484,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
             )
 
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_recreate_self_signed_cert(self, ca_path):
         """
         Test creating self signed certificate when one already exists
@@ -499,6 +513,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
             )
 
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_create_ca_signed_cert(self, ca_path):
         """
         Test signing certificate from request
@@ -533,6 +548,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
             )
 
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_recreate_ca_signed_cert(self, ca_path):
         """
         Test signing certificate from request when certificate exists
@@ -570,6 +586,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
             )
 
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_create_pkcs12(self, ca_path):
         """
         Test creating pkcs12
@@ -607,6 +624,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
             )
 
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_recreate_pkcs12(self, ca_path):
         """
         Test creating pkcs12 when it already exists
@@ -646,6 +664,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                 ret,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_pyOpenSSL_version(self):
         """
         Test extension logic with different pyOpenSSL versions
@@ -685,6 +704,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(tls.get_extensions("client"), pillarval)
 
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_pyOpenSSL_version_destructive(self, ca_path):
         """
         Test extension logic with different pyOpenSSL versions
@@ -815,6 +835,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                             tls.create_csr(ca_name, **_TLS_TEST_DATA["create_ca"]), ret
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_expiration_date(self):
         with patch(
             "salt.utils.files.fopen", mock_open(read_data=_TLS_TEST_DATA["ca_cert"])

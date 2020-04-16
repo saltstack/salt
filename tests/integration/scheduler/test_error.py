@@ -58,6 +58,7 @@ class SchedulerErrorTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.reset()
 
     @skipIf(not HAS_CRONITER, "Cannot find croniter python module")
+    @skipIf(True, "FASTTEST skip")
     def test_eval_cron_invalid(self):
         """
         verify that scheduled job runs
@@ -74,6 +75,7 @@ class SchedulerErrorTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.schedule.job_status("job1")
         self.assertEqual(ret["_error"], "Invalid cron string. Ignoring job job1.")
 
+    @skipIf(True, "FASTTEST skip")
     def test_eval_when_invalid_date(self):
         """
         verify that scheduled job does not run
@@ -95,6 +97,7 @@ class SchedulerErrorTest(ModuleCase, SaltReturnAssertsMixin):
             ret["_error"], "Invalid date string 13/29/2017 1:00pm. Ignoring job job1."
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_eval_whens_grain_not_dict(self):
         """
         verify that scheduled job does not run
@@ -116,6 +119,7 @@ class SchedulerErrorTest(ModuleCase, SaltReturnAssertsMixin):
             ret["_error"], 'Grain "whens" must be a dict. Ignoring job job1.'
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_eval_once_invalid_datestring(self):
         """
         verify that scheduled job does not run
@@ -141,6 +145,7 @@ class SchedulerErrorTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertEqual(ret["_error"], _expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_eval_skip_during_range_invalid_date(self):
         """
         verify that scheduled job does not run
@@ -174,6 +179,7 @@ class SchedulerErrorTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertEqual(ret["_error"], _expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_eval_skip_during_range_end_before_start(self):
         """
         verify that scheduled job does not run
@@ -209,6 +215,7 @@ class SchedulerErrorTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertEqual(ret["_error"], _expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_eval_skip_during_range_not_dict(self):
         """
         verify that scheduled job does not run

@@ -10,6 +10,7 @@ from tests.support.case import TestCase
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf
 
 
 class Boto_SecgroupTestCase(TestCase, LoaderModuleMockMixin):
@@ -20,6 +21,7 @@ class Boto_SecgroupTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {boto_secgroup: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test__get_rule_changes_no_rules_no_change(self):
         """
         tests a condition with no rules in present or desired group
@@ -30,6 +32,7 @@ class Boto_SecgroupTestCase(TestCase, LoaderModuleMockMixin):
             boto_secgroup._get_rule_changes(desired_rules, present_rules), ([], [])
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test__get_rule_changes_create_rules(self):
         """
         tests a condition where a rule must be created
@@ -78,6 +81,7 @@ class Boto_SecgroupTestCase(TestCase, LoaderModuleMockMixin):
             ([], rules_to_create),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test__get_rule_changes_delete_rules(self):
         """
         tests a condition where a rule must be deleted

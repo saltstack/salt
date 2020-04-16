@@ -13,7 +13,7 @@ from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class EventTestCase(TestCase, LoaderModuleMockMixin):
@@ -32,6 +32,7 @@ class EventTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_fire_master(self):
         """
         Test for Fire an event off up to the master server
@@ -66,6 +67,7 @@ class EventTestCase(TestCase, LoaderModuleMockMixin):
                 ):
                     self.assertFalse(event.fire_master("data", "tag"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_fire(self):
         """
         Test to fire an event on the local minion event bus.
@@ -76,6 +78,7 @@ class EventTestCase(TestCase, LoaderModuleMockMixin):
                 mock.fire_event = MagicMock(return_value=True)
                 self.assertTrue(event.fire("data", "tag"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_send(self):
         """
         Test for Send an event to the Salt Master

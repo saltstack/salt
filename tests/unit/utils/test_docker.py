@@ -26,7 +26,7 @@ from salt.ext import six
 from salt.utils.docker.translate import helpers as translate_helpers
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -778,11 +778,13 @@ class TranslateContainerInputTestCase(TranslateBase):
         return ret
 
     @assert_bool(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_auto_remove(self):
         """
         Should be a bool or converted to one
         """
 
+    @skipIf(True, "FASTTEST skip")
     def test_binds(self):
         """
         Test the "binds" kwarg. Any volumes not defined in the "volumes" kwarg
@@ -813,11 +815,13 @@ class TranslateContainerInputTestCase(TranslateBase):
         )
 
     @assert_int(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_blkio_weight(self):
         """
         Should be an int or converted to one
         """
 
+    @skipIf(True, "FASTTEST skip")
     def test_blkio_weight_device(self):
         """
         Should translate a list of PATH:WEIGHT pairs to a list of dictionaries
@@ -857,60 +861,70 @@ class TranslateContainerInputTestCase(TranslateBase):
             )
 
     @assert_stringlist(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_cap_add(self):
         """
         Should be a list of strings or converted to one
         """
 
     @assert_stringlist(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_cap_drop(self):
         """
         Should be a list of strings or converted to one
         """
 
     @assert_cmd(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_command(self):
         """
         Can either be a string or a comma-separated or Python list of strings.
         """
 
     @assert_string(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_cpuset_cpus(self):
         """
         Should be a string or converted to one
         """
 
     @assert_string(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_cpuset_mems(self):
         """
         Should be a string or converted to one
         """
 
     @assert_int(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_cpu_group(self):
         """
         Should be an int or converted to one
         """
 
     @assert_int(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_cpu_period(self):
         """
         Should be an int or converted to one
         """
 
     @assert_int(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_cpu_shares(self):
         """
         Should be an int or converted to one
         """
 
     @assert_bool(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_detach(self):
         """
         Should be a bool or converted to one
         """
 
     @assert_device_rates(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_device_read_bps(self):
         """
         CLI input is a list of PATH:RATE pairs, but the API expects a list of
@@ -918,6 +932,7 @@ class TranslateContainerInputTestCase(TranslateBase):
         """
 
     @assert_device_rates(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_device_read_iops(self):
         """
         CLI input is a list of PATH:RATE pairs, but the API expects a list of
@@ -925,6 +940,7 @@ class TranslateContainerInputTestCase(TranslateBase):
         """
 
     @assert_device_rates(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_device_write_bps(self):
         """
         CLI input is a list of PATH:RATE pairs, but the API expects a list of
@@ -932,6 +948,7 @@ class TranslateContainerInputTestCase(TranslateBase):
         """
 
     @assert_device_rates(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_device_write_iops(self):
         """
         CLI input is a list of PATH:RATE pairs, but the API expects a list of
@@ -939,23 +956,27 @@ class TranslateContainerInputTestCase(TranslateBase):
         """
 
     @assert_stringlist(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_devices(self):
         """
         Should be a list of strings or converted to one
         """
 
     @assert_stringlist(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_dns_opt(self):
         """
         Should be a list of strings or converted to one
         """
 
     @assert_stringlist(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_dns_search(self):
         """
         Should be a list of strings or converted to one
         """
 
+    @skipIf(True, "FASTTEST skip")
     def test_dns(self):
         """
         While this is a stringlist, it also supports IP address validation, so
@@ -991,24 +1012,28 @@ class TranslateContainerInputTestCase(TranslateBase):
             )
 
     @assert_string(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_domainname(self):
         """
         Should be a list of strings or converted to one
         """
 
     @assert_cmd(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_entrypoint(self):
         """
         Can either be a string or a comma-separated or Python list of strings.
         """
 
     @assert_key_equals_value(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_environment(self):
         """
         Can be passed in several formats but must end up as a dictionary
         mapping keys to values
         """
 
+    @skipIf(True, "FASTTEST skip")
     def test_extra_hosts(self):
         """
         Can be passed as a list of key:value pairs but can't be simply tested
@@ -1046,30 +1071,36 @@ class TranslateContainerInputTestCase(TranslateBase):
             )
 
     @assert_stringlist(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_group_add(self):
         """
         Should be a list of strings or converted to one
         """
 
     @assert_string(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_hostname(self):
         """
         Should be a string or converted to one
         """
 
     @assert_string(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_ipc_mode(self):
         """
         Should be a string or converted to one
         """
 
     @assert_string(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_isolation(self):
         """
         Should be a string or converted to one
         """
 
     @assert_labels(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_labels(self):
         """
         Can be passed as a list of key=value pairs or a dictionary, and must
@@ -1077,12 +1108,14 @@ class TranslateContainerInputTestCase(TranslateBase):
         """
 
     @assert_key_colon_value(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_links(self):
         """
         Can be passed as a list of key:value pairs or a dictionary, and must
         ultimately end up as a dictionary.
         """
 
+    @skipIf(True, "FASTTEST skip")
     def test_log_config(self):
         """
         This is a mixture of log_driver and log_opt, which get combined into a
@@ -1122,6 +1155,7 @@ class TranslateContainerInputTestCase(TranslateBase):
         )
 
     @assert_key_equals_value(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_lxc_conf(self):
         """
         Can be passed as a list of key=value pairs or a dictionary, and must
@@ -1129,71 +1163,83 @@ class TranslateContainerInputTestCase(TranslateBase):
         """
 
     @assert_string(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_mac_address(self):
         """
         Should be a string or converted to one
         """
 
     @assert_int_or_string(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_mem_limit(self):
         """
         Should be a string or converted to one
         """
 
     @assert_int(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_mem_swappiness(self):
         """
         Should be an int or converted to one
         """
 
     @assert_int_or_string(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_memswap_limit(self):
         """
         Should be a string or converted to one
         """
 
     @assert_string(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_name(self):
         """
         Should be a string or converted to one
         """
 
     @assert_bool(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_network_disabled(self):
         """
         Should be a bool or converted to one
         """
 
     @assert_string(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_network_mode(self):
         """
         Should be a string or converted to one
         """
 
     @assert_bool(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_oom_kill_disable(self):
         """
         Should be a bool or converted to one
         """
 
     @assert_int(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_oom_score_adj(self):
         """
         Should be an int or converted to one
         """
 
     @assert_string(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_pid_mode(self):
         """
         Should be a string or converted to one
         """
 
     @assert_int(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_pids_limit(self):
         """
         Should be an int or converted to one
         """
 
+    @skipIf(True, "FASTTEST skip")
     def test_port_bindings(self):
         """
         This has several potential formats and can include port ranges. It
@@ -1474,6 +1520,7 @@ class TranslateContainerInputTestCase(TranslateBase):
         ):
             salt.utils.docker.translate_input(self.translator, port_bindings="")
 
+    @skipIf(True, "FASTTEST skip")
     def test_ports(self):
         """
         Ports can be passed as a comma-separated or Python list of port
@@ -1515,23 +1562,27 @@ class TranslateContainerInputTestCase(TranslateBase):
             )
 
     @assert_bool(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_privileged(self):
         """
         Should be a bool or converted to one
         """
 
     @assert_bool(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_publish_all_ports(self):
         """
         Should be a bool or converted to one
         """
 
     @assert_bool(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_read_only(self):
         """
         Should be a bool or converted to one
         """
 
+    @skipIf(True, "FASTTEST skip")
     def test_restart_policy(self):
         """
         Input is in the format "name[:retry_count]", but the API wants it
@@ -1578,36 +1629,42 @@ class TranslateContainerInputTestCase(TranslateBase):
             )
 
     @assert_stringlist(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_security_opt(self):
         """
         Should be a list of strings or converted to one
         """
 
     @assert_int_or_string(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_shm_size(self):
         """
         Should be a string or converted to one
         """
 
     @assert_bool(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_stdin_open(self):
         """
         Should be a bool or converted to one
         """
 
     @assert_string(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_stop_signal(self):
         """
         Should be a string or converted to one
         """
 
     @assert_int(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_stop_timeout(self):
         """
         Should be an int or converted to one
         """
 
     @assert_key_equals_value(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_storage_opt(self):
         """
         Can be passed in several formats but must end up as a dictionary
@@ -1615,6 +1672,7 @@ class TranslateContainerInputTestCase(TranslateBase):
         """
 
     @assert_key_equals_value(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_sysctls(self):
         """
         Can be passed in several formats but must end up as a dictionary
@@ -1622,6 +1680,7 @@ class TranslateContainerInputTestCase(TranslateBase):
         """
 
     @assert_dict(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_tmpfs(self):
         """
         Can be passed in several formats but must end up as a dictionary
@@ -1629,11 +1688,13 @@ class TranslateContainerInputTestCase(TranslateBase):
         """
 
     @assert_bool(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_tty(self):
         """
         Should be a bool or converted to one
         """
 
+    @skipIf(True, "FASTTEST skip")
     def test_ulimits(self):
         """
         Input is in the format "name=soft_limit[:hard_limit]", but the API
@@ -1672,6 +1733,7 @@ class TranslateContainerInputTestCase(TranslateBase):
                 self.translator, ulimits="nofile=foo:2048"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_user(self):
         """
         Must be either username (string) or uid (int). An int passed as a
@@ -1699,18 +1761,21 @@ class TranslateContainerInputTestCase(TranslateBase):
             salt.utils.docker.translate_input(self.translator, user=-1)
 
     @assert_string(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_userns_mode(self):
         """
         Should be a bool or converted to one
         """
 
     @assert_string(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_volume_driver(self):
         """
         Should be a bool or converted to one
         """
 
     @assert_stringlist(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_volumes(self):
         """
         Should be a list of absolute paths
@@ -1724,12 +1789,14 @@ class TranslateContainerInputTestCase(TranslateBase):
             salt.utils.docker.translate_input(self.translator, volumes=path)
 
     @assert_stringlist(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_volumes_from(self):
         """
         Should be a list of strings or converted to one
         """
 
     @assert_string(salt.utils.docker.translate.container)
+    @skipIf(True, "FASTTEST skip")
     def test_working_dir(self):
         """
         Should be a single absolute path
@@ -1757,12 +1824,14 @@ class TranslateNetworkInputTestCase(TranslateBase):
     }
 
     @assert_string(salt.utils.docker.translate.network)
+    @skipIf(True, "FASTTEST skip")
     def test_driver(self):
         """
         Should be a string or converted to one
         """
 
     @assert_key_equals_value(salt.utils.docker.translate.network)
+    @skipIf(True, "FASTTEST skip")
     def test_options(self):
         """
         Can be passed in several formats but must end up as a dictionary
@@ -1770,24 +1839,29 @@ class TranslateNetworkInputTestCase(TranslateBase):
         """
 
     @assert_dict(salt.utils.docker.translate.network)
+    @skipIf(True, "FASTTEST skip")
     def test_ipam(self):
         """
         Must be a dict
         """
 
     @assert_bool(salt.utils.docker.translate.network)
+    @skipIf(True, "FASTTEST skip")
     def test_check_duplicate(self):
         """
         Should be a bool or converted to one
         """
 
     @assert_bool(salt.utils.docker.translate.network)
+    @skipIf(True, "FASTTEST skip")
     def test_internal(self):
         """
         Should be a bool or converted to one
         """
 
     @assert_labels(salt.utils.docker.translate.network)
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_labels(self):
         """
         Can be passed as a list of key=value pairs or a dictionary, and must
@@ -1795,30 +1869,35 @@ class TranslateNetworkInputTestCase(TranslateBase):
         """
 
     @assert_bool(salt.utils.docker.translate.network)
+    @skipIf(True, "FASTTEST skip")
     def test_enable_ipv6(self):
         """
         Should be a bool or converted to one
         """
 
     @assert_bool(salt.utils.docker.translate.network)
+    @skipIf(True, "FASTTEST skip")
     def test_attachable(self):
         """
         Should be a bool or converted to one
         """
 
     @assert_bool(salt.utils.docker.translate.network)
+    @skipIf(True, "FASTTEST skip")
     def test_ingress(self):
         """
         Should be a bool or converted to one
         """
 
     @assert_string(salt.utils.docker.translate.network)
+    @skipIf(True, "FASTTEST skip")
     def test_ipam_driver(self):
         """
         Should be a bool or converted to one
         """
 
     @assert_key_equals_value(salt.utils.docker.translate.network)
+    @skipIf(True, "FASTTEST skip")
     def test_ipam_opts(self):
         """
         Can be passed in several formats but must end up as a dictionary
@@ -1887,17 +1966,20 @@ class TranslateNetworkInputTestCase(TranslateBase):
                 )
 
     @assert_subnet(salt.utils.docker.translate.network)
+    @skipIf(True, "FASTTEST skip")
     def test_subnet(self):
         """
         Must be an IPv4 or IPv6 subnet
         """
 
     @assert_subnet(salt.utils.docker.translate.network)
+    @skipIf(True, "FASTTEST skip")
     def test_iprange(self):
         """
         Must be an IPv4 or IPv6 subnet
         """
 
+    @skipIf(True, "FASTTEST skip")
     def test_gateway(self):
         """
         Must be an IPv4 or IPv6 address
@@ -1931,6 +2013,7 @@ class TranslateNetworkInputTestCase(TranslateBase):
             )
 
     @assert_key_equals_value(salt.utils.docker.translate.network)
+    @skipIf(True, "FASTTEST skip")
     def test_aux_addresses(self):
         """
         Must be a mapping of hostnames to IP addresses
@@ -1970,6 +2053,7 @@ class DockerTranslateHelperTestCase(TestCase):
     Tests for a couple helper functions in salt.utils.docker.translate
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_port_def(self):
         """
         Test translation of port definition (1234, '1234/tcp', '1234/udp',
@@ -1995,6 +2079,7 @@ class DockerTranslateHelperTestCase(TestCase):
         # Test UDP port (proto passed in port_num
         self.assertEqual(translate_helpers.get_port_def("2222/udp"), (2222, "udp"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_port_range(self):
         """
         Test extracting the start and end of a port range from a port range

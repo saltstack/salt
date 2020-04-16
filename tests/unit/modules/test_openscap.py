@@ -13,7 +13,7 @@ from salt.ext import six
 from tests.support.mock import MagicMock, Mock, patch
 
 # Import salt test libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class OpenscapTestCase(TestCase):
@@ -40,6 +40,7 @@ class OpenscapTestCase(TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
 
+    @skipIf(True, "FASTTEST skip")
     def test_openscap_xccdf_eval_success(self):
         with patch(
             "salt.modules.openscap.Popen",
@@ -87,6 +88,7 @@ class OpenscapTestCase(TestCase):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_openscap_xccdf_eval_success_with_failing_rules(self):
         with patch(
             "salt.modules.openscap.Popen",
@@ -134,6 +136,7 @@ class OpenscapTestCase(TestCase):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_openscap_xccdf_eval_fail_no_profile(self):
         response = openscap.xccdf("eval --param Default /unknown/param")
         if six.PY2:
@@ -145,6 +148,7 @@ class OpenscapTestCase(TestCase):
             {"error": error, "upload_dir": None, "success": False, "returncode": None},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_openscap_xccdf_eval_success_ignore_unknown_params(self):
         with patch(
             "salt.modules.openscap.Popen",
@@ -186,6 +190,7 @@ class OpenscapTestCase(TestCase):
                 stdout=PIPE,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_openscap_xccdf_eval_evaluation_error(self):
         with patch(
             "salt.modules.openscap.Popen",
@@ -212,6 +217,7 @@ class OpenscapTestCase(TestCase):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_openscap_xccdf_eval_fail_not_implemented_action(self):
         response = openscap.xccdf("info {0}".format(self.policy_file))
         if six.PY2:

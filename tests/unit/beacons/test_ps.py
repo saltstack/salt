@@ -9,7 +9,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 
 # Salt testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 PATCH_OPTS = dict(autospec=True, spec_set=True)
 
@@ -31,6 +31,7 @@ class PSBeaconTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {}
 
+    @skipIf(True, "FASTTEST skip")
     def test_non_list_config(self):
         config = {}
 
@@ -38,6 +39,7 @@ class PSBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(ret, (False, "Configuration for ps beacon must be a list."))
 
+    @skipIf(True, "FASTTEST skip")
     def test_empty_config(self):
         config = [{}]
 
@@ -47,6 +49,7 @@ class PSBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret, (False, "Configuration for ps beacon requires processes.")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_ps_running(self):
         with patch(
             "salt.utils.psutil_compat.process_iter", **PATCH_OPTS
@@ -64,6 +67,7 @@ class PSBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret = ps.beacon(config)
             self.assertEqual(ret, [{"salt-master": "Running"}])
 
+    @skipIf(True, "FASTTEST skip")
     def test_ps_not_running(self):
         with patch(
             "salt.utils.psutil_compat.process_iter", **PATCH_OPTS

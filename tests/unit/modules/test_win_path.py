@@ -15,7 +15,7 @@ import salt.utils.stringutils
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class WinPathTestCase(TestCase, LoaderModuleMockMixin):
@@ -44,6 +44,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             env["PATH"], salt.utils.stringutils.to_str(self.pathsep.join(new_path))
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_path(self):
         """
         Test to Returns the system path
@@ -52,6 +53,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_path.__salt__, {"reg.read_value": mock}):
             self.assertListEqual(win_path.get_path(), ["C:\\Salt"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_exists(self):
         """
         Test to check if the directory is configured
@@ -63,6 +65,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(win_path.exists("c:\\foo"))
             self.assertFalse(win_path.exists("c:\\mystuff"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_add(self):
         """
         Test to add the directory to the SYSTEM path
@@ -187,6 +190,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         self.assert_call_matches(mock_set, new_path)
         self.assert_path_matches(env, new_path)
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove(self):
         """
         Test win_path.remove

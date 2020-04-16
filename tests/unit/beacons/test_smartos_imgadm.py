@@ -9,7 +9,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 
 # Salt testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 # Mock Results
 MOCK_CLEAN_STATE = {"first_run": True, "images": []}
@@ -52,6 +52,7 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {imgadm: {"__context__": {}, "__salt__": {}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_non_list_config(self):
         """
         We only have minimal validation so we test that here
@@ -61,6 +62,7 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
             "Configuration for imgadm beacon must be a list!",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_imported_startup(self):
         """
         Test with one image and startup_import_event
@@ -87,6 +89,7 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ]
             assert ret == res
 
+    @skipIf(True, "FASTTEST skip")
     def test_imported_nostartup(self):
         """
         Test with one image and startup_import_event unset/false
@@ -101,6 +104,7 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
             assert imgadm.validate(config) == (True, "Valid beacon configuration")
             assert imgadm.beacon(config) == []
 
+    @skipIf(True, "FASTTEST skip")
     def test_imported(self):
         """
         Test with one image and a new image added on the 2nd pass
@@ -133,6 +137,7 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
             assert ret == res
 
+    @skipIf(True, "FASTTEST skip")
     def test_deleted(self):
         """
         Test with two images and one gets deletes
@@ -165,6 +170,7 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
             assert ret == res
 
+    @skipIf(True, "FASTTEST skip")
     def test_complex(self):
         """
         Test with one image, delete both, import 2

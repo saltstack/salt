@@ -11,7 +11,7 @@ import salt.states.mongodb_user as mongodb_user
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MongodbUserTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class MongodbUserTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_present(self):
         """
         Test to ensure that the user is present with the specified properties.
@@ -61,6 +62,7 @@ class MongodbUserTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
         Test to ensure that the named user is absent.

@@ -16,7 +16,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class GrublegacyTestCase(TestCase, LoaderModuleMockMixin):
@@ -27,6 +27,7 @@ class GrublegacyTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {grub_legacy: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_version(self):
         """
         Test for Return server version from grub --version
@@ -35,6 +36,7 @@ class GrublegacyTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(grub_legacy.__salt__, {"cmd.run": mock}):
             self.assertEqual(grub_legacy.version(), "out")
 
+    @skipIf(True, "FASTTEST skip")
     def test_conf(self):
         """
         Test for Parse GRUB conf file

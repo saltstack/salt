@@ -8,7 +8,7 @@ import salt.beacons.avahi_announce as avahi_announce
 from tests.support.mixins import LoaderModuleMockMixin
 
 # Salt testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class AvahiAnnounceBeaconTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class AvahiAnnounceBeaconTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_non_list_config(self):
         config = {}
 
@@ -33,6 +34,7 @@ class AvahiAnnounceBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret, (False, "Configuration for avahi_announce beacon must be a list.")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_empty_config(self):
         config = [{}]
 

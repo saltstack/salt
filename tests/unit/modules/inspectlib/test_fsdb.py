@@ -31,7 +31,7 @@ from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 def mock_open(data=None):
@@ -99,6 +99,7 @@ class InspectorFSDBTestCase(TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
 
+    @skipIf(True, "FASTTEST skip")
     def test_open(self):
         """
         Test opening the database.
@@ -112,6 +113,7 @@ class InspectorFSDBTestCase(TestCase):
             assert list(csvdb.list_tables()) == ["test_db"]
             assert csvdb.is_closed() is False
 
+    @skipIf(True, "FASTTEST skip")
     def test_close(self):
         """
         Test closing the database.
@@ -125,6 +127,7 @@ class InspectorFSDBTestCase(TestCase):
             csvdb.close()
             assert csvdb.is_closed() is True
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_table(self):
         """
         Test creating table.
@@ -148,6 +151,7 @@ class InspectorFSDBTestCase(TestCase):
                 sorted_expected_data = sorted("foo:int,bar:str,spam:float".split(","))
             self.assertEqual(sorted_writable_data, sorted_expected_data)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_databases(self):
         """
         Test list databases.
@@ -157,6 +161,7 @@ class InspectorFSDBTestCase(TestCase):
             csvdb = CsvDB("/foobar")
             assert csvdb.list() == ["test_db"]
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_object(self):
         """
         Test storing object into the database.
@@ -185,6 +190,7 @@ class InspectorFSDBTestCase(TestCase):
                 csvdb.store(obj)
                 assert writable.data[0].strip() == "123,test entity,0.123"
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_object(self):
         """
         Deleting an object from the store.
@@ -226,6 +232,7 @@ class InspectorFSDBTestCase(TestCase):
             assert csvdb._remained[0].bar == "another"
             assert csvdb._remained[0].spam == 0.456
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_object(self):
         """
         Updating an object from the store.
@@ -275,6 +282,7 @@ class InspectorFSDBTestCase(TestCase):
             assert csvdb._remained[1].bar == "another"
             assert csvdb._remained[1].spam == 0.456
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_object(self):
         """
         Getting an object from the store.
@@ -309,6 +317,7 @@ class InspectorFSDBTestCase(TestCase):
             assert entities[1].bar == "another"
             assert entities[1].spam == 0.456
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_obj_equals(self):
         """
         Getting an object from the store with conditions
@@ -340,6 +349,7 @@ class InspectorFSDBTestCase(TestCase):
             assert entities[0].bar == "test"
             assert entities[0].spam == 0.123
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_obj_more_than(self):
         """
         Getting an object from the store with conditions
@@ -371,6 +381,7 @@ class InspectorFSDBTestCase(TestCase):
             assert entities[0].bar == "another"
             assert entities[0].spam == 0.456
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_obj_less_than(self):
         """
         Getting an object from the store with conditions
@@ -402,6 +413,7 @@ class InspectorFSDBTestCase(TestCase):
             assert entities[0].bar == "test"
             assert entities[0].spam == 0.123
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_obj_matching(self):
         """
         Getting an object from the store with conditions
@@ -433,6 +445,7 @@ class InspectorFSDBTestCase(TestCase):
             assert entities[0].bar == "this is test of something"
             assert entities[0].spam == 0.123
 
+    @skipIf(True, "FASTTEST skip")
     def test_obj_serialization(self):
         """
         Test object serialization.
@@ -448,6 +461,7 @@ class InspectorFSDBTestCase(TestCase):
         )
         assert obj._serialize(descr) == [123, "test entity", 0.123]
 
+    @skipIf(True, "FASTTEST skip")
     def test_obj_validation(self):
         """
         Test object validation.
@@ -473,6 +487,7 @@ class InspectorFSDBTestCase(TestCase):
             }
             assert csvdb._validate_object(obj) == [123, "test entity", 0.123]
 
+    @skipIf(True, "FASTTEST skip")
     def test_criteria(self):
         """
         Test criteria selector.

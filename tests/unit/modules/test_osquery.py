@@ -12,7 +12,7 @@ import salt.modules.osquery as osquery
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class OSQueryTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class OSQueryTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {osquery: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_version(self):
         """
         Test the version returned from OSQuery
@@ -51,6 +52,7 @@ class OSQueryTestCase(TestCase, LoaderModuleMockMixin):
             ):
                 self.assertEqual(osquery.version(), "2.6.1")
 
+    @skipIf(True, "FASTTEST skip")
     def test_deb_packages(self):
         """
         Test the results returned from the deb_packages function
@@ -98,6 +100,7 @@ class OSQueryTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(osquery.__grains__, {"os_family": "Debian"}):
                 self.assertEqual(osquery.deb_packages(), _os_query_results)
 
+    @skipIf(True, "FASTTEST skip")
     def test_deb_packages_with_attrs(self):
         """
         Test the results returned from the deb_packages function
@@ -127,6 +130,7 @@ class OSQueryTestCase(TestCase, LoaderModuleMockMixin):
                         _os_query_results,
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_kernel_modules(self):
         """
         Test the results returned from the kernel_modules function
@@ -163,6 +167,7 @@ class OSQueryTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(osquery.__grains__, {"os_family": "Debian"}):
                 self.assertEqual(osquery.kernel_modules(), _os_query_results)
 
+    @skipIf(True, "FASTTEST skip")
     def test_kernel_modules_with_attrs(self):
         """
         Test the results returned from the kernel_modules function
@@ -190,6 +195,7 @@ class OSQueryTestCase(TestCase, LoaderModuleMockMixin):
                         _os_query_results,
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_osquery_info(self):
         """
         Test the results returned from the kernel_modules function
@@ -237,6 +243,7 @@ class OSQueryTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(osquery.__grains__, {"os_family": "Debian"}):
                     self.assertEqual(osquery.osquery_info(), _os_query_results)
 
+    @skipIf(True, "FASTTEST skip")
     def test_osquery_info_with_attrs(self):
         """
         Test the results returned from the kernel_modules function

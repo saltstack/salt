@@ -190,6 +190,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
         dbus_mock.configure_mock(DBusException=DBusException)
         return {snapper: {"dbus": dbus_mock, "snapper": MagicMock()}}
 
+    @skipIf(True, "FASTTEST skip")
     def test__snapshot_to_data(self):
         data = snapper._snapshot_to_data(
             DBUS_RET["ListSnapshots"][0]
@@ -203,6 +204,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(data["cleanup"], "")
         self.assertEqual(data["userdata"]["userdata1"], "userval1")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_snapshots(self):
         with patch(
             "salt.modules.snapper.snapper.ListSnapshots",
@@ -210,6 +212,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(snapper.list_snapshots(), MODULE_RET["SNAPSHOTS"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_snapshot(self):
         with patch(
             "salt.modules.snapper.snapper.GetSnapshot",
@@ -223,6 +226,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                 snapper.get_snapshot(number=42), MODULE_RET["SNAPSHOTS"][1]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_configs(self):
         with patch(
             "salt.modules.snapper.snapper.ListConfigs",
@@ -230,6 +234,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(snapper.list_configs(), MODULE_RET["LISTCONFIGS"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_config(self):
         with patch(
             "salt.modules.snapper.snapper.GetConfig",
@@ -237,11 +242,13 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(snapper.get_config(), DBUS_RET["ListConfigs"][0])
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_config(self):
         with patch("salt.modules.snapper.snapper.SetConfig", MagicMock()):
             opts = {"sync_acl": True, "dummy": False, "foobar": 1234}
             self.assertEqual(snapper.set_config(opts), True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_status_to_string(self):
         self.assertEqual(snapper.status_to_string(1), ["created"])
         self.assertEqual(snapper.status_to_string(2), ["deleted"])
@@ -259,6 +266,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(snapper.status_to_string(128), ["extended attributes changed"])
         self.assertEqual(snapper.status_to_string(256), ["ACL info changed"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_config(self):
         with patch("salt.modules.snapper.snapper.CreateConfig", MagicMock()), patch(
             "salt.modules.snapper.snapper.GetConfig",
@@ -289,6 +297,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                 assert not set_config_mock.called
                 self.assertRaises(CommandExecutionError, snapper.create_config)
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_snapshot(self):
         with patch(
             "salt.modules.snapper.snapper.CreateSingleSnapshot",
@@ -310,6 +319,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                 }
                 self.assertEqual(snapper.create_snapshot(**opts), 1234)
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_snapshot_id_success(self):
         with patch("salt.modules.snapper.snapper.DeleteSnapshots", MagicMock()), patch(
             "salt.modules.snapper.snapper.ListSnapshots",
@@ -324,6 +334,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                 {"root": {"ids": [42, 43], "status": "deleted"}},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_snapshot_id_fail(self):
         with patch("salt.modules.snapper.snapper.DeleteSnapshots", MagicMock()), patch(
             "salt.modules.snapper.snapper.ListSnapshots",
@@ -337,6 +348,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                 CommandExecutionError, snapper.delete_snapshot, snapshots_ids=[1, 2]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_modify_snapshot(self):
         with patch("salt.modules.snapper.snapper.SetSnapshot", MagicMock()):
             _ret = {
@@ -361,6 +373,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
             ):
                 self.assertDictEqual(snapper.modify_snapshot(**_opts), _ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test__get_num_interval(self):
         with patch(
             "salt.modules.snapper._get_last_snapshot",
@@ -379,6 +392,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                 (42, 50),
             )  # pylint: disable=protected-access
 
+    @skipIf(True, "FASTTEST skip")
     def test_run(self):
         patch_dict = {
             "snapper.create_snapshot": MagicMock(return_value=43),
@@ -388,6 +402,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(snapper.run("test.ping"), True)
             self.assertRaises(CommandExecutionError, snapper.run, "unknown.func")
 
+    @skipIf(True, "FASTTEST skip")
     def test_status(self):
         with patch(
             "salt.modules.snapper._get_num_interval", MagicMock(return_value=(42, 43))
@@ -421,6 +436,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                     snapper.status(num_post=43), MODULE_RET["GETFILES"]
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_changed_files(self):
         with patch(
             "salt.modules.snapper.status",
@@ -428,6 +444,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(snapper.changed_files(), MODULE_RET["GETFILES"].keys())
 
+    @skipIf(True, "FASTTEST skip")
     def test_undo(self):
         with patch(
             "salt.modules.snapper._get_num_interval", MagicMock(return_value=(42, 43))
@@ -461,6 +478,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                     module_ret,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test__get_jid_snapshots(self):
         with patch(
             "salt.modules.snapper.list_snapshots",
@@ -473,6 +491,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                 (MODULE_RET["SNAPSHOTS"][0]["id"], MODULE_RET["SNAPSHOTS"][1]["id"]),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_undo_jid(self):
         with patch(
             "salt.modules.snapper._get_jid_snapshots", MagicMock(return_value=(42, 43))
@@ -484,6 +503,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                 snapper.undo_jid(20160607130930720112), "create:1 modify:1 delete:1"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_diff_text_file(self):
         with patch(
             "salt.modules.snapper._get_num_interval", MagicMock(return_value=(42, 43))
@@ -517,6 +537,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                 )
 
     @skipIf(sys.version_info < (2, 7), "Python 2.7 required to compare diff properly")
+    @skipIf(True, "FASTTEST skip")
     def test_diff_text_files(self):
         with patch(
             "salt.modules.snapper._get_num_interval", MagicMock(return_value=(55, 0))
@@ -559,6 +580,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                 }
                 self.assertEqual(snapper.diff(), module_ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_diff_binary_files(self):
         with patch(
             "salt.modules.snapper._get_num_interval", MagicMock(return_value=(55, 0))

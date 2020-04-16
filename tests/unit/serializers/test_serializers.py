@@ -34,6 +34,7 @@ SKIP_MESSAGE = "%s is unavailable, have prerequisites been met?"
 @flaky(condition=six.PY3)
 class TestSerializers(TestCase):
     @skipIf(not json.available, SKIP_MESSAGE % "json")
+    @skipIf(True, "FASTTEST skip")
     def test_serialize_json(self):
         data = {"foo": "bar"}
         serialized = json.serialize(data)
@@ -43,6 +44,7 @@ class TestSerializers(TestCase):
         assert deserialized == data, deserialized
 
     @skipIf(not yaml.available, SKIP_MESSAGE % "yaml")
+    @skipIf(True, "FASTTEST skip")
     def test_serialize_yaml(self):
         data = {"foo": "bar", "encrypted_data": EncryptedString("foo")}
         # The C dumper produces unquoted strings when serializing an
@@ -59,6 +61,7 @@ class TestSerializers(TestCase):
         assert deserialized == data, deserialized
 
     @skipIf(not yaml.available, SKIP_MESSAGE % "sls")
+    @skipIf(True, "FASTTEST skip")
     def test_serialize_sls(self):
         data = {"foo": "bar"}
         serialized = yamlex.serialize(data)
@@ -83,6 +86,7 @@ class TestSerializers(TestCase):
         assert deserialized == data, deserialized
 
     @skipIf(not yamlex.available, SKIP_MESSAGE % "sls")
+    @skipIf(True, "FASTTEST skip")
     def test_serialize_complex_sls(self):
         data = OrderedDict([("foo", 1), ("bar", 2), ("baz", True)])
         serialized = yamlex.serialize(data)
@@ -99,6 +103,7 @@ class TestSerializers(TestCase):
 
     @skipIf(not yaml.available, SKIP_MESSAGE % "yaml")
     @skipIf(not yamlex.available, SKIP_MESSAGE % "sls")
+    @skipIf(True, "FASTTEST skip")
     def test_compare_sls_vs_yaml(self):
         src = "{foo: 1, bar: 2, baz: {qux: true}}"
         sls_data = yamlex.deserialize(src)
@@ -164,6 +169,7 @@ class TestSerializers(TestCase):
         assert obj != final_obj, "Objects matched! {} == {}".format(obj, final_obj)
 
     @skipIf(not yamlex.available, SKIP_MESSAGE % "sls")
+    @skipIf(True, "FASTTEST skip")
     def test_sls_aggregate(self):
         src = dedent(
             """
@@ -267,6 +273,7 @@ class TestSerializers(TestCase):
         }, sls_obj
 
     @skipIf(not yamlex.available, SKIP_MESSAGE % "sls")
+    @skipIf(True, "FASTTEST skip")
     def test_sls_reset(self):
         src = dedent(
             """
@@ -280,6 +287,7 @@ class TestSerializers(TestCase):
         assert sls_obj == {"placeholder": {"foo": {"baz": "inga"}}}, sls_obj
 
     @skipIf(not yamlex.available, SKIP_MESSAGE % "sls")
+    @skipIf(True, "FASTTEST skip")
     def test_sls_repr(self):
         """
         Ensure that obj __repr__ and __str__ methods are yaml friendly.
@@ -299,6 +307,7 @@ class TestSerializers(TestCase):
         assert sls_obj["foo"].__repr__() == '"bar"'
 
     @skipIf(not yamlex.available, SKIP_MESSAGE % "sls")
+    @skipIf(True, "FASTTEST skip")
     def test_sls_micking_file_merging(self):
         def convert(obj):
             return yamlex.deserialize(yamlex.serialize(obj))
@@ -336,6 +345,7 @@ class TestSerializers(TestCase):
         }, sls_obj3
 
     @skipIf(not msgpack.available, SKIP_MESSAGE % "msgpack")
+    @skipIf(True, "FASTTEST skip")
     def test_msgpack(self):
         data = OrderedDict([("foo", 1), ("bar", 2), ("baz", True)])
         serialized = msgpack.serialize(data)
@@ -343,6 +353,7 @@ class TestSerializers(TestCase):
         assert deserialized == data, deserialized
 
     @skipIf(not python.available, SKIP_MESSAGE % "python")
+    @skipIf(True, "FASTTEST skip")
     def test_serialize_python(self):
         data = {"foo": "bar"}
         serialized = python.serialize(data)
@@ -350,6 +361,7 @@ class TestSerializers(TestCase):
         assert serialized == expected, serialized
 
     @skipIf(not configparser.available, SKIP_MESSAGE % "configparser")
+    @skipIf(True, "FASTTEST skip")
     def test_configparser(self):
         data = {"foo": {"bar": "baz"}}
         # configparser appends empty lines

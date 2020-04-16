@@ -10,7 +10,7 @@ import salt.modules.google_chat as gchat
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 def mocked_http_query(url, method, **kwargs):  # pylint: disable=unused-argument
@@ -35,6 +35,7 @@ class TestModulesCfutils(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {gchat: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_send_message_success(self):
         """
         Testing a successful message
@@ -44,6 +45,7 @@ class TestModulesCfutils(TestCase, LoaderModuleMockMixin):
         ):  # pylint: disable=no-member
             self.assertTrue(gchat.send_message("https://example.com", "Yupiii"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_send_message_failure(self):
         """
         Testing a failed message

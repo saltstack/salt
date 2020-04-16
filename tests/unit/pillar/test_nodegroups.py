@@ -9,7 +9,7 @@ import salt.pillar.nodegroups as nodegroups
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 fake_minion_id = "fake_id"
 fake_pillar = {}
@@ -46,6 +46,7 @@ class NodegroupsPillarTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertDictEqual(actual_ret, expected_ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_succeeds(self):
         ret = {fake_pillar_name: ["groupA"]}
         self._runner(ret)

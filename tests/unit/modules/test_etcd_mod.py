@@ -13,7 +13,7 @@ import salt.utils.etcd_util as etcd_util
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, create_autospec, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class EtcdModTestCase(TestCase, LoaderModuleMockMixin):
@@ -35,6 +35,7 @@ class EtcdModTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get(self):
         """
         Test if it get a value from etcd, by direct path
@@ -55,6 +56,7 @@ class EtcdModTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_set(self):
         """
         Test if it set a key in etcd, by direct path
@@ -83,6 +85,7 @@ class EtcdModTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'update' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_update(self):
         """
         Test if can set multiple keys in etcd
@@ -110,6 +113,7 @@ class EtcdModTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'ls_' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_ls(self):
         """
         Test if it return all keys and dirs inside a specific path
@@ -130,6 +134,7 @@ class EtcdModTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'rm_' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_rm(self):
         """
         Test if it delete a key from etcd
@@ -150,6 +155,7 @@ class EtcdModTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'tree' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_tree(self):
         """
         Test if it recurses through etcd and return all values
@@ -169,6 +175,7 @@ class EtcdModTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'watch' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_watch(self):
         """
         Test if watch returns the right tuples

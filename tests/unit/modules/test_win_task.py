@@ -19,6 +19,7 @@ class WinTaskTestCase(TestCase):
         Test cases for salt.modules.win_task
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_repeat_interval(self):
         task_name = "SaltTest1"
         try:
@@ -41,6 +42,7 @@ class WinTaskTestCase(TestCase):
             ret = win_task.delete_task(task_name)
             self.assertTrue(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_repeat_interval_and_indefinitely(self):
         task_name = "SaltTest2"
         try:

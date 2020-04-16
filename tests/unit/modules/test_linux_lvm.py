@@ -15,7 +15,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
@@ -26,6 +26,7 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {linux_lvm: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_version(self):
         """
         Tests LVM version info from lvm version
@@ -38,6 +39,7 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(linux_lvm.__salt__, {"cmd.run": mock}):
             self.assertEqual(linux_lvm.version(), "2.02.168(2) (2016-11-30)")
 
+    @skipIf(True, "FASTTEST skip")
     def test_fullversion(self):
         """
         Tests all version info from lvm version
@@ -57,6 +59,7 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_pvdisplay(self):
         """
         Tests information about the physical volume(s)
@@ -115,6 +118,7 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
                     },
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vgdisplay(self):
         """
         Tests information about the volume group(s)
@@ -159,6 +163,7 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_lvdisplay(self):
         """
         Return information about the logical volume(s)
@@ -192,6 +197,7 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_pvcreate(self):
         """
         Tests for set a physical device to be used as an LVM physical volume
@@ -218,6 +224,7 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(linux_lvm.__salt__, {"cmd.run_all": mock}):
                     self.assertEqual(linux_lvm.pvcreate("A", metadatasize=1000), True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_pvcreate_existing_pvs(self):
         """
         Test a scenario when all the submitted devices are already LVM PVs.
@@ -236,6 +243,7 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertEqual(linux_lvm.pvcreate("A", metadatasize=1000), True)
                     self.assertTrue(cmd_mock.call_count == 0)
 
+    @skipIf(True, "FASTTEST skip")
     def test_pvremove(self):
         """
         Tests for remove a physical device being used as an LVM physical volume
@@ -260,6 +268,7 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(linux_lvm.__salt__, {"cmd.run_all": mock}):
                     self.assertEqual(linux_lvm.pvremove("A"), True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_vgcreate(self):
         """
         Tests create an LVM volume group
@@ -275,6 +284,7 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
                     linux_lvm.vgcreate("A", "B"), {"Output from vgcreate": "A"}
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vgextend(self):
         """
         Tests add physical volumes to an LVM volume group
@@ -290,6 +300,7 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
                     linux_lvm.vgextend("A", "B"), {"Output from vgextend": "A"}
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_lvcreate(self):
         """
         Test create a new logical volume, with option
@@ -323,6 +334,7 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
                     {"Output from lvcreate": "A"},
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_lvcreate_with_force(self):
         """
         Test create a new logical volume, with option
@@ -336,6 +348,7 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
                     {"Output from lvcreate": "A"},
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_vgremove(self):
         """
         Tests to remove an LVM volume group
@@ -344,6 +357,7 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(linux_lvm.__salt__, {"cmd.run": mock}):
             self.assertEqual(linux_lvm.vgremove("A"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_lvremove(self):
         """
         Test to remove a given existing logical volume
@@ -353,6 +367,7 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(linux_lvm.__salt__, {"cmd.run": mock}):
             self.assertEqual(linux_lvm.lvremove("", ""), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_lvresize(self):
         """
         Test to return information about the logical volume(s)

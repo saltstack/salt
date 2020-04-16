@@ -9,13 +9,14 @@ import salt.modules.gem as gem
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class TestGemModule(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {gem: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_gem(self):
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
         with patch.dict(
@@ -79,6 +80,7 @@ class TestGemModule(TestCase, LoaderModuleMockMixin):
             gem._gem(["install", "rails"])
             mock.assert_called_once_with(["gem", "install", "rails"], runas=None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_pre_rubygems_3(self):
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
         with patch.dict(
@@ -96,6 +98,7 @@ class TestGemModule(TestCase, LoaderModuleMockMixin):
                 python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_pre(self):
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
         with patch.dict(
@@ -113,6 +116,7 @@ class TestGemModule(TestCase, LoaderModuleMockMixin):
                 python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list(self):
         output = """
 actionmailer (2.3.14)
@@ -140,6 +144,7 @@ sass (3.1.15, 3.1.7)
                 gem.list_(),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_upgrades(self):
         output = """
 arel (5.0.1.20140414130214 < 6.0.0)
@@ -153,6 +158,7 @@ rake (10.3.2 < 10.4.2)
                 gem.list_upgrades(),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_sources_list(self):
         output = """*** CURRENT SOURCES ***
 

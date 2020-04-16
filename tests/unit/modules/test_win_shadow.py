@@ -12,7 +12,7 @@ import salt.modules.win_shadow as win_shadow
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
@@ -32,6 +32,7 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'info' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_info(self):
         """
         Test if it return information for the specified user
@@ -56,6 +57,7 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_password' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_password(self):
         """
         Test if it set the password for a named user.

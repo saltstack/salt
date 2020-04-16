@@ -12,7 +12,7 @@ from salt.ext.six.moves import zip
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PkgTestCase(TestCase, LoaderModuleMockMixin):
@@ -29,6 +29,7 @@ class PkgTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {pkg: {"__grains__": {"os": "CentOS"}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_uptodate_with_changes(self):
         """
         Test pkg.uptodate with simulated changes
@@ -63,6 +64,7 @@ class PkgTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertIsNone(ret["result"])
                 self.assertDictEqual(ret["changes"], self.pkgs)
 
+    @skipIf(True, "FASTTEST skip")
     def test_uptodate_with_pkgs_with_changes(self):
         """
         Test pkg.uptodate with simulated changes
@@ -110,6 +112,7 @@ class PkgTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertIsNone(ret["result"])
                 self.assertDictEqual(ret["changes"], pkgs)
 
+    @skipIf(True, "FASTTEST skip")
     def test_uptodate_no_changes(self):
         """
         Test pkg.uptodate with no changes
@@ -134,6 +137,7 @@ class PkgTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertTrue(ret["result"])
                 self.assertDictEqual(ret["changes"], {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_uptodate_with_pkgs_no_changes(self):
         """
         Test pkg.uptodate with no changes
@@ -164,6 +168,7 @@ class PkgTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertTrue(ret["result"])
                 self.assertDictEqual(ret["changes"], {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_uptodate_with_failed_changes(self):
         """
         Test pkg.uptodate with simulated failed changes
@@ -211,6 +216,7 @@ class PkgTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertIsNone(ret["result"])
                 self.assertDictEqual(ret["changes"], pkgs)
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_version_string(self):
         test_parameters = [
             (
@@ -237,6 +243,7 @@ class PkgTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(expected_version_condition[0], version_condition[0])
                 self.assertEqual(expected_version_condition[1], version_condition[1])
 
+    @skipIf(True, "FASTTEST skip")
     def test_fulfills_version_string(self):
         test_parameters = [
             ("> 1.0.0, < 15.0.0, != 14.0.1", [], False),
@@ -269,6 +276,7 @@ class PkgTestCase(TestCase, LoaderModuleMockMixin):
                 msg,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_fulfills_version_spec(self):
         test_parameters = [
             (["1.0.0", "14.0.1", "16.0.0", "2.0.0"], "==", "1.0.0", True),

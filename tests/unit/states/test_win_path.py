@@ -14,7 +14,7 @@ import salt.states.win_path as win_path
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 NAME = "salt"
 
@@ -27,6 +27,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {win_path: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
         Test various cases for win_path.absent
@@ -86,6 +87,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                     ret["result"] = None
                     self.assertDictEqual(win_path.absent(NAME), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_exists_invalid_index(self):
         """
         Tests win_path.exists when a non-integer index is specified.
@@ -101,6 +103,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_exists_add_no_index_success(self):
         """
         Tests win_path.exists when the directory isn't already in the PATH and
@@ -134,6 +137,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_exists_add_no_index_failure(self):
         """
         Tests win_path.exists when the directory isn't already in the PATH and
@@ -167,6 +171,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_exists_add_no_index_failure_exception(self):
         """
         Tests win_path.exists when the directory isn't already in the PATH and
@@ -201,6 +206,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_exists_change_index_success(self):
         """
         Tests win_path.exists when the directory is already in the PATH and
@@ -234,6 +240,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_exists_change_negative_index_success(self):
         """
         Tests win_path.exists when the directory is already in the PATH and
@@ -269,6 +276,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_exists_change_index_add_exception(self):
         """
         Tests win_path.exists when the directory is already in the PATH but an
@@ -303,6 +311,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_exists_change_negative_index_add_exception(self):
         """
         Tests win_path.exists when the directory is already in the PATH but an
@@ -339,6 +348,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_exists_change_index_failure(self):
         """
         Tests win_path.exists when the directory is already in the PATH and
@@ -372,6 +382,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_exists_change_negative_index_failure(self):
         """
         Tests win_path.exists when the directory is already in the PATH and
@@ -407,6 +418,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_exists_change_index_test_mode(self):
         """
         Tests win_path.exists when the directory is already in the PATH and
@@ -438,6 +450,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_exists_change_negative_index_test_mode(self):
         """
         Tests win_path.exists when the directory is already in the PATH and
@@ -510,18 +523,22 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_exists_add_no_index_already_present(self):
         self._test_exists_add_already_present(None, False)
 
+    @skipIf(True, "FASTTEST skip")
     def test_exists_add_no_index_already_present_test_mode(self):
         self._test_exists_add_already_present(None, True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_exists_add_index_already_present(self):
         self._test_exists_add_already_present(1, False)
         self._test_exists_add_already_present(2, False)
         self._test_exists_add_already_present(-1, False)
         self._test_exists_add_already_present(-2, False)
 
+    @skipIf(True, "FASTTEST skip")
     def test_exists_add_index_already_present_test_mode(self):
         self._test_exists_add_already_present(1, True)
         self._test_exists_add_already_present(2, True)

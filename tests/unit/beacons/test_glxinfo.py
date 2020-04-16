@@ -11,7 +11,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import Mock, patch
 
 # Salt testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class GLXInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
@@ -22,6 +22,7 @@ class GLXInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {glxinfo: {"last_state": {}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_no_glxinfo_command(self):
         with patch("salt.utils.path.which") as mock:
             mock.return_value = None
@@ -31,6 +32,7 @@ class GLXInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
             mock.assert_called_once_with("glxinfo")
             self.assertFalse(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_with_glxinfo_command(self):
         with patch("salt.utils.path.which") as mock:
             mock.return_value = "/usr/bin/glxinfo"
@@ -40,6 +42,7 @@ class GLXInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
             mock.assert_called_once_with("glxinfo")
             self.assertEqual(ret, "glxinfo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_non_list_config(self):
         config = {}
 
@@ -49,6 +52,7 @@ class GLXInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret, (False, "Configuration for glxinfo beacon must be a list.")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_no_user(self):
         config = [{"screen_event": True}]
 
@@ -61,6 +65,7 @@ class GLXInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
         ret = glxinfo.validate(config)
         self.assertEqual(ret, _expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_screen_state(self):
         config = [{"screen_event": True, "user": "frank"}]
 
@@ -76,6 +81,7 @@ class GLXInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
                 "DISPLAY=:0 glxinfo", runas="frank", python_shell=True
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_screen_state_missing(self):
         config = [{"screen_event": True, "user": "frank"}]
 
@@ -87,6 +93,7 @@ class GLXInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret = glxinfo.beacon(config)
             self.assertEqual(ret, [{"tag": "screen_event", "screen_available": False}])
 
+    @skipIf(True, "FASTTEST skip")
     def test_screen_state_no_repeat(self):
         config = [{"screen_event": True, "user": "frank"}]
 
@@ -101,6 +108,7 @@ class GLXInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret = glxinfo.beacon(config)
             self.assertEqual(ret, [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_screen_state_change(self):
         config = [{"screen_event": True, "user": "frank"}]
 

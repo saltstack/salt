@@ -11,7 +11,7 @@ import salt.engines.libvirt_events as libvirt_events
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 # pylint: disable=protected-access,attribute-defined-outside-init,invalid-name,unused-argument,no-self-use
 
@@ -43,6 +43,7 @@ class EngineLibvirtEventTestCase(TestCase, LoaderModuleMockMixin):
         VIR_PREFIX_SUB_BAR=1,
         VIR_PREFIX_SUB_FOOBAR=2,
     )
+    @skipIf(True, "FASTTEST skip")
     def test_get_libvirt_enum_string_subprefix(self, libvirt_mock):
         """
         Make sure the libvirt enum value to string works reliably with
@@ -55,6 +56,7 @@ class EngineLibvirtEventTestCase(TestCase, LoaderModuleMockMixin):
     @patch(
         "salt.engines.libvirt_events.libvirt", VIR_PREFIX_FOO=0, VIR_PREFIX_BAR_FOO=1
     )
+    @skipIf(True, "FASTTEST skip")
     def test_get_libvirt_enum_string_underscores(self, libvirt_mock):
         """
         Make sure the libvirt enum value to string works reliably and items
@@ -71,6 +73,7 @@ class EngineLibvirtEventTestCase(TestCase, LoaderModuleMockMixin):
         VIR_DOMAIN_EVENT_DEFINED_ADDED=0,
         VIR_DOMAIN_EVENT_DEFINED_UPDATED=1,
     )
+    @skipIf(True, "FASTTEST skip")
     def test_get_domain_event_detail(self, mock_libvirt):
         """
         Test get_domain_event_detail function
@@ -80,6 +83,7 @@ class EngineLibvirtEventTestCase(TestCase, LoaderModuleMockMixin):
         assert libvirt_events._get_domain_event_detail(4, 2) == ("unknown", "unknown")
 
     @patch("salt.engines.libvirt_events.libvirt", VIR_NETWORK_EVENT_ID_LIFECYCLE=1000)
+    @skipIf(True, "FASTTEST skip")
     def test_event_register(self, mock_libvirt):
         """
         Test that the libvirt_events engine actually registers events catch them and cleans
@@ -129,6 +133,7 @@ class EngineLibvirtEventTestCase(TestCase, LoaderModuleMockMixin):
             register = libvirt_events.REGISTER_FUNCTIONS[obj]
             assert getattr(mock_cnx, register).call_count == count
 
+    @skipIf(True, "FASTTEST skip")
     def test_event_skipped(self):
         """
         Test that events are skipped if their ID isn't defined in the libvirt
@@ -159,6 +164,7 @@ class EngineLibvirtEventTestCase(TestCase, LoaderModuleMockMixin):
         # Network events should have been skipped
         mock_cnx.networkEventRegisterAny.assert_not_called()
 
+    @skipIf(True, "FASTTEST skip")
     def test_event_filtered(self):
         """
         Test that events are skipped if their ID isn't defined in the libvirt

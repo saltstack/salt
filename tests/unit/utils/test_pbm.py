@@ -76,6 +76,8 @@ class GetProfileManagerTestCase(TestCase):
         ):
             delattr(self, attr)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_new_service_stub(self):
         mock_get_new_service_stub = MagicMock()
         with patch(
@@ -86,16 +88,21 @@ class GetProfileManagerTestCase(TestCase):
             self.mock_si, ns="pbm/2.0", path="/pbm/sdk"
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_pbm_si(self):
         mock_get_pbm_si = MagicMock()
         with patch("salt.utils.pbm.pbm.ServiceInstance", mock_get_pbm_si):
             salt.utils.pbm.get_profile_manager(self.mock_si)
         mock_get_pbm_si.assert_called_once_with("ServiceInstance", self.mock_stub)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_return_profile_manager(self):
         ret = salt.utils.pbm.get_profile_manager(self.mock_si)
         self.assertEqual(ret, self.mock_prof_mgr)
 
+    @skipIf(True, "FASTTEST skip")
     def test_profile_manager_raises_no_permissions(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -107,6 +114,7 @@ class GetProfileManagerTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_profile_manager_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -115,6 +123,7 @@ class GetProfileManagerTestCase(TestCase):
             salt.utils.pbm.get_profile_manager(self.mock_si)
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_profile_manager_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -164,6 +173,8 @@ class GetPlacementSolverTestCase(TestCase):
         ):
             delattr(self, attr)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_new_service_stub(self):
         mock_get_new_service_stub = MagicMock()
         with patch(
@@ -174,16 +185,21 @@ class GetPlacementSolverTestCase(TestCase):
             self.mock_si, ns="pbm/2.0", path="/pbm/sdk"
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_pbm_si(self):
         mock_get_pbm_si = MagicMock()
         with patch("salt.utils.pbm.pbm.ServiceInstance", mock_get_pbm_si):
             salt.utils.pbm.get_placement_solver(self.mock_si)
         mock_get_pbm_si.assert_called_once_with("ServiceInstance", self.mock_stub)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_return_profile_manager(self):
         ret = salt.utils.pbm.get_placement_solver(self.mock_si)
         self.assertEqual(ret, self.mock_prof_mgr)
 
+    @skipIf(True, "FASTTEST skip")
     def test_placement_solver_raises_no_permissions(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -195,6 +211,7 @@ class GetPlacementSolverTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_placement_solver_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -203,6 +220,7 @@ class GetPlacementSolverTestCase(TestCase):
             salt.utils.pbm.get_placement_solver(self.mock_si)
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_placement_solver_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -240,6 +258,8 @@ class GetCapabilityDefinitionsTestCase(TestCase):
         for attr in ("mock_res_type", "mock_cap_cats", "mock_prof_mgr"):
             delattr(self, attr)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_res_type(self):
         mock_get_res_type = MagicMock()
         with patch("salt.utils.pbm.pbm.profile.ResourceType", mock_get_res_type):
@@ -248,12 +268,14 @@ class GetCapabilityDefinitionsTestCase(TestCase):
             resourceType=pbm.profile.ResourceTypeEnum.STORAGE
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_fetch_capabilities(self):
         salt.utils.pbm.get_capability_definitions(self.mock_prof_mgr)
         self.mock_prof_mgr.FetchCapabilityMetadata.assert_called_once_with(
             self.mock_res_type
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_fetch_capabilities_raises_no_permissions(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -265,6 +287,7 @@ class GetCapabilityDefinitionsTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_fetch_capabilities_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -273,6 +296,7 @@ class GetCapabilityDefinitionsTestCase(TestCase):
             salt.utils.pbm.get_capability_definitions(self.mock_prof_mgr)
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_fetch_capabilities_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -281,6 +305,7 @@ class GetCapabilityDefinitionsTestCase(TestCase):
             salt.utils.pbm.get_capability_definitions(self.mock_prof_mgr)
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_return_cap_definitions(self):
         ret = salt.utils.pbm.get_capability_definitions(self.mock_prof_mgr)
         self.assertEqual(ret, ["fake_cap_meta1", "fake_cap_meta2", "fake_cap_meta3"])
@@ -301,10 +326,12 @@ class GetPoliciesByIdTestCase(TestCase):
         for attr in ("policy_ids", "mock_policies", "mock_prof_mgr"):
             delattr(self, attr)
 
+    @skipIf(True, "FASTTEST skip")
     def test_retrieve_policies(self):
         salt.utils.pbm.get_policies_by_id(self.mock_prof_mgr, self.policy_ids)
         self.mock_prof_mgr.RetrieveContent.assert_called_once_with(self.policy_ids)
 
+    @skipIf(True, "FASTTEST skip")
     def test_retrieve_policies_raises_no_permissions(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -316,6 +343,7 @@ class GetPoliciesByIdTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_retrieve_policies_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -324,6 +352,7 @@ class GetPoliciesByIdTestCase(TestCase):
             salt.utils.pbm.get_policies_by_id(self.mock_prof_mgr, self.policy_ids)
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_retrieve_policies_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -332,6 +361,7 @@ class GetPoliciesByIdTestCase(TestCase):
             salt.utils.pbm.get_policies_by_id(self.mock_prof_mgr, self.policy_ids)
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_return_policies(self):
         ret = salt.utils.pbm.get_policies_by_id(self.mock_prof_mgr, self.policy_ids)
         self.assertEqual(ret, self.mock_policies)
@@ -381,6 +411,8 @@ class GetStoragePoliciesTestCase(TestCase):
         ):
             delattr(self, attr)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_res_type(self):
         mock_get_res_type = MagicMock()
         with patch("salt.utils.pbm.pbm.profile.ResourceType", mock_get_res_type):
@@ -389,12 +421,14 @@ class GetStoragePoliciesTestCase(TestCase):
             resourceType=pbm.profile.ResourceTypeEnum.STORAGE
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_retrieve_policy_ids(self):
         mock_retrieve_policy_ids = MagicMock(return_value=self.mock_policy_ids)
         self.mock_prof_mgr.QueryProfile = mock_retrieve_policy_ids
         salt.utils.pbm.get_storage_policies(self.mock_prof_mgr)
         mock_retrieve_policy_ids.assert_called_once_with(self.mock_res_type)
 
+    @skipIf(True, "FASTTEST skip")
     def test_retrieve_policy_ids_raises_no_permissions(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -406,6 +440,7 @@ class GetStoragePoliciesTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_retrieve_policy_ids_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -414,6 +449,7 @@ class GetStoragePoliciesTestCase(TestCase):
             salt.utils.pbm.get_storage_policies(self.mock_prof_mgr)
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_retrieve_policy_ids_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -422,6 +458,8 @@ class GetStoragePoliciesTestCase(TestCase):
             salt.utils.pbm.get_storage_policies(self.mock_prof_mgr)
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_policies_by_id(self):
         mock_get_policies_by_id = MagicMock(return_value=self.mock_policies)
         with patch("salt.utils.pbm.get_policies_by_id", mock_get_policies_by_id):
@@ -430,12 +468,14 @@ class GetStoragePoliciesTestCase(TestCase):
             self.mock_prof_mgr, self.mock_policy_ids
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_return_all_policies(self):
         ret = salt.utils.pbm.get_storage_policies(
             self.mock_prof_mgr, get_all_policies=True
         )
         self.assertEqual(ret, self.mock_policies)
 
+    @skipIf(True, "FASTTEST skip")
     def test_return_filtered_policies(self):
         ret = salt.utils.pbm.get_storage_policies(
             self.mock_prof_mgr, policy_names=["fake_policy1", "fake_policy3"]
@@ -455,10 +495,14 @@ class CreateStoragePolicyTestCase(TestCase):
         for attr in ("mock_policy_spec", "mock_prof_mgr"):
             delattr(self, attr)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_create_policy(self):
         salt.utils.pbm.create_storage_policy(self.mock_prof_mgr, self.mock_policy_spec)
         self.mock_prof_mgr.Create.assert_called_once_with(self.mock_policy_spec)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_create_policy_raises_no_permissions(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -472,6 +516,8 @@ class CreateStoragePolicyTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_create_policy_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -482,6 +528,8 @@ class CreateStoragePolicyTestCase(TestCase):
             )
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_create_policy_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -506,6 +554,8 @@ class UpdateStoragePolicyTestCase(TestCase):
         for attr in ("mock_policy_spec", "mock_policy", "mock_prof_mgr"):
             delattr(self, attr)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_create_policy(self):
         salt.utils.pbm.update_storage_policy(
             self.mock_prof_mgr, self.mock_policy, self.mock_policy_spec
@@ -514,6 +564,8 @@ class UpdateStoragePolicyTestCase(TestCase):
             self.mock_policy.profileId, self.mock_policy_spec
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_create_policy_raises_no_permissions(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -527,6 +579,8 @@ class UpdateStoragePolicyTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_create_policy_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -537,6 +591,8 @@ class UpdateStoragePolicyTestCase(TestCase):
             )
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_create_policy_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -585,6 +641,8 @@ class GetDefaultStoragePolicyOfDatastoreTestCase(TestCase):
         ):
             delattr(self, attr)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_placement_hub(self):
         mock_get_placement_hub = MagicMock()
         with patch("salt.utils.pbm.pbm.placement.PlacementHub", mock_get_placement_hub):
@@ -595,6 +653,7 @@ class GetDefaultStoragePolicyOfDatastoreTestCase(TestCase):
             hubId="fake_ds_moid", hubType="Datastore"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_query_default_requirement_profile(self):
         mock_query_prof = MagicMock(return_value=self.mock_policy_id)
         self.mock_prof_mgr.QueryDefaultRequirementProfile = mock_query_prof
@@ -603,6 +662,7 @@ class GetDefaultStoragePolicyOfDatastoreTestCase(TestCase):
         )
         mock_query_prof.assert_called_once_with(self.mock_hub)
 
+    @skipIf(True, "FASTTEST skip")
     def test_query_default_requirement_profile_raises_no_permissions(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -616,6 +676,7 @@ class GetDefaultStoragePolicyOfDatastoreTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_query_default_requirement_profile_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -626,6 +687,7 @@ class GetDefaultStoragePolicyOfDatastoreTestCase(TestCase):
             )
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_query_default_requirement_profile_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -636,6 +698,8 @@ class GetDefaultStoragePolicyOfDatastoreTestCase(TestCase):
             )
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_policies_by_id(self):
         mock_get_policies_by_id = MagicMock()
         with patch("salt.utils.pbm.get_policies_by_id", mock_get_policies_by_id):
@@ -646,6 +710,7 @@ class GetDefaultStoragePolicyOfDatastoreTestCase(TestCase):
             self.mock_prof_mgr, [self.mock_policy_id]
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_no_policy_refs(self):
         mock_get_policies_by_id = MagicMock()
         with patch("salt.utils.pbm.get_policies_by_id", MagicMock(return_value=None)):
@@ -658,6 +723,7 @@ class GetDefaultStoragePolicyOfDatastoreTestCase(TestCase):
             "Storage policy with id 'fake_policy_id' was not " "found",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_return_policy_ref(self):
         mock_get_policies_by_id = MagicMock()
         ret = salt.utils.pbm.get_default_storage_policy_of_datastore(
@@ -690,6 +756,8 @@ class AssignDefaultStoragePolicyToDatastoreTestCase(TestCase):
         for attr in ("mock_ds", "mock_hub", "mock_policy", "mock_prof_mgr"):
             delattr(self, attr)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_placement_hub(self):
         mock_get_placement_hub = MagicMock()
         with patch("salt.utils.pbm.pbm.placement.PlacementHub", mock_get_placement_hub):
@@ -700,6 +768,7 @@ class AssignDefaultStoragePolicyToDatastoreTestCase(TestCase):
             hubId="fake_ds_moid", hubType="Datastore"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_assign_default_requirement_profile(self):
         mock_assign_prof = MagicMock()
         self.mock_prof_mgr.AssignDefaultRequirementProfile = mock_assign_prof
@@ -710,6 +779,7 @@ class AssignDefaultStoragePolicyToDatastoreTestCase(TestCase):
             self.mock_policy.profileId, [self.mock_hub]
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_assign_default_requirement_profile_raises_no_permissions(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -723,6 +793,7 @@ class AssignDefaultStoragePolicyToDatastoreTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_assign_default_requirement_profile_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -733,6 +804,7 @@ class AssignDefaultStoragePolicyToDatastoreTestCase(TestCase):
             )
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_assign_default_requirement_profile_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"

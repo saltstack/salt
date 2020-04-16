@@ -14,7 +14,7 @@ from tests.support.mock import patch
 
 # Import Salt Testing libs
 # import integration
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class CacheFunctionsTest(TestCase):
@@ -31,10 +31,12 @@ class CacheFunctionsTest(TestCase):
             "memcache_debug": False,
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_factory_cache(self):
         ret = salt.cache.factory(self.opts)
         self.assertIsInstance(ret, salt.cache.Cache)
 
+    @skipIf(True, "FASTTEST skip")
     def test_factory_memcache(self):
         self.opts["memcache_expire_seconds"] = 10
         ret = salt.cache.factory(self.opts)
@@ -60,6 +62,7 @@ class MemCacheTest(TestCase):
 
     @patch("salt.cache.Cache.fetch", return_value="fake_data")
     @patch("salt.loader.cache", return_value={})
+    @skipIf(True, "FASTTEST skip")
     def test_fetch(self, loader_mock, cache_fetch_mock):
         # Fetch value, it will be kept in cache.
         with patch("time.time", return_value=0):
@@ -95,6 +98,7 @@ class MemCacheTest(TestCase):
 
     @patch("salt.cache.Cache.store")
     @patch("salt.loader.cache", return_value={})
+    @skipIf(True, "FASTTEST skip")
     def test_store(self, loader_mock, cache_store_mock):
         # Fetch value, it will be kept in cache.
         with patch("time.time", return_value=0):
@@ -123,6 +127,7 @@ class MemCacheTest(TestCase):
     @patch("salt.cache.Cache.store")
     @patch("salt.cache.Cache.flush")
     @patch("salt.loader.cache", return_value={})
+    @skipIf(True, "FASTTEST skip")
     def test_flush(self, loader_mock, cache_flush_mock, cache_store_mock):
         # Flush non-existing bank
         self.cache.flush("bank")
@@ -151,6 +156,7 @@ class MemCacheTest(TestCase):
 
     @patch("salt.cache.Cache.store")
     @patch("salt.loader.cache", return_value={})
+    @skipIf(True, "FASTTEST skip")
     def test_max_items(self, loader_mock, cache_store_mock):
         # Put MAX=3 values
         with patch("time.time", return_value=0):
@@ -181,6 +187,7 @@ class MemCacheTest(TestCase):
 
     @patch("salt.cache.Cache.store")
     @patch("salt.loader.cache", return_value={})
+    @skipIf(True, "FASTTEST skip")
     def test_full_cleanup(self, loader_mock, cache_store_mock):
         # Enable full cleanup
         self.cache.cleanup = True
@@ -212,6 +219,7 @@ class MemCacheTest(TestCase):
 
     @patch("salt.cache.Cache.fetch", return_value="fake_data")
     @patch("salt.loader.cache", return_value={})
+    @skipIf(True, "FASTTEST skip")
     def test_fetch_debug(self, loader_mock, cache_fetch_mock):
         # Recreate cache with debug enabled
         self.opts["memcache_debug"] = True

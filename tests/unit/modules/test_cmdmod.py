@@ -92,12 +92,14 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
     def tearDownClass(cls):
         del cls.mock_loglevels
 
+    @skipIf(True, "FASTTEST skip")
     def test_render_cmd_no_template(self):
         """
         Tests return when template=None
         """
         self.assertEqual(cmdmod._render_cmd("foo", "bar", None), ("foo", "bar"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_render_cmd_unavailable_engine(self):
         """
         Tests CommandExecutionError raised when template isn't in the
@@ -107,6 +109,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
             CommandExecutionError, cmdmod._render_cmd, "boo", "bar", "baz"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_loglevel_bad_level(self):
         """
         Tests return of providing an invalid loglevel option
@@ -114,6 +117,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(LOG_LEVELS, self.mock_loglevels):
             self.assertEqual(cmdmod._check_loglevel(level="bad_loglevel"), "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_loglevel_bad_level_not_str(self):
         """
         Tests the return of providing an invalid loglevel option that is not a string
@@ -121,6 +125,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(LOG_LEVELS, self.mock_loglevels):
             self.assertEqual(cmdmod._check_loglevel(level=1000), "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_loglevel_quiet(self):
         """
         Tests the return of providing a loglevel of 'quiet'
@@ -128,12 +133,14 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(LOG_LEVELS, self.mock_loglevels):
             self.assertEqual(cmdmod._check_loglevel(level="quiet"), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_env_not_env(self):
         """
         Tests the return of an env that is not an env
         """
         self.assertEqual(cmdmod._parse_env(None), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_env_list(self):
         """
         Tests the return of an env that is a list
@@ -141,12 +148,14 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         ret = {"foo": None, "bar": None}
         self.assertEqual(ret, cmdmod._parse_env(["foo", "bar"]))
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_env_dict(self):
         """
         Test the return of an env that is not a dict
         """
         self.assertEqual(cmdmod._parse_env("test"), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_shell_is_not_file(self):
         """
         Tests error raised when shell is not available after _is_valid_shell error msg
@@ -157,6 +166,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                 with patch("os.path.isfile", MagicMock(return_value=False)):
                     self.assertRaises(CommandExecutionError, cmdmod._run, "foo", "bar")
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_shell_file_no_access(self):
         """
         Tests error raised when shell is not available after _is_valid_shell error msg,
@@ -170,6 +180,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                             CommandExecutionError, cmdmod._run, "foo", "bar"
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_runas_with_windows(self):
         """
         Tests error raised when runas is passed on windows
@@ -181,6 +192,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                         CommandExecutionError, cmdmod._run, "foo", "bar", runas="baz"
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_user_not_available(self):
         """
         Tests return when runas user is not available
@@ -193,6 +205,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                 CommandExecutionError, cmdmod._run, "foo", "bar", runas="baz"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_zero_umask(self):
         """
         Tests error raised when umask is set to zero
@@ -205,6 +218,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                             CommandExecutionError, cmdmod._run, "foo", "bar", umask=0
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_invalid_umask(self):
         """
         Tests error raised when an invalid umask is given
@@ -221,6 +235,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                             umask="baz",
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_invalid_cwd_not_abs_path(self):
         """
         Tests error raised when cwd is not an absolute path
@@ -233,6 +248,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                             CommandExecutionError, cmdmod._run, "foo", "bar"
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_invalid_cwd_not_dir(self):
         """
         Tests error raised when cwd is not a dir
@@ -246,6 +262,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                                 CommandExecutionError, cmdmod._run, "foo", "bar"
                             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_no_vt_os_error(self):
         """
         Tests error raised when not useing vt and OSError is provided
@@ -265,6 +282,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                                 expected_error
                             ), repr(error.exception.args[0])
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_no_vt_io_error(self):
         """
         Tests error raised when not useing vt and IOError is provided
@@ -299,6 +317,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                         )
                         self.assertIn("foo", ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_valid_shell_windows(self):
         """
         Tests return if running on windows
@@ -307,6 +326,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(cmdmod._is_valid_shell("foo"))
 
     @skipIf(salt.utils.platform.is_windows(), "Do not run on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_is_valid_shell_none(self):
         """
         Tests return of when os.path.exists(/etc/shells) isn't available
@@ -314,6 +334,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         with patch("os.path.exists", MagicMock(return_value=False)):
             self.assertIsNone(cmdmod._is_valid_shell("foo"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_valid_shell_available(self):
         """
         Tests return when provided shell is available
@@ -323,6 +344,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertTrue(cmdmod._is_valid_shell("/bin/bash"))
 
     @skipIf(salt.utils.platform.is_windows(), "Do not run on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_is_valid_shell_unavailable(self):
         """
         Tests return when provided shell is not available
@@ -332,6 +354,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertFalse(cmdmod._is_valid_shell("foo"))
 
     @skipIf(salt.utils.platform.is_windows(), "Do not run on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_os_environment_remains_intact(self):
         """
         Make sure the OS environment is not tainted after running a command
@@ -367,6 +390,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                         getpwnam_mock.assert_called_with("foobar")
 
     @skipIf(not salt.utils.platform.is_darwin(), "applicable to macOS only")
+    @skipIf(True, "FASTTEST skip")
     def test_shell_properly_handled_on_macOS(self):
         """
         cmd.run should invoke a new bash login only
@@ -437,6 +461,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                         "cmd does not invoke user shell on macOS",
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_cwd_doesnt_exist_issue_7154(self):
         """
         cmd.run should fail and raise
@@ -452,6 +477,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         else:
             raise RuntimeError
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_all_binary_replace(self):
         """
         Test for failed decoding of binary data, for instance when doing
@@ -495,6 +521,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret["stdout"], stdout_unicode)
         self.assertEqual(ret["stderr"], stderr_unicode)
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_all_none(self):
         """
         Tests cases when proc.stdout or proc.stderr are None. These should be
@@ -507,6 +534,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret["stdout"], "")
         self.assertEqual(ret["stderr"], "")
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_all_unicode(self):
         """
         Ensure that unicode stdout and stderr are decoded properly
@@ -528,6 +556,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret["stdout"], stdout_unicode)
         self.assertEqual(ret["stderr"], stderr_unicode)
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_all_output_encoding(self):
         """
         Test that specifying the output encoding works as expected
@@ -544,6 +573,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(ret["stdout"], stdout)
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_all_output_loglevel_quiet(self):
         """
         Test that specifying quiet for loglevel
@@ -560,6 +590,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(ret["stdout"], salt.utils.stringutils.to_unicode(stdout))
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_all_output_loglevel_debug(self):
         """
         Test that specifying debug for loglevel
@@ -576,6 +607,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(ret["stdout"], salt.utils.stringutils.to_unicode(stdout))
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_chroot_mount(self):
         """
         Test cmdmod.run_chroot mount / umount balance
@@ -591,6 +623,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(mock_mount.call_count, 3)
                 self.assertEqual(mock_umount.call_count, 3)
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_chroot_mount_bind(self):
         """
         Test cmdmod.run_chroot mount / umount balance with bind mount

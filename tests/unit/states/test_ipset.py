@@ -11,7 +11,7 @@ import salt.states.ipset as ipset
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class IpsetSetPresentTestCase(TestCase, LoaderModuleMockMixin):
@@ -52,6 +52,7 @@ class IpsetSetPresentTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(mock_new_set.call_count == 0)
         self.assertDictEqual(actual_ret, expected_ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_already_exists(self):
         """
         Test to verify the chain exists when it already exists.
@@ -64,6 +65,7 @@ class IpsetSetPresentTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._runner(ret, check_set=True, new_set_assertion=False)
 
+    @skipIf(True, "FASTTEST skip")
     def test_needs_update_test_mode(self):
         """
         Test to verify that detects need for update but doesn't apply when in test mode.
@@ -77,6 +79,7 @@ class IpsetSetPresentTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._runner(ret, test=True, new_set_assertion=False)
 
+    @skipIf(True, "FASTTEST skip")
     def test_creates_set(self):
         ret = {
             "name": self.fake_name,
@@ -88,6 +91,7 @@ class IpsetSetPresentTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._runner(ret, new_set=True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_fails(self):
         ret = {
             "name": self.fake_name,
@@ -144,6 +148,8 @@ class IpsetSetAbsentTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(mock_delete_set.call_count == 0)
         self.assertDictEqual(actual_ret, expected_ret)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_already_absent(self):
         ret = {
             "name": self.fake_name,
@@ -155,6 +161,7 @@ class IpsetSetAbsentTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._runner(ret, check_set=False, delete_set=None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_test_mode(self):
         ret = {
             "name": self.fake_name,
@@ -164,6 +171,7 @@ class IpsetSetAbsentTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._runner(ret, test=True, delete_set=None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_fails(self):
         ret = {
             "name": self.fake_name,
@@ -173,6 +181,7 @@ class IpsetSetAbsentTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._runner(ret, flush_assertion=True, delete_set_assertion=True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_success(self):
         ret = {
             "name": self.fake_name,
@@ -227,6 +236,7 @@ class IpsetPresentTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(mock_add.call_count == 0)
         self.assertDictEqual(actual_ret, expected_ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_entries_already_present(self):
         ret = {
             "name": self.fake_name,
@@ -238,6 +248,9 @@ class IpsetPresentTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._runner(ret, check=True)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_in_test_mode(self):
         ret = {
             "name": self.fake_name,
@@ -249,6 +262,7 @@ class IpsetPresentTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._runner(ret, test=True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_fails(self):
         ret = {
             "name": self.fake_name,
@@ -259,6 +273,9 @@ class IpsetPresentTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._runner(ret, add="Error", add_assertion=True)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_success(self):
         ret = {
             "name": self.fake_name,
@@ -270,6 +287,7 @@ class IpsetPresentTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._runner(ret, add="worked", add_assertion=True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_missing_entry(self):
         ret = {
             "name": self.fake_name,
@@ -325,6 +343,8 @@ class IpsetAbsentTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(mock_delete.call_count == 0)
         self.assertDictEqual(actual_ret, expected_ret)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_already_absent(self):
         ret = {
             "name": self.fake_name,
@@ -336,6 +356,9 @@ class IpsetAbsentTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._runner(ret)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_in_test_mode(self):
         ret = {
             "name": self.fake_name,
@@ -347,6 +370,7 @@ class IpsetAbsentTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._runner(ret, test=True, check=True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_del_fails(self):
         ret = {
             "name": self.fake_name,
@@ -357,6 +381,9 @@ class IpsetAbsentTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._runner(ret, check=True, delete="Error", delete_assertion=True)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_success(self):
         ret = {
             "name": self.fake_name,
@@ -368,6 +395,7 @@ class IpsetAbsentTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._runner(ret, check=True, delete="worked", delete_assertion=True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         ret = {
             "name": self.fake_name,
@@ -408,6 +436,7 @@ class IpsetFlushTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(mock_flush.call_count == 0)
         self.assertDictEqual(actual_ret, expected_ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_no_set(self):
         ret = {
             "name": self.fake_name,
@@ -417,6 +446,9 @@ class IpsetFlushTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._runner(ret, check_set=False, flush_assertion=False)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_in_test_mode(self):
         ret = {
             "name": self.fake_name,
@@ -428,6 +460,7 @@ class IpsetFlushTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._runner(ret, test=True, flush_assertion=False)
 
+    @skipIf(True, "FASTTEST skip")
     def test_flush_fails(self):
         ret = {
             "name": self.fake_name,
@@ -439,6 +472,9 @@ class IpsetFlushTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._runner(ret, flush=False)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_success(self):
         ret = {
             "name": self.fake_name,

@@ -30,6 +30,7 @@ class EnabledTest(ModuleCase):
     )
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
+    @skipIf(True, "FASTTEST skip")
     def test_shell_default_enabled(self):
         """
         ensure that python_shell defaults to True for cmd.run
@@ -39,6 +40,7 @@ class EnabledTest(ModuleCase):
         self.assertEqual(ret.strip(), enabled_ret)
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
+    @skipIf(True, "FASTTEST skip")
     def test_shell_disabled(self):
         """
         test shell disabled output for cmd.run
@@ -90,7 +92,6 @@ class EnabledTest(ModuleCase):
             os.remove(state_file)
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
-    @skipIf(True, "SLOWTEST skip")
     def test_template_default_disabled(self):
         """
         test shell disabled output for templates (python_shell=False is the default

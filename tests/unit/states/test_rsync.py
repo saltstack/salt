@@ -11,7 +11,7 @@ import salt.states.rsync as rsync
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class RsyncTestCase(TestCase, LoaderModuleMockMixin):
@@ -22,6 +22,7 @@ class RsyncTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {rsync: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_syncronized_failed(self):
         """
         Test to perform an rsync.synchorized call that fails
@@ -61,6 +62,7 @@ class RsyncTestCase(TestCase, LoaderModuleMockMixin):
                         rsync.synchronized("name", "source"), _expected
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_syncronized(self):
         """
         Test to perform an rsync.synchorized call that succeeds
@@ -124,6 +126,7 @@ class RsyncTestCase(TestCase, LoaderModuleMockMixin):
                         rsync.synchronized("name", "source"), _expected
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_syncronized_test_true(self):
         """
         Test to perform an rsync.synchorized call that fails

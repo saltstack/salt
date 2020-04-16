@@ -56,9 +56,11 @@ class TestProcsCount(TestProcsBase):
         self.add_process(pid=101)
         self.call_procs()
 
+    @skipIf(True, "FASTTEST skip")
     def test_process_count(self):
         self.assertEqual(len(self.result), 2)
 
+    @skipIf(True, "FASTTEST skip")
     def test_process_key_is_pid(self):
         self.assertSetEqual(set(self.result.keys()), set([100, 101]))
 
@@ -80,15 +82,20 @@ class TestProcsAttributes(TestProcsBase):
         self.call_procs()
         self.proc = self.result[pid]
 
+    @skipIf(True, "FASTTEST skip")
     def test_process_cmd_is_set(self):
         self.assertEqual(self.proc["cmd"], self._expected_cmd)
 
+    @skipIf(True, "FASTTEST skip")
     def test_process_name_is_set(self):
         self.assertEqual(self.proc["name"], self._expected_name)
 
+    @skipIf(True, "FASTTEST skip")
     def test_process_user_is_set(self):
         self.assertEqual(self.proc["user"], self._expected_user)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_process_user_domain_is_set(self):
         self.assertEqual(self.proc["user_domain"], self._expected_domain)
 
@@ -133,10 +140,13 @@ class TestProcsWMIGetOwnerAccessDeniedWorkaround(TestProcsBase):
         self.add_process(pid=4, get_owner_result=2)
         self.call_procs()
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_is_set(self):
         self.assertEqual(self.result[0]["user"], self.expected_user)
         self.assertEqual(self.result[4]["user"], self.expected_user)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_process_user_domain_is_set(self):
         self.assertEqual(self.result[0]["user_domain"], self.expected_domain)
         self.assertEqual(self.result[4]["user_domain"], self.expected_domain)
@@ -147,6 +157,7 @@ class TestProcsWMIGetOwnerErrorsAreLogged(TestProcsBase):
         self.expected_error_code = 8
         self.add_process(get_owner_result=self.expected_error_code)
 
+    @skipIf(True, "FASTTEST skip")
     def test_error_logged_if_process_get_owner_fails(self):
         with patch("salt.modules.win_status.log") as log:
             self.call_procs()
@@ -161,6 +172,7 @@ class TestEmptyCommandLine(TestProcsBase):
         self.call_procs()
         self.proc = self.result[pid]
 
+    @skipIf(True, "FASTTEST skip")
     def test_cmd_is_empty_string(self):
         self.assertEqual(self.proc["cmd"], "")
 

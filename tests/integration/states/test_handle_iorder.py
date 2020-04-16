@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
 
 
 class HandleOrderTest(ModuleCase):
@@ -15,6 +16,7 @@ class HandleOrderTest(ModuleCase):
     Validate that ordering works correctly
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_handle_iorder(self):
         """
         Test the error with multiple states of the same type

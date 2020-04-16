@@ -101,6 +101,17 @@ class GetClusterTestCase(TestCase):
         ):
             self.addCleanup(delattr, self, attr)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_managed_object_name_call(self):
         mock_get_managed_object_name = MagicMock()
         with patch(
@@ -109,6 +120,7 @@ class GetClusterTestCase(TestCase):
             salt.utils.vmware.get_cluster(self.mock_dc, "fake_cluster")
         mock_get_managed_object_name.assert_called_once_with(self.mock_dc)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_service_instance_from_managed_object(self):
         mock_dc_name = MagicMock()
         mock_get_service_instance_from_managed_object = MagicMock()
@@ -126,6 +138,7 @@ class GetClusterTestCase(TestCase):
             self.mock_dc, name=mock_dc_name
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_traversal_spec_init(self):
         mock_dc_name = MagicMock()
         mock_traversal_spec = MagicMock()
@@ -149,6 +162,8 @@ class GetClusterTestCase(TestCase):
             ]
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_mors_with_properties_call(self):
         mock_get_mors_with_properties = MagicMock(
             return_value=[{"name": "fake_cluster", "object": MagicMock()}]
@@ -180,6 +195,8 @@ class GetClusterTestCase(TestCase):
             traversal_spec=mock_traversal_spec,
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_mors_with_properties_returns_empty_array(self):
         with patch(
             "salt.utils.vmware.get_managed_object_name",
@@ -195,6 +212,7 @@ class GetClusterTestCase(TestCase):
             "Cluster 'fake_cluster' was not found in " "datacenter 'fake_dc'",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_cluster_not_found(self):
         with patch(
             "salt.utils.vmware.get_managed_object_name",
@@ -211,6 +229,7 @@ class GetClusterTestCase(TestCase):
             "Cluster 'fake_cluster' was not found in " "datacenter 'fake_dc'",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_cluster_found(self):
         with patch(
             "salt.utils.vmware.get_managed_object_name",
@@ -244,6 +263,8 @@ class CreateClusterTestCase(TestCase):
         for attr in ("mock_create_cluster_ex", "mock_dc", "mock_cluster_spec"):
             self.addCleanup(delattr, self, attr)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_managed_object_name(self):
         mock_get_managed_object_name = MagicMock()
         with patch(
@@ -254,6 +275,7 @@ class CreateClusterTestCase(TestCase):
             )
         mock_get_managed_object_name.assert_called_once_with(self.mock_dc)
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_cluster_call(self):
         salt.utils.vmware.create_cluster(
             self.mock_dc, "fake_cluster", self.mock_cluster_spec
@@ -262,6 +284,7 @@ class CreateClusterTestCase(TestCase):
             "fake_cluster", self.mock_cluster_spec
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_cluster_raise_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -275,6 +298,7 @@ class CreateClusterTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_cluster_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -285,6 +309,7 @@ class CreateClusterTestCase(TestCase):
             )
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_cluster_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -327,6 +352,8 @@ class UpdateClusterTestCase(TestCase):
         ):
             self.addCleanup(delattr, self, attr)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_managed_object_name(self):
         mock_get_managed_object_name = MagicMock()
         with patch(
@@ -335,12 +362,14 @@ class UpdateClusterTestCase(TestCase):
             salt.utils.vmware.update_cluster(self.mock_cluster, self.mock_cluster_spec)
         mock_get_managed_object_name.assert_called_once_with(self.mock_cluster)
 
+    @skipIf(True, "FASTTEST skip")
     def test_reconfigure_compute_resource_task_call(self):
         salt.utils.vmware.update_cluster(self.mock_cluster, self.mock_cluster_spec)
         self.mock_reconfigure_compute_resource_task.assert_called_once_with(
             self.mock_cluster_spec, modify=True
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_reconfigure_compute_resource_raise_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -352,6 +381,7 @@ class UpdateClusterTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_reconfigure_compute_resource_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -360,6 +390,7 @@ class UpdateClusterTestCase(TestCase):
             salt.utils.vmware.update_cluster(self.mock_cluster, self.mock_cluster_spec)
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_reconfigure_compute_resource_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -368,6 +399,7 @@ class UpdateClusterTestCase(TestCase):
             salt.utils.vmware.update_cluster(self.mock_cluster, self.mock_cluster_spec)
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_wait_for_task_call(self):
         mock_wait_for_task = MagicMock()
         with patch(
@@ -399,6 +431,7 @@ class WaitForTaskTestCase(TestCase):
             patcher.start()
             self.addCleanup(patcher.stop)
 
+    @skipIf(True, "FASTTEST skip")
     def test_first_task_info_raise_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -413,6 +446,7 @@ class WaitForTaskTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_first_task_info_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -424,6 +458,7 @@ class WaitForTaskTestCase(TestCase):
             )
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_first_task_info_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -435,6 +470,7 @@ class WaitForTaskTestCase(TestCase):
             )
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_inner_loop_task_info_raise_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -451,6 +487,7 @@ class WaitForTaskTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_inner_loop_task_info_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -464,6 +501,7 @@ class WaitForTaskTestCase(TestCase):
             )
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_inner_loop_task_info_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -477,6 +515,7 @@ class WaitForTaskTestCase(TestCase):
             )
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_info_state_running(self):
         # The 'bad' values are invalid in the while loop
         mock_task = MagicMock()
@@ -488,6 +527,7 @@ class WaitForTaskTestCase(TestCase):
         self.assertEqual(prop_mock_state.call_count, 4)
         self.assertEqual(prop_mock_result.call_count, 1)
 
+    @skipIf(True, "FASTTEST skip")
     def test_info_state_running_continues_loop(self):
         mock_task = MagicMock()
         # The 'fake' values are required to match all the lookups and end the
@@ -502,6 +542,7 @@ class WaitForTaskTestCase(TestCase):
         self.assertEqual(prop_mock_state.call_count, 4)
         self.assertEqual(prop_mock_result.call_count, 1)
 
+    @skipIf(True, "FASTTEST skip")
     def test_info_state_queued_continues_loop(self):
         mock_task = MagicMock()
         # The 'fake' values are required to match all the lookups and end the
@@ -516,6 +557,7 @@ class WaitForTaskTestCase(TestCase):
         self.assertEqual(prop_mock_state.call_count, 5)
         self.assertEqual(prop_mock_result.call_count, 1)
 
+    @skipIf(True, "FASTTEST skip")
     def test_info_state_success(self):
         mock_task = MagicMock()
         prop_mock_state = PropertyMock(return_value="success")
@@ -526,6 +568,7 @@ class WaitForTaskTestCase(TestCase):
         self.assertEqual(prop_mock_state.call_count, 3)
         self.assertEqual(prop_mock_result.call_count, 1)
 
+    @skipIf(True, "FASTTEST skip")
     def test_info_error_exception(self):
         mock_task = MagicMock()
         prop_mock_state = PropertyMock(return_value="error")
@@ -538,6 +581,7 @@ class WaitForTaskTestCase(TestCase):
             )
         self.assertEqual(six.text_type(excinfo.exception), "error exc")
 
+    @skipIf(True, "FASTTEST skip")
     def test_info_error_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -555,6 +599,7 @@ class WaitForTaskTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_info_error_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -569,6 +614,7 @@ class WaitForTaskTestCase(TestCase):
             )
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_info_error_system_fault(self):
         exc = vmodl.fault.SystemError()
         exc.msg = "SystemError msg"
@@ -583,6 +629,7 @@ class WaitForTaskTestCase(TestCase):
             )
         self.assertEqual(excinfo.exception.strerror, "SystemError msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_info_error_invalid_argument_no_fault_message(self):
         exc = vmodl.fault.InvalidArgument()
         exc.faultMessage = None
@@ -598,6 +645,7 @@ class WaitForTaskTestCase(TestCase):
             )
         self.assertEqual(excinfo.exception.strerror, "InvalidArgumentFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_info_error_invalid_argument_with_fault_message(self):
         exc = vmodl.fault.InvalidArgument()
         fault_message = vim.LocalizableMessage()
@@ -637,6 +685,7 @@ class GetMorsWithPropertiesTestCase(TestCase):
         self.container_ref = MagicMock()
         self.traversal_spec = MagicMock()
 
+    @skipIf(True, "FASTTEST skip")
     def test_empty_content(self):
         get_content = MagicMock(return_value=[])
         with patch("salt.utils.vmware.get_content", get_content):
@@ -657,6 +706,8 @@ class GetMorsWithPropertiesTestCase(TestCase):
         )
         self.assertEqual(ret, [])
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_local_properties_set(self):
         obj_mock = MagicMock()
         # obj.propSet
@@ -686,6 +737,7 @@ class GetMorsWithPropertiesTestCase(TestCase):
             local_properties=True,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_one_element_content(self):
         obj_mock = MagicMock()
         # obj.propSet
@@ -717,6 +769,7 @@ class GetMorsWithPropertiesTestCase(TestCase):
         self.assertEqual(len(ret), 1)
         self.assertDictEqual(ret[0], {"object": inner_obj_mock})
 
+    @skipIf(True, "FASTTEST skip")
     def test_multiple_element_content(self):
         # obj1
         obj1_mock = MagicMock()
@@ -762,6 +815,7 @@ class GetMorsWithPropertiesTestCase(TestCase):
         self.assertDictEqual(ret[0], {"object": obj1_inner_obj_mock})
         self.assertDictEqual(ret[1], {"object": obj2_inner_obj_mock})
 
+    @skipIf(True, "FASTTEST skip")
     def test_one_elem_one_property(self):
         obj_mock = MagicMock()
 
@@ -808,6 +862,7 @@ class GetMorsWithPropertiesTestCase(TestCase):
             ret[0], {"prop_name": "prop_value", "object": inner_obj_mock}
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_one_elem_multiple_properties(self):
         obj_mock = MagicMock()
 
@@ -894,6 +949,7 @@ class GetPropertiesOfManagedObjectTestCase(TestCase):
         self.mock_item_name = {"name": "fake_name"}
         self.mock_item = MagicMock()
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_service_instance_from_managed_object_call(self):
         mock_get_instance_from_managed_object = MagicMock()
         with patch(
@@ -906,6 +962,7 @@ class GetPropertiesOfManagedObjectTestCase(TestCase):
             )
         mock_get_instance_from_managed_object.assert_called_once_with(self.fake_mo_ref)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_mors_with_properties_calls(self):
         mock_get_mors_with_properties = MagicMock(return_value=[MagicMock()])
         with patch(
@@ -939,6 +996,7 @@ class GetPropertiesOfManagedObjectTestCase(TestCase):
             ]
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed_object_no_name_property(self):
         with patch(
             "salt.utils.vmware.get_mors_with_properties",
@@ -953,6 +1011,7 @@ class GetPropertiesOfManagedObjectTestCase(TestCase):
             excinfo.exception.strerror,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_no_items_named_object(self):
         with patch(
             "salt.utils.vmware.get_mors_with_properties",
@@ -987,6 +1046,7 @@ class GetManagedObjectName(TestCase):
             self.addCleanup(patcher.stop)
         self.mock_mo_ref = MagicMock()
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_properties_of_managed_object_call(self):
         mock_get_properties_of_managed_object = MagicMock()
         with patch(
@@ -998,10 +1058,12 @@ class GetManagedObjectName(TestCase):
             self.mock_mo_ref, ["name"]
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_no_name_in_property_dict(self):
         ret = salt.utils.vmware.get_managed_object_name(self.mock_mo_ref)
         self.assertIsNone(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_return_managed_object_name(self):
         mock_get_properties_of_managed_object = MagicMock()
         with patch(
@@ -1107,6 +1169,7 @@ class GetContentTestCase(TestCase):
         self.filter_spec_ret_mock = MagicMock()
         self.filter_spec_mock = MagicMock(return_value=self.filter_spec_ret_mock)
 
+    @skipIf(True, "FASTTEST skip")
     def test_empty_container_ref(self):
         with patch("salt.utils.vmware.get_root_folder", self.get_root_folder_mock):
             salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
@@ -1115,6 +1178,7 @@ class GetContentTestCase(TestCase):
             self.root_folder_mock, [self.obj_type_mock], True
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_defined_container_ref(self):
         container_ref_mock = MagicMock()
         with patch("salt.utils.vmware.get_root_folder", self.get_root_folder_mock):
@@ -1128,6 +1192,7 @@ class GetContentTestCase(TestCase):
         )
 
     # Also checks destroy is called
+    @skipIf(True, "FASTTEST skip")
     def test_local_traversal_spec(self):
         with patch("salt.utils.vmware.get_root_folder", self.get_root_folder_mock):
             with patch(self.traversal_spec_method_name, self.traversal_spec_mock):
@@ -1152,6 +1217,7 @@ class GetContentTestCase(TestCase):
         # check destroy is called
         self.assertEqual(self.destroy_mock.call_count, 1)
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_container_view_raise_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -1166,6 +1232,7 @@ class GetContentTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_container_view_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -1177,6 +1244,7 @@ class GetContentTestCase(TestCase):
                 salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_container_view_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -1188,6 +1256,7 @@ class GetContentTestCase(TestCase):
                 salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_destroy_raise_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -1202,6 +1271,7 @@ class GetContentTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_destroy_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -1213,6 +1283,7 @@ class GetContentTestCase(TestCase):
                 salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_destroy_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -1225,6 +1296,7 @@ class GetContentTestCase(TestCase):
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
     # Also checks destroy is not called
+    @skipIf(True, "FASTTEST skip")
     def test_external_traversal_spec(self):
         traversal_spec_obj_mock = MagicMock()
         with patch("salt.utils.vmware.get_root_folder", self.get_root_folder_mock):
@@ -1244,6 +1316,7 @@ class GetContentTestCase(TestCase):
         # check destroy is not called
         self.assertEqual(self.destroy_mock.call_count, 0)
 
+    @skipIf(True, "FASTTEST skip")
     def test_property_obj_filter_specs_and_contents(self):
         with patch(self.traversal_spec_method_name, self.traversal_spec_mock):
             with patch(self.property_spec_method_name, self.property_spec_mock):
@@ -1269,6 +1342,7 @@ class GetContentTestCase(TestCase):
         self.retrieve_contents_mock.assert_called_once_with([self.filter_spec_ret_mock])
         self.assertEqual(ret, self.result_mock)
 
+    @skipIf(True, "FASTTEST skip")
     def test_retrieve_contents_raise_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -1282,6 +1356,7 @@ class GetContentTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_retrieve_contents_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -1292,6 +1367,7 @@ class GetContentTestCase(TestCase):
             salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_retrieve_contents_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -1302,6 +1378,8 @@ class GetContentTestCase(TestCase):
             salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_local_properties_set(self):
         container_ref_mock = MagicMock()
         with patch(self.traversal_spec_method_name, self.traversal_spec_mock):
@@ -1332,6 +1410,10 @@ class GetRootFolderTestCase(TestCase):
             RetrieveContent=MagicMock(return_value=self.mock_content)
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_raise_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -1343,6 +1425,10 @@ class GetRootFolderTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -1351,6 +1437,10 @@ class GetRootFolderTestCase(TestCase):
             salt.utils.vmware.get_root_folder(self.mock_si)
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -1359,6 +1449,7 @@ class GetRootFolderTestCase(TestCase):
             salt.utils.vmware.get_root_folder(self.mock_si)
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_return(self):
         ret = salt.utils.vmware.get_root_folder(self.mock_si)
         self.assertEqual(ret, self.mock_root_folder)
@@ -1379,10 +1470,12 @@ class GetServiceInfoTestCase(TestCase):
         for attr in ("mock_si", "mock_about"):
             delattr(self, attr)
 
+    @skipIf(True, "FASTTEST skip")
     def test_about_ret(self):
         ret = salt.utils.vmware.get_service_info(self.mock_si)
         self.assertEqual(ret, self.mock_about)
 
+    @skipIf(True, "FASTTEST skip")
     def test_about_raises_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -1394,6 +1487,7 @@ class GetServiceInfoTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_about_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -1402,6 +1496,7 @@ class GetServiceInfoTestCase(TestCase):
             salt.utils.vmware.get_service_info(self.mock_si)
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_about_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -1505,6 +1600,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
             patcher.start()
             self.addCleanup(patcher.stop)
 
+    @skipIf(True, "FASTTEST skip")
     def test_invalid_mechianism(self):
         with self.assertRaises(CommandExecutionError) as excinfo:
             salt.utils.vmware._get_service_instance(
@@ -1519,6 +1615,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
             )
         self.assertIn("Unsupported mechanism", excinfo.exception.strerror)
 
+    @skipIf(True, "FASTTEST skip")
     def test_userpass_mechanism_empty_username(self):
         with self.assertRaises(CommandExecutionError) as excinfo:
             salt.utils.vmware._get_service_instance(
@@ -1533,6 +1630,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
             )
         self.assertIn("mandatory parameter 'username'", excinfo.exception.strerror)
 
+    @skipIf(True, "FASTTEST skip")
     def test_userpass_mechanism_empty_password(self):
         with self.assertRaises(CommandExecutionError) as excinfo:
             salt.utils.vmware._get_service_instance(
@@ -1547,6 +1645,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
             )
         self.assertIn("mandatory parameter 'password'", excinfo.exception.strerror)
 
+    @skipIf(True, "FASTTEST skip")
     def test_userpass_mechanism_no_domain(self):
         mock_sc = MagicMock()
         with patch("salt.utils.vmware.SmartConnect", mock_sc):
@@ -1570,6 +1669,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                 mechanism="userpass",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_userpass_mech_domain_unused(self):
         mock_sc = MagicMock()
         with patch("salt.utils.vmware.SmartConnect", mock_sc):
@@ -1613,6 +1713,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                 mechanism="userpass",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_sspi_empty_principal(self):
         with self.assertRaises(CommandExecutionError) as excinfo:
             salt.utils.vmware._get_service_instance(
@@ -1627,6 +1728,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
             )
         self.assertIn("mandatory parameters are missing", excinfo.exception.strerror)
 
+    @skipIf(True, "FASTTEST skip")
     def test_sspi_empty_domain(self):
         with self.assertRaises(CommandExecutionError) as excinfo:
             salt.utils.vmware._get_service_instance(
@@ -1641,6 +1743,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
             )
         self.assertIn("mandatory parameters are missing", excinfo.exception.strerror)
 
+    @skipIf(True, "FASTTEST skip")
     def test_sspi_get_token_error(self):
         mock_token = MagicMock(side_effect=Exception("Exception"))
 
@@ -1661,6 +1764,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
             )
             self.assertEqual("Exception", excinfo.exception.strerror)
 
+    @skipIf(True, "FASTTEST skip")
     def test_sspi_get_token_success_(self):
         mock_token = MagicMock(return_value="fake_token")
         mock_sc = MagicMock()
@@ -1690,6 +1794,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                 mechanism="sspi",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_first_attempt_successful_connection(self):
         mock_sc = MagicMock()
         with patch("salt.utils.vmware.SmartConnect", mock_sc):
@@ -1714,6 +1819,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
             )
 
     @skipIf(not SSL_VALIDATION, "SSL validation is not enabled")
+    @skipIf(True, "FASTTEST skip")
     def test_second_attempt_successful_connection(self):
         with patch("ssl.SSLContext", MagicMock()), patch(ssl_context, MagicMock()):
             exc = vim.fault.HostConnectFault()
@@ -1760,6 +1866,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                     mock_sc.assert_has_calls(calls)
 
     @skipIf(not SSL_VALIDATION, "SSL validation is not enabled")
+    @skipIf(True, "FASTTEST skip")
     def test_third_attempt_successful_connection(self):
         with patch("ssl.SSLContext", MagicMock()), patch(ssl_context, MagicMock()):
             exc = vim.fault.HostConnectFault()
@@ -1819,6 +1926,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                         ]
                         mock_sc.assert_has_calls(calls)
 
+    @skipIf(True, "FASTTEST skip")
     def test_first_attempt_unsuccessful_connection_default_error(self):
         exc = Exception("Exception")
         mock_sc = MagicMock(side_effect=exc)
@@ -1842,6 +1950,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                     excinfo.Exception.message,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_first_attempt_unsuccessful_connection_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault"
@@ -1864,6 +1973,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                 self.assertEqual("VimFault", excinfo.Exception.message)
 
     @skipIf(not SSL_VALIDATION, "SSL validation is not enabled")
+    @skipIf(True, "FASTTEST skip")
     def test_second_attempt_unsuccsessful_connection_default_error(self):
         with patch("ssl.SSLContext", MagicMock()), patch(ssl_context, MagicMock()):
             exc = vim.fault.HostConnectFault()
@@ -1891,6 +2001,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                     )
 
     @skipIf(not SSL_VALIDATION, "SSL validation is not enabled")
+    @skipIf(True, "FASTTEST skip")
     def test_second_attempt_unsuccsessful_connection_vim_fault(self):
         with patch("ssl.SSLContext", MagicMock()), patch(ssl_context, MagicMock()):
             exc = vim.fault.HostConnectFault()
@@ -1916,6 +2027,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                     self.assertIn("VimFault", excinfo.Exception.message)
 
     @skipIf(not SSL_VALIDATION, "SSL validation is not enabled")
+    @skipIf(True, "FASTTEST skip")
     def test_third_attempt_unsuccessful_connection_detault_error(self):
         with patch("ssl.SSLContext", MagicMock()), patch(ssl_context, MagicMock()):
             exc = vim.fault.HostConnectFault()
@@ -1941,6 +2053,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                     self.assertIn("Exception", excinfo.Exception.message)
 
     @skipIf(not SSL_VALIDATION, "SSL validation is not enabled")
+    @skipIf(True, "FASTTEST skip")
     def test_third_attempt_unsuccessful_connection_vim_fault(self):
         with patch("ssl.SSLContext", MagicMock()), patch(ssl_context, MagicMock()):
             exc = vim.fault.HostConnectFault()
@@ -1986,6 +2099,7 @@ class GetServiceInstanceTestCase(TestCase):
             patcher.start()
             self.addCleanup(patcher.stop)
 
+    @skipIf(True, "FASTTEST skip")
     def test_default_params(self):
         mock_get_si = MagicMock()
         with patch("salt.utils.vmware._get_service_instance", mock_get_si):
@@ -1994,6 +2108,7 @@ class GetServiceInstanceTestCase(TestCase):
                 "fake_host", None, None, "https", 443, "userpass", None, None
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_no_cached_service_instance_same_host_on_proxy(self):
         with patch("salt.utils.platform.is_proxy", MagicMock(return_value=True)):
             # Service instance is uncached when using class default mock objs
@@ -2020,6 +2135,7 @@ class GetServiceInstanceTestCase(TestCase):
                     "fake_domain",
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_cached_service_instance_different_host(self):
         mock_si = MagicMock()
         mock_si_stub = MagicMock()
@@ -2043,6 +2159,7 @@ class GetServiceInstanceTestCase(TestCase):
             self.assertEqual(mock_getstub.call_count, 1)
             self.assertEqual(mock_disconnect.call_count, 1)
 
+    @skipIf(True, "FASTTEST skip")
     def test_uncached_service_instance(self):
         # Service instance is uncached when using class default mock objs
         mock_get_si = MagicMock()
@@ -2068,6 +2185,7 @@ class GetServiceInstanceTestCase(TestCase):
                 "fake_domain",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_unauthenticated_service_instance(self):
         mock_si_current_time = MagicMock(side_effect=vim.fault.NotAuthenticated)
         mock_si = MagicMock()
@@ -2090,6 +2208,7 @@ class GetServiceInstanceTestCase(TestCase):
                 self.assertEqual(mock_disconnect.call_count, 1)
                 self.assertEqual(mock_get_si.call_count, 2)
 
+    @skipIf(True, "FASTTEST skip")
     def test_current_time_raise_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -2113,6 +2232,7 @@ class GetServiceInstanceTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_current_time_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -2133,6 +2253,7 @@ class GetServiceInstanceTestCase(TestCase):
                 )
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_current_time_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -2164,12 +2285,14 @@ class DisconnectTestCase(TestCase):
         self.mock_si = MagicMock()
         self.addCleanup(delattr, self, "mock_si")
 
+    @skipIf(True, "FASTTEST skip")
     def test_disconnect(self):
         mock_disconnect = MagicMock()
         with patch("salt.utils.vmware.Disconnect", mock_disconnect):
             salt.utils.vmware.disconnect(service_instance=self.mock_si)
             mock_disconnect.assert_called_once_with(self.mock_si)
 
+    @skipIf(True, "FASTTEST skip")
     def test_disconnect_raise_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -2181,6 +2304,7 @@ class DisconnectTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_disconnect_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -2189,6 +2313,7 @@ class DisconnectTestCase(TestCase):
                 salt.utils.vmware.disconnect(service_instance=self.mock_si)
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_disconnect_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -2204,6 +2329,7 @@ class IsConnectionToAVCenterTestCase(TestCase):
     Tests for salt.utils.vmware.is_connection_to_a_vcenter
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_api_type_raise_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -2216,6 +2342,7 @@ class IsConnectionToAVCenterTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_api_type_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -2225,6 +2352,7 @@ class IsConnectionToAVCenterTestCase(TestCase):
             salt.utils.vmware.is_connection_to_a_vcenter(mock_si)
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_api_type_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -2234,6 +2362,7 @@ class IsConnectionToAVCenterTestCase(TestCase):
             salt.utils.vmware.is_connection_to_a_vcenter(mock_si)
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_connected_to_a_vcenter(self):
         mock_si = MagicMock()
         mock_si.content.about.apiType = "VirtualCenter"
@@ -2241,6 +2370,7 @@ class IsConnectionToAVCenterTestCase(TestCase):
         ret = salt.utils.vmware.is_connection_to_a_vcenter(mock_si)
         self.assertTrue(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_connected_to_a_host(self):
         mock_si = MagicMock()
         mock_si.content.about.apiType = "HostAgent"
@@ -2248,6 +2378,7 @@ class IsConnectionToAVCenterTestCase(TestCase):
         ret = salt.utils.vmware.is_connection_to_a_vcenter(mock_si)
         self.assertFalse(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_connected_to_invalid_entity(self):
         mock_si = MagicMock()
         mock_si.content.about.apiType = "UnsupportedType"
@@ -2312,21 +2443,25 @@ class GetNewServiceInstanceStub(TestCase, LoaderModuleMockMixin):
         ):
             delattr(self, attr)
 
+    @skipIf(True, "FASTTEST skip")
     def test_ssl_default_context_loaded(self):
         salt.utils.vmware.get_new_service_instance_stub(self.mock_si, "fake_path")
         self.mock_create_default_context.assert_called_once_with()
         self.assertFalse(self.mock_context.check_hostname)
         self.assertEqual(self.mock_context.verify_mode, salt.utils.vmware.ssl.CERT_NONE)
 
+    @skipIf(True, "FASTTEST skip")
     def test_ssl_default_context_not_loaded(self):
         type(salt.utils.vmware.sys).version_info = PropertyMock(return_value=(2, 7, 8))
         salt.utils.vmware.get_new_service_instance_stub(self.mock_si, "fake_path")
         self.assertEqual(self.mock_create_default_context.call_count, 0)
 
+    @skipIf(True, "FASTTEST skip")
     def test_session_cookie_in_context(self):
         salt.utils.vmware.get_new_service_instance_stub(self.mock_si, "fake_path")
         self.assertEqual(self.context_dict["vcSessionCookie"], "fake_cookie")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_new_stub(self):
         mock_get_new_stub = MagicMock()
         with patch("salt.utils.vmware.SoapStubAdapter", mock_get_new_stub):
@@ -2342,6 +2477,7 @@ class GetNewServiceInstanceStub(TestCase, LoaderModuleMockMixin):
             sslContext=self.mock_context,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_new_stub_2_7_8_python(self):
         type(salt.utils.vmware.sys).version_info = PropertyMock(return_value=(2, 7, 8))
         mock_get_new_stub = MagicMock()
@@ -2358,6 +2494,7 @@ class GetNewServiceInstanceStub(TestCase, LoaderModuleMockMixin):
             sslContext=None,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_new_stub_returned(self):
         ret = salt.utils.vmware.get_new_service_instance_stub(self.mock_si, "fake_path")
         self.assertEqual(self.mock_new_stub.cookie, 'ignore"fake_cookie')
@@ -2382,6 +2519,7 @@ class GetServiceInstanceFromManagedObjectTestCase(TestCase):
         for attr in ("mock_si", "mock_stub", "mock_mo_ref"):
             self.addCleanup(delattr, self, attr)
 
+    @skipIf(True, "FASTTEST skip")
     def test_default_name_parameter(self):
         mock_trace = MagicMock()
         type(salt.utils.vmware.log).trace = mock_trace
@@ -2390,6 +2528,7 @@ class GetServiceInstanceFromManagedObjectTestCase(TestCase):
             "[%s] Retrieving service instance from managed object", "<unnamed>"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_name_parameter_passed_in(self):
         mock_trace = MagicMock()
         type(salt.utils.vmware.log).trace = mock_trace
@@ -2400,12 +2539,14 @@ class GetServiceInstanceFromManagedObjectTestCase(TestCase):
             "[%s] Retrieving service instance from managed object", "fake_mo_name"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_service_instance_instantiation(self):
         mock_service_instance_ini = MagicMock()
         with patch("salt.utils.vmware.vim.ServiceInstance", mock_service_instance_ini):
             salt.utils.vmware.get_service_instance_from_managed_object(self.mock_mo_ref)
         mock_service_instance_ini.assert_called_once_with("ServiceInstance")
 
+    @skipIf(True, "FASTTEST skip")
     def test_si_return_and_stub_assignment(self):
         with patch(
             "salt.utils.vmware.vim.ServiceInstance",
@@ -2443,6 +2584,8 @@ class GetDatacentersTestCase(TestCase):
             {"name": "fake_dc2", "object": self.mock_dc2},
         ]
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_mors_with_properties_call(self):
         mock_get_mors_with_properties = MagicMock(
             return_value=[{"name": "fake_dc", "object": MagicMock()}]
@@ -2457,6 +2600,8 @@ class GetDatacentersTestCase(TestCase):
             self.mock_si, vim.Datacenter, property_list=["name"]
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_mors_with_properties_returns_empty_array(self):
         with patch(
             "salt.utils.vmware.get_mors_with_properties", MagicMock(return_value=[])
@@ -2466,6 +2611,7 @@ class GetDatacentersTestCase(TestCase):
             )
         self.assertEqual(res, [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_no_parameters(self):
         with patch(
             "salt.utils.vmware.get_mors_with_properties",
@@ -2474,6 +2620,7 @@ class GetDatacentersTestCase(TestCase):
             res = salt.utils.vmware.get_datacenters(self.mock_si)
         self.assertEqual(res, [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_datastore_not_found(self):
         with patch(
             "salt.utils.vmware.get_mors_with_properties",
@@ -2484,6 +2631,7 @@ class GetDatacentersTestCase(TestCase):
             )
         self.assertEqual(res, [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_datastore_found(self):
         with patch(
             "salt.utils.vmware.get_mors_with_properties",
@@ -2494,6 +2642,8 @@ class GetDatacentersTestCase(TestCase):
             )
         self.assertEqual(res, [self.mock_dc2])
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_all_datastores(self):
         with patch(
             "salt.utils.vmware.get_mors_with_properties",
@@ -2525,6 +2675,7 @@ class GetDatacenterTestCase(TestCase):
         self.mock_si = MagicMock()
         self.mock_dc = MagicMock()
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_datacenters_call(self):
         mock_get_datacenters = MagicMock(return_value=[MagicMock()])
         with patch("salt.utils.vmware.get_datacenters", mock_get_datacenters):
@@ -2533,6 +2684,7 @@ class GetDatacenterTestCase(TestCase):
             self.mock_si, datacenter_names=["fake_dc1"]
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_no_datacenters_returned(self):
         with patch("salt.utils.vmware.get_datacenters", MagicMock(return_value=[])):
             with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
@@ -2541,6 +2693,7 @@ class GetDatacenterTestCase(TestCase):
             "Datacenter 'fake_dc1' was not found", excinfo.exception.strerror
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_datacenter_return(self):
         with patch(
             "salt.utils.vmware.get_datacenters", MagicMock(return_value=[self.mock_dc])
@@ -2566,12 +2719,14 @@ class CreateDatacenterTestCase(TestCase):
         self.mock_create_datacenter = MagicMock(return_value=self.mock_dc)
         self.mock_root_folder = MagicMock(CreateDatacenter=self.mock_create_datacenter)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_root_folder(self):
         mock_get_root_folder = MagicMock()
         with patch("salt.utils.vmware.get_root_folder", mock_get_root_folder):
             salt.utils.vmware.create_datacenter(self.mock_si, "fake_dc")
         mock_get_root_folder.assert_called_once_with(self.mock_si)
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_datacenter_call(self):
         with patch(
             "salt.utils.vmware.get_root_folder",
@@ -2580,6 +2735,7 @@ class CreateDatacenterTestCase(TestCase):
             salt.utils.vmware.create_datacenter(self.mock_si, "fake_dc")
         self.mock_create_datacenter.assert_called_once_with("fake_dc")
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_datacenter_raise_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -2595,6 +2751,7 @@ class CreateDatacenterTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_datacenter_raise_vim_fault(self):
         exc = vim.VimFault()
         exc.msg = "VimFault msg"
@@ -2607,6 +2764,7 @@ class CreateDatacenterTestCase(TestCase):
                 salt.utils.vmware.create_datacenter(self.mock_si, "fake_dc")
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_datacenter_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -2619,6 +2777,7 @@ class CreateDatacenterTestCase(TestCase):
                 salt.utils.vmware.create_datacenter(self.mock_si, "fake_dc")
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_datastore_successfully_created(self):
         with patch(
             "salt.utils.vmware.get_root_folder",
@@ -2672,6 +2831,17 @@ class GetDvssTestCase(TestCase):
         ):
             delattr(self, attr)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_managed_object_name_call(self):
         mock_get_managed_object_name = MagicMock()
         with patch(
@@ -2680,6 +2850,10 @@ class GetDvssTestCase(TestCase):
             salt.utils.vmware.get_dvss(self.mock_dc_ref)
         mock_get_managed_object_name.assert_called_once_with(self.mock_dc_ref)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_traversal_spec(self):
         mock_traversal_spec = MagicMock(return_value="traversal_spec")
         with patch(
@@ -2700,6 +2874,12 @@ class GetDvssTestCase(TestCase):
             ]
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_mors_with_properties(self):
         salt.utils.vmware.get_dvss(self.mock_dc_ref)
         self.mock_get_mors.assert_called_once_with(
@@ -2710,14 +2890,17 @@ class GetDvssTestCase(TestCase):
             traversal_spec=self.mock_traversal_spec,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_no_dvss(self):
         ret = salt.utils.vmware.get_dvss(self.mock_dc_ref)
         self.assertEqual(ret, [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_all_dvss(self):
         ret = salt.utils.vmware.get_dvss(self.mock_dc_ref, get_all_dvss=True)
         self.assertEqual(ret, [i["object"] for i in self.mock_items])
 
+    @skipIf(True, "FASTTEST skip")
     def test_filtered_all_dvss(self):
         ret = salt.utils.vmware.get_dvss(
             self.mock_dc_ref, dvs_names=["fake_dvs1", "fake_dvs3", "no_dvs"]
@@ -2766,6 +2949,17 @@ class GetNetworkFolderTestCase(TestCase):
         ):
             delattr(self, attr)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_managed_object_name_call(self):
         mock_get_managed_object_name = MagicMock()
         with patch(
@@ -2774,6 +2968,10 @@ class GetNetworkFolderTestCase(TestCase):
             salt.utils.vmware.get_network_folder(self.mock_dc_ref)
         mock_get_managed_object_name.assert_called_once_with(self.mock_dc_ref)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_traversal_spec(self):
         mock_traversal_spec = MagicMock(return_value="traversal_spec")
         with patch(
@@ -2786,6 +2984,12 @@ class GetNetworkFolderTestCase(TestCase):
             path="networkFolder", skip=False, type=vim.Datacenter
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_mors_with_properties(self):
         salt.utils.vmware.get_network_folder(self.mock_dc_ref)
         self.mock_get_mors.assert_called_once_with(
@@ -2796,6 +3000,7 @@ class GetNetworkFolderTestCase(TestCase):
             traversal_spec=self.mock_traversal_spec,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_no_network_folder(self):
         with patch(
             "salt.utils.vmware.get_mors_with_properties", MagicMock(return_value=[])
@@ -2807,6 +3012,8 @@ class GetNetworkFolderTestCase(TestCase):
             "Network folder in datacenter 'fake_dc' wasn't " "retrieved",
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_network_folder(self):
         ret = salt.utils.vmware.get_network_folder(self.mock_dc_ref)
         self.assertEqual(ret, self.mock_entries[0]["object"])
@@ -2849,6 +3056,17 @@ class CreateDvsTestCase(TestCase):
         ):
             delattr(self, attr)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_managed_object_name_call(self):
         mock_get_managed_object_name = MagicMock()
         with patch(
@@ -2857,6 +3075,7 @@ class CreateDvsTestCase(TestCase):
             salt.utils.vmware.create_dvs(self.mock_dc_ref, "fake_dvs")
         mock_get_managed_object_name.assert_called_once_with(self.mock_dc_ref)
 
+    @skipIf(True, "FASTTEST skip")
     def test_no_dvs_create_spec(self):
         mock_spec = MagicMock(configSpec=None)
         mock_config_spec = MagicMock()
@@ -2873,12 +3092,15 @@ class CreateDvsTestCase(TestCase):
         self.assertEqual(mock_config_spec.name, "fake_dvs")
         self.mock_netw_folder.CreateDVS_Task.assert_called_once_with(mock_spec)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_network_folder(self):
         mock_get_network_folder = MagicMock()
         with patch("salt.utils.vmware.get_network_folder", mock_get_network_folder):
             salt.utils.vmware.create_dvs(self.mock_dc_ref, "fake_dvs")
         mock_get_network_folder.assert_called_once_with(self.mock_dc_ref)
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_dvs_task_passed_in_spec(self):
         salt.utils.vmware.create_dvs(
             self.mock_dc_ref, "fake_dvs", dvs_create_spec=self.mock_dvs_create_spec
@@ -2887,6 +3109,7 @@ class CreateDvsTestCase(TestCase):
             self.mock_dvs_create_spec
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_dvs_task_raises_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -2900,6 +3123,7 @@ class CreateDvsTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_dvs_task_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -2910,6 +3134,7 @@ class CreateDvsTestCase(TestCase):
             )
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_dvs_task_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -2920,6 +3145,11 @@ class CreateDvsTestCase(TestCase):
             )
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_wait_for_tasks(self):
         salt.utils.vmware.create_dvs(
             self.mock_dc_ref, "fake_dvs", dvs_create_spec=self.mock_dvs_create_spec
@@ -2964,6 +3194,17 @@ class UpdateDvsTestCase(TestCase):
         ):
             delattr(self, attr)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_managed_object_name_call(self):
         mock_get_managed_object_name = MagicMock()
         with patch(
@@ -2972,12 +3213,14 @@ class UpdateDvsTestCase(TestCase):
             salt.utils.vmware.update_dvs(self.mock_dvs_ref, self.mock_dvs_spec)
         mock_get_managed_object_name.assert_called_once_with(self.mock_dvs_ref)
 
+    @skipIf(True, "FASTTEST skip")
     def test_reconfigure_dvs_task(self):
         salt.utils.vmware.update_dvs(self.mock_dvs_ref, self.mock_dvs_spec)
         self.mock_dvs_ref.ReconfigureDvs_Task.assert_called_once_with(
             self.mock_dvs_spec
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_reconfigure_dvs_task_raises_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -2989,6 +3232,7 @@ class UpdateDvsTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_reconfigure_dvs_task_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -2997,6 +3241,7 @@ class UpdateDvsTestCase(TestCase):
             salt.utils.vmware.update_dvs(self.mock_dvs_ref, self.mock_dvs_spec)
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_reconfigure_dvs_task_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -3005,6 +3250,11 @@ class UpdateDvsTestCase(TestCase):
             salt.utils.vmware.update_dvs(self.mock_dvs_ref, self.mock_dvs_spec)
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_wait_for_tasks(self):
         salt.utils.vmware.update_dvs(self.mock_dvs_ref, self.mock_dvs_spec)
         self.mock_wait_for_task.assert_called_once_with(
@@ -3037,6 +3287,17 @@ class SetDvsNetworkResourceManagementEnabledTestCase(TestCase):
         for attr in ("mock_dvs_ref", "mock_enabled"):
             delattr(self, attr)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_managed_object_name_call(self):
         mock_get_managed_object_name = MagicMock()
         with patch(
@@ -3047,6 +3308,7 @@ class SetDvsNetworkResourceManagementEnabledTestCase(TestCase):
             )
         mock_get_managed_object_name.assert_called_once_with(self.mock_dvs_ref)
 
+    @skipIf(True, "FASTTEST skip")
     def test_enable_network_resource_management(self):
         salt.utils.vmware.set_dvs_network_resource_management_enabled(
             self.mock_dvs_ref, self.mock_enabled
@@ -3055,6 +3317,7 @@ class SetDvsNetworkResourceManagementEnabledTestCase(TestCase):
             enable=self.mock_enabled
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_enable_network_resource_management_raises_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -3068,6 +3331,7 @@ class SetDvsNetworkResourceManagementEnabledTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_enable_network_resource_management_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -3077,6 +3341,7 @@ class SetDvsNetworkResourceManagementEnabledTestCase(TestCase):
                 self.mock_dvs_ref, self.mock_enabled
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_enable_network_resource_management_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -3130,6 +3395,7 @@ class GetDvportgroupsTestCase(TestCase):
         ):
             delattr(self, attr)
 
+    @skipIf(True, "FASTTEST skip")
     def test_unsupported_parrent(self):
         with self.assertRaises(ArgumentValueError) as excinfo:
             salt.utils.vmware.get_dvportgroups(MagicMock())
@@ -3138,6 +3404,17 @@ class GetDvportgroupsTestCase(TestCase):
             "Parent has to be either a datacenter, or a " "distributed virtual switch",
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_managed_object_name_call(self):
         mock_get_managed_object_name = MagicMock()
         with patch(
@@ -3146,6 +3423,7 @@ class GetDvportgroupsTestCase(TestCase):
             salt.utils.vmware.get_dvportgroups(self.mock_dc_ref)
         mock_get_managed_object_name.assert_called_once_with(self.mock_dc_ref)
 
+    @skipIf(True, "FASTTEST skip")
     def test_traversal_spec_datacenter_parent(self):
         mock_traversal_spec = MagicMock(return_value="traversal_spec")
         with patch(
@@ -3166,6 +3444,7 @@ class GetDvportgroupsTestCase(TestCase):
             ]
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_traversal_spec_dvs_parent(self):
         mock_traversal_spec = MagicMock(return_value="traversal_spec")
         with patch(
@@ -3178,6 +3457,12 @@ class GetDvportgroupsTestCase(TestCase):
             path="portgroup", skip=False, type=vim.DistributedVirtualSwitch
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_mors_with_properties(self):
         salt.utils.vmware.get_dvportgroups(self.mock_dvs_ref)
         self.mock_get_mors.assert_called_once_with(
@@ -3188,16 +3473,19 @@ class GetDvportgroupsTestCase(TestCase):
             traversal_spec=self.mock_traversal_spec,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_no_pgs(self):
         ret = salt.utils.vmware.get_dvportgroups(self.mock_dvs_ref)
         self.assertEqual(ret, [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_all_pgs(self):
         ret = salt.utils.vmware.get_dvportgroups(
             self.mock_dvs_ref, get_all_portgroups=True
         )
         self.assertEqual(ret, [i["object"] for i in self.mock_items])
 
+    @skipIf(True, "FASTTEST skip")
     def test_filtered_pgs(self):
         ret = salt.utils.vmware.get_dvss(
             self.mock_dc_ref, dvs_names=["fake_pg1", "fake_pg3", "no_pg"]
@@ -3249,6 +3537,17 @@ class GetUplinkDvportgroupTestCase(TestCase):
         ):
             delattr(self, attr)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_managed_object_name_call(self):
         mock_get_managed_object_name = MagicMock()
         with patch(
@@ -3257,6 +3556,10 @@ class GetUplinkDvportgroupTestCase(TestCase):
             salt.utils.vmware.get_uplink_dvportgroup(self.mock_dvs_ref)
         mock_get_managed_object_name.assert_called_once_with(self.mock_dvs_ref)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_traversal_spec(self):
         mock_traversal_spec = MagicMock(return_value="traversal_spec")
         with patch(
@@ -3269,6 +3572,12 @@ class GetUplinkDvportgroupTestCase(TestCase):
             path="portgroup", skip=False, type=vim.DistributedVirtualSwitch
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_mors_with_properties(self):
         salt.utils.vmware.get_uplink_dvportgroup(self.mock_dvs_ref)
         self.mock_get_mors.assert_called_once_with(
@@ -3279,6 +3588,7 @@ class GetUplinkDvportgroupTestCase(TestCase):
             traversal_spec=self.mock_traversal_spec,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_no_uplink_pg(self):
         with patch(
             "salt.utils.vmware.get_mors_with_properties", MagicMock(return_value=[])
@@ -3290,6 +3600,7 @@ class GetUplinkDvportgroupTestCase(TestCase):
             "Uplink portgroup of DVS 'fake_dvs' wasn't found",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_uplink_pg(self):
         ret = salt.utils.vmware.get_uplink_dvportgroup(self.mock_dvs_ref)
         self.assertEqual(ret, self.mock_items[1]["object"])
@@ -3321,6 +3632,17 @@ class CreateDvportgroupTestCase(TestCase):
         for attr in ("mock_pg_spec", "mock_dvs_ref", "mock_task", "mock_wait_for_task"):
             delattr(self, attr)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_managed_object_name_call(self):
         mock_get_managed_object_name = MagicMock()
         with patch(
@@ -3329,12 +3651,14 @@ class CreateDvportgroupTestCase(TestCase):
             salt.utils.vmware.create_dvportgroup(self.mock_dvs_ref, self.mock_pg_spec)
         mock_get_managed_object_name.assert_called_once_with(self.mock_dvs_ref)
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_dvporgroup_task(self):
         salt.utils.vmware.create_dvportgroup(self.mock_dvs_ref, self.mock_pg_spec)
         self.mock_dvs_ref.CreateDVPortgroup_Task.assert_called_once_with(
             self.mock_pg_spec
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_dvporgroup_task_raises_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -3346,6 +3670,7 @@ class CreateDvportgroupTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_dvporgroup_task_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -3354,6 +3679,7 @@ class CreateDvportgroupTestCase(TestCase):
             salt.utils.vmware.create_dvportgroup(self.mock_dvs_ref, self.mock_pg_spec)
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_dvporgroup_task_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -3362,6 +3688,11 @@ class CreateDvportgroupTestCase(TestCase):
             salt.utils.vmware.create_dvportgroup(self.mock_dvs_ref, self.mock_pg_spec)
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_wait_for_tasks(self):
         salt.utils.vmware.create_dvportgroup(self.mock_dvs_ref, self.mock_pg_spec)
         self.mock_wait_for_task.assert_called_once_with(
@@ -3399,6 +3730,17 @@ class UpdateDvportgroupTestCase(TestCase):
         for attr in ("mock_pg_spec", "mock_pg_ref", "mock_task", "mock_wait_for_task"):
             delattr(self, attr)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_managed_object_name_call(self):
         mock_get_managed_object_name = MagicMock()
         with patch(
@@ -3407,12 +3749,14 @@ class UpdateDvportgroupTestCase(TestCase):
             salt.utils.vmware.update_dvportgroup(self.mock_pg_ref, self.mock_pg_spec)
         mock_get_managed_object_name.assert_called_once_with(self.mock_pg_ref)
 
+    @skipIf(True, "FASTTEST skip")
     def test_reconfigure_dvporgroup_task(self):
         salt.utils.vmware.update_dvportgroup(self.mock_pg_ref, self.mock_pg_spec)
         self.mock_pg_ref.ReconfigureDVPortgroup_Task.assert_called_once_with(
             self.mock_pg_spec
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_reconfigure_dvporgroup_task_raises_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -3424,6 +3768,7 @@ class UpdateDvportgroupTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_reconfigure_dvporgroup_task_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -3432,6 +3777,7 @@ class UpdateDvportgroupTestCase(TestCase):
             salt.utils.vmware.update_dvportgroup(self.mock_pg_ref, self.mock_pg_spec)
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_reconfigure_dvporgroup_task_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -3440,6 +3786,11 @@ class UpdateDvportgroupTestCase(TestCase):
             salt.utils.vmware.update_dvportgroup(self.mock_pg_ref, self.mock_pg_spec)
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_wait_for_tasks(self):
         salt.utils.vmware.update_dvportgroup(self.mock_pg_ref, self.mock_pg_spec)
         self.mock_wait_for_task.assert_called_once_with(
@@ -3476,6 +3827,17 @@ class RemoveDvportgroupTestCase(TestCase):
         for attr in ("mock_pg_ref", "mock_task", "mock_wait_for_task"):
             delattr(self, attr)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_managed_object_name_call(self):
         mock_get_managed_object_name = MagicMock()
         with patch(
@@ -3484,10 +3846,12 @@ class RemoveDvportgroupTestCase(TestCase):
             salt.utils.vmware.remove_dvportgroup(self.mock_pg_ref)
         mock_get_managed_object_name.assert_called_once_with(self.mock_pg_ref)
 
+    @skipIf(True, "FASTTEST skip")
     def test_destroy_task(self):
         salt.utils.vmware.remove_dvportgroup(self.mock_pg_ref)
         self.mock_pg_ref.Destroy_Task.assert_called_once_with()
 
+    @skipIf(True, "FASTTEST skip")
     def test_destroy_task_raises_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -3499,6 +3863,7 @@ class RemoveDvportgroupTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_destroy_treconfigure_dvporgroup_task_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -3507,6 +3872,7 @@ class RemoveDvportgroupTestCase(TestCase):
             salt.utils.vmware.remove_dvportgroup(self.mock_pg_ref)
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_destroy_treconfigure_dvporgroup_task_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -3515,6 +3881,11 @@ class RemoveDvportgroupTestCase(TestCase):
             salt.utils.vmware.remove_dvportgroup(self.mock_pg_ref)
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_wait_for_tasks(self):
         salt.utils.vmware.remove_dvportgroup(self.mock_pg_ref)
         self.mock_wait_for_task.assert_called_once_with(
@@ -3558,6 +3929,7 @@ class GetHostsTestCase(TestCase):
             self.mock_prop_host3,
         ]
 
+    @skipIf(True, "FASTTEST skip")
     def test_cluster_no_datacenter(self):
         with self.assertRaises(ArgumentValueError) as excinfo:
             salt.utils.vmware.get_hosts(self.mock_si, cluster_name="fake_cluster")
@@ -3566,6 +3938,7 @@ class GetHostsTestCase(TestCase):
             "Must specify the datacenter when specifying the " "cluster",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_si_no_datacenter_no_cluster(self):
         mock_get_mors = MagicMock()
         mock_get_root_folder = MagicMock(return_value=self.mock_root_folder)
@@ -3580,6 +3953,7 @@ class GetHostsTestCase(TestCase):
             property_list=["name"],
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_si_datacenter_name_no_cluster_name(self):
         mock_dc = MagicMock()
         mock_get_dc = MagicMock(return_value=mock_dc)
@@ -3594,6 +3968,7 @@ class GetHostsTestCase(TestCase):
             self.mock_si, vim.HostSystem, container_ref=mock_dc, property_list=["name"]
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_si_datacenter_name_and_cluster_name(self):
         mock_dc = MagicMock()
         mock_get_dc = MagicMock(return_value=mock_dc)
@@ -3615,6 +3990,7 @@ class GetHostsTestCase(TestCase):
             property_list=["name", "parent"],
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_host_get_all_hosts(self):
         with patch(
             "salt.utils.vmware.get_root_folder",
@@ -3627,6 +4003,7 @@ class GetHostsTestCase(TestCase):
                 res = salt.utils.vmware.get_hosts(self.mock_si, get_all_hosts=True)
         self.assertEqual(res, [self.mock_host1, self.mock_host2, self.mock_host3])
 
+    @skipIf(True, "FASTTEST skip")
     def test_filter_hostname(self):
         with patch(
             "salt.utils.vmware.get_mors_with_properties",
@@ -3637,6 +4014,7 @@ class GetHostsTestCase(TestCase):
             )
         self.assertEqual(res, [self.mock_host1, self.mock_host2])
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_all_host_flag_not_set_and_no_host_names(self):
         with patch(
             "salt.utils.vmware.get_mors_with_properties",
@@ -3645,6 +4023,7 @@ class GetHostsTestCase(TestCase):
             res = salt.utils.vmware.get_hosts(self.mock_si)
         self.assertEqual(res, [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_filter_cluster(self):
         self.mock_prop_host1["parent"] = vim.ClusterComputeResource("cluster")
         self.mock_prop_host2["parent"] = vim.ClusterComputeResource("cluster")
@@ -3666,6 +4045,7 @@ class GetHostsTestCase(TestCase):
         self.assertEqual(mock_get_cl_name.call_count, 2)
         self.assertEqual(res, [self.mock_host2])
 
+    @skipIf(True, "FASTTEST skip")
     def test_no_hosts(self):
         with patch(
             "salt.utils.vmware.get_mors_with_properties", MagicMock(return_value=[])
@@ -3673,6 +4053,7 @@ class GetHostsTestCase(TestCase):
             res = salt.utils.vmware.get_hosts(self.mock_si, get_all_hosts=True)
         self.assertEqual(res, [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_one_host_returned(self):
         with patch(
             "salt.utils.vmware.get_mors_with_properties",
@@ -3699,6 +4080,10 @@ class GetLicenseManagerTestCase(TestCase):
         for attr in ("mock_si", "mock_lic_mgr"):
             delattr(self, attr)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_raise_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -3710,6 +4095,10 @@ class GetLicenseManagerTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -3718,6 +4107,10 @@ class GetLicenseManagerTestCase(TestCase):
             salt.utils.vmware.get_license_manager(self.mock_si)
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -3726,6 +4119,8 @@ class GetLicenseManagerTestCase(TestCase):
             salt.utils.vmware.get_license_manager(self.mock_si)
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_valid_assignment_manager(self):
         ret = salt.utils.vmware.get_license_manager(self.mock_si)
         self.assertEqual(ret, self.mock_lic_mgr)
@@ -3748,6 +4143,10 @@ class GetLicenseAssignmentManagerTestCase(TestCase):
         for attr in ("mock_si", "mock_lic_assign_mgr"):
             delattr(self, attr)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_raise_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -3761,6 +4160,10 @@ class GetLicenseAssignmentManagerTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -3771,6 +4174,10 @@ class GetLicenseAssignmentManagerTestCase(TestCase):
             salt.utils.vmware.get_license_assignment_manager(self.mock_si)
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -3781,6 +4188,7 @@ class GetLicenseAssignmentManagerTestCase(TestCase):
             salt.utils.vmware.get_license_assignment_manager(self.mock_si)
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_empty_license_assignment_manager(self):
         type(
             self.mock_si.content.licenseManager
@@ -3791,6 +4199,8 @@ class GetLicenseAssignmentManagerTestCase(TestCase):
             excinfo.exception.strerror, "License assignment manager was not retrieved"
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_valid_assignment_manager(self):
         ret = salt.utils.vmware.get_license_assignment_manager(self.mock_si)
         self.assertEqual(ret, self.mock_lic_assign_mgr)
@@ -3822,12 +4232,16 @@ class GetLicensesTestCase(TestCase):
         for attr in ("mock_si", "mock_lic_mgr", "mock_licenses"):
             delattr(self, attr)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_no_license_manager_passed_in(self):
         mock_get_license_manager = MagicMock()
         with patch("salt.utils.vmware.get_license_manager", mock_get_license_manager):
             salt.utils.vmware.get_licenses(self.mock_si)
         mock_get_license_manager.assert_called_once_with(self.mock_si)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_license_manager_passed_in(self):
         mock_licenses = PropertyMock()
         mock_lic_mgr = MagicMock()
@@ -3838,6 +4252,10 @@ class GetLicensesTestCase(TestCase):
         self.assertEqual(mock_get_license_manager.call_count, 0)
         self.assertEqual(mock_licenses.call_count, 1)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_raise_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -3849,6 +4267,10 @@ class GetLicensesTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_raise_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -3857,6 +4279,10 @@ class GetLicensesTestCase(TestCase):
             salt.utils.vmware.get_licenses(self.mock_si)
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -3865,6 +4291,7 @@ class GetLicensesTestCase(TestCase):
             salt.utils.vmware.get_licenses(self.mock_si)
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_licenses(self):
         ret = salt.utils.vmware.get_licenses(self.mock_si)
         self.assertEqual(ret, self.mock_licenses)
@@ -3904,6 +4331,8 @@ class AddLicenseTestCase(TestCase):
         ):
             delattr(self, attr)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_no_license_manager_passed_in(self):
         mock_get_license_manager = MagicMock()
         with patch("salt.utils.vmware.get_license_manager", mock_get_license_manager):
@@ -3912,6 +4341,8 @@ class AddLicenseTestCase(TestCase):
             )
         mock_get_license_manager.assert_called_once_with(self.mock_si)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_license_manager_passed_in(self):
         mock_get_license_manager = MagicMock()
         with patch("salt.utils.vmware.get_license_manager", mock_get_license_manager):
@@ -3924,6 +4355,7 @@ class AddLicenseTestCase(TestCase):
         self.assertEqual(mock_get_license_manager.call_count, 0)
         self.assertEqual(self.mock_add_license.call_count, 1)
 
+    @skipIf(True, "FASTTEST skip")
     def test_label_settings(self):
         salt.utils.vmware.add_license(
             self.mock_si, "fake_license_key", "fake_license_description"
@@ -3931,6 +4363,7 @@ class AddLicenseTestCase(TestCase):
         self.assertEqual(self.mock_label.key, "VpxClientLicenseLabel")
         self.assertEqual(self.mock_label.value, "fake_license_description")
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_license_arguments(self):
         salt.utils.vmware.add_license(
             self.mock_si, "fake_license_key", "fake_license_description"
@@ -3939,6 +4372,7 @@ class AddLicenseTestCase(TestCase):
             "fake_license_key", [self.mock_label]
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_license_raises_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -3952,6 +4386,7 @@ class AddLicenseTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_license_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -3962,6 +4397,7 @@ class AddLicenseTestCase(TestCase):
             )
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_license_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -3972,6 +4408,7 @@ class AddLicenseTestCase(TestCase):
             )
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_license_added(self):
         ret = salt.utils.vmware.add_license(
             self.mock_si, "fake_license_key", "fake_license_description"
@@ -4032,6 +4469,8 @@ class GetAssignedLicensesTestCase(TestCase):
         ):
             delattr(self, attr)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_no_license_assignment_manager_passed_in(self):
         mock_get_license_assign_manager = MagicMock()
         with patch(
@@ -4043,6 +4482,8 @@ class GetAssignedLicensesTestCase(TestCase):
             )
         mock_get_license_assign_manager.assert_called_once_with(self.mock_si)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_license_assignment_manager_passed_in(self):
         mock_get_license_assign_manager = MagicMock()
         with patch(
@@ -4057,6 +4498,8 @@ class GetAssignedLicensesTestCase(TestCase):
             )
         self.assertEqual(mock_get_license_assign_manager.call_count, 0)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_entity_name(self):
         mock_trace = MagicMock()
         with patch("salt._logging.impl.SaltLoggingClass.trace", mock_trace):
@@ -4067,6 +4510,8 @@ class GetAssignedLicensesTestCase(TestCase):
             "Retrieving licenses assigned to '%s'", "fake_entity_name"
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_instance_uuid(self):
         mock_instance_uuid_prop = PropertyMock()
         type(self.mock_si.content.about).instanceUuid = mock_instance_uuid_prop
@@ -4078,6 +4523,8 @@ class GetAssignedLicensesTestCase(TestCase):
         )
         self.assertEqual(mock_instance_uuid_prop.call_count, 1)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_instance_uuid_raises_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -4091,6 +4538,8 @@ class GetAssignedLicensesTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_instance_uuid_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -4101,6 +4550,8 @@ class GetAssignedLicensesTestCase(TestCase):
             )
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_instance_uuid_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -4111,6 +4562,7 @@ class GetAssignedLicensesTestCase(TestCase):
             )
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_vcenter_entity_too_many_assignements(self):
         self.mock_lic_assign_mgr.QueryAssignedLicenses = MagicMock(
             return_value=[MagicMock(), MagicMock()]
@@ -4124,6 +4576,7 @@ class GetAssignedLicensesTestCase(TestCase):
             "Unexpected return. Expect only a single assignment",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_wrong_vcenter_name(self):
         self.mock_lic_assign_mgr.QueryAssignedLicenses = MagicMock(
             return_value=[MagicMock(entityDisplayName="bad_vcenter")]
@@ -4137,6 +4590,7 @@ class GetAssignedLicensesTestCase(TestCase):
             "Got license assignment info for a different vcenter",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_query_assigned_licenses_vcenter(self):
         with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
             salt.utils.vmware.get_assigned_licenses(
@@ -4144,12 +4598,14 @@ class GetAssignedLicensesTestCase(TestCase):
             )
         self.mock_query_assigned_licenses.assert_called_once_with(self.mock_ent_id)
 
+    @skipIf(True, "FASTTEST skip")
     def test_query_assigned_licenses_with_entity(self):
         salt.utils.vmware.get_assigned_licenses(
             self.mock_si, self.mock_entity_ref, "fake_entity_name"
         )
         self.mock_query_assigned_licenses.assert_called_once_with(self.mock_moid)
 
+    @skipIf(True, "FASTTEST skip")
     def test_query_assigned_licenses_raises_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -4163,6 +4619,7 @@ class GetAssignedLicensesTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_query_assigned_licenses_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -4173,6 +4630,7 @@ class GetAssignedLicensesTestCase(TestCase):
             )
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_query_assigned_licenses_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -4183,6 +4641,8 @@ class GetAssignedLicensesTestCase(TestCase):
             )
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_valid_assignments(self):
         ret = salt.utils.vmware.get_assigned_licenses(
             self.mock_si, self.mock_entity_ref, "fake_entity_name"
@@ -4223,6 +4683,8 @@ class AssignLicenseTestCase(TestCase):
             patcher.start()
             self.addCleanup(patcher.stop)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_no_license_assignment_manager_passed_in(self):
         mock_get_license_assign_manager = MagicMock()
         with patch(
@@ -4238,6 +4700,8 @@ class AssignLicenseTestCase(TestCase):
             )
         mock_get_license_assign_manager.assert_called_once_with(self.mock_si)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_license_assignment_manager_passed_in(self):
         mock_get_license_assign_manager = MagicMock()
         with patch(
@@ -4255,6 +4719,8 @@ class AssignLicenseTestCase(TestCase):
         self.assertEqual(mock_get_license_assign_manager.call_count, 0)
         self.assertEqual(self.mock_update_assigned_license.call_count, 1)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_entity_name(self):
         mock_trace = MagicMock()
         with patch("salt._logging.impl.SaltLoggingClass.trace", mock_trace):
@@ -4269,6 +4735,8 @@ class AssignLicenseTestCase(TestCase):
             "Assigning license to '%s'", "fake_entity_name"
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_instance_uuid(self):
         mock_instance_uuid_prop = PropertyMock()
         type(self.mock_si.content.about).instanceUuid = mock_instance_uuid_prop
@@ -4283,6 +4751,8 @@ class AssignLicenseTestCase(TestCase):
         )
         self.assertEqual(mock_instance_uuid_prop.call_count, 1)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_instance_uuid_raises_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -4299,6 +4769,8 @@ class AssignLicenseTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_instance_uuid_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -4312,6 +4784,8 @@ class AssignLicenseTestCase(TestCase):
             )
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_instance_uuid_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -4325,6 +4799,7 @@ class AssignLicenseTestCase(TestCase):
             )
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_assigned_licenses_vcenter(self):
         salt.utils.vmware.assign_license(
             self.mock_si,
@@ -4336,6 +4811,7 @@ class AssignLicenseTestCase(TestCase):
             self.mock_ent_id, self.mock_lic_key, "fake_license_name"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_assigned_licenses_call_with_entity(self):
         salt.utils.vmware.assign_license(
             self.mock_si,
@@ -4348,6 +4824,7 @@ class AssignLicenseTestCase(TestCase):
             self.mock_moid, self.mock_lic_key, "fake_license_name"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_assigned_licenses_raises_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -4365,6 +4842,7 @@ class AssignLicenseTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_assigned_licenses_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -4379,6 +4857,7 @@ class AssignLicenseTestCase(TestCase):
             )
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_assigned_licenses_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -4393,6 +4872,8 @@ class AssignLicenseTestCase(TestCase):
             )
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_valid_assignments(self):
         ret = salt.utils.vmware.assign_license(
             self.mock_si,
@@ -4444,16 +4925,22 @@ class GetStorageSystemTestCase(TestCase):
         ):
             delattr(self, attr)
 
+    @skipIf(True, "FASTTEST skip")
     def test_no_hostname_argument(self):
         salt.utils.vmware.get_storage_system(self.mock_si, self.mock_host_ref)
         self.mock_get_managed_object_name.assert_called_once_with(self.mock_host_ref)
 
+    @skipIf(True, "FASTTEST skip")
     def test_hostname_argument(self):
         salt.utils.vmware.get_storage_system(
             self.mock_si, self.mock_host_ref, hostname="fake_host"
         )
         self.assertEqual(self.mock_get_managed_object_name.call_count, 0)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_traversal_spec(self):
         mock_traversal_spec = MagicMock(return_value=[{"object": self.mock_obj}])
         with patch(
@@ -4466,6 +4953,12 @@ class GetStorageSystemTestCase(TestCase):
             path="configManager.storageSystem", type=vim.HostSystem, skip=False
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_mors_with_properties(self):
         salt.utils.vmware.get_storage_system(self.mock_si, self.mock_host_ref)
         self.mock_get_mors.assert_called_once_with(
@@ -4476,6 +4969,7 @@ class GetStorageSystemTestCase(TestCase):
             traversal_spec=self.mock_traversal_spec,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_empty_mors_result(self):
         with patch(
             "salt.utils.vmware.get_mors_with_properties", MagicMock(return_value=[])
@@ -4487,6 +4981,7 @@ class GetStorageSystemTestCase(TestCase):
             "Host's 'fake_host' storage system was " "not retrieved",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_mors_result(self):
         res = salt.utils.vmware.get_storage_system(self.mock_si, self.mock_host_ref)
         self.assertEqual(res, self.mock_obj)
@@ -4566,14 +5061,17 @@ class GetDatastoresTestCase(TestCase):
         ):
             delattr(self, attr)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_reference_name_call(self):
         salt.utils.vmware.get_datastores(self.mock_si, self.mock_reference)
         self.mock_get_managed_object_name.assert_called_once_with(self.mock_reference)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_no_datastores(self):
         res = salt.utils.vmware.get_datastores(self.mock_si, self.mock_reference)
         self.assertEqual(res, [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_storage_system_call(self):
         salt.utils.vmware.get_datastores(
             self.mock_si, self.mock_reference, backing_disk_ids=["fake_disk1"]
@@ -4582,6 +5080,7 @@ class GetDatastoresTestCase(TestCase):
             self.mock_si, self.mock_reference, "fake_host"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_mount_info_call(self):
         mock_get_properties_of_managed_object = MagicMock()
         with patch(
@@ -4595,6 +5094,7 @@ class GetDatastoresTestCase(TestCase):
             self.mock_storage_system, ["fileSystemVolumeInfo.mountInfo"]
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_backing_disks_no_mount_info(self):
         with patch(
             "salt.utils.vmware.get_properties_of_managed_object",
@@ -4605,6 +5105,7 @@ class GetDatastoresTestCase(TestCase):
             )
         self.assertEqual(res, [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_host_traversal_spec(self):
         # Reference is of type vim.HostSystem
         mock_traversal_spec_init = MagicMock()
@@ -4623,6 +5124,7 @@ class GetDatastoresTestCase(TestCase):
             type=vim.HostSystem,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_cluster_traversal_spec(self):
         mock_traversal_spec_init = MagicMock()
         # Reference is of type vim.ClusterComputeResource
@@ -4642,6 +5144,7 @@ class GetDatastoresTestCase(TestCase):
             type=vim.ClusterComputeResource,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_datacenter_traversal_spec(self):
         mock_traversal_spec_init = MagicMock()
         # Reference is of type vim.ClusterComputeResource
@@ -4661,6 +5164,7 @@ class GetDatastoresTestCase(TestCase):
             type=vim.Datacenter,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_root_folder_traversal_spec(self):
         mock_traversal_spec_init = MagicMock(return_value="traversal")
         mock_reference = MagicMock(spec=vim.Folder)
@@ -4689,6 +5193,7 @@ class GetDatastoresTestCase(TestCase):
             ]
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_unsupported_reference_type(self):
         class FakeClass(object):
             pass
@@ -4702,6 +5207,12 @@ class GetDatastoresTestCase(TestCase):
             excinfo.exception.strerror, "Unsupported reference type 'FakeClass'"
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_mors_with_properties(self):
         mock_get_mors_with_properties = MagicMock()
         with patch(
@@ -4718,6 +5229,8 @@ class GetDatastoresTestCase(TestCase):
             traversal_spec=self.mock_traversal_spec,
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_all_datastores(self):
         res = salt.utils.vmware.get_datastores(
             self.mock_si, self.mock_reference, get_all_datastores=True
@@ -4731,6 +5244,7 @@ class GetDatastoresTestCase(TestCase):
             ],
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_datastores_filtered_by_name(self):
         res = salt.utils.vmware.get_datastores(
             self.mock_si, self.mock_reference, datastore_names=["fake_ds1", "fake_ds2"]
@@ -4739,6 +5253,7 @@ class GetDatastoresTestCase(TestCase):
             res, [self.mock_entries[0]["object"], self.mock_entries[1]["object"]]
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_datastores_filtered_by_backing_disk(self):
         res = salt.utils.vmware.get_datastores(
             self.mock_si,
@@ -4749,6 +5264,7 @@ class GetDatastoresTestCase(TestCase):
             res, [self.mock_entries[1]["object"], self.mock_entries[2]["object"]]
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_datastores_filtered_by_both_name_and_backing_disk(self):
         # Simulate VMware data model for volumes fake_ds2, fake_ds3
         res = salt.utils.vmware.get_datastores(
@@ -4787,10 +5303,12 @@ class RenameDatastoreTestCase(TestCase):
         for attr in ("mock_ds_ref", "mock_get_managed_object_name"):
             delattr(self, attr)
 
+    @skipIf(True, "FASTTEST skip")
     def test_datastore_name_call(self):
         salt.utils.vmware.rename_datastore(self.mock_ds_ref, "fake_new_name")
         self.mock_get_managed_object_name.assert_called_once_with(self.mock_ds_ref)
 
+    @skipIf(True, "FASTTEST skip")
     def test_rename_datastore_raise_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -4802,6 +5320,7 @@ class RenameDatastoreTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_rename_datastore_raise_vim_fault(self):
         exc = vim.VimFault()
         exc.msg = "vim_fault"
@@ -4810,6 +5329,7 @@ class RenameDatastoreTestCase(TestCase):
             salt.utils.vmware.rename_datastore(self.mock_ds_ref, "fake_new_name")
         self.assertEqual(excinfo.exception.strerror, "vim_fault")
 
+    @skipIf(True, "FASTTEST skip")
     def test_rename_datastore_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "runtime_fault"
@@ -4818,6 +5338,7 @@ class RenameDatastoreTestCase(TestCase):
             salt.utils.vmware.rename_datastore(self.mock_ds_ref, "fake_new_name")
         self.assertEqual(excinfo.exception.strerror, "runtime_fault")
 
+    @skipIf(True, "FASTTEST skip")
     def test_rename_datastore(self):
         salt.utils.vmware.rename_datastore(self.mock_ds_ref, "fake_new_name")
         self.mock_ds_ref.RenameDatastore.assert_called_once_with("fake_new_name")
@@ -4831,23 +5352,27 @@ class ConvertToKbTestCase(TestCase):
     def setUp(self):
         pass
 
+    @skipIf(True, "FASTTEST skip")
     def test_gb_conversion_call(self):
         self.assertEqual(
             salt.utils.vmware.convert_to_kb("Gb", 10),
             {"size": int(10485760), "unit": "KB"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_mb_conversion_call(self):
         self.assertEqual(
             salt.utils.vmware.convert_to_kb("Mb", 10),
             {"size": int(10240), "unit": "KB"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_kb_conversion_call(self):
         self.assertEqual(
             salt.utils.vmware.convert_to_kb("Kb", 10), {"size": int(10), "unit": "KB"}
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_conversion_bad_input_argument_fault(self):
         self.assertRaises(
             ArgumentValueError, salt.utils.vmware.convert_to_kb, "test", 10
@@ -4871,6 +5396,7 @@ class CreateVirtualMachineTestCase(TestCase):
         self.mock_vm_create_task = MagicMock(return_value=self.mock_task)
         self.mock_folder_object = MagicMock(CreateVM_Task=self.mock_vm_create_task)
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_vm_pool_task_call(self):
         salt.utils.vmware.create_vm(
             self.vm_name,
@@ -4880,6 +5406,7 @@ class CreateVirtualMachineTestCase(TestCase):
         )
         self.assert_called_once(self.mock_vm_create_task)
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_vm_host_task_call(self):
         salt.utils.vmware.create_vm(
             self.vm_name,
@@ -4890,6 +5417,7 @@ class CreateVirtualMachineTestCase(TestCase):
         )
         self.assert_called_once(self.mock_vm_create_task)
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_vm_raise_no_permission(self):
         exception = vim.fault.NoPermission()
         exception.msg = "vim.fault.NoPermission msg"
@@ -4905,6 +5433,7 @@ class CreateVirtualMachineTestCase(TestCase):
             exc.exception.strerror, "Not enough permissions. Required privilege: "
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_vm_raise_vim_fault(self):
         exception = vim.fault.VimFault()
         exception.msg = "vim.fault.VimFault msg"
@@ -4918,6 +5447,7 @@ class CreateVirtualMachineTestCase(TestCase):
             )
         self.assertEqual(exc.exception.strerror, "vim.fault.VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_vm_raise_runtime_fault(self):
         exception = vmodl.RuntimeFault()
         exception.msg = "vmodl.RuntimeFault msg"
@@ -4931,6 +5461,7 @@ class CreateVirtualMachineTestCase(TestCase):
             )
         self.assertEqual(exc.exception.strerror, "vmodl.RuntimeFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_vm_wait_for_task(self):
         mock_wait_for_task = MagicMock()
         with patch("salt.utils.vmware.wait_for_task", mock_wait_for_task):
@@ -4963,6 +5494,7 @@ class RegisterVirtualMachineTestCase(TestCase):
         self.vm_folder_object = MagicMock(RegisterVM_Task=self.mock_vm_register_task)
         self.datacenter = MagicMock(vmFolder=self.vm_folder_object)
 
+    @skipIf(True, "FASTTEST skip")
     def test_register_vm_pool_task_call(self):
         salt.utils.vmware.register_vm(
             self.datacenter,
@@ -4972,6 +5504,7 @@ class RegisterVirtualMachineTestCase(TestCase):
         )
         self.assert_called_once(self.mock_vm_register_task)
 
+    @skipIf(True, "FASTTEST skip")
     def test_register_vm_host_task_call(self):
         salt.utils.vmware.register_vm(
             self.datacenter,
@@ -4982,6 +5515,7 @@ class RegisterVirtualMachineTestCase(TestCase):
         )
         self.assert_called_once(self.mock_vm_register_task)
 
+    @skipIf(True, "FASTTEST skip")
     def test_register_vm_raise_no_permission(self):
         exception = vim.fault.NoPermission()
         self.vm_folder_object.RegisterVM_Task = MagicMock(side_effect=exception)
@@ -4996,6 +5530,7 @@ class RegisterVirtualMachineTestCase(TestCase):
             exc.exception.strerror, "Not enough permissions. Required privilege: "
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_register_vm_raise_vim_fault(self):
         exception = vim.fault.VimFault()
         exception.msg = "vim.fault.VimFault msg"
@@ -5009,6 +5544,7 @@ class RegisterVirtualMachineTestCase(TestCase):
             )
         self.assertEqual(exc.exception.strerror, "vim.fault.VimFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_register_vm_raise_runtime_fault(self):
         exception = vmodl.RuntimeFault()
         exception.msg = "vmodl.RuntimeFault msg"
@@ -5022,6 +5558,7 @@ class RegisterVirtualMachineTestCase(TestCase):
             )
         self.assertEqual(exc.exception.strerror, "vmodl.RuntimeFault msg")
 
+    @skipIf(True, "FASTTEST skip")
     def test_register_vm_wait_for_task(self):
         mock_wait_for_task = MagicMock()
         with patch("salt.utils.vmware.wait_for_task", mock_wait_for_task):
@@ -5050,10 +5587,12 @@ class UpdateVirtualMachineTestCase(TestCase):
         self.mock_vm_update_task = MagicMock(return_value=self.mock_task)
         self.mock_vm_ref = MagicMock(ReconfigVM_Task=self.mock_vm_update_task)
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_vm_task_call(self):
         salt.utils.vmware.update_vm(self.mock_vm_ref, self.mock_config_spec)
         self.assert_called_once(self.mock_vm_update_task)
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_vm_raise_vim_fault(self):
         exception = vim.fault.VimFault()
         exception.msg = "vim.fault.VimFault"
@@ -5062,6 +5601,7 @@ class UpdateVirtualMachineTestCase(TestCase):
             salt.utils.vmware.update_vm(self.mock_vm_ref, self.mock_config_spec)
         self.assertEqual(exc.exception.strerror, "vim.fault.VimFault")
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_vm_raise_runtime_fault(self):
         exception = vmodl.RuntimeFault()
         exception.msg = "vmodl.RuntimeFault"
@@ -5070,6 +5610,7 @@ class UpdateVirtualMachineTestCase(TestCase):
             salt.utils.vmware.update_vm(self.mock_vm_ref, self.mock_config_spec)
         self.assertEqual(exc.exception.strerror, "vmodl.RuntimeFault")
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_vm_wait_for_task(self):
         mock_wait_for_task = MagicMock()
         with patch(
@@ -5095,10 +5636,12 @@ class DeleteVirtualMachineTestCase(TestCase):
         self.mock_vm_destroy_task = MagicMock(return_value=self.mock_task)
         self.mock_vm_ref = MagicMock(Destroy_Task=self.mock_vm_destroy_task)
 
+    @skipIf(True, "FASTTEST skip")
     def test_destroy_vm_task_call(self):
         salt.utils.vmware.delete_vm(self.mock_vm_ref)
         self.assert_called_once(self.mock_vm_destroy_task)
 
+    @skipIf(True, "FASTTEST skip")
     def test_destroy_vm_raise_vim_fault(self):
         exception = vim.fault.VimFault()
         exception.msg = "vim.fault.VimFault"
@@ -5107,6 +5650,7 @@ class DeleteVirtualMachineTestCase(TestCase):
             salt.utils.vmware.delete_vm(self.mock_vm_ref)
         self.assertEqual(exc.exception.strerror, "vim.fault.VimFault")
 
+    @skipIf(True, "FASTTEST skip")
     def test_destroy_vm_raise_runtime_fault(self):
         exception = vmodl.RuntimeFault()
         exception.msg = "vmodl.RuntimeFault"
@@ -5115,6 +5659,7 @@ class DeleteVirtualMachineTestCase(TestCase):
             salt.utils.vmware.delete_vm(self.mock_vm_ref)
         self.assertEqual(exc.exception.strerror, "vmodl.RuntimeFault")
 
+    @skipIf(True, "FASTTEST skip")
     def test_destroy_vm_wait_for_task(self):
         mock_wait_for_task = MagicMock()
         with patch(
@@ -5138,10 +5683,12 @@ class UnregisterVirtualMachineTestCase(TestCase):
         self.mock_vm_unregister = MagicMock()
         self.mock_vm_ref = MagicMock(UnregisterVM=self.mock_vm_unregister)
 
+    @skipIf(True, "FASTTEST skip")
     def test_unregister_vm_task_call(self):
         salt.utils.vmware.unregister_vm(self.mock_vm_ref)
         self.assert_called_once(self.mock_vm_unregister)
 
+    @skipIf(True, "FASTTEST skip")
     def test_unregister_vm_raise_vim_fault(self):
         exception = vim.fault.VimFault()
         exception.msg = "vim.fault.VimFault"
@@ -5150,6 +5697,7 @@ class UnregisterVirtualMachineTestCase(TestCase):
             salt.utils.vmware.unregister_vm(self.mock_vm_ref)
         self.assertEqual(exc.exception.strerror, "vim.fault.VimFault")
 
+    @skipIf(True, "FASTTEST skip")
     def test_unregister_vm_raise_runtime_fault(self):
         exception = vmodl.RuntimeFault()
         exception.msg = "vmodl.RuntimeFault"

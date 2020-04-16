@@ -13,7 +13,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class BowerTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {bower: {"__opts__": {"test": False}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_removed_not_installed(self):
         """
         Test if it returns True when specified package is not installed
@@ -41,6 +42,7 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertEqual(ret, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_removed_with_error(self):
         """
         Test if returns False when list packages fails
@@ -58,6 +60,7 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertEqual(ret, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_removed_existing(self):
         """
         Test if it returns True when specified package is installed and
@@ -79,6 +82,7 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertEqual(ret, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_removed_existing_with_error(self):
         """
         Test if it returns False when specified package is installed and
@@ -100,6 +104,7 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertEqual(ret, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_bootstrap_with_error(self):
         """
         Test if it return False when install packages fails
@@ -117,6 +122,7 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertEqual(ret, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_bootstrap_not_needed(self):
         """
         Test if it returns True when there is nothing to install
@@ -134,6 +140,7 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertEqual(ret, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_bootstrap_success(self):
         """
         Test if it returns True when install packages succeeds
@@ -151,6 +158,7 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertEqual(ret, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_with_error(self):
         """
         Test if it returns False when list packages fails
@@ -168,6 +176,7 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertEqual(ret, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_not_needed(self):
         """
         Test if it returns True when there is nothing to install
@@ -195,6 +204,7 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertEqual(ret, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_new_with_exc(self):
         """
         Test if it returns False when install packages fails (exception)
@@ -215,6 +225,7 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertEqual(ret, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_new_with_error(self):
         """
         Test if returns False when install packages fails (bower error)
@@ -235,6 +246,7 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertEqual(ret, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_success(self):
         """
         Test if it returns True when install succeeds

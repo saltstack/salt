@@ -164,7 +164,6 @@ class GitModuleTest(ModuleCase):
             delattr(self, key)
         super(GitModuleTest, self).tearDown()
 
-    @skipIf(True, "SLOWTEST skip")
     def test_add_dir(self):
         """
         Test git.add with a directory
@@ -188,7 +187,6 @@ class GitModuleTest(ModuleCase):
             res = res.replace("\\", "/")
         self.assertEqual(ret, res)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_add_file(self):
         """
         Test git.add with a file
@@ -204,7 +202,6 @@ class GitModuleTest(ModuleCase):
         ret = self.run_function("git.add", [self.repo, filename])
         self.assertEqual(ret, "add '{0}'".format(filename))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_archive(self):
         """
         Test git.archive
@@ -242,7 +239,6 @@ class GitModuleTest(ModuleCase):
             except OSError:
                 pass
 
-    @skipIf(True, "SLOWTEST skip")
     def test_archive_subdir(self):
         """
         Test git.archive on a subdir, giving only a partial copy of the repo in
@@ -269,7 +265,6 @@ class GitModuleTest(ModuleCase):
             except OSError:
                 pass
 
-    @skipIf(True, "SLOWTEST skip")
     def test_branch(self):
         """
         Test creating, renaming, and deleting a branch using git.branch
@@ -285,7 +280,6 @@ class GitModuleTest(ModuleCase):
             self.run_function("git.branch", [self.repo, renamed_branch], opts="-D")
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_checkout(self):
         """
         Test checking out a new branch and then checking out master again
@@ -302,7 +296,6 @@ class GitModuleTest(ModuleCase):
             in self.run_function("git.checkout", [self.repo, "master"]),
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_checkout_no_rev(self):
         """
         Test git.checkout without a rev, both with -b in opts and without
@@ -319,7 +312,6 @@ class GitModuleTest(ModuleCase):
             in self.run_function("git.checkout", [self.repo])
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_clone(self):
         """
         Test cloning an existing repo
@@ -329,7 +321,6 @@ class GitModuleTest(ModuleCase):
         # Cleanup after yourself
         shutil.rmtree(clone_parent_dir, True)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_clone_with_alternate_name(self):
         """
         Test cloning an existing repo with an alternate name for the repo dir
@@ -345,7 +336,6 @@ class GitModuleTest(ModuleCase):
         # Cleanup after yourself
         shutil.rmtree(clone_parent_dir, True)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_commit(self):
         """
         Test git.commit two ways:
@@ -374,7 +364,6 @@ class GitModuleTest(ModuleCase):
         )
         self.assertTrue(bool(re.search(commit_re_prefix + commit_msg, ret)))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_config(self):
         """
         Test setting, getting, and unsetting config values
@@ -561,14 +550,12 @@ class GitModuleTest(ModuleCase):
         finally:
             _clear_config()
 
-    @skipIf(True, "SLOWTEST skip")
     def test_current_branch(self):
         """
         Test git.current_branch
         """
         self.assertEqual(self.run_function("git.current_branch", [self.repo]), "master")
 
-    @skipIf(True, "SLOWTEST skip")
     def test_describe(self):
         """
         Test git.describe
@@ -578,7 +565,6 @@ class GitModuleTest(ModuleCase):
     # Test for git.fetch would be unreliable on Jenkins, skipping for now
     # The test should go into test_remotes when ready
 
-    @skipIf(True, "SLOWTEST skip")
     def test_init(self):
         """
         Use git.init to init a new repo
@@ -614,7 +600,6 @@ class GitModuleTest(ModuleCase):
 
         shutil.rmtree(new_repo)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_list_branches(self):
         """
         Test git.list_branches
@@ -623,7 +608,6 @@ class GitModuleTest(ModuleCase):
             self.run_function("git.list_branches", [self.repo]), sorted(self.branches)
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_list_tags(self):
         """
         Test git.list_tags
@@ -635,7 +619,6 @@ class GitModuleTest(ModuleCase):
     # Test for git.ls_remote will need to wait for now, while I think of how to
     # properly mock it.
 
-    @skipIf(True, "SLOWTEST skip")
     def test_merge(self):
         """
         Test git.merge
@@ -647,7 +630,6 @@ class GitModuleTest(ModuleCase):
         # Merge should be a fast-forward
         self.assertTrue("Fast-forward" in ret.splitlines())
 
-    @skipIf(True, "SLOWTEST skip")
     def test_merge_base_and_tree(self):
         """
         Test git.merge_base, git.merge_tree and git.revision
@@ -684,7 +666,6 @@ class GitModuleTest(ModuleCase):
 
     # Test for git.push would be unreliable on Jenkins, skipping for now
 
-    @skipIf(True, "SLOWTEST skip")
     def test_rebase(self):
         """
         Test git.rebase
@@ -720,7 +701,6 @@ class GitModuleTest(ModuleCase):
 
     # Test for git.remote_set is in test_remotes
 
-    @skipIf(True, "SLOWTEST skip")
     def test_remotes(self):
         """
         Test setting a remote (git.remote_set), and getting a remote
@@ -750,7 +730,6 @@ class GitModuleTest(ModuleCase):
         )
         self.assertEqual(self.run_function("git.remotes", [self.repo]), remotes)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_reset(self):
         """
         Test git.reset
@@ -775,7 +754,6 @@ class GitModuleTest(ModuleCase):
         # The two revisions should be the same
         self.assertEqual(head_rev, master_rev)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_rev_parse(self):
         """
         Test git.rev_parse
@@ -790,7 +768,6 @@ class GitModuleTest(ModuleCase):
 
     # Test for git.revision happens in test_merge_base
 
-    @skipIf(True, "SLOWTEST skip")
     def test_rm(self):
         """
         Test git.rm
@@ -812,7 +789,6 @@ class GitModuleTest(ModuleCase):
             self.run_function("git.rm", [self.repo, entire_dir], opts="-r"), expected
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_stash(self):
         """
         Test git.stash
@@ -842,7 +818,6 @@ class GitModuleTest(ModuleCase):
             )
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_status(self):
         """
         Test git.status
@@ -880,7 +855,6 @@ class GitModuleTest(ModuleCase):
 
     # TODO: Add git.submodule test
 
-    @skipIf(True, "SLOWTEST skip")
     def test_symbolic_ref(self):
         """
         Test git.symbolic_ref
@@ -893,7 +867,6 @@ class GitModuleTest(ModuleCase):
     @skipIf(
         not _worktrees_supported(), "Git 2.5 or newer required for worktree support"
     )
-    @skipIf(True, "SLOWTEST skip")
     def test_worktree_add_rm(self):
         """
         This tests git.worktree_add, git.is_worktree, git.worktree_rm, and

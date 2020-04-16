@@ -12,7 +12,7 @@ import salt.modules.drbd as drbd
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class DrbdTestCase(TestCase, LoaderModuleMockMixin):
@@ -25,6 +25,7 @@ class DrbdTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'overview' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_overview(self):
         """
         Test if it shows status of the DRBD devices

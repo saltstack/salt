@@ -9,13 +9,14 @@ import salt.modules.win_dism as dism
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class WinDismTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {dism: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_capability(self):
         """
             Test installing a capability with DISM
@@ -35,6 +36,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                     ]
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_capability_with_extras(self):
         """
             Test installing a capability with DISM
@@ -56,6 +58,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                     ]
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_capability(self):
         """
             Test uninstalling a capability with DISM
@@ -75,6 +78,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                     ]
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_capabilities(self):
         """
             Test getting all the capabilities
@@ -93,6 +97,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(out, ["Capa1", "Capa2"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_capabilities(self):
         """
             Test getting all the installed capabilities
@@ -111,6 +116,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(out, ["Capa1"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_available_capabilities(self):
         """
             Test getting all the available capabilities
@@ -129,6 +135,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(out, ["Capa2"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_feature(self):
         """
             Test installing a feature with DISM
@@ -147,6 +154,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                 ]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_feature_with_extras(self):
         """
             Test installing a feature with DISM
@@ -169,6 +177,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                 ]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_feature(self):
         """
             Test uninstalling a capability with DISM
@@ -187,6 +196,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                 ]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_feature_with_extras(self):
         """
             Test uninstalling a capability with DISM
@@ -206,6 +216,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                 ]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_features(self):
         """
             Test getting all the features
@@ -223,6 +234,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(out, ["Capa1", "Capa2"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_features(self):
         """
             Test getting all the installed features
@@ -240,6 +252,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(out, ["Capa1"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_available_features(self):
         """
             Test getting all the available features
@@ -257,6 +270,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(out, ["Capa2"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_package(self):
         """
             Test installing a package with DISM
@@ -275,6 +289,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                 ]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_package_with_extras(self):
         """
             Test installing a package with DISM
@@ -295,6 +310,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                 ]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_package(self):
         """
             Test uninstalling a package with DISM
@@ -313,6 +329,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                 ]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_packages(self):
         """
             Test getting all the installed features

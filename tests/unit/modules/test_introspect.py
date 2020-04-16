@@ -12,7 +12,7 @@ import salt.modules.introspect as introspect
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class IntrospectTestCase(TestCase, LoaderModuleMockMixin):
@@ -25,6 +25,7 @@ class IntrospectTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'running_service_owners' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_running_service_owners(self):
         """
         Test if it determine which packages own the currently running services.
@@ -54,6 +55,7 @@ class IntrospectTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'enabled_service_owners' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_enabled_service_owners(self):
         """
         Test if it return which packages own each of the services
@@ -84,6 +86,7 @@ class IntrospectTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'service_highstate' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_service_highstate(self):
         """
         Test if it return running and enabled services in a highstate structure.

@@ -12,7 +12,7 @@ import salt.modules.munin as munin
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MuninTestCase(TestCase, LoaderModuleMockMixin):
@@ -25,6 +25,7 @@ class MuninTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'run' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_run(self):
         """
         Test if it runs one or more named munin plugins
@@ -37,6 +38,7 @@ class MuninTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'run_all' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_all(self):
         """
         Test if it runs all the munin plugins
@@ -49,6 +51,7 @@ class MuninTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_plugins' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_plugins(self):
         """
         Test if it list all the munin plugins

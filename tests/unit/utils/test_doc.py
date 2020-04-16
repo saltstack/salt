@@ -10,7 +10,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import salt.utils.doc
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class DocUtilsTestCase(TestCase):
@@ -18,6 +18,7 @@ class DocUtilsTestCase(TestCase):
     Test case for doc util.
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_docstring(self):
         test_keystone_str = """Management of Keystone users
                                 ============================

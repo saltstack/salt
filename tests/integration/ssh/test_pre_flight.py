@@ -13,7 +13,6 @@ import salt.utils.files
 # Import salt testing libs
 from tests.support.case import SSHCase
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 
 class SSHPreFlightTest(SSHCase):
@@ -37,7 +36,6 @@ class SSHPreFlightTest(SSHCase):
         with salt.utils.files.fopen(self.data["ssh_pre_flight"], "w") as fp_:
             fp_.write("touch {0}".format(self.test_script))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_ssh_pre_flight(self):
         """
         test ssh when ssh_pre_flight is set
@@ -48,7 +46,6 @@ class SSHPreFlightTest(SSHCase):
 
         assert os.path.exists(self.test_script)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_ssh_run_pre_flight(self):
         """
         test ssh when --pre-flight is passed to salt-ssh

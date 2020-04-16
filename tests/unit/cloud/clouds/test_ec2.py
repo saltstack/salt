@@ -48,6 +48,7 @@ class EC2TestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {ec2: {"__opts__": {}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test__validate_key_path_and_mode(self):
         # Key file exists
         with patch("os.path.exists", return_value=True):
@@ -80,6 +81,7 @@ class EC2TestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.cloud.clouds.ec2.get_location")
     @patch("salt.cloud.clouds.ec2.get_provider")
     @patch("salt.utils.aws.query")
+    @skipIf(True, "FASTTEST skip")
     def test_get_password_data(self, query, get_provider, get_location, _get_node):
         query.return_value = [{"passwordData": PASS_DATA}]
         _get_node.return_value = {"instanceId": "i-abcdef"}
@@ -97,6 +99,7 @@ class EC2TestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.cloud.clouds.ec2.get_location")
     @patch("salt.cloud.clouds.ec2.get_provider")
     @patch("salt.cloud.clouds.ec2.aws.query")
+    @skipIf(True, "FASTTEST skip")
     def test_get_imageid(self, aws_query, get_provider, get_location, config):
         """
         test querying imageid function
@@ -125,6 +128,7 @@ class EC2TestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.cloud.clouds.ec2.get_spot_config")
     @patch("salt.cloud.clouds.ec2._param_from_config")
     @patch("salt.cloud.clouds.ec2.securitygroupid")
+    @skipIf(True, "FASTTEST skip")
     def test_termination_protection(
         self,
         securitygroupid,
@@ -164,6 +168,7 @@ class EC2TestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.cloud.clouds.ec2.get_provider")
     @patch("salt.cloud.clouds.ec2.get_spot_config")
     @patch("salt.cloud.clouds.ec2.securitygroupid")
+    @skipIf(True, "FASTTEST skip")
     def test_termination_protection_exception(
         self,
         securitygroupid,

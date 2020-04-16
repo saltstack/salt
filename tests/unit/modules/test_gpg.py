@@ -196,6 +196,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         super(GpgTestCase, self).tearDown()
 
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
+    @skipIf(True, "FASTTEST skip")
     def test_list_keys(self):
         """
         Test gpg.list_keys
@@ -262,6 +263,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertEqual(gpg.list_keys(), _expected_result)
 
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
+    @skipIf(True, "FASTTEST skip")
     def test_get_key(self):
         """
         Test gpg.get_key
@@ -328,6 +330,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
 
     @destructiveTest  # Need to run as root!?
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
+    @skipIf(True, "FASTTEST skip")
     def test_delete_key(self):
         """
         Test gpg.delete_key
@@ -391,6 +394,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                         self.assertEqual(ret, _expected_result)
 
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
+    @skipIf(True, "FASTTEST skip")
     def test_search_keys(self):
         """
         Test gpg.search_keys
@@ -442,7 +446,6 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertEqual(ret, _expected_result)
 
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
-    @skipIf(True, "SLOWTEST skip")
     def test_gpg_import_pub_key(self):
         config_user = MagicMock(return_value="salt")
         user_info = MagicMock(
@@ -454,7 +457,6 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(ret["res"], True)
 
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
-    @skipIf(True, "SLOWTEST skip")
     def test_gpg_import_priv_key(self):
         config_user = MagicMock(return_value="salt")
         user_info = MagicMock(
@@ -466,7 +468,6 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(ret["res"], True)
 
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
-    @skipIf(True, "SLOWTEST skip")
     def test_gpg_sign(self):
         config_user = MagicMock(return_value="salt")
         user_info = MagicMock(

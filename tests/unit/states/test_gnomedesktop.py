@@ -9,7 +9,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import salt.states.gnomedesktop as gnomedesktop
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class GnomedesktopTestCase(TestCase):
@@ -19,6 +19,7 @@ class GnomedesktopTestCase(TestCase):
 
     # 'wm_preferences' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_wm_preferences(self):
         """
         Test to sets values in the org.gnome.desktop.wm.preferences schema
@@ -31,6 +32,7 @@ class GnomedesktopTestCase(TestCase):
 
     # 'desktop_lockdown' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_desktop_lockdown(self):
         """
         Test to sets values in the org.gnome.desktop.lockdown schema
@@ -43,6 +45,7 @@ class GnomedesktopTestCase(TestCase):
 
     # 'desktop_interface' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_desktop_interface(self):
         """
         Test to sets values in the org.gnome.desktop.interface schema

@@ -44,6 +44,7 @@ class PayloadTestCase(TestCase):
             for chunk in data:
                 self.assertNoOrderedDict(chunk)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_nested_odicts(self):
         payload = salt.payload.Serial("msgpack")
         idata = {"pillar": [OrderedDict(environment="dev")]}
@@ -51,6 +52,7 @@ class PayloadTestCase(TestCase):
         self.assertNoOrderedDict(odata)
         self.assertEqual(idata, odata)
 
+    @skipIf(True, "FASTTEST skip")
     def test_datetime_dump_load(self):
         """
         Check the custom datetime handler can understand itself
@@ -66,6 +68,7 @@ class PayloadTestCase(TestCase):
         )
         self.assertEqual(idata, odata)
 
+    @skipIf(True, "FASTTEST skip")
     def test_verylong_dump_load(self):
         """
         Test verylong encoder/decoder
@@ -77,6 +80,7 @@ class PayloadTestCase(TestCase):
         idata["jid"] = "{0}".format(idata["jid"])
         self.assertEqual(idata, odata)
 
+    @skipIf(True, "FASTTEST skip")
     def test_immutable_dict_dump_load(self):
         """
         Test immutable dict encoder/decoder
@@ -87,6 +91,7 @@ class PayloadTestCase(TestCase):
         odata = payload.loads(sdata)
         self.assertEqual(idata, odata)
 
+    @skipIf(True, "FASTTEST skip")
     def test_immutable_list_dump_load(self):
         """
         Test immutable list encoder/decoder
@@ -97,6 +102,7 @@ class PayloadTestCase(TestCase):
         odata = payload.loads(sdata)
         self.assertEqual(idata, odata)
 
+    @skipIf(True, "FASTTEST skip")
     def test_immutable_set_dump_load(self):
         """
         Test immutable set encoder/decoder
@@ -107,6 +113,7 @@ class PayloadTestCase(TestCase):
         odata = payload.loads(sdata)
         self.assertEqual(idata, odata)
 
+    @skipIf(True, "FASTTEST skip")
     def test_odict_dump_load(self):
         """
         Test odict just works. It wasn't until msgpack 0.2.0
@@ -121,6 +128,7 @@ class PayloadTestCase(TestCase):
         odata = payload.loads(sdata)
         self.assertEqual({"set": dict(data)}, odata)
 
+    @skipIf(True, "FASTTEST skip")
     def test_mixed_dump_load(self):
         """
         Test we can handle all exceptions at once
@@ -154,6 +162,7 @@ class PayloadTestCase(TestCase):
         odata = payload.loads(sdata)
         self.assertEqual(edata, odata)
 
+    @skipIf(True, "FASTTEST skip")
     def test_recursive_dump_load(self):
         """
         Test recursive payloads are (mostly) serialized
@@ -223,7 +232,6 @@ class SREQTestCase(TestCase):
     def get_sreq(self):
         return salt.payload.SREQ("tcp://127.0.0.1:{0}".format(SREQTestCase.port))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_send_auto(self):
         """
         Test creation, send/rect
@@ -235,6 +243,7 @@ class SREQTestCase(TestCase):
         # check that the load always gets passed
         assert sreq.send_auto({"load": "foo"}) == {"load": "foo", "enc": "clear"}
 
+    @skipIf(True, "FASTTEST skip")
     def test_send(self):
         sreq = self.get_sreq()
         assert sreq.send("clear", "foo") == {"enc": "clear", "load": "foo"}
@@ -275,6 +284,7 @@ class SREQTestCase(TestCase):
         log.info("Sending regular send")
         assert sreq.send("clear", "foo") == {"enc": "clear", "load": "foo"}
 
+    @skipIf(True, "FASTTEST skip")
     def test_destroy(self):
         """
         Test the __del__ capabilities
@@ -284,6 +294,7 @@ class SREQTestCase(TestCase):
         # swallows exceptions, we have to call destroy directly
         sreq.destroy()
 
+    @skipIf(True, "FASTTEST skip")
     def test_raw_vs_encoding_none(self):
         """
         Test that we handle the new raw parameter in 5.0.2 correctly based on
@@ -296,6 +307,7 @@ class SREQTestCase(TestCase):
         odata = payload.loads(sdata, encoding=None)
         assert isinstance(odata[dtvalue], six.string_types)
 
+    @skipIf(True, "FASTTEST skip")
     def test_raw_vs_encoding_utf8(self):
         """
         Test that we handle the new raw parameter in 5.0.2 correctly based on

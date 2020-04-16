@@ -24,7 +24,7 @@ from salt.ext.six.moves import configparser
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, call, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ZyppCallMock(object):
@@ -88,6 +88,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         del self.new_repo_config
         del self.zypper_patcher_config
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_upgrades(self):
         """
         List package upgrades
@@ -115,6 +116,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         "salt.utils.environment.get_module_environment",
         MagicMock(return_value={"SALT_RUNNING": "1"}),
     )
+    @skipIf(True, "FASTTEST skip")
     def test_zypper_caller(self):
         """
         Test Zypper caller.
@@ -211,6 +213,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
             zypper.__zypper__.noraise.call("stay quiet")
             self.assertEqual(zypper.__zypper__.error_msg, "Check Zypper's logs.")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_upgrades_error_handling(self):
         """
         Test error handling in the list package upgrades.
@@ -251,6 +254,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
             ):
                 zypper.list_upgrades(refresh=False)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_products(self):
         """
         List products test.
@@ -330,6 +334,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                             test_data[kwd], sorted([prod.get(kwd) for prod in products])
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_refresh_db(self):
         """
         Test if refresh DB handled correctly
@@ -355,6 +360,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(result.get("openSUSE-Leap-42.1-Update"), False)
                 self.assertEqual(result.get("openSUSE-Leap-42.1-Update-Non-Oss"), True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_info_installed(self):
         """
         Test the return information of the named package(s), installed on the system.
@@ -423,6 +429,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                     continue
                 self.assertEqual(installed["virgo-dummy"][pn_key], pn_val)
 
+    @skipIf(True, "FASTTEST skip")
     def test_info_installed_with_non_ascii_char(self):
         """
         Test the return information of the named package(s), installed on the system whith non-ascii chars
@@ -436,6 +443,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
             installed = zypper.info_installed()
             self.assertEqual(installed["vīrgô"]["description"], "vīrgô d€šçripţiǫñ")
 
+    @skipIf(True, "FASTTEST skip")
     def test_info_installed_with_all_versions(self):
         """
         Test the return information of all versions for the named package(s), installed on the system.
@@ -524,6 +532,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                 for info in pkg_info_list:
                     self.assertTrue(info["arch"] in ("x86_64", "i686"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_info_available(self):
         """
         Test return the information of the named package available for the system.
@@ -556,6 +565,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(available["vim"]["summary"], "Vi IMproved")
 
+    @skipIf(True, "FASTTEST skip")
     def test_latest_version(self):
         """
         Test the latest version of the named package available for upgrade or installation.
@@ -572,6 +582,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                 {"vim": "7.4.326-2.62", "fakepkg": ""},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_upgrade_success(self):
         """
         Test system upgrade and dist-upgrade success.
@@ -710,6 +721,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                         "--no-allow-vendor-change",
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_upgrade_kernel(self):
         """
         Test kernel package upgrade success.
@@ -754,6 +766,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                             },
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_upgrade_failure(self):
         """
         Test system upgrade failure.
@@ -800,6 +813,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                     "dist-upgrade", "--auto-agree-with-licenses", "--from", "DUMMY"
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_upgrade_available(self):
         """
         Test whether or not an upgrade is available for a given package.
@@ -815,6 +829,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 self.assertFalse(zypper.upgrade_available(pkg_name))
             self.assertTrue(zypper.upgrade_available("vim"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_pkgs(self):
         """
         Test packages listing.
@@ -862,6 +877,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 self.assertTrue(pkgs.get(pkg_name))
                 self.assertEqual(pkgs[pkg_name], pkg_version)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_pkgs_with_attr(self):
         """
         Test packages listing with the attr parameter
@@ -986,6 +1002,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 self.assertTrue(pkgs.get(pkg_name))
                 self.assertEqual(pkgs[pkg_name], pkg_attr)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_pkgs_with_attr_multiple_versions(self):
         """
         Test packages listing with the attr parameter reporting multiple version installed
@@ -1057,6 +1074,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 else:
                     self.assertItemsEqual(pkginfo, expected_pkg_list[pkgname])
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_patches(self):
         """
         Test advisory patches listing.
@@ -1101,6 +1119,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         "fnmatch.filter",
         MagicMock(return_value=["/var/cache/zypper/packages/foo/bar/test_package.rpm"]),
     )
+    @skipIf(True, "FASTTEST skip")
     def test_list_downloaded(self):
         """
         Test downloaded packages listing.
@@ -1130,6 +1149,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             self.assertEqual(len(list_downloaded), 1)
             self.assertDictEqual(list_downloaded, DOWNLOADED_RET)
 
+    @skipIf(True, "FASTTEST skip")
     def test_download(self):
         """
         Test package download
@@ -1178,6 +1198,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             ]
         ),
     )
+    @skipIf(True, "FASTTEST skip")
     def test_install_with_downloadonly(self):
         """
         Test a package installation with downloadonly=True.
@@ -1237,6 +1258,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             }
         ),
     )
+    @skipIf(True, "FASTTEST skip")
     def test_install_with_downloadonly_already_downloaded(self):
         """
         Test a package installation with downloadonly=True when package is already downloaded.
@@ -1276,6 +1298,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         "salt.modules.zypperpkg.list_pkgs",
         MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.2"}]),
     )
+    @skipIf(True, "FASTTEST skip")
     def test_install_advisory_patch_ok(self):
         """
         Test successfully advisory patch installation.
@@ -1311,6 +1334,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         ),
     )
     @patch("salt.modules.zypperpkg.list_pkgs", MagicMock(return_value={"vim": "1.1"}))
+    @skipIf(True, "FASTTEST skip")
     def test_install_advisory_patch_failure(self):
         """
         Test failing advisory patch installation because patch does not exist.
@@ -1333,6 +1357,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 ):
                     zypper.install(advisory_ids=["SUSE-PATCH-XXX"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_purge(self):
         """
         Test package removal
@@ -1376,6 +1401,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                     self.assertTrue(diff[pkg_name]["old"])
                     self.assertFalse(diff[pkg_name]["new"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_repo_value_info(self):
         """
         Tests if repo info is properly parsed.
@@ -1396,6 +1422,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             self.assertEqual(r_info["enabled"], alias == "SLE12-SP1-x86_64-Update")
             self.assertEqual(r_info["autorefresh"], alias == "SLE12-SP1-x86_64-Update")
 
+    @skipIf(True, "FASTTEST skip")
     def test_repo_add_nomod_noref(self):
         """
         Test mod_repo adds the new repo and nothing else
@@ -1415,6 +1442,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             )
             self.assertTrue(zypper.__zypper__.refreshable.xml.call.call_count == 0)
 
+    @skipIf(True, "FASTTEST skip")
     def test_repo_noadd_nomod_noref(self):
         """
         Test mod_repo detects the repo already exists,
@@ -1440,6 +1468,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             self.assertTrue(zypper.__zypper__.xml.call.call_count == 0)
             self.assertTrue(zypper.__zypper__.refreshable.xml.call.call_count == 0)
 
+    @skipIf(True, "FASTTEST skip")
     def test_repo_noadd_modbaseurl_ref(self):
         """
         Test mod_repo detects the repo already exists,
@@ -1474,6 +1503,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 zypper.mod_repo.mock_calls[1] == call(name, **expected_params)
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_repo_add_mod_noref(self):
         """
         Test mod_repo adds the new repo and call modify to update autorefresh
@@ -1495,6 +1525,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 "mr", "--refresh", name
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_repo_noadd_mod_noref(self):
         """
         Test mod_repo detects the repository exists,
@@ -1517,6 +1548,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 "mr", "--refresh", name
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_repo_add_nomod_ref(self):
         """
         Test mod_repo adds the new repo and refreshes the repo with
@@ -1541,6 +1573,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             )
             self.assertTrue(zypper.__zypper__.refreshable.xml.call.call_count == 0)
 
+    @skipIf(True, "FASTTEST skip")
     def test_repo_noadd_nomod_ref(self):
         """
         Test mod_repo detects the repo already exists,
@@ -1566,6 +1599,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             )
             self.assertTrue(zypper.__zypper__.refreshable.xml.call.call_count == 0)
 
+    @skipIf(True, "FASTTEST skip")
     def test_repo_add_mod_ref(self):
         """
         Test mod_repo adds the new repo,
@@ -1595,6 +1629,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 "--gpg-auto-import-keys", "mr", "--refresh", name
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_repo_noadd_mod_ref(self):
         """
         Test mod_repo detects the repo already exists,
@@ -1624,6 +1659,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 "--gpg-auto-import-keys", "mr", "--refresh", name
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_wildcard_to_query_match_all(self):
         """
         Test wildcard to query match all pattern
@@ -1649,6 +1685,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             "16.5.2-27.9.1",
         ]
 
+    @skipIf(True, "FASTTEST skip")
     def test_wildcard_to_query_multiple_asterisk(self):
         """
         Test wildcard to query match multiple asterisk
@@ -1671,6 +1708,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             "16.2.6-27.9.1",
         ]
 
+    @skipIf(True, "FASTTEST skip")
     def test_wildcard_to_query_exact_match_at_end(self):
         """
         Test wildcard to query match exact pattern at the end
@@ -1692,6 +1730,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             "16.2.5-25.1"
         ]
 
+    @skipIf(True, "FASTTEST skip")
     def test_wildcard_to_query_exact_match_at_beginning(self):
         """
         Test wildcard to query match exact pattern at the beginning
@@ -1714,6 +1753,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             "17.2.6-27.9.1",
         ]
 
+    @skipIf(True, "FASTTEST skip")
     def test_wildcard_to_query_usage(self):
         """
         Test wildcard to query usage.
@@ -1734,6 +1774,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         assert zypper.Wildcard(_zpr)("libzypp", "*6-*") == "17.2.6-27.9.1"
         assert zypper.Wildcard(_zpr)("libzypp", "*.1") == "17.2.6-27.9.1"
 
+    @skipIf(True, "FASTTEST skip")
     def test_wildcard_to_query_noversion(self):
         """
         Test wildcard to query when no version has been passed on.
@@ -1751,6 +1792,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
         assert zypper.Wildcard(_zpr)("libzypp", None) is None
 
+    @skipIf(True, "FASTTEST skip")
     def test_wildcard_to_query_typecheck(self):
         """
         Test wildcard to query typecheck.
@@ -1768,6 +1810,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
         assert isinstance(zypper.Wildcard(_zpr)("libzypp", "*.1"), six.string_types)
 
+    @skipIf(True, "FASTTEST skip")
     def test_wildcard_to_query_condition_preservation(self):
         """
         Test wildcard to query Zypper condition preservation.
@@ -1795,6 +1838,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 "libzypp", "16*{0}".format(op)
             ) == "{0}16.2.5-25.1".format(op)
 
+    @skipIf(True, "FASTTEST skip")
     def test_wildcard_to_query_unsupported_operators(self):
         """
         Test wildcard to query unsupported operators.

@@ -9,13 +9,14 @@ import salt.states.mac_xattr as xattr
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class XAttrTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {xattr: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_exists_not(self):
         """
             Test adding an attribute when it doesn't exist
@@ -43,6 +44,7 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_exists_change(self):
         """
             Test changing and attribute value
@@ -70,6 +72,7 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_exists_already(self):
         """
             Test that having the same value does nothing
@@ -95,6 +98,7 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
                 assert not write_mock.called
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete(self):
         """
             Test deleting an attribute from a file
@@ -120,6 +124,7 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
                 delete_mock.assert_called_once_with("/path/to/file", "key")
                 self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_not(self):
         """
             Test deleting an attribute that doesn't exist from a file

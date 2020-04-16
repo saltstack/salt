@@ -15,7 +15,7 @@ from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 _F1 = {
     "definition": {
@@ -115,6 +115,7 @@ class SPMTest(TestCase, AdaptedConfigurationTestCaseMixin):
                 f.write(contents)
         return fdir
 
+    @skipIf(True, "FASTTEST skip")
     def test_build_install(self):
         # Build package
         fdir = self._create_formula_files(_F1)
@@ -178,6 +179,7 @@ class SPMTest(TestCase, AdaptedConfigurationTestCaseMixin):
                     self.client.run(["local", "install", pkgpath])
             assert len(self.ui._error) == 0
 
+    @skipIf(True, "FASTTEST skip")
     def test_failure_paths(self):
         fail_args = (
             ["bogus", "command"],

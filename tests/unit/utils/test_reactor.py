@@ -15,7 +15,7 @@ import salt.utils.reactor as reactor
 import salt.utils.yaml
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, Mock, mock_open, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 REACTOR_CONFIG = """\
 reactor:
@@ -410,6 +410,7 @@ class TestReactor(TestCase, AdaptedConfigurationTestCaseMixin):
         del cls.reactor
         del cls.render_pipe
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_reactors(self):
         """
         Ensure that list_reactors() returns the correct list of reactor SLS
@@ -422,6 +423,7 @@ class TestReactor(TestCase, AdaptedConfigurationTestCaseMixin):
                     self.reactor.list_reactors(tag), self.reaction_map[tag]
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_reactions(self):
         """
         Ensure that the correct reactions are built from the configured SLS
@@ -476,6 +478,7 @@ class TestReactWrap(TestCase, AdaptedConfigurationTestCaseMixin):
     def tearDownClass(cls):
         del cls.wrap
 
+    @skipIf(True, "FASTTEST skip")
     def test_runner(self):
         """
         Test runner reactions using both the old and new config schema
@@ -491,6 +494,7 @@ class TestReactWrap(TestCase, AdaptedConfigurationTestCaseMixin):
                 self.wrap.client_cache["runner"].low, args=WRAPPER_CALLS[tag]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_wheel(self):
         """
         Test wheel reactions using both the old and new config schema
@@ -506,6 +510,7 @@ class TestReactWrap(TestCase, AdaptedConfigurationTestCaseMixin):
                 self.wrap.client_cache["wheel"].low, args=WRAPPER_CALLS[tag]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_local(self):
         """
         Test local reactions using both the old and new config schema
@@ -521,6 +526,7 @@ class TestReactWrap(TestCase, AdaptedConfigurationTestCaseMixin):
                 *WRAPPER_CALLS[tag]["args"], **WRAPPER_CALLS[tag]["kwargs"]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_cmd(self):
         """
         Test cmd reactions (alias for 'local') using both the old and new
@@ -537,6 +543,7 @@ class TestReactWrap(TestCase, AdaptedConfigurationTestCaseMixin):
                 *WRAPPER_CALLS[tag]["args"], **WRAPPER_CALLS[tag]["kwargs"]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_caller(self):
         """
         Test caller reactions using both the old and new config schema

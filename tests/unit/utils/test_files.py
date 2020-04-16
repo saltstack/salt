@@ -24,6 +24,7 @@ class FilesTestCase(TestCase):
     Test case for files util.
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_safe_rm(self):
         with patch("os.remove") as os_remove_mock:
             salt.utils.files.safe_rm("dummy_tgt")
@@ -33,6 +34,7 @@ class FilesTestCase(TestCase):
         os.path.exists("/tmp/no_way_this_is_a_file_nope.sh"),
         "Test file exists! Skipping safe_rm_exceptions test!",
     )
+    @skipIf(True, "FASTTEST skip")
     def test_safe_rm_exceptions(self):
         error = False
         try:
@@ -44,6 +46,7 @@ class FilesTestCase(TestCase):
         )
 
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_safe_walk_symlink_recursion(self, tmp):
         if os.stat(tmp).st_ino == 0:
             self.skipTest("inodes not supported in {0}".format(tmp))
@@ -71,6 +74,7 @@ class FilesTestCase(TestCase):
             )
 
     @skipIf(not six.PY3, "This test only applies to Python 3")
+    @skipIf(True, "FASTTEST skip")
     def test_fopen_with_disallowed_fds(self):
         """
         This is safe to have as a unit test since we aren't going to actually
@@ -119,6 +123,7 @@ class FilesTestCase(TestCase):
 
     @with_tempdir()
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_recursive_copy(self, src, dest):
         src_structure = {
             "foo": {"foofile.txt": "fooSTRUCTURE"},

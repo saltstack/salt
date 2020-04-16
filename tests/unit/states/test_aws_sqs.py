@@ -11,7 +11,7 @@ import salt.states.aws_sqs as aws_sqs
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class AwsSqsTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class AwsSqsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'exists' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_exists(self):
         """
         Test to ensure the SQS queue exists.
@@ -46,6 +47,7 @@ class AwsSqsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
         Test to remove the named SQS queue if it exists.

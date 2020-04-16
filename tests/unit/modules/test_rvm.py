@@ -9,7 +9,7 @@ import salt.modules.rvm as rvm
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class TestRvmModule(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class TestRvmModule(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_rvm(self):
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
         with patch.dict(rvm.__salt__, {"cmd.run_all": mock}):
@@ -35,6 +36,7 @@ class TestRvmModule(TestCase, LoaderModuleMockMixin):
                 env=None,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_rvm_do(self):
         mock = MagicMock(return_value={"retcode": 0, "stdout": "stdout"})
         with patch.dict(rvm.__salt__, {"cmd.run_all": mock}):
@@ -47,6 +49,7 @@ class TestRvmModule(TestCase, LoaderModuleMockMixin):
                 env=None,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install(self):
         mock = MagicMock(return_value={"retcode": 0})
         with patch.dict(rvm.__salt__, {"cmd.run_all": mock}):
@@ -57,6 +60,7 @@ class TestRvmModule(TestCase, LoaderModuleMockMixin):
             )
             mock.assert_called_once_with(curl_cmd, runas=None, python_shell=True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_ruby_nonroot(self):
         mock = MagicMock(return_value={"retcode": 0, "stdout": "stdout"})
         expected = [
@@ -79,6 +83,7 @@ class TestRvmModule(TestCase, LoaderModuleMockMixin):
             rvm.install_ruby("2.0.0", runas="rvm")
             self.assertEqual(mock.call_args_list, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_with_env(self):
         mock = MagicMock(return_value={"retcode": 0, "stdout": "stdout"})
         expected = [
@@ -94,6 +99,7 @@ class TestRvmModule(TestCase, LoaderModuleMockMixin):
             rvm.install_ruby("2.0.0", env=[{"RUBY_CONFIGURE_OPTS": "--foobar"}])
             self.assertEqual(mock.call_args_list, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_with_opts(self):
         mock = MagicMock(return_value={"retcode": 0, "stdout": "stdout"})
         expected = [
@@ -121,6 +127,7 @@ class TestRvmModule(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(mock.call_args_list, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list(self):
         list_output = """
 rvm rubies
@@ -153,6 +160,7 @@ rvm rubies
                 rvm.list_(),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_gemset_list(self):
         output = """
 gemsets for ree-1.8.7-2012.02 (found in /usr/local/rvm/gems/ree-1.8.7-2012.02)
@@ -165,6 +173,7 @@ gemsets for ree-1.8.7-2012.02 (found in /usr/local/rvm/gems/ree-1.8.7-2012.02)
             mock_method.return_value = output
             self.assertEqual(["global", "bar", "foo"], rvm.gemset_list())
 
+    @skipIf(True, "FASTTEST skip")
     def test_gemset_list_all(self):
         output = """
 

@@ -7,7 +7,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import salt.returners.sentry_return as sentry
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class SentryReturnerTestCase(TestCase):
@@ -23,6 +23,7 @@ class SentryReturnerTestCase(TestCase):
         "return": "Long Return containing a Traceback",
     }
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_message(self):
         self.assertEqual(
             sentry._get_message(self.ret), "salt func: mytest.func arg1 arg2 foo=bar"

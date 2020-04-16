@@ -16,7 +16,7 @@ import salt.states.boto_cloudfront as boto_cloudfront
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class BotoCloudfrontTestCase(TestCase, LoaderModuleMockMixin):
@@ -66,6 +66,7 @@ class BotoCloudfrontTestCase(TestCase, LoaderModuleMockMixin):
         new_ret.update(extra_ret)
         return new_ret
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_distribution_retrieval_error(self):
         """
         Test for boto_cloudfront.present when we cannot get the distribution.
@@ -84,6 +85,7 @@ class BotoCloudfrontTestCase(TestCase, LoaderModuleMockMixin):
                 ),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_from_scratch(self):
         mock_get = MagicMock(return_value={"result": None})
 
@@ -142,6 +144,7 @@ class BotoCloudfrontTestCase(TestCase, LoaderModuleMockMixin):
                 ),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_correct_state(self):
         mock_get = MagicMock(
             return_value={
@@ -165,6 +168,7 @@ class BotoCloudfrontTestCase(TestCase, LoaderModuleMockMixin):
                 ),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_update_config_and_tags(self):
         mock_get = MagicMock(
             return_value={

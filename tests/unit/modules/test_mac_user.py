@@ -86,6 +86,7 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
         # TODO: Implement tests after clarifications come in
         pass
 
+    @skipIf(True, "FASTTEST skip")
     def test_dscl(self):
         """
         Tests the creation of a dscl node
@@ -107,6 +108,7 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
                     {"pid": 4948, "retcode": 0, "stderr": "", "stdout": ""},
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_first_avail_uid(self):
         """
         Tests the availability of the next uid
@@ -118,6 +120,7 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
     # Only tested error handling
     # Full functionality tests covered in integration testing
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_user_exists(self):
         """
         Tests if the user exists or not
@@ -127,6 +130,7 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertRaises(CommandExecutionError, mac_user.add, "test")
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_whitespace(self):
         """
         Tests if there is whitespace in the user name
@@ -134,6 +138,7 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
         with patch("salt.modules.mac_user.info", MagicMock(return_value={})):
             self.assertRaises(SaltInvocationError, mac_user.add, "foo bar")
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_uid_int(self):
         """
         Tests if the uid is an int
@@ -141,6 +146,7 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
         with patch("salt.modules.mac_user.info", MagicMock(return_value={})):
             self.assertRaises(SaltInvocationError, mac_user.add, "foo", "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_gid_int(self):
         """
         Tests if the gid is an int
@@ -152,12 +158,14 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
     # Only tested pure logic of function
     # Full functionality tests covered in integration testing
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_whitespace(self):
         """
         Tests if there is whitespace in the user name
         """
         self.assertRaises(SaltInvocationError, mac_user.delete, "foo bar")
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_user_exists(self):
         """
         Tests if the user exists or not
@@ -165,6 +173,7 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
         with patch("salt.modules.mac_user.info", MagicMock(return_value={})):
             self.assertTrue(mac_user.delete("foo"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_getent(self):
         """
         Tests the list of information for all users
@@ -207,12 +216,14 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
     # Only tested pure logic of function
     # Full functionality tests covered in integration testing
 
+    @skipIf(True, "FASTTEST skip")
     def test_chuid_int(self):
         """
         Tests if the uid is an int
         """
         self.assertRaises(SaltInvocationError, mac_user.chuid, "foo", "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_chuid_user_exists(self):
         """
         Tests if the user exists or not
@@ -220,6 +231,7 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
         with patch("salt.modules.mac_user.info", MagicMock(return_value={})):
             self.assertRaises(CommandExecutionError, mac_user.chuid, "foo", 4376)
 
+    @skipIf(True, "FASTTEST skip")
     def test_chuid_same_uid(self):
         """
         Tests if the user's uid is the same as as the argument
@@ -233,12 +245,14 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
     # Only tested pure logic of function
     # Full functionality tests covered in integration testing
 
+    @skipIf(True, "FASTTEST skip")
     def test_chgid_int(self):
         """
         Tests if the gid is an int
         """
         self.assertRaises(SaltInvocationError, mac_user.chgid, "foo", "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_chgid_user_exists(self):
         """
         Tests if the user exists or not
@@ -246,6 +260,7 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
         with patch("salt.modules.mac_user.info", MagicMock(return_value={})):
             self.assertRaises(CommandExecutionError, mac_user.chgid, "foo", 4376)
 
+    @skipIf(True, "FASTTEST skip")
     def test_chgid_same_gid(self):
         """
         Tests if the user's gid is the same as as the argument
@@ -259,6 +274,7 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
     # Only tested pure logic of function
     # Full functionality tests covered in integration testing
 
+    @skipIf(True, "FASTTEST skip")
     def test_chshell_user_exists(self):
         """
         Tests if the user exists or not
@@ -268,6 +284,7 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
                 CommandExecutionError, mac_user.chshell, "foo", "/bin/bash"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_chshell_same_shell(self):
         """
         Tests if the user's shell is the same as the argument
@@ -281,6 +298,7 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
     # Only tested pure logic of function
     # Full functionality tests covered in integration testing
 
+    @skipIf(True, "FASTTEST skip")
     def test_chhome_user_exists(self):
         """
         Test if the user exists or not
@@ -290,6 +308,7 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
                 CommandExecutionError, mac_user.chhome, "foo", "/Users/foo"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_chhome_same_home(self):
         """
         Tests if the user's home is the same as the argument
@@ -303,6 +322,7 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
     # Only tested pure logic of function
     # Full functionality tests covered in integration testing
 
+    @skipIf(True, "FASTTEST skip")
     def test_chfullname_user_exists(self):
         """
         Tests if the user exists or not
@@ -312,6 +332,7 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
                 CommandExecutionError, mac_user.chfullname, "test", "TEST USER"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_chfullname_same_name(self):
         """
         Tests if the user's full name is the same as the argument
@@ -325,6 +346,7 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
     # Only tested pure logic of function
     # Full functionality tests covered in integration testing
 
+    @skipIf(True, "FASTTEST skip")
     def test_chgroups_user_exists(self):
         """
         Tests if the user exists or not
@@ -334,6 +356,7 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
                 CommandExecutionError, mac_user.chgroups, "foo", "wheel,root"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_chgroups_bad_groups(self):
         """
         Test if there is white space in groups argument
@@ -345,6 +368,7 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
                 SaltInvocationError, mac_user.chgroups, "test", "bad group"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_chgroups_same_desired(self):
         """
         Tests if the user's list of groups is the same as the arguments
@@ -358,6 +382,7 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(mac_user.chgroups("test", "wheel,root"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_info(self):
         """
         Tests the return of user information
@@ -379,6 +404,7 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(mac_user.info("root"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_format_info(self):
         """
         Tests the formatting of returned user information
@@ -408,6 +434,7 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(mac_user._format_info(data), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_users(self):
         """
         Tests the list of all users

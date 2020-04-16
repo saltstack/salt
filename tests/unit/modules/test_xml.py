@@ -10,7 +10,7 @@ import tempfile
 
 from salt.modules import xml
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 XML_STRING = """
     <root xmlns:foo="http://www.foo.org/" xmlns:bar="http://www.bar.org">
@@ -36,6 +36,7 @@ class XmlTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {xml: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_value(self):
         """
             Verify xml.get_value
@@ -49,6 +50,7 @@ class XmlTestCase(TestCase, LoaderModuleMockMixin):
 
         os.remove(xml_file.name)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_value(self):
         """
             Verify xml.set_value
@@ -67,6 +69,7 @@ class XmlTestCase(TestCase, LoaderModuleMockMixin):
 
         os.remove(xml_file.name)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_attribute(self):
         """
             Verify xml.get_attribute
@@ -80,6 +83,7 @@ class XmlTestCase(TestCase, LoaderModuleMockMixin):
 
         os.remove(xml_file.name)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_attribute(self):
         """
             Verify xml.set_value

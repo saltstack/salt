@@ -11,7 +11,7 @@ import tests.support.napalm as napalm_test_support
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 import salt.modules.napalm_snmp as napalm_snmp  # NOQA
 import salt.modules.napalm_network as napalm_network  # NOQA
@@ -34,14 +34,17 @@ class NapalmSnmpModuleTestCase(TestCase, LoaderModuleMockMixin):
 
         return {napalm_snmp: module_globals, napalm_network: module_globals}
 
+    @skipIf(True, "FASTTEST skip")
     def test_config(self):
         ret = napalm_snmp.config()
         assert ret["out"] == napalm_test_support.TEST_SNMP_INFO
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_config(self):
         ret = napalm_snmp.remove_config("1.2.3.4")
         assert ret["result"] is False
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_config(self):
         ret = napalm_snmp.update_config("1.2.3.4")
         assert ret["result"] is False

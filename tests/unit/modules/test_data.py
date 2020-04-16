@@ -11,7 +11,7 @@ import salt.modules.data as data
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class DataTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'clear' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_clear(self):
         """
         Test if it clear out all of the data in the minion datastore
@@ -34,6 +35,7 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'load' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_load(self):
         """
         Test if it return all of the data in the minion datastore
@@ -49,6 +51,7 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'dump' function tests: 3
 
+    @skipIf(True, "FASTTEST skip")
     def test_dump(self):
         """
         Test if it replace the entire datastore with a passed data structure
@@ -57,6 +60,7 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
             with patch("salt.utils.files.fopen", mock_open()):
                 self.assertTrue(data.dump('{"eggs": "spam"}'))
 
+    @skipIf(True, "FASTTEST skip")
     def test_dump_isinstance(self):
         """
         Test if it replace the entire datastore with a passed data structure
@@ -64,6 +68,7 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
         with patch("ast.literal_eval", MagicMock(return_value="")):
             self.assertFalse(data.dump("salt"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_dump_ioerror(self):
         """
         Test if it replace the entire datastore with a passed data structure
@@ -75,6 +80,7 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'update' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_update(self):
         """
         Test if it update a key with a value in the minion datastore
@@ -86,6 +92,7 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_get(self):
         """
         Test if it gets a value from the minion datastore
@@ -93,6 +100,7 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
         with patch("salt.modules.data.load", MagicMock(return_value={"salt": "SALT"})):
             self.assertEqual(data.get("salt"), "SALT")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_vals(self):
         """
         Test if it gets values from the minion datastore
@@ -105,6 +113,7 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'cas' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_cas_not_load(self):
         """
         Test if it check and set a value in the minion datastore
@@ -115,6 +124,7 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertFalse(data.cas("salt3", "SALT", "SALTSTACK"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_cas_not_equal(self):
         """
         Test if it check and set a value in the minion datastore
@@ -125,6 +135,7 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertFalse(data.cas("salt", "SALT", "SALTSTACK"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_cas(self):
         """
         Test if it check and set a value in the minion datastore

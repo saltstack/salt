@@ -12,7 +12,7 @@ import salt.utils.versions
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class LxcTestCase(TestCase, LoaderModuleMockMixin):
@@ -25,6 +25,7 @@ class LxcTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_present(self):
         """
         Test to verify the named container if it exist.
@@ -84,6 +85,7 @@ class LxcTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
         Test to ensure a container is not present, destroying it if present.
@@ -113,6 +115,7 @@ class LxcTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'running' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_running(self):
         """
         Test to ensure that a container is running.
@@ -152,6 +155,7 @@ class LxcTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'frozen' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_frozen(self):
         """
         Test to ensure that a container is frozen.
@@ -185,6 +189,7 @@ class LxcTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'stopped' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_stopped(self):
         """
         Test to ensure that a container is stopped.
@@ -222,6 +227,7 @@ class LxcTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_pass' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_pass(self):
         """
         Test to execute set_pass func.
@@ -236,6 +242,7 @@ class LxcTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'edited_conf' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_edited_conf(self):
         """
         Test to edit LXC configuration options

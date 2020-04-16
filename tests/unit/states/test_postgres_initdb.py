@@ -7,7 +7,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import salt.states.postgres_initdb as postgres_initdb
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PostgresInitdbTestCase(TestCase, LoaderModuleMockMixin):
@@ -32,6 +32,7 @@ class PostgresInitdbTestCase(TestCase, LoaderModuleMockMixin):
         del self.mock_true
         del self.mock_false
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_existing(self):
         """
         Test existing data directory handled correctly
@@ -43,6 +44,7 @@ class PostgresInitdbTestCase(TestCase, LoaderModuleMockMixin):
             self.ret.update({"comment": _comt, "result": True})
             self.assertDictEqual(postgres_initdb.present(self.name), self.ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_non_existing_pass(self):
         """
         Test non existing data directory ok
@@ -69,6 +71,7 @@ class PostgresInitdbTestCase(TestCase, LoaderModuleMockMixin):
                 self.ret.update({"comment": _comt, "result": True, "changes": _changes})
                 self.assertDictEqual(postgres_initdb.present(self.name), self.ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_non_existing_fail(self):
         """
         Test non existing data directory fail

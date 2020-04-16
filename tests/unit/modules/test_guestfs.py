@@ -24,6 +24,7 @@ class GuestfsTestCase(TestCase, LoaderModuleMockMixin):
         return {guestfs: {}}
 
     # 'mount' function tests: 1
+    @skipIf(True, "FASTTEST skip")
     def test_mount(self):
         """
         Test if it mounts an image
@@ -85,7 +86,6 @@ class GuestfsTestCase(TestCase, LoaderModuleMockMixin):
             )
             makedirs_mock.assert_called_once()
 
-    @skipIf(True, "SLOWTEST skip")
     def test_umount(self):
         """
         Test the guestfs.unmount function

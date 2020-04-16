@@ -12,7 +12,7 @@ import salt.states.rabbitmq_cluster as rabbitmq_cluster
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class RabbitmqClusterTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class RabbitmqClusterTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {rabbitmq_cluster: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_joined(self):
         """
         Test to ensure the current node joined

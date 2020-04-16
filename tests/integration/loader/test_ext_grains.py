@@ -32,7 +32,6 @@ class LoaderGrainsTest(ModuleCase):
     #    self.opts['disable_modules'] = ['pillar']
     #    self.opts['grains'] = grains(self.opts)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_grains_overwrite(self):
         # Force a grains sync
         self.run_function("saltutil.sync_grains")

@@ -231,6 +231,7 @@ class BotoCognitoIdentityTestCase(
         else:
             return default_pool_ret
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_when_failing_to_describe_identity_pools(self):
         """
         Tests exceptions when describing identity pools
@@ -248,6 +249,7 @@ class BotoCognitoIdentityTestCase(
         self.assertEqual(result.get("result"), False)
         self.assertTrue("error on describe identity pool" in result.get("comment", {}))
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_when_multiple_pools_with_same_name_exist(self):
         """
         Tests present on an identity pool name where it matched
@@ -268,6 +270,7 @@ class BotoCognitoIdentityTestCase(
             "{0}".format([first_pool_ret, third_pool_ret]), result.get("comment", "")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_when_failing_to_create_a_new_identity_pool(self):
         """
         Tests present on an identity pool name that doesn't exist and
@@ -290,6 +293,7 @@ class BotoCognitoIdentityTestCase(
         self.assertTrue("error on create_identity_pool" in result.get("comment", ""))
         self.assertTrue(self.conn.update_identity_pool.call_count == 0)
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_when_failing_to_update_an_existing_identity_pool(self):
         """
         Tests present on a unique instance of identity pool having the matching
@@ -323,6 +327,7 @@ class BotoCognitoIdentityTestCase(
         else:
             return default_pool_role_ret
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_when_failing_to_get_identity_pool_roles(self):
         """
         Tests present on a unique instance of identity pool having the matching
@@ -349,7 +354,6 @@ class BotoCognitoIdentityTestCase(
         self.assertTrue(self.conn.create_identity_pool.call_count == 0)
         self.assertTrue(self.conn.set_identity_pool_roles.call_count == 0)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_present_when_failing_to_set_identity_pool_roles(self):
         """
         Tests present on a unique instance of identity pool having the matching
@@ -394,7 +398,6 @@ class BotoCognitoIdentityTestCase(
                 self.conn.set_identity_pool_roles.call_args == expected_call_args
             )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_present_when_pool_name_does_not_exist(self):
         """
         Tests the successful case of creating a new instance, and updating its
@@ -446,7 +449,6 @@ class BotoCognitoIdentityTestCase(
             )
             self.assertTrue(self.conn.update_identity_pool.call_count == 0)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_present_when_pool_name_exists(self):
         """
         Tests the successful case of updating a single instance with matching
@@ -496,6 +498,7 @@ class BotoCognitoIdentityTestCase(
             )
             self.assertTrue(self.conn.create_identity_pool.call_count == 0)
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_when_pool_does_not_exist(self):
         """
         Tests absent on an identity pool that does not exist.
@@ -510,6 +513,7 @@ class BotoCognitoIdentityTestCase(
         self.assertEqual(result.get("result"), True)
         self.assertEqual(result["changes"], {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_when_removeallmatched_is_false_and_multiple_pools_matched(self):
         """
         Tests absent on when RemoveAllMatched flag is false and there are multiple matches
@@ -532,6 +536,7 @@ class BotoCognitoIdentityTestCase(
             "{0}".format([first_pool_ret, third_pool_ret]) in result.get("comment", "")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_when_failing_to_describe_identity_pools(self):
         """
         Tests exceptions when describing identity pools
@@ -549,6 +554,7 @@ class BotoCognitoIdentityTestCase(
         self.assertEqual(result.get("result"), False)
         self.assertTrue("error on describe identity pool" in result.get("comment", {}))
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_when_erroring_on_delete_identity_pool(self):
         """
         Tests error due to delete_identity_pools
@@ -570,6 +576,7 @@ class BotoCognitoIdentityTestCase(
         self.assertEqual(result["changes"], {})
         self.assertTrue("error on delete identity pool" in result.get("comment", ""))
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_when_a_single_pool_exists(self):
         """
         Tests absent succeeds on delete when a single pool matched and
@@ -591,6 +598,7 @@ class BotoCognitoIdentityTestCase(
         }
         self.assertEqual(result["changes"], expected_changes)
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_when_multiple_pool_exists_and_removeallmatched_flag_is_true(self):
         """
         Tests absent succeeds on delete when a multiple pools matched and

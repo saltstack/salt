@@ -30,7 +30,6 @@ class WheelModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
     def tearDown(self):
         del self.wheel
 
-    @skipIf(True, "SLOWTEST skip")
     def test_master_call(self):
         """
         Test executing master_call with lowdata
@@ -43,6 +42,7 @@ class WheelModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
 
         self.wheel.master_call(**low)
 
+    @skipIf(True, "FASTTEST skip")
     def test_token(self):
         """
         Test executing master_call with lowdata
@@ -66,7 +66,6 @@ class WheelModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
             }
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_cmd_sync(self):
         low = {
             "client": "wheel",
@@ -83,6 +82,7 @@ class WheelModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
         salt.utils.platform.is_windows(),
         "Causes pickling error on Windows: Issue #39616",
     )
+    @skipIf(True, "FASTTEST skip")
     def test_cmd_async(self):
         low = {
             "client": "wheel_async",
@@ -93,7 +93,6 @@ class WheelModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
 
         self.wheel.cmd_async(low)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_cmd_sync_w_arg(self):
         low = {
             "fun": "key.finger",
@@ -105,6 +104,7 @@ class WheelModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
         ret = self.wheel.cmd_sync(low)
         self.assertIn("return", ret.get("data", {}))
 
+    @skipIf(True, "FASTTEST skip")
     def test_wildcard_auth(self):
         low = {
             "username": "the_s0und_of_t3ch",

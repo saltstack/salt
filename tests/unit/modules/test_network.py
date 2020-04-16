@@ -34,6 +34,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {network: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_wol_bad_mac(self):
         """
         tests network.wol with bad mac
@@ -41,6 +42,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         bad_mac = "31337"
         self.assertRaises(ValueError, network.wol, bad_mac)
 
+    @skipIf(True, "FASTTEST skip")
     def test_wol_success(self):
         """
         tests network.wol success
@@ -64,6 +66,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         with patch("socket.socket", MockSocket):
             self.assertTrue(network.wol(mac, bcast))
 
+    @skipIf(True, "FASTTEST skip")
     def test_ping(self):
         """
         Test for Performs a ping to a host
@@ -78,6 +81,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(network.__salt__, {"cmd.run": MagicMock(return_value="A")}):
                 self.assertEqual(network.ping("host"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_netstat(self):
         """
         Test for return information on open ports and states
@@ -94,6 +98,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(network.__grains__, {"kernel": "A"}):
             self.assertRaises(CommandExecutionError, network.netstat)
 
+    @skipIf(True, "FASTTEST skip")
     def test_active_tcp(self):
         """
         Test for return a dict containing information on all
@@ -103,6 +108,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(network.__grains__, {"kernel": "Linux"}):
                 self.assertEqual(network.active_tcp(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_traceroute(self):
         """
         Test for Performs a traceroute to a 3rd party host
@@ -119,6 +125,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
                 ):
                     self.assertListEqual(network.traceroute("gentoo.org"), [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_dig(self):
         """
         Test for Performs a DNS lookup with dig
@@ -132,6 +139,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(network.dig("host"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_arp(self):
         """
         Test for return the arp table from the minion
@@ -141,6 +149,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         ), patch("salt.utils.path.which", MagicMock(return_value="")):
             self.assertDictEqual(network.arp(), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_interfaces(self):
         """
         Test for return a dictionary of information about
@@ -149,6 +158,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(salt.utils.network, "interfaces", return_value={}):
             self.assertDictEqual(network.interfaces(), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_hw_addr(self):
         """
         Test for return the hardware address (a.k.a. MAC address)
@@ -157,6 +167,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(salt.utils.network, "hw_addr", return_value={}):
             self.assertDictEqual(network.hw_addr("iface"), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_interface(self):
         """
         Test for return the inet address for a given interface
@@ -164,6 +175,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(salt.utils.network, "interface", return_value={}):
             self.assertDictEqual(network.interface("iface"), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_interface_ip(self):
         """
         Test for return the inet address for a given interface
@@ -171,6 +183,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(salt.utils.network, "interface_ip", return_value={}):
             self.assertDictEqual(network.interface_ip("iface"), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_subnets(self):
         """
         Test for returns a list of subnets to which the host belongs
@@ -178,6 +191,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(salt.utils.network, "subnets", return_value={}):
             self.assertDictEqual(network.subnets(), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_in_subnet(self):
         """
         Test for returns True if host is within specified
@@ -186,6 +200,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(salt.utils.network, "in_subnet", return_value={}):
             self.assertDictEqual(network.in_subnet("iface"), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_ip_addrs(self):
         """
         Test for returns a list of IPv4 addresses assigned to the host.
@@ -201,6 +216,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
                 network.ip_addrs("interface", "include_loopback"), ["0.0.0.0"]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_ip_addrs6(self):
         """
         Test for returns a list of IPv6 addresses assigned to the host.
@@ -208,6 +224,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(salt.utils.network, "ip_addrs6", return_value=["A"]):
             self.assertListEqual(network.ip_addrs6("int", "include"), ["A"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_hostname(self):
         """
         Test for Get hostname
@@ -215,6 +232,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(network.socket, "gethostname", return_value="A"):
             self.assertEqual(network.get_hostname(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_mod_hostname(self):
         """
         Test for Modify hostname
@@ -233,6 +251,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(network.mod_hostname("hostname"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_connect(self):
         """
         Test for Test connectivity to a host using a particular
@@ -279,6 +298,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
                     )
 
     @skipIf(not bool(ipaddress), "unable to import 'ipaddress'")
+    @skipIf(True, "FASTTEST skip")
     def test_is_private(self):
         """
         Test for Check if the given IP address is a private address
@@ -289,6 +309,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(network.is_private("::1"))
 
     @skipIf(not bool(ipaddress), "unable to import 'ipaddress'")
+    @skipIf(True, "FASTTEST skip")
     def test_is_loopback(self):
         """
         Test for Check if the given IP address is a loopback address
@@ -298,6 +319,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(ipaddress.IPv6Address, "is_loopback", return_value=True):
             self.assertTrue(network.is_loopback("::1"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_bufsize(self):
         """
         Test for return network buffer sizes as a dict
@@ -312,6 +334,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(network.__grains__, {"kernel": "A"}):
             self.assertDictEqual(network.get_bufsize("iface"), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_mod_bufsize(self):
         """
         Test for Modify network interface buffers (currently linux only)
@@ -326,6 +349,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(network.__grains__, {"kernel": "A"}):
             self.assertFalse(network.mod_bufsize("iface"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_routes(self):
         """
         Test for return currently configured routes from routing table
@@ -352,6 +376,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
                         network.routes("inet"), [{"addr_family": "inet"}]
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_default_route(self):
         """
         Test for return default route(s) from routing table
@@ -369,6 +394,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(network.__grains__, {"kernel": "Linux"}):
                 self.assertListEqual(network.default_route("inet"), [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_route(self):
         """
         Test for return output from get_route

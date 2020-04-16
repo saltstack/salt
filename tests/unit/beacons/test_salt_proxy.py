@@ -11,7 +11,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 
 # Salt testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 PATCH_OPTS = dict(autospec=True, spec_set=True)
 
@@ -26,6 +26,7 @@ class SaltProxyBeaconTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {salt_proxy: {"__context__": {}, "__salt__": {}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_non_list_config(self):
         config = {}
 
@@ -35,6 +36,7 @@ class SaltProxyBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret, (False, "Configuration for salt_proxy beacon must be a list.")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_empty_config(self):
         config = [{}]
 
@@ -44,6 +46,7 @@ class SaltProxyBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret, (False, "Configuration for salt_proxy beacon requires proxies.")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_salt_proxy_running(self):
         mock = MagicMock(return_value={"result": True})
         with patch.dict(salt_proxy.__salt__, {"salt_proxy.is_running": mock}):
@@ -55,6 +58,7 @@ class SaltProxyBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret = salt_proxy.beacon(config)
             self.assertEqual(ret, [{"p8000": "Proxy p8000 is already running"}])
 
+    @skipIf(True, "FASTTEST skip")
     def test_salt_proxy_not_running(self):
         is_running_mock = MagicMock(return_value={"result": False})
         configure_mock = MagicMock(

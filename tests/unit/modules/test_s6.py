@@ -14,7 +14,7 @@ import salt.modules.s6 as s6
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class S6TestCase(TestCase, LoaderModuleMockMixin):
@@ -27,6 +27,7 @@ class S6TestCase(TestCase, LoaderModuleMockMixin):
 
     # 'start' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_start(self):
         """
         Test if it starts service via s6-svc.
@@ -37,6 +38,7 @@ class S6TestCase(TestCase, LoaderModuleMockMixin):
 
     # 'stop' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_stop(self):
         """
         Test if it stops service via s6.
@@ -47,6 +49,7 @@ class S6TestCase(TestCase, LoaderModuleMockMixin):
 
     # 'term' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_term(self):
         """
         Test if it send a TERM to service via s6.
@@ -57,6 +60,7 @@ class S6TestCase(TestCase, LoaderModuleMockMixin):
 
     # 'reload_' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_reload(self):
         """
         Test if it send a HUP to service via s6.
@@ -67,6 +71,7 @@ class S6TestCase(TestCase, LoaderModuleMockMixin):
 
     # 'restart' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_restart(self):
         """
         Test if it restart service via s6. This will stop/start service.
@@ -77,6 +82,7 @@ class S6TestCase(TestCase, LoaderModuleMockMixin):
 
     # 'full_restart' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_full_restart(self):
         """
         Test if it calls s6.restart() function.
@@ -87,6 +93,7 @@ class S6TestCase(TestCase, LoaderModuleMockMixin):
 
     # 'status' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_status(self):
         """
         Test if it return the status for a service via s6,
@@ -98,6 +105,7 @@ class S6TestCase(TestCase, LoaderModuleMockMixin):
 
     # 'available' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_available(self):
         """
         Test if it returns ``True`` if the specified service is available,
@@ -108,6 +116,7 @@ class S6TestCase(TestCase, LoaderModuleMockMixin):
 
     # 'missing' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_missing(self):
         """
         Test if it returns ``True`` if the specified service is not available,
@@ -118,6 +127,7 @@ class S6TestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_all' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_all(self):
         """
         Test if it return a list of all available services.

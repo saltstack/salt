@@ -11,7 +11,7 @@ import salt.modules.smf_service as smf
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class SmfTestCase(TestCase, LoaderModuleMockMixin):
@@ -22,6 +22,7 @@ class SmfTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {smf: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_running(self):
         """
         Test to return the running services
@@ -31,6 +32,7 @@ class SmfTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(smf.get_running(), ["A"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_stopped(self):
         """
         Test to return the stopped services
@@ -38,6 +40,7 @@ class SmfTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(smf.__salt__, {"cmd.run": MagicMock(return_value="A\n")}):
             self.assertListEqual(smf.get_stopped(), ["A"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_available(self):
         """
         Test to returns ``True`` if the specified service is available,
@@ -47,6 +50,7 @@ class SmfTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(smf, "get_all", return_value=("A")):
                 self.assertTrue(smf.available("A"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_missing(self):
         """
         The inverse of service.available.
@@ -57,6 +61,7 @@ class SmfTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(smf, "get_all", return_value=("A")):
                 self.assertFalse(smf.missing("A"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_all(self):
         """
         Test to return all installed services
@@ -64,6 +69,7 @@ class SmfTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(smf.__salt__, {"cmd.run": MagicMock(return_value="A\n")}):
             self.assertListEqual(smf.get_all(), ["A"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_start(self):
         """
         Test to start the specified service
@@ -78,6 +84,7 @@ class SmfTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertFalse(smf.start("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_stop(self):
         """
         Test to stop the specified service
@@ -85,6 +92,7 @@ class SmfTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(smf.__salt__, {"cmd.retcode": MagicMock(return_value=False)}):
             self.assertTrue(smf.stop("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_restart(self):
         """
         Test to restart the named service
@@ -98,6 +106,7 @@ class SmfTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertFalse(smf.restart("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_reload_(self):
         """
         Test to reload the named service
@@ -111,6 +120,7 @@ class SmfTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertFalse(smf.reload_("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_status(self):
         """
         Test to return the status for a service, returns a bool whether the
@@ -123,6 +133,7 @@ class SmfTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertFalse(smf.status("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_enable(self):
         """
         Test to enable the named service to start at boot
@@ -130,6 +141,7 @@ class SmfTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(smf.__salt__, {"cmd.retcode": MagicMock(return_value=False)}):
             self.assertTrue(smf.enable("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_disable(self):
         """
         Test to disable the named service to start at boot
@@ -137,6 +149,7 @@ class SmfTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(smf.__salt__, {"cmd.retcode": MagicMock(return_value=False)}):
             self.assertTrue(smf.disable("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_enabled(self):
         """
         Test to check to see if the named service is enabled to start on boot
@@ -153,6 +166,7 @@ class SmfTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertFalse(smf.enabled("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_disabled(self):
         """
         Test to check to see if the named service is disabled to start on boot
@@ -160,6 +174,7 @@ class SmfTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(smf, "enabled", return_value=False):
             self.assertTrue(smf.disabled("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_enabled(self):
         """
         Test to return the enabled services
@@ -167,6 +182,7 @@ class SmfTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(smf, "_get_enabled_disabled", return_value=True):
             self.assertTrue(smf.get_enabled())
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_disabled(self):
         """
         Test to return the disabled services

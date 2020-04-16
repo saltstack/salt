@@ -58,6 +58,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {localemod: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_avail(self):
         """
         Test for Lists available (compiled) locales
@@ -72,6 +73,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         "salt.modules.localemod.__salt__",
         {"cmd.run": MagicMock(return_value=locale_ctl_out)},
     )
+    @skipIf(True, "FASTTEST skip")
     def test_localectl_status_parser(self):
         """
         Test localectl status parser.
@@ -104,6 +106,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         "salt.modules.localemod.__salt__",
         {"cmd.run": MagicMock(return_value=locale_ctl_notset)},
     )
+    @skipIf(True, "FASTTEST skip")
     def test_localectl_status_parser_notset(self):
         """
         Test localectl status parser.
@@ -124,6 +127,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         assert out["x11_layout"]["data"] is None
 
     @patch("salt.modules.localemod.dbus", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_dbus_locale_parser_matches(self):
         """
         Test dbus locale status parser matching the results.
@@ -141,6 +145,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch("salt.modules.localemod.dbus", MagicMock())
     @patch("salt.modules.localemod.log", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_dbus_locale_parser_doesnot_matches(self):
         """
         Test dbus locale status parser does not matching the results.
@@ -166,6 +171,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch("salt.utils.path.which", MagicMock(return_value=None))
     @patch("salt.modules.localemod.log", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_localectl_status_parser_no_systemd(self):
         """
         Test localectl status parser raises an exception if no systemd installed.
@@ -181,6 +187,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         "salt.modules.localemod.__salt__",
         {"cmd.run": MagicMock(return_value=locale_ctl_out_empty)},
     )
+    @skipIf(True, "FASTTEST skip")
     def test_localectl_status_parser_empty(self):
         with pytest.raises(CommandExecutionError) as exc_info:
             localemod._localectl_status()
@@ -191,6 +198,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         "salt.modules.localemod.__salt__",
         {"cmd.run": MagicMock(return_value=locale_ctl_out_broken)},
     )
+    @skipIf(True, "FASTTEST skip")
     def test_localectl_status_parser_broken(self):
         with pytest.raises(CommandExecutionError) as exc_info:
             localemod._localectl_status()
@@ -201,6 +209,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         "salt.modules.localemod.__salt__",
         {"cmd.run": MagicMock(return_value=locale_ctl_out_structure)},
     )
+    @skipIf(True, "FASTTEST skip")
     def test_localectl_status_parser_structure(self):
         out = localemod._localectl_status()
         assert isinstance(out, dict)
@@ -225,6 +234,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         MagicMock(return_value={"system_locale": {"LANG": "de_DE.utf8"}}),
     )
     @patch("salt.utils.systemd.booted", MagicMock(return_value=True))
+    @skipIf(True, "FASTTEST skip")
     def test_get_locale_with_systemd_nodbus(self):
         """
         Test getting current system locale with systemd but no dbus available.
@@ -247,6 +257,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         MagicMock(return_value={"system_locale": {"LANG": "de_DE.utf8"}}),
     )
     @patch("salt.utils.systemd.booted", MagicMock(return_value=True))
+    @skipIf(True, "FASTTEST skip")
     def test_get_locale_with_systemd_and_dbus(self):
         """
         Test getting current system locale with systemd and dbus available.
@@ -269,6 +280,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     )
     @patch("salt.modules.localemod.__salt__", {"cmd.run": MagicMock()})
     @patch("salt.utils.systemd.booted", MagicMock(return_value=True))
+    @skipIf(True, "FASTTEST skip")
     def test_get_locale_with_systemd_and_dbus_sle12(self):
         """
         Test getting current system locale with systemd and dbus available on SLE12.
@@ -288,6 +300,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.modules.localemod.dbus", None)
     @patch("salt.modules.localemod.__salt__", {"cmd.run": MagicMock()})
     @patch("salt.utils.systemd.booted", MagicMock(return_value=False))
+    @skipIf(True, "FASTTEST skip")
     def test_get_locale_with_no_systemd_redhat(self):
         """
         Test getting current system locale with systemd and dbus available on RedHat.
@@ -307,6 +320,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.modules.localemod.dbus", None)
     @patch("salt.modules.localemod.__salt__", {"cmd.run": MagicMock()})
     @patch("salt.utils.systemd.booted", MagicMock(return_value=False))
+    @skipIf(True, "FASTTEST skip")
     def test_get_locale_with_no_systemd_debian(self):
         """
         Test getting current system locale with systemd and dbus available on Debian.
@@ -326,6 +340,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.modules.localemod.dbus", None)
     @patch("salt.modules.localemod.__salt__", {"cmd.run": MagicMock()})
     @patch("salt.utils.systemd.booted", MagicMock(return_value=False))
+    @skipIf(True, "FASTTEST skip")
     def test_get_locale_with_no_systemd_gentoo(self):
         """
         Test getting current system locale with systemd and dbus available on Gentoo.
@@ -345,6 +360,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.modules.localemod.dbus", None)
     @patch("salt.modules.localemod.__salt__", {"cmd.run": MagicMock()})
     @patch("salt.utils.systemd.booted", MagicMock(return_value=False))
+    @skipIf(True, "FASTTEST skip")
     def test_get_locale_with_no_systemd_solaris(self):
         """
         Test getting current system locale with systemd and dbus available on Solaris.
@@ -364,6 +380,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.modules.localemod.dbus", None)
     @patch("salt.modules.localemod.__salt__", {"cmd.run": MagicMock()})
     @patch("salt.utils.systemd.booted", MagicMock(return_value=False))
+    @skipIf(True, "FASTTEST skip")
     def test_get_locale_with_no_systemd_unknown(self):
         """
         Test getting current system locale with systemd and dbus available on Gentoo.
@@ -381,6 +398,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.modules.localemod.dbus", None)
     @patch("salt.utils.systemd.booted", MagicMock(return_value=True))
     @patch("salt.modules.localemod._localectl_set", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_set_locale_with_systemd_nodbus(self):
         """
         Test setting current system locale with systemd but no dbus available.
@@ -398,6 +416,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.modules.localemod.dbus", True)
     @patch("salt.utils.systemd.booted", MagicMock(return_value=True))
     @patch("salt.modules.localemod._localectl_set", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_set_locale_with_systemd_and_dbus(self):
         """
         Test setting current system locale with systemd and dbus available.
@@ -415,6 +434,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.modules.localemod.__salt__", MagicMock())
     @patch("salt.modules.localemod._localectl_set", MagicMock())
     @patch("salt.utils.systemd.booted", MagicMock(return_value=True))
+    @skipIf(True, "FASTTEST skip")
     def test_set_locale_with_systemd_and_dbus_sle12(self):
         """
         Test setting current system locale with systemd and dbus available on SLE12.
@@ -442,6 +462,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.modules.localemod.__salt__", MagicMock())
     @patch("salt.modules.localemod._localectl_set", MagicMock())
     @patch("salt.utils.systemd.booted", MagicMock(return_value=False))
+    @skipIf(True, "FASTTEST skip")
     def test_set_locale_with_no_systemd_redhat(self):
         """
         Test setting current system locale with systemd and dbus available on RedHat.
@@ -468,6 +489,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.modules.localemod.__salt__", MagicMock())
     @patch("salt.modules.localemod._localectl_set", MagicMock())
     @patch("salt.utils.systemd.booted", MagicMock(return_value=False))
+    @skipIf(True, "FASTTEST skip")
     def test_set_locale_with_no_systemd_debian(self):
         """
         Test setting current system locale with systemd and dbus available on Debian.
@@ -495,6 +517,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.modules.localemod.__salt__", MagicMock())
     @patch("salt.modules.localemod._localectl_set", MagicMock())
     @patch("salt.utils.systemd.booted", MagicMock(return_value=False))
+    @skipIf(True, "FASTTEST skip")
     def test_set_locale_with_no_systemd_debian_no_update_locale(self):
         """
         Test setting current system locale with systemd and dbus available on Debian but update-locale is not installed.
@@ -517,6 +540,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.modules.localemod.__salt__", MagicMock())
     @patch("salt.modules.localemod._localectl_set", MagicMock())
     @patch("salt.utils.systemd.booted", MagicMock(return_value=False))
+    @skipIf(True, "FASTTEST skip")
     def test_set_locale_with_no_systemd_gentoo(self):
         """
         Test setting current system locale with systemd and dbus available on Gentoo.
@@ -545,6 +569,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     )
     @patch("salt.modules.localemod._localectl_set", MagicMock())
     @patch("salt.utils.systemd.booted", MagicMock(return_value=False))
+    @skipIf(True, "FASTTEST skip")
     def test_set_locale_with_no_systemd_solaris_with_list_avail(self):
         """
         Test setting current system locale with systemd and dbus available on Solaris.
@@ -576,6 +601,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     )
     @patch("salt.modules.localemod._localectl_set", MagicMock())
     @patch("salt.utils.systemd.booted", MagicMock(return_value=False))
+    @skipIf(True, "FASTTEST skip")
     def test_set_locale_with_no_systemd_solaris_without_list_avail(self):
         """
         Test setting current system locale with systemd and dbus is not available on Solaris.
@@ -601,6 +627,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     )
     @patch("salt.modules.localemod._localectl_set", MagicMock())
     @patch("salt.utils.systemd.booted", MagicMock(return_value=False))
+    @skipIf(True, "FASTTEST skip")
     def test_set_locale_with_no_systemd_unknown(self):
         """
         Test setting current system locale without systemd on unknown system.
@@ -618,6 +645,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         "salt.modules.localemod.__salt__",
         {"locale.list_avail": MagicMock(return_value=["A", "B"])},
     )
+    @skipIf(True, "FASTTEST skip")
     def test_avail(self):
         """
         Test for Check if a locale is available
@@ -631,6 +659,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         "salt.modules.localemod.__salt__",
         {"file.search": MagicMock(return_value=False)},
     )
+    @skipIf(True, "FASTTEST skip")
     def test_gen_locale_not_valid(self):
         """
         Tests the return of gen_locale when the provided locale is not found
@@ -649,6 +678,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.modules.localemod.__grains__", {"os_family": "Suse"})
     @patch("os.listdir", MagicMock(return_value=[]))
     @patch("salt.utils.locales.join_locale", MagicMock(return_value="en_GB.utf8"))
+    @skipIf(True, "FASTTEST skip")
     def test_gen_locale_suse_invalid(self):
         """
         Tests the location where gen_locale is searching for generated paths.
@@ -675,6 +705,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     @patch("os.path.exists", MagicMock(return_value=False))
     @patch("salt.utils.locales.join_locale", MagicMock(return_value="de_DE.utf8"))
     @patch("salt.utils.path.which", MagicMock(side_effect=[None, "/usr/bin/localedef"]))
+    @skipIf(True, "FASTTEST skip")
     def test_gen_locale_suse_valid(self):
         """
         Tests the location where gen_locale is calling localedef on Suse os-family.
@@ -702,6 +733,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
     @patch("os.path.exists", MagicMock(return_value=False))
     @patch("salt.utils.locales.join_locale", MagicMock(return_value="de_DE.utf8"))
     @patch("salt.utils.path.which", MagicMock(return_value=None))
+    @skipIf(True, "FASTTEST skip")
     def test_gen_locale_suse_localedef_error_handling(self):
         """
         Tests the location where gen_locale is handling error while calling not installed localedef on Suse os-family.
@@ -714,6 +746,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
             in six.text_type(exc_info.value)
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_gen_locale_debian(self):
         """
         Tests the return of successful gen_locale on Debian system
@@ -731,6 +764,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         ):
             assert localemod.gen_locale("en_US.UTF-8 UTF-8")
 
+    @skipIf(True, "FASTTEST skip")
     def test_gen_locale_debian_no_charmap(self):
         """
         Tests the return of successful gen_locale on Debian system without a charmap
@@ -748,6 +782,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         ):
             assert localemod.gen_locale("en_US.UTF-8")
 
+    @skipIf(True, "FASTTEST skip")
     def test_gen_locale_ubuntu(self):
         """
         Test the return of successful gen_locale on Ubuntu system
@@ -770,6 +805,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         ):
             assert localemod.gen_locale("en_US.UTF-8")
 
+    @skipIf(True, "FASTTEST skip")
     def test_gen_locale_gentoo(self):
         """
         Tests the return of successful gen_locale on Gentoo system
@@ -787,6 +823,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         ):
             assert localemod.gen_locale("en_US.UTF-8 UTF-8")
 
+    @skipIf(True, "FASTTEST skip")
     def test_gen_locale_gentoo_no_charmap(self):
         """
         Tests the return of successful gen_locale on Gentoo system without a charmap
@@ -814,6 +851,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         ):
             assert localemod.gen_locale("en_US.UTF-8")
 
+    @skipIf(True, "FASTTEST skip")
     def test_gen_locale(self):
         """
         Tests the return of successful gen_locale
@@ -829,6 +867,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         ):
             assert localemod.gen_locale("en_US.UTF-8")
 
+    @skipIf(True, "FASTTEST skip")
     def test_gen_locale_verbose(self):
         """
         Tests the return of successful gen_locale
@@ -845,6 +884,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
             assert localemod.gen_locale("en_US.UTF-8", verbose=True) == ret
 
     @patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/localctl"))
+    @skipIf(True, "FASTTEST skip")
     def test_parse_localectl(self):
         localectl_out = (
             "   System Locale: LANG=en_US.UTF-8\n"

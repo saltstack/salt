@@ -9,7 +9,7 @@ import salt.modules.win_powercfg as powercfg
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
@@ -31,6 +31,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
                 Current AC Power Setting Index: 0x00000708
                 Current DC Power Setting Index: 0x00000384"""
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_monitor_timeout(self):
         """
         Test to make sure we can set the monitor timeout value
@@ -54,6 +55,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_disk_timeout(self):
         """
         Test to make sure we can set the disk timeout value
@@ -77,6 +79,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_standby_timeout(self):
         """
         Test to make sure we can set the standby timeout value
@@ -100,6 +103,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_hibernate_timeout(self):
         """
         Test to make sure we can set the hibernate timeout value
@@ -123,6 +127,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_monitor_timeout(self):
         """
         Test to make sure we can get the monitor timeout value
@@ -146,6 +151,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertEqual({"ac": 30, "dc": 15}, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_disk_timeout(self):
         """
         Test to make sure we can get the disk timeout value
@@ -169,6 +175,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertEqual({"ac": 30, "dc": 15}, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_standby_timeout(self):
         """
         Test to make sure we can get the standby timeout value
@@ -192,6 +199,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertEqual({"ac": 30, "dc": 15}, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_hibernate_timeout(self):
         """
         Test to make sure we can get the hibernate timeout value
@@ -215,6 +223,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertEqual({"ac": 30, "dc": 15}, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_windows_7(self):
         """
         Test to make sure we can get the hibernate timeout value on windows 7
@@ -239,6 +248,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
 
                 self.assertEqual({"ac": 30, "dc": 15}, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_hibernate_timeout_scheme(self):
         """
         Test to make sure we can set the hibernate timeout value
@@ -253,6 +263,7 @@ class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_hibernate_timeout_scheme(self):
         """
         Test to make sure we can get the hibernate timeout value with a

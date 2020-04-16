@@ -17,13 +17,14 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {alternatives: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_display(self):
         with patch.dict(alternatives.__grains__, {"os_family": "RedHat"}):
             mock = MagicMock(return_value={"retcode": 0, "stdout": "salt"})
@@ -60,6 +61,7 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_current(self):
         mock = MagicMock(return_value="/etc/alternatives/salt")
         with patch("salt.utils.path.readlink", mock):
@@ -75,6 +77,7 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
                     "ERROR:alternative: hell does not exist", handler.messages
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_installed(self):
         mock = MagicMock(return_value="/etc/alternatives/salt")
         with patch("salt.utils.path.readlink", mock):
@@ -86,6 +89,7 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
                 alternatives.check_installed("help", "/etc/alternatives/salt")
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install(self):
         with patch.dict(alternatives.__grains__, {"os_family": "RedHat"}):
             mock = MagicMock(return_value={"retcode": 0, "stdout": "salt"})
@@ -146,6 +150,7 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove(self):
         with patch.dict(alternatives.__grains__, {"os_family": "RedHat"}):
             mock = MagicMock(return_value={"retcode": 0, "stdout": "salt"})

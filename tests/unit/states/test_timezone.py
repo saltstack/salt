@@ -14,7 +14,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class TimezoneTestCase(TestCase, LoaderModuleMockMixin):
@@ -25,6 +25,7 @@ class TimezoneTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {timezone: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_system(self):
         """
             Test to set the timezone for the system.

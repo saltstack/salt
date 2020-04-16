@@ -32,6 +32,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {win_service: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_enabled(self):
         """
             Test to return the enabled services
@@ -54,6 +55,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(win_service, "info", mock_info):
                 self.assertListEqual(win_service.get_enabled(), ["spongebob"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_disabled(self):
         """
             Test to return the disabled services
@@ -78,6 +80,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
                     win_service.get_disabled(), ["patrick", "squarepants"]
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_available(self):
         """
             Test to Returns ``True`` if the specified service
@@ -87,6 +90,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(win_service, "get_all", mock):
             self.assertTrue(win_service.available("a"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_missing(self):
         """
             Test to the inverse of service.available
@@ -95,6 +99,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(win_service, "get_all", mock):
             self.assertTrue(win_service.missing("d"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_all(self):
         """
             Test to return all installed services
@@ -111,6 +116,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
                 win_service.get_all(), ["patrick", "spongebob", "squarepants"]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_service_name(self):
         """
             Test to the Display Name is what is displayed
@@ -138,7 +144,6 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
             )
 
     @skipIf(not WINAPI, "win32serviceutil not available")
-    @skipIf(True, "SLOWTEST skip")
     def test_start(self):
         """
             Test to start the specified service
@@ -168,6 +173,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(win_service.start("spongebob"))
 
     @skipIf(not WINAPI, "pywintypes not available")
+    @skipIf(True, "FASTTEST skip")
     def test_start_already_running(self):
         """
         Test starting a service that is already running
@@ -183,7 +189,6 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(win_service.start("spongebob"))
 
     @skipIf(not WINAPI, "win32serviceutil not available")
-    @skipIf(True, "SLOWTEST skip")
     def test_stop(self):
         """
             Test to stop the specified service
@@ -211,6 +216,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(win_service.stop("spongebob"))
 
     @skipIf(not WINAPI, "pywintypes not available")
+    @skipIf(True, "FASTTEST skip")
     def test_stop_not_running(self):
         """
         Test stopping a service that is already stopped
@@ -224,6 +230,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(win_service.stop("spongebob"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_restart(self):
         """
             Test to restart the named service
@@ -237,6 +244,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(win_service, "start", mock_true):
                 self.assertTrue(win_service.restart("salt"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_createwin_saltrestart_task(self):
         """
             Test to create a task in Windows task
@@ -259,6 +267,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
                 user_name="System",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_execute_salt_restart_task(self):
         """
             Test to run the Windows Salt restart task
@@ -268,6 +277,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(win_service.execute_salt_restart_task())
 
     @skipIf(not WINAPI, "win32serviceutil not available")
+    @skipIf(True, "FASTTEST skip")
     def test_status(self):
         """
             Test to return the status for a service
@@ -285,6 +295,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(win_service.status("patrick"))
             self.assertFalse(win_service.status("squidward"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_getsid(self):
         """
             Test to return the sid for this windows service
@@ -296,6 +307,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(win_service.getsid("spongebob"), "S-1-5-80-1956725871...")
             self.assertEqual(win_service.getsid("plankton"), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_enable(self):
         """
             Test to enable the named service to start at boot
@@ -308,6 +320,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(win_service, "info", mock_info):
                 self.assertTrue(win_service.enable("spongebob"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_disable(self):
         """
             Test to disable the named service to start at boot
@@ -318,6 +331,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(win_service, "info", mock_info):
                 self.assertTrue(win_service.disable("spongebob"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_enabled(self):
         """
             Test to check to see if the named
@@ -328,6 +342,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(win_service.enabled("spongebob"))
             self.assertFalse(win_service.enabled("squarepants"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_enabled_with_space_in_name(self):
         """
             Test to check to see if the named
@@ -339,6 +354,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(win_service.enabled("spongebob test"))
             self.assertFalse(win_service.enabled("squarepants test"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_disabled(self):
         """
             Test to check to see if the named
@@ -349,6 +365,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(win_service.disabled("spongebob"))
             self.assertFalse(win_service.disabled("squarepants"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_cmd_quote(self):
         """
         Make sure the command gets quoted correctly

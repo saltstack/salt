@@ -12,7 +12,7 @@ import salt.states.xmpp as xmpp
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class XmppTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class XmppTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {xmpp: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_send_msg(self):
         """
             Test to send a message to an XMPP user

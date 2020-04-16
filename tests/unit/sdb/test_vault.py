@@ -12,7 +12,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class TestVaultSDB(LoaderModuleMockMixin, TestCase):
@@ -32,6 +32,7 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_set(self):
         """
         Test salt.sdb.vault.set function
@@ -56,6 +57,7 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
             ],
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_v2(self):
         """
         Test salt.sdb.vault.set function with kv v2 backend
@@ -85,6 +87,7 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
             ],
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_question_mark(self):
         """
         Test salt.sdb.vault.set_ while using the old
@@ -110,6 +113,7 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
             ],
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get(self):
         """
         Test salt.sdb.vault.get function
@@ -129,6 +133,7 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
             [call("GET", "v1/sdb://myvault/path/to/foo", None)],
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_v2(self):
         """
         Test salt.sdb.vault.get function with kv v2 backend
@@ -152,6 +157,7 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
             mock_vault.call_args_list, [call("GET", "v1/path/data/to/foo", None)]
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_question_mark(self):
         """
         Test salt.sdb.vault.get while using the old
@@ -171,6 +177,7 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
             [call("GET", "v1/sdb://myvault/path/to/foo", None)],
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_missing(self):
         """
         Test salt.sdb.vault.get function returns None
@@ -189,6 +196,7 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
             call("GET", "v1/sdb://myvault/path/to/foo", None)
         ]
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_missing_key(self):
         """
         Test salt.sdb.vault.get function returns None

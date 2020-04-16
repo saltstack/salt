@@ -11,13 +11,14 @@ import salt.modules.s3 as s3
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class S3TestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {s3: {"__utils__": {"s3.query": MagicMock(return_value="A")}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test__get_key_defaults(self):
         mock = MagicMock(return_value="")
         with patch.dict(s3.__salt__, {"config.option": mock}):
@@ -41,6 +42,7 @@ class S3TestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual("", path_style)
             self.assertEqual("", https_enable)
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete(self):
         """
         Test for delete a bucket, or delete an object from a bucket.
@@ -62,6 +64,7 @@ class S3TestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(s3.delete("bucket"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get(self):
         """
         Test for list the contents of a bucket, or return an object from a
@@ -84,6 +87,7 @@ class S3TestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(s3.get(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_head(self):
         """
         Test for return the metadata for a bucket, or an object in a bucket.
@@ -105,6 +109,7 @@ class S3TestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(s3.head("bucket"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_put(self):
         """
         Test for create a new bucket, or upload an object to a bucket.

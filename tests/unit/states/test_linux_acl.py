@@ -28,6 +28,7 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_present(self):
         """
         Test to ensure a Linux ACL is present
@@ -252,6 +253,7 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'absent' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
         Test to ensure a Linux ACL does not exist
@@ -283,6 +285,7 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_present(self):
         """
         Test to ensure a Linux ACL is present
@@ -490,6 +493,7 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_absent' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_absent(self):
         """
         Test to ensure a Linux ACL does not exist
@@ -525,6 +529,7 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({"comment": comt, "result": False})
             self.assertDictEqual(linux_acl.list_absent(name, acl_type, acl_names), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_recursive(self):
         """
         Test to ensure a Linux ACL does not exist

@@ -12,7 +12,7 @@ from salt.exceptions import SaltException
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 CONN_ARGS = {}
 CONN_ARGS["url"] = "http://test.url"
@@ -148,6 +148,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {zabbix: {"__salt__": {"cmd.which_bin": lambda _: "zabbix_server"}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_object_id_by_params(self):
         """
         Test get_object_id function with expected result from API call
@@ -160,6 +161,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
                 zabbix.get_object_id_by_params("hostgroup", "Databases"), "11"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_obj_id_by_params_fail(self):
         """
         Test get_object_id function with unexpected result from API call
@@ -172,6 +174,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
                 SaltException, zabbix.get_object_id_by_params, "hostgroup", "Databases"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_substitute_params(self):
         """
         Test proper parameter substitution for defined input
@@ -183,6 +186,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
                 zabbix.substitute_params(DEFINED_PARAMS), SUBSTITUTED_DEFINED_PARAMS
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_substitute_params_fail(self):
         """
         Test proper parameter substitution if there is needed parameter missing
@@ -193,6 +197,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
             {"groupid": {"query_object": "hostgroup"}},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_compare_params(self):
         """
         Test result comparison of two params structures
@@ -202,6 +207,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
             DIFF_PARAMS_RESULT,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_compare_params_rollback(self):
         """
         Test result comparison of two params structures with rollback return value option
@@ -213,6 +219,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
             DIFF_PARAMS_RESULT_WITH_ROLLBACK,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_compare_params_fail(self):
         """
         Test result comparison of two params structures where some data type mismatch exists
@@ -221,6 +228,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
             SaltException, zabbix.compare_params, {"dict": "val"}, {"dict": ["list"]}
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_apiiinfo_version(self):
         """
         Test apiinfo_version
@@ -232,6 +240,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(zabbix, "_login", return_value=CONN_ARGS):
                 self.assertEqual(zabbix.apiinfo_version(**CONN_ARGS), module_return)
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_create(self):
         """
         query_submitted = {"params": {"passwd": "password007", "alias": "james",
@@ -256,6 +265,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
                     module_return,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_delete(self):
         """
         query_submitted = {"params": [3], "jsonrpc": "2.0", "id": 0,
@@ -269,6 +279,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(zabbix, "_login", return_value=CONN_ARGS):
                 self.assertEqual(zabbix.user_delete(3, **CONN_ARGS), module_return)
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_exists(self):
         """
         query_submitted = {"params": {"filter": {"alias": "Admin"}, "output": "extend"},
@@ -308,6 +319,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
                     zabbix.user_exists("Admin", **CONN_ARGS), module_return
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_get(self):
         """
         query_submitted = {"params": {"filter": {"alias": "Admin"}, "output": "extend"},
@@ -366,6 +378,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
                     zabbix.user_get(userids="1", **CONN_ARGS), module_return
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_update(self):
         """
         query_submitted = {"params": {"userid": 3, "name": "James Brown"}, "jsonrpc": "2.0",
@@ -382,6 +395,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
                     module_return,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_getmedia(self):
         """
         query_submitted = {"params": {"userids": 3}, "jsonrpc": "2.0", "id": 0,
@@ -420,6 +434,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(zabbix, "_login", return_value=CONN_ARGS):
                 self.assertEqual(zabbix.user_getmedia("3", **CONN_ARGS), module_return)
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_addmedia(self):
         """
         query_submitted = {"params": {"medias": [{"active": 0, "mediatypeid": 1,
@@ -446,6 +461,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
                     module_return,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_deletemedia(self):
         """
         query_submitted = {"params": [1], "jsonrpc": "2.0", "id": 0, "auth": "9fb226c759a320de0de3b7a141404506",
@@ -461,6 +477,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
                     zabbix.user_deletemedia("1", **CONN_ARGS), module_return
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_list(self):
         """
         query_submitted = {"params": {"output": "extend"}, "jsonrpc": "2.0", "id": 0,
@@ -583,6 +600,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(zabbix, "_login", return_value=CONN_ARGS):
                 self.assertEqual(zabbix.user_list(**CONN_ARGS), module_return)
 
+    @skipIf(True, "FASTTEST skip")
     def test_usergroup_create(self):
         """
         query_submitted = {"params": {"name": "testgroup"}, "jsonrpc": "2.0", "id": 0,
@@ -598,6 +616,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
                     zabbix.usergroup_create("testgroup", **CONN_ARGS), module_return
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_usergroup_delete(self):
         """
         query_submitted = {"params": [13], "jsonrpc": "2.0", "id": 0,
@@ -613,6 +632,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
                     zabbix.usergroup_delete("13", **CONN_ARGS), module_return
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_usergroup_exists(self):
         """
         query_submitted = {"params": {"filter": {"name": "testgroup"}, "output": "extend",
@@ -643,6 +663,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
                         zabbix.usergroup_exists("testgroup", **CONN_ARGS), module_return
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_usergroup_get(self):
         """
         query_submitted = {"params": {"filter": {"name": "testgroup"}, "output": "extend",
@@ -682,6 +703,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
                         zabbix.usergroup_get("testgroup", **CONN_ARGS), module_return
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_usergroup_update(self):
         """
         query_submitted = {"params": {"usrgrpid": 13, "users_status": 1}, "jsonrpc": "2.0",
@@ -698,6 +720,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
                     module_return,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_usergroup_list(self):
         """
         query_submitted = {"params": {"output": "extend"}, "jsonrpc": "2.0", "id": 0,
@@ -802,6 +825,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(zabbix, "_login", return_value=CONN_ARGS):
                 self.assertEqual(zabbix.usergroup_list(**CONN_ARGS), module_return)
 
+    @skipIf(True, "FASTTEST skip")
     def test_host_inventory_get(self):
         """
         test host_inventory_get
@@ -1008,6 +1032,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
                     zabbix.host_inventory_get("12345", **CONN_ARGS), module_return
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_host_inventory_set(self):
         """
         query_submitted = {"params": {"hostid": 10258, "inventory_mode": "0", "inventory":

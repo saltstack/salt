@@ -11,7 +11,7 @@ import salt.states.postgres_extension as postgres_extension
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PostgresExtensionTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class PostgresExtensionTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_present(self):
         """
         Test to ensure that the named extension is present
@@ -49,6 +50,7 @@ class PostgresExtensionTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
         Test to ensure that the named extension is absent.

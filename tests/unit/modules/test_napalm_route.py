@@ -11,7 +11,7 @@ import tests.support.napalm as napalm_test_support
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 import salt.modules.napalm_route as napalm_route  # NOQA
 
@@ -37,6 +37,7 @@ class NapalmRouteModuleTestCase(TestCase, LoaderModuleMockMixin):
 
         return {napalm_route: module_globals}
 
+    @skipIf(True, "FASTTEST skip")
     def test_show(self):
         ret = napalm_route.show("1.2.3.4")
         assert ret["out"] == napalm_test_support.TEST_ROUTE

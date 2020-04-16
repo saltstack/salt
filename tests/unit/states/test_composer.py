@@ -12,7 +12,7 @@ from salt.exceptions import SaltException
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ComposerTestCase(TestCase, LoaderModuleMockMixin):
@@ -25,6 +25,7 @@ class ComposerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'installed' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed(self):
         """
         Test to verify that the correct versions of composer
@@ -65,6 +66,7 @@ class ComposerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'update' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_update(self):
         """
         Test to composer update the directory to ensure we have

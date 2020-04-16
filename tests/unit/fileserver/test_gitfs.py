@@ -145,6 +145,7 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
                 if exc.errno != errno.EEXIST:
                     raise
 
+    @skipIf(True, "FASTTEST skip")
     def test_per_saltenv_config(self):
         opts_override = textwrap.dedent(
             """
@@ -251,8 +252,6 @@ class GitFSTestFuncs(object):
     2. Do *NOT* move the gitfs.update() into the setUp.
     """
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
     def test_file_list(self):
         gitfs.update()
         ret = gitfs.file_list(LOAD)
@@ -262,16 +261,12 @@ class GitFSTestFuncs(object):
         # forward slash, hence it being explicitly used to join here.
         self.assertIn("/".join((UNICODE_DIRNAME, "foo.txt")), ret)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
     def test_dir_list(self):
         gitfs.update()
         ret = gitfs.dir_list(LOAD)
         self.assertIn("grail", ret)
         self.assertIn(UNICODE_DIRNAME, ret)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
     def test_envs(self):
         gitfs.update()
         ret = gitfs.envs(ignore_cache=True)
@@ -279,8 +274,6 @@ class GitFSTestFuncs(object):
         self.assertIn(UNICODE_ENVNAME, ret)
         self.assertIn(TAG_NAME, ret)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
     def test_ref_types_global(self):
         """
         Test the global gitfs_ref_types config option
@@ -294,8 +287,6 @@ class GitFSTestFuncs(object):
             self.assertIn(UNICODE_ENVNAME, ret)
             self.assertNotIn(TAG_NAME, ret)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
     def test_ref_types_per_remote(self):
         """
         Test the per_remote ref_types config option, using a different
@@ -311,8 +302,6 @@ class GitFSTestFuncs(object):
             self.assertNotIn(UNICODE_ENVNAME, ret)
             self.assertIn(TAG_NAME, ret)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
     def test_disable_saltenv_mapping_global_with_mapping_defined_globally(self):
         """
         Test the global gitfs_disable_saltenv_mapping config option, combined
@@ -336,8 +325,6 @@ class GitFSTestFuncs(object):
             # the envs list, but the branches should not.
             self.assertEqual(ret, ["base", "foo"])
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
     def test_saltenv_blacklist(self):
         """
         test saltenv_blacklist
@@ -356,8 +343,6 @@ class GitFSTestFuncs(object):
             assert UNICODE_ENVNAME in ret
             assert "mytag" in ret
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
     def test_saltenv_whitelist(self):
         """
         test saltenv_whitelist
@@ -376,8 +361,6 @@ class GitFSTestFuncs(object):
             assert UNICODE_ENVNAME not in ret
             assert "mytag" not in ret
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
     def test_env_deprecated_opts(self):
         """
         ensure deprecated options gitfs_env_whitelist
@@ -399,8 +382,6 @@ class GitFSTestFuncs(object):
             assert UNICODE_ENVNAME in ret
             assert "mytag" in ret
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
     def test_disable_saltenv_mapping_global_with_mapping_defined_per_remote(self):
         """
         Test the global gitfs_disable_saltenv_mapping config option, combined
@@ -428,8 +409,6 @@ class GitFSTestFuncs(object):
             # the envs list, but the branches should not.
             self.assertEqual(ret, ["bar", "base"])
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
     def test_disable_saltenv_mapping_per_remote_with_mapping_defined_globally(self):
         """
         Test the per-remote disable_saltenv_mapping config option, combined
@@ -458,8 +437,6 @@ class GitFSTestFuncs(object):
             # the envs list, but the branches should not.
             self.assertEqual(ret, ["base", "hello"])
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
     def test_disable_saltenv_mapping_per_remote_with_mapping_defined_per_remote(self):
         """
         Test the per-remote disable_saltenv_mapping config option, combined

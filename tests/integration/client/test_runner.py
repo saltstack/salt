@@ -8,7 +8,7 @@ import salt.runner
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
@@ -25,7 +25,6 @@ class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
         """
         self.runner = salt.runner.RunnerClient(self.get_config("client_config"))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_eauth(self):
         """
         Test executing master_call with lowdata
@@ -41,7 +40,6 @@ class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
 
         self.runner.master_call(**low)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_token(self):
         """
         Test executing master_call with lowdata
@@ -58,7 +56,6 @@ class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
             **{"client": "runner", "fun": "error.error", "token": token["token"]}
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_cmd_sync(self):
         low = {
             "client": "runner",
@@ -68,7 +65,6 @@ class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
 
         self.runner.cmd_sync(low)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_cmd_async(self):
         low = {
             "client": "runner",
@@ -78,7 +74,6 @@ class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
 
         self.runner.cmd_async(low)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_cmd_sync_w_arg(self):
         low = {
             "fun": "test.arg",
@@ -91,7 +86,6 @@ class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(ret["kwargs"]["foo"], "Foo!")
         self.assertEqual(ret["kwargs"]["bar"], "Bar!")
 
-    @skipIf(True, "SLOWTEST skip")
     def test_wildcard_auth(self):
         low = {
             "username": "the_s0und_of_t3ch",
@@ -103,14 +97,12 @@ class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
         }
         self.runner.cmd_sync(low)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_full_return_kwarg(self):
         low = {"fun": "test.arg"}
         low.update(self.eauth_creds)
         ret = self.runner.cmd_sync(low, full_return=True)
         self.assertIn("success", ret["data"])
 
-    @skipIf(True, "SLOWTEST skip")
     def test_cmd_sync_arg_kwarg_parsing(self):
         low = {
             "client": "runner",
@@ -135,7 +127,6 @@ class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
             },
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_invalid_kwargs_are_ignored(self):
         low = {
             "client": "runner",

@@ -14,7 +14,7 @@ from salt.ext import six
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class JsonTestCase(TestCase, LoaderModuleMockMixin):
@@ -29,35 +29,41 @@ class JsonTestCase(TestCase, LoaderModuleMockMixin):
         self.data = {"test": "two", "example": "one"}
         self.addCleanup(delattr, self, "data")
 
+    @skipIf(True, "FASTTEST skip")
     def test_default_output(self):
         ret = json_out.output(self.data)
         self.assertIn('"test": "two"', ret)
         self.assertIn('"example": "one"', ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_pretty_output(self):
         with patch.dict(json_out.__opts__, {"output_indent": "pretty"}):
             ret = json_out.output(self.data)
             self.assertIn('"test": "two"', ret)
             self.assertIn('"example": "one"', ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_indent_output(self):
         with patch.dict(json_out.__opts__, {"output_indent": 2}):
             ret = json_out.output(self.data)
             self.assertIn('"test": "two"', ret)
             self.assertIn('"example": "one"', ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_negative_zero_output(self):
         with patch.dict(json_out.__opts__, {"output_indent": 0}):
             ret = json_out.output(self.data)
             self.assertIn('"test": "two"', ret)
             self.assertIn('"example": "one"', ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_negative_int_output(self):
         with patch.dict(json_out.__opts__, {"output_indent": -1}):
             ret = json_out.output(self.data)
             self.assertIn('"test": "two"', ret)
             self.assertIn('"example": "one"', ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_unicode_output(self):
         with patch.dict(json_out.__opts__, {"output_indent": "pretty"}):
             decoded = {"test": "Д", "example": "one"}

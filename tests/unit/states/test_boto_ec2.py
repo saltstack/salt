@@ -11,7 +11,7 @@ import salt.states.boto_ec2 as boto_ec2
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class BotoEc2TestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class BotoEc2TestCase(TestCase, LoaderModuleMockMixin):
 
     # 'key_present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_key_present(self):
         """
         Test to ensure key pair is present.
@@ -55,6 +56,7 @@ class BotoEc2TestCase(TestCase, LoaderModuleMockMixin):
 
     # 'key_absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_key_absent(self):
         """
         Test to deletes a key pair

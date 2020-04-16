@@ -14,7 +14,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class FreezerTestCase(TestCase, LoaderModuleMockMixin):
@@ -26,6 +26,7 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
         return {freezer: {"__salt__": {}, "__opts__": {"cachedir": ""}}}
 
     @patch("os.path.isfile")
+    @skipIf(True, "FASTTEST skip")
     def test_status(self, isfile):
         """
         Test if a frozen state exist.
@@ -38,6 +39,7 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch("os.listdir")
     @patch("os.path.isdir")
+    @skipIf(True, "FASTTEST skip")
     def test_list(self, isdir, listdir):
         """
         Test the listing of all frozen states.
@@ -63,6 +65,7 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(freezer.list_(), ["freezer", "state"])
 
     @patch("os.makedirs")
+    @skipIf(True, "FASTTEST skip")
     def test_freeze_fails_cache(self, makedirs):
         """
         Test to freeze a current installation
@@ -73,6 +76,7 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch("salt.modules.freezer.status")
     @patch("os.makedirs")
+    @skipIf(True, "FASTTEST skip")
     def test_freeze_fails_already_frozen(self, makedirs, status):
         """
         Test to freeze a current installation
@@ -86,6 +90,7 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.modules.freezer.fopen")
     @patch("salt.modules.freezer.status")
     @patch("os.makedirs")
+    @skipIf(True, "FASTTEST skip")
     def test_freeze_success_two_freeze(self, makedirs, status, fopen, dump):
         """
         Test to freeze a current installation
@@ -110,6 +115,7 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.modules.freezer.fopen")
     @patch("salt.modules.freezer.status")
     @patch("os.makedirs")
+    @skipIf(True, "FASTTEST skip")
     def test_freeze_success_new_state(self, makedirs, status, fopen, dump):
         """
         Test to freeze a current installation
@@ -132,6 +138,7 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.modules.freezer.fopen")
     @patch("salt.modules.freezer.status")
     @patch("os.makedirs")
+    @skipIf(True, "FASTTEST skip")
     def test_freeze_success_force(self, makedirs, status, fopen, dump):
         """
         Test to freeze a current installation
@@ -151,6 +158,7 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
             dump.assert_called()
 
     @patch("salt.modules.freezer.status")
+    @skipIf(True, "FASTTEST skip")
     def test_restore_fails_missing_state(self, status):
         """
         Test to restore an old state
@@ -162,6 +170,7 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.utils.json.load")
     @patch("salt.modules.freezer.fopen")
     @patch("salt.modules.freezer.status")
+    @skipIf(True, "FASTTEST skip")
     def test_restore_add_missing_repo(self, status, fopen, load):
         """
         Test to restore an old state
@@ -192,6 +201,7 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.utils.json.load")
     @patch("salt.modules.freezer.fopen")
     @patch("salt.modules.freezer.status")
+    @skipIf(True, "FASTTEST skip")
     def test_restore_add_missing_package(self, status, fopen, load):
         """
         Test to restore an old state
@@ -222,6 +232,7 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.utils.json.load")
     @patch("salt.modules.freezer.fopen")
     @patch("salt.modules.freezer.status")
+    @skipIf(True, "FASTTEST skip")
     def test_restore_remove_extra_package(self, status, fopen, load):
         """
         Test to restore an old state
@@ -252,6 +263,7 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.utils.json.load")
     @patch("salt.modules.freezer.fopen")
     @patch("salt.modules.freezer.status")
+    @skipIf(True, "FASTTEST skip")
     def test_restore_remove_extra_repo(self, status, fopen, load):
         """
         Test to restore an old state
@@ -283,6 +295,7 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.utils.json.load")
     @patch("salt.modules.freezer.fopen")
     @patch("salt.modules.freezer.status")
+    @skipIf(True, "FASTTEST skip")
     def test_restore_clean_yml(self, status, fopen, load, remove):
         """
         Test to restore an old state

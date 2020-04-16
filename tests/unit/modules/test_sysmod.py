@@ -12,7 +12,7 @@ import salt.modules.sysmod as sysmod
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MockDocstringable(object):
@@ -161,6 +161,7 @@ class SysmodTestCase(TestCase, LoaderModuleMockMixin):
             except AttributeError:
                 continue
 
+    @skipIf(True, "FASTTEST skip")
     def test_doc(self):
         """
         Test if it returns the docstrings for all modules.
@@ -173,6 +174,7 @@ class SysmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'state_doc' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_state_doc(self):
         """
         Test if it returns the docstrings for all states.
@@ -186,6 +188,7 @@ class SysmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'runner_doc' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_runner_doc(self):
         """
         Test if it returns the docstrings for all runners.
@@ -198,6 +201,7 @@ class SysmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'returner_doc' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_returner_doc(self):
         """
         Test if it returns the docstrings for all returners.
@@ -210,6 +214,7 @@ class SysmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'renderer_doc' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_renderer_doc(self):
         """
         Test if it returns the docstrings for all renderers.
@@ -222,6 +227,7 @@ class SysmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_functions' function tests: 7
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_functions(self):
         """
         Test if it lists the functions for all modules.
@@ -260,6 +266,7 @@ class SysmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_modules' function tests: 4
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_modules(self):
         """
         Test if it lists the modules loaded on the minion
@@ -274,6 +281,7 @@ class SysmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'reload_modules' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_reload_modules(self):
         """
         Test if it tell the minion to reload the execution modules
@@ -282,6 +290,7 @@ class SysmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'argspec' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_argspec(self):
         """
         Test if it return the argument specification
@@ -291,6 +300,7 @@ class SysmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'state_argspec' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_state_argspec(self):
         """
         Test if it return the argument specification
@@ -300,6 +310,7 @@ class SysmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'returner_argspec' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_returner_argspec(self):
         """
         Test if it return the argument specification
@@ -309,6 +320,7 @@ class SysmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'runner_argspec' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_runner_argspec(self):
         """
         Test if it return the argument specification of functions in Salt runner
@@ -318,6 +330,7 @@ class SysmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_state_functions' function tests: 7
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_state_functions(self):
         """
         Test if it lists the functions for all state modules.
@@ -358,6 +371,7 @@ class SysmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_state_modules' function tests: 4
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_state_modules(self):
         """
         Test if it lists the modules loaded on the minion.
@@ -374,6 +388,7 @@ class SysmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_runners' function tests: 4
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_runners(self):
         """
         Test if it list the runners loaded on the minion.
@@ -388,6 +403,7 @@ class SysmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_runner_functions' function tests: 7
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_runner_functions(self):
         """
         Test if it lists the functions for all runner modules.
@@ -428,6 +444,7 @@ class SysmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_returners' function tests: 4
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_returners(self):
         """
         Test if it lists the returners loaded on the minion
@@ -442,6 +459,7 @@ class SysmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_returner_functions' function tests: 7
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_returner_functions(self):
         """
         Test if it lists the functions for all returner modules.
@@ -482,6 +500,7 @@ class SysmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_renderers' function tests: 4
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_renderers(self):
         """
         Test if it list the renderers loaded on the minion.

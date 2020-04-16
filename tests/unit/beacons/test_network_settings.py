@@ -41,6 +41,7 @@ class NetworkSettingsBeaconTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {network_settings: {"__context__": {}, "__salt__": {}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_non_list_config(self):
         config = {}
 
@@ -50,6 +51,7 @@ class NetworkSettingsBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret, (False, "Configuration for network_settings beacon must be a list.")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_empty_config(self):
         config = [{}]
 
@@ -57,6 +59,7 @@ class NetworkSettingsBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(ret, (True, "Valid beacon configuration"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_interface(self):
         config = [{"interfaces": {"enp14s0u1u2": {"promiscuity": None}}}]
         LAST_STATS = network_settings._copy_interfaces_info(
@@ -89,6 +92,7 @@ class NetworkSettingsBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ]
             self.assertEqual(ret, _expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_interface_no_change(self):
         config = [{"interfaces": {"enp14s0u1u2": {"promiscuity": None}}}]
         LAST_STATS = network_settings._copy_interfaces_info(
@@ -114,6 +118,7 @@ class NetworkSettingsBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret = network_settings.beacon(config)
             self.assertEqual(ret, [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_wildcard_interface(self):
         config = [{"interfaces": {"en*": {"promiscuity": None}}}]
         LAST_STATS = network_settings._copy_interfaces_info(

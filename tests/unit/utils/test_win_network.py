@@ -117,6 +117,7 @@ class Interface(object):
 
 @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
 class WinNetworkTestCase(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_get_interface_info_dot_net(self):
         expected = {
             "Ethernet": {
@@ -201,6 +202,7 @@ class WinNetworkTestCase(TestCase):
 
         self.assertDictEqual(expected, results)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_network_info(self):
         expected = {
             "Dell GigabitEthernet": {
@@ -247,6 +249,7 @@ class WinNetworkTestCase(TestCase):
 
         self.assertDictEqual(expected, results)
 
+    @skipIf(True, "FASTTEST skip")
     def test__get_base_properties_tap_adapter(self):
         """
         Adapter Type 53 is apparently an undocumented type corresponding to
@@ -276,6 +279,7 @@ class WinNetworkTestCase(TestCase):
         results = win_network._get_base_properties(i_face=i_face)
         self.assertDictEqual(expected, results)
 
+    @skipIf(True, "FASTTEST skip")
     def test__get_base_properties_undefined_adapter(self):
         """
         The Adapter Type 53 may be an arbitrary number assigned by OpenVPN.

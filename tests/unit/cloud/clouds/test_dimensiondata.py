@@ -87,6 +87,7 @@ class DimensionDataTestCase(ExtendedTestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_avail_images_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call avail_images
@@ -96,6 +97,7 @@ class DimensionDataTestCase(ExtendedTestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, dimensiondata.avail_images, call="action"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_avail_locations_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call avail_locations
@@ -105,6 +107,7 @@ class DimensionDataTestCase(ExtendedTestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, dimensiondata.avail_locations, call="action"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_avail_sizes_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call avail_sizes
@@ -112,6 +115,7 @@ class DimensionDataTestCase(ExtendedTestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, dimensiondata.avail_sizes, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_nodes_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_nodes
@@ -119,6 +123,7 @@ class DimensionDataTestCase(ExtendedTestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltCloudSystemExit, dimensiondata.list_nodes, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_destroy_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call destroy
@@ -131,6 +136,7 @@ class DimensionDataTestCase(ExtendedTestCase, LoaderModuleMockMixin):
     @skipIf(
         HAS_LIBCLOUD is False, "Install 'libcloud' to be able to run this unit test."
     )
+    @skipIf(True, "FASTTEST skip")
     def test_avail_sizes(self):
         """
         Tests that avail_sizes returns an empty dictionary.
@@ -139,6 +145,7 @@ class DimensionDataTestCase(ExtendedTestCase, LoaderModuleMockMixin):
         self.assertEqual(len(sizes), 1)
         self.assertEqual(sizes["default"]["name"], "default")
 
+    @skipIf(True, "FASTTEST skip")
     def test_import(self):
         """
         Test that the module picks up installed deps
@@ -149,6 +156,7 @@ class DimensionDataTestCase(ExtendedTestCase, LoaderModuleMockMixin):
             if LooseVersion(mock_version) >= LooseVersion("2.0.0"):
                 self.assertTrue(p.call_count >= 1)
 
+    @skipIf(True, "FASTTEST skip")
     def test_provider_matches(self):
         """
         Test that the first configured instance of a dimensiondata driver is matched
@@ -156,6 +164,7 @@ class DimensionDataTestCase(ExtendedTestCase, LoaderModuleMockMixin):
         p = dimensiondata.get_configured_provider()
         self.assertNotEqual(p, None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_query_node_data_filter_preferred_ip_addresses(self):
         """
         Test if query node data is filtering out unpreferred IP addresses.

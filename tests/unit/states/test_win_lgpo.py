@@ -34,6 +34,7 @@ class WinLGPOComparePoliciesTestCase(TestCase):
     Test cases for the win_lgpo state
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test__compare_policies_string(self):
         """
         ``_compare_policies`` should only return ``True`` when the string values
@@ -51,6 +52,7 @@ class WinLGPOComparePoliciesTestCase(TestCase):
         # None
         self.assertFalse(win_lgpo._compare_policies(compare_string, None))
 
+    @skipIf(True, "FASTTEST skip")
     def test__compare_policies_list(self):
         """
         ``_compare_policies`` should only return ``True`` when the lists are the
@@ -70,6 +72,7 @@ class WinLGPOComparePoliciesTestCase(TestCase):
         # None
         self.assertFalse(win_lgpo._compare_policies(compare_list, None))
 
+    @skipIf(True, "FASTTEST skip")
     def test__compare_policies_dict(self):
         """
         ``_compare_policies`` should only return ``True`` when the dicts are the
@@ -87,6 +90,7 @@ class WinLGPOComparePoliciesTestCase(TestCase):
         # None
         self.assertFalse(win_lgpo._compare_policies(compare_dict, None))
 
+    @skipIf(True, "FASTTEST skip")
     def test__compare_policies_integer(self):
         """
         ``_compare_policies`` should only return ``True`` when the integer
@@ -123,7 +127,7 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_lgpo.__opts__, {"test": False}):
             win_lgpo.set_(name="nc_state", computer_policy=computer_policy)
 
-    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_current_element_naming_style(self):
         computer_policy = {
             "Point and Print Restrictions": {
@@ -152,7 +156,7 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
             result["changes"]["new"]["Computer Configuration"], expected
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_old_element_naming_style(self):
         computer_policy = {
             "Point and Print Restrictions": {
@@ -192,7 +196,7 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(result["comment"], expected)
 
-    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_invalid_elements(self):
         computer_policy = {
             "Point and Print Restrictions": {
@@ -246,7 +250,7 @@ class WinLGPOPolicyElementNamesTestTrue(TestCase, LoaderModuleMockMixin):
                 win_lgpo.set_(name="nc_state", computer_policy=computer_policy)
             self.configured = True
 
-    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_current_element_naming_style(self):
         computer_policy = {
             "Point and Print Restrictions": {
@@ -268,7 +272,7 @@ class WinLGPOPolicyElementNamesTestTrue(TestCase, LoaderModuleMockMixin):
         self.assertTrue(result["result"])
         self.assertEqual(result["comment"], expected["comment"])
 
-    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_old_element_naming_style(self):
         computer_policy = {
             "Point and Print Restrictions": {
@@ -294,7 +298,7 @@ class WinLGPOPolicyElementNamesTestTrue(TestCase, LoaderModuleMockMixin):
         self.assertTrue(result["result"])
         self.assertEqual(result["comment"], expected["comment"])
 
-    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_invalid_elements(self):
         computer_policy = {
             "Point and Print Restrictions": {

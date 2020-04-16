@@ -56,6 +56,7 @@ class JSONTestCase(TestCase):
         )
     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_find_json(self):
         test_sample_json = """
                             {
@@ -133,6 +134,7 @@ class JSONTestCase(TestCase):
             ret = salt.utils.json.find_json(raw)
             self.assertEqual(ret, {"foo": "öäü"})
 
+    @skipIf(True, "FASTTEST skip")
     def test_dumps_loads(self):
         """
         Test dumping to and loading from a string
@@ -158,6 +160,7 @@ class JSONTestCase(TestCase):
         self.assertEqual(salt.utils.json.loads(ret), self.data)
 
     @with_tempfile()
+    @skipIf(True, "FASTTEST skip")
     def test_dump_load(self, json_out):
         """
         Test dumping to and loading from a file handle

@@ -94,6 +94,7 @@ class SSDPBaseTestCase(TestCase, Mocks):
 
     @patch("salt.utils.ssdp._json", None)
     @patch("salt.utils.ssdp.asyncio", None)
+    @skipIf(True, "FASTTEST skip")
     def test_base_avail(self):
         """
         Test SSDP base class availability method.
@@ -113,6 +114,7 @@ class SSDPBaseTestCase(TestCase, Mocks):
         ):
             assert base._is_available()
 
+    @skipIf(True, "FASTTEST skip")
     def test_base_protocol_settings(self):
         """
         Tests default constants data.
@@ -130,6 +132,7 @@ class SSDPBaseTestCase(TestCase, Mocks):
         for key, value in zip(v_keys, v_vals):
             assert base.DEFAULTS[key] == value
 
+    @skipIf(True, "FASTTEST skip")
     def test_base_self_ip(self):
         """
         Test getting self IP method.
@@ -155,6 +158,7 @@ class SSDPFactoryTestCase(TestCase, Mocks):
     Test socket protocol
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_attr_check(self):
         """
         Tests attributes are set to the base class
@@ -173,6 +177,7 @@ class SSDPFactoryTestCase(TestCase, Mocks):
         assert not factory.disable_hidden
         assert factory.my_ip == expected_ip
 
+    @skipIf(True, "FASTTEST skip")
     def test_transport_sendto_success(self):
         """
         Test transport send_to.
@@ -194,6 +199,7 @@ class SSDPFactoryTestCase(TestCase, Mocks):
             assert factory.log.debug.called
             assert factory.log.debug.mock_calls[0][1][0] == "Sent successfully"
 
+    @skipIf(True, "FASTTEST skip")
     def test_transport_sendto_retry(self):
         """
         Test transport send_to.
@@ -222,6 +228,7 @@ class SSDPFactoryTestCase(TestCase, Mocks):
                 assert factory.log.debug.called
                 assert "Permission error" in factory.log.debug.mock_calls[0][1][0]
 
+    @skipIf(True, "FASTTEST skip")
     def test_datagram_signature_bad(self):
         """
         Test datagram_received on bad signature
@@ -239,6 +246,7 @@ class SSDPFactoryTestCase(TestCase, Mocks):
             assert factory.log.debug.call_args[0][1] == addr[0]
             assert factory.log.debug.call_args[0][2] == addr[1]
 
+    @skipIf(True, "FASTTEST skip")
     def test_datagram_signature_wrong_timestamp_quiet(self):
         """
         Test datagram receives a wrong timestamp (no reply).
@@ -259,6 +267,7 @@ class SSDPFactoryTestCase(TestCase, Mocks):
             )
             assert not factory._sendto.called
 
+    @skipIf(True, "FASTTEST skip")
     def test_datagram_signature_wrong_timestamp_reply(self):
         """
         Test datagram receives a wrong timestamp.
@@ -285,6 +294,7 @@ class SSDPFactoryTestCase(TestCase, Mocks):
                 == factory._sendto.call_args[0][0]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_datagram_signature_outdated_timestamp_quiet(self):
         """
         Test if datagram processing reacts on outdated message (more than 20 seconds). Quiet mode.
@@ -314,6 +324,7 @@ class SSDPFactoryTestCase(TestCase, Mocks):
             assert not factory._sendto.called
             assert "Received outdated package" in factory.log.debug.call_args[0][0]
 
+    @skipIf(True, "FASTTEST skip")
     def test_datagram_signature_outdated_timestamp_reply(self):
         """
         Test if datagram processing reacts on outdated message (more than 20 seconds). Reply mode.
@@ -347,6 +358,7 @@ class SSDPFactoryTestCase(TestCase, Mocks):
             ] == "{}:E:Timestamp is too old".format(signature)
             assert "Received outdated package" in factory.log.debug.call_args[0][0]
 
+    @skipIf(True, "FASTTEST skip")
     def test_datagram_signature_correct_timestamp_reply(self):
         """
         Test if datagram processing sends out correct reply within 20 seconds.
@@ -387,6 +399,8 @@ class SSDPServerTestCase(TestCase, Mocks):
     Server-related test cases
     """
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_config_detached(self):
         """
         Test if configuration is not a reference.
@@ -403,6 +417,7 @@ class SSDPServerTestCase(TestCase, Mocks):
             assert srv._config["answer"]["master"] == new_ip
             assert config["answer"]["master"] == old_ip
 
+    @skipIf(True, "FASTTEST skip")
     def test_run(self):
         """
         Test server runner.
@@ -478,6 +493,7 @@ class SSDPClientTestCase(TestCase, Mocks):
         def read(self, *args, **kwargs):
             return self.pool.pop(0)
 
+    @skipIf(True, "FASTTEST skip")
     def test_config_passed(self):
         """
         Test if the configuration is passed.
@@ -493,6 +509,8 @@ class SSDPClientTestCase(TestCase, Mocks):
         assert clnt._config[ssdp.SSDPBase.PORT] == config[ssdp.SSDPBase.PORT]
         assert clnt._config[ssdp.SSDPBase.TIMEOUT] == config[ssdp.SSDPBase.TIMEOUT]
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_config_detached(self):
         """
         Test if the passed configuration is not a reference.
@@ -506,6 +524,7 @@ class SSDPClientTestCase(TestCase, Mocks):
         assert "foo" in clnt._config
         assert "foo" not in config
 
+    @skipIf(True, "FASTTEST skip")
     def test_query(self):
         """
         Test if client queries the broadcast
@@ -530,6 +549,7 @@ class SSDPClientTestCase(TestCase, Mocks):
             assert target[0] == "<broadcast>"
             assert target[1] == config[ssdp.SSDPBase.PORT]
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_masters_map(self):
         """
         Test getting map of the available masters on the network
@@ -547,6 +567,7 @@ class SSDPClientTestCase(TestCase, Mocks):
             assert response["10.10.10.10"] == ["some", "data"]
             assert response["20.20.20.20"] == ["data"]
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_masters_map_error_handling(self):
         """
         Test getting map handles timeout network exception
@@ -567,6 +588,7 @@ class SSDPClientTestCase(TestCase, Mocks):
             assert error_msg == six.text_type(clnt.log.error.call_args[0][1])
             assert not response
 
+    @skipIf(True, "FASTTEST skip")
     def test_discover_no_masters(self):
         """
         Test discover available master on the network (none found).
@@ -582,6 +604,7 @@ class SSDPClientTestCase(TestCase, Mocks):
         assert clnt.log.info.called
         assert clnt.log.info.call_args[0][0] == "No master has been discovered."
 
+    @skipIf(True, "FASTTEST skip")
     def test_discover_general_error(self):
         """
         Test discover available master on the network (erroneous found)
@@ -612,6 +635,7 @@ class SSDPClientTestCase(TestCase, Mocks):
             assert clnt.log.error.call_args[1] == {}
             assert clnt.log.error.call_args[0][2] == error
 
+    @skipIf(True, "FASTTEST skip")
     def test_discover_timestamp_error(self):
         """
         Test discover available master on the network (outdated timestamp)

@@ -11,7 +11,7 @@ import salt.modules.gnomedesktop as gnomedesktop
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class GnomedesktopTestCase(TestCase, LoaderModuleMockMixin):
@@ -22,12 +22,14 @@ class GnomedesktopTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {gnomedesktop: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_ping(self):
         """
         Test for A test to ensure the GNOME module is loaded
         """
         self.assertTrue(gnomedesktop.ping())
 
+    @skipIf(True, "FASTTEST skip")
     def test_getidledelay(self):
         """
         Test for Return the current idle delay setting in seconds
@@ -36,6 +38,7 @@ class GnomedesktopTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(gsettings_mock, "_get", return_value=True):
                 self.assertTrue(gnomedesktop.getIdleDelay())
 
+    @skipIf(True, "FASTTEST skip")
     def test_setidledelay(self):
         """
         Test for Set the current idle delay setting in seconds
@@ -44,6 +47,7 @@ class GnomedesktopTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(gsettings_mock, "_set", return_value=True):
                 self.assertTrue(gnomedesktop.setIdleDelay(5))
 
+    @skipIf(True, "FASTTEST skip")
     def test_getclockformat(self):
         """
         Test for Return the current clock format, either 12h or 24h format.
@@ -52,6 +56,7 @@ class GnomedesktopTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(gsettings_mock, "_get", return_value=True):
                 self.assertTrue(gnomedesktop.getClockFormat())
 
+    @skipIf(True, "FASTTEST skip")
     def test_setclockformat(self):
         """
         Test for Set the clock format, either 12h or 24h format..
@@ -62,6 +67,7 @@ class GnomedesktopTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertFalse(gnomedesktop.setClockFormat("a"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_getclockshowdate(self):
         """
         Test for Return the current setting, if the date is shown in the clock
@@ -70,6 +76,7 @@ class GnomedesktopTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(gsettings_mock, "_get", return_value=True):
                 self.assertTrue(gnomedesktop.getClockShowDate())
 
+    @skipIf(True, "FASTTEST skip")
     def test_setclockshowdate(self):
         """
         Test for Set whether the date is visible in the clock
@@ -80,6 +87,7 @@ class GnomedesktopTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(gsettings_mock, "_get", return_value=True):
                 self.assertTrue(gnomedesktop.setClockShowDate(True))
 
+    @skipIf(True, "FASTTEST skip")
     def test_getidleactivation(self):
         """
         Test for Get whether the idle activation is enabled
@@ -88,6 +96,7 @@ class GnomedesktopTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(gsettings_mock, "_get", return_value=True):
                 self.assertTrue(gnomedesktop.getIdleActivation())
 
+    @skipIf(True, "FASTTEST skip")
     def test_setidleactivation(self):
         """
         Test for Set whether the idle activation is enabled
@@ -98,6 +107,7 @@ class GnomedesktopTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(gsettings_mock, "_set", return_value=True):
                 self.assertTrue(gnomedesktop.setIdleActivation(True))
 
+    @skipIf(True, "FASTTEST skip")
     def test_get(self):
         """
         Test for Get key in a particular GNOME schema
@@ -106,6 +116,7 @@ class GnomedesktopTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(gsettings_mock, "_get", return_value=True):
                 self.assertTrue(gnomedesktop.get())
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_(self):
         """
         Test for Set key in a particular GNOME schema.

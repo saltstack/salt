@@ -34,6 +34,7 @@ class DiskModuleVirtualizationTest(ModuleCase):
         if os.path.isfile("/etc/mtab"):
             shutil.move("/etc/mtab", "/tmp/mtab")
 
+    @skipIf(True, "FASTTEST skip")
     def test_no_mtab(self):
         ret = self.run_function("disk.usage")
         self.assertDictEqual(ret, {})
@@ -48,7 +49,6 @@ class DiskModuleTest(ModuleCase):
     Validate the disk module
     """
 
-    @skipIf(True, "SLOWTEST skip")
     def test_usage(self):
         """
         disk.usage
@@ -76,6 +76,7 @@ class DiskModuleTest(ModuleCase):
                 self.assertTrue("capacity" in val)
 
     @skipIf(salt.utils.platform.is_windows(), "inode info not available on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_inodeusage(self):
         """
         disk.inodeusage

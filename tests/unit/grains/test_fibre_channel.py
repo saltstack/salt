@@ -10,7 +10,7 @@ import salt.grains.fibre_channel as fibre_channel
 from tests.support.mock import MagicMock, mock_open, patch
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class FibreChannelGrainsTestCase(TestCase):
@@ -18,6 +18,7 @@ class FibreChannelGrainsTestCase(TestCase):
     Test cases for iscsi grains
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_windows_fibre_channel_wwns_grains(self):
         wwns = [
             "20:00:00:25:b5:11:11:4c",
@@ -30,6 +31,7 @@ class FibreChannelGrainsTestCase(TestCase):
             ret = fibre_channel._windows_wwns()
         assert ret == wwns, ret
 
+    @skipIf(True, "FASTTEST skip")
     def test_linux_fibre_channel_wwns_grains(self):
 
         contents = ["0x500143802426baf4", "0x500143802426baf5"]

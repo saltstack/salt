@@ -15,7 +15,7 @@ import salt.modules.win_pki as win_pki
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 CERT_PATH = r"C:\certs\testdomain.local.cer"
 THUMBPRINT = "9988776655443322111000AAABBBCCCDDDEEEFFF"
@@ -88,6 +88,7 @@ class WinPkiTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {win_pki: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_stores(self):
         """
         Test - Get the certificate location contexts and their corresponding stores.
@@ -97,6 +98,7 @@ class WinPkiTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(win_pki.get_stores(), STORES)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_certs(self):
         """
         Test - Get the available certificates in the given store.
@@ -108,6 +110,7 @@ class WinPkiTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(win_pki.get_certs(), CERTS)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_cert_file(self):
         """
         Test - Get the details of the certificate file.
@@ -118,6 +121,7 @@ class WinPkiTestCase(TestCase, LoaderModuleMockMixin):
         ), patch("salt.modules.win_pki._cmd_run", MagicMock(return_value=JSON_CERTS)):
             self.assertEqual(win_pki.get_cert_file(**kwargs), CERTS[THUMBPRINT])
 
+    @skipIf(True, "FASTTEST skip")
     def test_import_cert(self):
         """
         Test - Import the certificate file into the given certificate store.
@@ -136,6 +140,7 @@ class WinPkiTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(win_pki.import_cert(**kwargs))
 
+    @skipIf(True, "FASTTEST skip")
     def test_export_cert(self):
         """
         Test - Export the certificate to a file from the given certificate store.
@@ -150,6 +155,7 @@ class WinPkiTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(win_pki.export_cert(**kwargs))
 
+    @skipIf(True, "FASTTEST skip")
     def test_test_cert(self):
         """
         Test - Check the certificate for validity.
@@ -161,6 +167,7 @@ class WinPkiTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(win_pki.test_cert(thumbprint=THUMBPRINT))
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_cert(self):
         """
         Test - Remove the certificate from the given certificate store.

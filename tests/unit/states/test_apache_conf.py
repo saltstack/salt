@@ -8,7 +8,7 @@ import salt.states.apache_conf as apache_conf
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ApacheConfTestCase(TestCase, LoaderModuleMockMixin):
@@ -21,6 +21,7 @@ class ApacheConfTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'enabled' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_enabled(self):
         """
         Test to ensure an Apache conf is enabled.
@@ -53,6 +54,7 @@ class ApacheConfTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'disabled' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_disabled(self):
         """
         Test to ensure an Apache conf is disabled.

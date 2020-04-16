@@ -9,13 +9,14 @@ import salt.states.win_license as win_license
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class LicenseTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {win_license: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_activate(self):
         """
             Test activating the given product key
@@ -51,6 +52,7 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
             activate_mock.assert_called_once_with()
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_not_activated(self):
         """
             Test activating the given product key when the key is installed but not activated
@@ -86,6 +88,7 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
             activate_mock.assert_called_once_with()
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_activated(self):
         """
             Test activating the given product key when its already activated
@@ -121,6 +124,7 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
             assert not activate_mock.called
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_install_fail(self):
         """
             Test activating the given product key when the install fails
@@ -156,6 +160,7 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
             assert not activate_mock.called
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_activate_fail(self):
         """
             Test activating the given product key when the install fails

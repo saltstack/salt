@@ -51,18 +51,21 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_key_exists_existing(self):
         """
         Tests the key_exists function using a well known registry key
         """
         self.assertTrue(reg.key_exists(hive="HKLM", key="SOFTWARE\\Microsoft"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_key_exists_non_existing(self):
         """
         Tests the key_exists function using a non existing registry key
         """
         self.assertFalse(reg.key_exists(hive="HKLM", key=FAKE_KEY))
 
+    @skipIf(True, "FASTTEST skip")
     def test_key_exists_invalid_hive(self):
         """
         Tests the key_exists function using an invalid hive
@@ -74,6 +77,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             key="SOFTWARE\\Microsoft",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_key_exists_unknown_key_error(self):
         """
         Tests the key_exists function with an unknown key error
@@ -86,6 +90,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
                 win32api.error, reg.key_exists, hive="HKLM", key="SOFTWARE\\Microsoft"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_value_exists_existing(self):
         """
         Tests the value_exists function using a well known registry key
@@ -98,6 +103,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             )
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_value_exists_non_existing(self):
         """
         Tests the value_exists function using a non existing registry key
@@ -110,6 +116,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             )
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_value_exists_invalid_hive(self):
         """
         Tests the value_exists function using an invalid hive
@@ -122,6 +129,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             vname="CommonFilesDir",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_value_exists_key_not_exist(self):
         """
         Tests the value_exists function when the key does not exist
@@ -138,6 +146,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
                 )
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_value_exists_unknown_key_error(self):
         """
         Tests the value_exists function with an unknown error when opening the
@@ -155,6 +164,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
                 vname="CommonFilesDir",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_value_exists_empty_default_value(self):
         """
         Tests the value_exists function when querying the default value
@@ -171,6 +181,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
                 )
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_value_exists_no_vname(self):
         """
         Tests the value_exists function when the vname does not exist
@@ -187,12 +198,14 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
                 )
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_keys_existing(self):
         """
         Test the list_keys function using a well known registry key
         """
         self.assertIn("Microsoft", reg.list_keys(hive="HKLM", key="SOFTWARE"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_keys_non_existing(self):
         """
         Test the list_keys function using a non existing registry key
@@ -200,6 +213,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         expected = (False, "Cannot find key: HKLM\\{0}".format(FAKE_KEY))
         self.assertEqual(reg.list_keys(hive="HKLM", key=FAKE_KEY), expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_keys_invalid_hive(self):
         """
         Test the list_keys function when passing an invalid hive
@@ -211,6 +225,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             key="SOFTWARE\\Microsoft",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_keys_unknown_key_error(self):
         """
         Tests the list_keys function with an unknown key error
@@ -223,6 +238,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
                 win32api.error, reg.list_keys, hive="HKLM", key="SOFTWARE\\Microsoft"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_values_existing(self):
         """
         Test the list_values function using a well known registry key
@@ -235,6 +251,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             keys.append(value["vname"])
         self.assertIn("ProgramFilesDir", keys)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_values_non_existing(self):
         """
         Test the list_values function using a non existing registry key
@@ -242,6 +259,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         expected = (False, "Cannot find key: HKLM\\{0}".format(FAKE_KEY))
         self.assertEqual(reg.list_values(hive="HKLM", key=FAKE_KEY), expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_values_invalid_hive(self):
         """
         Test the list_values function when passing an invalid hive
@@ -253,6 +271,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             key="SOFTWARE\\Microsoft",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_values_unknown_key_error(self):
         """
         Tests the list_values function with an unknown key error
@@ -265,6 +284,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
                 win32api.error, reg.list_values, hive="HKLM", key="SOFTWARE\\Microsoft"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_read_value_existing(self):
         """
         Test the read_value function using a well known registry value
@@ -276,6 +296,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(ret["vdata"], "%ProgramFiles%")
 
+    @skipIf(True, "FASTTEST skip")
     def test_read_value_default(self):
         """
         Test the read_value function reading the default value using a well
@@ -286,6 +307,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(ret["vdata"], "(value not set)")
 
+    @skipIf(True, "FASTTEST skip")
     def test_read_value_non_existing(self):
         """
         Test the read_value function using a non existing value pair
@@ -308,6 +330,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             expected,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_read_value_non_existing_key(self):
         """
         Test the read_value function using a non existing registry key
@@ -324,6 +347,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             reg.read_value(hive="HKLM", key=FAKE_KEY, vname="fake_name"), expected
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_read_value_invalid_hive(self):
         """
         Test the read_value function when passing an invalid hive
@@ -336,6 +360,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             vname="ProgramFilesPath",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_read_value_unknown_key_error(self):
         """
         Tests the read_value function with an unknown key error
@@ -352,6 +377,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
                 vname="ProgramFilesPath",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_read_value_unknown_value_error(self):
         """
         Tests the read_value function with an unknown value error
@@ -369,6 +395,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             )
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_read_value_multi_sz_empty_list(self):
         """
         An empty REG_MULTI_SZ value should return an empty list, not None
@@ -398,6 +425,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_set_value(self):
         """
         Test the set_value function
@@ -423,6 +451,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_set_value_default(self):
         """
         Test the set_value function on the default value
@@ -444,6 +473,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_set_value_unicode_key(self):
         """
         Test the set_value function on a unicode key
@@ -477,6 +507,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_set_value_unicode_value(self):
         """
         Test the set_value function on a unicode value
@@ -503,6 +534,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_set_value_reg_dword(self):
         """
         Test the set_value function on a REG_DWORD value
@@ -532,6 +564,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_set_value_reg_qword(self):
         """
         Test the set_value function on a REG_QWORD value
@@ -560,6 +593,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         finally:
             reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_value_invalid_hive(self):
         """
         Test the set_value function when passing an invalid hive
@@ -573,6 +607,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             vdata="fake_data",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_value_open_create_failure(self):
         """
         Test the set_value function when there is a problem opening/creating
@@ -588,6 +623,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
                 )
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_value_type_error(self):
         """
         Test the set_value function when the wrong type of data is passed
@@ -600,6 +636,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
                 )
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_value_system_error(self):
         """
         Test the set_value function when a SystemError occurs while setting the
@@ -613,6 +650,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
                 )
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_value_value_error(self):
         """
         Test the set_value function when a ValueError occurs while setting the
@@ -627,6 +665,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             )
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_delete_value(self):
         """
         Test the delete_value function
@@ -643,6 +682,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         finally:
             reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_value_non_existing(self):
         """
         Test the delete_value function on non existing value
@@ -655,6 +695,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
                 reg.delete_value(hive="HKLM", key=FAKE_KEY, vname="fake_name")
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_value_invalid_hive(self):
         """
         Test the delete_value function when passing an invalid hive
@@ -667,6 +708,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             vname="fake_name",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_value_unknown_error(self):
         """
         Test the delete_value function when there is a problem opening the key
@@ -684,6 +726,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             )
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_delete_value_unicode(self):
         """
         Test the delete_value function on a unicode value
@@ -701,6 +744,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_delete_value_unicode_vname(self):
         """
         Test the delete_value function on a unicode vname
@@ -718,6 +762,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_delete_value_unicode_key(self):
         """
         Test the delete_value function on a unicode key
@@ -741,6 +786,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         finally:
             reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_key_recursive_invalid_hive(self):
         """
         Test the delete_key_recursive function when passing an invalid hive
@@ -752,6 +798,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             key=FAKE_KEY,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_key_recursive_key_not_found(self):
         """
         Test the delete_key_recursive function when the passed key to delete is
@@ -760,6 +807,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertFalse(reg.key_exists(hive="HKLM", key=FAKE_KEY))
         self.assertFalse(reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY))
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_key_recursive_too_close(self):
         """
         Test the delete_key_recursive function when the passed key to delete is
@@ -770,6 +818,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertFalse(reg.delete_key_recursive(hive="HKLM", key="FAKE_KEY"))
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_delete_key_recursive(self):
         """
         Test the delete_key_recursive function
@@ -788,6 +837,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_delete_key_recursive_failed_to_open_key(self):
         """
         Test the delete_key_recursive function on failure to open the key
@@ -819,6 +869,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_delete_key_recursive_failed_to_delete(self):
         """
         Test the delete_key_recursive function on failure to delete a key
@@ -844,6 +895,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
     @destructiveTest
+    @skipIf(True, "FASTTEST skip")
     def test_delete_key_recursive_unicode(self):
         """
         Test the delete_key_recursive function on value within a unicode key

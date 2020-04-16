@@ -11,7 +11,7 @@ import tests.support.napalm as napalm_test_support
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 import salt.proxy.napalm as napalm_proxy  # NOQA
 
@@ -37,47 +37,57 @@ class NapalmProxyTestCase(TestCase, LoaderModuleMockMixin):
         module_globals["napalm_base"] = MagicMock()
         return {napalm_proxy: module_globals}
 
+    @skipIf(True, "FASTTEST skip")
     def test_init(self):
         ret = napalm_proxy.init(TEST_OPTS)
         assert ret is True
 
+    @skipIf(True, "FASTTEST skip")
     def test_alive(self):
         ret = napalm_proxy.alive(TEST_OPTS)
         assert ret is True
 
+    @skipIf(True, "FASTTEST skip")
     def test_ping(self):
         napalm_proxy.init(TEST_OPTS)
         ret = napalm_proxy.ping()
         assert ret is True
 
+    @skipIf(True, "FASTTEST skip")
     def test_initialized(self):
         napalm_proxy.init(TEST_OPTS)
         ret = napalm_proxy.initialized()
         assert ret is True
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_device(self):
         napalm_proxy.init(TEST_OPTS)
         ret = napalm_proxy.get_device()
         assert ret["UP"] is True
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_grains(self):
         napalm_proxy.init(TEST_OPTS)
         ret = napalm_proxy.get_grains()
         assert ret["out"] == napalm_test_support.TEST_FACTS
 
+    @skipIf(True, "FASTTEST skip")
     def test_grains_refresh(self):
         napalm_proxy.init(TEST_OPTS)
         ret = napalm_proxy.grains_refresh()
         assert ret["out"] == napalm_test_support.TEST_FACTS
 
+    @skipIf(True, "FASTTEST skip")
     def test_fns(self):
         ret = napalm_proxy.fns()
         assert "details" in ret.keys()
 
+    @skipIf(True, "FASTTEST skip")
     def test_shutdown(self):
         ret = napalm_proxy.shutdown(TEST_OPTS)
         assert ret is True
 
+    @skipIf(True, "FASTTEST skip")
     def test_call(self):
         napalm_proxy.init(TEST_OPTS)
         ret = napalm_proxy.call("get_arp_table")

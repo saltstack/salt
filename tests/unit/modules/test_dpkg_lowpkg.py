@@ -14,7 +14,7 @@ import salt.modules.dpkg_lowpkg as dpkg
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class DpkgTestCase(TestCase, LoaderModuleMockMixin):
@@ -27,6 +27,7 @@ class DpkgTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'unpurge' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_unpurge(self):
         """
         Test if it change package selection for each package
@@ -36,6 +37,7 @@ class DpkgTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(dpkg.__salt__, {"pkg.list_pkgs": mock, "cmd.run": mock}):
             self.assertDictEqual(dpkg.unpurge("curl"), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_unpurge_empty_package(self):
         """
         Test if it change package selection for each package
@@ -45,6 +47,7 @@ class DpkgTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_pkgs' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_pkgs(self):
         """
         Test if it lists the packages currently installed
@@ -61,6 +64,7 @@ class DpkgTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'file_list' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_file_list(self):
         """
         Test if it lists the files that belong to a package.
@@ -77,6 +81,7 @@ class DpkgTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'file_dict' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_file_dict(self):
         """
         Test if it lists the files that belong to a package, grouped by package
@@ -93,6 +98,7 @@ class DpkgTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(dpkg.__salt__, {"cmd.run_all": mock}):
             self.assertEqual(dpkg.file_dict("httpd"), "Error:  error")
 
+    @skipIf(True, "FASTTEST skip")
     def test_info(self):
         """
         Test package info

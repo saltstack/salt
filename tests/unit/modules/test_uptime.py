@@ -11,7 +11,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import Mock
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class RequestMock(Mock):
@@ -67,18 +67,22 @@ class UptimeTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_checks_list(self):
         ret = uptime.checks_list()
         self.assertListEqual(ret, ["http://example.org"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_checks_exists(self):
         self.assertTrue(uptime.check_exists("http://example.org") is True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_checks_create(self):
         self.assertRaises(CommandExecutionError, uptime.create, "http://example.org")
         self.assertEqual(4321, uptime.create("http://example.com"))
         self.assertEqual(("http://localhost:5000/api/checks",), REQUEST_MOCK.args)
 
+    @skipIf(True, "FASTTEST skip")
     def test_checks_delete(self):
         self.assertRaises(CommandExecutionError, uptime.delete, "http://example.com")
         self.assertTrue(uptime.delete("http://example.org") is True)

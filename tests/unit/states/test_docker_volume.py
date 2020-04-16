@@ -13,7 +13,7 @@ import salt.states.docker_volume as docker_state
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import Mock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class DockerVolumeTestCase(TestCase, LoaderModuleMockMixin):
@@ -27,6 +27,7 @@ class DockerVolumeTestCase(TestCase, LoaderModuleMockMixin):
             docker_state: {"__opts__": {"test": False}},
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_present(self):
         """
         Test docker_volume.present
@@ -129,6 +130,7 @@ class DockerVolumeTestCase(TestCase, LoaderModuleMockMixin):
             mod_orig_volumes[0]["Driver"] = "local"
             self.assertEqual(mod_orig_volumes, volumes)
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_with_another_driver(self):
         """
         Test docker_volume.present
@@ -158,6 +160,7 @@ class DockerVolumeTestCase(TestCase, LoaderModuleMockMixin):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_wo_existing_volumes(self):
         """
         Test docker_volume.present without existing volumes.
@@ -184,6 +187,7 @@ class DockerVolumeTestCase(TestCase, LoaderModuleMockMixin):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
         Test docker_volume.absent

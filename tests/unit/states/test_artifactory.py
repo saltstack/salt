@@ -11,7 +11,7 @@ import salt.states.artifactory as artifactory
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ArtifactoryTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class ArtifactoryTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'downloaded' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_downloaded(self):
         """
         Test to ensures that the artifact from artifactory exists at
@@ -58,6 +59,7 @@ class ArtifactoryTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'downloaded test=True' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_downloaded_test_true(self):
         """
         Test to ensures that the artifact from artifactory exists at

@@ -66,6 +66,7 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {systemd: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_systemctl_reload(self):
         """
             Test to Reloads systemctl
@@ -84,6 +85,7 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertTrue(systemd.systemctl_reload())
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_enabled(self):
         """
         Test to return a list of all enabled services
@@ -109,6 +111,7 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
                                 ["baz", "service1", "timer1.timer"],
                             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_disabled(self):
         """
         Test to return a list of all disabled services
@@ -140,6 +143,7 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
                                 ["bar", "service2", "timer2.timer"],
                             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_all(self):
         """
         Test to return a list of all available services
@@ -162,6 +166,7 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
                     systemd.get_all(), ["bar", "foo", "mysql", "mytimer.timer", "nginx"]
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_available(self):
         """
         Test to check that the given service is available
@@ -188,6 +193,7 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertTrue(systemd.available("sshd.service"))
                     self.assertFalse(systemd.available("bar.service"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_missing(self):
         """
             Test to the inverse of service.available.
@@ -214,6 +220,7 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertFalse(systemd.missing("sshd.service"))
                     self.assertTrue(systemd.missing("bar.service"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_show(self):
         """
         Test to show properties of one or more units/jobs or the manager
@@ -231,6 +238,7 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_execs(self):
         """
         Test to return a list of all files specified as ``ExecStart`` for all
@@ -242,7 +250,6 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(systemd, "show", mock):
                 self.assertDictEqual(systemd.execs(), {"a": "c", "b": "c"})
 
-    @skipIf(True, "SLOWTEST skip")
     def test_status(self):
         """
         Test to confirm that the function retries when the service is in the
@@ -626,42 +633,53 @@ class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
                                 redirect_stderr=True,
                             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_start(self):
         self._change_state("start", no_block=False)
         self._change_state("start", no_block=True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_stop(self):
         self._change_state("stop", no_block=False)
         self._change_state("stop", no_block=True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_restart(self):
         self._change_state("restart", no_block=False)
         self._change_state("restart", no_block=True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_reload(self):
         self._change_state("reload_", no_block=False)
         self._change_state("reload_", no_block=True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_force_reload(self):
         self._change_state("force_reload", no_block=False)
         self._change_state("force_reload", no_block=True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_enable(self):
         self._change_state("enable", no_block=False)
         self._change_state("enable", no_block=True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_disable(self):
         self._change_state("disable", no_block=False)
         self._change_state("disable", no_block=True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_mask(self):
         self._mask_unmask("mask", False)
 
+    @skipIf(True, "FASTTEST skip")
     def test_mask_runtime(self):
         self._mask_unmask("mask", True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_unmask(self):
         self._mask_unmask("unmask_", False)
 
+    @skipIf(True, "FASTTEST skip")
     def test_unmask_runtime(self):
         self._mask_unmask("unmask_", True)

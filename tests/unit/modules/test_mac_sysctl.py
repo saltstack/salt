@@ -13,7 +13,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import DEFAULT, MagicMock, mock_open, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class DarwinSysctlTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class DarwinSysctlTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {mac_sysctl: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_get(self):
         """
         Tests the return of get function
@@ -32,6 +33,7 @@ class DarwinSysctlTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(mac_sysctl.__salt__, {"cmd.run": mock_cmd}):
             self.assertEqual(mac_sysctl.get("kern.ostype"), "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_assign_cmd_failed(self):
         """
         Tests if the assignment was successful or not
@@ -48,6 +50,7 @@ class DarwinSysctlTestCase(TestCase, LoaderModuleMockMixin):
                 CommandExecutionError, mac_sysctl.assign, "net.inet.icmp.icmplim", 50
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_assign(self):
         """
         Tests the return of successful assign function
@@ -63,6 +66,7 @@ class DarwinSysctlTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(mac_sysctl.__salt__, {"cmd.run_all": mock_cmd}):
             self.assertEqual(mac_sysctl.assign("net.inet.icmp.icmplim", 50), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_persist_no_conf_failure(self):
         """
         Tests adding of config file failure
@@ -79,6 +83,7 @@ class DarwinSysctlTestCase(TestCase, LoaderModuleMockMixin):
                 config=None,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_persist_no_conf_success(self):
         """
         Tests successful add of config file when it did not already exist
@@ -99,6 +104,7 @@ class DarwinSysctlTestCase(TestCase, LoaderModuleMockMixin):
             assert num_writes == 1, num_writes
             assert writes[0] == "#\n# Kernel sysctl configuration\n#\n", writes[0]
 
+    @skipIf(True, "FASTTEST skip")
     def test_persist_success(self):
         """
         Tests successful write to existing sysctl file

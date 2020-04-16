@@ -11,7 +11,7 @@ import tests.support.napalm as napalm_test_support
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 import salt.modules.napalm_bgp as napalm_bgp  # NOQA
 
@@ -32,10 +32,12 @@ class NapalmBgpModuleTestCase(TestCase, LoaderModuleMockMixin):
 
         return {napalm_bgp: module_globals}
 
+    @skipIf(True, "FASTTEST skip")
     def test_config(self):
         ret = napalm_bgp.config("test_group")
         assert ret["out"] is napalm_test_support.TEST_BGP_CONFIG
 
+    @skipIf(True, "FASTTEST skip")
     def test_neighbors(self):
         ret = napalm_bgp.neighbors("test_address")
         assert ret["out"] is napalm_test_support.TEST_BGP_NEIGHBORS

@@ -11,7 +11,7 @@ import salt.states.xml as xml
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class XMLTestCase(TestCase, LoaderModuleMockMixin):
@@ -22,6 +22,7 @@ class XMLTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {xml: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_value_already_present(self):
         """
         Test for existing value_present
@@ -41,6 +42,7 @@ class XMLTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(xml.__salt__, {"xml.get_value": MagicMock(return_value=value)}):
             self.assertDictEqual(xml.value_present(name, xpath, value), state_return)
 
+    @skipIf(True, "FASTTEST skip")
     def test_value_update(self):
         """
         Test for updating value_present
@@ -69,6 +71,7 @@ class XMLTestCase(TestCase, LoaderModuleMockMixin):
                     xml.value_present(name, xpath, value), state_return
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_value_update_test(self):
         """
         Test for value_present test=True
@@ -94,6 +97,7 @@ class XMLTestCase(TestCase, LoaderModuleMockMixin):
                 xml.value_present(name, xpath, value, test=True), state_return
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_value_update_invalid_xpath(self):
         """
         Test for value_present invalid xpath

@@ -19,6 +19,7 @@ class UtilsTestCase(TestCase):
     Test case for utils/__init__.py
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_module_environment_empty(self):
         """
         Test for salt.utils.get_module_environment
@@ -30,6 +31,7 @@ class UtilsTestCase(TestCase):
         assert out == {}
         assert isinstance(out, dict)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_module_environment_opts(self):
         """
         Test for salt.utils.get_module_environment
@@ -45,6 +47,7 @@ class UtilsTestCase(TestCase):
         }
         assert salt.utils.environment.get_module_environment(_globals) == expectation
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_module_environment_pillars(self):
         """
         Test for salt.utils.get_module_environment
@@ -62,6 +65,7 @@ class UtilsTestCase(TestCase):
         }
         assert salt.utils.environment.get_module_environment(_globals) == expectation
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_module_environment_pillar_override(self):
         """
         Test for salt.utils.get_module_environment
@@ -84,6 +88,7 @@ class UtilsTestCase(TestCase):
         }
         assert salt.utils.environment.get_module_environment(_globals) == expectation
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_module_environment_sname_found(self):
         """
         Test for salt.utils.get_module_environment
@@ -106,6 +111,7 @@ class UtilsTestCase(TestCase):
         _globals["__file__"] = "/route/jumping/interference.py"
         assert salt.utils.environment.get_module_environment(_globals) == expectation
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_module_environment_mname_found(self):
         """
         Test for salt.utils.get_module_environment
@@ -129,6 +135,7 @@ class UtilsTestCase(TestCase):
         ] = expectation
         assert salt.utils.environment.get_module_environment(_globals) == expectation
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_module_environment_vname_found(self):
         """
         Test for salt.utils.get_module_environment
@@ -148,6 +155,7 @@ class UtilsTestCase(TestCase):
         }
         assert salt.utils.environment.get_module_environment(_globals) == expectation
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_module_environment_vname_overridden(self):
         """
         Test for salt.utils.get_module_environment

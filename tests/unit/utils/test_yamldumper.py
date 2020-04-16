@@ -11,7 +11,7 @@ import salt.ext.six
 import salt.utils.yamldumper
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class YamlDumperTestCase(TestCase):
@@ -19,6 +19,7 @@ class YamlDumperTestCase(TestCase):
     TestCase for salt.utils.yamldumper module
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_yaml_dump(self):
         """
         Test yaml.dump a dict
@@ -36,6 +37,7 @@ class YamlDumperTestCase(TestCase):
             data, default_flow_style=False
         ) == exp_yaml.replace("{", "").replace("}", "")
 
+    @skipIf(True, "FASTTEST skip")
     def test_yaml_safe_dump(self):
         """
         Test yaml.safe_dump a dict

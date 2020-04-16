@@ -7,7 +7,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import salt.utils.hashutils
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class HashutilsTestCase(TestCase):
@@ -39,6 +39,7 @@ class HashutilsTestCase(TestCase):
         "95089b883f6bd47a68fb92589276ae74829f4f1d4be49dd4e7c33dc9039dd387"
     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_base64_b64encode(self):
         """
         Ensure that this function converts the value passed to bytes before
@@ -53,6 +54,7 @@ class HashutilsTestCase(TestCase):
             self.bytes_b64encode_result,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_base64_b64decode(self):
         """
         Ensure that this function converts the value passed to a unicode type
@@ -66,6 +68,7 @@ class HashutilsTestCase(TestCase):
             self.bytes,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_base64_encodestring(self):
         """
         Ensure that this function converts the value passed to bytes before
@@ -81,6 +84,7 @@ class HashutilsTestCase(TestCase):
             self.bytes_encodestring_result,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_base64_decodestring(self):
         """
         Ensure that this function converts the value passed to a unicode type
@@ -95,6 +99,7 @@ class HashutilsTestCase(TestCase):
             self.bytes,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_md5_digest(self):
         """
         Ensure that this function converts the value passed to bytes before
@@ -104,6 +109,7 @@ class HashutilsTestCase(TestCase):
         self.assertEqual(salt.utils.hashutils.md5_digest(self.str), self.str_md5)
         self.assertEqual(salt.utils.hashutils.md5_digest(self.bytes), self.bytes_md5)
 
+    @skipIf(True, "FASTTEST skip")
     def test_sha256_digest(self):
         """
         Ensure that this function converts the value passed to bytes before
@@ -115,6 +121,7 @@ class HashutilsTestCase(TestCase):
             salt.utils.hashutils.sha256_digest(self.bytes), self.bytes_sha256
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_sha512_digest(self):
         """
         Ensure that this function converts the value passed to bytes before
@@ -126,6 +133,7 @@ class HashutilsTestCase(TestCase):
             salt.utils.hashutils.sha512_digest(self.bytes), self.bytes_sha512
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_hmac_signature(self):
         """
         Ensure that this function converts the value passed to bytes before
@@ -143,6 +151,7 @@ class HashutilsTestCase(TestCase):
             )
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_hmac_compute(self):
         """
         Ensure that this function converts the value passed to bytes before
@@ -158,6 +167,7 @@ class HashutilsTestCase(TestCase):
             self.bytes_hmac_compute,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_hash_exception(self):
         self.assertRaises(
             ValueError, salt.utils.hashutils.get_hash, "/tmp/foo/", form="INVALID"

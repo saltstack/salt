@@ -18,6 +18,7 @@ from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 ROOT_DIR = os.path.join(RUNTIME_VARS.TMP, "schedule-unit-tests")
@@ -47,6 +48,7 @@ class SchedulerHelpersTest(ModuleCase, SaltReturnAssertsMixin):
     def tearDown(self):
         self.schedule.reset()
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_schedule(self):
         """
         verify that the _get_schedule function works

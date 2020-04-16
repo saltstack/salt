@@ -81,6 +81,7 @@ class VMwareTestCase(ExtendedTestCase):
     Unit TestCase for salt.cloud.clouds.vmware module.
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_test_vcenter_connection_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call test_vcenter_connection
@@ -90,6 +91,7 @@ class VMwareTestCase(ExtendedTestCase):
             SaltCloudSystemExit, vmware.test_vcenter_connection, call="action"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_vcenter_version_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call get_vcenter_version
@@ -99,6 +101,7 @@ class VMwareTestCase(ExtendedTestCase):
             SaltCloudSystemExit, vmware.get_vcenter_version, call="action"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_avail_images_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call avail_images
@@ -106,6 +109,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.avail_images, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_avail_locations_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call avail_locations
@@ -113,6 +117,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.avail_locations, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_avail_sizes_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call avail_sizes
@@ -120,6 +125,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.avail_sizes, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_datacenters_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_datacenters
@@ -127,6 +133,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.list_datacenters, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_clusters_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_clusters
@@ -134,6 +141,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.list_clusters, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_datastore_clusters_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_datastore_clusters
@@ -143,6 +151,7 @@ class VMwareTestCase(ExtendedTestCase):
             SaltCloudSystemExit, vmware.list_datastore_clusters, call="action"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_datastores_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_datastores
@@ -150,6 +159,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.list_datastores, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_hosts_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_hosts
@@ -157,6 +167,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.list_hosts, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_resourcepools_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_resourcepools
@@ -164,6 +175,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.list_resourcepools, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_networks_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_networks
@@ -171,6 +183,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.list_networks, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_nodes_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_nodes
@@ -178,6 +191,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.list_nodes, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_nodes_min_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_nodes_min
@@ -185,6 +199,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.list_nodes_min, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_nodes_full_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_nodes_full
@@ -192,6 +207,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.list_nodes_full, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_nodes_select_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_nodes_full
@@ -199,6 +215,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.list_nodes_select, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_folders_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_folders
@@ -206,6 +223,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.list_folders, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_snapshots_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_snapshots
@@ -213,6 +231,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.list_snapshots, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_hosts_by_cluster_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_hosts_by_cluster
@@ -222,6 +241,7 @@ class VMwareTestCase(ExtendedTestCase):
             SaltCloudSystemExit, vmware.list_hosts_by_cluster, call="action"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_clusters_by_datacenter_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_clusters_by_datacenter
@@ -231,6 +251,7 @@ class VMwareTestCase(ExtendedTestCase):
             SaltCloudSystemExit, vmware.list_clusters_by_datacenter, call="action"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_hosts_by_datacenter_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_hosts_by_datacenter
@@ -240,6 +261,7 @@ class VMwareTestCase(ExtendedTestCase):
             SaltCloudSystemExit, vmware.list_hosts_by_datacenter, call="action"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_hbas_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_hbas
@@ -247,6 +269,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.list_hbas, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_dvs_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_dvs
@@ -254,6 +277,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.list_dvs, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_vapps_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_vapps
@@ -261,6 +285,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.list_vapps, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_templates_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_templates
@@ -268,6 +293,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.list_templates, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_datacenter_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call create_datacenter
@@ -275,6 +301,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.create_datacenter, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_cluster_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call create_cluster
@@ -282,6 +309,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.create_cluster, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_rescan_hba_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call rescan_hba
@@ -289,6 +317,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.rescan_hba, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_upgrade_tools_all_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call upgrade_tools_all
@@ -296,6 +325,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.upgrade_tools_all, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_enter_maintenance_mode_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call enter_maintenance_mode
@@ -305,6 +335,7 @@ class VMwareTestCase(ExtendedTestCase):
             SaltCloudSystemExit, vmware.enter_maintenance_mode, call="action"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_exit_maintenance_mode_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call exit_maintenance_mode
@@ -314,6 +345,7 @@ class VMwareTestCase(ExtendedTestCase):
             SaltCloudSystemExit, vmware.exit_maintenance_mode, call="action"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_folder_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call create_folder
@@ -321,6 +353,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.create_folder, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_host_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call add_host
@@ -328,6 +361,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.add_host, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_host_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call remove_host
@@ -335,6 +369,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.remove_host, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_connect_host_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call connect_host
@@ -342,6 +377,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.connect_host, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_disconnect_host_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call disconnect_host
@@ -349,6 +385,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.disconnect_host, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_reboot_host_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call reboot_host
@@ -356,6 +393,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.reboot_host, call="action")
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_datastore_cluster_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call create_datastore_cluster
@@ -365,6 +403,7 @@ class VMwareTestCase(ExtendedTestCase):
             SaltCloudSystemExit, vmware.create_datastore_cluster, call="action"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_instance_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call show_instance
@@ -374,6 +413,7 @@ class VMwareTestCase(ExtendedTestCase):
             SaltCloudSystemExit, vmware.show_instance, name=VM_NAME, call="function"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_start_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call start
@@ -383,6 +423,7 @@ class VMwareTestCase(ExtendedTestCase):
             SaltCloudSystemExit, vmware.start, name=VM_NAME, call="function"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_stop_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call stop
@@ -392,6 +433,7 @@ class VMwareTestCase(ExtendedTestCase):
             SaltCloudSystemExit, vmware.stop, name=VM_NAME, call="function"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_suspend_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call suspend
@@ -401,6 +443,7 @@ class VMwareTestCase(ExtendedTestCase):
             SaltCloudSystemExit, vmware.suspend, name=VM_NAME, call="function"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_reset_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call reset
@@ -410,6 +453,7 @@ class VMwareTestCase(ExtendedTestCase):
             SaltCloudSystemExit, vmware.reset, name=VM_NAME, call="function"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_terminate_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call terminate
@@ -419,6 +463,7 @@ class VMwareTestCase(ExtendedTestCase):
             SaltCloudSystemExit, vmware.terminate, name=VM_NAME, call="function"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_destroy_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call destroy
@@ -428,6 +473,7 @@ class VMwareTestCase(ExtendedTestCase):
             SaltCloudSystemExit, vmware.destroy, name=VM_NAME, call="function"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_upgrade_tools_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call upgrade_tools
@@ -437,6 +483,7 @@ class VMwareTestCase(ExtendedTestCase):
             SaltCloudSystemExit, vmware.upgrade_tools, name=VM_NAME, call="function"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_snapshot_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call create_snapshot
@@ -446,6 +493,7 @@ class VMwareTestCase(ExtendedTestCase):
             SaltCloudSystemExit, vmware.create_snapshot, name=VM_NAME, call="function"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_revert_to_snapshot_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call revert_to_snapshot
@@ -458,6 +506,7 @@ class VMwareTestCase(ExtendedTestCase):
             call="function",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_snapshot_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call remove_snapshot
@@ -471,6 +520,7 @@ class VMwareTestCase(ExtendedTestCase):
             call="function",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_snapshot_call_no_snapshot_name_in_kwargs(self):
         """
         Tests that a SaltCloudSystemExit is raised when name is not present in kwargs.
@@ -479,6 +529,7 @@ class VMwareTestCase(ExtendedTestCase):
             SaltCloudSystemExit, vmware.remove_snapshot, name=VM_NAME, call="action"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_all_snapshots_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call remove_all_snapshots
@@ -491,6 +542,7 @@ class VMwareTestCase(ExtendedTestCase):
             call="function",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_convert_to_template_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call convert_to_template
@@ -503,12 +555,14 @@ class VMwareTestCase(ExtendedTestCase):
             call="function",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_avail_sizes(self):
         """
         Tests that avail_sizes returns an empty dictionary.
         """
         self.assertEqual(vmware.avail_sizes(call="foo"), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_datacenter_no_kwargs(self):
         """
         Tests that a SaltCloudSystemExit is raised when no kwargs are provided to
@@ -518,6 +572,7 @@ class VMwareTestCase(ExtendedTestCase):
             SaltCloudSystemExit, vmware.create_datacenter, kwargs=None, call="function"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_datacenter_no_name_in_kwargs(self):
         """
         Tests that a SaltCloudSystemExit is raised when name is not present in
@@ -530,6 +585,7 @@ class VMwareTestCase(ExtendedTestCase):
             call="function",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_datacenter_name_too_short(self):
         """
         Tests that a SaltCloudSystemExit is raised when name is present in kwargs
@@ -542,6 +598,7 @@ class VMwareTestCase(ExtendedTestCase):
             call="function",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_datacenter_name_too_long(self):
         """
         Tests that a SaltCloudSystemExit is raised when name is present in kwargs
@@ -556,6 +613,7 @@ class VMwareTestCase(ExtendedTestCase):
             call="function",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_cluster_no_kwargs(self):
         """
         Tests that a SaltCloudSystemExit is raised when no kwargs are provided to
@@ -565,6 +623,7 @@ class VMwareTestCase(ExtendedTestCase):
             SaltCloudSystemExit, vmware.create_cluster, kwargs=None, call="function"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_cluster_no_name_no_datacenter_in_kwargs(self):
         """
         Tests that a SaltCloudSystemExit is raised when neither the name nor the
@@ -577,6 +636,7 @@ class VMwareTestCase(ExtendedTestCase):
             call="function",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_cluster_no_datacenter_in_kwargs(self):
         """
         Tests that a SaltCloudSystemExit is raised when the name is present but the
@@ -589,6 +649,7 @@ class VMwareTestCase(ExtendedTestCase):
             call="function",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_cluster_no_name_in_kwargs(self):
         """
         Tests that a SaltCloudSystemExit is raised when the datacenter is present
@@ -601,6 +662,7 @@ class VMwareTestCase(ExtendedTestCase):
             call="function",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_rescan_hba_no_kwargs(self):
         """
         Tests that a SaltCloudSystemExit is raised when no kwargs are provided to
@@ -610,6 +672,7 @@ class VMwareTestCase(ExtendedTestCase):
             SaltCloudSystemExit, vmware.rescan_hba, kwargs=None, call="function"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_rescan_hba_no_host_in_kwargs(self):
         """
         Tests that a SaltCloudSystemExit is raised when host is not present in
@@ -622,6 +685,7 @@ class VMwareTestCase(ExtendedTestCase):
             call="function",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_snapshot_no_kwargs(self):
         """
         Tests that a SaltCloudSystemExit is raised when no kwargs are provided to
@@ -635,6 +699,7 @@ class VMwareTestCase(ExtendedTestCase):
             call="action",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_snapshot_no_snapshot_name_in_kwargs(self):
         """
         Tests that a SaltCloudSystemExit is raised when snapshot_name is not present
@@ -648,6 +713,7 @@ class VMwareTestCase(ExtendedTestCase):
             call="action",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_host_no_esxi_host_user_in_config(self):
         """
         Tests that a SaltCloudSystemExit is raised when esxi_host_user is not
@@ -662,6 +728,7 @@ class VMwareTestCase(ExtendedTestCase):
                 call="function",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_host_no_esxi_host_password_in_config(self):
         """
         Tests that a SaltCloudSystemExit is raised when esxi_host_password is not
@@ -683,6 +750,7 @@ class VMwareTestCase(ExtendedTestCase):
                 call="function",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_no_clonefrom_just_image(self):
         """
         Tests that the profile is configured correctly when deploying using an image
@@ -705,6 +773,7 @@ class VMwareTestCase(ExtendedTestCase):
                 True,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_just_clonefrom(self):
         """
         Tests that the profile is configured correctly when deploying by cloning from a template
@@ -730,6 +799,7 @@ class VMwareTestCase(ExtendedTestCase):
                 True,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_new_ide_controller_helper(self):
         """
         Tests that creating a new controller, ensuring that it will generate a controller key
@@ -754,6 +824,7 @@ class VMwareTestCase(ExtendedTestCase):
             self.assertEqual(spec.device.deviceInfo.label, controller_label)
             self.assertEqual(spec.device.deviceInfo.summary, controller_label)
 
+    @skipIf(True, "FASTTEST skip")
     def test_manage_devices_just_cd(self):
         """
         Tests that when adding IDE/CD drives, controller keys will be in the apparent
@@ -790,6 +861,7 @@ class VMwareTestCase(ExtendedTestCase):
                 self.assertEqual(specs[0].device.key, first_key.return_value)
                 self.assertEqual(specs[2].device.controllerKey, first_key.return_value)
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_host_no_host_in_kwargs(self):
         """
         Tests that a SaltCloudSystemExit is raised when host is not present in
@@ -812,6 +884,7 @@ class VMwareTestCase(ExtendedTestCase):
                 call="function",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_host_both_cluster_and_datacenter_in_kwargs(self):
         """
         Tests that a SaltCloudSystemExit is raised when both cluster and datacenter
@@ -838,6 +911,7 @@ class VMwareTestCase(ExtendedTestCase):
                 call="function",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_host_neither_cluster_nor_datacenter_in_kwargs(self):
         """
         Tests that a SaltCloudSystemExit is raised when neither cluster nor
@@ -861,6 +935,7 @@ class VMwareTestCase(ExtendedTestCase):
             )
 
     @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
+    @skipIf(True, "FASTTEST skip")
     def test_add_host_cluster_not_exists(self):
         """
         Tests that a SaltCloudSystemExit is raised when the specified cluster present
@@ -891,6 +966,7 @@ class VMwareTestCase(ExtendedTestCase):
                     )
 
     @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
+    @skipIf(True, "FASTTEST skip")
     def test_add_host_datacenter_not_exists(self):
         """
         Tests that a SaltCloudSystemExit is raised when the specified datacenter
@@ -920,6 +996,7 @@ class VMwareTestCase(ExtendedTestCase):
                         call="function",
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_host_no_kwargs(self):
         """
         Tests that a SaltCloudSystemExit is raised when no kwargs are provided to
@@ -929,6 +1006,7 @@ class VMwareTestCase(ExtendedTestCase):
             SaltCloudSystemExit, vmware.remove_host, kwargs=None, call="function"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_host_no_host_in_kwargs(self):
         """
         Tests that a SaltCloudSystemExit is raised when host is not present in
@@ -942,6 +1020,7 @@ class VMwareTestCase(ExtendedTestCase):
         )
 
     @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
+    @skipIf(True, "FASTTEST skip")
     def test_remove_host_not_exists(self):
         """
         Tests that a SaltCloudSystemExit is raised when the specified host present
@@ -959,6 +1038,7 @@ class VMwareTestCase(ExtendedTestCase):
                     call="function",
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_connect_host_no_kwargs(self):
         """
         Tests that a SaltCloudSystemExit is raised when no kwargs are provided to
@@ -968,6 +1048,7 @@ class VMwareTestCase(ExtendedTestCase):
             SaltCloudSystemExit, vmware.connect_host, kwargs=None, call="function"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_connect_host_no_host_in_kwargs(self):
         """
         Tests that a SaltCloudSystemExit is raised when host is not present in
@@ -981,6 +1062,7 @@ class VMwareTestCase(ExtendedTestCase):
         )
 
     @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
+    @skipIf(True, "FASTTEST skip")
     def test_connect_host_not_exists(self):
         """
         Tests that a SaltCloudSystemExit is raised when the specified host present
@@ -998,6 +1080,7 @@ class VMwareTestCase(ExtendedTestCase):
                     call="function",
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_disconnect_host_no_kwargs(self):
         """
         Tests that a SaltCloudSystemExit is raised when no kwargs are provided to
@@ -1007,6 +1090,7 @@ class VMwareTestCase(ExtendedTestCase):
             SaltCloudSystemExit, vmware.disconnect_host, kwargs=None, call="function"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_disconnect_host_no_host_in_kwargs(self):
         """
         Tests that a SaltCloudSystemExit is raised when host is not present in
@@ -1020,6 +1104,7 @@ class VMwareTestCase(ExtendedTestCase):
         )
 
     @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
+    @skipIf(True, "FASTTEST skip")
     def test_disconnect_host_not_exists(self):
         """
         Tests that a SaltCloudSystemExit is raised when the specified host present
@@ -1037,6 +1122,7 @@ class VMwareTestCase(ExtendedTestCase):
                     call="function",
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_reboot_host_no_kwargs(self):
         """
         Tests that a SaltCloudSystemExit is raised when no kwargs are provided to
@@ -1046,6 +1132,7 @@ class VMwareTestCase(ExtendedTestCase):
             SaltCloudSystemExit, vmware.reboot_host, kwargs=None, call="function"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_reboot_host_no_host_in_kwargs(self):
         """
         Tests that a SaltCloudSystemExit is raised when host is not present in
@@ -1059,6 +1146,7 @@ class VMwareTestCase(ExtendedTestCase):
         )
 
     @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
+    @skipIf(True, "FASTTEST skip")
     def test_reboot_host_not_exists(self):
         """
         Tests that a SaltCloudSystemExit is raised when the specified host present
@@ -1076,6 +1164,7 @@ class VMwareTestCase(ExtendedTestCase):
                     call="function",
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_datastore_cluster_no_kwargs(self):
         """
         Tests that a SaltCloudSystemExit is raised when no kwargs are provided to
@@ -1088,6 +1177,7 @@ class VMwareTestCase(ExtendedTestCase):
             call="function",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_datastore_cluster_no_name_in_kwargs(self):
         """
         Tests that a SaltCloudSystemExit is raised when name is not present in
@@ -1100,6 +1190,7 @@ class VMwareTestCase(ExtendedTestCase):
             call="function",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_datastore_cluster_name_too_short(self):
         """
         Tests that a SaltCloudSystemExit is raised when name is present in kwargs
@@ -1112,6 +1203,7 @@ class VMwareTestCase(ExtendedTestCase):
             call="function",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_datastore_cluster_name_too_long(self):
         """
         Tests that a SaltCloudSystemExit is raised when name is present in kwargs
@@ -1126,6 +1218,7 @@ class VMwareTestCase(ExtendedTestCase):
             call="function",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test__add_new_hard_disk_helper(self):
         with patch("salt.cloud.clouds.vmware._get_si", MagicMock(return_value=None)):
             with patch(
@@ -1178,6 +1271,7 @@ class CloneFromSnapshotTest(TestCase):
     """
 
     @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
+    @skipIf(True, "FASTTEST skip")
     def test_quick_linked_clone(self):
         """
         Test that disk move type is
@@ -1186,6 +1280,7 @@ class CloneFromSnapshotTest(TestCase):
         self._test_clone_type(vmware.QUICK_LINKED_CLONE)
 
     @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
+    @skipIf(True, "FASTTEST skip")
     def test_current_state_linked_clone(self):
         """
         Test that disk move type is
@@ -1194,6 +1289,7 @@ class CloneFromSnapshotTest(TestCase):
         self._test_clone_type(vmware.CURRENT_STATE_LINKED_CLONE)
 
     @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
+    @skipIf(True, "FASTTEST skip")
     def test_copy_all_disks_full_clone(self):
         """
         Test that disk move type is
@@ -1202,6 +1298,7 @@ class CloneFromSnapshotTest(TestCase):
         self._test_clone_type(vmware.COPY_ALL_DISKS_FULL_CLONE)
 
     @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
+    @skipIf(True, "FASTTEST skip")
     def test_flatten_all_all_disks_full_clone(self):
         """
         Test that disk move type is
@@ -1210,6 +1307,7 @@ class CloneFromSnapshotTest(TestCase):
         self._test_clone_type(vmware.FLATTEN_DISK_FULL_CLONE)
 
     @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
+    @skipIf(True, "FASTTEST skip")
     def test_raises_error_for_invalid_disk_move_type(self):
         """
         Test that invalid disk move type

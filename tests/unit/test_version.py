@@ -21,10 +21,11 @@ from salt.version import SaltStackVersion, versions_report
 from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class VersionTestCase(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_version_parsing(self):
         strip_initial_non_numbers_regex = re.compile(r"(?:[^\d]+)?(?P<vs>.*)")
         expect = (
@@ -62,6 +63,7 @@ class VersionTestCase(TestCase):
                 version = strip_initial_non_numbers_regex.search(vstr).group("vs")
             self.assertEqual(saltstack_version.string, version)
 
+    @skipIf(True, "FASTTEST skip")
     def test_version_comparison(self):
         examples = (
             ("debian/0.11.1+ds-1-3-ga0afcbd", "0.11.1+ds-2"),
@@ -96,6 +98,7 @@ class VersionTestCase(TestCase):
             self.assertTrue(SaltStackVersion.parse(lower_version) < higher_version)
             assert SaltStackVersion.parse(lower_version) != higher_version
 
+    @skipIf(True, "FASTTEST skip")
     def test_unparsable_version(self):
         with self.assertRaises(ValueError):
             SaltStackVersion.from_name("Drunk")
@@ -103,6 +106,7 @@ class VersionTestCase(TestCase):
         with self.assertRaises(ValueError):
             SaltStackVersion.parse("Drunk")
 
+    @skipIf(True, "FASTTEST skip")
     def test_sha(self):
         """
         test matching sha's
@@ -120,6 +124,7 @@ class VersionTestCase(TestCase):
             else:
                 assert not ret
 
+    @skipIf(True, "FASTTEST skip")
     def test_version_report_lines(self):
         """
         Validate padding in versions report is correct
@@ -135,6 +140,7 @@ class VersionTestCase(TestCase):
         # Check that they are all the same size (only one element in the set)
         assert len(line_lengths) == 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_string_new_version(self):
         """
         Validate string property method
@@ -146,6 +152,7 @@ class VersionTestCase(TestCase):
         assert not ver.bugfix
         assert maj_ver == ver.string
 
+    @skipIf(True, "FASTTEST skip")
     def test_string_new_version_minor(self):
         """
         Validate string property method
@@ -159,6 +166,7 @@ class VersionTestCase(TestCase):
         assert not ver.bugfix
         assert ver.string == "{0}.{1}".format(maj_ver, min_ver)
 
+    @skipIf(True, "FASTTEST skip")
     def test_string_new_version_minor_as_string(self):
         """
         Validate string property method
@@ -180,6 +188,7 @@ class VersionTestCase(TestCase):
         assert not ver.bugfix
         assert ver.string == maj_ver
 
+    @skipIf(True, "FASTTEST skip")
     def test_string_old_version(self):
         """
         Validate string property method
@@ -192,6 +201,7 @@ class VersionTestCase(TestCase):
         assert ver.bugfix == 0
         assert ver.string == "{0}.{1}.0".format(maj_ver, min_ver)
 
+    @skipIf(True, "FASTTEST skip")
     def test_noc_info(self):
         """
         Test noc_info property method
@@ -211,6 +221,7 @@ class VersionTestCase(TestCase):
             assert saltstack_version.noc_info, noc_info
             assert len(saltstack_version.noc_info) == len(noc_info)
 
+    @skipIf(True, "FASTTEST skip")
     def test_full_info(self):
         """
         Test full_Info property method
@@ -230,6 +241,7 @@ class VersionTestCase(TestCase):
             assert saltstack_version.full_info, full_info
             assert len(saltstack_version.full_info) == len(full_info)
 
+    @skipIf(True, "FASTTEST skip")
     def test_full_info_all_versions(self):
         """
         Test full_info_all_versions property method
@@ -249,6 +261,7 @@ class VersionTestCase(TestCase):
             assert saltstack_version.full_info_all_versions, full_info
             assert len(saltstack_version.full_info_all_versions) == len(full_info)
 
+    @skipIf(True, "FASTTEST skip")
     def test_discover_version(self):
         """
         Test call to __discover_version
@@ -283,6 +296,7 @@ class VersionTestCase(TestCase):
                     ret = getattr(salt.version, "__discover_version")(salt_ver)
                 assert ret == exp
 
+    @skipIf(True, "FASTTEST skip")
     def test_info_new_version(self):
         """
         test info property method with new versioning scheme
@@ -295,6 +309,7 @@ class VersionTestCase(TestCase):
             else:
                 assert ver.info == (maj_ver,)
 
+    @skipIf(True, "FASTTEST skip")
     def test_info_old_version(self):
         """
         test info property method with old versioning scheme
@@ -307,6 +322,7 @@ class VersionTestCase(TestCase):
             else:
                 assert ver.info == (maj_ver, min_ver, bug_fix, 0)
 
+    @skipIf(True, "FASTTEST skip")
     def test_bugfix_string(self):
         """
         test when bugfix is an empty string
@@ -316,6 +332,7 @@ class VersionTestCase(TestCase):
         assert ret.minor == 1
         assert ret.bugfix is None
 
+    @skipIf(True, "FASTTEST skip")
     def test_version_repr(self):
         """
         Test SaltStackVersion repr for both date

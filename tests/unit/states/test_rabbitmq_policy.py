@@ -11,7 +11,7 @@ import salt.states.rabbitmq_policy as rabbitmq_policy
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class RabbitmqPolicyTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class RabbitmqPolicyTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_present(self):
         """
         Test to ensure the RabbitMQ policy exists.
@@ -65,6 +66,7 @@ class RabbitmqPolicyTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
         Test to ensure the named policy is absent.

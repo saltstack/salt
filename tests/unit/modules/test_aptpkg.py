@@ -161,6 +161,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {aptpkg: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_version(self):
         """
         Test - Returns a string representing the package version or an empty string if
@@ -171,6 +172,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(aptpkg.__salt__, {"pkg_resource.version": mock}):
             self.assertEqual(aptpkg.version(*["wget"]), version)
 
+    @skipIf(True, "FASTTEST skip")
     def test_upgrade_available(self):
         """
         Test - Check whether or not an upgrade is available for a given package.
@@ -178,6 +180,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         with patch("salt.modules.aptpkg.latest_version", MagicMock(return_value="")):
             self.assertFalse(aptpkg.upgrade_available("wget"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_repo_key(self):
         """
         Test - Add a repo key.
@@ -193,6 +196,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
                     )
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_repo_key_failed(self):
         """
         Test - Add a repo key using incomplete input data.
@@ -205,6 +209,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(aptpkg.__salt__, {"cmd.run_all": mock}):
                 self.assertRaises(SaltInvocationError, aptpkg.add_repo_key, **kwargs)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_repo_keys(self):
         """
         Test - List known repo key details.
@@ -213,6 +218,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(aptpkg.__salt__, {"cmd.run_all": mock}):
             self.assertEqual(aptpkg.get_repo_keys(), REPO_KEYS)
 
+    @skipIf(True, "FASTTEST skip")
     def test_file_dict(self):
         """
         Test - List the files that belong to a package, grouped by package.
@@ -221,6 +227,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(aptpkg.__salt__, {"lowpkg.file_dict": mock}):
             self.assertEqual(aptpkg.file_dict("wget"), LOWPKG_FILES)
 
+    @skipIf(True, "FASTTEST skip")
     def test_file_list(self):
         """
         Test - List the files that belong to a package.
@@ -233,6 +240,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(aptpkg.__salt__, {"lowpkg.file_list": mock}):
             self.assertEqual(aptpkg.file_list("wget"), files)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_selections(self):
         """
         Test - View package state from the dpkg database.
@@ -242,6 +250,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(aptpkg.__salt__, {"cmd.run_stdout": mock}):
             self.assertEqual(aptpkg.get_selections("wget"), selections)
 
+    @skipIf(True, "FASTTEST skip")
     def test_info_installed(self):
         """
         Test - Return the information of the named package(s) installed on the system.
@@ -259,6 +268,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(aptpkg.info_installed("wget"), installed)
             self.assertEqual(len(aptpkg.info_installed()), 1)
 
+    @skipIf(True, "FASTTEST skip")
     def test_owner(self):
         """
         Test - Return the name of the package that owns the file.
@@ -268,6 +278,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(aptpkg.__salt__, {"cmd.run_stdout": mock}):
             self.assertEqual(aptpkg.owner(*paths), "wget")
 
+    @skipIf(True, "FASTTEST skip")
     def test_refresh_db(self):
         """
         Test - Updates the APT database to latest packages based upon repositories.
@@ -287,6 +298,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             ):
                 self.assertEqual(aptpkg.refresh_db(), refresh_db)
 
+    @skipIf(True, "FASTTEST skip")
     def test_refresh_db_failed(self):
         """
         Test - Update the APT database using unreachable repositories.
@@ -300,6 +312,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             ):
                 self.assertRaises(CommandExecutionError, aptpkg.refresh_db, **kwargs)
 
+    @skipIf(True, "FASTTEST skip")
     def test_autoremove(self):
         """
         Test - Remove packages not required by another package.
@@ -319,6 +332,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
                 assert aptpkg.autoremove(list_only=True) == []
                 assert aptpkg.autoremove(list_only=True, purge=True) == []
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove(self):
         """
         Test - Remove packages.
@@ -326,6 +340,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         with patch("salt.modules.aptpkg._uninstall", MagicMock(return_value=UNINSTALL)):
             self.assertEqual(aptpkg.remove(name="tmux"), UNINSTALL)
 
+    @skipIf(True, "FASTTEST skip")
     def test_purge(self):
         """
         Test - Remove packages along with all configuration files.
@@ -333,6 +348,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         with patch("salt.modules.aptpkg._uninstall", MagicMock(return_value=UNINSTALL)):
             self.assertEqual(aptpkg.purge(name="tmux"), UNINSTALL)
 
+    @skipIf(True, "FASTTEST skip")
     def test_upgrade(self):
         """
         Test - Upgrades all packages.
@@ -351,6 +367,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.multiple(aptpkg, **patch_kwargs):
                     self.assertEqual(aptpkg.upgrade(), dict())
 
+    @skipIf(True, "FASTTEST skip")
     def test_upgrade_downloadonly(self):
         """
         Tests the download-only options for upgrade.
@@ -394,6 +411,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
                     # --download-only should be in the args list and we should have at least on True in the list.
                     self.assertTrue(any(args_matching))
 
+    @skipIf(True, "FASTTEST skip")
     def test_show(self):
         """
         Test that the pkg.show function properly parses apt-cache show output.
@@ -525,6 +543,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             self.assert_called_once(refresh_mock)
             refresh_mock.reset_mock()
 
+    @skipIf(True, "FASTTEST skip")
     def test_mod_repo_enabled(self):
         """
         Checks if a repo is enabled or disabled depending on the passed kwargs.
@@ -567,6 +586,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         "fnmatch.filter",
         MagicMock(return_value=["/var/cache/apt/archive/test_package.rpm"]),
     )
+    @skipIf(True, "FASTTEST skip")
     def test_list_downloaded(self):
         """
         Test downloaded packages listing.
@@ -605,6 +625,7 @@ class AptUtilsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {aptpkg: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_call_apt_default(self):
         """
         Call default apt.
@@ -623,6 +644,7 @@ class AptUtilsTestCase(TestCase, LoaderModuleMockMixin):
             )
 
     @patch("salt.utils.systemd.has_scope", MagicMock(return_value=True))
+    @skipIf(True, "FASTTEST skip")
     def test_call_apt_in_scope(self):
         """
         Call apt within the scope.
@@ -648,6 +670,7 @@ class AptUtilsTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_call_apt_with_kwargs(self):
         """
         Call apt with the optinal keyword arguments.

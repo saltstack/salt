@@ -9,7 +9,7 @@ import salt.renderers.nacl as nacl
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class NaclTestCase(TestCase, LoaderModuleMockMixin):
@@ -20,6 +20,7 @@ class NaclTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {nacl: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test__decrypt_object(self):
         """
         test _decrypt_object
@@ -40,6 +41,7 @@ class NaclTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(nacl._decrypt_object(crypted_list), secret_list)
             self.assertEqual(nacl._decrypt_object(None), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_render(self):
         """
         test render

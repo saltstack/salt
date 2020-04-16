@@ -9,7 +9,7 @@ import salt.modules.win_psget as win_psget
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 BOOTSTRAP_PS_STR = """<?xml version="1.0" encoding="utf-8"?>
 <Objects>
@@ -55,6 +55,7 @@ class WinPsgetCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {win_psget: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_bootstrap(self):
         mock_read_ok = MagicMock(
             return_value={
@@ -68,6 +69,7 @@ class WinPsgetCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_psget.__salt__, {"cmd.run_all": mock_read_ok}):
             self.assertTrue("NuGet" in win_psget.bootstrap())
 
+    @skipIf(True, "FASTTEST skip")
     def test_avail_modules(self):
         mock_read_ok = MagicMock(
             return_value={

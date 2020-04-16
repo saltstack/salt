@@ -147,6 +147,7 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
         sys.version_info > (3, 6),
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
+    @skipIf(True, "FASTTEST skip")
     def test_register_instances_valid_id_result_true(self):
         """
         tests that given a valid instance id and valid ELB that
@@ -169,6 +170,7 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
         sys.version_info > (3, 6),
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
+    @skipIf(True, "FASTTEST skip")
     def test_register_instances_valid_id_string(self):
         """
         tests that given a string containing a instance id and valid ELB that
@@ -197,6 +199,7 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
         sys.version_info > (3, 6),
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
+    @skipIf(True, "FASTTEST skip")
     def test_deregister_instances_valid_id_result_true(self):
         """
         tests that given an valid id the boto_elb deregister_instances method
@@ -222,6 +225,7 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
         sys.version_info > (3, 6),
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
+    @skipIf(True, "FASTTEST skip")
     def test_deregister_instances_valid_id_string(self):
         """
         tests that given an valid id the boto_elb deregister_instances method
@@ -254,6 +258,7 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
         sys.version_info > (3, 6),
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
+    @skipIf(True, "FASTTEST skip")
     def test_deregister_instances_valid_id_list(self):
         """
         tests that given an valid ids in the form of a list that the boto_elb

@@ -14,7 +14,7 @@ import salt.states.network as network
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -59,6 +59,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {network: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed(self):
         """
             Test to ensure that the named interface is configured properly
@@ -127,6 +128,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
                                         network.managed("salt", "stack", False), ret
                                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_routes(self):
         """
             Test to manage network interface static routes.
@@ -187,6 +189,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
                     )
                     self.assertDictEqual(network.routes("salt"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_system(self):
         """
             Test to ensure that global network settings

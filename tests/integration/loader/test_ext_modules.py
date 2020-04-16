@@ -19,14 +19,12 @@ from tests.support.case import ModuleCase
 
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 
 class LoaderOverridesTest(ModuleCase):
     def setUp(self):
         self.run_function("saltutil.sync_modules")
 
-    @skipIf(True, "SLOWTEST skip")
     def test_overridden_internal(self):
         # To avoid a race condition on Windows, we need to make sure the
         # `override_test.py` file is present in the _modules directory before

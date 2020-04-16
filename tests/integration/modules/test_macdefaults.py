@@ -9,6 +9,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.unit import skipIf
 
 DEFAULT_DOMAIN = "com.apple.AppleMultitouchMouse"
 DEFAULT_KEY = "MouseHorizontalScroll"
@@ -31,6 +32,7 @@ class MacDefaultsModuleTest(ModuleCase):
         if os_grain["kernel"] not in "Darwin":
             self.skipTest("Test not applicable to '{kernel}' kernel".format(**os_grain))
 
+    @skipIf(True, "FASTTEST skip")
     def test_macdefaults_write_read(self):
         """
         Tests that writes and reads macdefaults

@@ -26,6 +26,7 @@ class PamTestCase(TestCase):
 
     # 'read_file' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_read_file(self):
         """
         Test if the parsing function works

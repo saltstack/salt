@@ -11,7 +11,7 @@ from salt.ext import six
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import Mock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 LSCLUSTER = """\
 8.4 main 5432 online postgres /srv/8.4/main \
@@ -41,6 +41,7 @@ class PostgresClusterTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_cluster_create(self):
         deb_postgres.cluster_create(
             "9.3",
@@ -88,6 +89,7 @@ class PostgresLsClusterTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_pg_lsclusters(self):
         stdout = LSCLUSTER
         self.maxDiff = None
@@ -111,6 +113,7 @@ class PostgresLsClusterTestCase(TestCase, LoaderModuleMockMixin):
             deb_postgres._parse_pg_lscluster(stdout),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_cluster_list(self):
         return_list = deb_postgres.cluster_list()
         self.assertEqual(
@@ -124,6 +127,7 @@ class PostgresLsClusterTestCase(TestCase, LoaderModuleMockMixin):
         return_dict = deb_postgres.cluster_list(verbose=True)
         self.assertIsInstance(return_dict, dict)
 
+    @skipIf(True, "FASTTEST skip")
     def test_cluster_exists(self):
         self.assertTrue(deb_postgres.cluster_exists("8.4") is True)
         self.assertTrue(deb_postgres.cluster_exists("8.4", "main") is True)
@@ -150,6 +154,7 @@ class PostgresDeleteClusterTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_cluster_delete(self):
         deb_postgres.cluster_remove("9.3", "main")
         self.assertEqual(

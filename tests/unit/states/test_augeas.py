@@ -14,7 +14,7 @@ import salt.states.augeas as augeas
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class AugeasTestCase(TestCase, LoaderModuleMockMixin):
@@ -56,6 +56,7 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
         del self.fp_changes
         del self.mock_method_map
 
+    @skipIf(True, "FASTTEST skip")
     def test_change_non_list_changes(self):
         """
         Test if none list changes handled correctly
@@ -65,6 +66,7 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertDictEqual(augeas.change(self.name), self.ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_change_non_list_load_path(self):
         """
         Test if none list load_path is handled correctly
@@ -77,6 +79,7 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
             self.ret,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_change_in_test_mode(self):
         """
         Test test mode handling
@@ -93,6 +96,7 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
                 augeas.change(self.name, self.context, self.changes), self.ret
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_change_no_context_without_full_path(self):
         """
         Test handling of no context without full path
@@ -110,6 +114,7 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
                     augeas.change(self.name, changes=self.changes), self.ret
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_change_no_context_with_full_path_fail(self):
         """
         Test handling of no context with full path with execute fail
@@ -127,6 +132,7 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
                     augeas.change(self.name, changes=self.fp_changes), self.ret
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_change_no_context_with_full_path_pass(self):
         """
         Test handling of no context with full path with execute pass
@@ -158,6 +164,7 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
                                 self.ret,
                             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_change_no_context_without_full_path_invalid_cmd(self):
         """
         Test handling of invalid commands when no context supplied
@@ -178,6 +185,7 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
                     augeas.change(self.name, changes=changes), self.ret
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_change_no_context_without_full_path_invalid_change(self):
         """
         Test handling of invalid change when no context supplied
@@ -197,6 +205,7 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
                     augeas.change(self.name, changes=changes), self.ret
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_change_no_context_with_full_path_multiple_files(self):
         """
         Test handling of different paths with no context supplied
@@ -224,6 +233,7 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
                     augeas.change(self.name, changes=changes), self.ret
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_change_with_context_without_full_path_fail(self):
         """
         Test handling of context without full path fails
@@ -245,6 +255,7 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
                         self.ret,
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_change_with_context_without_old_file(self):
         """
         Test handling of context without oldfile pass

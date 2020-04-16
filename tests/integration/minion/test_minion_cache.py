@@ -10,10 +10,12 @@ from salt.utils.files import fopen
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_tempdir
 from tests.support.mock import patch
+from tests.support.unit import skipIf
 
 
 class BasePillarTest(ModuleCase):
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_minion_cache_should_cache_files(self, tempdir):
         pillar = {"this": {"is": {"some": "pillar data"}}}
         opts = {

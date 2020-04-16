@@ -11,7 +11,7 @@ import salt.modules.win_disk as win_disk
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MockKernel32(object):
@@ -58,6 +58,7 @@ class WinDiskTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'usage' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_usage(self):
         """
         Test if it return usage information for volumes mounted on this minion.

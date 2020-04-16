@@ -48,6 +48,7 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         return {x509: {}}
 
     @patch("salt.modules.x509.log", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_private_func__parse_subject(self):
         """
         Test private function _parse_subject(subject) it handles a missing fields
@@ -75,6 +76,7 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         assert isinstance(x509.log.trace.call_args[0][2], TypeError)
 
     @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailble")
+    @skipIf(True, "FASTTEST skip")
     def test_get_pem_entry(self):
         """
         Test private function _parse_subject(subject) it handles a missing fields
@@ -101,6 +103,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
         self.assertEqual(ret, ca_key)
 
     @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailble")
+    @skipIf(True, "FASTTEST skip")
     def test_get_private_key_size(self):
         """
         Test private function _parse_subject(subject) it handles a missing fields
@@ -128,6 +131,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
         self.assertEqual(ret, 1024)
 
     @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailble")
+    @skipIf(True, "FASTTEST skip")
     def test_create_key(self):
         """
         Test that x509.create_key returns a private key
@@ -137,6 +141,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
         self.assertIn("BEGIN RSA PRIVATE KEY", ret)
 
     @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailble")
+    @skipIf(True, "FASTTEST skip")
     def test_create_certificate(self):
         """
         Test private function _parse_subject(subject) it handles a missing fields
@@ -179,6 +184,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
         self.assertIn("BEGIN CERTIFICATE", ret)
 
     @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailble")
+    @skipIf(True, "FASTTEST skip")
     def test_create_crl(self):
         ca_key = """
 -----BEGIN RSA PRIVATE KEY-----
@@ -247,6 +253,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
         self.assertIn("BEGIN X509 CRL", crl)
 
     @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailble")
+    @skipIf(True, "FASTTEST skip")
     def test_revoke_certificate_with_crl(self):
         ca_key = """
 -----BEGIN RSA PRIVATE KEY-----

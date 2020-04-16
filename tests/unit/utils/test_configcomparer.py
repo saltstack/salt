@@ -9,7 +9,7 @@ import copy
 import salt.utils.configcomparer as configcomparer
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class UtilConfigcomparerTestCase(TestCase):
@@ -22,6 +22,7 @@ class UtilConfigcomparerTestCase(TestCase):
         "attr5": {"subattr1": "value1", "subattr2": ["item1"]},
     }
 
+    @skipIf(True, "FASTTEST skip")
     def test_compare_and_update_config(self):
 
         # empty config

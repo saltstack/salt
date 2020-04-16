@@ -19,7 +19,7 @@ import salt.utils.zfs as zfs
 # Import Salt Utils
 from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 # Import Salt Testing libs
 from tests.support.zfs import ZFSMockData
@@ -42,6 +42,7 @@ class ZfsUtilsTestCase(TestCase):
             self.addCleanup(delattr, self, name)
 
     # NOTE: test parameter parsing
+    @skipIf(True, "FASTTEST skip")
     def test_is_supported(self):
         """
         Test zfs.is_supported method
@@ -53,6 +54,7 @@ class ZfsUtilsTestCase(TestCase):
                 ):
                     self.assertEqual(value, zfs.is_supported())
 
+    @skipIf(True, "FASTTEST skip")
     def test_property_data_zpool(self):
         """
         Test parsing of zpool get output
@@ -64,6 +66,7 @@ class ZfsUtilsTestCase(TestCase):
                 ):
                     self.assertEqual(zfs.property_data_zpool(), self.pmap_zpool)
 
+    @skipIf(True, "FASTTEST skip")
     def test_property_data_zfs(self):
         """
         Test parsing of zfs get output
@@ -76,6 +79,7 @@ class ZfsUtilsTestCase(TestCase):
                     self.assertEqual(zfs.property_data_zfs(), self.pmap_zfs)
 
     # NOTE: testing from_bool results
+    @skipIf(True, "FASTTEST skip")
     def test_from_bool_on(self):
         """
         Test from_bool with 'on'
@@ -83,6 +87,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertTrue(zfs.from_bool("on"))
         self.assertTrue(zfs.from_bool(zfs.from_bool("on")))
 
+    @skipIf(True, "FASTTEST skip")
     def test_from_bool_off(self):
         """
         Test from_bool with 'off'
@@ -90,6 +95,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertFalse(zfs.from_bool("off"))
         self.assertFalse(zfs.from_bool(zfs.from_bool("off")))
 
+    @skipIf(True, "FASTTEST skip")
     def test_from_bool_none(self):
         """
         Test from_bool with 'none'
@@ -97,6 +103,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.from_bool("none"), None)
         self.assertEqual(zfs.from_bool(zfs.from_bool("none")), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_from_bool_passthrough(self):
         """
         Test from_bool with 'passthrough'
@@ -104,6 +111,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.from_bool("passthrough"), "passthrough")
         self.assertEqual(zfs.from_bool(zfs.from_bool("passthrough")), "passthrough")
 
+    @skipIf(True, "FASTTEST skip")
     def test_from_bool_alt_yes(self):
         """
         Test from_bool_alt with 'yes'
@@ -111,6 +119,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertTrue(zfs.from_bool_alt("yes"))
         self.assertTrue(zfs.from_bool_alt(zfs.from_bool_alt("yes")))
 
+    @skipIf(True, "FASTTEST skip")
     def test_from_bool_alt_no(self):
         """
         Test from_bool_alt with 'no'
@@ -118,6 +127,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertFalse(zfs.from_bool_alt("no"))
         self.assertFalse(zfs.from_bool_alt(zfs.from_bool_alt("no")))
 
+    @skipIf(True, "FASTTEST skip")
     def test_from_bool_alt_none(self):
         """
         Test from_bool_alt with 'none'
@@ -125,6 +135,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.from_bool_alt("none"), None)
         self.assertEqual(zfs.from_bool_alt(zfs.from_bool_alt("none")), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_from_bool_alt_passthrough(self):
         """
         Test from_bool_alt with 'passthrough'
@@ -135,6 +146,7 @@ class ZfsUtilsTestCase(TestCase):
         )
 
     # NOTE: testing to_bool results
+    @skipIf(True, "FASTTEST skip")
     def test_to_bool_true(self):
         """
         Test to_bool with True
@@ -142,6 +154,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.to_bool(True), "on")
         self.assertEqual(zfs.to_bool(zfs.to_bool(True)), "on")
 
+    @skipIf(True, "FASTTEST skip")
     def test_to_bool_false(self):
         """
         Test to_bool with False
@@ -149,6 +162,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.to_bool(False), "off")
         self.assertEqual(zfs.to_bool(zfs.to_bool(False)), "off")
 
+    @skipIf(True, "FASTTEST skip")
     def test_to_bool_none(self):
         """
         Test to_bool with None
@@ -156,6 +170,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.to_bool(None), "none")
         self.assertEqual(zfs.to_bool(zfs.to_bool(None)), "none")
 
+    @skipIf(True, "FASTTEST skip")
     def test_to_bool_passthrough(self):
         """
         Test to_bool with 'passthrough'
@@ -163,6 +178,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.to_bool("passthrough"), "passthrough")
         self.assertEqual(zfs.to_bool(zfs.to_bool("passthrough")), "passthrough")
 
+    @skipIf(True, "FASTTEST skip")
     def test_to_bool_alt_true(self):
         """
         Test to_bool_alt with True
@@ -170,6 +186,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.to_bool_alt(True), "yes")
         self.assertEqual(zfs.to_bool_alt(zfs.to_bool_alt(True)), "yes")
 
+    @skipIf(True, "FASTTEST skip")
     def test_to_bool_alt_false(self):
         """
         Test to_bool_alt with False
@@ -177,6 +194,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.to_bool_alt(False), "no")
         self.assertEqual(zfs.to_bool_alt(zfs.to_bool_alt(False)), "no")
 
+    @skipIf(True, "FASTTEST skip")
     def test_to_bool_alt_none(self):
         """
         Test to_bool_alt with None
@@ -184,6 +202,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.to_bool_alt(None), "none")
         self.assertEqual(zfs.to_bool_alt(zfs.to_bool_alt(None)), "none")
 
+    @skipIf(True, "FASTTEST skip")
     def test_to_bool_alt_passthrough(self):
         """
         Test to_bool_alt with 'passthrough'
@@ -192,6 +211,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.to_bool_alt(zfs.to_bool_alt("passthrough")), "passthrough")
 
     # NOTE: testing from_numeric results
+    @skipIf(True, "FASTTEST skip")
     def test_from_numeric_str(self):
         """
         Test from_numeric with '42'
@@ -199,6 +219,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.from_numeric("42"), 42)
         self.assertEqual(zfs.from_numeric(zfs.from_numeric("42")), 42)
 
+    @skipIf(True, "FASTTEST skip")
     def test_from_numeric_int(self):
         """
         Test from_numeric with 42
@@ -206,6 +227,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.from_numeric(42), 42)
         self.assertEqual(zfs.from_numeric(zfs.from_numeric(42)), 42)
 
+    @skipIf(True, "FASTTEST skip")
     def test_from_numeric_none(self):
         """
         Test from_numeric with 'none'
@@ -213,6 +235,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.from_numeric("none"), None)
         self.assertEqual(zfs.from_numeric(zfs.from_numeric("none")), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_from_numeric_passthrough(self):
         """
         Test from_numeric with 'passthrough'
@@ -223,6 +246,7 @@ class ZfsUtilsTestCase(TestCase):
         )
 
     # NOTE: testing to_numeric results
+    @skipIf(True, "FASTTEST skip")
     def test_to_numeric_str(self):
         """
         Test to_numeric with '42'
@@ -230,6 +254,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.to_numeric("42"), 42)
         self.assertEqual(zfs.to_numeric(zfs.to_numeric("42")), 42)
 
+    @skipIf(True, "FASTTEST skip")
     def test_to_numeric_int(self):
         """
         Test to_numeric with 42
@@ -237,6 +262,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.to_numeric(42), 42)
         self.assertEqual(zfs.to_numeric(zfs.to_numeric(42)), 42)
 
+    @skipIf(True, "FASTTEST skip")
     def test_to_numeric_none(self):
         """
         Test to_numeric with 'none'
@@ -244,6 +270,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.to_numeric(None), "none")
         self.assertEqual(zfs.to_numeric(zfs.to_numeric(None)), "none")
 
+    @skipIf(True, "FASTTEST skip")
     def test_to_numeric_passthrough(self):
         """
         Test to_numeric with 'passthrough'
@@ -252,6 +279,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.to_numeric(zfs.to_numeric("passthrough")), "passthrough")
 
     # NOTE: testing from_size results
+    @skipIf(True, "FASTTEST skip")
     def test_from_size_absolute(self):
         """
         Test from_size with '5G'
@@ -259,6 +287,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.from_size("5G"), 5368709120)
         self.assertEqual(zfs.from_size(zfs.from_size("5G")), 5368709120)
 
+    @skipIf(True, "FASTTEST skip")
     def test_from_size_decimal(self):
         """
         Test from_size with '4.20M'
@@ -266,6 +295,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.from_size("4.20M"), 4404019)
         self.assertEqual(zfs.from_size(zfs.from_size("4.20M")), 4404019)
 
+    @skipIf(True, "FASTTEST skip")
     def test_from_size_none(self):
         """
         Test from_size with 'none'
@@ -273,6 +303,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.from_size("none"), None)
         self.assertEqual(zfs.from_size(zfs.from_size("none")), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_from_size_passthrough(self):
         """
         Test from_size with 'passthrough'
@@ -281,6 +312,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.from_size(zfs.from_size("passthrough")), "passthrough")
 
     # NOTE: testing to_size results
+    @skipIf(True, "FASTTEST skip")
     def test_to_size_str_absolute(self):
         """
         Test to_size with '5368709120'
@@ -288,6 +320,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.to_size("5368709120"), "5G")
         self.assertEqual(zfs.to_size(zfs.to_size("5368709120")), "5G")
 
+    @skipIf(True, "FASTTEST skip")
     def test_to_size_str_decimal(self):
         """
         Test to_size with '4404019'
@@ -295,6 +328,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.to_size("4404019"), "4.20M")
         self.assertEqual(zfs.to_size(zfs.to_size("4404019")), "4.20M")
 
+    @skipIf(True, "FASTTEST skip")
     def test_to_size_int_absolute(self):
         """
         Test to_size with 5368709120
@@ -302,6 +336,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.to_size(5368709120), "5G")
         self.assertEqual(zfs.to_size(zfs.to_size(5368709120)), "5G")
 
+    @skipIf(True, "FASTTEST skip")
     def test_to_size_int_decimal(self):
         """
         Test to_size with 4404019
@@ -309,6 +344,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.to_size(4404019), "4.20M")
         self.assertEqual(zfs.to_size(zfs.to_size(4404019)), "4.20M")
 
+    @skipIf(True, "FASTTEST skip")
     def test_to_size_none(self):
         """
         Test to_size with 'none'
@@ -316,6 +352,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.to_size(None), "none")
         self.assertEqual(zfs.to_size(zfs.to_size(None)), "none")
 
+    @skipIf(True, "FASTTEST skip")
     def test_to_size_passthrough(self):
         """
         Test to_size with 'passthrough'
@@ -324,6 +361,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.to_size(zfs.to_size("passthrough")), "passthrough")
 
     # NOTE: testing from_str results
+    @skipIf(True, "FASTTEST skip")
     def test_from_str_space(self):
         """
         Test from_str with "\"my pool/my dataset\"
@@ -333,6 +371,7 @@ class ZfsUtilsTestCase(TestCase):
             zfs.from_str(zfs.from_str('"my pool/my dataset"')), "my pool/my dataset"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_from_str_squote_space(self):
         """
         Test from_str with "my pool/jorge's dataset"
@@ -345,6 +384,7 @@ class ZfsUtilsTestCase(TestCase):
             "my pool/jorge's dataset",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_from_str_dquote_space(self):
         """
         Test from_str with "my pool/the \"good\" stuff"
@@ -357,6 +397,7 @@ class ZfsUtilsTestCase(TestCase):
             'my pool/the "good" stuff',
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_from_str_none(self):
         """
         Test from_str with 'none'
@@ -364,6 +405,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.from_str("none"), None)
         self.assertEqual(zfs.from_str(zfs.from_str("none")), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_from_str_passthrough(self):
         """
         Test from_str with 'passthrough'
@@ -372,6 +414,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.from_str(zfs.from_str("passthrough")), "passthrough")
 
     # NOTE: testing to_str results
+    @skipIf(True, "FASTTEST skip")
     def test_to_str_space(self):
         """
         Test to_str with 'my pool/my dataset'
@@ -382,6 +425,7 @@ class ZfsUtilsTestCase(TestCase):
             zfs.to_str(zfs.to_str("my pool/my dataset")), '"my pool/my dataset"'
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_to_str_squote_space(self):
         """
         Test to_str with "my pool/jorge's dataset"
@@ -394,6 +438,7 @@ class ZfsUtilsTestCase(TestCase):
             '"my pool/jorge\'s dataset"',
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_to_str_none(self):
         """
         Test to_str with 'none'
@@ -401,6 +446,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.to_str(None), "none")
         self.assertEqual(zfs.to_str(zfs.to_str(None)), "none")
 
+    @skipIf(True, "FASTTEST skip")
     def test_to_str_passthrough(self):
         """
         Test to_str with 'passthrough'
@@ -409,18 +455,21 @@ class ZfsUtilsTestCase(TestCase):
         self.assertEqual(zfs.to_str(zfs.to_str("passthrough")), "passthrough")
 
     # NOTE: testing is_snapshot
+    @skipIf(True, "FASTTEST skip")
     def test_is_snapshot_snapshot(self):
         """
         Test is_snapshot with a valid snapshot name
         """
         self.assertTrue(zfs.is_snapshot("zpool_name/dataset@backup"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_snapshot_bookmark(self):
         """
         Test is_snapshot with a valid bookmark name
         """
         self.assertFalse(zfs.is_snapshot("zpool_name/dataset#backup"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_snapshot_filesystem(self):
         """
         Test is_snapshot with a valid filesystem name
@@ -428,18 +477,21 @@ class ZfsUtilsTestCase(TestCase):
         self.assertFalse(zfs.is_snapshot("zpool_name/dataset"))
 
     # NOTE: testing is_bookmark
+    @skipIf(True, "FASTTEST skip")
     def test_is_bookmark_snapshot(self):
         """
         Test is_bookmark with a valid snapshot name
         """
         self.assertFalse(zfs.is_bookmark("zpool_name/dataset@backup"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_bookmark_bookmark(self):
         """
         Test is_bookmark with a valid bookmark name
         """
         self.assertTrue(zfs.is_bookmark("zpool_name/dataset#backup"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_bookmark_filesystem(self):
         """
         Test is_bookmark with a valid filesystem name
@@ -447,18 +499,21 @@ class ZfsUtilsTestCase(TestCase):
         self.assertFalse(zfs.is_bookmark("zpool_name/dataset"))
 
     # NOTE: testing is_dataset
+    @skipIf(True, "FASTTEST skip")
     def test_is_dataset_snapshot(self):
         """
         Test is_dataset with a valid snapshot name
         """
         self.assertFalse(zfs.is_dataset("zpool_name/dataset@backup"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_dataset_bookmark(self):
         """
         Test is_dataset with a valid bookmark name
         """
         self.assertFalse(zfs.is_dataset("zpool_name/dataset#backup"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_dataset_filesystem(self):
         """
         Test is_dataset with a valid filesystem/volume name
@@ -466,6 +521,7 @@ class ZfsUtilsTestCase(TestCase):
         self.assertTrue(zfs.is_dataset("zpool_name/dataset"))
 
     # NOTE: testing zfs_command
+    @skipIf(True, "FASTTEST skip")
     def test_zfs_command_simple(self):
         """
         Test if zfs_command builds the correct string
@@ -482,6 +538,7 @@ class ZfsUtilsTestCase(TestCase):
                     ):
                         self.assertEqual(zfs.zfs_command("list"), "/sbin/zfs list")
 
+    @skipIf(True, "FASTTEST skip")
     def test_zfs_command_none_target(self):
         """
         Test if zfs_command builds the correct string with a target of None
@@ -501,6 +558,7 @@ class ZfsUtilsTestCase(TestCase):
                             "/sbin/zfs list mypool",
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_zfs_command_flag(self):
         """
         Test if zfs_command builds the correct string
@@ -522,6 +580,7 @@ class ZfsUtilsTestCase(TestCase):
                             zfs.zfs_command("list", flags=my_flags), "/sbin/zfs list -r"
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_zfs_command_opt(self):
         """
         Test if zfs_command builds the correct string
@@ -544,6 +603,7 @@ class ZfsUtilsTestCase(TestCase):
                             "/sbin/zfs list -t snap",
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_zfs_command_flag_opt(self):
         """
         Test if zfs_command builds the correct string
@@ -569,6 +629,7 @@ class ZfsUtilsTestCase(TestCase):
                             "/sbin/zfs list -r -t snap",
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_zfs_command_target(self):
         """
         Test if zfs_command builds the correct string
@@ -596,6 +657,7 @@ class ZfsUtilsTestCase(TestCase):
                             "/sbin/zfs list -r -t snap mypool",
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_zfs_command_target_with_space(self):
         """
         Test if zfs_command builds the correct string
@@ -623,6 +685,7 @@ class ZfsUtilsTestCase(TestCase):
                             '/sbin/zfs list -r -t snap "my pool"',
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_zfs_command_property(self):
         """
         Test if zfs_command builds the correct string
@@ -644,6 +707,7 @@ class ZfsUtilsTestCase(TestCase):
                             "/sbin/zfs get quota mypool",
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_zfs_command_property_value(self):
         """
         Test if zfs_command builds the correct string
@@ -672,6 +736,7 @@ class ZfsUtilsTestCase(TestCase):
                             "/sbin/zfs set -r quota=5368709120 mypool",
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_zfs_command_multi_property_value(self):
         """
         Test if zfs_command builds the correct string
@@ -698,6 +763,7 @@ class ZfsUtilsTestCase(TestCase):
                             "/sbin/zfs set quota=5368709120 readonly=off mypool",
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_zfs_command_fs_props(self):
         """
         Test if zfs_command builds the correct string
@@ -729,6 +795,7 @@ class ZfsUtilsTestCase(TestCase):
                             "/sbin/zfs create -p -o compression=lz4 -o quota=1073741824 mypool/dataset",
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_zfs_command_fs_props_with_space(self):
         """
         Test if zfs_command builds the correct string
@@ -757,6 +824,7 @@ class ZfsUtilsTestCase(TestCase):
                         )
 
     # NOTE: testing zpool_command
+    @skipIf(True, "FASTTEST skip")
     def test_zpool_command_simple(self):
         """
         Test if zfs_command builds the correct string
@@ -773,6 +841,7 @@ class ZfsUtilsTestCase(TestCase):
                     ):
                         self.assertEqual(zfs.zpool_command("list"), "/sbin/zpool list")
 
+    @skipIf(True, "FASTTEST skip")
     def test_zpool_command_opt(self):
         """
         Test if zpool_command builds the correct string
@@ -795,6 +864,7 @@ class ZfsUtilsTestCase(TestCase):
                             "/sbin/zpool list -o name,size",
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_zpool_command_opt_list(self):
         """
         Test if zpool_command builds the correct string
@@ -817,6 +887,7 @@ class ZfsUtilsTestCase(TestCase):
                             "/sbin/zpool import -d /tmp -d /zvol mypool",
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_zpool_command_flag_opt(self):
         """
         Test if zpool_command builds the correct string
@@ -839,6 +910,7 @@ class ZfsUtilsTestCase(TestCase):
                             "/sbin/zpool list -o name,size",
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_zpool_command_target(self):
         """
         Test if zpool_command builds the correct string
@@ -861,6 +933,7 @@ class ZfsUtilsTestCase(TestCase):
                             "/sbin/zpool list -o name,size mypool",
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_zpool_command_target_with_space(self):
         """
         Test if zpool_command builds the correct string
@@ -891,6 +964,7 @@ class ZfsUtilsTestCase(TestCase):
                             '/sbin/zpool create -O quota=107374182400 -o comment="jorge\'s comment has a space" "my pool"',
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_zpool_command_property(self):
         """
         Test if zpool_command builds the correct string
@@ -912,6 +986,7 @@ class ZfsUtilsTestCase(TestCase):
                             "/sbin/zpool get comment mypool",
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_zpool_command_property_value(self):
         """
         Test if zpool_command builds the correct string
@@ -936,6 +1011,7 @@ class ZfsUtilsTestCase(TestCase):
                             "/sbin/zpool iostat -v mypool 60 1",
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_command_result_success(self):
         """
         Test if parse_command_result returns the expected result
@@ -959,6 +1035,7 @@ class ZfsUtilsTestCase(TestCase):
                             OrderedDict([("tested", True)]),
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_command_result_success_nolabel(self):
         """
         Test if parse_command_result returns the expected result
@@ -981,6 +1058,7 @@ class ZfsUtilsTestCase(TestCase):
                             zfs.parse_command_result(res), OrderedDict(),
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_command_result_fail(self):
         """
         Test if parse_command_result returns the expected result on failure
@@ -1004,6 +1082,7 @@ class ZfsUtilsTestCase(TestCase):
                             OrderedDict([("tested", False)]),
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_command_result_nolabel(self):
         """
         Test if parse_command_result returns the expected result on failure
@@ -1026,6 +1105,7 @@ class ZfsUtilsTestCase(TestCase):
                             zfs.parse_command_result(res), OrderedDict(),
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_command_result_fail_message(self):
         """
         Test if parse_command_result returns the expected result on failure with stderr
@@ -1053,6 +1133,7 @@ class ZfsUtilsTestCase(TestCase):
                             ),
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_command_result_fail_message_nolabel(self):
         """
         Test if parse_command_result returns the expected result on failure with stderr

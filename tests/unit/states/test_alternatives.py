@@ -11,7 +11,7 @@ import salt.states.alternatives as alternatives
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'install' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_install(self):
         """
         Test to install new alternative for defined <name>
@@ -128,6 +129,7 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'remove' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove(self):
         """
         Test to removes installed alternative for defined <name> and <path>
@@ -174,6 +176,7 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'auto' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_auto(self):
         """
         Test to instruct alternatives to use the highest priority
@@ -204,6 +207,7 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_set(self):
         """
         Test to sets alternative for <name> to <path>, if <path> is defined

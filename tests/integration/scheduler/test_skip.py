@@ -48,7 +48,6 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
     def tearDown(self):
         self.schedule.reset()
 
-    @skipIf(True, "SLOWTEST skip")
     def test_skip(self):
         """
         verify that scheduled job is skipped at the specified time
@@ -88,7 +87,6 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_skip_during_range(self):
         """
         verify that scheduled job is skipped during the specified range
@@ -129,6 +127,7 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
 
+    @skipIf(True, "FASTTEST skip")
     def test_skip_during_range_invalid_datestring(self):
         """
         verify that scheduled job is not not and returns the right error string
@@ -190,7 +189,6 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         ).format(job_name2)
         self.assertEqual(ret["_error"], _expected)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_skip_during_range_global(self):
         """
         verify that scheduled job is skipped during the specified range
@@ -228,7 +226,6 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_run_after_skip_range(self):
         """
         verify that scheduled job is skipped during the specified range
@@ -265,7 +262,6 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_run_seconds_skip(self):
         """
         verify that scheduled job is skipped during the specified range

@@ -12,7 +12,7 @@ import salt.modules.mandrill as mandrill
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 # Test data
 TEST_SEND = {
@@ -48,6 +48,7 @@ class MandrillModuleTest(TestCase, LoaderModuleMockMixin):
             module_globals["sys.modules"] = {"requests": MagicMock()}
         return module_globals
 
+    @skipIf(True, "FASTTEST skip")
     def test_send(self):
         """
         Test the send function.

@@ -12,6 +12,7 @@ from salt.returners import librato_return
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
+from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
@@ -53,6 +54,7 @@ class libratoTest(ShellCase):
     Test the librato returner
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_count_runtimes(self):
         """
         Test the calculations

@@ -49,6 +49,7 @@ class ModrandomTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {mod_random: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_hash(self):
         """
         Test for Encodes a value with the specified encoder.
@@ -57,6 +58,7 @@ class ModrandomTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertRaises(SaltInvocationError, mod_random.hash, "value", "algorithm")
 
+    @skipIf(True, "FASTTEST skip")
     def test_str_encode(self):
         """
         Test for The value to be encoded.
@@ -71,6 +73,7 @@ class ModrandomTestCase(TestCase, LoaderModuleMockMixin):
             # We're using the base64 module which does not include the trailing new line
             self.assertEqual(mod_random.str_encode("A"), "QQ==")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_str(self):
         """
         Test for Returns a random string of the specified length.
@@ -78,6 +81,7 @@ class ModrandomTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(salt.utils.pycrypto, "secure_password", return_value="A"):
             self.assertEqual(mod_random.get_str(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_shadow_hash(self):
         """
         Test for Generates a salted hash suitable for /etc/shadow.

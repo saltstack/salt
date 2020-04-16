@@ -18,7 +18,7 @@ from salt.ext import six
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 # pylint: disable=import-error,3rd-party-module-not-gated
 OPKG_VIM_INFO = {
@@ -61,6 +61,7 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
         """
         return {opkg: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_version(self):
         """
         Test - Returns a string representing the package version or an empty string if
@@ -71,6 +72,7 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(opkg.__salt__, {"pkg_resource.version": mock}):
             self.assertEqual(opkg.version(*["vim"]), version)
 
+    @skipIf(True, "FASTTEST skip")
     def test_upgrade_available(self):
         """
         Test - Check whether or not an upgrade is available for a given package.
@@ -78,6 +80,7 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
         with patch("salt.modules.opkg.latest_version", MagicMock(return_value="")):
             self.assertFalse(opkg.upgrade_available("vim"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_file_dict(self):
         """
         Test - List the files that belong to a package, grouped by package.
@@ -88,6 +91,7 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(opkg.__salt__, {"cmd.run_all": mock}):
             self.assertEqual(opkg.file_dict("vim"), OPKG_VIM_FILES)
 
+    @skipIf(True, "FASTTEST skip")
     def test_file_list(self):
         """
         Test - List the files that belong to a package.
@@ -102,6 +106,7 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(opkg.__salt__, {"cmd.run_all": mock}):
             self.assertEqual(opkg.file_list("vim"), files)
 
+    @skipIf(True, "FASTTEST skip")
     def test_owner(self):
         """
         Test - Return the name of the package that owns the file.
@@ -111,6 +116,7 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(opkg.__salt__, {"cmd.run_stdout": mock}):
             self.assertEqual(opkg.owner(*paths), "vim")
 
+    @skipIf(True, "FASTTEST skip")
     def test_install(self):
         """
         Test - Install packages.
@@ -134,6 +140,7 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
             with patch.multiple(opkg, **patch_kwargs):
                 self.assertEqual(opkg.install("vim:7.4"), INSTALLED)
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_noaction(self):
         """
         Test - Install packages.
@@ -155,6 +162,7 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
             with patch.multiple(opkg, **patch_kwargs):
                 self.assertEqual(opkg.install("vim:7.4", test=True), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove(self):
         """
         Test - Remove packages.
@@ -178,6 +186,7 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
             with patch.multiple(opkg, **patch_kwargs):
                 self.assertEqual(opkg.remove("vim"), REMOVED)
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_noaction(self):
         """
         Test - Remove packages.
@@ -199,6 +208,7 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
             with patch.multiple(opkg, **patch_kwargs):
                 self.assertEqual(opkg.remove("vim:7.4", test=True), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_info_installed(self):
         """
         Test - Return the information of the named package(s) installed on the system.
@@ -213,12 +223,14 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(opkg.__salt__, {"cmd.run_all": mock}):
             self.assertEqual(opkg.info_installed("vim"), expected_dict)
 
+    @skipIf(True, "FASTTEST skip")
     def test_version_clean(self):
         """
         Test - Return the information of version_clean
         """
         self.assertEqual(opkg.version_clean("1.0.1"), "1.0.1")
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_extra_requirements(self):
         """
         Test - Return the information of check_extra_requirements

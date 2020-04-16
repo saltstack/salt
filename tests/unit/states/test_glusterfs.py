@@ -15,7 +15,7 @@ import salt.utils.network
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
@@ -28,6 +28,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'peered' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_peered(self):
         """
         Test to verify if node is peered.
@@ -96,6 +97,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'volume_present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_volume_present(self):
         """
         Test to ensure that a volume exists
@@ -209,6 +211,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'started' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_started(self):
         """
         Test to check if volume has been started
@@ -254,6 +257,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'add_volume_bricks' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_volume_bricks(self):
         """
         Test to add brick(s) to an existing volume
@@ -316,6 +320,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'op_version' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_op_version(self):
         """
         Test setting the Glusterfs op-version
@@ -378,6 +383,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'max_op_version' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_max_op_version(self):
         """
         Test setting the Glusterfs to its self reported max-op-version

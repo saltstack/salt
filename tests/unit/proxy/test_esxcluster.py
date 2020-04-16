@@ -79,6 +79,7 @@ class InitTestCase(TestCase, LoaderModuleMockMixin):
             patcher.start()
             self.addCleanup(patcher.stop)
 
+    @skipIf(True, "FASTTEST skip")
     def test_merge(self):
         mock_pillar_proxy = MagicMock()
         mock_opts_proxy = MagicMock()
@@ -88,6 +89,7 @@ class InitTestCase(TestCase, LoaderModuleMockMixin):
                 esxcluster.init(opts={"proxy": mock_opts_proxy})
         mock_merge.assert_called_once_with(mock_opts_proxy, mock_pillar_proxy)
 
+    @skipIf(True, "FASTTEST skip")
     def test_esxcluster_schema(self):
         mock_json_validate = MagicMock()
         serialized_schema = EsxclusterProxySchema().serialize()
@@ -97,6 +99,7 @@ class InitTestCase(TestCase, LoaderModuleMockMixin):
             self.opts_sspi["proxy"], serialized_schema
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_invalid_proxy_input_error(self):
         with patch(
             "salt.proxy.esxcluster.jsonschema.validate",
@@ -108,6 +111,7 @@ class InitTestCase(TestCase, LoaderModuleMockMixin):
                 esxcluster.init(self.opts_userpass)
         self.assertEqual(excinfo.exception.strerror, "Validation Error")
 
+    @skipIf(True, "FASTTEST skip")
     def test_no_username(self):
         opts = self.opts_userpass.copy()
         del opts["proxy"]["username"]
@@ -122,6 +126,7 @@ class InitTestCase(TestCase, LoaderModuleMockMixin):
             "'username' key found in proxy config.",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_no_passwords(self):
         opts = self.opts_userpass.copy()
         del opts["proxy"]["passwords"]
@@ -136,6 +141,7 @@ class InitTestCase(TestCase, LoaderModuleMockMixin):
             "'passwords' key found in proxy config.",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_no_domain(self):
         opts = self.opts_sspi.copy()
         del opts["proxy"]["domain"]
@@ -149,6 +155,7 @@ class InitTestCase(TestCase, LoaderModuleMockMixin):
             "Mechanism is set to 'sspi', but no " "'domain' key found in proxy config.",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_no_principal(self):
         opts = self.opts_sspi.copy()
         del opts["proxy"]["principal"]
@@ -163,6 +170,7 @@ class InitTestCase(TestCase, LoaderModuleMockMixin):
             "'principal' key found in proxy config.",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_find_credentials(self):
         mock_find_credentials = MagicMock(
             return_value=("fake_username", "fake_password")
@@ -175,6 +183,7 @@ class InitTestCase(TestCase, LoaderModuleMockMixin):
                 esxcluster.init(self.opts_userpass)
         mock_find_credentials.assert_called_once_with()
 
+    @skipIf(True, "FASTTEST skip")
     def test_details_userpass(self):
         mock_find_credentials = MagicMock(
             return_value=("fake_username", "fake_password")
@@ -200,6 +209,7 @@ class InitTestCase(TestCase, LoaderModuleMockMixin):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_details_sspi(self):
         esxcluster.init(self.opts_sspi)
         self.assertDictEqual(

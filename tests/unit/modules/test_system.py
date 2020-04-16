@@ -11,7 +11,7 @@ import salt.modules.system as system
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class SystemTestCase(TestCase, LoaderModuleMockMixin):
@@ -22,6 +22,7 @@ class SystemTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {system: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_halt(self):
         """
         Test to halt a running system
@@ -29,6 +30,7 @@ class SystemTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(system.__salt__, {"cmd.run": MagicMock(return_value="A")}):
             self.assertEqual(system.halt(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_init(self):
         """
         Test to change the system runlevel on sysV compatible systems
@@ -36,6 +38,7 @@ class SystemTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(system.__salt__, {"cmd.run": MagicMock(return_value="A")}):
             self.assertEqual(system.init("r"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_poweroff(self):
         """
         Test to poweroff a running system
@@ -43,6 +46,7 @@ class SystemTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(system.__salt__, {"cmd.run": MagicMock(return_value="A")}):
             self.assertEqual(system.poweroff(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_reboot(self):
         """
         Test to reboot the system with shutdown -r
@@ -52,6 +56,7 @@ class SystemTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(system.reboot(), "A")
         cmd_mock.assert_called_with(["shutdown", "-r", "now"], python_shell=False)
 
+    @skipIf(True, "FASTTEST skip")
     def test_reboot_with_delay(self):
         """
         Test to reboot the system using shutdown -r with a delay
@@ -61,6 +66,7 @@ class SystemTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(system.reboot(at_time=5), "A")
         cmd_mock.assert_called_with(["shutdown", "-r", "5"], python_shell=False)
 
+    @skipIf(True, "FASTTEST skip")
     def test_shutdown(self):
         """
         Test to shutdown a running system
@@ -74,6 +80,7 @@ class SystemTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(system.shutdown(), "A")
         cmd_mock.assert_called_with(["shutdown", "-h", "now"], python_shell=False)
 
+    @skipIf(True, "FASTTEST skip")
     def test_shutdown_freebsd(self):
         """
         Test to shutdown a running FreeBSD system
@@ -87,6 +94,7 @@ class SystemTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(system.shutdown(), "A")
         cmd_mock.assert_called_with(["shutdown", "-p", "now"], python_shell=False)
 
+    @skipIf(True, "FASTTEST skip")
     def test_shutdown_netbsd(self):
         """
         Test to shutdown a running NetBSD system
@@ -100,6 +108,7 @@ class SystemTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(system.shutdown(), "A")
         cmd_mock.assert_called_with(["shutdown", "-p", "now"], python_shell=False)
 
+    @skipIf(True, "FASTTEST skip")
     def test_shutdown_openbsd(self):
         """
         Test to shutdown a running OpenBSD system

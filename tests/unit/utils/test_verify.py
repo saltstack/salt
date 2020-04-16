@@ -52,6 +52,7 @@ class TestVerify(TestCase):
     Verify module tests
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_id_exception_handler(self):
         """
         Ensure we just return False if we pass in invalid or undefined paths.
@@ -60,6 +61,7 @@ class TestVerify(TestCase):
         opts = {"pki_dir": "/tmp/whatever"}
         self.assertFalse(valid_id(opts, None))
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid_id_pathsep(self):
         """
         Path separators in id should make it invalid
@@ -70,18 +72,22 @@ class TestVerify(TestCase):
         for pathsep in ("/", "\\"):
             self.assertFalse(valid_id(opts, pathsep.join(("..", "foobar"))))
 
+    @skipIf(True, "FASTTEST skip")
     def test_zmq_verify(self):
         self.assertTrue(zmq_version())
 
+    @skipIf(True, "FASTTEST skip")
     def test_zmq_verify_insufficient(self):
         import zmq
 
         with patch.object(zmq, "__version__", "2.1.0"):
             self.assertFalse(zmq_version())
 
+    @skipIf(True, "FASTTEST skip")
     def test_user(self):
         self.assertTrue(check_user(getpass.getuser()))
 
+    @skipIf(True, "FASTTEST skip")
     def test_no_user(self):
         # Catch sys.stderr here since no logging is configured and
         # check_user WILL write to sys.stderr
@@ -107,6 +113,7 @@ class TestVerify(TestCase):
             sys.stderr.write(writer.output)
 
     @skipIf(salt.utils.platform.is_windows(), "No verify_env Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_verify_env(self):
         root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         var_dir = os.path.join(root_dir, "var", "log", "salt")
@@ -120,6 +127,7 @@ class TestVerify(TestCase):
         self.assertEqual(dir_stat.st_mode & stat.S_IRWXO, 5)
 
     @requires_network(only_local_network=True)
+    @skipIf(True, "FASTTEST skip")
     def test_verify_socket(self):
         self.assertTrue(verify_socket("", 18000, 18001))
         if socket.has_ipv6:
@@ -136,6 +144,7 @@ class TestVerify(TestCase):
                 # not support IPv6.
                 pass
 
+    @skipIf(True, "FASTTEST skip")
     def test_max_open_files(self):
         with TstSuiteLoggingHandler() as handler:
             logmsg_dbg = "DEBUG:This salt-master instance has accepted {0} minion keys."
@@ -254,6 +263,7 @@ class TestVerify(TestCase):
                     resource.setrlimit(resource.RLIMIT_NOFILE, (mof_s, mof_h))
                 shutil.rmtree(tempdir)
 
+    @skipIf(True, "FASTTEST skip")
     def test_verify_log(self):
         """
         Test that verify_log works as expected
@@ -290,6 +300,7 @@ class TestVerifyLog(TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
 
+    @skipIf(True, "FASTTEST skip")
     def test_verify_logs_filter(self):
         filtered = verify_logs_filter(
             ["udp://foo", "tcp://bar", "/tmp/foo", "file://tmp/bar"]
@@ -297,21 +308,25 @@ class TestVerifyLog(TestCase):
         assert filtered == ["/tmp/foo"], filtered
 
     @skipIf(salt.utils.platform.is_windows(), "Not applicable on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_verify_log_files_udp_scheme(self):
         verify_log_files(["udp://foo"], getpass.getuser())
         self.assertFalse(os.path.isdir(os.path.join(os.getcwd(), "udp:")))
 
     @skipIf(salt.utils.platform.is_windows(), "Not applicable on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_verify_log_files_tcp_scheme(self):
         verify_log_files(["udp://foo"], getpass.getuser())
         self.assertFalse(os.path.isdir(os.path.join(os.getcwd(), "tcp:")))
 
     @skipIf(salt.utils.platform.is_windows(), "Not applicable on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_verify_log_files_file_scheme(self):
         verify_log_files(["file://{}"], getpass.getuser())
         self.assertFalse(os.path.isdir(os.path.join(os.getcwd(), "file:")))
 
     @skipIf(salt.utils.platform.is_windows(), "Not applicable on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_verify_log_files(self):
         path = os.path.join(self.tmpdir, "foo", "bar.log")
         self.assertFalse(os.path.exists(path))

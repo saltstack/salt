@@ -25,7 +25,7 @@ from tests.support.mixins import (
 )
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 try:
     import win32file
@@ -87,11 +87,13 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
     def tearDown(self):
         del self.opts
 
+    @skipIf(True, "FASTTEST skip")
     def test_file_list(self):
         ret = roots.file_list({"saltenv": "base"})
         self.assertIn("testfile", ret)
         self.assertIn(UNICODE_FILENAME, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_find_file(self):
         ret = roots.find_file("testfile")
         self.assertEqual("testfile", ret["rel"])
@@ -99,6 +101,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         full_path_to_file = os.path.join(RUNTIME_VARS.BASE_FILES, "testfile")
         self.assertEqual(full_path_to_file, ret["path"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_serve_file(self):
         with patch.dict(roots.__opts__, {"file_buffer_size": 262144}):
             load = {
@@ -116,6 +119,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
 
             self.assertDictEqual(ret, {"data": data, "dest": "testfile"})
 
+    @skipIf(True, "FASTTEST skip")
     def test_envs(self):
         opts = {"file_roots": copy.copy(self.opts["file_roots"])}
         opts["file_roots"][UNICODE_ENVNAME] = opts["file_roots"]["base"]
@@ -124,6 +128,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         self.assertIn("base", ret)
         self.assertIn(UNICODE_ENVNAME, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_file_hash(self):
         load = {
             "saltenv": "base",
@@ -141,10 +146,12 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
 
         self.assertDictEqual(ret, {"hsum": hsum, "hash_type": "sha256"})
 
+    @skipIf(True, "FASTTEST skip")
     def test_file_list_emptydirs(self):
         ret = roots.file_list_emptydirs({"saltenv": "base"})
         self.assertIn("empty_dir", ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_file_list_with_slash(self):
         opts = {"file_roots": copy.copy(self.opts["file_roots"])}
         opts["file_roots"]["foo/bar"] = opts["file_roots"]["base"]
@@ -156,11 +163,13 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         self.assertIn("testfile", ret)
         self.assertIn(UNICODE_FILENAME, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_dir_list(self):
         ret = roots.dir_list({"saltenv": "base"})
         self.assertIn("empty_dir", ret)
         self.assertIn(UNICODE_DIRNAME, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_symlink_list(self):
         orig_file_roots = self.opts["file_roots"]
         try:
@@ -172,6 +181,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
             if self.test_symlink_list_file_roots:
                 self.opts["file_roots"] = orig_file_roots
 
+    @skipIf(True, "FASTTEST skip")
     def test_dynamic_file_roots(self):
         dyn_root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         top_sls = os.path.join(dyn_root_dir, "top.sls")

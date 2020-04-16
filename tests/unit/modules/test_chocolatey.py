@@ -48,6 +48,7 @@ class ChocolateyTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {chocolatey: {"__context__": {}, "__salt__": {}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test__clear_context(self):
         """
         Tests _clear_context function
@@ -62,6 +63,7 @@ class ChocolateyTestCase(TestCase, LoaderModuleMockMixin):
             # Did it clear all chocolatey items from __context__P?
             self.assertEqual(chocolatey.__context__, {})
 
+    @skipIf(True, "FASTTEST skip")
     def test__yes_context(self):
         """
         Tests _yes function when it exists in __context__
@@ -74,6 +76,7 @@ class ChocolateyTestCase(TestCase, LoaderModuleMockMixin):
             # Did it populate __context__
             self.assertEqual(chocolatey.__context__["chocolatey._yes"], expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test__yes_version_greater(self):
         """
         Test _yes when Chocolatey version is greater than 0.9.9
@@ -87,6 +90,7 @@ class ChocolateyTestCase(TestCase, LoaderModuleMockMixin):
             # Did it populate __context__
             self.assertEqual(chocolatey.__context__["chocolatey._yes"], expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test__yes_version_less_than(self):
         """
         Test _yes when Chocolatey version is less than 0.9.9
@@ -100,6 +104,7 @@ class ChocolateyTestCase(TestCase, LoaderModuleMockMixin):
             # Did it populate __context__
             self.assertEqual(chocolatey.__context__["chocolatey._yes"], expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test__find_chocolatey_context(self):
         """
         Test _find_chocolatey when it exists in __context__
@@ -109,6 +114,7 @@ class ChocolateyTestCase(TestCase, LoaderModuleMockMixin):
             expected = self.choco_path
             self.assertEqual(result, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test__find_chocolatey_which(self):
         """
         Test _find_chocolatey when found with `cmd.which`
@@ -122,6 +128,7 @@ class ChocolateyTestCase(TestCase, LoaderModuleMockMixin):
             # Does it populate __context__
             self.assertEqual(chocolatey.__context__["chocolatey._path"], expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test__find_chocolatey_programdata(self):
         """
         Test _find_chocolatey when found in ProgramData
@@ -136,6 +143,7 @@ class ChocolateyTestCase(TestCase, LoaderModuleMockMixin):
             # Does it populate __context__
             self.assertEqual(chocolatey.__context__["chocolatey._path"], expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test__find_chocolatey_systemdrive(self):
         """
         Test _find_chocolatey when found on SystemDrive (older versions)

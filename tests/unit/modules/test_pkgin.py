@@ -11,7 +11,7 @@ import salt.modules.pkgin as pkgin
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PkginTestCase(TestCase, LoaderModuleMockMixin):
@@ -22,6 +22,7 @@ class PkginTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {pkgin: {"__opts__": {"cachedir": "/tmp"}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_search(self):
         """
         Test searching for a package
@@ -61,6 +62,7 @@ class PkginTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.dict(pkgin.__salt__, {"cmd.run": pkgin_search_cmd}):
             self.assertDictEqual(pkgin.search("somepkg"), {"somepkg": "1.0"})
 
+    @skipIf(True, "FASTTEST skip")
     def test_latest_version(self):
         """
         Test getting the latest version of a package
@@ -147,6 +149,7 @@ class PkginTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(pkgin.latest_version("boguspkg"), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_file_dict(self):
         """
         Test that file_dict doesn't crash

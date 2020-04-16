@@ -25,6 +25,7 @@ class WinOsInfo(TestCase):
     Test cases for salt/utils/win_osinfo.py
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_os_version_info(self):
         sys_info = sys.getwindowsversion()
         get_info = win_osinfo.get_os_version_info()
@@ -38,6 +39,7 @@ class WinOsInfo(TestCase):
         self.assertIn("PlatformID", get_info)
         self.assertTrue(isinstance(get_info["BuildNumber"], six.integer_types))
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_join_info(self):
         join_info = win_osinfo.get_join_info()
         self.assertIn("Domain", join_info)

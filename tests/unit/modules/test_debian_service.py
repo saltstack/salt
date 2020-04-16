@@ -11,7 +11,7 @@ import salt.modules.debian_service as debian_service
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
@@ -22,6 +22,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {debian_service: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_enabled(self):
         """
         Test for Return a list of service that are enabled on boot
@@ -34,6 +35,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(debian_service.glob, "glob", mock_glob):
                 self.assertEqual(debian_service.get_enabled()[0], "name")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_disabled(self):
         """
         Test for Return a set of services that are installed but disabled
@@ -44,6 +46,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(debian_service, "get_enabled", mock):
                 self.assertEqual(debian_service.get_disabled(), ["A"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_available(self):
         """
         Test for Returns ``True`` if the specified service is
@@ -54,6 +57,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(debian_service, "get_all", mock):
             self.assertFalse(debian_service.available("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_missing(self):
         """
         Test for The inverse of service.available.
@@ -62,6 +66,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(debian_service, "get_all", mock):
             self.assertTrue(debian_service.missing("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_getall(self):
         """
         Test for Return all available boot services
@@ -70,6 +75,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(debian_service, "get_enabled", mock):
             self.assertEqual(debian_service.get_all()[0], "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_start(self):
         """
         Test for Start the specified service
@@ -79,6 +85,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(debian_service.__salt__, {"cmd.retcode": mock}):
                 self.assertFalse(debian_service.start("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_stop(self):
         """
         Test for Stop the specified service
@@ -88,6 +95,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(debian_service.__salt__, {"cmd.retcode": mock}):
                 self.assertFalse(debian_service.stop("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_restart(self):
         """
         Test for Restart the named service
@@ -97,6 +105,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(debian_service.__salt__, {"cmd.retcode": mock}):
                 self.assertFalse(debian_service.restart("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_reload_(self):
         """
         Test for Reload the named service
@@ -106,6 +115,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(debian_service.__salt__, {"cmd.retcode": mock}):
                 self.assertFalse(debian_service.reload_("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_force_reload(self):
         """
         Test for Force-reload the named service
@@ -115,6 +125,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(debian_service.__salt__, {"cmd.retcode": mock}):
                 self.assertFalse(debian_service.force_reload("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_status(self):
         """
         Test for Return the status for a service
@@ -129,6 +140,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(debian_service.__salt__, {"cmd.retcode": mock}):
                 self.assertFalse(debian_service.status("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_enable(self):
         """
         Test for Enable the named service to start at boot
@@ -141,6 +153,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(debian_service.__salt__, {"cmd.retcode": mock}):
                     self.assertFalse(debian_service.enable("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_disable(self):
         """
         Test for Disable the named service to start at boot
@@ -151,6 +164,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(debian_service.__salt__, {"cmd.retcode": mock}):
                 self.assertFalse(debian_service.disable("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_enabled(self):
         """
         Test for Return True if the named service is enabled, false otherwise
@@ -159,6 +173,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(debian_service, "get_enabled", mock):
             self.assertFalse(debian_service.enabled("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_disabled(self):
         """
         Test for Return True if the named service is enabled, false otherwise

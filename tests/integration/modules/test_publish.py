@@ -6,7 +6,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.unit import skipIf
 
 
 class PublishModuleTest(ModuleCase, SaltReturnAssertsMixin):
@@ -14,7 +13,6 @@ class PublishModuleTest(ModuleCase, SaltReturnAssertsMixin):
     Validate the publish module
     """
 
-    @skipIf(True, "SLOWTEST skip")
     def test_publish(self):
         """
         publish.publish
@@ -52,7 +50,6 @@ class PublishModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["__pub_id"], "minion")
         self.assertEqual(ret["__pub_fun"], "test.kwarg")
 
-    @skipIf(True, "SLOWTEST skip")
     def test_publish_yaml_args(self):
         """
         test publish.publish yaml args formatting
@@ -89,7 +86,6 @@ class PublishModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["kwargs"]["__pub_id"], "minion")
         self.assertEqual(ret["kwargs"]["__pub_fun"], "test.arg")
 
-    @skipIf(True, "SLOWTEST skip")
     def test_full_data(self):
         """
         publish.full_data
@@ -100,7 +96,6 @@ class PublishModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(ret)
         self.assertEqual(ret["minion"]["ret"][0], 6765)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_kwarg(self):
         """
         Verify that the pub data is making it to the minion functions
@@ -138,7 +133,6 @@ class PublishModuleTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertIn("The following keyword arguments are not valid", ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_reject_minion(self):
         """
         Test bad authentication

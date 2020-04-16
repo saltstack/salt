@@ -9,13 +9,14 @@ import salt.states.macdefaults as macdefaults
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MacDefaultsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {macdefaults: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_write(self):
         """
             Test writing a default setting
@@ -44,6 +45,7 @@ class MacDefaultsTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_write_set(self):
         """
             Test writing a default setting that is already set
@@ -68,6 +70,7 @@ class MacDefaultsTestCase(TestCase, LoaderModuleMockMixin):
             assert not write_mock.called
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_write_boolean(self):
         """
             Test writing a default setting with a boolean
@@ -92,6 +95,7 @@ class MacDefaultsTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_write_boolean_match(self):
         """
             Test writing a default setting with a boolean that is already set to the same value
@@ -116,6 +120,7 @@ class MacDefaultsTestCase(TestCase, LoaderModuleMockMixin):
             assert not write_mock.called
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_write_integer(self):
         """
             Test writing a default setting with a integer
@@ -140,6 +145,7 @@ class MacDefaultsTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_write_integer_match(self):
         """
             Test writing a default setting with a integer that is already set to the same value
@@ -162,6 +168,7 @@ class MacDefaultsTestCase(TestCase, LoaderModuleMockMixin):
             assert not write_mock.called
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_already(self):
         """
             Test ensuring non-existent defaults value is absent
@@ -179,6 +186,7 @@ class MacDefaultsTestCase(TestCase, LoaderModuleMockMixin):
             mock.assert_called_once_with("com.apple.something", "Key", None)
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_deleting_existing(self):
         """
             Test removing an existing value

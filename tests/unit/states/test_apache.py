@@ -12,7 +12,7 @@ import salt.utils.files
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ApacheTestCase(TestCase, LoaderModuleMockMixin):
@@ -25,6 +25,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'configfile' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_configfile(self):
         """
         Test to allows for inputting a yaml dictionary into a file

@@ -14,7 +14,7 @@ import salt.states.user as user
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -27,6 +27,7 @@ class UserTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {user: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_present(self):
         """
             Test to ensure that the named user is present with
@@ -98,6 +99,7 @@ class UserTestCase(TestCase, LoaderModuleMockMixin):
                             )
                             self.assertDictEqual(user.present("salt"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_invalid_uid_change(self):
         mock_info = MagicMock(
             side_effect=[
@@ -125,6 +127,7 @@ class UserTestCase(TestCase, LoaderModuleMockMixin):
             # Only one of uid/gid should have been flagged in the comment
             self.assertEqual(ret["comment"].count("not permitted"), 1)
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_invalid_gid_change(self):
         mock_info = MagicMock(
             side_effect=[
@@ -152,6 +155,7 @@ class UserTestCase(TestCase, LoaderModuleMockMixin):
             # Only one of uid/gid should have been flagged in the comment
             self.assertEqual(ret["comment"].count("not permitted"), 1)
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_invalid_uid_gid_change(self):
         mock_info = MagicMock(
             side_effect=[
@@ -179,6 +183,7 @@ class UserTestCase(TestCase, LoaderModuleMockMixin):
             # Both the uid and gid should have been flagged in the comment
             self.assertEqual(ret["comment"].count("not permitted"), 2)
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_uid_gid_change(self):
         before = {
             "uid": 5000,
@@ -227,6 +232,7 @@ class UserTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
             Test to ensure that the named user is absent
@@ -249,6 +255,7 @@ class UserTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({"comment": "User salt is not present", "result": True})
             self.assertDictEqual(user.absent("salt"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_changes(self):
         """
         Test salt.states.user._changes

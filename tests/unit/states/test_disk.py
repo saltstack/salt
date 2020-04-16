@@ -13,7 +13,7 @@ import salt.states.disk as disk
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class DiskTestCase(TestCase, LoaderModuleMockMixin):
@@ -66,6 +66,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_status_missing(self):
         """
         Test disk.status when name not found
@@ -82,6 +83,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         ret = disk.status(mock_fs)
         self.assertEqual(ret, mock_ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_status_type_error(self):
         """
         Test disk.status with incorrectly formatted arguments
@@ -103,6 +105,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         ret = disk.status(mock_fs, minimum=r"\cos\pi + i\sin\pi")
         self.assertEqual(ret, mock_ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_status_range_error(self):
         """
         Test disk.status with excessive extrema
@@ -124,6 +127,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         ret = disk.status(mock_fs, minimum="101")
         self.assertEqual(ret, mock_ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_status_inverted_range(self):
         """
         Test disk.status when minimum > maximum
@@ -140,6 +144,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         ret = disk.status(mock_fs, maximum="0", minimum="1")
         self.assertEqual(ret, mock_ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_status_threshold(self):
         """
         Test disk.status when filesystem triggers thresholds
@@ -172,6 +177,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         ret = disk.status(mock_fs, maximum=mock_max)
         self.assertEqual(ret, mock_ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_status_strip(self):
         """
         Test disk.status appropriately strips unit info from numbers
@@ -203,6 +209,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         ret = disk.status(mock_fs, maximum="4194304 KB", absolute=True)
         self.assertEqual(ret, mock_ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_status(self):
         """
         Test disk.status when filesystem meets thresholds
@@ -271,6 +278,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                     disk.status(mock_fs, "20", "10", absolute=True), ret
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_path_missing(self):
         mock_fs = "/bar"
         mock_ret = {
@@ -289,6 +297,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
             )
 
     # acceptable range
+    @skipIf(True, "FASTTEST skip")
     def test_path_used_absolute_acceptable(self):
         mock_fs = "/foo"
         mock_ret = {
@@ -304,6 +313,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                 disk.status(mock_fs, "58", "55", absolute=True, free=False), mock_ret
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_path_used_relative_acceptable(self):
         mock_fs = "/foo"
         mock_ret = {
@@ -320,6 +330,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                 mock_ret,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_path_free_absolute_acceptable(self):
         mock_fs = "/foo"
         mock_ret = {
@@ -335,6 +346,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                 disk.status(mock_fs, "100", "42", absolute=True, free=True), mock_ret
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_path_free_relative_acceptable(self):
         mock_fs = "/foo"
         mock_ret = {
@@ -350,6 +362,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                 disk.status(mock_fs, "42%", "41%", absolute=False, free=True), mock_ret
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_mount_used_absolute_acceptable(self):
         mock_fs = "/"
         mock_ret = {
@@ -364,6 +377,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
             mock_ret,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_mount_used_relative_acceptable(self):
         mock_fs = "/"
         mock_ret = {
@@ -378,6 +392,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
             disk.status(mock_fs, "7%", "6%", absolute=False, free=False), mock_ret
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_mount_free_absolute_acceptable(self):
         mock_fs = "/"
         mock_ret = {
@@ -392,6 +407,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
             mock_ret,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_mount_free_relative_acceptable(self):
         mock_fs = "/"
         mock_ret = {
@@ -407,6 +423,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         )
 
     # below minimum
+    @skipIf(True, "FASTTEST skip")
     def test_path_used_absolute_below(self):
         mock_fs = "/foo"
         mock_ret = {
@@ -422,6 +439,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                 disk.status(mock_fs, "60", "59", absolute=True, free=False), mock_ret
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_path_used_relative_below(self):
         mock_fs = "/foo"
         mock_ret = {
@@ -437,6 +455,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                 disk.status(mock_fs, "60%", "59%", absolute=False, free=False), mock_ret
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_path_free_absolute_below(self):
         mock_fs = "/foo"
         mock_ret = {
@@ -452,6 +471,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                 disk.status(mock_fs, "100", "43", absolute=True, free=True), mock_ret
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_path_free_relative_below(self):
         mock_fs = "/foo"
         mock_ret = {
@@ -467,6 +487,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                 disk.status(mock_fs, "100%", "43%", absolute=False, free=True), mock_ret
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_mount_used_absolute_below(self):
         mock_fs = "/"
         mock_ret = {
@@ -481,6 +502,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
             mock_ret,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_mount_used_relative_below(self):
         mock_fs = "/"
         mock_ret = {
@@ -495,6 +517,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
             disk.status(mock_fs, "8%", "7%", absolute=False, free=False), mock_ret
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_mount_free_absolute_below(self):
         mock_fs = "/"
         mock_ret = {
@@ -509,6 +532,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
             mock_ret,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_mount_free_relative_below(self):
         mock_fs = "/"
         mock_ret = {
@@ -524,6 +548,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         )
 
     # above maximum
+    @skipIf(True, "FASTTEST skip")
     def test_path_used_absolute_above(self):
         mock_fs = "/foo"
         mock_ret = {
@@ -539,6 +564,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                 disk.status(mock_fs, "57", "56", absolute=True, free=False), mock_ret
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_path_used_relative_above(self):
         mock_fs = "/foo"
         mock_ret = {
@@ -554,6 +580,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                 disk.status(mock_fs, "57%", "56%", absolute=False, free=False), mock_ret
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_path_free_absolute_above(self):
         mock_fs = "/foo"
         mock_ret = {
@@ -569,6 +596,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                 disk.status(mock_fs, "41", "40", absolute=True, free=True), mock_ret
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_path_free_relative_above(self):
         mock_fs = "/foo"
         mock_ret = {
@@ -584,6 +612,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                 disk.status(mock_fs, "41%", "40%", absolute=False, free=True), mock_ret
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_mount_used_absolute_above(self):
         mock_fs = "/"
         mock_ret = {
@@ -598,6 +627,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
             mock_ret,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_mount_used_relative_above(self):
         mock_fs = "/"
         mock_ret = {
@@ -612,6 +642,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
             disk.status(mock_fs, "5%", "4%", absolute=False, free=False), mock_ret
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_mount_free_absolute_above(self):
         mock_fs = "/"
         mock_ret = {
@@ -626,6 +657,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
             mock_ret,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_mount_free_relative_above(self):
         mock_fs = "/"
         mock_ret = {

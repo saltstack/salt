@@ -9,10 +9,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt libs
 import salt.utils.yaml
 import salt.utils.yamlencoding
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class YamlEncodingTestCase(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_yaml_dquote(self):
         for teststr in (r'"\ []{}"',):
             self.assertEqual(
@@ -20,18 +21,22 @@ class YamlEncodingTestCase(TestCase):
                 salt.utils.yaml.safe_load(salt.utils.yamlencoding.yaml_dquote(teststr)),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_yaml_dquote_doesNotAddNewLines(self):
         teststr = '"' * 100
         self.assertNotIn("\n", salt.utils.yamlencoding.yaml_dquote(teststr))
 
+    @skipIf(True, "FASTTEST skip")
     def test_yaml_squote(self):
         ret = salt.utils.yamlencoding.yaml_squote(r'"')
         self.assertEqual(ret, r"""'"'""")
 
+    @skipIf(True, "FASTTEST skip")
     def test_yaml_squote_doesNotAddNewLines(self):
         teststr = "'" * 100
         self.assertNotIn("\n", salt.utils.yamlencoding.yaml_squote(teststr))
 
+    @skipIf(True, "FASTTEST skip")
     def test_yaml_encode(self):
         for testobj in (
             None,

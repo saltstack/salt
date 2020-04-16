@@ -13,7 +13,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class OpenstackConfigTestCase(TestCase, LoaderModuleMockMixin):
@@ -29,6 +29,7 @@ class OpenstackConfigTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_set(self):
         """
         Test if it set a value in an OpenStack configuration file.
@@ -59,6 +60,7 @@ class OpenstackConfigTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get(self):
         """
         Test if it get a value from an OpenStack configuration file.
@@ -86,6 +88,7 @@ class OpenstackConfigTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete(self):
         """
         Test if it delete a value from an OpenStack configuration file.

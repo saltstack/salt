@@ -13,7 +13,7 @@ from salt.ext import six
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class CassandraTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class CassandraTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {cassandra: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_compactionstats(self):
         """
         Test for Return compactionstats info
@@ -32,6 +33,7 @@ class CassandraTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(cassandra, "_nodetool", mock):
             self.assertEqual(cassandra.compactionstats(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_version(self):
         """
         Test for Return the cassandra version
@@ -40,6 +42,7 @@ class CassandraTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(cassandra, "_nodetool", mock):
             self.assertEqual(cassandra.version(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_netstats(self):
         """
         Test for Return netstats info
@@ -48,6 +51,7 @@ class CassandraTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(cassandra, "_nodetool", mock):
             self.assertEqual(cassandra.netstats(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_tpstats(self):
         """
         Test for Return tpstats info
@@ -56,6 +60,7 @@ class CassandraTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(cassandra, "_nodetool", mock):
             self.assertEqual(cassandra.tpstats(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_info(self):
         """
         Test for Return cassandra node info
@@ -64,6 +69,7 @@ class CassandraTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(cassandra, "_nodetool", mock):
             self.assertEqual(cassandra.info(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_ring(self):
         """
         Test for Return ring info
@@ -72,6 +78,7 @@ class CassandraTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(cassandra, "_nodetool", mock):
             self.assertEqual(cassandra.ring(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_keyspaces(self):
         """
         Test for Return existing keyspaces
@@ -87,6 +94,7 @@ class CassandraTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(cassandra, "_sys_mgr", mock_sys_mgr):
             self.assertEqual(cassandra.keyspaces(), mock_keyspaces)
 
+    @skipIf(True, "FASTTEST skip")
     def test_column_families(self):
         """
         Test for Return existing column families for all keyspaces
@@ -119,6 +127,7 @@ class CassandraTestCase(TestCase, LoaderModuleMockMixin):
                     column_families[key] = sorted(column_families[key])
                 self.assertEqual(column_families, {"A": ["a", "b"], "B": ["c", "d"]})
 
+    @skipIf(True, "FASTTEST skip")
     def test_column_family_definition(self):
         """
         Test for Return a dictionary of column family definitions for the given

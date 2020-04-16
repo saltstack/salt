@@ -11,7 +11,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 
 # Salt testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 STUB_MEMORY_USAGE = namedtuple(
     "vmem", "total available percent used free active inactive buffers cached shared"
@@ -37,6 +37,7 @@ class MemUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {}
 
+    @skipIf(True, "FASTTEST skip")
     def test_non_list_config(self):
         config = {}
 
@@ -46,6 +47,7 @@ class MemUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret, (False, "Configuration for memusage beacon must be a list.")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_empty_config(self):
         config = [{}]
 
@@ -55,6 +57,7 @@ class MemUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret, (False, "Configuration for memusage beacon requires percent.")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_memusage_match(self):
         with patch("psutil.virtual_memory", MagicMock(return_value=STUB_MEMORY_USAGE)):
 
@@ -67,6 +70,7 @@ class MemUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret = memusage.beacon(config)
             self.assertEqual(ret, [{"memusage": 40.7}])
 
+    @skipIf(True, "FASTTEST skip")
     def test_memusage_nomatch(self):
         with patch("psutil.virtual_memory", MagicMock(return_value=STUB_MEMORY_USAGE)):
 

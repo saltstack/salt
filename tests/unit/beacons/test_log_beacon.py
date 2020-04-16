@@ -11,7 +11,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import mock_open, patch
 
 # Salt testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -31,6 +31,7 @@ class LogBeaconTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {log_beacon: {"__context__": {"log.loc": 2}, "__salt__": {}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_non_list_config(self):
         config = {}
 
@@ -38,6 +39,7 @@ class LogBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(ret, (False, "Configuration for log beacon must be a list."))
 
+    @skipIf(True, "FASTTEST skip")
     def test_empty_config(self):
         config = [{}]
 
@@ -47,6 +49,7 @@ class LogBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret, (False, "Configuration for log beacon must contain file option.")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_log_match(self):
         with patch("salt.utils.files.fopen", mock_open(read_data=_STUB_LOG_ENTRY)):
             config = [

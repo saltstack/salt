@@ -30,6 +30,7 @@ class WinFunctionsTestCase(TestCase):
     Test cases for salt.utils.win_functions
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_escape_argument_simple(self):
         """
         Test to make sure we encode simple arguments correctly
@@ -38,6 +39,7 @@ class WinFunctionsTestCase(TestCase):
 
         self.assertEqual(encoded, "simple")
 
+    @skipIf(True, "FASTTEST skip")
     def test_escape_argument_with_space(self):
         """
         Test to make sure we encode arguments containing spaces correctly
@@ -46,6 +48,7 @@ class WinFunctionsTestCase(TestCase):
 
         self.assertEqual(encoded, '^"with space^"')
 
+    @skipIf(True, "FASTTEST skip")
     def test_escape_argument_simple_path(self):
         """
         Test to make sure we encode simple path arguments correctly
@@ -54,6 +57,7 @@ class WinFunctionsTestCase(TestCase):
 
         self.assertEqual(encoded, "C:\\some\\path")
 
+    @skipIf(True, "FASTTEST skip")
     def test_escape_argument_path_with_space(self):
         """
         Test to make sure we encode path arguments containing spaces correctly
@@ -63,6 +67,7 @@ class WinFunctionsTestCase(TestCase):
         self.assertEqual(encoded, '^"C:\\Some Path\\With Spaces^"')
 
     @skipIf(not salt.utils.platform.is_windows(), "WinDLL only available on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_broadcast_setting_change(self):
         """
             Test to rehash the Environment variables
@@ -70,6 +75,7 @@ class WinFunctionsTestCase(TestCase):
         self.assertTrue(win_functions.broadcast_setting_change())
 
     @skipIf(not salt.utils.platform.is_windows(), "WinDLL only available on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_get_user_groups(self):
         groups = ["Administrators", "Users"]
         with patch("win32net.NetUserGetLocalGroups", return_value=groups):
@@ -77,6 +83,7 @@ class WinFunctionsTestCase(TestCase):
             self.assertListEqual(groups, ret)
 
     @skipIf(not salt.utils.platform.is_windows(), "WinDLL only available on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_get_user_groups_sid(self):
         groups = ["Administrators", "Users"]
         expected = ["S-1-5-32-544", "S-1-5-32-545"]
@@ -85,6 +92,7 @@ class WinFunctionsTestCase(TestCase):
             self.assertListEqual(expected, ret)
 
     @skipIf(not salt.utils.platform.is_windows(), "WinDLL only available on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_get_user_groups_system(self):
         groups = ["SYSTEM"]
         with patch("win32net.NetUserGetLocalGroups", return_value=groups):
@@ -93,6 +101,7 @@ class WinFunctionsTestCase(TestCase):
 
     @skipIf(not salt.utils.platform.is_windows(), "WinDLL only available on Windows")
     @skipIf(not HAS_WIN32, "Requires pywin32 libraries")
+    @skipIf(True, "FASTTEST skip")
     def test_get_user_groups_unavailable_dc(self):
         groups = ["Administrators", "Users"]
         win_error = WinError()
@@ -104,6 +113,7 @@ class WinFunctionsTestCase(TestCase):
 
     @skipIf(not salt.utils.platform.is_windows(), "WinDLL only available on Windows")
     @skipIf(not HAS_WIN32, "Requires pywin32 libraries")
+    @skipIf(True, "FASTTEST skip")
     def test_get_user_groups_unknown_dc(self):
         groups = ["Administrators", "Users"]
         win_error = WinError()
@@ -115,6 +125,7 @@ class WinFunctionsTestCase(TestCase):
 
     @skipIf(not salt.utils.platform.is_windows(), "WinDLL only available on Windows")
     @skipIf(not HAS_WIN32, "Requires pywin32 libraries")
+    @skipIf(True, "FASTTEST skip")
     def test_get_user_groups_missing_permission(self):
         groups = ["Administrators", "Users"]
         win_error = WinError()
@@ -126,6 +137,7 @@ class WinFunctionsTestCase(TestCase):
 
     @skipIf(not salt.utils.platform.is_windows(), "WinDLL only available on Windows")
     @skipIf(not HAS_WIN32, "Requires pywin32 libraries")
+    @skipIf(True, "FASTTEST skip")
     def test_get_user_groups_error(self):
         win_error = WinError()
         win_error.winerror = 1927

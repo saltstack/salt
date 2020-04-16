@@ -110,6 +110,7 @@ class IPCMessageClient(BaseIPCReqCase):
         finally:
             self.channel = None
 
+    @skipIf(True, "FASTTEST skip")
     def test_singleton(self):
         channel = self._get_channel()
         assert self.channel is channel
@@ -122,12 +123,14 @@ class IPCMessageClient(BaseIPCReqCase):
         self.wait()
         self.assertEqual(self.payloads[0], msg)
 
+    @skipIf(True, "FASTTEST skip")
     def test_basic_send(self):
         msg = {"foo": "bar", "stop": True}
         self.channel.send(msg)
         self.wait()
         self.assertEqual(self.payloads[0], msg)
 
+    @skipIf(True, "FASTTEST skip")
     def test_many_send(self):
         msgs = []
         self.server_channel.stream_handler = MagicMock()
@@ -141,6 +144,7 @@ class IPCMessageClient(BaseIPCReqCase):
         self.wait()
         self.assertEqual(self.payloads[:-1], msgs)
 
+    @skipIf(True, "FASTTEST skip")
     def test_very_big_message(self):
         long_str = "".join([six.text_type(num) for num in range(10 ** 5)])
         msg = {"long_str": long_str, "stop": True}
@@ -148,6 +152,7 @@ class IPCMessageClient(BaseIPCReqCase):
         self.wait()
         self.assertEqual(msg, self.payloads[0])
 
+    @skipIf(True, "FASTTEST skip")
     def test_multistream_sends(self):
         local_channel = self._get_channel()
 
@@ -158,6 +163,7 @@ class IPCMessageClient(BaseIPCReqCase):
         self.wait()
         self.assertEqual(self.payloads[:-1], ["foo", "foo"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_multistream_errors(self):
         local_channel = self._get_channel()
 
@@ -218,6 +224,7 @@ class IPCMessagePubSubCase(salt.ext.tornado.testing.AsyncTestCase):
         del self.pub_channel
         del self.sub_channel
 
+    @skipIf(True, "FASTTEST skip")
     def test_multi_client_reading(self):
         # To be completely fair let's create 2 clients.
         client1 = self.sub_channel
@@ -252,6 +259,7 @@ class IPCMessagePubSubCase(salt.ext.tornado.testing.AsyncTestCase):
         self.assertEqual(call_cnt[0], "TEST")
         self.assertEqual(call_cnt[1], "TEST")
 
+    @skipIf(True, "FASTTEST skip")
     def test_sync_reading(self):
         # To be completely fair let's create 2 clients.
         client1 = self.sub_channel

@@ -27,6 +27,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {win_wusa: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_installed_false(self):
         """
         test is_installed function when the KB is not installed
@@ -35,6 +36,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_wusa.__salt__, {"cmd.retcode": mock_retcode}):
             self.assertFalse(win_wusa.is_installed("KB123456"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_installed_true(self):
         """
         test is_installed function when the KB is installed
@@ -43,6 +45,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_wusa.__salt__, {"cmd.retcode": mock_retcode}):
             self.assertTrue(win_wusa.is_installed("KB123456"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_list(self):
         """
         test list function
@@ -59,6 +62,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             returned = win_wusa.list()
             self.assertListEqual(expected, returned)
 
+    @skipIf(True, "FASTTEST skip")
     def test_install(self):
         """
         test install function
@@ -71,6 +75,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             ["wusa.exe", path, "/quiet", "/norestart"], ignore_retcode=True
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_restart(self):
         """
         test install function with restart=True
@@ -83,6 +88,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             ["wusa.exe", path, "/quiet", "/forcerestart"], ignore_retcode=True
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_already_installed(self):
         """
         test install function when KB already installed
@@ -104,6 +110,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             excinfo.exception.strerror,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_reboot_needed(self):
         """
         test install function when KB need a reboot
@@ -125,6 +132,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             excinfo.exception.strerror,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_error_87(self):
         """
         test install function when error 87 returned
@@ -143,6 +151,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             excinfo.exception.strerror,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_error_other(self):
         """
         test install function on other unknown error
@@ -157,6 +166,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual("Unknown error: 1234", excinfo.exception.strerror)
 
+    @skipIf(True, "FASTTEST skip")
     def test_uninstall_kb(self):
         """
         test uninstall function passing kb name
@@ -178,6 +188,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             ignore_retcode=True,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_uninstall_path(self):
         """
         test uninstall function passing full path to .msu file
@@ -193,6 +204,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             ignore_retcode=True,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_uninstall_path_restart(self):
         """
         test uninstall function with full path and restart=True
@@ -208,6 +220,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             ignore_retcode=True,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_uninstall_already_uninstalled(self):
         """
         test uninstall function when KB already uninstalled
@@ -233,6 +246,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             excinfo.exception.strerror,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_uninstall_path_error_other(self):
         """
         test uninstall function with unknown error

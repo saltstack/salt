@@ -37,7 +37,6 @@ self:
 
 @skipIf(not salt.utils.path.which("ssh"), "No ssh binary found in path")
 class SSHPasswordTests(ShellCase):
-    @skipIf(True, "SLOWTEST skip")
     def test_password_failure(self):
         """
         Check password failures when trying to deploy keys
@@ -78,6 +77,7 @@ class SSHPasswordTests(ShellCase):
 
 
 class SSHRosterDefaults(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_roster_defaults_flat(self):
         """
         Test Roster Defaults on the flat roster
@@ -139,6 +139,7 @@ class SSHSingleTests(TestCase):
             "priv": "/etc/salt/pki/master/ssh/salt-ssh.rsa",
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_single_opts(self):
         """ Sanity check for ssh.Single options
         """
@@ -164,6 +165,7 @@ class SSHSingleTests(TestCase):
             "-o User=root  date +%s",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_with_pre_flight(self):
         """
         test Single.run() when ssh_pre_flight is set
@@ -198,6 +200,7 @@ class SSHSingleTests(TestCase):
             mock_flight.assert_called()
             assert ret == cmd_ret
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_with_pre_flight_stderr(self):
         """
         test Single.run() when ssh_pre_flight is set
@@ -232,6 +235,7 @@ class SSHSingleTests(TestCase):
             mock_flight.assert_called()
             assert ret == cmd_ret
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_with_pre_flight_script_doesnot_exist(self):
         """
         test Single.run() when ssh_pre_flight is set
@@ -266,6 +270,7 @@ class SSHSingleTests(TestCase):
             mock_flight.assert_not_called()
             assert ret == cmd_ret
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_with_pre_flight_thin_dir_exists(self):
         """
         test Single.run() when ssh_pre_flight is set
@@ -298,6 +303,7 @@ class SSHSingleTests(TestCase):
             mock_flight.assert_not_called()
             assert ret == cmd_ret
 
+    @skipIf(True, "FASTTEST skip")
     def test_execute_script(self):
         """
         test Single.execute_script()
@@ -328,6 +334,7 @@ class SSHSingleTests(TestCase):
                 call("rm '{0}'".format(script)),
             ] == mock_cmd.call_args_list
 
+    @skipIf(True, "FASTTEST skip")
     def test_shim_cmd(self):
         """
         test Single.shim_cmd()
@@ -359,6 +366,7 @@ class SSHSingleTests(TestCase):
                 call("rm '$HOME/.35d96ccac2ff.py'"),
             ] == mock_cmd.call_args_list
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_ssh_pre_flight(self):
         """
         test Single.run_ssh_pre_flight

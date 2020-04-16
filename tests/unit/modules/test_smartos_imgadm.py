@@ -12,7 +12,7 @@ from salt.modules.smartos_imgadm import _parse_image_meta
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 image_orphan = {
     "manifest": {"uuid": "07f360fd-12d5-e624-a279-eb8a15b630f6"},
@@ -170,6 +170,7 @@ class ImgadmTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {imgadm: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_image_meta_orphan(self):
         """
         Test the internal _parse_image_meta methode
@@ -178,6 +179,7 @@ class ImgadmTestCase(TestCase, LoaderModuleMockMixin):
         ret = {"Error": "This looks like an orphaned image, image payload was invalid."}
         self.assertEqual(_parse_image_meta(image_orphan, True), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_image_meta_native(self):
         """
         Test the internal _parse_image_meta methode
@@ -193,6 +195,7 @@ class ImgadmTestCase(TestCase, LoaderModuleMockMixin):
         }
         self.assertEqual(_parse_image_meta(image_native, True), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_image_meta_lx(self):
         """
         Test the internal _parse_image_meta methode
@@ -210,6 +213,7 @@ class ImgadmTestCase(TestCase, LoaderModuleMockMixin):
         }
         self.assertEqual(_parse_image_meta(image_lx, True), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_image_meta_zvol(self):
         """
         Test the internal _parse_image_meta methode
@@ -226,6 +230,7 @@ class ImgadmTestCase(TestCase, LoaderModuleMockMixin):
         }
         self.assertEqual(_parse_image_meta(image_zvol, True), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_image_meta_docker(self):
         """
         Test the internal _parse_image_meta methode

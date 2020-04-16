@@ -12,7 +12,7 @@ import salt.modules.moosefs as moosefs
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MoosefsTestCase(TestCase, LoaderModuleMockMixin):
@@ -25,6 +25,7 @@ class MoosefsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'dirinfo' function tests: 1i
 
+    @skipIf(True, "FASTTEST skip")
     def test_dirinfo(self):
         """
         Test if it return information on a directory located on the Moose
@@ -35,6 +36,7 @@ class MoosefsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'fileinfo' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_fileinfo(self):
         """
         Test if it returns information on a file located on the Moose
@@ -45,6 +47,7 @@ class MoosefsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'mounts' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_mounts(self):
         """
         Test if it returns a list of current MooseFS mounts
@@ -55,6 +58,7 @@ class MoosefsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'getgoal' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_getgoal(self):
         """
         Test if it returns goal(s) for a file or directory

@@ -13,7 +13,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MacDesktopTestCase(TestCase, LoaderModuleMockMixin):
@@ -26,6 +26,7 @@ class MacDesktopTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_output_volume' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_output_volume(self):
         """
         Test if it get the output volume (range 0 to 100)
@@ -34,6 +35,7 @@ class MacDesktopTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(mac_desktop.__salt__, {"cmd.run_all": mock}):
             self.assertEqual(mac_desktop.get_output_volume(), "25")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_output_volume_error(self):
         """
         Tests that an error is raised when cmd.run_all errors
@@ -44,6 +46,7 @@ class MacDesktopTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_output_volume' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_output_volume(self):
         """
         Test if it set the volume of sound (range 0 to 100)
@@ -54,6 +57,7 @@ class MacDesktopTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(mac_desktop.set_output_volume("25"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_output_volume_error(self):
         """
         Tests that an error is raised when cmd.run_all errors
@@ -66,6 +70,7 @@ class MacDesktopTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'screensaver' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_screensaver(self):
         """
         Test if it launch the screensaver
@@ -74,6 +79,7 @@ class MacDesktopTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(mac_desktop.__salt__, {"cmd.run_all": mock}):
             self.assertTrue(mac_desktop.screensaver())
 
+    @skipIf(True, "FASTTEST skip")
     def test_screensaver_error(self):
         """
         Tests that an error is raised when cmd.run_all errors
@@ -84,6 +90,7 @@ class MacDesktopTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'lock' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_lock(self):
         """
         Test if it lock the desktop session
@@ -92,6 +99,7 @@ class MacDesktopTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(mac_desktop.__salt__, {"cmd.run_all": mock}):
             self.assertTrue(mac_desktop.lock())
 
+    @skipIf(True, "FASTTEST skip")
     def test_lock_error(self):
         """
         Tests that an error is raised when cmd.run_all errors
@@ -102,6 +110,7 @@ class MacDesktopTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'say' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_say(self):
         """
         Test if it says some words.
@@ -110,6 +119,7 @@ class MacDesktopTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(mac_desktop.__salt__, {"cmd.run_all": mock}):
             self.assertTrue(mac_desktop.say())
 
+    @skipIf(True, "FASTTEST skip")
     def test_say_error(self):
         """
         Tests that an error is raised when cmd.run_all errors

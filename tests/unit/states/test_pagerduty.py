@@ -11,7 +11,7 @@ import salt.states.pagerduty as pagerduty
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PagerdutyTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class PagerdutyTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'create_event' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_event(self):
         """
         Test to create an event on the PagerDuty service.

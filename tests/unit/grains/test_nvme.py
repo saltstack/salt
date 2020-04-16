@@ -13,7 +13,7 @@ import salt.grains.nvme as nvme
 from tests.support.mock import MagicMock, mock_open, patch
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class NvmeGrainsTestCase(TestCase):
@@ -21,6 +21,7 @@ class NvmeGrainsTestCase(TestCase):
     Test cases for nvme grains
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_linux_nvme_nqn_grains(self):
         _nvme_file = textwrap.dedent(
             """\
@@ -44,6 +45,7 @@ class NvmeGrainsTestCase(TestCase):
         ),
     )
     @patch("salt.grains.nvme.log", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_linux_nqn_non_root(self):
         """
         Test if linux_nqn is running on salt-master as non-root
@@ -59,6 +61,7 @@ class NvmeGrainsTestCase(TestCase):
 
     @patch("salt.utils.files.fopen", MagicMock(side_effect=IOError(errno.ENOENT, "")))
     @patch("salt.grains.nvme.log", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_linux_nqn_no_nvme_initiator(self):
         """
         Test if linux_nqn is running on salt-master as root.

@@ -12,7 +12,7 @@ import salt.modules.openbsdpkg as openbsdpkg
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ListPackages(object):
@@ -37,6 +37,7 @@ class OpenbsdpkgTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {openbsdpkg: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_pkgs(self):
         """
         Test for listing installed packages.
@@ -66,6 +67,7 @@ class OpenbsdpkgTestCase(TestCase, LoaderModuleMockMixin):
             "pkg_info -q -a", output_loglevel="trace"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_pkgs(self):
         """
         Test package install behavior for the following conditions:
@@ -111,6 +113,7 @@ class OpenbsdpkgTestCase(TestCase, LoaderModuleMockMixin):
         run_all_mock.assert_has_calls(expected_calls, any_order=True)
         self.assertEqual(run_all_mock.call_count, 3)
 
+    @skipIf(True, "FASTTEST skip")
     def test_upgrade_available(self):
         """
         Test upgrade_available when an update is available.
@@ -119,6 +122,7 @@ class OpenbsdpkgTestCase(TestCase, LoaderModuleMockMixin):
         with patch("salt.modules.openbsdpkg.latest_version", ret):
             self.assertTrue(openbsdpkg.upgrade_available("zsh"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_upgrade_not_available(self):
         """
         Test upgrade_available when an update is not available.
@@ -127,6 +131,7 @@ class OpenbsdpkgTestCase(TestCase, LoaderModuleMockMixin):
         with patch("salt.modules.openbsdpkg.latest_version", ret):
             self.assertFalse(openbsdpkg.upgrade_available("zsh"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_upgrade(self):
         """
         Test upgrading packages.

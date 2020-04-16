@@ -13,7 +13,7 @@ import salt.utils.json
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class SaltcloudmodTestCase(TestCase, LoaderModuleMockMixin):
@@ -27,6 +27,7 @@ class SaltcloudmodTestCase(TestCase, LoaderModuleMockMixin):
     def setUp(self):
         self.mock_json_loads = MagicMock(side_effect=ValueError())
 
+    @skipIf(True, "FASTTEST skip")
     def test_create(self):
         """
             Test if create the named vm

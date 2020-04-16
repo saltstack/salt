@@ -17,7 +17,7 @@ import salt.states.ldap
 from salt.ext import six
 from salt.utils.oset import OrderedSet
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 # emulates the LDAP database.  each key is the DN of an entry and it
 # maps to a dict which maps attribute names to sets of values.
@@ -244,6 +244,7 @@ class LDAPTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._test_helper(init_db, expected, replace, delete_others)
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed_empty(self):
         _init_db()
         name = "ldapi:///"
@@ -256,40 +257,51 @@ class LDAPTestCase(TestCase, LoaderModuleMockMixin):
         actual = salt.states.ldap.managed(name, {})
         self.assertDictEqual(expected, actual)
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed_add_entry(self):
         self._test_helper_success({}, {"dummydn": {"foo": ["bar", "baz"]}})
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed_add_attr(self):
         self._test_helper_success(_complex_db(), {"dnfoo": {"attrfoo3": ["valfoo3.1"]}})
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed_simplereplace(self):
         self._test_helper_success(_complex_db(), {"dnfoo": {"attrfoo1": ["valfoo1.3"]}})
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed_deleteattr(self):
         self._test_helper_success(_complex_db(), {"dnfoo": {"attrfoo1": []}})
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed_deletenonexistattr(self):
         self._test_helper_nochange(_complex_db(), {"dnfoo": {"dummyattr": []}})
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed_deleteentry(self):
         self._test_helper_success(_complex_db(), {"dnfoo": {}}, True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed_deletenonexistentry(self):
         self._test_helper_nochange(_complex_db(), {"dummydn": {}}, True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed_deletenonexistattrinnonexistentry(self):
         self._test_helper_nochange(_complex_db(), {"dummydn": {"dummyattr": []}})
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed_add_attr_delete_others(self):
         self._test_helper_success(
             _complex_db(), {"dnfoo": {"dummyattr": ["dummyval"]}}, True
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed_no_net_change(self):
         self._test_helper_nochange(
             _complex_db(), {"dnfoo": {"attrfoo1": ["valfoo1.1", "valfoo1.2"]}}
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed_repeated_values(self):
         self._test_helper_success(
             {}, {"dummydn": {"dummyattr": ["dummyval", "dummyval"]}}

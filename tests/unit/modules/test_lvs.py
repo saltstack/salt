@@ -12,7 +12,7 @@ import salt.modules.lvs as lvs
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class LvsTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class LvsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {lvs: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_service(self):
         """
         Test for Add a virtual service.
@@ -39,6 +40,7 @@ class LvsTestCase(TestCase, LoaderModuleMockMixin):
                 ):
                     self.assertEqual(lvs.add_service(), "stderr")
 
+    @skipIf(True, "FASTTEST skip")
     def test_edit_service(self):
         """
         Test for Edit the virtual service.
@@ -55,6 +57,7 @@ class LvsTestCase(TestCase, LoaderModuleMockMixin):
                 ):
                     self.assertEqual(lvs.edit_service(), "stderr")
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_service(self):
         """
         Test for Delete the virtual service.
@@ -71,6 +74,7 @@ class LvsTestCase(TestCase, LoaderModuleMockMixin):
                 ):
                     self.assertEqual(lvs.delete_service(), "stderr")
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_server(self):
         """
         Test for Add a real server to a virtual service.
@@ -87,6 +91,7 @@ class LvsTestCase(TestCase, LoaderModuleMockMixin):
                 ):
                     self.assertEqual(lvs.add_server(), "stderr")
 
+    @skipIf(True, "FASTTEST skip")
     def test_edit_server(self):
         """
         Test for Edit a real server to a virtual service.
@@ -103,6 +108,7 @@ class LvsTestCase(TestCase, LoaderModuleMockMixin):
                 ):
                     self.assertEqual(lvs.edit_server(), "stderr")
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_server(self):
         """
         Test for Delete the realserver from the virtual service.
@@ -119,6 +125,7 @@ class LvsTestCase(TestCase, LoaderModuleMockMixin):
                 ):
                     self.assertEqual(lvs.delete_server(), "stderr")
 
+    @skipIf(True, "FASTTEST skip")
     def test_clear(self):
         """
         Test for Clear the virtual server table
@@ -134,6 +141,7 @@ class LvsTestCase(TestCase, LoaderModuleMockMixin):
             ):
                 self.assertEqual(lvs.clear(), "stderr")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_rules(self):
         """
         Test for Get the virtual server rules
@@ -142,6 +150,7 @@ class LvsTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(lvs.__salt__, {"cmd.run": MagicMock(return_value="A")}):
                 self.assertEqual(lvs.get_rules(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_(self):
         """
         Test for List the virtual server table
@@ -158,6 +167,7 @@ class LvsTestCase(TestCase, LoaderModuleMockMixin):
                 ):
                     self.assertEqual(lvs.list_("p", "s"), "stderr")
 
+    @skipIf(True, "FASTTEST skip")
     def test_zero(self):
         """
         Test for Zero the packet, byte and rate counters in a
@@ -175,6 +185,7 @@ class LvsTestCase(TestCase, LoaderModuleMockMixin):
                 ):
                     self.assertEqual(lvs.zero("p", "s"), "stderr")
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_service(self):
         """
         Test for Check the virtual service exists.
@@ -194,6 +205,7 @@ class LvsTestCase(TestCase, LoaderModuleMockMixin):
                             lvs.check_service("p", "s"), "Error: service not exists"
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_server(self):
         """
         Test for Check the real server exists in the specified service.

@@ -7,7 +7,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import salt.utils.dictdiffer as dictdiffer
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 NONE = dictdiffer.RecursiveDictDiffer.NONE_VALUE
 
@@ -36,25 +36,31 @@ class RecursiveDictDifferTestCase(TestCase):
             except AttributeError:
                 continue
 
+    @skipIf(True, "FASTTEST skip")
     def test_added(self):
         self.assertEqual(self.recursive_diff.added(), ["a.g", "h", "i"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_removed(self):
         self.assertEqual(self.recursive_diff.removed(), ["a.f"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_changed_with_ignore_unset_values(self):
         self.recursive_diff.ignore_unset_values = True
         self.assertEqual(self.recursive_diff.changed(), ["a.c", "a.e"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_changed_without_ignore_unset_values(self):
         self.recursive_diff.ignore_unset_values = False
         self.assertEqual(
             self.recursive_diff.changed(), ["a.c", "a.e", "a.f", "a.g", "h", "i"]
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_unchanged(self):
         self.assertEqual(self.recursive_diff.unchanged(), ["a.b", "j"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_diffs(self):
         self.assertDictEqual(
             self.recursive_diff.diffs,
@@ -82,6 +88,7 @@ class RecursiveDictDifferTestCase(TestCase):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_new_values(self):
         self.assertDictEqual(
             self.recursive_diff.new_values,
@@ -92,6 +99,7 @@ class RecursiveDictDifferTestCase(TestCase):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_old_values(self):
         self.assertDictEqual(
             self.recursive_diff.old_values,
@@ -102,6 +110,7 @@ class RecursiveDictDifferTestCase(TestCase):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_changes_str(self):
         self.assertEqual(
             self.recursive_diff.changes_str,

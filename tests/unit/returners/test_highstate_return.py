@@ -21,7 +21,7 @@ import salt.utils.files
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -48,6 +48,7 @@ class HighstateReturnerTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_pipe_in_name(self):
         ret = {
             "fun_args": ["test"],

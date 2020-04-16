@@ -11,7 +11,7 @@ from salt.modules.libcloud_dns import _simple_record, _simple_zone
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class DNSTestZone(object):
@@ -71,6 +71,7 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_record_exists(self):
         """
         Try and create a record that already exists
@@ -80,6 +81,7 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertTrue(result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_record_does_not_exist(self):
         """
         Try and create a record that already exists
@@ -89,6 +91,7 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertTrue(result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_record_exists(self):
         """
         Try and deny a record that already exists
@@ -96,6 +99,7 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
         result = libcloud_dns.record_absent("www", "test.com", "A", "127.0.0.1", "test")
         self.assertTrue(result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_record_does_not_exist(self):
         """
         Try and deny a record that already exists
@@ -105,6 +109,7 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertTrue(result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_zone_not_found(self):
         """
         Assert that when you try and ensure present state for a record to a zone that doesn't exist
@@ -115,6 +120,7 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertFalse(result["result"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_zone_not_found(self):
         """
         Assert that when you try and ensure absent state for a record to a zone that doesn't exist
@@ -125,6 +131,7 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertFalse(result["result"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_zone_present(self):
         """
         Assert that a zone is present (that did not exist)
@@ -132,6 +139,7 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
         result = libcloud_dns.zone_present("testing.com", "master", "test1")
         self.assertTrue(result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_zone_already_present(self):
         """
         Assert that a zone is present (that did exist)
@@ -139,6 +147,7 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
         result = libcloud_dns.zone_present("test.com", "master", "test1")
         self.assertTrue(result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_zone_absent(self):
         """
         Assert that a zone that did exist is absent
@@ -146,6 +155,7 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
         result = libcloud_dns.zone_absent("test.com", "test1")
         self.assertTrue(result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_zone_already_absent(self):
         """
         Assert that a zone that did not exist is absent

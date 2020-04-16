@@ -12,7 +12,7 @@ import salt.modules.incron as incron
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class IncronTestCase(TestCase, LoaderModuleMockMixin):
@@ -25,6 +25,7 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'write_incron_file' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_write_incron_file(self):
         """
         Test if it writes the contents of a file to a user's crontab
@@ -38,6 +39,7 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'write_cron_file_verbose' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_write_cron_file_verbose(self):
         """
         Test if it writes the contents of a file to a user's crontab and
@@ -54,6 +56,7 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'raw_system_incron' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_raw_system_incron(self):
         """
         Test if it return the contents of the system wide incrontab
@@ -63,6 +66,7 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'raw_incron' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_raw_incron(self):
         """
         Test if it return the contents of the user's incrontab
@@ -75,6 +79,7 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_tab' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_tab(self):
         """
         Test if it return the contents of the specified user's incrontab
@@ -89,6 +94,7 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_job' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_job(self):
         """
         Test if it sets a cron job up for a specified user.
@@ -173,6 +179,7 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'rm_job' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_rm_job(self):
         """
         Test if it remove a cron job for a specified user. If any of the

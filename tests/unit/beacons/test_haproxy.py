@@ -9,7 +9,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 
 # Salt testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class HAProxyBeaconTestCase(TestCase, LoaderModuleMockMixin):
@@ -20,6 +20,7 @@ class HAProxyBeaconTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {haproxy: {"__context__": {}, "__salt__": {}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_non_list_config(self):
         config = {}
 
@@ -29,6 +30,7 @@ class HAProxyBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret, (False, "Configuration for haproxy beacon must be a list.")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_empty_config(self):
         config = [{}]
 
@@ -38,12 +40,14 @@ class HAProxyBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret, (False, "Configuration for haproxy beacon requires backends.")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_no_servers(self):
         config = [{"backends": {"www-backend": {"threshold": 45}}}]
         ret = haproxy.validate(config)
 
         self.assertEqual(ret, (False, "Backends for haproxy beacon require servers."))
 
+    @skipIf(True, "FASTTEST skip")
     def test_threshold_reached(self):
         config = [{"backends": {"www-backend": {"threshold": 45, "servers": ["web1"]}}}]
         ret = haproxy.validate(config)
@@ -55,6 +59,7 @@ class HAProxyBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret = haproxy.beacon(config)
             self.assertEqual(ret, [{"threshold": 45, "scur": 46, "server": "web1"}])
 
+    @skipIf(True, "FASTTEST skip")
     def test_threshold_not_reached(self):
         config = [
             {"backends": {"www-backend": {"threshold": 100, "servers": ["web1"]}}}

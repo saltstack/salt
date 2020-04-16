@@ -8,7 +8,7 @@ import salt.wheel
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 class KeyWheelModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
@@ -18,13 +18,11 @@ class KeyWheelModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
     def tearDown(self):
         del self.wheel
 
-    @skipIf(True, "SLOWTEST skip")
     def test_list_all(self):
         ret = self.wheel.cmd("key.list_all", print_event=False)
         for host in ["minion", "sub_minion"]:
             self.assertIn(host, ret["minions"])
 
-    @skipIf(True, "SLOWTEST skip")
     def test_gen(self):
         ret = self.wheel.cmd(
             "key.gen", kwarg={"id_": "soundtechniciansrock"}, print_event=False
@@ -43,7 +41,6 @@ class KeyWheelModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
             ret.get("priv", "").startswith("-----BEGIN RSA PRIVATE KEY-----")
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_master_key_str(self):
         ret = self.wheel.cmd("key.master_key_str", print_event=False)
         self.assertIn("local", ret)

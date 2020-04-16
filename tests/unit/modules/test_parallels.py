@@ -15,7 +15,7 @@ from salt.ext import six
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
@@ -26,6 +26,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {parallels: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test__normalize_args(self):
         """
         Test parallels._normalize_args
@@ -55,6 +56,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
         other_args = {"anion": "hydroxide", "cation": "ammonium"}
         _validate_ret(parallels._normalize_args(other_args))
 
+    @skipIf(True, "FASTTEST skip")
     def test__find_guids(self):
         """
         Test parallels._find_guids
@@ -73,6 +75,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(parallels._find_guids(guid_str), guids)
 
+    @skipIf(True, "FASTTEST skip")
     def test_prlsrvctl(self):
         """
         Test parallels.prlsrvctl
@@ -110,6 +113,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
                 parallels.prlsrvctl("set", "--mem-limit auto", runas=runas)
                 set_fcn.assert_called_once_with(set_cmd, runas=runas)
 
+    @skipIf(True, "FASTTEST skip")
     def test_prlctl(self):
         """
         Test parallels.prlctl
@@ -147,6 +151,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 cap_fcn.assert_called_once_with(cap_cmd, runas=runas)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_vms(self):
         """
         Test parallels.list_vms
@@ -185,6 +190,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
                 "list", ["-o", "uuid,status", "--all"], runas=runas
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_clone(self):
         """
         Test parallels.clone
@@ -216,6 +222,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
                 "clone", [name, "--name", "macvm_templ", "--template"], runas=runas
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete(self):
         """
         Test parallels.delete
@@ -229,6 +236,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
             parallels.delete(name, runas=runas)
             mock_delete.assert_called_once_with("delete", name, runas=runas)
 
+    @skipIf(True, "FASTTEST skip")
     def test_exists(self):
         """
         Test parallels.exists
@@ -246,6 +254,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(parallels, "list_vms", mock_list):
             self.assertFalse(parallels.exists("winvm", runas=runas))
 
+    @skipIf(True, "FASTTEST skip")
     def test_start(self):
         """
         Test parallels.start
@@ -258,6 +267,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
             parallels.start(name, runas=runas)
             mock_start.assert_called_once_with("start", name, runas=runas)
 
+    @skipIf(True, "FASTTEST skip")
     def test_stop(self):
         """
         Test parallels.stop
@@ -277,6 +287,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
             parallels.stop(name, kill=True, runas=runas)
             mock_kill.assert_called_once_with("stop", [name, "--kill"], runas=runas)
 
+    @skipIf(True, "FASTTEST skip")
     def test_restart(self):
         """
         Test parallels.restart
@@ -289,6 +300,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
             parallels.restart(name, runas=runas)
             mock_start.assert_called_once_with("restart", name, runas=runas)
 
+    @skipIf(True, "FASTTEST skip")
     def test_reset(self):
         """
         Test parallels.reset
@@ -301,6 +313,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
             parallels.reset(name, runas=runas)
             mock_start.assert_called_once_with("reset", name, runas=runas)
 
+    @skipIf(True, "FASTTEST skip")
     def test_status(self):
         """
         Test parallels.status
@@ -313,6 +326,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
             parallels.status(name, runas=runas)
             mock_start.assert_called_once_with("status", name, runas=runas)
 
+    @skipIf(True, "FASTTEST skip")
     def test_exec_(self):
         """
         Test parallels.exec_
@@ -327,6 +341,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
                 "exec", [name, "find", "/etc/paths.d"], runas=runas
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_snapshot_id_to_name(self):
         """
         Test parallels.snapshot_id_to_name
@@ -381,6 +396,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
             snap_name = parallels.snapshot_id_to_name(name, snap_id)
             self.assertEqual(snap_name, "top")
 
+    @skipIf(True, "FASTTEST skip")
     def test_snapshot_name_to_id(self):
         """
         Test parallels.snapshot_name_to_id
@@ -437,6 +453,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
                     strict=True,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test__validate_snap_name(self):
         """
         Test parallels._validate_snap_name
@@ -479,6 +496,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
                 name, u"e_ν", strict=False, runas=None
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_snapshots(self):
         """
         Test parallels.list_snapshots
@@ -529,6 +547,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertIn(snap_name, ret)
                 mock_prlctl.assert_called_once_with("snapshot-list", [name], runas=None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_snapshot(self):
         """
         Test parallels.snapshot
@@ -564,6 +583,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
                 runas=None,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_snapshot(self):
         """
         Test parallels.delete_snapshot
@@ -609,6 +629,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
                     "snapshot-delete", [name, "--id", snap_ids[1]], runas=None
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_revert_snapshot(self):
         """
         Test parallels.revert_snapshot

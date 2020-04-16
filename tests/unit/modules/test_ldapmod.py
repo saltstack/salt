@@ -14,7 +14,7 @@ import salt.modules.ldapmod as ldapmod
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class LdapmodTestCase(TestCase, LoaderModuleMockMixin):
@@ -27,6 +27,7 @@ class LdapmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'search' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_search(self):
         """
         Test if it run an arbitrary LDAP query and return the results.

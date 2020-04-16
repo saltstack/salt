@@ -13,7 +13,7 @@ import salt.modules.defaults as defaults
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class DefaultsTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class DefaultsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {defaults: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_mock(self):
         """
         Test if it execute a defaults client run and return a dict
@@ -34,6 +35,7 @@ class DefaultsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(defaults.get("core:users:root"), {"users": {"root": [0]}})
 
+    @skipIf(True, "FASTTEST skip")
     def test_merge_with_list_merging(self):
         """
         Test deep merging of dicts with merge_lists enabled.
@@ -63,6 +65,7 @@ class DefaultsTestCase(TestCase, LoaderModuleMockMixin):
         defaults.merge(dest_dict, src_dict, merge_lists=True)
         self.assertEqual(dest_dict, merged_dict)
 
+    @skipIf(True, "FASTTEST skip")
     def test_merge_without_list_merging(self):
         """
         Test deep merging of dicts with merge_lists disabled.
@@ -92,6 +95,7 @@ class DefaultsTestCase(TestCase, LoaderModuleMockMixin):
         defaults.merge(dest, src, merge_lists=False)
         self.assertEqual(dest, merged)
 
+    @skipIf(True, "FASTTEST skip")
     def test_merge_not_in_place(self):
         """
         Test deep merging of dicts not in place.
@@ -109,6 +113,7 @@ class DefaultsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(dest, dest_orig)
         self.assertEqual(final, merged)
 
+    @skipIf(True, "FASTTEST skip")
     def test_deepcopy(self):
         """
         Test a deep copy of object.
@@ -124,6 +129,7 @@ class DefaultsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertFalse(src == dist)
         self.assertTrue(dist == result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_in_place(self):
         """
         Test update with defaults values in place.

@@ -14,7 +14,7 @@ from salt.exceptions import CommandExecutionError, MinionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
@@ -27,6 +27,7 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'refresh_db' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_refresh_db(self):
         """
         Test if it updates the pkgutil repo database (pkgutil -U).
@@ -38,6 +39,7 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'upgrade_available' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_upgrade_available(self):
         """
         Test if there is an upgrade available for a certain package.
@@ -54,6 +56,7 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_upgrades' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_upgrades(self):
         """
         Test if it list all available package upgrades on this system.
@@ -68,6 +71,7 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'upgrade' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_upgrade(self):
         """
         Test if it upgrade all of the packages to the latest available version.
@@ -92,6 +96,7 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_pkgs' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_pkgs(self):
         """
         Test if it list the packages currently installed as a dict.
@@ -125,6 +130,7 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'version' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_version(self):
         """
         Test if it returns a version if the package is installed.
@@ -135,6 +141,7 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'latest_version' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_latest_version(self):
         """
         Test if it return the latest version of the named package
@@ -166,6 +173,7 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'install' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_install(self):
         """
         Test if it install packages using the pkgutil tool.
@@ -200,6 +208,7 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'remove' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove(self):
         """
         Test if it remove a package and all its dependencies
@@ -243,6 +252,7 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'purge' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_purge(self):
         """
         Test if it package purges are not supported,

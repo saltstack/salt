@@ -11,7 +11,7 @@ import salt.states.chef as chef
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ChefTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class ChefTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'client' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_client(self):
         """
         Test to run chef-client
@@ -41,6 +42,7 @@ class ChefTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'solo' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_solo(self):
         """
         Test to run chef-solo

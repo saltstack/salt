@@ -14,7 +14,7 @@ from salt.ext import six
 from tests.support.mock import DEFAULT, patch
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -24,6 +24,7 @@ class ArgsTestCase(TestCase):
     TestCase for salt.utils.args module
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_condition_input_string(self):
         """
         Test passing a jid on the command line
@@ -33,6 +34,7 @@ class ArgsTestCase(TestCase):
         )
         self.assertIsInstance(cmd[2], six.text_type)
 
+    @skipIf(True, "FASTTEST skip")
     def test_clean_kwargs(self):
         self.assertDictEqual(salt.utils.args.clean_kwargs(foo="bar"), {"foo": "bar"})
         self.assertDictEqual(salt.utils.args.clean_kwargs(__pub_foo="bar"), {})
@@ -41,6 +43,7 @@ class ArgsTestCase(TestCase):
             salt.utils.args.clean_kwargs(foo_bar="gwar"), {"foo_bar": "gwar"}
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_function_argspec(self):
         def dummy_func(first, second, third, fourth="fifth"):
             pass
@@ -55,6 +58,7 @@ class ArgsTestCase(TestCase):
 
         self.assertEqual(ret, expected_argspec)
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_kwarg(self):
         ret = salt.utils.args.parse_kwarg("foo=bar")
         self.assertEqual(ret, ("foo", "bar"))
@@ -62,6 +66,7 @@ class ArgsTestCase(TestCase):
         ret = salt.utils.args.parse_kwarg("foobar")
         self.assertEqual(ret, (None, None))
 
+    @skipIf(True, "FASTTEST skip")
     def test_arg_lookup(self):
         def dummy_func(first, second, third, fourth="fifth"):
             pass
@@ -73,6 +78,7 @@ class ArgsTestCase(TestCase):
         ret = salt.utils.args.arg_lookup(dummy_func)
         self.assertEqual(expected_dict, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_format_call(self):
         with patch("salt.utils.args.arg_lookup") as arg_lookup:
 
@@ -113,6 +119,7 @@ class ArgsTestCase(TestCase):
             )
             self.assertDictEqual(ret, {"args": [], "kwargs": {}})
 
+    @skipIf(True, "FASTTEST skip")
     def test_format_call_simple_args(self):
         def foo(one, two=2, three=3):
             pass
@@ -130,6 +137,7 @@ class ArgsTestCase(TestCase):
             {"args": [2], "kwargs": dict(two=2, three=3)},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_format_call_mimic_typeerror_exceptions(self):
         def foo(one, two=2, three=3):
             pass
@@ -147,6 +155,7 @@ class ArgsTestCase(TestCase):
         ):
             salt.utils.args.format_call(foo2, dict(one=1))
 
+    @skipIf(True, "FASTTEST skip")
     def test_argspec_report(self):
         def _test_spec(arg1, arg2, kwarg1=None):
             pass
@@ -165,23 +174,27 @@ class ArgsTestCase(TestCase):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_test_mode(self):
         self.assertTrue(salt.utils.args.test_mode(test=True))
         self.assertTrue(salt.utils.args.test_mode(Test=True))
         self.assertTrue(salt.utils.args.test_mode(tEsT=True))
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_function_no_args(self):
         fun, args, kwargs = salt.utils.args.parse_function("amod.afunc()")
         self.assertEqual(fun, "amod.afunc")
         self.assertEqual(args, [])
         self.assertEqual(kwargs, {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_function_args_only(self):
         fun, args, kwargs = salt.utils.args.parse_function("amod.afunc(str1, str2)")
         self.assertEqual(fun, "amod.afunc")
         self.assertEqual(args, ["str1", "str2"])
         self.assertEqual(kwargs, {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_function_kwargs_only(self):
         fun, args, kwargs = salt.utils.args.parse_function(
             "amod.afunc(kw1=val1, kw2=val2)"
@@ -190,6 +203,7 @@ class ArgsTestCase(TestCase):
         self.assertEqual(args, [])
         self.assertEqual(kwargs, {"kw1": "val1", "kw2": "val2"})
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_function_args_kwargs(self):
         fun, args, kwargs = salt.utils.args.parse_function(
             "amod.afunc(str1, str2, kw1=val1, kw2=val2)"
@@ -198,6 +212,7 @@ class ArgsTestCase(TestCase):
         self.assertEqual(args, ["str1", "str2"])
         self.assertEqual(kwargs, {"kw1": "val1", "kw2": "val2"})
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_function_malformed_no_name(self):
         fun, args, kwargs = salt.utils.args.parse_function(
             "(str1, str2, kw1=val1, kw2=val2)"
@@ -206,12 +221,14 @@ class ArgsTestCase(TestCase):
         self.assertIsNone(args)
         self.assertIsNone(kwargs)
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_function_malformed_not_fun_def(self):
         fun, args, kwargs = salt.utils.args.parse_function("foo bar, some=text")
         self.assertIsNone(fun)
         self.assertIsNone(args)
         self.assertIsNone(kwargs)
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_function_wrong_bracket_style(self):
         fun, args, kwargs = salt.utils.args.parse_function(
             "amod.afunc[str1, str2, kw1=val1, kw2=val2]"
@@ -220,6 +237,7 @@ class ArgsTestCase(TestCase):
         self.assertIsNone(args)
         self.assertIsNone(kwargs)
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_function_brackets_unballanced(self):
         fun, args, kwargs = salt.utils.args.parse_function(
             "amod.afunc(str1, str2, kw1=val1, kw2=val2"
@@ -240,6 +258,7 @@ class ArgsTestCase(TestCase):
         self.assertIsNone(args)
         self.assertIsNone(kwargs)
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_function_brackets_in_quotes(self):
         fun, args, kwargs = salt.utils.args.parse_function(
             'amod.afunc(str1, str2, kw1="(val1[val2)]", kw2=val2)'
@@ -248,6 +267,7 @@ class ArgsTestCase(TestCase):
         self.assertEqual(args, ["str1", "str2"])
         self.assertEqual(kwargs, {"kw1": "(val1[val2)]", "kw2": "val2"})
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_function_quotes(self):
         fun, args, kwargs = salt.utils.args.parse_function(
             'amod.afunc("double \\" single \'", \'double " single \\\'\', kw1="equal=equal", kw2=val2)'
@@ -256,6 +276,7 @@ class ArgsTestCase(TestCase):
         self.assertEqual(args, ["double \" single '", "double \" single '"])
         self.assertEqual(kwargs, {"kw1": "equal=equal", "kw2": "val2"})
 
+    @skipIf(True, "FASTTEST skip")
     def test_yamlify_arg(self):
         """
         Test that we properly yamlify CLI input. In several of the tests below
@@ -323,6 +344,7 @@ class ArgsTestCase(TestCase):
 
 
 class KwargRegexTest(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_arguments_regex(self):
         argument_matches = (
             ("pip=1.1", ("pip", "1.1")),

@@ -13,7 +13,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
@@ -28,6 +28,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_users_rabbitmq2' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_users_rabbitmq2(self):
         """
         Test if it return a list of users based off of rabbitmqctl user_list.
@@ -47,6 +48,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_users_rabbitmq3' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_users_rabbitmq3(self):
         """
         Test if it return a list of users based off of rabbitmqctl user_list.
@@ -66,6 +68,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_users_with_warning_rabbitmq2' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_users_with_warning_rabbitmq2(self):
         """
         Test if having a leading WARNING returns the user_list anyway.
@@ -87,6 +90,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_users_with_warning_rabbitmq3' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_users_with_warning_rabbitmq3(self):
         """
         Test if having a leading WARNING returns the user_list anyway.
@@ -108,6 +112,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_vhosts' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_vhosts(self):
         """
         Test if it return a list of vhost based on rabbitmqctl list_vhosts.
@@ -118,6 +123,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(rabbitmq.__salt__, {"cmd.run_all": mock_run}):
             self.assertListEqual(rabbitmq.list_vhosts(), ["/", "saltstack", "..."])
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_vhosts_with_warning(self):
         """
         Test if it return a list of vhost based on rabbitmqctl list_vhosts even with a leading WARNING.
@@ -139,6 +145,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'user_exists' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_exists(self):
         """
         Test whether a given rabbitmq-internal user exists based
@@ -154,6 +161,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(rabbitmq.__salt__, {"cmd.run_all": mock_run}):
             self.assertTrue(rabbitmq.user_exists("saltstack"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_exists_negative(self):
         """
         Negative test of whether rabbitmq-internal user exists based
@@ -171,6 +179,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'vhost_exists' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_vhost_exists(self):
         """
         Test if it return whether the vhost exists based
@@ -186,6 +195,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(rabbitmq.__salt__, {"cmd.run_all": mock_run}):
             self.assertTrue(rabbitmq.vhost_exists("saltstack"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_vhost_exists_negative(self):
         """
         Test if it return whether the vhost exists based
@@ -203,6 +213,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'add_user' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_user(self):
         """
         Test if it add a rabbitMQ user via rabbitmqctl
@@ -225,6 +236,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete_user' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_user(self):
         """
         Test if it deletes a user via rabbitmqctl delete_user.
@@ -239,6 +251,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'check_password' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_password_lt_38(self):
         """
         Test if it checks a user's password for RabbitMQ less than v3.8.
@@ -256,6 +269,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(rabbitmq.check_password("saltstack", "salt@123"), True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_password_gt_38(self):
         """
         Test if it checks a user's password for RabbitMQ greater than v3.8.
@@ -275,6 +289,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'change_password' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_change_password(self):
         """
         Test if it changes a user's password.
@@ -290,6 +305,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'clear_password' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_clear_password(self):
         """
         Test if it removes a user's password.
@@ -304,6 +320,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'add_vhost' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_vhost(self):
         """
         Test if it adds a vhost via rabbitmqctl add_vhost.
@@ -318,6 +335,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete_vhost' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_vhost(self):
         """
         Test if it deletes a vhost rabbitmqctl delete_vhost.
@@ -332,6 +350,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_permissions' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_permissions(self):
         """
         Test if it sets permissions for vhost via rabbitmqctl set_permissions.
@@ -347,6 +366,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_permissions' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_permissions(self):
         """
         Test if it lists permissions for a vhost
@@ -367,6 +387,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_user_permissions' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_user_permissions(self):
         """
         Test if it list permissions for a user
@@ -387,6 +408,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_user_tags' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_user_tags(self):
         """
         Test if it add user tags via rabbitmqctl set_user_tags.
@@ -401,6 +423,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'status' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_status(self):
         """
         Test if it return rabbitmq status.
@@ -413,6 +436,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'cluster_status' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_cluster_status(self):
         """
         Test if it return rabbitmq cluster_status.
@@ -425,6 +449,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'join_cluster' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_join_cluster(self):
         """
         Test if it join a rabbit cluster.
@@ -439,6 +464,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'stop_app' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_stop_app(self):
         """
         Test if it stops the RabbitMQ application,
@@ -452,6 +478,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'start_app' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_start_app(self):
         """
         Test if it start the RabbitMQ application.
@@ -464,6 +491,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'reset' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_reset(self):
         """
         Test if it return a RabbitMQ node to its virgin state
@@ -476,6 +504,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'force_reset' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_force_reset(self):
         """
         Test if it forcefully Return a RabbitMQ node to its virgin state
@@ -488,6 +517,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_queues' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_queues(self):
         """
         Test if it returns queue details of the / virtual host
@@ -506,6 +536,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_queues_vhost' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_queues_vhost(self):
         """
         Test if it returns queue details of specified virtual host.
@@ -525,6 +556,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_policies' function tests: 3
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_policies(self):
         """
         Test if it return a dictionary of policies nested by vhost
@@ -539,6 +571,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.dict(rabbitmq.__grains__, {"os_family": ""}):
             self.assertDictEqual(rabbitmq.list_policies(), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_policies_freebsd(self):
         """
         Test if it return a dictionary of policies nested by vhost
@@ -553,6 +586,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.dict(rabbitmq.__grains__, {"os_family": "FreeBSD"}):
             self.assertDictEqual(rabbitmq.list_policies(), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_policies_old_version(self):
         """
         Test if it return a dictionary of policies nested by vhost
@@ -569,6 +603,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_policy' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_policy(self):
         """
         Test if it set a policy based on rabbitmqctl set_policy.
@@ -584,6 +619,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete_policy' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_policy(self):
         """
         Test if it delete a policy based on rabbitmqctl clear_policy.
@@ -598,6 +634,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'policy_exists' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_policy_exists(self):
         """
         Test if it return whether the policy exists
@@ -614,6 +651,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_available_plugins' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_available_plugins(self):
         """
         Test if it returns a list of plugins.
@@ -633,6 +671,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
                 rabbitmq.list_available_plugins(), ["saltstack", "salt", "other"]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_available_plugins_space_delimited(self):
         """
         Test if it returns a list of plugins.
@@ -650,6 +689,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_enabled_plugins' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_enabled_plugins(self):
         """
         Test if it returns a list of plugins.
@@ -669,6 +709,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
                 rabbitmq.list_enabled_plugins(), ["saltstack", "salt", "other"]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_enabled_plugins_space_delimited(self):
         """
         Test if it returns a list of plugins.
@@ -686,6 +727,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'plugin_is_enabled' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_plugin_is_enabled(self):
         """
         Test if it returns true for an enabled plugin.
@@ -705,6 +747,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(rabbitmq.plugin_is_enabled("salt"))
             self.assertTrue(rabbitmq.plugin_is_enabled("other"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_plugin_is_enabled_negative(self):
         """
         Test if it returns false for a disabled plugin.
@@ -722,6 +765,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'enable_plugin' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_enable_plugin(self):
         """
         Test if it enable a RabbitMQ plugin via the rabbitmq-plugins command.
@@ -739,6 +783,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'disable_plugin' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_disable_plugin(self):
         """
         Test if it disable a RabbitMQ plugin via the rabbitmq-plugins command.
@@ -756,6 +801,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_upstreams' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_upstreams(self):
         """
         Test if it returns a list of upstreams.
@@ -786,6 +832,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'upstream_exists' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_upstream_exists(self):
         """
         Test whether a given rabbitmq-internal upstream exists based
@@ -803,6 +850,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(rabbitmq.__salt__, {"cmd.run_all": mock_run}):
             self.assertTrue(rabbitmq.upstream_exists("remote-name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_upstream_exists_negative(self):
         """
         Negative test of whether rabbitmq-internal upstream exists based
@@ -822,6 +870,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'add_upstream' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_upstream(self):
         """
         Test if a rabbitMQ upstream gets configured properly.
@@ -851,6 +900,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete_upstream' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_upstream(self):
         """
         Test if an upstream gets deleted properly using rabbitmqctl delete_upstream.
@@ -868,6 +918,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(rabbitmq.__salt__, {"cmd.run_all": mock_run}):
             self.assertTrue(rabbitmq.delete_upstream("remote-name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_upstream_negative(self):
         """
         Negative test trying to delete a non-existant upstream.

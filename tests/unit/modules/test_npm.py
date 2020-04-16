@@ -17,7 +17,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class NpmTestCase(TestCase, LoaderModuleMockMixin):
@@ -35,6 +35,7 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'install' function tests: 4
 
+    @skipIf(True, "FASTTEST skip")
     def test_install(self):
         """
         Test if it installs an NPM package.
@@ -113,6 +114,7 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'uninstall' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_uninstall(self):
         """
         Test if it uninstalls an NPM package.
@@ -127,6 +129,7 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list(self):
         """
         Test if it list installed NPM packages.
@@ -149,6 +152,7 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'cache_clean' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_cache_clean(self):
         """
         Test if it cleans the cached NPM packages.
@@ -167,6 +171,7 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'cache_list' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_cache_list(self):
         """
         Test if it lists the NPM cache.
@@ -187,6 +192,7 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'cache_path' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_cache_path(self):
         """
         Test if it prints the NPM cache path.

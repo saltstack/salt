@@ -19,7 +19,7 @@ from salt.utils.versions import LooseVersion
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -79,6 +79,7 @@ class GitTestCase(TestCase, LoaderModuleMockMixin):
             git_mod: {"__utils__": {"ssh.key_is_encrypted": Mock(return_value=False)}}
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_worktrees(self):
         """
         This tests git.list_worktrees
@@ -170,6 +171,7 @@ class GitTestCase(TestCase, LoaderModuleMockMixin):
                     ),
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test__git_run_tmp_wrapper(self):
         """
         When an identity file is specified, make sure we don't attempt to

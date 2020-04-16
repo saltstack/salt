@@ -39,10 +39,12 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
 
         return {libcloud_dns: module_globals}
 
+    @skipIf(True, "FASTTEST skip")
     def test_module_creation(self):
         client = libcloud_dns._get_driver("test")
         self.assertFalse(client is None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_init(self):
         with patch("salt.utils.compat.pack_dunder", return_value=False) as dunder:
             libcloud_dns.__init__(None)

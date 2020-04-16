@@ -6,6 +6,7 @@ import logging
 import socket
 import textwrap
 
+import pytest
 import salt.exceptions
 
 # Import salt libs
@@ -141,10 +142,12 @@ IPV6_SUBNETS = {
 
 
 class NetworkTestCase(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_sanitize_host(self):
         ret = network.sanitize_host("10.1./2.$3")
         self.assertEqual(ret, "10.1.2.3")
 
+    @skipIf(True, "FASTTEST skip")
     def test_host_to_ips(self):
         """
         NOTE: When this test fails it's usually because the IP address has
@@ -178,9 +181,11 @@ class NetworkTestCase(TestCase):
             ret = network.host_to_ips("someothersite.com")
             self.assertEqual(ret, None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_generate_minion_id(self):
         self.assertTrue(network.generate_minion_id())
 
+    @skipIf(True, "FASTTEST skip")
     def test__generate_minion_id_with_unicode_in_etc_hosts(self):
         """
         Test that unicode in /etc/hosts doesn't raise an error when
@@ -197,6 +202,7 @@ class NetworkTestCase(TestCase):
         with patch("salt.utils.files.fopen", fopen_mock):
             assert "thisismyhostname" in network._generate_minion_id()
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_ip(self):
         self.assertTrue(network.is_ip("10.10.0.3"))
         self.assertFalse(network.is_ip("0.9.800.1000"))
@@ -204,6 +210,7 @@ class NetworkTestCase(TestCase):
         # https://github.com/saltstack/salt/issues/51258
         self.assertFalse(network.is_ipv6("sixteen-char-str"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_ipv4(self):
         self.assertTrue(network.is_ipv4("10.10.0.3"))
         self.assertFalse(network.is_ipv4("10.100.1"))
@@ -212,6 +219,7 @@ class NetworkTestCase(TestCase):
         # https://github.com/saltstack/salt/issues/51258
         self.assertFalse(network.is_ipv4("sixteen-char-str"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_ipv6(self):
         self.assertTrue(network.is_ipv6("2001:db8:0:1:1:1:1:1"))
         self.assertTrue(network.is_ipv6("0:0:0:0:0:0:0:1"))
@@ -227,6 +235,7 @@ class NetworkTestCase(TestCase):
         # https://github.com/saltstack/salt/issues/51258
         self.assertFalse(network.is_ipv6("sixteen-char-str"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_ipv6(self):
         self.assertTrue(network.ipv6("2001:db8:0:1:1:1:1:1"))
         self.assertTrue(network.ipv6("0:0:0:0:0:0:0:1"))
@@ -236,6 +245,7 @@ class NetworkTestCase(TestCase):
         self.assertTrue(network.ipv6("2001:0db8:85a3::8a2e:0370:7334"))
         self.assertTrue(network.ipv6("2001:67c:2e8::/48"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_host_port(self):
         _ip = ipaddress.ip_address
         good_host_ports = {
@@ -277,6 +287,7 @@ class NetworkTestCase(TestCase):
                 )
                 raise _e_
 
+    @skipIf(True, "FASTTEST skip")
     def test_dns_check(self):
         hosts = [
             {
@@ -320,6 +331,7 @@ class NetworkTestCase(TestCase):
                     ret = network.dns_check(host["host"], host["port"])
                     self.assertEqual(ret, host["ret"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_dns_check_ipv6_filter(self):
         # raise exception to skip everything after the getaddrinfo call
         with patch.object(
@@ -336,6 +348,7 @@ class NetworkTestCase(TestCase):
                     network.dns_check("foo", "1", ipv6=ipv6)
                 getaddrinfo.assert_called_with("foo", "1", param, socket.SOCK_STREAM)
 
+    @skipIf(True, "FASTTEST skip")
     def test_dns_check_errors(self):
         with patch.object(
             socket, "getaddrinfo", create_autospec(socket.getaddrinfo, return_value=[])
@@ -356,6 +369,7 @@ class NetworkTestCase(TestCase):
             ):
                 network.dns_check("foo", "1")
 
+    @skipIf(True, "FASTTEST skip")
     def test_test_addrs(self):
         # subset of real data from getaddrinfo against saltstack.com
         addrinfo = [
@@ -385,6 +399,7 @@ class NetworkTestCase(TestCase):
             addrs = network._test_addrs(addrinfo, 80)
             self.assertTrue(len(addrs) == 5)
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_subnet(self):
         for subnet_data in (IPV4_SUBNETS, IPV6_SUBNETS):
             for item in subnet_data[True]:
@@ -394,6 +409,7 @@ class NetworkTestCase(TestCase):
                 log.debug("Testing that %s is not a valid subnet", item)
                 self.assertFalse(network.is_subnet(item))
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_ipv4_subnet(self):
         for item in IPV4_SUBNETS[True]:
             log.debug("Testing that %s is a valid subnet", item)
@@ -402,6 +418,7 @@ class NetworkTestCase(TestCase):
             log.debug("Testing that %s is not a valid subnet", item)
             self.assertFalse(network.is_ipv4_subnet(item))
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_ipv6_subnet(self):
         for item in IPV6_SUBNETS[True]:
             log.debug("Testing that %s is a valid subnet", item)
@@ -410,6 +427,7 @@ class NetworkTestCase(TestCase):
             log.debug("Testing that %s is not a valid subnet", item)
             self.assertFalse(network.is_ipv6_subnet(item))
 
+    @skipIf(True, "FASTTEST skip")
     def test_cidr_to_ipv4_netmask(self):
         self.assertEqual(network.cidr_to_ipv4_netmask(24), "255.255.255.0")
         self.assertEqual(network.cidr_to_ipv4_netmask(21), "255.255.248.0")
@@ -418,11 +436,13 @@ class NetworkTestCase(TestCase):
         self.assertEqual(network.cidr_to_ipv4_netmask(36), "")
         self.assertEqual(network.cidr_to_ipv4_netmask("lol"), "")
 
+    @skipIf(True, "FASTTEST skip")
     def test_number_of_set_bits_to_ipv4_netmask(self):
         set_bits_to_netmask = network._number_of_set_bits_to_ipv4_netmask(0xFFFFFF00)
         self.assertEqual(set_bits_to_netmask, "255.255.255.0")
         set_bits_to_netmask = network._number_of_set_bits_to_ipv4_netmask(0xFFFF6400)
 
+    @skipIf(True, "FASTTEST skip")
     def test_hex2ip(self):
         self.assertEqual(network.hex2ip("0x4A7D2B63"), "74.125.43.99")
         self.assertEqual(network.hex2ip("0x4A7D2B63", invert=True), "99.43.125.74")
@@ -440,6 +460,7 @@ class NetworkTestCase(TestCase):
             "2001:db8::",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_interfaces_ifconfig_linux(self):
         interfaces = network._interfaces_ifconfig(LINUX)
         self.assertEqual(
@@ -471,6 +492,7 @@ class NetworkTestCase(TestCase):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_interfaces_ifconfig_freebsd(self):
         interfaces = network._interfaces_ifconfig(FREEBSD)
         self.assertEqual(
@@ -510,6 +532,7 @@ class NetworkTestCase(TestCase):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_interfaces_ifconfig_solaris(self):
         with patch("salt.utils.platform.is_sunos", lambda: True):
             interfaces = network._interfaces_ifconfig(SOLARIS)
@@ -567,6 +590,7 @@ class NetworkTestCase(TestCase):
             }
             self.assertEqual(interfaces, expected_interfaces)
 
+    @skipIf(True, "FASTTEST skip")
     def test_interfaces_ifconfig_netbsd(self):
         interfaces = network._netbsd_interfaces_ifconfig(NETBSD)
         self.assertEqual(
@@ -600,6 +624,7 @@ class NetworkTestCase(TestCase):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_freebsd_remotes_on(self):
         with patch("salt.utils.platform.is_sunos", lambda: False):
             with patch("salt.utils.platform.is_freebsd", lambda: True):
@@ -607,6 +632,7 @@ class NetworkTestCase(TestCase):
                     remotes = network._freebsd_remotes_on("4506", "remote")
                     self.assertEqual(remotes, set(["127.0.0.1"]))
 
+    @skipIf(True, "FASTTEST skip")
     def test_freebsd_remotes_on_with_fat_pid(self):
         with patch("salt.utils.platform.is_sunos", lambda: False):
             with patch("salt.utils.platform.is_freebsd", lambda: True):
@@ -617,6 +643,7 @@ class NetworkTestCase(TestCase):
                     remotes = network._freebsd_remotes_on("4506", "remote")
                     self.assertEqual(remotes, set(["127.0.0.1"]))
 
+    @skipIf(True, "FASTTEST skip")
     def test_netlink_tool_remote_on_a(self):
         with patch("salt.utils.platform.is_sunos", lambda: False):
             with patch("salt.utils.platform.is_linux", lambda: True):
@@ -628,11 +655,13 @@ class NetworkTestCase(TestCase):
                         remotes, set(["192.168.122.177", "::ffff:127.0.0.1"])
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_netlink_tool_remote_on_b(self):
         with patch("subprocess.check_output", return_value=NETLINK_SS):
             remotes = network._netlink_tool_remote_on("4505", "remote_port")
             self.assertEqual(remotes, set(["127.0.0.1", "::ffff:1.2.3.4"]))
 
+    @skipIf(True, "FASTTEST skip")
     def test_generate_minion_id_distinct(self):
         """
         Test if minion IDs are distinct in the pool.
@@ -663,6 +692,7 @@ class NetworkTestCase(TestCase):
                 ],
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_generate_minion_id_127_name(self):
         """
         Test if minion IDs can be named 127.foo
@@ -687,6 +717,7 @@ class NetworkTestCase(TestCase):
                 ["127.domainname.blank", "127", "1.2.3.4", "5.6.7.8"],
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_generate_minion_id_127_name_startswith(self):
         """
         Test if minion IDs can be named starting from "127"
@@ -711,6 +742,7 @@ class NetworkTestCase(TestCase):
                 ["127890.domainname.blank", "127890", "1.2.3.4", "5.6.7.8"],
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_generate_minion_id_duplicate(self):
         """
         Test if IP addresses in the minion IDs are distinct in the pool
@@ -730,6 +762,7 @@ class NetworkTestCase(TestCase):
         ):
             self.assertEqual(network._generate_minion_id(), ["hostname", "1.2.3.4"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_generate_minion_id_platform_used(self):
         """
         Test if platform.node is used for the first occurrence.
@@ -754,6 +787,7 @@ class NetworkTestCase(TestCase):
                 network.generate_minion_id(), "very.long.and.complex.domain.name"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_generate_minion_id_platform_localhost_filtered(self):
         """
         Test if localhost is filtered from the first occurrence.
@@ -775,6 +809,7 @@ class NetworkTestCase(TestCase):
         ):
             self.assertEqual(network.generate_minion_id(), "hostname.domainname.blank")
 
+    @skipIf(True, "FASTTEST skip")
     def test_generate_minion_id_platform_localhost_filtered_all(self):
         """
         Test if any of the localhost is filtered from everywhere.
@@ -796,6 +831,7 @@ class NetworkTestCase(TestCase):
         ):
             self.assertEqual(network.generate_minion_id(), "1.2.3.4")
 
+    @skipIf(True, "FASTTEST skip")
     def test_generate_minion_id_platform_localhost_only(self):
         """
         Test if there is no other choice but localhost.
@@ -815,6 +851,7 @@ class NetworkTestCase(TestCase):
         ):
             self.assertEqual(network.generate_minion_id(), "localhost")
 
+    @skipIf(True, "FASTTEST skip")
     def test_generate_minion_id_platform_fqdn(self):
         """
         Test if fqdn is picked up.
@@ -834,6 +871,7 @@ class NetworkTestCase(TestCase):
         ):
             self.assertEqual(network.generate_minion_id(), "pick.me")
 
+    @skipIf(True, "FASTTEST skip")
     def test_generate_minion_id_platform_localhost_addrinfo(self):
         """
         Test if addinfo is picked up.
@@ -853,6 +891,7 @@ class NetworkTestCase(TestCase):
         ):
             self.assertEqual(network.generate_minion_id(), "pick.me")
 
+    @skipIf(True, "FASTTEST skip")
     def test_generate_minion_id_platform_ip_addr_only(self):
         """
         Test if IP address is the only what is used as a Minion ID in case no DNS name.
@@ -874,6 +913,7 @@ class NetworkTestCase(TestCase):
         ):
             self.assertEqual(network.generate_minion_id(), "1.2.3.4")
 
+    @skipIf(True, "FASTTEST skip")
     def test_gen_mac(self):
         with patch("random.randint", return_value=1) as random_mock:
             self.assertEqual(random_mock.return_value, 1)
@@ -881,6 +921,7 @@ class NetworkTestCase(TestCase):
             expected_mac = "00:16:3E:01:01:01"
             self.assertEqual(ret, expected_mac)
 
+    @skipIf(True, "FASTTEST skip")
     def test_mac_str_to_bytes(self):
         self.assertRaises(ValueError, network.mac_str_to_bytes, "31337")
         self.assertRaises(ValueError, network.mac_str_to_bytes, "0001020304056")
@@ -893,7 +934,6 @@ class NetworkTestCase(TestCase):
             b"\xf8\xe7\xd6\xc5\xb4\xa3", network.mac_str_to_bytes("f8e7d6c5b4a3")
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_generate_minion_id_with_long_hostname(self):
         """
         Validate the fix for:
@@ -905,3 +945,51 @@ class NetworkTestCase(TestCase):
             # An exception is raised if unicode is passed to socket.getfqdn
             minion_id = network.generate_minion_id()
         assert minion_id != "", minion_id
+
+    def test_filter_by_networks_with_no_filter(self):
+        ips = ["10.0.123.200", "10.10.10.10"]
+        with pytest.raises(TypeError):
+            network.filter_by_networks(ips)  # pylint: disable=no-value-for-parameter
+
+    def test_filter_by_networks_empty_filter(self):
+        ips = ["10.0.123.200", "10.10.10.10"]
+        assert network.filter_by_networks(ips, []) == []
+
+    def test_filter_by_networks_ips_list(self):
+        ips = [
+            "10.0.123.200",
+            "10.10.10.10",
+            "193.124.233.5",
+            "fe80::d210:cf3f:64e7:5423",
+        ]
+        networks = ["10.0.0.0/8", "fe80::/64"]
+        assert network.filter_by_networks(ips, networks) == [
+            "10.0.123.200",
+            "10.10.10.10",
+            "fe80::d210:cf3f:64e7:5423",
+        ]
+
+    def test_filter_by_networks_interfaces_dict(self):
+        interfaces = {
+            "wlan0": ["192.168.1.100", "217.5.140.67", "2001:db8::ff00:42:8329"],
+            "eth0": [
+                "2001:0DB8:0:CD30:123:4567:89AB:CDEF",
+                "192.168.1.101",
+                "10.0.123.201",
+            ],
+        }
+        assert network.filter_by_networks(
+            interfaces, ["192.168.1.0/24", "2001:db8::/48"]
+        ) == {
+            "wlan0": ["192.168.1.100", "2001:db8::ff00:42:8329"],
+            "eth0": ["2001:0DB8:0:CD30:123:4567:89AB:CDEF", "192.168.1.101"],
+        }
+
+    def test_filter_by_networks_catch_all(self):
+        ips = [
+            "10.0.123.200",
+            "10.10.10.10",
+            "193.124.233.5",
+            "fe80::d210:cf3f:64e7:5423",
+        ]
+        assert ips == network.filter_by_networks(ips, ["0.0.0.0/0", "::/0"])

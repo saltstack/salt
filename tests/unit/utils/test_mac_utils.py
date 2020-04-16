@@ -34,6 +34,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {mac_utils: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_execute_return_success_not_supported(self):
         """
         test execute_return_success function
@@ -47,6 +48,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
                 CommandExecutionError, mac_utils.execute_return_success, "dir c:\\"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_execute_return_success_command_failed(self):
         """
         test execute_return_success function
@@ -60,6 +62,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
                 CommandExecutionError, mac_utils.execute_return_success, "dir c:\\"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_execute_return_success_command_succeeded(self):
         """
         test execute_return_success function
@@ -70,6 +73,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
             ret = mac_utils.execute_return_success("dir c:\\")
             self.assertEqual(ret, True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_execute_return_result_command_failed(self):
         """
         test execute_return_result function
@@ -83,6 +87,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
                 CommandExecutionError, mac_utils.execute_return_result, "dir c:\\"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_execute_return_result_command_succeeded(self):
         """
         test execute_return_result function
@@ -93,6 +98,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
             ret = mac_utils.execute_return_result("dir c:\\")
             self.assertEqual(ret, "spongebob")
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_return_space(self):
         """
         test parse_return function
@@ -102,6 +108,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
             mac_utils.parse_return("spongebob: squarepants"), "squarepants"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_return_new_line(self):
         """
         test parse_return function
@@ -111,6 +118,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
             mac_utils.parse_return("spongebob:\nsquarepants"), "squarepants"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_return_no_delimiter(self):
         """
         test parse_return function
@@ -118,6 +126,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertEqual(mac_utils.parse_return("squarepants"), "squarepants")
 
+    @skipIf(True, "FASTTEST skip")
     def test_validate_enabled_on(self):
         """
         test validate_enabled function
@@ -125,6 +134,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertEqual(mac_utils.validate_enabled("On"), "on")
 
+    @skipIf(True, "FASTTEST skip")
     def test_validate_enabled_off(self):
         """
         test validate_enabled function
@@ -132,6 +142,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertEqual(mac_utils.validate_enabled("Off"), "off")
 
+    @skipIf(True, "FASTTEST skip")
     def test_validate_enabled_bad_string(self):
         """
         test validate_enabled function
@@ -139,6 +150,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertRaises(SaltInvocationError, mac_utils.validate_enabled, "bad string")
 
+    @skipIf(True, "FASTTEST skip")
     def test_validate_enabled_non_zero(self):
         """
         test validate_enabled function
@@ -147,6 +159,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
         for x in range(1, 179, 3):
             self.assertEqual(mac_utils.validate_enabled(x), "on")
 
+    @skipIf(True, "FASTTEST skip")
     def test_validate_enabled_0(self):
         """
         test validate_enabled function
@@ -154,6 +167,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertEqual(mac_utils.validate_enabled(0), "off")
 
+    @skipIf(True, "FASTTEST skip")
     def test_validate_enabled_true(self):
         """
         test validate_enabled function
@@ -161,6 +175,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertEqual(mac_utils.validate_enabled(True), "on")
 
+    @skipIf(True, "FASTTEST skip")
     def test_validate_enabled_false(self):
         """
         test validate_enabled function
@@ -168,6 +183,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertEqual(mac_utils.validate_enabled(False), "off")
 
+    @skipIf(True, "FASTTEST skip")
     def test_launchctl(self):
         """
         test launchctl function
@@ -179,6 +195,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
             ret = mac_utils.launchctl("enable", "org.salt.minion")
             self.assertEqual(ret, True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_launchctl_return_stdout(self):
         """
         test launchctl function and return stdout
@@ -190,6 +207,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
             ret = mac_utils.launchctl("enable", "org.salt.minion", return_stdout=True)
             self.assertEqual(ret, "success")
 
+    @skipIf(True, "FASTTEST skip")
     def test_launchctl_error(self):
         """
         test launchctl function returning an error
@@ -211,6 +229,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch("salt.utils.path.os_walk")
     @patch("os.path.exists")
+    @skipIf(True, "FASTTEST skip")
     def test_available_services_result(self, mock_exists, mock_os_walk):
         """
         test available_services results are properly formed dicts.
@@ -241,6 +260,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
     @patch("os.path.exists")
     @patch("os.listdir")
     @patch("os.path.isdir")
+    @skipIf(True, "FASTTEST skip")
     def test_available_services_dirs(
         self, mock_isdir, mock_listdir, mock_exists, mock_os_walk
     ):
@@ -274,6 +294,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.utils.path.os_walk")
     @patch("os.path.exists")
     @patch("plistlib.readPlist" if six.PY2 else "plistlib.load")
+    @skipIf(True, "FASTTEST skip")
     def test_available_services_broken_symlink(
         self, mock_read_plist, mock_exists, mock_os_walk
     ):
@@ -309,6 +330,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
     @patch("plistlib.readPlist")
     @patch("salt.utils.mac_utils.__salt__")
     @patch("plistlib.readPlistFromString", create=True)
+    @skipIf(True, "FASTTEST skip")
     def test_available_services_binary_plist(
         self,
         mock_read_plist_from_string,
@@ -366,6 +388,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch("salt.utils.path.os_walk")
     @patch("os.path.exists")
+    @skipIf(True, "FASTTEST skip")
     def test_available_services_invalid_file(self, mock_exists, mock_os_walk):
         """
         test available_services excludes invalid files.
@@ -392,6 +415,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
     @patch("plistlib.readPlist")
     @patch("salt.utils.path.os_walk")
     @patch("os.path.exists")
+    @skipIf(True, "FASTTEST skip")
     def test_available_services_expat_error(
         self, mock_exists, mock_os_walk, mock_read_plist, mock_run
     ):

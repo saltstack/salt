@@ -5,7 +5,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import salt.utils.pkg
 from salt.utils.pkg import rpm
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PkgUtilsTestCase(TestCase):
@@ -38,6 +38,7 @@ class PkgUtilsTestCase(TestCase):
         ("", "", ""),
     ]
 
+    @skipIf(True, "FASTTEST skip")
     def test_split_comparison(self):
         """
         Tests salt.utils.pkg.split_comparison
@@ -54,6 +55,7 @@ class PkgRPMTestCase(TestCase):
     """
 
     @patch("salt.utils.path.which", MagicMock(return_value=True))
+    @skipIf(True, "FASTTEST skip")
     def test_get_osarch_by_rpm(self):
         """
         Get os_arch if RPM package is installed.
@@ -85,6 +87,7 @@ class PkgRPMTestCase(TestCase):
             )
         ),
     )
+    @skipIf(True, "FASTTEST skip")
     def test_get_osarch_by_platform(self):
         """
         Get os_arch if RPM package is not installed (inird image, for example).
@@ -107,6 +110,7 @@ class PkgRPMTestCase(TestCase):
             )
         ),
     )
+    @skipIf(True, "FASTTEST skip")
     def test_get_osarch_by_platform_no_cpu_arch(self):
         """
         Get os_arch if RPM package is not installed (inird image, for example) but cpu arch cannot be determined.
@@ -129,6 +133,7 @@ class PkgRPMTestCase(TestCase):
             )
         ),
     )
+    @skipIf(True, "FASTTEST skip")
     def test_get_osarch_by_platform_no_cpu_arch_no_machine(self):
         """
         Get os_arch if RPM package is not installed (inird image, for example)

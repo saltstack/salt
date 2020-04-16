@@ -11,7 +11,7 @@ import salt.states.pecl as pecl
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PeclTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class PeclTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'installed' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed(self):
         """
         Test to make sure that a pecl extension is installed.
@@ -58,6 +59,7 @@ class PeclTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'removed' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_removed(self):
         """
         Test to make sure that a pecl extension is not installed.

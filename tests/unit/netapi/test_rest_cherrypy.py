@@ -14,6 +14,7 @@ from salt.ext.six.moves.urllib.parse import (  # pylint: disable=no-name-in-modu
 
 # Import Salt libs
 from tests.support.cherrypy_testclasses import BaseToolsTest
+from tests.support.unit import skipIf
 
 
 class TestOutFormats(BaseToolsTest):
@@ -22,20 +23,24 @@ class TestOutFormats(BaseToolsTest):
             "tools.hypermedia_out.on": True,
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_default_accept(self):
         request, response = self.request("/")
         self.assertEqual(response.headers["Content-type"], "application/json")
 
+    @skipIf(True, "FASTTEST skip")
     def test_unsupported_accept(self):
         request, response = self.request(
             "/", headers=(("Accept", "application/ms-word"),)
         )
         self.assertEqual(response.status, "406 Not Acceptable")
 
+    @skipIf(True, "FASTTEST skip")
     def test_json_out(self):
         request, response = self.request("/", headers=(("Accept", "application/json"),))
         self.assertEqual(response.headers["Content-type"], "application/json")
 
+    @skipIf(True, "FASTTEST skip")
     def test_yaml_out(self):
         request, response = self.request(
             "/", headers=(("Accept", "application/x-yaml"),)
@@ -49,6 +54,7 @@ class TestInFormats(BaseToolsTest):
             "tools.hypermedia_in.on": True,
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_urlencoded_ctype(self):
         data = {"valid": "stuff"}
         request, response = self.request(
@@ -60,6 +66,7 @@ class TestInFormats(BaseToolsTest):
         self.assertEqual(response.status, "200 OK")
         self.assertDictEqual(request.unserialized_data, data)
 
+    @skipIf(True, "FASTTEST skip")
     def test_json_ctype(self):
         data = {"valid": "stuff"}
         request, response = self.request(
@@ -71,6 +78,7 @@ class TestInFormats(BaseToolsTest):
         self.assertEqual(response.status, "200 OK")
         self.assertDictEqual(request.unserialized_data, data)
 
+    @skipIf(True, "FASTTEST skip")
     def test_json_as_text_out(self):
         """
         Some service send JSON as text/plain for compatibility purposes
@@ -85,6 +93,7 @@ class TestInFormats(BaseToolsTest):
         self.assertEqual(response.status, "200 OK")
         self.assertDictEqual(request.unserialized_data, data)
 
+    @skipIf(True, "FASTTEST skip")
     def test_yaml_ctype(self):
         data = {"valid": "stuff"}
         request, response = self.request(
@@ -103,6 +112,7 @@ class TestCors(BaseToolsTest):
             "tools.cors_tool.on": True,
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_option_request(self):
         request, response = self.request(
             "/", method="OPTIONS", headers=(("Origin", "https://domain.com"),)

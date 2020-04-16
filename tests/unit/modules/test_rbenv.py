@@ -14,7 +14,7 @@ import salt.modules.rbenv as rbenv
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class RbenvTestCase(TestCase, LoaderModuleMockMixin):
@@ -25,6 +25,7 @@ class RbenvTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {rbenv: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_install(self):
         """
         Test for install Rbenv systemwide
@@ -35,6 +36,7 @@ class RbenvTestCase(TestCase, LoaderModuleMockMixin):
                     with patch.object(os.path, "expanduser", return_value="A"):
                         self.assertTrue(rbenv.install())
 
+    @skipIf(True, "FASTTEST skip")
     def test_update(self):
         """
         Test for updates the current versions of Rbenv and Ruby-Build
@@ -45,6 +47,7 @@ class RbenvTestCase(TestCase, LoaderModuleMockMixin):
                     with patch.object(os.path, "expanduser", return_value="A"):
                         self.assertTrue(rbenv.update())
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_installed(self):
         """
         Test for check if Rbenv is installed.
@@ -55,6 +58,7 @@ class RbenvTestCase(TestCase, LoaderModuleMockMixin):
             ):
                 self.assertTrue(rbenv.is_installed())
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_ruby(self):
         """
         Test for install a ruby implementation.
@@ -79,6 +83,7 @@ class RbenvTestCase(TestCase, LoaderModuleMockMixin):
                     with patch.object(rbenv, "uninstall_ruby", return_value=None):
                         self.assertFalse(rbenv.install_ruby("ruby"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_uninstall_ruby(self):
         """
         Test for uninstall a ruby implementation.
@@ -86,6 +91,7 @@ class RbenvTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(rbenv, "_rbenv_exec", return_value=None):
             self.assertTrue(rbenv.uninstall_ruby("ruby", "runas"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_versions(self):
         """
         Test for list the installed versions of ruby.
@@ -93,6 +99,7 @@ class RbenvTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(rbenv, "_rbenv_exec", return_value="A\nBC\nD"):
             self.assertListEqual(rbenv.versions(), ["A", "BC", "D"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_default(self):
         """
         Test for returns or sets the currently defined default ruby.
@@ -102,6 +109,7 @@ class RbenvTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertEqual(rbenv.default(), "")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_(self):
         """
         Test for list the installable versions of ruby.
@@ -109,6 +117,7 @@ class RbenvTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(rbenv, "_rbenv_exec", return_value="A\nB\nCD\n"):
             self.assertListEqual(rbenv.list_(), ["A", "B", "CD"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_rehash(self):
         """
         Test for run rbenv rehash to update the installed shims.
@@ -116,6 +125,7 @@ class RbenvTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(rbenv, "_rbenv_exec", return_value=None):
             self.assertTrue(rbenv.rehash())
 
+    @skipIf(True, "FASTTEST skip")
     def test_do_with_ruby(self):
         """
         Test for execute a ruby command with rbenv's shims using a

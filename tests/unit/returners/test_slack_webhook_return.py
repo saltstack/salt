@@ -17,7 +17,7 @@ import salt.returners.slack_webhook_return as slack_webhook
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
@@ -138,6 +138,7 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_no_webhook(self):
         """
         Test returner stops if no webhook is defined
@@ -145,6 +146,7 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(slack_webhook.__opts__, {"slack_webhook.webhook": ""}):
             self.assertEqual(slack_webhook.returner(self._RET), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_returner(self):
         """
         Test to see if the Slack Webhook returner sends a message
@@ -153,6 +155,7 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
         with patch("salt.utils.http.query", return_value=query_ret):
             self.assertTrue(slack_webhook.returner(self._RET))
 
+    @skipIf(True, "FASTTEST skip")
     def test_generate_payload(self):
         """
         Test _generate_payload private method

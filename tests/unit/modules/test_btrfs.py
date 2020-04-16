@@ -29,6 +29,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
         return {btrfs: {"__salt__": {}}}
 
     # 'version' function tests: 1
+    @skipIf(True, "FASTTEST skip")
     def test_version(self):
         """
         Test if it return BTRFS version.
@@ -39,6 +40,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'info' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_info(self):
         """
         Test if it get BTRFS filesystem information.
@@ -54,6 +56,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'devices' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_devices(self):
         """
         Test if it get known BTRFS formatted devices on the system.
@@ -67,6 +70,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'defragment' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_defragment(self):
         """
         Test if it defragment mounted BTRFS filesystem.
@@ -91,6 +95,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
                     with patch.object(salt.utils.files, "fopen", mock_file):
                         self.assertListEqual(btrfs.defragment("/dev/sda1"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_defragment_error(self):
         """
         Test if it gives device not mount error
@@ -108,6 +113,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'features' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_features(self):
         """
         Test if it list currently available BTRFS features.
@@ -121,6 +127,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'usage' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_usage(self):
         """
         Test if it shows in which disk the chunks are allocated.
@@ -156,6 +163,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'mkfs' function tests: 3
 
+    @skipIf(True, "FASTTEST skip")
     def test_mkfs(self):
         """
         Test if it create a file system on the specified device.
@@ -171,12 +179,14 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(salt.utils.files, "fopen", mock_file):
                 self.assertDictEqual(btrfs.mkfs("/dev/sda1"), {"log": "Salt"})
 
+    @skipIf(True, "FASTTEST skip")
     def test_mkfs_error(self):
         """
         Test if it No devices specified error
         """
         self.assertRaises(CommandExecutionError, btrfs.mkfs)
 
+    @skipIf(True, "FASTTEST skip")
     def test_mkfs_mount_error(self):
         """
         Test if it device mount error
@@ -187,6 +197,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'resize' function tests: 4
 
+    @skipIf(True, "FASTTEST skip")
     def test_resize(self):
         """
         Test if it resize filesystem.
@@ -205,6 +216,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
                         btrfs.resize("/dev/sda1", "max"), {"log": "Salt"}
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_resize_valid_error(self):
         """
         Test if it gives device should be mounted error
@@ -218,6 +230,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
                     CommandExecutionError, btrfs.resize, "/dev/sda1", "max"
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_resize_mount_error(self):
         """
         Test if it gives mount point error
@@ -229,6 +242,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
                     CommandExecutionError, btrfs.resize, "/dev/sda1", "max"
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_resize_size_error(self):
         """
         Test if it gives unknown size error
@@ -237,6 +251,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'convert' function tests: 5
 
+    @skipIf(True, "FASTTEST skip")
     def test_convert(self):
         """
         Test if it convert ext2/3/4 to BTRFS
@@ -271,6 +286,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
                             btrfs.convert("/dev/sda3", permanent=True), ret
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_convert_device_error(self):
         """
         Test if it gives device not found error
@@ -281,6 +297,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(salt.utils.fsutils, "_blkid_output", mock):
                 self.assertRaises(CommandExecutionError, btrfs.convert, "/dev/sda1")
 
+    @skipIf(True, "FASTTEST skip")
     def test_convert_filesystem_error(self):
         """
         Test if it gives file system error
@@ -294,6 +311,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(salt.utils.fsutils, "_blkid_output", mock):
                     self.assertRaises(CommandExecutionError, btrfs.convert, "/dev/sda1")
 
+    @skipIf(True, "FASTTEST skip")
     def test_convert_error(self):
         """
         Test if it gives error cannot convert root
@@ -313,6 +331,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
                             CommandExecutionError, btrfs.convert, "/dev/sda1"
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_convert_migration_error(self):
         """
         Test if it gives migration error
@@ -334,6 +353,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'add' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_add(self):
         """
         Test if it add a devices to a BTRFS filesystem.
@@ -343,6 +363,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete(self):
         """
         Test if it delete a devices to a BTRFS filesystem.
@@ -354,6 +375,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'properties' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_properties(self):
         """
         Test if list properties for given btrfs object
@@ -365,12 +387,14 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(btrfs.__salt__, {"cmd.run_all": mock}):
                 self.assertDictEqual(btrfs.properties("/dev/sda1", "subvol"), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_properties_unknown_error(self):
         """
         Test if it gives unknown property error
         """
         self.assertRaises(CommandExecutionError, btrfs.properties, "/dev/sda1", "a")
 
+    @skipIf(True, "FASTTEST skip")
     def test_properties_error(self):
         """
         Test if it gives exception error
@@ -379,6 +403,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
             CommandExecutionError, btrfs.properties, "/dev/sda1", "subvol", True
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_subvolume_exists(self):
         """
         Test subvolume_exists
@@ -389,6 +414,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(btrfs.__salt__, salt_mock):
             assert btrfs.subvolume_exists("/mnt/one")
 
+    @skipIf(True, "FASTTEST skip")
     def test_subvolume_not_exists(self):
         """
         Test subvolume_exists
@@ -399,6 +425,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(btrfs.__salt__, salt_mock):
             assert not btrfs.subvolume_exists("/mnt/nowhere")
 
+    @skipIf(True, "FASTTEST skip")
     def test_subvolume_create_fails_parameters(self):
         """
         Test btrfs subvolume create
@@ -408,6 +435,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
             btrfs.subvolume_create("var", qgroupids="1")
 
     @patch("salt.modules.btrfs.subvolume_exists")
+    @skipIf(True, "FASTTEST skip")
     def test_subvolume_create_already_exists(self, subvolume_exists):
         """
         Test btrfs subvolume create
@@ -417,6 +445,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
     @patch("salt.modules.btrfs.subvolume_exists")
+    @skipIf(True, "FASTTEST skip")
     def test_subvolume_create(self, subvolume_exists):
         """
         Test btrfs subvolume create
@@ -433,6 +462,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
                 ["btrfs", "subvolume", "create", "/mnt/var"]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_subvolume_delete_fails_parameters(self):
         """
         Test btrfs subvolume delete
@@ -444,6 +474,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
         with pytest.raises(CommandExecutionError):
             btrfs.subvolume_delete(names="var")
 
+    @skipIf(True, "FASTTEST skip")
     def test_subvolume_delete_fails_parameter_commit(self):
         """
         Test btrfs subvolume delete
@@ -453,6 +484,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
             btrfs.subvolume_delete(name="var", commit="maybe")
 
     @patch("salt.modules.btrfs.subvolume_exists")
+    @skipIf(True, "FASTTEST skip")
     def test_subvolume_delete_already_missing(self, subvolume_exists):
         """
         Test btrfs subvolume delete
@@ -461,6 +493,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
         assert not btrfs.subvolume_delete(name="var", names=["tmp"])
 
     @patch("salt.modules.btrfs.subvolume_exists")
+    @skipIf(True, "FASTTEST skip")
     def test_subvolume_delete_already_missing_name(self, subvolume_exists):
         """
         Test btrfs subvolume delete
@@ -469,6 +502,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
         assert not btrfs.subvolume_delete(name="var")
 
     @patch("salt.modules.btrfs.subvolume_exists")
+    @skipIf(True, "FASTTEST skip")
     def test_subvolume_delete_already_missing_names(self, subvolume_exists):
         """
         Test btrfs subvolume delete
@@ -477,6 +511,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
         assert not btrfs.subvolume_delete(names=["tmp"])
 
     @patch("salt.modules.btrfs.subvolume_exists")
+    @skipIf(True, "FASTTEST skip")
     def test_subvolume_delete(self, subvolume_exists):
         """
         Test btrfs subvolume delete
@@ -492,6 +527,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
                 ["btrfs", "subvolume", "delete", "var", "tmp"]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_subvolume_find_new_empty(self):
         """
         Test btrfs subvolume find-new
@@ -511,6 +547,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
                 ["btrfs", "subvolume", "find-new", "var", "2000"]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_subvolume_find_new(self):
         """
         Test btrfs subvolume find-new
@@ -535,6 +572,7 @@ transid marker was 1024""",
                 ["btrfs", "subvolume", "find-new", "var", "1023"]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_subvolume_get_default_free(self):
         """
         Test btrfs subvolume get-default
@@ -554,6 +592,7 @@ transid marker was 1024""",
                 ["btrfs", "subvolume", "get-default", "/mnt"]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_subvolume_get_default(self):
         """
         Test btrfs subvolume get-default
@@ -576,6 +615,7 @@ transid marker was 1024""",
                 ["btrfs", "subvolume", "get-default", "/mnt"]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_subvolume_list_fails_parameters(self):
         """
         Test btrfs subvolume list
@@ -588,6 +628,7 @@ transid marker was 1024""",
         with pytest.raises(CommandExecutionError):
             btrfs.subvolume_list("/mnt", sort=["-root"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_subvolume_list_simple(self):
         """
         Test btrfs subvolume list
@@ -612,6 +653,7 @@ ID 258 gen 10 top level 5 path another one
                 ["btrfs", "subvolume", "list", "/mnt"]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_subvolume_list(self):
         """
         Test btrfs subvolume list
@@ -690,6 +732,7 @@ ID 258 gen 10 cgen 10 parent 5 top level 5 parent_uuid -     received_uuid - \
                 ]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_subvolume_set_default(self):
         """
         Test btrfs subvolume set-default
@@ -704,6 +747,7 @@ ID 258 gen 10 cgen 10 parent 5 top level 5 parent_uuid -     received_uuid - \
                 ["btrfs", "subvolume", "set-default", "257", "/mnt"]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_subvolume_show(self):
         """
         Test btrfs subvolume show
@@ -751,6 +795,7 @@ ID 258 gen 10 cgen 10 parent 5 top level 5 parent_uuid -     received_uuid - \
                 ["btrfs", "subvolume", "show", "/var"]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_subvolume_sync_fail_parameters(self):
         """
         Test btrfs subvolume sync
@@ -759,6 +804,7 @@ ID 258 gen 10 cgen 10 parent 5 top level 5 parent_uuid -     received_uuid - \
         with pytest.raises(CommandExecutionError):
             btrfs.subvolume_sync("/mnt", subvolids="257")
 
+    @skipIf(True, "FASTTEST skip")
     def test_subvolume_sync(self):
         """
         Test btrfs subvolume sync

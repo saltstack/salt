@@ -18,7 +18,7 @@ from salt.utils.versions import LooseVersion
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import __version__ as mock_version
 from tests.support.mock import patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 try:
     import libcloud.security
@@ -77,6 +77,7 @@ class GCETestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_destroy_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call destroy
@@ -86,18 +87,21 @@ class GCETestCase(TestCase, LoaderModuleMockMixin):
             SaltCloudSystemExit, gce.destroy, vm_name=VM_NAME, call="function"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_fail_virtual_missing_deps(self):
         # Missing deps
         with patch("salt.config.check_driver_dependencies", return_value=False):
             v = gce.__virtual__()
             self.assertEqual(v, False)
 
+    @skipIf(True, "FASTTEST skip")
     def test_fail_virtual_deps_missing_config(self):
         with patch("salt.config.check_driver_dependencies", return_value=True):
             with patch("salt.config.is_provider_configured", return_value=False):
                 v = gce.__virtual__()
                 self.assertEqual(v, False)
 
+    @skipIf(True, "FASTTEST skip")
     def test_import(self):
         """
         Test that the module picks up installed deps
@@ -108,6 +112,7 @@ class GCETestCase(TestCase, LoaderModuleMockMixin):
             if LooseVersion(mock_version) >= LooseVersion("2.0.0"):
                 self.assert_called_once(p)
 
+    @skipIf(True, "FASTTEST skip")
     def test_provider_matches(self):
         """
         Test that the first configured instance of a gce driver is matched

@@ -63,6 +63,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         return {core: {}}
 
     @patch("os.path.isfile")
+    @skipIf(True, "FASTTEST skip")
     def test_parse_etc_os_release(self, path_isfile_mock):
         path_isfile_mock.side_effect = lambda x: x == "/usr/lib/os-release"
         with salt.utils.files.fopen(
@@ -91,6 +92,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_cpe_name_wfn(self):
         """
         Parse correct CPE_NAME data WFN formatted
@@ -123,6 +125,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                 assert key in ret
                 assert cpe_ret[key] == ret[key]
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_cpe_name_v23(self):
         """
         Parse correct CPE_NAME data v2.3 formatted
@@ -165,6 +168,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                 assert key in ret
                 assert cpe_ret[key] == ret[key]
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_cpe_name_broken(self):
         """
         Parse broken CPE_NAME data
@@ -178,6 +182,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         ]:
             assert core._parse_cpe_name(cpe) == {}
 
+    @skipIf(True, "FASTTEST skip")
     def test_missing_os_release(self):
         with patch("salt.utils.files.fopen", mock_open(read_data={})):
             os_release = core._parse_os_release(
@@ -186,6 +191,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(os_release, {})
 
     @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
+    @skipIf(True, "FASTTEST skip")
     def test__windows_platform_data(self):
         grains = core._windows_platform_data()
         keys = [
@@ -209,6 +215,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertIn(key, grains)
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    @skipIf(True, "FASTTEST skip")
     def test_gnu_slash_linux_in_os_name(self):
         """
         Test to return a list of all enabled services
@@ -285,6 +292,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(os_grains.get("os_family"), "Debian")
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    @skipIf(True, "FASTTEST skip")
     def test_suse_os_from_cpe_data(self):
         """
         Test if 'os' grain is parsed from CPE_NAME of /etc/os-release
@@ -453,6 +461,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self._run_os_grains_tests(None, os_release_map, expectation)
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    @skipIf(True, "FASTTEST skip")
     def test_suse_os_grains_sles11sp3(self):
         """
         Test if OS grains are parsed correctly in SLES 11 SP3
@@ -478,6 +487,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self._run_suse_os_grains_tests(_os_release_map, expectation)
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    @skipIf(True, "FASTTEST skip")
     def test_suse_os_grains_sles11sp4(self):
         """
         Test if OS grains are parsed correctly in SLES 11 SP4
@@ -504,6 +514,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self._run_suse_os_grains_tests(_os_release_map, expectation)
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    @skipIf(True, "FASTTEST skip")
     def test_suse_os_grains_sles12(self):
         """
         Test if OS grains are parsed correctly in SLES 12
@@ -530,6 +541,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self._run_suse_os_grains_tests(_os_release_map, expectation)
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    @skipIf(True, "FASTTEST skip")
     def test_suse_os_grains_sles12sp1(self):
         """
         Test if OS grains are parsed correctly in SLES 12 SP1
@@ -556,6 +568,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self._run_suse_os_grains_tests(_os_release_map, expectation)
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    @skipIf(True, "FASTTEST skip")
     def test_suse_os_grains_opensuse_leap_42_1(self):
         """
         Test if OS grains are parsed correctly in openSUSE Leap 42.1
@@ -582,6 +595,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self._run_suse_os_grains_tests(_os_release_map, expectation)
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    @skipIf(True, "FASTTEST skip")
     def test_suse_os_grains_tumbleweed(self):
         """
         Test if OS grains are parsed correctly in openSUSE Tumbleweed
@@ -608,6 +622,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self._run_suse_os_grains_tests(_os_release_map, expectation)
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    @skipIf(True, "FASTTEST skip")
     def test_debian_7_os_grains(self):
         """
         Test if OS grains are parsed correctly in Debian 7 "wheezy"
@@ -628,6 +643,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self._run_os_grains_tests("debian-7", _os_release_map, expectation)
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    @skipIf(True, "FASTTEST skip")
     def test_debian_8_os_grains(self):
         """
         Test if OS grains are parsed correctly in Debian 8 "jessie"
@@ -648,6 +664,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self._run_os_grains_tests("debian-8", _os_release_map, expectation)
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    @skipIf(True, "FASTTEST skip")
     def test_debian_9_os_grains(self):
         """
         Test if OS grains are parsed correctly in Debian 9 "stretch"
@@ -668,6 +685,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self._run_os_grains_tests("debian-9", _os_release_map, expectation)
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    @skipIf(True, "FASTTEST skip")
     def test_ubuntu_xenial_os_grains(self):
         """
         Test if OS grains are parsed correctly in Ubuntu 16.04 "Xenial Xerus"
@@ -688,6 +706,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self._run_os_grains_tests("ubuntu-16.04", _os_release_map, expectation)
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    @skipIf(True, "FASTTEST skip")
     def test_ubuntu_artful_os_grains(self):
         """
         Test if OS grains are parsed correctly in Ubuntu 17.10 "Artful Aardvark"
@@ -708,6 +727,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self._run_os_grains_tests("ubuntu-17.10", _os_release_map, expectation)
 
     @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_windows_platform_data(self):
         """
         Test the _windows_platform_data function
@@ -751,6 +771,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         ]
         self.assertIn(returned_grains["osrelease"], valid_releases)
 
+    @skipIf(True, "FASTTEST skip")
     def test__windows_os_release_grain(self):
         versions = {
             "Windows 10 Home": "10",
@@ -861,6 +882,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(version, "7")
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    @skipIf(True, "FASTTEST skip")
     def test_linux_memdata(self):
         """
         Test memdata on Linux systems
@@ -876,6 +898,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(memdata.get("swap_total"), 4676)
 
     @skipIf(salt.utils.platform.is_windows(), "System is Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_bsd_memdata(self):
         """
         Test to memdata on *BSD systems
@@ -937,6 +960,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(os_grains.get("swap_total"), 400)
 
     @skipIf(salt.utils.platform.is_windows(), "System is Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_docker_virtual(self):
         """
         Test if virtual grains are parsed correctly in Docker.
@@ -967,6 +991,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                             )
 
     @skipIf(salt.utils.platform.is_windows(), "System is Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_lxc_virtual(self):
         """
         Test if virtual grains are parsed correctly in LXC.
@@ -989,6 +1014,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                         )
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    @skipIf(True, "FASTTEST skip")
     def test_xen_virtual(self):
         """
         Test if OS grains are parsed correctly in Ubuntu Xenial Xerus
@@ -1007,6 +1033,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                     "Xen PV DomU",
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_if_virtual_subtype_exists_virtual_should_fallback_to_virtual(self):
         def mockstat(path):
             if path == "/":
@@ -1059,6 +1086,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             )
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    @skipIf(True, "FASTTEST skip")
     def test_fqdn_return(self):
         """
         test ip4 and ip6 return values
@@ -1071,6 +1099,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         )
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    @skipIf(True, "FASTTEST skip")
     def test_fqdn6_empty(self):
         """
         test when ip6 is empty
@@ -1081,6 +1110,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self._run_fqdn_tests(net_ip4_mock, net_ip6_mock, ip4_empty=False)
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    @skipIf(True, "FASTTEST skip")
     def test_fqdn4_empty(self):
         """
         test when ip4 is empty
@@ -1091,6 +1121,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self._run_fqdn_tests(net_ip4_mock, net_ip6_mock, ip6_empty=False)
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    @skipIf(True, "FASTTEST skip")
     def test_fqdn_all_empty(self):
         """
         test when both ip4 and ip6 are empty
@@ -1143,6 +1174,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     @patch.object(salt.utils.platform, "is_windows", MagicMock(return_value=False))
     @patch("salt.grains.core.__opts__", {"ipv6": False})
+    @skipIf(True, "FASTTEST skip")
     def test_dns_return(self):
         """
         test the return for a dns grain. test for issue:
@@ -1188,6 +1220,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     @patch(
         "salt.utils.network.socket.getfqdn", MagicMock(side_effect=lambda v: v)
     )  # Just pass-through
+    @skipIf(True, "FASTTEST skip")
     def test_fqdns_return(self):
         """
         test the return for a dns grain. test for issue:
@@ -1209,6 +1242,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     @patch("salt.utils.network.ip_addrs", MagicMock(return_value=["1.2.3.4"]))
     @patch("salt.utils.network.ip_addrs6", MagicMock(return_value=[]))
+    @skipIf(True, "FASTTEST skip")
     def test_fqdns_socket_error(self):
         """
         test the behavior on non-critical socket errors of the dns grain
@@ -1239,6 +1273,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                 mock_log.debug.assert_not_called()
                 mock_log.error.assert_called_once()
 
+    @skipIf(True, "FASTTEST skip")
     def test_core_virtual(self):
         """
         test virtual grain with cmd virt-what
@@ -1267,6 +1302,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                     ret = core._virtual(osdata)
                     self.assertEqual(ret["virtual"], virt)
 
+    @skipIf(True, "FASTTEST skip")
     def test_solaris_sparc_s7zone(self):
         """
         verify productname grain for s7 zone
@@ -1284,6 +1320,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             this_sparc_return_data, expectation
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_solaris_sparc_s7(self):
         """
         verify productname grain for s7
@@ -1301,6 +1338,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             this_sparc_return_data, expectation
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_solaris_sparc_t5220(self):
         """
         verify productname grain for t5220
@@ -1318,6 +1356,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             this_sparc_return_data, expectation
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_solaris_sparc_t5220zone(self):
         """
         verify productname grain for t5220 zone
@@ -1393,6 +1432,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch("os.path.isfile")
     @patch("os.path.isdir")
+    @skipIf(True, "FASTTEST skip")
     def test_core_virtual_unicode(self, mock_file, mock_dir):
         """
         test virtual grain with unicode character in product_name file
@@ -1431,6 +1471,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                         self.assertEqual(ret["virtual"], virt)
 
     @patch("salt.utils.path.which", MagicMock(return_value="/usr/sbin/sysctl"))
+    @skipIf(True, "FASTTEST skip")
     def test_osx_memdata_with_comma(self):
         """
         test osx memdata method when comma returns
@@ -1450,6 +1491,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             assert ret["mem_total"] == 4096
 
     @patch("salt.utils.path.which", MagicMock(return_value="/usr/sbin/sysctl"))
+    @skipIf(True, "FASTTEST skip")
     def test_osx_memdata(self):
         """
         test osx memdata
@@ -1469,6 +1511,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             assert ret["mem_total"] == 4096
 
     @skipIf(not core._DATEUTIL_TZ, "Missing dateutil.tz")
+    @skipIf(True, "FASTTEST skip")
     def test_locale_info_tzname(self):
         # mock datetime.now().tzname()
         # cant just mock now because it is read only
@@ -1497,6 +1540,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertEqual(ret["locale_info"]["timezone"], "MDT_FAKE")
 
     @skipIf(not core._DATEUTIL_TZ, "Missing dateutil.tz")
+    @skipIf(True, "FASTTEST skip")
     def test_locale_info_unicode_error_tzname(self):
         # UnicodeDecodeError most have the default string encoding
         unicode_error = UnicodeDecodeError(str("fake"), b"\x00\x00", 1, 2, str("fake"))
@@ -1551,6 +1595,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                 is_windows.assert_not_called()
                 self.assertEqual(ret["locale_info"]["timezone"], "unknown")
 
+    @skipIf(True, "FASTTEST skip")
     def test_cwd_exists(self):
         cwd_grain = core.cwd()
 
@@ -1558,6 +1603,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue("cwd" in cwd_grain)
         self.assertEqual(cwd_grain["cwd"], os.getcwd())
 
+    @skipIf(True, "FASTTEST skip")
     def test_cwd_is_cwd(self):
         cwd = os.getcwd()
 
@@ -1573,6 +1619,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             # change back to original directory
             os.chdir(cwd)
 
+    @skipIf(True, "FASTTEST skip")
     def test_virtual_set_virtual_grain(self):
         osdata = {}
 
@@ -1599,6 +1646,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertIn("virtual", virtual_grains)
 
+    @skipIf(True, "FASTTEST skip")
     def test_virtual_has_virtual_grain(self):
         osdata = {"virtual": "something"}
 
@@ -1627,6 +1675,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertNotEqual(virtual_grains["virtual"], "physical")
 
     @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_windows_virtual_set_virtual_grain(self):
         osdata = {}
 
@@ -1654,6 +1703,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertIn("virtual", virtual_grains)
 
     @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_windows_virtual_has_virtual_grain(self):
         osdata = {"virtual": "something"}
 
@@ -1682,6 +1732,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertNotEqual(virtual_grains["virtual"], "physical")
 
     @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_osdata_virtual_key_win(self):
         with patch.dict(
             core.__salt__,
@@ -1707,6 +1758,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertNotEqual(osdata_grains["virtual"], "physical")
 
     @skipIf(salt.utils.platform.is_windows(), "System is Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_bsd_osfullname(self):
         """
         Test to ensure osfullname exists on *BSD systems
@@ -1769,6 +1821,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertIn("osfullname", os_grains)
         self.assertEqual(os_grains.get("osfullname"), "FreeBSD")
 
+    @skipIf(True, "FASTTEST skip")
     def test_saltversioninfo(self):
         """
         test saltversioninfo core grain.
@@ -1785,6 +1838,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         assert all([x is not None for x in info])
         assert all([isinstance(x, int) for x in info])
 
+    @skipIf(True, "FASTTEST skip")
     def test_path(self):
         comps = ["foo", "bar", "baz"]
         path = os.path.pathsep.join(comps)

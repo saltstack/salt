@@ -13,7 +13,7 @@ from salt.ext import six
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class UdevTestCase(TestCase, LoaderModuleMockMixin):
@@ -26,6 +26,7 @@ class UdevTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'info' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_info(self):
         """
         Test if it returns the info of udev-created node in a dict
@@ -66,6 +67,7 @@ class UdevTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'exportdb' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_exportdb(self):
         """
         Test if it returns the all the udev database into a dict
@@ -177,6 +179,7 @@ E: XKBMODEL=pc105
                 for key, value in six.iteritems(d_section["E"]):
                     assert out[d_idx]["E"][key] == value
 
+    @skipIf(True, "FASTTEST skip")
     def test_normalize_info(self):
         """
         Test if udevdb._normalize_info does not returns nested lists that contains only one item.

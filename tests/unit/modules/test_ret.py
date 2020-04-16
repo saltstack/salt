@@ -14,7 +14,7 @@ import salt.modules.ret as ret
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class RetTestCase(TestCase, LoaderModuleMockMixin):
@@ -27,6 +27,7 @@ class RetTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_jid' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_jid(self):
         """
         Test if it return the information for a specified job id
@@ -41,6 +42,7 @@ class RetTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_fun' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_fun(self):
         """
         Test if it return info about last time fun was called on each minion
@@ -55,6 +57,7 @@ class RetTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_jids' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_jids(self):
         """
         Test if it return a list of all job ids
@@ -69,6 +72,7 @@ class RetTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_minions' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_minions(self):
         """
         Test if it return a list of all minions

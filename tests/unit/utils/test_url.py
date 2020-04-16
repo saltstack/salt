@@ -9,7 +9,7 @@ import salt.utils.url
 from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class UrlTestCase(TestCase):
@@ -19,6 +19,7 @@ class UrlTestCase(TestCase):
 
     # parse tests
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_path(self):
         """
         Test parsing an ordinary path
@@ -27,6 +28,7 @@ class UrlTestCase(TestCase):
 
         self.assertEqual(salt.utils.url.parse(path), (path, None))
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_salt_url(self):
         """
         Test parsing a 'salt://' URL
@@ -38,6 +40,7 @@ class UrlTestCase(TestCase):
 
         self.assertEqual(salt.utils.url.parse(url), (path, None))
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_salt_saltenv(self):
         """
         Test parsing a 'salt://' URL with a '?saltenv=' query
@@ -52,6 +55,7 @@ class UrlTestCase(TestCase):
 
     # create tests
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_url(self):
         """
         Test creating a 'salt://' URL
@@ -63,6 +67,7 @@ class UrlTestCase(TestCase):
 
         self.assertEqual(salt.utils.url.create(path), url)
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_url_saltenv(self):
         """
         Test creating a 'salt://' URL with a saltenv
@@ -78,6 +83,7 @@ class UrlTestCase(TestCase):
 
     # is_escaped tests
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_escaped_windows(self):
         """
         Test not testing a 'salt://' URL on windows
@@ -87,6 +93,7 @@ class UrlTestCase(TestCase):
         with patch("salt.utils.platform.is_windows", MagicMock(return_value=True)):
             self.assertFalse(salt.utils.url.is_escaped(url))
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_escaped_escaped_path(self):
         """
         Test testing an escaped path
@@ -95,6 +102,7 @@ class UrlTestCase(TestCase):
 
         self.assertTrue(salt.utils.url.is_escaped(path))
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_escaped_unescaped_path(self):
         """
         Test testing an unescaped path
@@ -103,6 +111,7 @@ class UrlTestCase(TestCase):
 
         self.assertFalse(salt.utils.url.is_escaped(path))
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_escaped_escaped_url(self):
         """
         Test testing an escaped 'salt://' URL
@@ -111,6 +120,7 @@ class UrlTestCase(TestCase):
 
         self.assertTrue(salt.utils.url.is_escaped(url))
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_escaped_unescaped_url(self):
         """
         Test testing an unescaped 'salt://' URL
@@ -119,6 +129,7 @@ class UrlTestCase(TestCase):
 
         self.assertFalse(salt.utils.url.is_escaped(url))
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_escaped_generic_url(self):
         """
         Test testing an unescaped 'salt://' URL
@@ -129,6 +140,7 @@ class UrlTestCase(TestCase):
 
     # escape tests
 
+    @skipIf(True, "FASTTEST skip")
     def test_escape_windows(self):
         """
         Test not escaping a 'salt://' URL on windows
@@ -138,6 +150,7 @@ class UrlTestCase(TestCase):
         with patch("salt.utils.platform.is_windows", MagicMock(return_value=True)):
             self.assertEqual(salt.utils.url.escape(url), url)
 
+    @skipIf(True, "FASTTEST skip")
     def test_escape_escaped_path(self):
         """
         Test escaping an escaped path
@@ -146,6 +159,7 @@ class UrlTestCase(TestCase):
 
         self.assertEqual(salt.utils.url.escape(resource), resource)
 
+    @skipIf(True, "FASTTEST skip")
     def test_escape_unescaped_path(self):
         """
         Test escaping an unescaped path
@@ -157,6 +171,7 @@ class UrlTestCase(TestCase):
 
         self.assertEqual(salt.utils.url.escape(path), escaped_path)
 
+    @skipIf(True, "FASTTEST skip")
     def test_escape_escaped_url(self):
         """
         Test testing an escaped 'salt://' URL
@@ -165,6 +180,7 @@ class UrlTestCase(TestCase):
 
         self.assertEqual(salt.utils.url.escape(url), url)
 
+    @skipIf(True, "FASTTEST skip")
     def test_escape_unescaped_url(self):
         """
         Test testing an unescaped 'salt://' URL
@@ -177,6 +193,7 @@ class UrlTestCase(TestCase):
 
         self.assertEqual(salt.utils.url.escape(url), escaped_url)
 
+    @skipIf(True, "FASTTEST skip")
     def test_escape_generic_url(self):
         """
         Test testing an unescaped 'salt://' URL
@@ -187,6 +204,7 @@ class UrlTestCase(TestCase):
 
     # unescape tests
 
+    @skipIf(True, "FASTTEST skip")
     def test_unescape_windows(self):
         """
         Test not escaping a 'salt://' URL on windows
@@ -196,6 +214,7 @@ class UrlTestCase(TestCase):
         with patch("salt.utils.platform.is_windows", MagicMock(return_value=True)):
             self.assertEqual(salt.utils.url.unescape(url), url)
 
+    @skipIf(True, "FASTTEST skip")
     def test_unescape_escaped_path(self):
         """
         Test escaping an escaped path
@@ -205,6 +224,7 @@ class UrlTestCase(TestCase):
 
         self.assertEqual(salt.utils.url.unescape(escaped_path), resource)
 
+    @skipIf(True, "FASTTEST skip")
     def test_unescape_unescaped_path(self):
         """
         Test escaping an unescaped path
@@ -213,6 +233,7 @@ class UrlTestCase(TestCase):
 
         self.assertEqual(salt.utils.url.unescape(path), path)
 
+    @skipIf(True, "FASTTEST skip")
     def test_unescape_escaped_url(self):
         """
         Test testing an escaped 'salt://' URL
@@ -223,6 +244,7 @@ class UrlTestCase(TestCase):
 
         self.assertEqual(salt.utils.url.unescape(escaped_url), url)
 
+    @skipIf(True, "FASTTEST skip")
     def test_unescape_unescaped_url(self):
         """
         Test testing an unescaped 'salt://' URL
@@ -231,6 +253,7 @@ class UrlTestCase(TestCase):
 
         self.assertEqual(salt.utils.url.unescape(url), url)
 
+    @skipIf(True, "FASTTEST skip")
     def test_unescape_generic_url(self):
         """
         Test testing an unescaped 'salt://' URL
@@ -241,6 +264,7 @@ class UrlTestCase(TestCase):
 
     # add_env tests
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_env_not_salt(self):
         """
         Test not adding a saltenv to a non 'salt://' URL
@@ -250,6 +274,7 @@ class UrlTestCase(TestCase):
 
         self.assertEqual(salt.utils.url.add_env(url, saltenv), url)
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_env(self):
         """
         Test adding a saltenv to a 'salt://' URL
@@ -262,6 +287,7 @@ class UrlTestCase(TestCase):
 
     # split_env tests
 
+    @skipIf(True, "FASTTEST skip")
     def test_split_env_non_salt(self):
         """
         Test not splitting a saltenv from a non 'salt://' URL
@@ -271,6 +297,7 @@ class UrlTestCase(TestCase):
 
         self.assertEqual(salt.utils.url.split_env(url), (url, None))
 
+    @skipIf(True, "FASTTEST skip")
     def test_split_env(self):
         """
         Test splitting a 'salt://' URL
@@ -283,6 +310,7 @@ class UrlTestCase(TestCase):
 
     # validate tests
 
+    @skipIf(True, "FASTTEST skip")
     def test_validate_valid(self):
         """
         Test URL valid validation
@@ -292,6 +320,7 @@ class UrlTestCase(TestCase):
 
         self.assertTrue(salt.utils.url.validate(url, protos))
 
+    @skipIf(True, "FASTTEST skip")
     def test_validate_invalid(self):
         """
         Test URL invalid validation
@@ -303,6 +332,7 @@ class UrlTestCase(TestCase):
 
     # strip tests
 
+    @skipIf(True, "FASTTEST skip")
     def test_strip_url_with_scheme(self):
         """
         Test stripping of URL scheme
@@ -313,6 +343,7 @@ class UrlTestCase(TestCase):
 
         self.assertEqual(salt.utils.url.strip_proto(url), resource)
 
+    @skipIf(True, "FASTTEST skip")
     def test_strip_url_without_scheme(self):
         """
         Test stripping of a URL without a scheme
@@ -321,6 +352,7 @@ class UrlTestCase(TestCase):
 
         self.assertEqual(salt.utils.url.strip_proto(resource), resource)
 
+    @skipIf(True, "FASTTEST skip")
     def test_http_basic_auth(self):
         """
         Tests that adding basic auth to a URL works as expected
@@ -346,6 +378,7 @@ class UrlTestCase(TestCase):
             result = salt.utils.url.add_http_basic_auth(**kwargs)
             self.assertEqual(result, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_http_basic_auth_https_only(self):
         """
         Tests that passing a non-https URL with https_only=True will raise a
@@ -359,6 +392,7 @@ class UrlTestCase(TestCase):
         }
         self.assertRaises(ValueError, salt.utils.url.add_http_basic_auth, **kwargs)
 
+    @skipIf(True, "FASTTEST skip")
     def test_redact_http_basic_auth(self):
         sensitive_outputs = (
             "https://deadbeaf@example.com",
@@ -369,6 +403,7 @@ class UrlTestCase(TestCase):
             result = salt.utils.url.redact_http_basic_auth(sensitive_output)
             self.assertEqual(result, sanitized)
 
+    @skipIf(True, "FASTTEST skip")
     def test_redact_non_auth_output(self):
         non_auth_output = "This is just normal output"
         self.assertEqual(

@@ -14,7 +14,7 @@ import salt.utils.path
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class BlockdevTestCase(TestCase, LoaderModuleMockMixin):
@@ -27,6 +27,7 @@ class BlockdevTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'tuned' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_tuned(self):
         """
         Test to manage options of block device
@@ -50,6 +51,7 @@ class BlockdevTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'formatted' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_formatted(self):
         """
         Test to manage filesystems of partitions.
@@ -111,6 +113,7 @@ class BlockdevTestCase(TestCase, LoaderModuleMockMixin):
                     with patch.dict(blockdev.__opts__, {"test": False}):
                         self.assertDictEqual(blockdev.formatted(name), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test__checkblk(self):
         """
         Confirm that we call cmd.run with ignore_retcode=True

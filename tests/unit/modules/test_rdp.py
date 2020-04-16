@@ -12,7 +12,7 @@ import salt.modules.rdp as rdp
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class RdpTestCase(TestCase, LoaderModuleMockMixin):
@@ -25,6 +25,7 @@ class RdpTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'enable' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_enable(self):
         """
         Test if it enables RDP the service on the server
@@ -37,6 +38,7 @@ class RdpTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'disable' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_disable(self):
         """
         Test if it disables RDP the service on the server
@@ -49,6 +51,7 @@ class RdpTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'status' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_status(self):
         """
         Test if it shows rdp is enabled on the server

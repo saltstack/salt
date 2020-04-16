@@ -10,7 +10,7 @@ import salt.states.modjk as modjk
 from salt.ext import six
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 if six.PY2:
     LIST_NOT_STR = "workers should be a list not a <type 'unicode'>"
@@ -25,6 +25,7 @@ class ModjkTestCase(TestCase):
 
     # 'worker_stopped' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_worker_stopped(self):
         """
         Test to stop all the workers in the modjk load balancer
@@ -38,6 +39,7 @@ class ModjkTestCase(TestCase):
 
     # 'worker_activated' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_worker_activated(self):
         """
         Test to activate all the workers in the modjk load balancer
@@ -51,6 +53,7 @@ class ModjkTestCase(TestCase):
 
     # 'worker_disabled' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_worker_disabled(self):
         """
         Test to disable all the workers in the modjk load balancer
@@ -64,6 +67,7 @@ class ModjkTestCase(TestCase):
 
     # 'worker_recover' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_worker_recover(self):
         """
         Test to recover all the workers in the modjk load balancer

@@ -17,7 +17,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ExtNodesTestCase(TestCase, LoaderModuleMockMixin):
@@ -36,6 +36,7 @@ class ExtNodesTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_ext_nodes(self):
         """
         Confirm that subprocess.Popen works as expected and does not raise an
@@ -54,6 +55,7 @@ class ExtNodesTestCase(TestCase, LoaderModuleMockMixin):
             ret = ext_nodes.top(opts={"id": "foo"})
         self.assertEqual(ret, {"base": ["one", "two"]})
 
+    @skipIf(True, "FASTTEST skip")
     def test_ext_nodes_with_environment(self):
         """
         Same as above, but also tests that the matches are assigned to the proper

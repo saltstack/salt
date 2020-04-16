@@ -13,7 +13,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class OpenBSDSysctlTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class OpenBSDSysctlTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {openbsd_sysctl: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_get(self):
         """
         Tests the return of get function
@@ -32,6 +33,7 @@ class OpenBSDSysctlTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(openbsd_sysctl.__salt__, {"cmd.run": mock_cmd}):
             self.assertEqual(openbsd_sysctl.get("kern.ostype"), "OpenBSD")
 
+    @skipIf(True, "FASTTEST skip")
     def test_assign_cmd_failed(self):
         """
         Tests if the assignment was successful or not
@@ -48,6 +50,7 @@ class OpenBSDSysctlTestCase(TestCase, LoaderModuleMockMixin):
                 CommandExecutionError, openbsd_sysctl.assign, "kern.securelevel", 9000
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_assign_cmd_eperm(self):
         """
         Tests if the assignment was not permitted.
@@ -64,6 +67,7 @@ class OpenBSDSysctlTestCase(TestCase, LoaderModuleMockMixin):
                 CommandExecutionError, openbsd_sysctl.assign, "ddb.console", 1
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_assign(self):
         """
         Tests the return of successful assign function

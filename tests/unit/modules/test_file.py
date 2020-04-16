@@ -112,12 +112,14 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
         os.remove(self.tfile.name)
         del self.tfile
 
+    @skipIf(True, "FASTTEST skip")
     def test_replace(self):
         filemod.replace(self.tfile.name, r"Etiam", "Salticus", backup=False)
 
         with salt.utils.files.fopen(self.tfile.name, "r") as fp:
             self.assertIn("Salticus", salt.utils.stringutils.to_unicode(fp.read()))
 
+    @skipIf(True, "FASTTEST skip")
     def test_replace_idempotency(self):
         os.utime(self.tfile.name, (1552661253, 1552661253))
         mtime = os.stat(self.tfile.name).st_mtime
@@ -126,6 +128,7 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(mtime, nmtime)
 
+    @skipIf(True, "FASTTEST skip")
     def test_replace_append_if_not_found(self):
         """
         Check that file.replace append_if_not_found works
@@ -186,6 +189,8 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
         with salt.utils.files.fopen(tfile.name) as tfile2:
             self.assertEqual(salt.utils.stringutils.to_unicode(tfile2.read()), expected)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_backup(self):
         fext = ".bak"
         bak_file = "{0}{1}".format(self.tfile.name, fext)
@@ -195,6 +200,7 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(os.path.exists(bak_file))
         os.unlink(bak_file)
 
+    @skipIf(True, "FASTTEST skip")
     def test_nobackup(self):
         fext = ".bak"
         bak_file = "{0}{1}".format(self.tfile.name, fext)
@@ -203,6 +209,8 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertFalse(os.path.exists(bak_file))
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_dry_run(self):
         before_ctime = os.stat(self.tfile.name).st_mtime
         filemod.replace(self.tfile.name, r"Etiam", "Salticus", dry_run=True)
@@ -210,25 +218,31 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(before_ctime, after_ctime)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_show_changes(self):
         ret = filemod.replace(self.tfile.name, r"Etiam", "Salticus", show_changes=True)
 
         self.assertTrue(ret.startswith("---"))  # looks like a diff
 
+    @skipIf(True, "FASTTEST skip")
     def test_noshow_changes(self):
         ret = filemod.replace(self.tfile.name, r"Etiam", "Salticus", show_changes=False)
 
         self.assertIsInstance(ret, bool)
 
+    @skipIf(True, "FASTTEST skip")
     def test_re_str_flags(self):
         # upper- & lower-case
         filemod.replace(
             self.tfile.name, r"Etiam", "Salticus", flags=["MULTILINE", "ignorecase"]
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_re_int_flags(self):
         filemod.replace(self.tfile.name, r"Etiam", "Salticus", flags=10)
 
+    @skipIf(True, "FASTTEST skip")
     def test_numeric_repl(self):
         """
         This test covers cases where the replacement string is numeric, and the
@@ -239,12 +253,14 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
         """
         filemod.replace(self.tfile.name, r"Etiam", 123)
 
+    @skipIf(True, "FASTTEST skip")
     def test_search_only_return_true(self):
         ret = filemod.replace(self.tfile.name, r"Etiam", "Salticus", search_only=True)
 
         self.assertIsInstance(ret, bool)
         self.assertEqual(ret, True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_search_only_return_false(self):
         ret = filemod.replace(self.tfile.name, r"Etian", "Salticus", search_only=True)
 
@@ -295,6 +311,7 @@ class FileCommentLineTestCase(TestCase, LoaderModuleMockMixin):
         os.remove(self.tfile.name)
         del self.tfile
 
+    @skipIf(True, "FASTTEST skip")
     def test_comment_line(self):
         filemod.comment_line(self.tfile.name, "^ipsum")
 
@@ -302,6 +319,7 @@ class FileCommentLineTestCase(TestCase, LoaderModuleMockMixin):
             filecontent = fp.read()
         self.assertIn("#ipsum", filecontent)
 
+    @skipIf(True, "FASTTEST skip")
     def test_comment(self):
         filemod.comment(self.tfile.name, "^ipsum")
 
@@ -309,6 +327,7 @@ class FileCommentLineTestCase(TestCase, LoaderModuleMockMixin):
             filecontent = fp.read()
         self.assertIn("#ipsum", filecontent)
 
+    @skipIf(True, "FASTTEST skip")
     def test_comment_different_character(self):
         filemod.comment_line(self.tfile.name, "^ipsum", "//")
 
@@ -316,6 +335,7 @@ class FileCommentLineTestCase(TestCase, LoaderModuleMockMixin):
             filecontent = fp.read()
         self.assertIn("//ipsum", filecontent)
 
+    @skipIf(True, "FASTTEST skip")
     def test_comment_not_found(self):
         filemod.comment_line(self.tfile.name, "^sit")
 
@@ -324,6 +344,7 @@ class FileCommentLineTestCase(TestCase, LoaderModuleMockMixin):
         self.assertNotIn("#sit", filecontent)
         self.assertNotIn("sit", filecontent)
 
+    @skipIf(True, "FASTTEST skip")
     def test_uncomment(self):
         filemod.uncomment(self.tfile.name, "dolor")
 
@@ -415,6 +436,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
         os.remove(self.tfile.name)
         del self.tfile
 
+    @skipIf(True, "FASTTEST skip")
     def test_replace_multiline(self):
         new_multiline_content = os.linesep.join(
             [
@@ -451,6 +473,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
         self.assertNotIn(b"old content part 1", filecontent)
         self.assertNotIn(b"old content part 2", filecontent)
 
+    @skipIf(True, "FASTTEST skip")
     def test_replace_append(self):
         new_content = "Well, I didn't vote for you."
 
@@ -494,6 +517,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                 fp.read(),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_replace_append_newline_at_eof(self):
         """
         Check that file.blockreplace works consistently on files with and
@@ -549,6 +573,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(salt.utils.stringutils.to_unicode(tfile2.read()), block)
         os.remove(tfile.name)
 
+    @skipIf(True, "FASTTEST skip")
     def test_replace_prepend(self):
         new_content = "Well, I didn't vote for you."
 
@@ -600,6 +625,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                 )
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_replace_partial_marked_lines(self):
         if salt.utils.platform.is_windows():
             check_perms_patch = win_file.check_perms
@@ -623,6 +649,8 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
         self.assertIn("part of start line not removed", filecontent)
         self.assertIn("part of end line not removed", filecontent)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_backup(self):
         fext = ".bak"
         bak_file = "{0}{1}".format(self.tfile.name, fext)
@@ -662,6 +690,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertFalse(os.path.exists(bak_file))
 
+    @skipIf(True, "FASTTEST skip")
     def test_no_modifications(self):
         if salt.utils.platform.is_windows():
             check_perms_patch = win_file.check_perms
@@ -694,6 +723,8 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(before_ctime, after_ctime)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_dry_run(self):
         before_ctime = os.stat(self.tfile.name).st_mtime
         filemod.blockreplace(
@@ -707,6 +738,8 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(before_ctime, after_ctime)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_show_changes(self):
         if salt.utils.platform.is_windows():
             check_perms_patch = win_file.check_perms
@@ -735,6 +768,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertIsInstance(ret, bool)
 
+    @skipIf(True, "FASTTEST skip")
     def test_unfinished_block_exception(self):
         self.assertRaises(
             CommandExecutionError,
@@ -791,6 +825,7 @@ class FileGrepTestCase(TestCase, LoaderModuleMockMixin):
         os.remove(self.tfile.name)
         del self.tfile
 
+    @skipIf(True, "FASTTEST skip")
     def test_grep_query_exists(self):
         result = filemod.grep(self.tfile.name, "Lorem ipsum")
 
@@ -799,6 +834,7 @@ class FileGrepTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(result["stdout"] == "Lorem ipsum dolor sit amet, consectetur")
         self.assertTrue(result["stderr"] == "")
 
+    @skipIf(True, "FASTTEST skip")
     def test_grep_query_not_exists(self):
         result = filemod.grep(self.tfile.name, "Lorem Lorem")
 
@@ -806,6 +842,7 @@ class FileGrepTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(result["stdout"] == "")
         self.assertTrue(result["stderr"] == "")
 
+    @skipIf(True, "FASTTEST skip")
     def test_grep_query_exists_with_opt(self):
         result = filemod.grep(self.tfile.name, "Lorem ipsum", "-i")
 
@@ -814,6 +851,7 @@ class FileGrepTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(result["stdout"] == "Lorem ipsum dolor sit amet, consectetur")
         self.assertTrue(result["stderr"] == "")
 
+    @skipIf(True, "FASTTEST skip")
     def test_grep_query_not_exists_opt(self):
         result = filemod.grep(self.tfile.name, "Lorem Lorem", "-v")
 
@@ -821,12 +859,14 @@ class FileGrepTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(result["stdout"] == FileGrepTestCase.MULTILINE_STRING)
         self.assertTrue(result["stderr"] == "")
 
+    @skipIf(True, "FASTTEST skip")
     def test_grep_query_too_many_opts(self):
         with self.assertRaisesRegex(
             SaltInvocationError, "^Passing multiple command line arg"
         ) as cm:
             result = filemod.grep(self.tfile.name, "Lorem Lorem", "-i -b2")
 
+    @skipIf(True, "FASTTEST skip")
     def test_grep_query_exists_wildcard(self):
         _file = "{0}*".format(self.tfile.name)
         result = filemod.grep(_file, "Lorem ipsum")
@@ -836,6 +876,7 @@ class FileGrepTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(result["stdout"] == "Lorem ipsum dolor sit amet, consectetur")
         self.assertTrue(result["stderr"] == "")
 
+    @skipIf(True, "FASTTEST skip")
     def test_grep_file_not_exists_wildcard(self):
         _file = "{0}-junk*".format(self.tfile.name)
         result = filemod.grep(_file, "Lorem ipsum")
@@ -871,6 +912,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         }
 
     @skipIf(salt.utils.platform.is_windows(), "lsattr is not available on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_check_file_meta_no_lsattr(self):
         """
         Ensure that we skip attribute comparison if lsattr(1) is not found
@@ -902,6 +944,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(result, None)
 
     @skipIf(salt.utils.platform.is_windows(), "SED is not available on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_sed_limit_escaped(self):
         with tempfile.NamedTemporaryFile(mode="w+") as tfile:
             tfile.write(SED_CONTENT)
@@ -920,6 +963,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                     salt.utils.stringutils.to_unicode(newfile.read()),
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_append_newline_at_eof(self):
         """
         Check that file.append works consistently on files with and without
@@ -951,6 +995,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 salt.utils.stringutils.to_unicode(tfile2.read()), "bar" + os.linesep
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_extract_hash(self):
         """
         Check various hash file formats.
@@ -1066,6 +1111,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(result, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_to_uid_int(self):
         """
         Tests if user is passed as an integer
@@ -1074,6 +1120,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         ret = filemod.user_to_uid(user)
         self.assertEqual(ret, user)
 
+    @skipIf(True, "FASTTEST skip")
     def test_group_to_gid_int(self):
         """
         Tests if group is passed as an integer
@@ -1082,6 +1129,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         ret = filemod.group_to_gid(group)
         self.assertEqual(ret, group)
 
+    @skipIf(True, "FASTTEST skip")
     def test_patch(self):
         with patch("os.path.isdir", return_value=False) as mock_isdir, patch(
             "salt.utils.path.which", return_value="/bin/patch"
@@ -1100,6 +1148,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             cmd_mock.assert_called_once_with(cmd, python_shell=False)
             self.assertEqual("test_retval", ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_patch_dry_run(self):
         with patch("os.path.isdir", return_value=False) as mock_isdir, patch(
             "salt.utils.path.which", return_value="/bin/patch"
@@ -1119,6 +1168,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             cmd_mock.assert_called_once_with(cmd, python_shell=False)
             self.assertEqual("test_retval", ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_patch_dir(self):
         with patch("os.path.isdir", return_value=True) as mock_isdir, patch(
             "salt.utils.path.which", return_value="/bin/patch"
@@ -1139,6 +1189,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             cmd_mock.assert_called_once_with(cmd, python_shell=False)
             self.assertEqual("test_retval", ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_apply_template_on_contents(self):
         """
         Tests that the templating engine works on string contents
@@ -1155,6 +1206,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             )
         self.assertEqual(ret, "This is a templated file.")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_diff(self):
 
         text1 = textwrap.dedent(
@@ -1278,6 +1330,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 ret = filemod.get_diff("binary1", "text1")
                 self.assertEqual(ret, "Replace binary file with text file")
 
+    @skipIf(True, "FASTTEST skip")
     def test_stats(self):
         with patch(
             "os.path.expanduser", MagicMock(side_effect=lambda path: path)
@@ -1343,6 +1396,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
 
     @patch("os.path.realpath", MagicMock(wraps=lambda x: x))
     @patch("os.path.isfile", MagicMock(return_value=True))
+    @skipIf(True, "FASTTEST skip")
     def test_delete_line_in_empty_file(self):
         """
         Tests that when calling file.line with ``mode=delete``,
@@ -1367,6 +1421,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
     @patch("os.path.realpath", MagicMock())
     @patch("os.path.isfile", MagicMock(return_value=True))
     @patch("os.stat", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_line_delete_no_match(self):
         """
         Tests that when calling file.line with ``mode=delete``,
@@ -1388,6 +1443,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
 
     @patch("os.path.realpath", MagicMock(wraps=lambda x: x))
     @patch("os.path.isfile", MagicMock(return_value=True))
+    @skipIf(True, "FASTTEST skip")
     def test_line_modecheck_failure(self):
         """
         Test for file.line for empty or wrong mode.
@@ -1404,6 +1460,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
 
     @patch("os.path.realpath", MagicMock(wraps=lambda x: x))
     @patch("os.path.isfile", MagicMock(return_value=True))
+    @skipIf(True, "FASTTEST skip")
     def test_line_no_content(self):
         """
         Test for file.line for an empty content when not deleting anything.
@@ -1420,6 +1477,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
     @patch("os.path.realpath", MagicMock(wraps=lambda x: x))
     @patch("os.path.isfile", MagicMock(return_value=True))
     @patch("os.stat", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_line_insert_no_location_no_before_no_after(self):
         """
         Test for file.line for insertion but define no location/before/after.
@@ -1431,6 +1489,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 filemod.line("foo", content="test content", mode="insert")
             self.assertIn('"location" or "before/after"', six.text_type(exc_info.value))
 
+    @skipIf(True, "FASTTEST skip")
     def test_util_starts_till(self):
         """
         Test for file._starts_till function.
@@ -1447,6 +1506,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         )
 
     @with_tempfile()
+    @skipIf(True, "FASTTEST skip")
     def test_line_insert_after_no_pattern(self, name):
         """
         Test for file.line for insertion after specific line, using no pattern.
@@ -1480,6 +1540,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             assert writelines_content[0] == expected, (writelines_content[0], expected)
 
     @with_tempfile()
+    @skipIf(True, "FASTTEST skip")
     def test_line_insert_after_pattern(self, name):
         """
         Test for file.line for insertion after specific line, using pattern.
@@ -1546,6 +1607,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 )
 
     @with_tempfile()
+    @skipIf(True, "FASTTEST skip")
     def test_line_insert_multi_line_content_after_unicode(self, name):
         """
         Test for file.line for insertion after specific line with Unicode
@@ -1592,6 +1654,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 )
 
     @with_tempfile()
+    @skipIf(True, "FASTTEST skip")
     def test_line_insert_before(self, name):
         """
         Test for file.line for insertion before specific line, using pattern and no patterns.
@@ -1643,6 +1706,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
     @patch("os.path.realpath", MagicMock(wraps=lambda x: x))
     @patch("os.path.isfile", MagicMock(return_value=True))
     @patch("os.stat", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_line_assert_exception_pattern(self):
         """
         Test for file.line for exception on insert with too general pattern.
@@ -1671,6 +1735,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                     )
 
     @with_tempfile()
+    @skipIf(True, "FASTTEST skip")
     def test_line_insert_before_after(self, name):
         """
         Test for file.line for insertion before specific line, using pattern and no patterns.
@@ -1731,6 +1796,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 )
 
     @with_tempfile()
+    @skipIf(True, "FASTTEST skip")
     def test_line_insert_start(self, name):
         """
         Test for file.line for insertion at the beginning of the file
@@ -1770,6 +1836,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             assert writelines_content[0] == expected, (writelines_content[0], expected)
 
     @with_tempfile()
+    @skipIf(True, "FASTTEST skip")
     def test_line_insert_end(self, name):
         """
         Test for file.line for insertion at the end of the file (append)
@@ -1809,6 +1876,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             assert writelines_content[0] == expected, (writelines_content[0], expected)
 
     @with_tempfile()
+    @skipIf(True, "FASTTEST skip")
     def test_line_insert_ensure_before(self, name):
         """
         Test for file.line for insertion ensuring the line is before
@@ -1838,6 +1906,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             assert writelines_content[0] == expected, (writelines_content[0], expected)
 
     @with_tempfile()
+    @skipIf(True, "FASTTEST skip")
     def test_line_insert_duplicate_ensure_before(self, name):
         """
         Test for file.line for insertion ensuring the line is before
@@ -1858,6 +1927,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             assert atomic_open_mock.filehandles.get(name) is None
 
     @with_tempfile()
+    @skipIf(True, "FASTTEST skip")
     def test_line_insert_ensure_before_first_line(self, name):
         """
         Test for file.line for insertion ensuring the line is before first line
@@ -1894,6 +1964,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             assert writelines_content[0] == expected, (writelines_content[0], expected)
 
     @with_tempfile()
+    @skipIf(True, "FASTTEST skip")
     def test_line_insert_ensure_after(self, name):
         """
         Test for file.line for insertion ensuring the line is after
@@ -1932,6 +2003,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             assert writelines_content[0] == expected, (writelines_content[0], expected)
 
     @with_tempfile()
+    @skipIf(True, "FASTTEST skip")
     def test_line_insert_duplicate_ensure_after(self, name):
         """
         Test for file.line for insertion ensuring the line is after
@@ -1961,6 +2033,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             assert atomic_open_mock.filehandles.get(name) is None
 
     @with_tempfile()
+    @skipIf(True, "FASTTEST skip")
     def test_line_insert_ensure_beforeafter_twolines(self, name):
         """
         Test for file.line for insertion ensuring the line is between two lines
@@ -2010,6 +2083,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 )
 
     @with_tempfile()
+    @skipIf(True, "FASTTEST skip")
     def test_line_insert_ensure_beforeafter_twolines_exists(self, name):
         """
         Test for file.line for insertion ensuring the line is between two lines
@@ -2054,6 +2128,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
     @patch("os.path.realpath", MagicMock(wraps=lambda x: x))
     @patch("os.path.isfile", MagicMock(return_value=True))
     @patch("os.stat", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_line_insert_ensure_beforeafter_rangelines(self):
         """
         Test for file.line for insertion ensuring the line is between two lines
@@ -2091,6 +2166,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             )
 
     @with_tempfile()
+    @skipIf(True, "FASTTEST skip")
     def test_line_delete(self, name):
         """
         Test for file.line for deletion of specific line
@@ -2134,6 +2210,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 )
 
     @with_tempfile()
+    @skipIf(True, "FASTTEST skip")
     def test_line_replace(self, name):
         """
         Test for file.line for replacement of specific line
@@ -2221,6 +2298,7 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
         self.addCleanup(delattr, self, "myfile")
 
     @skipIf(salt.utils.platform.is_windows(), "os.symlink is not available on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_symlink_already_in_desired_state(self):
         os.symlink(self.tfile.name, self.directory + "/a_link")
         self.addCleanup(os.remove, self.directory + "/a_link")
@@ -2228,6 +2306,7 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(result)
 
     @skipIf(salt.utils.platform.is_windows(), "os.link is not available on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_hardlink_sanity(self):
         target = os.path.join(self.directory, "a_hardlink")
         self.addCleanup(os.remove, target)
@@ -2235,6 +2314,7 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(result)
 
     @skipIf(salt.utils.platform.is_windows(), "os.link is not available on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_hardlink_numlinks(self):
         target = os.path.join(self.directory, "a_hardlink")
         self.addCleanup(os.remove, target)
@@ -2243,6 +2323,7 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(name_i > 1)
 
     @skipIf(salt.utils.platform.is_windows(), "os.link is not available on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_hardlink_working(self):
         target = os.path.join(self.directory, "a_hardlink")
         self.addCleanup(os.remove, target)
@@ -2251,6 +2332,7 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
         target_i = os.stat(target).st_ino
         self.assertTrue(name_i == target_i)
 
+    @skipIf(True, "FASTTEST skip")
     def test_source_list_for_list_returns_file_from_dict_via_http(self):
         with patch("salt.modules.file.os.remove") as remove:
             remove.return_value = None
@@ -2269,6 +2351,7 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
                     list(ret), ["http://t.est.com/http/httpd.conf", "filehash"]
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_source_list_for_list_returns_existing_file(self):
         with patch.dict(
             filemod.__salt__,
@@ -2284,6 +2367,7 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(list(ret), ["salt://http/httpd.conf.fallback", "filehash"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_source_list_for_list_returns_file_from_other_env(self):
         def list_master(env):
             dct = {"base": [], "dev": ["http/httpd.conf"]}
@@ -2308,6 +2392,7 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
                 list(ret), ["salt://http/httpd.conf?saltenv=dev", "filehash"]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_source_list_for_list_returns_file_from_dict(self):
         with patch.dict(
             filemod.__salt__,
@@ -2321,6 +2406,7 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(list(ret), ["salt://http/httpd.conf", "filehash"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_source_list_for_list_returns_existing_local_file_slash(self):
         with patch.dict(
             filemod.__salt__,
@@ -2334,6 +2420,7 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(list(ret), [self.myfile, "filehash"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_source_list_for_list_returns_existing_local_file_proto(self):
         with patch.dict(
             filemod.__salt__,
@@ -2349,6 +2436,7 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(list(ret), ["file://" + self.myfile, "filehash"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_source_list_for_list_returns_local_file_slash_from_dict(self):
         with patch.dict(
             filemod.__salt__,
@@ -2360,6 +2448,7 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
             ret = filemod.source_list([{self.myfile: ""}], "filehash", "base")
             self.assertEqual(list(ret), [self.myfile, "filehash"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_source_list_for_list_returns_local_file_proto_from_dict(self):
         with patch.dict(
             filemod.__salt__,
@@ -2387,12 +2476,14 @@ class LsattrTests(TestCase, LoaderModuleMockMixin):
         with patch_aix, patch_exists, patch_which:
             super(LsattrTests, self).run(result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_if_lsattr_is_missing_it_should_return_None(self):
         patch_which = patch("salt.utils.path.which", Mock(return_value=None),)
         with patch_which:
             actual = filemod.lsattr("foo")
             assert actual is None, actual
 
+    @skipIf(True, "FASTTEST skip")
     def test_on_aix_lsattr_should_be_None(self):
         patch_aix = patch("salt.utils.platform.is_aix", Mock(return_value=True),)
         with patch_aix:
@@ -2401,11 +2492,13 @@ class LsattrTests(TestCase, LoaderModuleMockMixin):
             actual = filemod.lsattr("foo")
             self.assertIsNone(actual)
 
+    @skipIf(True, "FASTTEST skip")
     def test_SaltInvocationError_should_be_raised_when_file_is_missing(self):
         patch_exists = patch("os.path.exists", Mock(return_value=False),)
         with patch_exists, self.assertRaises(SaltInvocationError):
             filemod.lsattr("foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_if_chattr_version_is_less_than_required_flags_should_ignore_extended(self):
         fname = "/path/to/fnord"
         with_extended = (
@@ -2431,6 +2524,7 @@ class LsattrTests(TestCase, LoaderModuleMockMixin):
             # pylint: enable=E1322
             assert actual == expected, msg
 
+    @skipIf(True, "FASTTEST skip")
     def test_if_chattr_version_is_high_enough_then_extended_flags_should_be_returned(
         self,
     ):
@@ -2456,6 +2550,7 @@ class LsattrTests(TestCase, LoaderModuleMockMixin):
             msg = "Actual: {!r} Expected: {!r}".format(actual, expected)
             assert actual == expected, msg
 
+    @skipIf(True, "FASTTEST skip")
     def test_if_supports_extended_but_there_are_no_flags_then_none_should_be_returned(
         self,
     ):
@@ -2502,12 +2597,14 @@ class ChattrTests(TestCase, LoaderModuleMockMixin):
         with patch_aix, patch_exists, patch_which:
             super(ChattrTests, self).run(result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_chattr_version_returns_None_if_no_tune2fs_exists(self):
         patch_which = patch("salt.utils.path.which", Mock(return_value=""),)
         with patch_which:
             actual = filemod._chattr_version()
             self.assertIsNone(actual)
 
+    @skipIf(True, "FASTTEST skip")
     def test_on_aix_chattr_version_should_be_None_even_if_tune2fs_exists(self):
         patch_which = patch("salt.utils.path.which", Mock(return_value="fnord"),)
         patch_aix = patch("salt.utils.platform.is_aix", Mock(return_value=True),)
@@ -2518,6 +2615,7 @@ class ChattrTests(TestCase, LoaderModuleMockMixin):
             self.assertIsNone(actual)
             mock_run.assert_not_called()
 
+    @skipIf(True, "FASTTEST skip")
     def test_chattr_version_should_return_version_from_tune2fs(self):
         expected = "1.43.4"
         sample_output = textwrap.dedent(
@@ -2541,6 +2639,7 @@ class ChattrTests(TestCase, LoaderModuleMockMixin):
             actual = filemod._chattr_version()
             self.assertEqual(actual, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_if_tune2fs_has_no_version_version_should_be_None(self):
         patch_which = patch("salt.utils.path.which", Mock(return_value="fnord"),)
         patch_run = patch.dict(
@@ -2550,6 +2649,7 @@ class ChattrTests(TestCase, LoaderModuleMockMixin):
             actual = filemod._chattr_version()
             self.assertIsNone(actual)
 
+    @skipIf(True, "FASTTEST skip")
     def test_chattr_has_extended_attrs_should_return_False_if_chattr_version_is_None(
         self,
     ):
@@ -2560,6 +2660,7 @@ class ChattrTests(TestCase, LoaderModuleMockMixin):
             actual = filemod._chattr_has_extended_attrs()
             assert not actual, actual
 
+    @skipIf(True, "FASTTEST skip")
     def test_chattr_has_extended_attrs_should_return_False_if_version_is_too_low(self):
         below_expected = "0.1.1"
         patch_chattr = patch(
@@ -2569,6 +2670,7 @@ class ChattrTests(TestCase, LoaderModuleMockMixin):
             actual = filemod._chattr_has_extended_attrs()
             assert not actual, actual
 
+    @skipIf(True, "FASTTEST skip")
     def test_chattr_has_extended_attrs_should_return_False_if_version_is_equal_threshold(
         self,
     ):
@@ -2580,6 +2682,7 @@ class ChattrTests(TestCase, LoaderModuleMockMixin):
             actual = filemod._chattr_has_extended_attrs()
             assert not actual, actual
 
+    @skipIf(True, "FASTTEST skip")
     def test_chattr_has_extended_attrs_should_return_True_if_version_is_above_threshold(
         self,
     ):
@@ -2595,6 +2698,7 @@ class ChattrTests(TestCase, LoaderModuleMockMixin):
     # file.py which is specifically for Linux. The Windows version resides in
     # win_file.py
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_check_perms_should_report_no_attr_changes_if_there_are_none(self):
         filename = "/path/to/fnord"
         attrs = "aAcCdDeijPsStTu"
@@ -2628,6 +2732,7 @@ class ChattrTests(TestCase, LoaderModuleMockMixin):
     # file.py which is specifically for Linux. The Windows version resides in
     # win_file.py
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_check_perms_should_report_attrs_new_and_old_if_they_changed(self):
         filename = "/path/to/fnord"
         attrs = "aAcCdDeijPsStTu"

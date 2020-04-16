@@ -52,6 +52,7 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_requirements_parsing(self):
         log.debug("Real pip version is %s", pip.__version__)
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
@@ -276,6 +277,7 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
                         "packages are already installed", {"test": ret}
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_requirements_custom_pypi(self):
         """
         test requirement parsing for both when a custom
@@ -317,6 +319,7 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
                     self.assertSaltTrueReturn({"test": ret})
                     assert "Requirements were already installed." == ret["comment"]
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_requirements_custom_pypi_changes(self):
         """
         test requirement parsing for both when a custom
@@ -362,6 +365,7 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
                         == ret["comment"]
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_in_editable_mode(self):
         """
         Check that `name` parameter containing bad characters is not parsed by
@@ -391,16 +395,19 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
 
 
 class PipStateUtilsTest(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_has_internal_exceptions_mod_function(self):
         assert pip_state.pip_has_internal_exceptions_mod("10.0")
         assert pip_state.pip_has_internal_exceptions_mod("18.1")
         assert not pip_state.pip_has_internal_exceptions_mod("9.99")
 
+    @skipIf(True, "FASTTEST skip")
     def test_has_exceptions_mod_function(self):
         assert pip_state.pip_has_exceptions_mod("1.0")
         assert not pip_state.pip_has_exceptions_mod("0.1")
         assert not pip_state.pip_has_exceptions_mod("10.0")
 
+    @skipIf(True, "FASTTEST skip")
     def test_pip_purge_method_with_pip(self):
         mock_modules = sys.modules.copy()
         mock_modules.pop("pip", None)
@@ -409,6 +416,7 @@ class PipStateUtilsTest(TestCase):
             pip_state.purge_pip()
         assert "pip" not in mock_modules
 
+    @skipIf(True, "FASTTEST skip")
     def test_pip_purge_method_without_pip(self):
         mock_modules = sys.modules.copy()
         mock_modules.pop("pip", None)
@@ -420,7 +428,6 @@ class PipStateUtilsTest(TestCase):
     salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, "virtualenv not installed"
 )
 class PipStateInstallationErrorTest(TestCase):
-    @skipIf(True, "SLOWTEST skip")
     def test_importable_installation_error(self):
         extra_requirements = []
         for name, version in salt.version.dependency_information():

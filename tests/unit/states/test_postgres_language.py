@@ -7,7 +7,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import salt.states.postgres_language as postgres_language
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PostgresLanguageTestCase(TestCase, LoaderModuleMockMixin):
@@ -36,6 +36,7 @@ class PostgresLanguageTestCase(TestCase, LoaderModuleMockMixin):
         del self.mock_language_list
         del self.mock_empty_language_list
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_existing(self):
         """
         Test present, language is already present in database
@@ -50,6 +51,7 @@ class PostgresLanguageTestCase(TestCase, LoaderModuleMockMixin):
                 postgres_language.present(self.name, "testdb"), self.ret
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_non_existing_pass(self):
         """
         Test present, language not present in database - pass
@@ -77,6 +79,7 @@ class PostgresLanguageTestCase(TestCase, LoaderModuleMockMixin):
                     postgres_language.present(self.name, "testdb"), self.ret
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_non_existing_fail(self):
         """
         Test present, language not present in database - fail
@@ -102,6 +105,7 @@ class PostgresLanguageTestCase(TestCase, LoaderModuleMockMixin):
                     postgres_language.present(self.name, "testdb"), self.ret
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_existing(self):
         """
         Test absent, language present in database
@@ -129,6 +133,7 @@ class PostgresLanguageTestCase(TestCase, LoaderModuleMockMixin):
                     postgres_language.absent(self.name, "testdb"), self.ret
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_non_existing(self):
         """
         Test absent, language not present in database

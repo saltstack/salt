@@ -161,6 +161,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         }
         return facts
 
+    @skipIf(True, "FASTTEST skip")
     def test_timeout_decorator(self):
         with patch(
             "jnpr.junos.Device.timeout", new_callable=PropertyMock
@@ -175,6 +176,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             calls = [call(), call(10), call(30)]
             mock_timeout.assert_has_calls(calls)
 
+    @skipIf(True, "FASTTEST skip")
     def test_facts_refresh(self):
         with patch("salt.modules.saltutil.sync_grains") as mock_sync_grains:
             ret = dict()
@@ -270,6 +272,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = True
             self.assertEqual(junos.facts_refresh(), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_facts_refresh_exception(self):
         with patch("jnpr.junos.device.Device.facts_refresh") as mock_facts_refresh:
             mock_facts_refresh.side_effect = self.raise_exception
@@ -278,6 +281,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = False
             self.assertEqual(junos.facts_refresh(), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_facts(self):
         ret = dict()
         ret["facts"] = {
@@ -372,6 +376,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ret["out"] = True
         self.assertEqual(junos.facts(), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_facts_exception(self):
         with patch.dict(
             junos.__proxy__, {"junos.get_serialized_facts": self.raise_exception}
@@ -381,17 +386,20 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = False
             self.assertEqual(junos.facts(), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_hostname_without_args(self):
         ret = dict()
         ret["message"] = "Please provide the hostname."
         ret["out"] = False
         self.assertEqual(junos.set_hostname(), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_hostname_load_called_with_valid_name(self):
         with patch("jnpr.junos.utils.config.Config.load") as mock_load:
             junos.set_hostname("test-name")
             mock_load.assert_called_with("set system host-name test-name", format="set")
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_hostname_raise_exception_for_load(self):
         with patch("jnpr.junos.utils.config.Config.load") as mock_load:
             mock_load.side_effect = self.raise_exception
@@ -402,6 +410,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = False
             self.assertEqual(junos.set_hostname("Test-name"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_hostname_raise_exception_for_commit_check(self):
         with patch("jnpr.junos.utils.config.Config.commit_check") as mock_commit_check:
             mock_commit_check.side_effect = self.raise_exception
@@ -410,6 +419,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = False
             self.assertEqual(junos.set_hostname("test-name"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_hostname_one_arg_parsed_correctly(self):
         with patch("jnpr.junos.utils.config.Config.load") as mock_load, patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -431,6 +441,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             junos.set_hostname("test-name", **args)
             mock_commit.assert_called_with(comment="Committed via salt")
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_hostname_more_than_one_args_parsed_correctly(self):
         with patch("jnpr.junos.utils.config.Config.load") as mock_load, patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -455,6 +466,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             junos.set_hostname("test-name", **args)
             mock_commit.assert_called_with(comment="Committed via salt", confirm=5)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_hostname_successful_return_message(self):
         with patch("jnpr.junos.utils.config.Config.load") as mock_load, patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -477,6 +489,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = True
             self.assertEqual(junos.set_hostname("test-name", **args), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_hostname_raise_exception_for_commit(self):
         with patch("jnpr.junos.utils.config.Config.commit") as mock_commit:
             mock_commit.side_effect = self.raise_exception
@@ -487,6 +500,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = False
             self.assertEqual(junos.set_hostname("test-name"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_hostname_fail_commit_check(self):
         with patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -499,6 +513,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ] = "Successfully loaded host-name but pre-commit check failed."
             self.assertEqual(junos.set_hostname("test"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_commit_without_args(self):
         with patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -512,6 +527,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = True
             self.assertEqual(junos.commit(), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_commit_raise_commit_check_exception(self):
         with patch("jnpr.junos.utils.config.Config.commit_check") as mock_commit_check:
             mock_commit_check.side_effect = self.raise_exception
@@ -520,6 +536,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = False
             self.assertEqual(junos.commit(), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_commit_raise_commit_exception(self):
         with patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -535,6 +552,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ] = 'Commit check succeeded but actual commit failed with "Test exception"'
             self.assertEqual(junos.commit(), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_commit_with_single_argument(self):
         with patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -555,6 +573,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             junos.commit(**args)
             mock_commit.assert_called_with(detail=False, sync=True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_commit_with_multiple_arguments(self):
         with patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -581,6 +600,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 comment="comitted via salt", detail=True, confirm=3
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_commit_pyez_commit_returning_false(self):
         with patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -594,6 +614,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = False
             self.assertEqual(junos.commit(), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_commit_pyez_commit_check_returns_false(self):
         with patch("jnpr.junos.utils.config.Config.commit_check") as mock_commit_check:
             mock_commit_check.return_value = False
@@ -602,6 +623,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["message"] = "Pre-commit check failed."
             self.assertEqual(junos.commit(), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_rollback_exception(self):
         with patch("jnpr.junos.utils.config.Config.rollback") as mock_rollback:
             mock_rollback.side_effect = self.raise_exception
@@ -610,6 +632,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = False
             self.assertEqual(junos.rollback(), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_rollback_without_args_success(self):
         with patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -625,6 +648,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = True
             self.assertEqual(junos.rollback(), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_rollback_without_args_fail(self):
         with patch("jnpr.junos.utils.config.Config.rollback") as mock_rollback:
             mock_rollback.return_value = False
@@ -633,6 +657,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = False
             self.assertEqual(junos.rollback(), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_rollback_with_id(self):
         with patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -645,6 +670,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             junos.rollback(id=5)
             mock_rollback.assert_called_with(5)
 
+    @skipIf(True, "FASTTEST skip")
     def test_rollback_with_id_and_single_arg(self):
         with patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -668,6 +694,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             mock_rollback.assert_called_with(2)
             mock_commit.assert_called_with(confirm=2)
 
+    @skipIf(True, "FASTTEST skip")
     def test_rollback_with_id_and_multiple_args(self):
         with patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -697,6 +724,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 comment="Comitted via salt", confirm=1, dev_timeout=40
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_rollback_with_only_single_arg(self):
         with patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -720,6 +748,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             mock_rollback.assert_called_once_with(0)
             mock_commit.assert_called_once_with(sync=True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_rollback_with_only_multiple_args_no_id(self):
         with patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -749,6 +778,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 sync=True, confirm=3, comment="Comitted via salt"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_rollback_with_diffs_file_option_when_diff_is_None(self):
         with patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -777,6 +807,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             junos.rollback(**args)
             mock_fopen.assert_called_with("/home/regress/diff", "w")
 
+    @skipIf(True, "FASTTEST skip")
     def test_rollback_with_diffs_file_option(self):
         with patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -805,6 +836,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             junos.rollback(**args)
             assert not mock_fopen.called
 
+    @skipIf(True, "FASTTEST skip")
     def test_rollback_commit_check_exception(self):
         with patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -817,6 +849,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = False
             self.assertEqual(junos.rollback(), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_rollback_commit_exception(self):
         with patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -834,6 +867,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = False
             self.assertEqual(junos.rollback(), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_rollback_commit_check_fails(self):
         with patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -846,16 +880,19 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = False
             self.assertEqual(junos.rollback(), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_diff_without_args(self):
         with patch("jnpr.junos.utils.config.Config.diff") as mock_diff:
             junos.diff()
             mock_diff.assert_called_with(rb_id=0)
 
+    @skipIf(True, "FASTTEST skip")
     def test_diff_with_arg(self):
         with patch("jnpr.junos.utils.config.Config.diff") as mock_diff:
             junos.diff(id=2)
             mock_diff.assert_called_with(rb_id=2)
 
+    @skipIf(True, "FASTTEST skip")
     def test_diff_exception(self):
         with patch("jnpr.junos.utils.config.Config.diff") as mock_diff:
             mock_diff.side_effect = self.raise_exception
@@ -864,12 +901,14 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = False
             self.assertEqual(junos.diff(), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_ping_without_args(self):
         ret = dict()
         ret["message"] = "Please specify the destination ip to ping."
         ret["out"] = False
         self.assertEqual(junos.ping(), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_ping(self):
         with patch("jnpr.junos.device.Device.execute") as mock_execute:
             junos.ping("1.1.1.1")
@@ -877,6 +916,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             rpc = "<ping><count>5</count><host>1.1.1.1</host></ping>"
             self.assertEqualXML(args[0][0], rpc)
 
+    @skipIf(True, "FASTTEST skip")
     def test_ping_ttl(self):
         with patch("jnpr.junos.device.Device.execute") as mock_execute:
             args = {
@@ -894,6 +934,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             rpc = "<ping><count>5</count><host>1.1.1.1</host><ttl>3</ttl></ping>"
             self.assertEqualXML(exec_args[0][0], rpc)
 
+    @skipIf(True, "FASTTEST skip")
     def test_ping_exception(self):
         with patch("jnpr.junos.device.Device.execute") as mock_execute:
             mock_execute.side_effect = self.raise_exception
@@ -902,17 +943,20 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = False
             self.assertEqual(junos.ping("1.1.1.1"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_cli_without_args(self):
         ret = dict()
         ret["message"] = "Please provide the CLI command to be executed."
         ret["out"] = False
         self.assertEqual(junos.cli(), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_cli_with_format_as_empty_string(self):
         with patch("jnpr.junos.device.Device.cli") as mock_cli:
             junos.cli("show version", format="")
             mock_cli.assert_called_with("show version", "text", warning=False)
 
+    @skipIf(True, "FASTTEST skip")
     def test_cli(self):
         with patch("jnpr.junos.device.Device.cli") as mock_cli:
             mock_cli.return_vale = "CLI result"
@@ -922,6 +966,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             junos.cli("show version")
             mock_cli.assert_called_with("show version", "text", warning=False)
 
+    @skipIf(True, "FASTTEST skip")
     def test_cli_format_xml(self):
         with patch("salt.modules.junos.jxmlease.parse") as mock_jxml, patch(
             "salt.modules.junos.etree.tostring"
@@ -946,6 +991,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             mock_to_string.assert_called_once_with("<root><a>test</a></root>")
             assert mock_jxml.called
 
+    @skipIf(True, "FASTTEST skip")
     def test_cli_exception_in_cli(self):
         with patch("jnpr.junos.device.Device.cli") as mock_cli:
             mock_cli.side_effect = self.raise_exception
@@ -954,12 +1000,14 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = False
             self.assertEqual(junos.cli("show version"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_shutdown_without_args(self):
         ret = dict()
         ret["message"] = "Provide either one of the arguments: shutdown or reboot."
         ret["out"] = False
         self.assertEqual(junos.shutdown(), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_shutdown_with_reboot_args(self):
         with patch("salt.modules.junos.SW.reboot") as mock_reboot:
             ret = dict()
@@ -978,6 +1026,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             self.assertEqual(junos.shutdown(**args), ret)
             assert mock_reboot.called
 
+    @skipIf(True, "FASTTEST skip")
     def test_shutdown_with_poweroff_args(self):
         with patch("salt.modules.junos.SW.poweroff") as mock_poweroff:
             ret = dict()
@@ -996,6 +1045,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             self.assertEqual(junos.shutdown(**args), ret)
             assert mock_poweroff.called
 
+    @skipIf(True, "FASTTEST skip")
     def test_shutdown_with_shutdown_as_false(self):
         ret = dict()
         ret["message"] = "Nothing to be done."
@@ -1012,6 +1062,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         }
         self.assertEqual(junos.shutdown(**args), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_shutdown_with_in_min_arg(self):
         with patch("salt.modules.junos.SW.poweroff") as mock_poweroff:
             args = {
@@ -1028,6 +1079,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             junos.shutdown(**args)
             mock_poweroff.assert_called_with(in_min=10)
 
+    @skipIf(True, "FASTTEST skip")
     def test_shutdown_with_at_arg(self):
         with patch("salt.modules.junos.SW.reboot") as mock_reboot:
             args = {
@@ -1044,6 +1096,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             junos.shutdown(**args)
             mock_reboot.assert_called_with(at="12:00 pm")
 
+    @skipIf(True, "FASTTEST skip")
     def test_shutdown_fail_with_exception(self):
         with patch("salt.modules.junos.SW.poweroff") as mock_poweroff:
             mock_poweroff.side_effect = self.raise_exception
@@ -1062,6 +1115,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = False
             self.assertEqual(junos.shutdown(**args), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_config_without_args(self):
         ret = dict()
         ret[
@@ -1070,6 +1124,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ret["out"] = False
         self.assertEqual(junos.install_config(), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_config_cp_fails(self):
         with patch("os.path.isfile") as mock_isfile:
             mock_isfile.return_value = False
@@ -1078,6 +1133,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = False
             self.assertEqual(junos.install_config("path"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_config_file_cp_fails(self):
         with patch("os.path.isfile") as mock_isfile, patch(
             "os.path.getsize"
@@ -1089,6 +1145,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = False
             self.assertEqual(junos.install_config("path"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_config(self):
         with patch("jnpr.junos.utils.config.Config.commit") as mock_commit, patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -1117,6 +1174,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             self.assertEqual(junos.install_config("actual/path/config.set"), ret)
             mock_load.assert_called_with(path="test/path/config", format="set")
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_config_xml_file(self):
         with patch("jnpr.junos.utils.config.Config.commit") as mock_commit, patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -1145,6 +1203,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             self.assertEqual(junos.install_config("actual/path/config.xml"), ret)
             mock_load.assert_called_with(path="test/path/config", format="xml")
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_config_text_file(self):
         with patch("jnpr.junos.utils.config.Config.commit") as mock_commit, patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -1173,6 +1232,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             self.assertEqual(junos.install_config("actual/path/config"), ret)
             mock_load.assert_called_with(path="test/path/config", format="text")
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_config_replace(self):
         with patch("jnpr.junos.utils.config.Config.commit") as mock_commit, patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -1216,6 +1276,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 path="test/path/config", format="set", merge=False
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_config_overwrite(self):
         with patch("jnpr.junos.utils.config.Config.commit") as mock_commit, patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -1259,6 +1320,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 path="test/path/config", format="xml", overwrite=True
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_config_overwrite_false(self):
         with patch("jnpr.junos.utils.config.Config.commit") as mock_commit, patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -1300,6 +1362,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 path="test/path/config", format="text", merge=True
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_config_load_causes_exception(self):
         with patch("jnpr.junos.utils.config.Config.diff") as mock_diff, patch(
             "jnpr.junos.utils.config.Config.load"
@@ -1320,6 +1383,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = False
             self.assertEqual(junos.install_config(path="actual/path/config.set"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_config_no_diff(self):
         with patch("jnpr.junos.utils.config.Config.diff") as mock_diff, patch(
             "jnpr.junos.utils.config.Config.load"
@@ -1339,6 +1403,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = True
             self.assertEqual(junos.install_config("actual/path/config"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_config_write_diff(self):
         with patch("jnpr.junos.utils.config.Config.commit") as mock_commit, patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -1380,6 +1445,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             self.assertEqual(junos.install_config("actual/path/config", **args), ret)
             mock_fopen.assert_called_with("copy/config/here", "w")
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_config_write_diff_exception(self):
         with patch("jnpr.junos.utils.config.Config.commit") as mock_commit, patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -1422,6 +1488,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             self.assertEqual(junos.install_config("actual/path/config", **args), ret)
             mock_fopen.assert_called_with("copy/config/here", "w")
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_config_commit_params(self):
         with patch("jnpr.junos.utils.config.Config.commit") as mock_commit, patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -1460,6 +1527,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             self.assertEqual(junos.install_config("actual/path/config", **args), ret)
             mock_commit.assert_called_with(comment="comitted via salt", confirm=3)
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_config_commit_check_fails(self):
         with patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -1489,6 +1557,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = False
             self.assertEqual(junos.install_config("actual/path/config.xml"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_config_commit_exception(self):
         with patch("jnpr.junos.utils.config.Config.commit") as mock_commit, patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -1518,6 +1587,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = False
             self.assertEqual(junos.install_config("actual/path/config"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_zeroize(self):
         with patch("jnpr.junos.device.Device.cli") as mock_cli:
             result = junos.zeroize()
@@ -1527,6 +1597,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             mock_cli.assert_called_once_with("request system zeroize")
             self.assertEqual(result, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_zeroize_throw_exception(self):
         with patch("jnpr.junos.device.Device.cli") as mock_cli:
             mock_cli.side_effect = self.raise_exception
@@ -1535,6 +1606,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = False
             self.assertEqual(junos.zeroize(), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_os_without_args(self):
         ret = dict()
         ret[
@@ -1543,6 +1615,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ret["out"] = False
         self.assertEqual(junos.install_os(), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_os_cp_fails(self):
         with patch("os.path.isfile") as mock_isfile, patch(
             "os.path.getsize"
@@ -1554,6 +1627,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = False
             self.assertEqual(junos.install_os("/image/path/"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_os_image_cp_fails(self):
         with patch("os.path.isfile") as mock_isfile, patch(
             "os.path.getsize"
@@ -1565,6 +1639,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = False
             self.assertEqual(junos.install_os("/image/path/"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_os(self):
         with patch("jnpr.junos.utils.sw.SW.install") as mock_install, patch(
             "salt.utils.files.safe_rm"
@@ -1580,6 +1655,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["message"] = "Installed the os."
             self.assertEqual(junos.install_os("path"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_os_with_reboot_arg(self):
         with patch("jnpr.junos.utils.sw.SW.install") as mock_install, patch(
             "jnpr.junos.utils.sw.SW.reboot"
@@ -1607,6 +1683,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = True
             self.assertEqual(junos.install_os("path", **args), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_os_pyez_install_throws_exception(self):
         with patch("jnpr.junos.utils.sw.SW.install") as mock_install, patch(
             "salt.utils.files.safe_rm"
@@ -1623,6 +1700,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = False
             self.assertEqual(junos.install_os("path"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_os_with_reboot_raises_exception(self):
         with patch("jnpr.junos.utils.sw.SW.install") as mock_install, patch(
             "jnpr.junos.utils.sw.SW.reboot"
@@ -1653,6 +1731,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = False
             self.assertEqual(junos.install_os("path", **args), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_os_no_copy(self):
         with patch("jnpr.junos.utils.sw.SW.install") as mock_install, patch(
             "salt.utils.files.safe_rm"
@@ -1671,6 +1750,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             mock_mkstemp.assert_not_called()
             mock_safe_rm.assert_not_called()
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_os_issu(self):
         with patch("jnpr.junos.utils.sw.SW.install") as mock_install, patch(
             "salt.utils.files.safe_rm"
@@ -1687,6 +1767,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             self.assertEqual(junos.install_os("path", issu=True), ret)
             mock_install.assert_called_with(ANY, issu=True, progress=True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_os_add_params(self):
         with patch("jnpr.junos.utils.sw.SW.install") as mock_install, patch(
             "salt.utils.files.safe_rm"
@@ -1711,12 +1792,14 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 ANY, nssu=True, remote_path=remote_path, progress=True, validate=True
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_file_copy_without_args(self):
         ret = dict()
         ret["message"] = "Please provide the absolute path of the file to be copied."
         ret["out"] = False
         self.assertEqual(junos.file_copy(), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_file_copy_invalid_src(self):
         with patch("os.path.isfile") as mock_isfile:
             mock_isfile.return_value = False
@@ -1725,6 +1808,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = False
             self.assertEqual(junos.file_copy("invalid/file/path", "file"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_file_copy_without_dest(self):
         ret = dict()
         ret[
@@ -1735,6 +1819,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             mck.return_value = True
             self.assertEqual(junos.file_copy("/home/user/config.set"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_file_copy(self):
         with patch("salt.modules.junos.SCP") as mock_scp, patch(
             "os.path.isfile"
@@ -1745,6 +1830,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = True
             self.assertEqual(junos.file_copy(dest="file", src="test/src/file"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_file_copy_exception(self):
         with patch("salt.modules.junos.SCP") as mock_scp, patch(
             "os.path.isfile"
@@ -1760,6 +1846,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
     # to check if the given module is loadable. This function is not used by
     # an external user.
 
+    @skipIf(True, "FASTTEST skip")
     def test_virtual_proxy_unavailable(self):
         with patch.dict(junos.__opts__, {}):
             res = (
@@ -1769,16 +1856,19 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             )
             self.assertEqual(junos.__virtual__(), res)
 
+    @skipIf(True, "FASTTEST skip")
     def test_virtual_all_true(self):
         with patch.dict(junos.__opts__, {"proxy": "test"}):
             self.assertEqual(junos.__virtual__(), "junos")
 
+    @skipIf(True, "FASTTEST skip")
     def test_rpc_without_args(self):
         ret = dict()
         ret["message"] = "Please provide the rpc to execute."
         ret["out"] = False
         self.assertEqual(junos.rpc(), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_rpc_get_config_exception(self):
         with patch("jnpr.junos.device.Device.execute") as mock_execute:
             mock_execute.side_effect = self.raise_exception
@@ -1787,6 +1877,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = False
             self.assertEqual(junos.rpc("get_config"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_rpc_get_config_filter(self):
         with patch("jnpr.junos.device.Device.execute") as mock_execute:
             mock_execute.return_value = etree.XML("<reply><rpc/></reply>")
@@ -1811,6 +1902,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             )
             self.assertEqualXML(exec_args[0][0], expected_rpc)
 
+    @skipIf(True, "FASTTEST skip")
     def test_rpc_get_interface_information(self):
         with patch("jnpr.junos.device.Device.execute") as mock_execute:
             junos.rpc("get-interface-information", format="json")
@@ -1818,6 +1910,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             expected_rpc = '<get-interface-information format="json"/>'
             self.assertEqualXML(args[0][0], expected_rpc)
 
+    @skipIf(True, "FASTTEST skip")
     def test_rpc_get_interface_information_with_kwargs(self):
         with patch("jnpr.junos.device.Device.execute") as mock_execute:
             args = {
@@ -1844,6 +1937,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             )
             self.assertEqualXML(etree.tostring(args[0][0]), expected_rpc)
 
+    @skipIf(True, "FASTTEST skip")
     def test_rpc_get_chassis_inventory_filter_as_arg(self):
         with patch("salt.modules.junos.jxmlease.parse") as mock_jxmlease, patch(
             "salt.modules.junos.etree.tostring"
@@ -1860,6 +1954,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 'Filter ignored as it is only used with "get-config" rpc'
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_rpc_get_interface_information_exception(self):
         with patch("jnpr.junos.device.Device.execute") as mock_execute:
             mock_execute.side_effect = self.raise_exception
@@ -1868,6 +1963,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret["out"] = False
             self.assertEqual(junos.rpc("get_interface_information"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_rpc_write_file_format_text(self):
         with patch("jnpr.junos.device.Device.execute") as mock_execute:
             mock_execute.return_value = etree.XML(
@@ -1878,6 +1974,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 writes = m_open.write_calls()
                 assert writes == ["text rpc reply"], writes
 
+    @skipIf(True, "FASTTEST skip")
     def test_rpc_write_file_format_json(self):
         with patch("jnpr.junos.device.Device.execute") as mock_execute, patch(
             "salt.utils.json.dumps"
@@ -1888,6 +1985,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 writes = m_open.write_calls()
                 assert writes == ["json rpc reply"], writes
 
+    @skipIf(True, "FASTTEST skip")
     def test_rpc_write_file(self):
         with patch("salt.modules.junos.jxmlease.parse") as mock_parse, patch(
             "salt.modules.junos.etree.tostring"
@@ -1898,11 +1996,13 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 writes = m_open.write_calls()
                 assert writes == ["xml rpc reply"], writes
 
+    @skipIf(True, "FASTTEST skip")
     def test_lock_success(self):
         ret_exp = {"out": True, "message": "Successfully locked the configuration."}
         ret = junos.lock()
         self.assertEqual(ret, ret_exp)
 
+    @skipIf(True, "FASTTEST skip")
     def test_lock_error(self):
         ret_exp = {"out": False, "message": 'Could not gain lock due to : "LockError"'}
         with patch("jnpr.junos.utils.config.Config.lock") as mock_lock:
@@ -1910,11 +2010,13 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = junos.lock()
             self.assertEqual(ret, ret_exp)
 
+    @skipIf(True, "FASTTEST skip")
     def test_unlock_success(self):
         ret_exp = {"out": True, "message": "Successfully unlocked the configuration."}
         ret = junos.unlock()
         self.assertEqual(ret, ret_exp)
 
+    @skipIf(True, "FASTTEST skip")
     def test_unlock_error(self):
         ret_exp = {
             "out": False,
@@ -1925,6 +2027,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = junos.unlock()
             self.assertEqual(ret, ret_exp)
 
+    @skipIf(True, "FASTTEST skip")
     def test_load_none_path(self):
         ret_exp = {
             "out": False,
@@ -1933,6 +2036,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ret = junos.load()
         self.assertEqual(ret, ret_exp)
 
+    @skipIf(True, "FASTTEST skip")
     def test_load_wrong_tmp_file(self):
         ret_exp = {"out": False, "message": "Invalid file path."}
         with patch("salt.utils.files.mkstemp") as mock_mkstemp:
@@ -1940,11 +2044,13 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = junos.load("/path/to/file")
             self.assertEqual(ret, ret_exp)
 
+    @skipIf(True, "FASTTEST skip")
     def test_load_invalid_path(self):
         ret_exp = {"out": False, "message": "Template failed to render"}
         ret = junos.load("/path/to/file")
         self.assertEqual(ret, ret_exp)
 
+    @skipIf(True, "FASTTEST skip")
     def test_load_no_extension(self):
         ret_exp = {"out": True, "message": "Successfully loaded the configuration."}
         with patch("os.path.getsize") as mock_getsize, patch(
@@ -1959,6 +2065,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             mock_load.assert_called_with(format="text", path="/path/to/file")
             self.assertEqual(ret, ret_exp)
 
+    @skipIf(True, "FASTTEST skip")
     def test_load_xml_extension(self):
         ret_exp = {"out": True, "message": "Successfully loaded the configuration."}
         with patch("os.path.getsize") as mock_getsize, patch(
@@ -1973,6 +2080,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             mock_load.assert_called_with(format="xml", path="/path/to/file")
             self.assertEqual(ret, ret_exp)
 
+    @skipIf(True, "FASTTEST skip")
     def test_load_set_extension(self):
         ret_exp = {"out": True, "message": "Successfully loaded the configuration."}
         with patch("os.path.getsize") as mock_getsize, patch(
@@ -1987,6 +2095,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             mock_load.assert_called_with(format="set", path="/path/to/file")
             self.assertEqual(ret, ret_exp)
 
+    @skipIf(True, "FASTTEST skip")
     def test_load_replace_true(self):
         ret_exp = {"out": True, "message": "Successfully loaded the configuration."}
         with patch("os.path.getsize") as mock_getsize, patch(
@@ -2003,6 +2112,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             )
             self.assertEqual(ret, ret_exp)
 
+    @skipIf(True, "FASTTEST skip")
     def test_load_replace_false(self):
         ret_exp = {"out": True, "message": "Successfully loaded the configuration."}
         with patch("os.path.getsize") as mock_getsize, patch(
@@ -2019,6 +2129,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             )
             self.assertEqual(ret, ret_exp)
 
+    @skipIf(True, "FASTTEST skip")
     def test_load_overwrite_true(self):
         ret_exp = {"out": True, "message": "Successfully loaded the configuration."}
         with patch("os.path.getsize") as mock_getsize, patch(
@@ -2035,6 +2146,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             )
             self.assertEqual(ret, ret_exp)
 
+    @skipIf(True, "FASTTEST skip")
     def test_load_overwrite_false(self):
         ret_exp = {"out": True, "message": "Successfully loaded the configuration."}
         with patch("os.path.getsize") as mock_getsize, patch(
@@ -2051,6 +2163,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             )
             self.assertEqual(ret, ret_exp)
 
+    @skipIf(True, "FASTTEST skip")
     def test_load_error(self):
         ret_exp = {
             "out": False,
@@ -2069,11 +2182,13 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = junos.load("/path/to/file")
             self.assertEqual(ret, ret_exp)
 
+    @skipIf(True, "FASTTEST skip")
     def test_commit_check_success(self):
         ret_exp = {"out": True, "message": "Commit check succeeded."}
         ret = junos.commit_check()
         self.assertEqual(ret, ret_exp)
 
+    @skipIf(True, "FASTTEST skip")
     def test_commit_check_error(self):
         ret_exp = {"out": False, "message": "Commit check failed with "}
         with patch("jnpr.junos.utils.config.Config.commit_check") as mock_check:

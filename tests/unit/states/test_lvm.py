@@ -11,7 +11,7 @@ import salt.states.lvm as lvm
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class LvmTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class LvmTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'pv_present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_pv_present(self):
         """
         Test to set a physical device to be used as an LVM physical volume
@@ -45,6 +46,7 @@ class LvmTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'pv_absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_pv_absent(self):
         """
         Test to ensure that a Physical Device is not being used by lvm
@@ -66,6 +68,7 @@ class LvmTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'vg_present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_vg_present(self):
         """
         Test to create an LVM volume group
@@ -88,6 +91,7 @@ class LvmTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'vg_absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_vg_absent(self):
         """
         Test to remove an LVM volume group
@@ -109,6 +113,7 @@ class LvmTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'lv_present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_lv_present(self):
         """
         Test to create a new logical volume
@@ -128,6 +133,7 @@ class LvmTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(lvm.__opts__, {"test": True}):
                 self.assertDictEqual(lvm.lv_present(name), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_lv_present_with_force(self):
         """
         Test to create a new logical volume with force=True
@@ -149,6 +155,7 @@ class LvmTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'lv_absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_lv_absent(self):
         """
         Test to remove a given existing logical volume

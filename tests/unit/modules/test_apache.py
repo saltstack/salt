@@ -16,7 +16,7 @@ from salt.utils.odict import OrderedDict
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ApacheTestCase(TestCase, LoaderModuleMockMixin):
@@ -28,6 +28,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
         return {apache: {}}
 
     # 'version' function tests: 1
+    @skipIf(True, "FASTTEST skip")
     def test_version(self):
         """
         Test if return server version (``apachectl -v``)
@@ -41,6 +42,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'fullversion' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_fullversion(self):
         """
         Test if return server version (``apachectl -V``)
@@ -57,6 +59,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'modules' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_modules(self):
         """
         Test if return list of static and shared modules
@@ -76,6 +79,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'servermods' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_servermods(self):
         """
         Test if return list of modules compiled into the server
@@ -89,6 +93,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'directives' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_directives(self):
         """
         Test if return list of directives
@@ -102,6 +107,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'vhosts' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_vhosts(self):
         """
         Test if it shows the virtualhost settings
@@ -115,6 +121,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'signal' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_signal(self):
         """
         Test if return no signal for httpd
@@ -126,6 +133,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(apache.__salt__, {"cmd.run": mock}):
                 assert apache.signal(None) is None
 
+    @skipIf(True, "FASTTEST skip")
     def test_signal_args(self):
         """
         Test if return httpd signal to start, restart, or stop.
@@ -158,6 +166,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'useradd' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_useradd(self):
         """
         Test if it add HTTP user using the ``htpasswd`` command
@@ -168,6 +177,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'userdel' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_userdel(self):
         """
         Test if it delete HTTP user using the ``htpasswd`` file
@@ -178,6 +188,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'server_status' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_server_status(self):
         """
         Test if return get information from the Apache server-status
@@ -187,6 +198,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(apache.__salt__, {"config.get": mock}):
                 assert apache.server_status() == {}
 
+    @skipIf(True, "FASTTEST skip")
     def test_server_status_error(self):
         """
         Test if return get error from the Apache server-status
@@ -199,6 +211,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'config' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_config(self):
         """
         Test if it create VirtualHost configuration files
@@ -211,6 +224,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
 
     # '_parse_config' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test__parse_config_dict(self):
         """
         Test parsing function which creates configs from dict like (legacy way):
@@ -261,6 +275,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
         parse = apache._parse_config(data_in, "VirtualHost")
         assert parse == dataout
 
+    @skipIf(True, "FASTTEST skip")
     def test__parse_config_list(self):
         """
         Test parsing function which creates configs from variable structure (list of dicts or

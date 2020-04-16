@@ -13,7 +13,7 @@ import salt.modules.environ as environ
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class EnvironTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class EnvironTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {environ: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_setval(self):
         """
         Test for set a single salt process environment variable. Returns True
@@ -44,6 +45,7 @@ class EnvironTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(os.environ, mock_environ):
             self.assertFalse(environ.setval("key", True))
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_val_permanent(self):
         with patch.dict(os.environ, {}), patch.dict(
             environ.__salt__,
@@ -67,6 +69,7 @@ class EnvironTestCase(TestCase, LoaderModuleMockMixin):
                 "HKLM", key, "key", "Test"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_setenv(self):
         """
         Set multiple salt process environment variables from a dict.
@@ -84,6 +87,7 @@ class EnvironTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(environ, "setval", mock_setval):
                 self.assertEqual(environ.setenv({}, False, True, False)["KEY"], None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get(self):
         """
         Get a single salt process environment variable.
@@ -92,6 +96,7 @@ class EnvironTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(environ.get("key"), "")
 
+    @skipIf(True, "FASTTEST skip")
     def test_has_value(self):
         """
         Determine whether the key exists in the current salt process
@@ -113,6 +118,7 @@ class EnvironTestCase(TestCase, LoaderModuleMockMixin):
             os.environ["key"] = "value"
             self.assertTrue(environ.has_value("key"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_item(self):
         """
         Get one or more salt process environment variables.
@@ -120,6 +126,7 @@ class EnvironTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertEqual(environ.item(None), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_items(self):
         """
         Return a dict of the entire environment set for the salt process

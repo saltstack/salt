@@ -12,7 +12,7 @@ import salt.modules.purefb as purefb
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PureFBTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class PureFBTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {purefb: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_fs_create(self):
         """
         Test for creation of a filesystem
@@ -30,6 +31,7 @@ class PureFBTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(purefb, "fs_create", return_value=True):
             self.assertEqual(purefb.fs_create("test"), True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_fs_delete(self):
         """
         Test for deletion of a filesystem
@@ -37,6 +39,7 @@ class PureFBTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(purefb, "fs_delete", return_value=True):
             self.assertEqual(purefb.fs_delete("test"), True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_fs_eradicate(self):
         """
         Test for eradication of a filesystem
@@ -44,6 +47,7 @@ class PureFBTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(purefb, "fs_eradicate", return_value=True):
             self.assertEqual(purefb.fs_eradicate("test"), True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_fs_extend(self):
         """
         Test for size extention of a filesystem
@@ -51,6 +55,7 @@ class PureFBTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(purefb, "fs_extend", return_value=True):
             self.assertEqual(purefb.fs_extend("test", "33G"), True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_snap_create(self):
         """
         Test for creation of a filesystem snapshot
@@ -58,6 +63,7 @@ class PureFBTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(purefb, "snap_create", return_value=True):
             self.assertEqual(purefb.snap_create("test", suffix="suffix"), True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_snap_delete(self):
         """
         Test for deletion of a filesystem snapshot
@@ -65,6 +71,7 @@ class PureFBTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(purefb, "snap_delete", return_value=True):
             self.assertEqual(purefb.snap_delete("test", suffix="suffix"), True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_snap_eradicate(self):
         """
         Test for eradication of a deleted filesystem snapshot

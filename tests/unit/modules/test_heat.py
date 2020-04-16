@@ -17,7 +17,7 @@ import salt.utils.win_dacl as dacl
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MockStacks(object):
@@ -100,6 +100,7 @@ class HeatTestCase(TestCase, LoaderModuleMockMixin):
                 "salt.modules.file.check_perms", win_file.check_perms
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_heat_create_stack(self):
         """
         Test salt.modules.heat.create_stack method
@@ -122,6 +123,7 @@ class HeatTestCase(TestCase, LoaderModuleMockMixin):
             )
         assert ret == {"result": True, "comment": "Created stack 'mystack'."}
 
+    @skipIf(True, "FASTTEST skip")
     def test_heat_create_stack_environment(self):
         """
         Test salt.modules.heat.create_stack method with environment set
@@ -146,6 +148,7 @@ class HeatTestCase(TestCase, LoaderModuleMockMixin):
             )
         assert ret == {"result": True, "comment": "Created stack 'mystack'."}
 
+    @skipIf(True, "FASTTEST skip")
     def test_heat_create_stack_environment_err(self):
         """
         Test salt.modules.heat.create_stack method with environment set
@@ -178,6 +181,7 @@ class HeatTestCase(TestCase, LoaderModuleMockMixin):
             "comment": "Can not open environment: {0}, ".format(env_file),
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_heat_update_stack(self):
         """
         Test salt.modules.heat.update_method method
@@ -199,6 +203,7 @@ class HeatTestCase(TestCase, LoaderModuleMockMixin):
             )
         assert ret == {"result": True, "comment": ("Updated stack 'mystack'.",)}
 
+    @skipIf(True, "FASTTEST skip")
     def test_heat_update_stack_env(self):
         """
         Test salt.modules.heat.update_method method
@@ -224,6 +229,7 @@ class HeatTestCase(TestCase, LoaderModuleMockMixin):
             )
         assert ret == {"result": True, "comment": ("Updated stack 'mystack'.",)}
 
+    @skipIf(True, "FASTTEST skip")
     def test_heat_update_stack_env_err(self):
         """
         Test salt.modules.heat.update_method method

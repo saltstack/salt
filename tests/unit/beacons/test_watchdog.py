@@ -65,11 +65,13 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
         ret = watchdog.validate(config)
         self.assertEqual(ret, (True, "Valid beacon configuration"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_empty_config(self):
         config = [{}]
         ret = watchdog.beacon(config)
         self.assertEqual(ret, [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_file_create(self):
         path = os.path.join(self.tmpdir, "tmpfile")
 
@@ -84,6 +86,7 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret[0]["path"], path)
         self.assertEqual(ret[0]["change"], "created")
 
+    @skipIf(True, "FASTTEST skip")
     def test_file_modified(self):
         path = os.path.join(self.tmpdir, "tmpfile")
         # Create triggers a modify event along with the create event in Py3
@@ -114,6 +117,7 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
         # Check results of the for loop to validate modified
         self.assertTrue(modified)
 
+    @skipIf(True, "FASTTEST skip")
     def test_file_deleted(self):
         path = os.path.join(self.tmpdir, "tmpfile")
         create(path)
@@ -129,6 +133,7 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret[0]["path"], path)
         self.assertEqual(ret[0]["change"], "deleted")
 
+    @skipIf(True, "FASTTEST skip")
     def test_file_moved(self):
         path = os.path.join(self.tmpdir, "tmpfile")
         create(path)
@@ -144,6 +149,7 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret[0]["path"], path)
         self.assertEqual(ret[0]["change"], "moved")
 
+    @skipIf(True, "FASTTEST skip")
     def test_file_create_in_directory(self):
         config = [{"directories": {self.tmpdir: {"mask": ["create"]}}}]
         self.assertValid(config)
@@ -157,7 +163,6 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret[0]["path"], path)
         self.assertEqual(ret[0]["change"], "created")
 
-    @skipIf(True, "SLOWTEST skip")
     def test_trigger_all_possible_events(self):
         path = os.path.join(self.tmpdir, "tmpfile")
         moved = path + "_moved"

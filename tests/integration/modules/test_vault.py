@@ -82,7 +82,6 @@ class VaultTestCase(ModuleCase):
             self.run_state("docker_container.absent", name="vault")
             self.run_state("docker_image.absent", name="vault", force=True)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_write_read_secret(self):
         write_return = self.run_function(
             "vault.write_secret", path="secret/my/secret", user="foo", password="bar"
@@ -97,7 +96,6 @@ class VaultTestCase(ModuleCase):
             == "foo"
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_write_raw_read_secret(self):
         assert (
             self.run_function(
@@ -112,7 +110,6 @@ class VaultTestCase(ModuleCase):
             "user2": "foo2",
         }
 
-    @skipIf(True, "SLOWTEST skip")
     def test_delete_secret(self):
         assert (
             self.run_function(
@@ -127,7 +124,6 @@ class VaultTestCase(ModuleCase):
             self.run_function("vault.delete_secret", arg=["secret/my/secret"]) is True
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_list_secrets(self):
         assert (
             self.run_function(
@@ -203,7 +199,6 @@ class VaultTestCaseCurrent(ModuleCase):
             self.run_state("docker_container.absent", name="vault")
             self.run_state("docker_image.absent", name="vault", force=True)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_write_read_secret_kv2(self):
         write_return = self.run_function(
             "vault.write_secret", path="secret/my/secret", user="foo", password="bar"
@@ -232,7 +227,6 @@ class VaultTestCaseCurrent(ModuleCase):
         )
         self.assertEqual(read_return, "foo")
 
-    @skipIf(True, "SLOWTEST skip")
     def test_list_secrets_kv2(self):
         write_return = self.run_function(
             "vault.write_secret", path="secret/my/secret", user="foo", password="bar"
@@ -243,7 +237,6 @@ class VaultTestCaseCurrent(ModuleCase):
         list_return = self.run_function("vault.list_secrets", arg=["secret/my/"])
         self.assertIn("secret", list_return["keys"])
 
-    @skipIf(True, "SLOWTEST skip")
     def test_write_raw_read_secret_kv2(self):
         write_return = self.run_function(
             "vault.write_raw",
@@ -263,7 +256,6 @@ class VaultTestCaseCurrent(ModuleCase):
         expected_read = {"password2": "bar2", "user2": "foo2"}
         self.assertDictContainsSubset(expected_read, read_return)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_delete_secret_kv2(self):
         write_return = self.run_function(
             "vault.write_secret",
@@ -279,7 +271,6 @@ class VaultTestCaseCurrent(ModuleCase):
         )
         self.assertEqual(delete_return, True)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_destroy_secret_kv2(self):
         write_return = self.run_function(
             "vault.write_secret",

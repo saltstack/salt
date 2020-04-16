@@ -9,13 +9,14 @@ import salt.states.mac_assistive as assistive
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {assistive: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed(self):
         """
             Test installing a bundle ID as being allowed to run with assistive access
@@ -39,6 +40,7 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
             install_mock.assert_called_once_with("com.apple.Chess", True)
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_not_enabled(self):
         """
             Test installing a bundle ID as being allowed to run with assistive access
@@ -70,6 +72,7 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
             assert not install_mock.called
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_enabled(self):
         """
             Test enabling an already enabled bundle ID
@@ -101,6 +104,7 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
             assert not install_mock.called
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_not_disabled(self):
         """
             Test disabling an enabled and installed bundle ID

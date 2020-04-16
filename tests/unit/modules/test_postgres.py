@@ -13,7 +13,7 @@ from salt.exceptions import SaltInvocationError
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import Mock, call, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 test_list_db_csv = (
     "Name,Owner,Encoding,Collate,Ctype,Access privileges,Tablespace\n"
@@ -60,12 +60,14 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_psql(self):
         postgres._run_psql('echo "hi"')
         cmd = postgres.__salt__["cmd.run_all"]
 
         self.assertEqual("postgres", cmd.call_args[1]["runas"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_db_alter(self):
         with patch(
             "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
@@ -134,6 +136,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 ]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_db_alter_owner_recurse(self):
         with patch(
             "salt.modules.postgres.owner_to", Mock(return_value={"retcode": None})
@@ -160,6 +163,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 runas="foo",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_db_create(self):
         with patch(
             "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
@@ -202,6 +206,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 port="testport",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_db_create_empty_string_param(self):
         with patch(
             "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
@@ -243,6 +248,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 user="testuser",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_db_create_with_trivial_sql_injection(self):
         with patch(
             "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
@@ -254,6 +260,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 lc_collate="foo' ENCODING='utf8",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_db_exists(self):
         with patch(
             "salt.modules.postgres._run_psql",
@@ -270,6 +277,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertTrue(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_db_list(self):
         with patch(
             "salt.modules.postgres._run_psql",
@@ -321,6 +329,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_db_remove(self):
         with patch(
             "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
@@ -359,6 +368,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 port="testport",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_group_create(self):
         with patch(
             "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
@@ -387,6 +397,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     postgres._run_psql.call_args[0][0][14].startswith("CREATE ROLE")
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_group_remove(self):
         with patch(
             "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
@@ -426,6 +437,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     port="testport",
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_group_update(self):
         with patch(
             "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
@@ -459,6 +471,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     )
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_create(self):
         with patch(
             "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
@@ -501,6 +514,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 ):
                     self.assertTrue(i in call, "{0} not in {1}".format(i, call))
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_exists(self):
         with patch(
             "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
@@ -539,6 +553,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     )
                     self.assertTrue(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_list(self):
         with patch(
             "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
@@ -595,6 +610,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                         },
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_remove(self):
         with patch(
             "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
@@ -637,6 +653,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                         runas="foo",
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_update(self):
         with patch(
             "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
@@ -678,6 +695,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     )
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_update2(self):
         with patch(
             "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
@@ -715,6 +733,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     )
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_update3(self):
         with patch(
             "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
@@ -753,6 +772,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     )
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_update_encrypted_passwd(self):
         with patch(
             "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
@@ -793,6 +813,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     )
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_version(self):
         with patch(
             "salt.modules.postgres._run_psql",
@@ -817,6 +838,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 )
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_extensions(self):
         with patch(
             "salt.modules.postgres.psql_query",
@@ -825,6 +847,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
             exts = postgres.installed_extensions()
             self.assertEqual(exts, {"foo": {"extversion": "1", "extname": "foo"}})
 
+    @skipIf(True, "FASTTEST skip")
     def test_available_extensions(self):
         with patch(
             "salt.modules.postgres.psql_query",
@@ -833,6 +856,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
             exts = postgres.available_extensions()
             self.assertEqual(exts, {"foo": {"default_version": "1", "name": "foo"}})
 
+    @skipIf(True, "FASTTEST skip")
     def test_drop_extension2(self):
         with patch(
             "salt.modules.postgres.installed_extensions", Mock(side_effect=[{}, {}])
@@ -846,6 +870,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 ):
                     self.assertEqual(postgres.drop_extension("foo"), True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_drop_extension3(self):
         with patch(
             "salt.modules.postgres.installed_extensions",
@@ -860,6 +885,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 ):
                     self.assertEqual(postgres.drop_extension("foo"), True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_drop_extension1(self):
         with patch(
             "salt.modules.postgres.installed_extensions",
@@ -879,6 +905,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 ):
                     self.assertEqual(postgres.drop_extension("foo"), False)
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_mtdata(self):
         with patch(
             "salt.modules.postgres.installed_extensions",
@@ -915,6 +942,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertFalse(postgres._EXTENSION_TO_UPGRADE in ret)
                 self.assertFalse(postgres._EXTENSION_TO_MOVE in ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_extension_newerthan(self):
         """
         scenario of creating upgrading extensions with possible schema and
@@ -1015,6 +1043,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                         postgres.create_extension("foo", ext_version="a", schema="b")
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_encrypt_passwords(self):
         self.assertEqual(postgres._maybe_encrypt_password("foo", "bar", False), "bar")
         self.assertEqual(
@@ -1022,6 +1051,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
             "md596948aad3fcae80c08a35c9b5958cd89",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_schema_list(self):
         with patch(
             "salt.modules.postgres._run_psql",
@@ -1045,6 +1075,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_schema_exists(self):
         with patch(
             "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
@@ -1064,6 +1095,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 ret = postgres.schema_exists("template1", "public")
                 self.assertTrue(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_schema_get(self):
         with patch(
             "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
@@ -1083,6 +1115,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 ret = postgres.schema_get("template1", "public")
                 self.assertTrue(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_schema_get_again(self):
         with patch(
             "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
@@ -1102,6 +1135,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 ret = postgres.schema_get("template1", "pg_toast")
                 self.assertFalse(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_schema_create(self):
         with patch(
             "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
@@ -1141,6 +1175,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     runas="user",
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_schema_create2(self):
         with patch("salt.modules.postgres.schema_exists", Mock(return_value=True)):
             ret = postgres.schema_create(
@@ -1154,6 +1189,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertFalse(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_schema_remove(self):
         with patch(
             "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
@@ -1193,6 +1229,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     runas="user",
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_schema_remove2(self):
         with patch("salt.modules.postgres.schema_exists", Mock(return_value=False)):
             ret = postgres.schema_remove(
@@ -1206,6 +1243,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertFalse(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_language_list(self):
         """
         Test language listing
@@ -1226,6 +1264,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 {"c": "c", "internal": "internal", "plpgsql": "plpgsql", "sql": "sql"},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_language_exists(self):
         """
         Test language existence check
@@ -1250,6 +1289,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     ret = postgres.language_exists("sql", "testdb")
                     self.assertTrue(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_language_create(self):
         """
         Test language creation - does not exist in db
@@ -1294,6 +1334,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     runas="user",
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_language_create_exists(self):
         """
         Test language creation - already exists in db
@@ -1310,6 +1351,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertFalse(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_language_remove(self):
         """
         Test language removal - exists in db
@@ -1354,6 +1396,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     runas="user",
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_language_remove_non_exist(self):
         """
         Test language removal - does not exist in db
@@ -1370,6 +1413,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertFalse(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_privileges_list_table(self):
         """
         Test privilege listing on a table
@@ -1451,6 +1495,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 runas="user",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_privileges_list_group(self):
         """
         Test privilege listing on a group
@@ -1512,6 +1557,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 runas="user",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_has_privileges_on_table(self):
         """
         Test privilege checks on table
@@ -1582,6 +1628,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertTrue(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_has_privileges_on_group(self):
         """
         Test privilege checks on group
@@ -1633,6 +1680,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertFalse(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_privileges_grant_table(self):
         """
         Test granting privileges on table
@@ -1777,6 +1825,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     runas="user",
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_privileges_grant_group(self):
         """
         Test granting privileges on group
@@ -1872,6 +1921,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     runas="user",
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_privileges_revoke_table(self):
         """
         Test revoking privileges on table
@@ -1920,6 +1970,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     runas="user",
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_privileges_revoke_group(self):
         """
         Test revoking privileges on group
@@ -1967,6 +2018,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     runas="user",
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_datadir_init(self):
         """
         Test Initializing a postgres data directory
@@ -1993,6 +2045,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertTrue(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_datadir_exists(self):
         """
         Test Checks if postgres data directory has been initialized
@@ -2002,6 +2055,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
             ret = postgres.datadir_exists(name)
             self.assertTrue(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_pg_is_older_ext_ver(self):
         """
         Test Checks if postgres extension version string is older

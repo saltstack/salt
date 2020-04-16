@@ -29,6 +29,7 @@ class QemuNbdTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'connect' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_connect(self):
         """
         Test if it activate nbd for an image file.
@@ -55,6 +56,7 @@ class QemuNbdTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'mount' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_mount(self):
         """
         Test if it pass in the nbd connection device location,
@@ -66,7 +68,6 @@ class QemuNbdTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'init' function tests: 1
 
-    @skipIf(True, "SLOWTEST skip")
     def test_init(self):
         """
         Test if it mount the named image via qemu-nbd
@@ -93,6 +94,7 @@ class QemuNbdTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'clear' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_clear(self):
         """
         Test if it pass in the mnt dict returned from nbd_mount

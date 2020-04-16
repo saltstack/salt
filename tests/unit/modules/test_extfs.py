@@ -12,7 +12,7 @@ import salt.modules.extfs as extfs
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ExtfsTestCase(TestCase, LoaderModuleMockMixin):
@@ -25,6 +25,7 @@ class ExtfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'mkfs' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_mkfs(self):
         """
         Tests if a file system created on the specified device
@@ -35,6 +36,7 @@ class ExtfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'tune' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_tune(self):
         """
         Tests if specified group was added
@@ -47,6 +49,7 @@ class ExtfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'dump' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_dump(self):
         """
         Tests if specified group was added
@@ -57,6 +60,7 @@ class ExtfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'attributes' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_attributes(self):
         """
         Tests if specified group was added
@@ -69,6 +73,7 @@ class ExtfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'blocks' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_blocks(self):
         """
         Tests if specified group was added

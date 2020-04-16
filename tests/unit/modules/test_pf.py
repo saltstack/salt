@@ -9,7 +9,7 @@ import salt.modules.pf as pf
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PfTestCase(TestCase, LoaderModuleMockMixin):
@@ -20,6 +20,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {pf: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_enable_when_disabled(self):
         """
         Tests enabling pf when it's not enabled yet.
@@ -31,6 +32,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pf.__salt__, {"cmd.run_all": mock_cmd}):
             self.assertTrue(pf.enable()["changes"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_enable_when_enabled(self):
         """
         Tests enabling pf when it already enabled.
@@ -42,6 +44,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pf.__salt__, {"cmd.run_all": mock_cmd}):
             self.assertFalse(pf.enable()["changes"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_disable_when_enabled(self):
         """
         Tests disabling pf when it's enabled.
@@ -53,6 +56,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pf.__salt__, {"cmd.run_all": mock_cmd}):
             self.assertTrue(pf.disable()["changes"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_disable_when_disabled(self):
         """
         Tests disabling pf when it already disabled.
@@ -64,6 +68,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pf.__salt__, {"cmd.run_all": mock_cmd}):
             self.assertFalse(pf.disable()["changes"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_loglevel(self):
         """
         Tests setting a loglevel.
@@ -78,6 +83,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertTrue(res["changes"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_load(self):
         """
         Tests loading ruleset.
@@ -94,6 +100,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertTrue(res["changes"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_load_noop(self):
         """
         Tests evaluating but not actually loading ruleset.
@@ -110,6 +117,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertFalse(res["changes"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_flush(self):
         """
         Tests a regular flush command.
@@ -125,6 +133,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertTrue(res["changes"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_flush_capital(self):
         """
         Tests a flush command starting with a capital letter.
@@ -140,6 +149,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertTrue(res["changes"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_flush_without_changes(self):
         """
         Tests a flush command that has no changes.
@@ -151,6 +161,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pf.__salt__, {"cmd.run_all": mock_cmd}):
             self.assertFalse(pf.flush("tables")["changes"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_table(self):
         """
         Tests a regular table command.
@@ -162,6 +173,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pf.__salt__, {"cmd.run_all": mock_cmd}):
             self.assertTrue(pf.table("flush", table="bad_hosts")["changes"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_table_expire(self):
         """
         Tests the table expire command.
@@ -175,6 +187,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
                 pf.table("expire", table="bad_hosts", number=300)["changes"]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_table_add_addresses(self):
         """
         Tests adding addresses to a table.
@@ -190,6 +203,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
                 ]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_table_test_address(self):
         """
         Tests testing addresses in a table.
@@ -203,6 +217,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
                 pf.table("test", table="bad_hosts", addresses=["1.2.3.4"])["matches"]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_table_no_changes(self):
         """
         Tests a table command that has no changes.
@@ -216,6 +231,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
                 pf.table("expire", table="bad_hosts", number=300)["changes"]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_table_show(self):
         """
         Tests showing table contents.
@@ -230,6 +246,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
                 pf.table("show", table="bad_hosts")["comment"], expected
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_show(self):
         """
         Tests a regular show command.
@@ -242,6 +259,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pf.__salt__, {"cmd.run_all": mock_cmd}):
             self.assertListEqual(pf.show("rules")["comment"], expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_capital(self):
         """
         Tests a show command starting with a capital letter.

@@ -11,7 +11,7 @@ import salt.states.event as event
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class EventTestCase(TestCase, LoaderModuleMockMixin):
@@ -22,6 +22,7 @@ class EventTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {event: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_send(self):
         """
             Test to send an event to the Salt Master
@@ -50,6 +51,7 @@ class EventTestCase(TestCase, LoaderModuleMockMixin):
                     },
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_wait(self):
         """
             Test to fire an event on the Salt master

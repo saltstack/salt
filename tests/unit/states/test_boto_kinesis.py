@@ -8,7 +8,7 @@ import salt.states.boto_kinesis as boto_kinesis
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class BotoKinesisTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class BotoKinesisTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {boto_kinesis: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_stream_present(self):
         """
         Test to ensure the kinesis stream exists.
@@ -152,6 +153,7 @@ class BotoKinesisTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
         Test to ensure the Kinesis stream does not exist.

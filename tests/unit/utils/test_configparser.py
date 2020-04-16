@@ -23,7 +23,7 @@ from salt.ext import six
 
 # Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -117,6 +117,7 @@ class TestGitConfigParser(TestCase):
             self.conf.write(fp_)
         self.assertEqual(self.get_lines(self.new_config), self.fix_indent(ORIG_CONFIG))
 
+    @skipIf(True, "FASTTEST skip")
     def test_get(self):
         """
         Test getting an option's value
@@ -138,6 +139,7 @@ class TestGitConfigParser(TestCase):
         )
         # future lint: enable=non-unicode-string
 
+    @skipIf(True, "FASTTEST skip")
     def test_read_space_indent(self):
         """
         Test that user.name was successfully loaded despite being indented
@@ -146,6 +148,7 @@ class TestGitConfigParser(TestCase):
         """
         self.assertEqual(self.conf.get("user", "name"), "Артём Анисимов")
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_new_option(self):
         """
         Test setting a new option in an existing section
@@ -153,6 +156,7 @@ class TestGitConfigParser(TestCase):
         self.conf.set("http", "useragent", "myawesomeagent")
         self.assertEqual(self.conf.get("http", "useragent"), "myawesomeagent")
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_section(self):
         """
         Test adding a section and adding an item to that section
@@ -161,6 +165,7 @@ class TestGitConfigParser(TestCase):
         self.conf.set("foo", "bar", "baz")
         self.assertEqual(self.conf.get("foo", "bar"), "baz")
 
+    @skipIf(True, "FASTTEST skip")
     def test_replace_option(self):
         """
         Test replacing an existing option
@@ -170,6 +175,7 @@ class TestGitConfigParser(TestCase):
         self.conf.set("http", "sslVerify", "true")
         self.assertEqual(self.conf.get("http", "sslverify"), "true")
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_multivar(self):
         """
         Test setting a multivar and then writing the resulting file
@@ -194,6 +200,7 @@ class TestGitConfigParser(TestCase):
         # pylint: enable=string-substitution-usage-error
         self.assertEqual(self.get_lines(self.new_config), expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_option(self):
         """
         test removing an option, including all items from a multivar
@@ -206,6 +213,7 @@ class TestGitConfigParser(TestCase):
                 salt.utils.configparser.NoOptionError, self.conf.get, self.remote, item
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_option_regexp(self):
         """
         test removing an option, including all items from a multivar
@@ -254,12 +262,14 @@ class TestGitConfigParser(TestCase):
             salt.utils.configparser.NoOptionError, self.conf.get, self.remote, "fetch"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_write(self):
         """
         Test writing using non-binary filehandle
         """
         self._test_write(mode="w")
 
+    @skipIf(True, "FASTTEST skip")
     def test_write_binary(self):
         """
         Test writing using binary filehandle

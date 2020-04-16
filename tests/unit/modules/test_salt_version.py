@@ -14,7 +14,7 @@ from salt.ext import six
 from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class SaltVersionTestCase(TestCase):
@@ -22,6 +22,7 @@ class SaltVersionTestCase(TestCase):
     Test cases for salt.modules.salt_version
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_mocked_objects(self):
         """
         Test that the mocked objects actually have what we expect.
@@ -48,6 +49,7 @@ class SaltVersionTestCase(TestCase):
 
     # get_release_number tests: 3
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_release_number_no_codename(self):
         """
         Test that None is returned when the codename isn't found.
@@ -55,6 +57,7 @@ class SaltVersionTestCase(TestCase):
         assert salt_version.get_release_number("foo") is None
 
     @patch("salt.version.SaltStackVersion.LNAMES", {"foo": (12345, 0)})
+    @skipIf(True, "FASTTEST skip")
     def test_get_release_number_unassigned(self):
         """
         Test that a string is returned when a version is found, but unassigned.
@@ -62,12 +65,14 @@ class SaltVersionTestCase(TestCase):
         mock_str = "No version assigned."
         assert salt_version.get_release_number("foo") == mock_str
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_release_number_success(self):
         """
         Test that a version is returned for a released codename
         """
         assert salt_version.get_release_number("Oxygen") == "2018.3"
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_release_number_success_new_version(self):
         """
         Test that a version is returned for new versioning (3000)
@@ -78,6 +83,7 @@ class SaltVersionTestCase(TestCase):
 
     @patch("salt.version.SaltStackVersion.LNAMES", {"foo": (1900, 5)})
     @patch("salt.version.SaltStackVersion", MagicMock(return_value="1900.5.0"))
+    @skipIf(True, "FASTTEST skip")
     def test_equal_success(self):
         """
         Test that the current version is equal to the codename
@@ -86,6 +92,7 @@ class SaltVersionTestCase(TestCase):
 
     @patch("salt.version.SaltStackVersion.LNAMES", {"foo": (3000,)})
     @patch("salt.version.SaltStackVersion", MagicMock(return_value="3000.1"))
+    @skipIf(True, "FASTTEST skip")
     def test_equal_success_new_version(self):
         """
         Test that the current version is equal to the codename
@@ -98,6 +105,7 @@ class SaltVersionTestCase(TestCase):
         {"oxygen": (2018, 3), "nitrogen": (2017, 7)},
     )
     @patch("salt.version.SaltStackVersion", MagicMock(return_value="2018.3.2"))
+    @skipIf(True, "FASTTEST skip")
     def test_equal_older_codename(self):
         """
         Test that when an older codename is passed in, the function returns False.
@@ -108,6 +116,7 @@ class SaltVersionTestCase(TestCase):
         "salt.version.SaltStackVersion.LNAMES", {"neon": (3000), "nitrogen": (2017, 7)}
     )
     @patch("salt.version.SaltStackVersion", MagicMock(return_value="2018.3.2"))
+    @skipIf(True, "FASTTEST skip")
     def test_equal_older_codename_new_version(self):
         """
         Test that when an older codename is passed in, the function returns False.
@@ -120,6 +129,7 @@ class SaltVersionTestCase(TestCase):
         {"fluorine": (salt.version.MAX_SIZE - 100, 0)},
     )
     @patch("salt.version.SaltStackVersion", MagicMock(return_value="2018.3.2"))
+    @skipIf(True, "FASTTEST skip")
     def test_equal_newer_codename(self):
         """
         Test that when a newer codename is passed in, the function returns False
@@ -132,6 +142,7 @@ class SaltVersionTestCase(TestCase):
         "salt.modules.salt_version.get_release_number", MagicMock(return_value="2017.7")
     )
     @patch("salt.version.SaltStackVersion", MagicMock(return_value="2018.3.2"))
+    @skipIf(True, "FASTTEST skip")
     def test_greater_than_success(self):
         """
         Test that the current version is newer than the codename
@@ -142,6 +153,7 @@ class SaltVersionTestCase(TestCase):
         "salt.modules.salt_version.get_release_number", MagicMock(return_value="2017.7")
     )
     @patch("salt.version.SaltStackVersion", MagicMock(return_value="3000"))
+    @skipIf(True, "FASTTEST skip")
     def test_greater_than_success_new_version(self):
         """
         Test that the current version is newer than the codename
@@ -150,6 +162,7 @@ class SaltVersionTestCase(TestCase):
 
     @patch("salt.version.SaltStackVersion.LNAMES", {"oxygen": (2018, 3)})
     @patch("salt.version.SaltStackVersion", MagicMock(return_value="2018.3.2"))
+    @skipIf(True, "FASTTEST skip")
     def test_greater_than_with_equal_codename(self):
         """
         Test that when an equal codename is passed in, the function returns False.
@@ -161,6 +174,7 @@ class SaltVersionTestCase(TestCase):
         {"fluorine": (2019, 2), "oxygen": (2018, 3)},
     )
     @patch("salt.version.SaltStackVersion", MagicMock(return_value="2018.3.2"))
+    @skipIf(True, "FASTTEST skip")
     def test_greater_than_with_newer_codename(self):
         """
         Test that when a newer codename is passed in, the function returns False.
@@ -172,6 +186,7 @@ class SaltVersionTestCase(TestCase):
         MagicMock(return_value="No version assigned."),
     )
     @patch("salt.version.SaltStackVersion", MagicMock(return_value="2018.3.2"))
+    @skipIf(True, "FASTTEST skip")
     def test_greater_than_unassigned(self):
         """
         Test that the unassigned codename is greater than the current version
@@ -184,6 +199,7 @@ class SaltVersionTestCase(TestCase):
         "salt.modules.salt_version.get_release_number", MagicMock(return_value="2019.2")
     )
     @patch("salt.version.SaltStackVersion", MagicMock(return_value="2018.3.2"))
+    @skipIf(True, "FASTTEST skip")
     def test_less_than_success(self):
         """
         Test that when a newer codename is passed in, the function returns True.
@@ -194,6 +210,7 @@ class SaltVersionTestCase(TestCase):
         "salt.modules.salt_version.get_release_number", MagicMock(return_value="3000")
     )
     @patch("salt.version.SaltStackVersion", MagicMock(return_value="2018.3.2"))
+    @skipIf(True, "FASTTEST skip")
     def test_less_than_success_new_version(self):
         """
         Test that when a newer codename is passed in, the function returns True
@@ -203,6 +220,7 @@ class SaltVersionTestCase(TestCase):
 
     @patch("salt.version.SaltStackVersion", MagicMock(return_value="2018.3.2"))
     @patch("salt.version.SaltStackVersion.LNAMES", {"oxygen": (2018, 3)})
+    @skipIf(True, "FASTTEST skip")
     def test_less_than_with_equal_codename(self):
         """
         Test that when an equal codename is passed in, the function returns False.
@@ -213,6 +231,7 @@ class SaltVersionTestCase(TestCase):
         "salt.modules.salt_version.get_release_number", MagicMock(return_value="2017.7")
     )
     @patch("salt.version.SaltStackVersion", MagicMock(return_value="2018.3.2"))
+    @skipIf(True, "FASTTEST skip")
     def test_less_than_with_older_codename(self):
         """
         Test that the current version is less than the codename.
@@ -224,6 +243,7 @@ class SaltVersionTestCase(TestCase):
         MagicMock(return_value="No version assigned."),
     )
     @patch("salt.version.SaltStackVersion", MagicMock(return_value="2018.3.2"))
+    @skipIf(True, "FASTTEST skip")
     def test_less_than_with_unassigned_codename(self):
         """
         Test that when an unassigned codename greater than the current version.
@@ -232,12 +252,14 @@ class SaltVersionTestCase(TestCase):
 
     # _check_release_cmp tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_release_cmp_no_codename(self):
         """
         Test that None is returned when the codename isn't found.
         """
         assert salt_version._check_release_cmp("foo") is None
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_release_cmp_success(self):
         """
         Test that an int is returned from the version compare

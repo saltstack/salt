@@ -11,7 +11,7 @@ import salt.states.modjk_worker as modjk_worker
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ModjkWorkerTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class ModjkWorkerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'stop' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_stop(self):
         """
         Test to stop the named worker from the lbn load balancers
@@ -43,6 +44,7 @@ class ModjkWorkerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'activate' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_activate(self):
         """
         Test to activate the named worker from the lbn load balancers
@@ -62,6 +64,7 @@ class ModjkWorkerTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'disable' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_disable(self):
         """
         Test to disable the named worker from the lbn load balancers

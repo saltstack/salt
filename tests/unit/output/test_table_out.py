@@ -12,7 +12,7 @@ import salt.utils.stringutils
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class TableTestCase(TestCase, LoaderModuleMockMixin):
@@ -36,6 +36,7 @@ class TableTestCase(TestCase, LoaderModuleMockMixin):
         {"Food": "спам, спам, спам, яйца и спам", "Price": 3.99},
     ]
 
+    @skipIf(True, "FASTTEST skip")
     def test_output(self):
         ret = table_out.output(self.data)
         self.assertEqual(

@@ -9,7 +9,7 @@ import salt.modules.gentoo_service as gentoo_service
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class GentooServicesTestCase(TestCase, LoaderModuleMockMixin):
@@ -20,6 +20,7 @@ class GentooServicesTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {gentoo_service: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_service_list_parser(self):
         """
         Test for parser of rc-status results
@@ -30,6 +31,7 @@ class GentooServicesTestCase(TestCase, LoaderModuleMockMixin):
             self.assertFalse(gentoo_service.get_enabled())
         mock.assert_called_once_with("rc-update -v show")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_enabled_single_runlevel(self):
         """
         Test for Return a list of service that are enabled on boot
@@ -42,6 +44,7 @@ class GentooServicesTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(service_name in enabled_services)
             self.assertEqual(enabled_services[service_name], runlevels)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_enabled_filters_out_disabled_services(self):
         """
         Test for Return a list of service that are enabled on boot
@@ -58,6 +61,7 @@ class GentooServicesTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(service_name in enabled_services)
             self.assertEqual(enabled_services[service_name], runlevels)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_enabled_with_multiple_runlevels(self):
         """
         Test for Return a list of service that are enabled on boot at more than one runlevel
@@ -71,6 +75,7 @@ class GentooServicesTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(enabled_services[service_name][0], runlevels[1])
             self.assertEqual(enabled_services[service_name][1], runlevels[0])
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_disabled(self):
         """
         Test for Return a list of service that are installed but disabled
@@ -86,6 +91,7 @@ class GentooServicesTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(len(disabled_services), 1)
             self.assertTrue(disabled_service in disabled_services)
 
+    @skipIf(True, "FASTTEST skip")
     def test_available(self):
         """
         Test for Returns ``True`` if the specified service is
@@ -113,6 +119,7 @@ class GentooServicesTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(gentoo_service.available(shutdown_service))
             self.assertFalse(gentoo_service.available(missing_service))
 
+    @skipIf(True, "FASTTEST skip")
     def test_missing(self):
         """
         Test for The inverse of service.available.
@@ -128,6 +135,7 @@ class GentooServicesTestCase(TestCase, LoaderModuleMockMixin):
             self.assertFalse(gentoo_service.missing(disabled_service))
             self.assertTrue(gentoo_service.missing("missing"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_getall(self):
         """
         Test for Return all available boot services
@@ -144,6 +152,7 @@ class GentooServicesTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(disabled_service in all_services)
             self.assertTrue(enabled_service in all_services)
 
+    @skipIf(True, "FASTTEST skip")
     def test_start(self):
         """
         Test for Start the specified service
@@ -155,6 +164,7 @@ class GentooServicesTestCase(TestCase, LoaderModuleMockMixin):
             "/etc/init.d/name start", ignore_retcode=False, python_shell=False
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_stop(self):
         """
         Test for Stop the specified service
@@ -166,6 +176,7 @@ class GentooServicesTestCase(TestCase, LoaderModuleMockMixin):
             "/etc/init.d/name stop", ignore_retcode=False, python_shell=False
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_restart(self):
         """
         Test for Restart the named service
@@ -177,6 +188,7 @@ class GentooServicesTestCase(TestCase, LoaderModuleMockMixin):
             "/etc/init.d/name restart", ignore_retcode=False, python_shell=False
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_reload_(self):
         """
         Test for Reload the named service
@@ -188,6 +200,7 @@ class GentooServicesTestCase(TestCase, LoaderModuleMockMixin):
             "/etc/init.d/name reload", ignore_retcode=False, python_shell=False
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_zap(self):
         """
         Test for Reload the named service
@@ -199,6 +212,7 @@ class GentooServicesTestCase(TestCase, LoaderModuleMockMixin):
             "/etc/init.d/name zap", ignore_retcode=False, python_shell=False
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_status(self):
         """
         Test for Return the status for a service
@@ -239,6 +253,7 @@ class GentooServicesTestCase(TestCase, LoaderModuleMockMixin):
             "/etc/init.d/name status", ignore_retcode=True, python_shell=False
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_enable(self):
         """
         Test for Enable the named service to start at boot
@@ -382,6 +397,7 @@ class GentooServicesTestCase(TestCase, LoaderModuleMockMixin):
         )
         rc_update_mock.reset_mock()
 
+    @skipIf(True, "FASTTEST skip")
     def test_disable(self):
         """
         Test for Disable the named service to start at boot
@@ -493,6 +509,7 @@ class GentooServicesTestCase(TestCase, LoaderModuleMockMixin):
         )
         rc_update_mock.reset_mock()
 
+    @skipIf(True, "FASTTEST skip")
     def test_enabled(self):
         """
         Test for Return True if the named service is enabled, false otherwise
@@ -525,6 +542,7 @@ class GentooServicesTestCase(TestCase, LoaderModuleMockMixin):
                 gentoo_service.enabled("name", runlevels=["boot", "some-other-level"])
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_disabled(self):
         """
         Test for Return True if the named service is disabled, false otherwise

@@ -12,7 +12,7 @@ import salt.modules.nfs3 as nfs3
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class NfsTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class NfsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {nfs3: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_exports(self):
         """
         Test for List configured exports
@@ -31,6 +32,7 @@ class NfsTestCase(TestCase, LoaderModuleMockMixin):
             exports = nfs3.list_exports()
             assert exports == {"A": [{"hosts": "B1", "options": ["23"]}]}, exports
 
+    @skipIf(True, "FASTTEST skip")
     def test_del_export(self):
         """
         Test for Remove an export

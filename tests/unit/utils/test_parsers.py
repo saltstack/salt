@@ -168,6 +168,19 @@ class ParserBase(object):
 
     # log level configuration tests
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_log_level_cli(self):
         """
         Tests that log level match command-line specified value
@@ -198,6 +211,19 @@ class ParserBase(object):
         # Check log file logger log level
         self.assertEqual(self.log_setup.log_level_logfile, default_log_level)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_log_level_config(self):
         """
         Tests that log level match the configured value
@@ -228,6 +254,19 @@ class ParserBase(object):
         # Check log file logger log level
         self.assertEqual(self.log_setup.log_level_logfile, log_level)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_log_level_default(self):
         """
         Tests that log level match the default value
@@ -266,6 +305,19 @@ class ParserBase(object):
 
     # log file configuration tests
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_log_file_cli(self):
         """
         Tests that log file match command-line specified value
@@ -302,6 +354,19 @@ class ParserBase(object):
         # Check log file logger
         self.assertEqual(self.log_setup.log_file, log_file)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_log_file_config(self):
         """
         Tests that log file match the configured value
@@ -341,6 +406,19 @@ class ParserBase(object):
         # Check log file logger
         self.assertEqual(self.log_setup.log_file, log_file)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_log_file_default(self):
         """
         Tests that log file match the default value
@@ -384,6 +462,19 @@ class ParserBase(object):
 
     # log file log level configuration tests
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_log_file_level_cli(self):
         """
         Tests that file log level match command-line specified value
@@ -424,6 +515,19 @@ class ParserBase(object):
         # Check log file logger
         self.assertEqual(self.log_setup.log_level_logfile, log_level_logfile)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_log_file_level_config(self):
         """
         Tests that log file level match the configured value
@@ -466,6 +570,19 @@ class ParserBase(object):
         # Check log file logger
         self.assertEqual(self.log_setup.log_level_logfile, log_level_logfile)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_log_file_level_default(self):
         """
         Tests that log file level match the default value
@@ -511,6 +628,19 @@ class ParserBase(object):
             parser.get_option("--log-file-level").help,
         )
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_console_log_level_with_file_log_level(
         self,
     ):  # pylint: disable=invalid-name
@@ -554,6 +684,18 @@ class ParserBase(object):
         self.assertEqual(self.log_setup.log_level_logfile, log_level_logfile)
 
     @skipIf(salt.utils.platform.is_windows(), "Windows uses a logging listener")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_log_created(self):
         """
         Tests that log file is created
@@ -578,6 +720,19 @@ class ParserBase(object):
         else:
             self.assertEqual(os.path.getsize(getattr(self, log_file_name)), 0)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_callbacks_uniqueness(self):
         """
         Test that the callbacks are only added once, no matter
@@ -833,6 +988,19 @@ class SaltKeyOptionParserTestCase(ParserBase, TestCase):
 
     # log level configuration tests
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_log_level_cli(self):
         """
         Tests that console log level option is not recognized
@@ -859,6 +1027,19 @@ class SaltKeyOptionParserTestCase(ParserBase, TestCase):
         # Check log file logger log level
         self.assertEqual(self.log_setup.log_level_logfile, default_log_level)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_log_level_config(self):
         """
         Tests that log level set in config is ignored
@@ -892,6 +1073,19 @@ class SaltKeyOptionParserTestCase(ParserBase, TestCase):
         # Check log file logger log level
         self.assertEqual(self.log_setup.log_level_logfile, log_level)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_get_log_level_default(self):
         """
         Tests that log level default value is ignored
@@ -1171,6 +1365,7 @@ class DaemonMixInTestCase(TestCase):
     @patch("os.unlink", MagicMock())
     @patch("os.path.isfile", MagicMock(return_value=True))
     @patch("salt.utils.parsers.logger", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_pid_file_deletion(self):
         """
         PIDfile deletion without exception.
@@ -1183,6 +1378,7 @@ class DaemonMixInTestCase(TestCase):
     @patch("os.unlink", MagicMock(side_effect=OSError()))
     @patch("os.path.isfile", MagicMock(return_value=True))
     @patch("salt.utils.parsers.logger", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_pid_deleted_oserror_as_root(self):
         """
         PIDfile deletion with exception, running as root.
@@ -1207,6 +1403,7 @@ class DaemonMixInTestCase(TestCase):
     @patch("os.unlink", MagicMock(side_effect=OSError()))
     @patch("os.path.isfile", MagicMock(return_value=True))
     @patch("salt.utils.parsers.logger", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_pid_deleted_oserror_as_non_root(self):
         """
         PIDfile deletion with exception, running as non-root.

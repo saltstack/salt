@@ -20,7 +20,6 @@ class NTPTest(ModuleCase):
     """
 
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
     def test_ntp_set_servers(self):
         """
         test ntp get and set servers

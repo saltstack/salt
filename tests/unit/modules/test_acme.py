@@ -20,7 +20,7 @@ from salt.exceptions import SaltInvocationError
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class AcmeTestCase(TestCase, LoaderModuleMockMixin):
@@ -31,6 +31,7 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {acme: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_certs(self):
         """
         Test listing certs
@@ -45,6 +46,7 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
         ), patch("os.path.isdir", side_effect=[False, True, True]):
             self.assertEqual(acme.certs(), ["test_expired", "test_valid"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_has(self):
         """
         Test checking if certificate (does not) exist.
@@ -58,6 +60,7 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
         ):  # pylint: disable=no-member
             self.assertFalse(acme.has("test_invalid"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_needs_renewal(self):
         """
         Test if expired certs do indeed need renewal.
@@ -103,6 +106,7 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
                 SaltInvocationError, acme.needs_renewal, "test_valid", window="foo"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_expires(self):
         """
         Test if expires function functions properly.
@@ -122,6 +126,7 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
                 datetime.datetime.fromtimestamp(test_stamp.total_seconds()).isoformat(),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_info(self):
         """
         Test certificate information retrieval.
@@ -193,6 +198,7 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(acme.info("test"), {"text": "foo"})
 
+    @skipIf(True, "FASTTEST skip")
     def test_cert(self):
         """
         Test certificate retrieval/renewal

@@ -29,6 +29,7 @@ class VendorTornadoTest(TestCase):
     Ensure we are not using any non vendor'ed tornado
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_import_override(self):
         tmp = tempfile.mkdtemp()
         test_source = tests.support.helpers.dedent(
@@ -69,6 +70,7 @@ class VendorTornadoTest(TestCase):
         pout = p.stdout.read().strip().decode()
         assert pout == "salt.ext.tornado", pout
 
+    @skipIf(True, "FASTTEST skip")
     def test_vendored_tornado_import(self):
         grep_call = salt.modules.cmdmod.run_stdout(
             cmd="bash -c 'grep -r \"import tornado\" ./salt/*'",
@@ -87,6 +89,7 @@ class VendorTornadoTest(TestCase):
             valid_lines.append(line)
         assert valid_lines == [], len(valid_lines)
 
+    @skipIf(True, "FASTTEST skip")
     def test_vendored_tornado_import_from(self):
         grep_call = salt.modules.cmdmod.run_stdout(
             cmd="bash -c 'grep -r \"from tornado\" ./salt/*'",
@@ -101,6 +104,7 @@ class VendorTornadoTest(TestCase):
             valid_lines.append(line)
         assert valid_lines == [], len(valid_lines)
 
+    @skipIf(True, "FASTTEST skip")
     def test_regression_56063(self):
         importer = salt.TornadoImporter()
         try:

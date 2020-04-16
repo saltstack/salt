@@ -7,7 +7,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.unit import skipIf
 
 
 class BeaconStateTestCase(ModuleCase, SaltReturnAssertsMixin):
@@ -24,7 +23,6 @@ class BeaconStateTestCase(ModuleCase, SaltReturnAssertsMixin):
     def tearDown(self):
         self.run_function("beacons.reset", f_timeout=300)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_present_absent(self):
         kwargs = {"/": "38%", "interval": 5}
         ret = self.run_state(

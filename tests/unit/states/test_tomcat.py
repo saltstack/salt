@@ -13,7 +13,7 @@ from salt.modules import tomcat as tomcatmod
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class TomcatTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class TomcatTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {tomcat: {"__env__": "base"}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_war_deployed(self):
         """
         Test to enforce that the WAR will be deployed and
@@ -108,6 +109,7 @@ class TomcatTestCase(TestCase, LoaderModuleMockMixin):
                     tomcat.war_deployed("salt", "salt://jenkins" "-1.2.4.war"), ret
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_war_deployed_no_version(self):
         """
         Tests that going from versions to no versions and back work, as well
@@ -194,6 +196,7 @@ class TomcatTestCase(TestCase, LoaderModuleMockMixin):
                     ret,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_wait(self):
         """
         Test to wait for the tomcat manager to load
@@ -214,6 +217,7 @@ class TomcatTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertDictEqual(tomcat.wait("salt"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_mod_watch(self):
         """
         Test to the tomcat watcher function.
@@ -230,6 +234,7 @@ class TomcatTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({"changes": {"salt": False}})
             self.assertDictEqual(tomcat.mod_watch("salt"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_undeployed(self):
         """
         Test to enforce that the WAR will be un-deployed from the server

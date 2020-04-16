@@ -11,7 +11,7 @@ import salt.states.serverdensity_device as serverdensity_device
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ServerdensityDeviceTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class ServerdensityDeviceTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'monitored' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_monitored(self):
         """
         Test to device is monitored with Server Density.

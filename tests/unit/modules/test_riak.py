@@ -11,7 +11,7 @@ import salt.modules.riak as riak
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class RiakTestCase(TestCase, LoaderModuleMockMixin):
@@ -22,6 +22,7 @@ class RiakTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {riak: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_start(self):
         """
         Test for start Riak
@@ -31,6 +32,7 @@ class RiakTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(riak.start(), {"success": True, "comment": "success"})
 
+    @skipIf(True, "FASTTEST skip")
     def test_stop(self):
         """
         Test for stop Riak
@@ -40,6 +42,7 @@ class RiakTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(riak.stop(), {"success": True, "comment": "success"})
 
+    @skipIf(True, "FASTTEST skip")
     def test_cluster_join(self):
         """
         Test for Join a Riak cluster
@@ -51,6 +54,7 @@ class RiakTestCase(TestCase, LoaderModuleMockMixin):
                 riak.cluster_join("A", "B"), {"success": True, "comment": "success"}
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_cluster_leave(self):
         """
         Test for leaving a Riak cluster
@@ -62,6 +66,7 @@ class RiakTestCase(TestCase, LoaderModuleMockMixin):
                 riak.cluster_leave("A", "B"), {"success": True, "comment": "success"}
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_cluster_plan(self):
         """
         Test for Review Cluster Plan
@@ -71,6 +76,7 @@ class RiakTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(riak.cluster_plan())
 
+    @skipIf(True, "FASTTEST skip")
     def test_cluster_commit(self):
         """
         Test for Commit Cluster Changes
@@ -82,6 +88,7 @@ class RiakTestCase(TestCase, LoaderModuleMockMixin):
                 riak.cluster_commit(), {"success": True, "comment": "success"}
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_member_status(self):
         """
         Test for Get cluster member status
@@ -107,6 +114,7 @@ class RiakTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_status(self):
         """
         Test status information
@@ -119,6 +127,7 @@ class RiakTestCase(TestCase, LoaderModuleMockMixin):
                 {"vnode_map_update_time_95": "0", "vnode_map_update_time_99": "0"},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_test(self):
         """
         Test the Riak test
@@ -128,6 +137,7 @@ class RiakTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(riak.test(), {"success": True, "comment": "success"})
 
+    @skipIf(True, "FASTTEST skip")
     def test_services(self):
         """
         Test Riak Service List

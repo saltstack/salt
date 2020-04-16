@@ -37,7 +37,6 @@ class HelperB(object):
 
 class TestSyncWrapper(AsyncTestCase):
     @salt.ext.tornado.testing.gen_test
-    @skipIf(True, "SLOWTEST skip")
     def test_helpers(self):
         """
         Test that the helper classes do what we expect within a regular asynchronous env
@@ -50,6 +49,7 @@ class TestSyncWrapper(AsyncTestCase):
         ret = yield hb.sleep()
         self.assertFalse(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_basic_wrap(self):
         """
         Test that we can wrap an asynchronous caller.
@@ -58,7 +58,6 @@ class TestSyncWrapper(AsyncTestCase):
         ret = sync.sleep()
         self.assertTrue(ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_double(self):
         """
         Test when the asynchronous wrapper object itself creates a wrap of another thing
@@ -70,7 +69,6 @@ class TestSyncWrapper(AsyncTestCase):
         ret = sync.sleep()
         self.assertFalse(ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_double_sameloop(self):
         """
         Test asynchronous wrappers initiated from the same IOLoop, to ensure that

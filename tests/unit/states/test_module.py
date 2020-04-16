@@ -15,7 +15,7 @@ import salt.states.module as module
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -122,6 +122,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         del cls.aspec
         del cls.bspec
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_module_not_available(self):
         """
         Tests the return of module.run state when the module function is not available.
@@ -134,6 +135,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         if ret["comment"] != "Unavailable function: {0}.".format(CMD) or ret["result"]:
             self.fail("module.run did not fail as expected: {0}".format(ret))
 
+    @skipIf(True, "FASTTEST skip")
     def test_module_run_hidden_varargs(self):
         """
         Tests the return of module.run state when hidden varargs are used with
@@ -145,6 +147,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             ret = module._run(CMD, m_names="anyname")
         self.assertEqual(ret["comment"], "'names' must be a list.")
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_testmode(self):
         """
         Tests the return of the module.run state when test=True is passed.
@@ -160,6 +163,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         ):
             self.fail("module.run failed: {0}".format(ret))
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_missing_arg(self):
         """
         Tests the return of module.run state when arguments are missing
@@ -173,6 +177,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             ret["comment"], "'{}' failed: Missing arguments: name".format(CMD)
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_correct_arg(self):
         """
         Tests the return of module.run state when arguments are correct
@@ -185,6 +190,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         if ret["comment"] != "{0}: Success".format(CMD) or not ret["result"]:
             self.fail("module.run failed: {0}".format(ret))
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_state_apply_result_false(self):
         """
         Tests the 'result' of module.run that calls state.apply execution module
@@ -196,6 +202,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             ret = module.run(**{"name": "state.apply", "mods": "test2"})
         self.assertFalse(ret["result"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_unexpected_keywords(self):
         with patch.dict(module.__salt__, {CMD: _mocked_func_args}), patch.dict(
             module.__opts__, {"use_superseded": ["module.run"]}
@@ -211,6 +218,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         )
         self.assertFalse(ret["result"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_args(self):
         """
         Test unnamed args.
@@ -223,6 +231,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         self.assertTrue(ret["result"])
         self.assertEqual(ret["changes"], {CMD: {"args": ("foo", "bar")}})
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_42270(self):
         """
         Test example provided in issue 42270
@@ -240,6 +249,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             ret["comment"], "'{}' failed: Missing arguments: arg2".format(CMD)
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_42270_kwargs_to_args(self):
         """
         Test module.run filling in args with kwargs with the same name.
@@ -258,6 +268,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             {CMD: {"args": ["foo", "bar", "baz"], "kwargs": {"foo": "bar"}}},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_none_return(self):
         """
         Test handling of a broken function that returns None.
@@ -270,6 +281,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         self.assertTrue(ret["result"])
         self.assertEqual(ret["changes"], {CMD: None})
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_typed_return(self):
         """
         Test handling of a broken function that returns any type.
@@ -296,6 +308,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
                 ret = module.run(**{CMD: [{"ret": val}]})
             self.assertTrue(ret["result"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_run_batch_call(self):
         """
         Test batch call
@@ -317,6 +330,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
                 ret = module.run(**{f_name: None})
                 self.assertTrue(ret["result"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_module_run_module_not_available(self):
         """
         Tests the return of module.run state when the module function
@@ -329,6 +343,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             ret["comment"], "Module function {0} is not available".format(CMD)
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_module_run_test_true(self):
         """
         Tests the return of module.run state when test=True is passed in
@@ -339,6 +354,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             ret["comment"], "Module function {0} is set to execute".format(CMD)
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_module_run_missing_arg(self):
         """
         Tests the return of module.run state when arguments are missing
@@ -351,6 +367,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         self.assertIn("world", ret["comment"])
         self.assertIn("hello", ret["comment"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_call_function_named_args(self):
         """
         Test _call_function routine when params are named. Their position ordering should not matter.
@@ -393,6 +410,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
                 (1, 2, 3, (), {}),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_call_function_ordered_args(self):
         """
         Test _call_function routine when params are not named. Their position should matter.

@@ -11,7 +11,7 @@ import salt.states.keyboard as keyboard
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class KeyboardTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class KeyboardTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'system' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_system(self):
         """
         Test to set the keyboard layout for the system.
@@ -59,6 +60,7 @@ class KeyboardTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'xorg' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_xorg(self):
         """
         Test to set the keyboard layout for XOrg.

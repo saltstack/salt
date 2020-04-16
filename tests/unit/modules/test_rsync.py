@@ -12,7 +12,7 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class RsyncTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class RsyncTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {rsync: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_rsync(self):
         """
         Test for rsync files from src to dst
@@ -44,6 +45,7 @@ class RsyncTestCase(TestCase, LoaderModuleMockMixin):
 
                 self.assertEqual(rsync.rsync("src", "dst"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_version(self):
         """
         Test for return rsync version
@@ -54,6 +56,7 @@ class RsyncTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertEqual(rsync.version(), "C")
 
+    @skipIf(True, "FASTTEST skip")
     def test_rsync_excludes_list(self):
         """
         Test for rsync files from src to dst with a list of excludes
@@ -78,6 +81,7 @@ class RsyncTestCase(TestCase, LoaderModuleMockMixin):
             python_shell=False,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_rsync_excludes_str(self):
         """
         Test for rsync files from src to dst with one exclude

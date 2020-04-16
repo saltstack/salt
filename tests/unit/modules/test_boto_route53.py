@@ -119,6 +119,7 @@ class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
         del self.opts
 
     @mock_route53_deprecated
+    @skipIf(True, "FASTTEST skip")
     def test_create_healthcheck(self):
         """
         tests that given a valid instance id and valid ELB that

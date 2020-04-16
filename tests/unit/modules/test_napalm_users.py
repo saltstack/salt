@@ -11,7 +11,7 @@ import tests.support.napalm as napalm_test_support
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 import salt.modules.napalm_users as napalm_users  # NOQA
 import salt.modules.napalm_network as napalm_network  # NOQA
@@ -34,14 +34,17 @@ class NapalmUsersModuleTestCase(TestCase, LoaderModuleMockMixin):
 
         return {napalm_users: module_globals, napalm_network: module_globals}
 
+    @skipIf(True, "FASTTEST skip")
     def test_config(self):
         ret = napalm_users.config()
         assert ret["out"] == napalm_test_support.TEST_USERS
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_users(self):
         ret = napalm_users.set_users({"mircea": {}})
         assert ret["result"] is False
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_users(self):
         ret = napalm_users.delete_users({"mircea": {}})
         assert ret["result"] is False

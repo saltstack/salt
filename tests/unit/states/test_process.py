@@ -11,7 +11,7 @@ import salt.states.process as process
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ProcessTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class ProcessTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
         Test to ensures that the named command is not running.

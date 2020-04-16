@@ -16,7 +16,7 @@ import salt.states.git as git_state  # Don't potentially shadow GitPython
 from tests.support.helpers import with_tempdir
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import DEFAULT, MagicMock, Mock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -32,6 +32,7 @@ class GitTestCase(TestCase, LoaderModuleMockMixin):
         }
 
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_latest_no_diff_for_bare_repo(self, target):
         """
         This test ensures that we don't attempt to diff when cloning a repo

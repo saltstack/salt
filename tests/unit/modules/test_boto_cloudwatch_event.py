@@ -131,6 +131,7 @@ class BotoCloudWatchEventTestCase(
     TestCase for salt.modules.boto_cloudwatch_event module
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_checking_if_a_rule_exists_and_a_rule_exists_the_rule_exists_method_returns_true(
         self,
     ):
@@ -142,6 +143,7 @@ class BotoCloudWatchEventTestCase(
 
         self.assertTrue(result["exists"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_checking_if_a_rule_exists_and_a_rule_does_not_exist_the_exists_method_returns_false(
         self,
     ):
@@ -153,6 +155,7 @@ class BotoCloudWatchEventTestCase(
 
         self.assertFalse(result["exists"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_checking_if_a_rule_exists_and_boto3_returns_an_error_the_rule_exists_method_returns_error(
         self,
     ):
@@ -166,6 +169,7 @@ class BotoCloudWatchEventTestCase(
             result.get("error", {}).get("message"), error_message.format("list_rules")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_rule_and_rule_exists_the_describe_rule_method_returns_rule(
         self,
     ):
@@ -177,6 +181,7 @@ class BotoCloudWatchEventTestCase(
 
         self.assertEqual(result.get("rule"), rule_ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_rule_and_rule_does_not_exists_the_describe_method_returns_none(
         self,
     ):
@@ -188,6 +193,7 @@ class BotoCloudWatchEventTestCase(
 
         self.assertNotEqual(result.get("error"), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_describing_rule_and_boto3_returns_error_the_describe_method_returns_error(
         self,
     ):
@@ -201,6 +207,7 @@ class BotoCloudWatchEventTestCase(
             error_message.format("describe_rule"),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_a_rule_succeeds_the_create_rule_method_returns_true(
         self,
     ):
@@ -216,6 +223,7 @@ class BotoCloudWatchEventTestCase(
         )
         self.assertTrue(result["created"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_creating_a_rule_fails_the_create_method_returns_error(self):
         """
         tests False when rule not created
@@ -231,6 +239,7 @@ class BotoCloudWatchEventTestCase(
             result.get("error", {}).get("message"), error_message.format("put_rule")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_a_rule_succeeds_the_delete_method_returns_true(self):
         """
         tests True when delete rule succeeds
@@ -241,6 +250,7 @@ class BotoCloudWatchEventTestCase(
         self.assertTrue(result.get("deleted"))
         self.assertEqual(result.get("error"), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_deleting_a_rule_fails_the_delete_method_returns_error(self):
         """
         tests False when delete rule fails
@@ -252,6 +262,7 @@ class BotoCloudWatchEventTestCase(
             result.get("error", {}).get("message"), error_message.format("delete_rule")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_listing_targets_and_rule_exists_the_list_targets_method_returns_targets(
         self,
     ):
@@ -263,6 +274,7 @@ class BotoCloudWatchEventTestCase(
 
         self.assertEqual(result.get("targets"), [target_ret])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_listing_targets_and_rule_does_not_exist_the_list_targets_method_returns_error(
         self,
     ):
@@ -274,6 +286,7 @@ class BotoCloudWatchEventTestCase(
 
         self.assertNotEqual(result.get("error"), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_putting_targets_succeeds_the_put_target_method_returns_no_failures(
         self,
     ):
@@ -286,6 +299,7 @@ class BotoCloudWatchEventTestCase(
         )
         self.assertIsNone(result["failures"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_putting_targets_fails_the_put_targets_method_returns_error(self):
         """
         tests False when thing type not created
@@ -298,6 +312,7 @@ class BotoCloudWatchEventTestCase(
             result.get("error", {}).get("message"), error_message.format("put_targets")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_removing_targets_succeeds_the_remove_targets_method_returns_true(
         self,
     ):
@@ -312,6 +327,7 @@ class BotoCloudWatchEventTestCase(
         self.assertIsNone(result["failures"])
         self.assertEqual(result.get("error"), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_that_when_removing_targets_fails_the_remove_targets_method_returns_error(
         self,
     ):

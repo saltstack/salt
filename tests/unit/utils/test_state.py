@@ -16,7 +16,7 @@ import salt.utils.state
 from salt.ext import six
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class StateUtilTestCase(TestCase):
@@ -24,6 +24,7 @@ class StateUtilTestCase(TestCase):
     Test case for state util.
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_result(self):
         self.assertFalse(
             salt.utils.state.check_result(None),
@@ -778,6 +779,7 @@ class UtilStateMergeSubreturnTestcase(TestCase):
         "changes": {},
     }
 
+    @skipIf(True, "FASTTEST skip")
     def test_merge_result(self):
         # result not created if not needed
         for no_effect_result in [True, None]:
@@ -805,6 +807,7 @@ class UtilStateMergeSubreturnTestcase(TestCase):
             res = salt.utils.state.merge_subreturn(m, s)
             self.assertFalse(res["result"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_merge_changes(self):
         # The main changes dict should always already exist,
         # and there should always be a changes dict in the secondary.
@@ -839,6 +842,7 @@ class UtilStateMergeSubreturnTestcase(TestCase):
             {"old": None, "new": "my_resource", "alarms": secondary_changes},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_merge_comments(self):
         main_comment_1 = "First primary comment."
         main_comment_2 = "Second primary comment."
@@ -899,6 +903,7 @@ class UtilStateMergeSubreturnTestcase(TestCase):
         )
         self.assertMultiLineEqual("\n".join(res["comment"]), final_comment)
 
+    @skipIf(True, "FASTTEST skip")
     def test_merge_empty_comments(self):
         # Since the primarysalt.utils.state is in progress,
         # the main comment may be empty, either '' or [].

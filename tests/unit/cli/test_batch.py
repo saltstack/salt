@@ -11,7 +11,7 @@ from salt.cli.batch import Batch
 from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class BatchTestCase(TestCase):
@@ -36,6 +36,7 @@ class BatchTestCase(TestCase):
 
     # get_bnum tests
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_bnum_str(self):
         """
         Tests passing batch value as a number(str)
@@ -44,6 +45,7 @@ class BatchTestCase(TestCase):
         self.batch.minions = ["foo", "bar"]
         self.assertEqual(Batch.get_bnum(self.batch), 2)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_bnum_int(self):
         """
         Tests passing batch value as a number(int)
@@ -52,6 +54,7 @@ class BatchTestCase(TestCase):
         self.batch.minions = ["foo", "bar"]
         self.assertEqual(Batch.get_bnum(self.batch), 2)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_bnum_percentage(self):
         """
         Tests passing batch value as percentage
@@ -60,6 +63,7 @@ class BatchTestCase(TestCase):
         self.batch.minions = ["foo"]
         self.assertEqual(Batch.get_bnum(self.batch), 1)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_bnum_high_percentage(self):
         """
         Tests passing batch value as percentage over 100%
@@ -68,6 +72,7 @@ class BatchTestCase(TestCase):
         self.batch.minions = ["foo", "bar", "baz"]
         self.assertEqual(Batch.get_bnum(self.batch), 4)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_bnum_invalid_batch_data(self):
         """
         Tests when an invalid batch value is passed

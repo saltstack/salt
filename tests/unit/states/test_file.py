@@ -67,6 +67,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         except OSError:
             pass
 
+    @skipIf(True, "FASTTEST skip")
     def test_serialize(self):
         def returner(contents, *args, **kwargs):
             returner.returned = contents
@@ -100,6 +101,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     dataset, indent=8, separators=(",", ": "), sort_keys=True
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_contents_and_contents_pillar(self):
         def returner(contents, *args, **kwargs):
             returner.returned = contents
@@ -117,6 +119,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(False, ret["result"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_contents_pillar_doesnt_add_more_newlines(self):
         # make sure the newline
         pillar_value = "i am the pillar value{0}".format(os.linesep)
@@ -155,6 +158,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             # likely as simple as updating the 2nd index below.
             self.assertEqual(expected, returner.call_args[0][-5])
 
+    @skipIf(True, "FASTTEST skip")
     def test_symlink(self):
         """
         Test to create a symlink.
@@ -508,6 +512,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             )
 
     @skipIf(salt.utils.platform.is_windows(), "Do not run on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_hardlink(self):
         """
         Test to create a hardlink.
@@ -930,6 +935,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             )
 
     # 'absent' function tests: 1
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
         Test to make sure that the named file or directory is absent.
@@ -1027,6 +1033,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
     # 'exists' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_exists(self):
         """
         Test to verify that the named file or directory is present or exists.
@@ -1054,6 +1061,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
     # 'missing' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_missing(self):
         """
         Test to verify that the named file or directory is missing.
@@ -1081,6 +1089,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
     # 'managed' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_file_managed_should_fall_back_to_binary(self):
         expected_contents = b"\x8b"
         filename = "/tmp/blarg"
@@ -1103,6 +1112,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 actual_contents = mock_manage.call_args[0][14]
                 self.assertEqual(actual_contents, expected_contents)
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed(self):
         """
         Test to manage a given file, this function allows for a file to be
@@ -1421,6 +1431,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
     # 'directory' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_directory(self):
         """
         Test to ensure that a named directory is present and has the right perms
@@ -1611,6 +1622,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
     # 'recurse' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_recurse(self):
         """
         Test to recurse through a subdirectory on the master
@@ -1706,6 +1718,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
     # 'replace' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_replace(self):
         """
         Test to maintain an edit in a file.
@@ -1739,6 +1752,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
     # 'blockreplace' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_blockreplace(self):
         """
         Test to maintain an edit in a file in a zone
@@ -1775,6 +1789,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
     # 'comment' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_comment(self):
         """
         Test to comment out specified lines in a file.
@@ -1838,6 +1853,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
     # 'uncomment' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_uncomment(self):
         """
         Test to uncomment specified commented lines in a file
@@ -1898,6 +1914,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
     # 'prepend' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_prepend(self):
         """
         Test to ensure that some text appears at the beginning of a file.
@@ -1983,6 +2000,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
     # 'touch' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_touch(self):
         """
         Test to replicate the 'nix "touch" command to create a new empty
@@ -2028,6 +2046,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
     # 'copy' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_copy(self):
         """
         Test if the source file exists on the system, copy it to the named file.
@@ -2138,6 +2157,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
     # 'rename' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_rename(self):
         """
         Test if the source file exists on the system,
@@ -2254,6 +2274,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
     # 'accumulated' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_accumulated(self):
         """
         Test to prepare accumulator which can be used in template in file.
@@ -2389,6 +2410,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
     # 'mknod' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_mknod(self):
         """
         Test to create a special file similar to the 'nix mknod command.
@@ -2411,6 +2433,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
     # 'mod_run_check_cmd' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_mod_run_check_cmd(self):
         """
         Test to execute the check_cmd logic.
@@ -2431,7 +2454,6 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             self.assertTrue(filestate.mod_run_check_cmd(cmd, filename))
 
     @skipIf(not HAS_DATEUTIL, NO_DATEUTIL_REASON)
-    @skipIf(True, "SLOWTEST skip")
     def test_retention_schedule(self):
         """
         Test to execute the retention_schedule logic.
@@ -2623,6 +2645,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
 class TestFindKeepFiles(TestCase):
     @skipIf(salt.utils.platform.is_windows(), "Do not run on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test__find_keep_files_unix(self):
         keep = filestate._find_keep_files(
             "/test/parent_folder", ["/test/parent_folder/meh.txt"]
@@ -2637,6 +2660,7 @@ class TestFindKeepFiles(TestCase):
         assert actual == expected, actual
 
     @skipIf(not salt.utils.platform.is_windows(), "Only run on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test__find_keep_files_win32(self):
         """
         Test _find_keep_files. The `_find_keep_files` function is only called by
@@ -2669,6 +2693,7 @@ class TestFileTidied(TestCase):
         delattr(filestate, "__opts__")
         delattr(filestate, "__salt__")
 
+    @skipIf(True, "FASTTEST skip")
     def test__tidied(self):
         name = os.sep + "test"
         if salt.utils.platform.is_windows():
@@ -2741,6 +2766,7 @@ class TestFileTidied(TestCase):
         self.assertDictEqual(exp, ret)
         assert remove.call_count == 6
 
+    @skipIf(True, "FASTTEST skip")
     def test__bad_input(self):
         exp = {
             "name": "test/",
@@ -2766,6 +2792,7 @@ class TestFilePrivateFunctions(TestCase, LoaderModuleMockMixin):
 
     @destructiveTest
     @skipIf(salt.utils.platform.is_windows(), "File modes do not exist on windows")
+    @skipIf(True, "FASTTEST skip")
     def test__check_directory(self):
         """
         Test the _check_directory function

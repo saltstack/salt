@@ -13,7 +13,7 @@ import salt.modules.redismod as redismod
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class Mockredis(object):
@@ -278,108 +278,126 @@ class RedismodTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_bgrewriteaof(self):
         """
         Test to asynchronously rewrite the append-only file
         """
         self.assertEqual(redismod.bgrewriteaof(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_bgsave(self):
         """
         Test to asynchronously save the dataset to disk
         """
         self.assertEqual(redismod.bgsave(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_config_get(self):
         """
         Test to get redis server configuration values
         """
         self.assertEqual(redismod.config_get("*"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_config_set(self):
         """
         Test to set redis server configuration values
         """
         self.assertEqual(redismod.config_set("name", "value"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_dbsize(self):
         """
         Test to return the number of keys in the selected database
         """
         self.assertEqual(redismod.dbsize(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete(self):
         """
         Test to deletes the keys from redis, returns number of keys deleted
         """
         self.assertEqual(redismod.delete(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_exists(self):
         """
         Test to return true if the key exists in redis
         """
         self.assertEqual(redismod.exists("key"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_expire(self):
         """
         Test to set a keys time to live in seconds
         """
         self.assertEqual(redismod.expire("key", "seconds"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_expireat(self):
         """
         Test to set a keys expire at given UNIX time
         """
         self.assertEqual(redismod.expireat("key", "timestamp"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_flushall(self):
         """
         Test to remove all keys from all databases
         """
         self.assertEqual(redismod.flushall(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_flushdb(self):
         """
         Test to remove all keys from the selected database
         """
         self.assertEqual(redismod.flushdb(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_key(self):
         """
         Test to get redis key value
         """
         self.assertEqual(redismod.get_key("key"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_hget(self):
         """
         Test to get specific field value from a redis hash, returns dict
         """
         self.assertEqual(redismod.hget("key", "field"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_hgetall(self):
         """
         Test to get all fields and values from a redis hash, returns dict
         """
         self.assertEqual(redismod.hgetall("key"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_info(self):
         """
         Test to get information and statistics about the server
         """
         self.assertEqual(redismod.info(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_keys(self):
         """
         Test to get redis keys, supports glob style patterns
         """
         self.assertEqual(redismod.keys("pattern"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_key_type(self):
         """
         Test to get redis key type
         """
         self.assertEqual(redismod.key_type("key"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_lastsave(self):
         """
         Test to get the UNIX time in seconds of the last successful
@@ -387,18 +405,21 @@ class RedismodTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertTrue(redismod.lastsave())
 
+    @skipIf(True, "FASTTEST skip")
     def test_llen(self):
         """
         Test to get the length of a list in Redis
         """
         self.assertEqual(redismod.llen("key"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_lrange(self):
         """
         Test to get a range of values from a list in Redis
         """
         self.assertEqual(redismod.lrange("key", "start", "stop"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_ping(self):
         """
         Test to ping the server, returns False on connection errors
@@ -407,18 +428,21 @@ class RedismodTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertFalse(redismod.ping())
 
+    @skipIf(True, "FASTTEST skip")
     def test_save(self):
         """
         Test to synchronously save the dataset to disk
         """
         self.assertEqual(redismod.save(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_key(self):
         """
         Test to set redis key value
         """
         self.assertEqual(redismod.set_key("key", "value"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_shutdown(self):
         """
         Test to synchronously save the dataset to disk and then
@@ -430,6 +454,7 @@ class RedismodTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertFalse(redismod.shutdown())
 
+    @skipIf(True, "FASTTEST skip")
     def test_slaveof(self):
         """
         Test to make the server a slave of another instance, or
@@ -437,24 +462,28 @@ class RedismodTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertEqual(redismod.slaveof("master_host", "master_port"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_smembers(self):
         """
         Test to get members in a Redis set
         """
         self.assertListEqual(redismod.smembers("key"), ["A"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_time(self):
         """
         Test to return the current server UNIX time in seconds
         """
         self.assertEqual(redismod.time(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_zcard(self):
         """
         Test to get the length of a sorted set in Redis
         """
         self.assertEqual(redismod.zcard("key"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_zrange(self):
         """
         Test to get a range of values from a sorted set in Redis by index

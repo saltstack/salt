@@ -16,7 +16,7 @@ from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-bui
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 def _isfile_side_effect(path):
@@ -52,6 +52,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_extracted_tar(self):
         """
         archive.extracted tar options
@@ -135,6 +136,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                     ret_opts, cwd=tmp_dir + os.sep, python_shell=False
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_tar_gnutar(self):
         """
         Tests the call of extraction with gnutar
@@ -186,6 +188,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(ret["changes"]["extracted_files"], ["stdout"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_tar_bsdtar(self):
         """
         Tests the call of extraction with bsdtar
@@ -237,6 +240,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(ret["changes"]["extracted_files"], ["stderr"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_extracted_when_if_missing_path_exists(self):
         """
         When if_missing exists, we should exit without making any changes.
@@ -253,6 +257,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(ret["result"], ret)
             self.assertEqual(ret["comment"], "Path {0} exists".format(if_missing))
 
+    @skipIf(True, "FASTTEST skip")
     def test_clean_parent_conflict(self):
         """
         Tests the call of extraction with gnutar with both clean_parent plus clean set to True
@@ -309,6 +314,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(ret["changes"], {})
             self.assertEqual(ret["comment"], ret_comment)
 
+    @skipIf(True, "FASTTEST skip")
     def test_skip_files_list_verify_conflict(self):
         """
         Tests the call of extraction  with both skip_files_list_verify and skip_verify set to True
@@ -368,6 +374,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(ret["changes"], {})
             self.assertEqual(ret["comment"], ret_comment)
 
+    @skipIf(True, "FASTTEST skip")
     def test_skip_files_list_verify_success(self):
         """
         Test that if the local and expected source hash are the same we won't do anything.

@@ -32,6 +32,7 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'add' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_add(self):
         """
         Tests if specified group was added
@@ -46,6 +47,7 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'info' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_info(self):
         """
         Tests the return of group information
@@ -57,6 +59,7 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
 
     # '_format_info' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_format_info(self):
         """
         Tests the formatting of returned group information
@@ -69,6 +72,7 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'getent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_getent(self):
         """
         Tests the return of information on all groups
@@ -80,6 +84,7 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'chgid' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_chgid_gid_same(self):
         """
         Tests if the group id is the same as argument
@@ -88,6 +93,7 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(groupadd, "info", mock):
             self.assertTrue(groupadd.chgid("test", 10))
 
+    @skipIf(True, "FASTTEST skip")
     def test_chgid(self):
         """
         Tests the gid for a named group was changed
@@ -100,6 +106,7 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete(self):
         """
         Tests if the specified group was deleted
@@ -110,6 +117,7 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'adduser' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_adduser(self):
         """
         Tests if specified user gets added in the group.
@@ -152,6 +160,7 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'deluser' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_deluser(self):
         """
         Tests if specified user gets deleted from the group.
@@ -208,6 +217,7 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'deluser' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_members(self):
         """
         Tests if members of the group, get replaced with a provided list.

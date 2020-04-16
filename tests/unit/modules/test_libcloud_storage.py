@@ -86,34 +86,41 @@ class LibcloudStorageModuleTestCase(TestCase, LoaderModuleMockMixin):
 
         return {libcloud_storage: module_globals}
 
+    @skipIf(True, "FASTTEST skip")
     def test_module_creation(self):
         client = libcloud_storage._get_driver("test")
         self.assertFalse(client is None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_init(self):
         with patch("salt.utils.compat.pack_dunder", return_value=False) as dunder:
             libcloud_storage.__init__(None)
             dunder.assert_called_with("salt.modules.libcloud_storage")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_containers(self):
         containers = libcloud_storage.list_containers("test")
         self.assertEqual(len(containers), 1)
         self.assertEqual(containers[0]["name"], "test_container")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_container_objects(self):
         objects = libcloud_storage.list_container_objects("test_container", "test")
         self.assertEqual(len(objects), 1)
         self.assertEqual(objects[0]["name"], "test_obj")
         self.assertEqual(objects[0]["size"], 1234)
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_container(self):
         container = libcloud_storage.create_container("new_test_container", "test")
         self.assertEqual(container["name"], "test_container")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_container(self):
         container = libcloud_storage.get_container("test_container", "test")
         self.assertEqual(container["name"], "test_container")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_container_object(self):
         obj = libcloud_storage.get_container_object(
             "test_container", "test_obj", "test"

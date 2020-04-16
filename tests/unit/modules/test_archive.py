@@ -42,6 +42,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {archive: {"__grains__": {"id": 0}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_tar(self):
         with patch("glob.glob", lambda pathname: [pathname]):
             with patch("salt.utils.path.which", lambda exe: exe):
@@ -94,6 +95,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                         cwd=None,
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_tar_raises_exception_if_not_found(self):
         with patch("salt.utils.path.which", lambda exe: None):
             mock = MagicMock(return_value="salt")
@@ -107,6 +109,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertFalse(mock.called)
 
+    @skipIf(True, "FASTTEST skip")
     def test_gzip(self):
         mock = MagicMock(return_value="salt")
         with patch.dict(archive.__salt__, {"cmd.run": mock}):
@@ -120,6 +123,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                     template=None,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_gzip_raises_exception_if_not_found(self):
         mock = MagicMock(return_value="salt")
         with patch.dict(archive.__salt__, {"cmd.run": mock}):
@@ -129,6 +133,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertFalse(mock.called)
 
+    @skipIf(True, "FASTTEST skip")
     def test_gunzip(self):
         mock = MagicMock(return_value="salt")
         with patch.dict(archive.__salt__, {"cmd.run": mock}):
@@ -142,6 +147,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                     template=None,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_gunzip_raises_exception_if_not_found(self):
         mock = MagicMock(return_value="salt")
         with patch.dict(archive.__salt__, {"cmd.run": mock}):
@@ -153,6 +159,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertFalse(mock.called)
 
+    @skipIf(True, "FASTTEST skip")
     def test_cmd_zip(self):
         with patch("glob.glob", lambda pathname: [pathname]):
             with patch("salt.utils.path.which", lambda exe: exe):
@@ -200,6 +207,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                         cwd=None,
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_zip(self):
         with patch("glob.glob", lambda pathname: [pathname]):
             with patch.multiple(
@@ -221,6 +229,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                     ]
                     self.assertEqual(expected, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_zip_raises_exception_if_not_found(self):
         mock = MagicMock(return_value="salt")
         with patch.dict(archive.__salt__, {"cmd.run": mock}):
@@ -234,6 +243,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertFalse(mock.called)
 
+    @skipIf(True, "FASTTEST skip")
     def test_cmd_unzip(self):
         def _get_mock():
             """
@@ -391,6 +401,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                     template="jinja",
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_unzip(self):
         mock = ZipFileMock()
         with patch("zipfile.ZipFile", mock):
@@ -403,6 +414,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(["salt"], ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_unzip_raises_exception_if_not_found(self):
         mock = MagicMock(return_value="salt")
         with patch.dict(archive.__salt__, {"cmd.run": mock}):
@@ -417,6 +429,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertFalse(mock.called)
 
+    @skipIf(True, "FASTTEST skip")
     def test_rar(self):
         with patch("glob.glob", lambda pathname: [pathname]):
             with patch("salt.utils.path.which", lambda exe: exe):
@@ -462,6 +475,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                         cwd=None,
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_rar_raises_exception_if_not_found(self):
         mock = MagicMock(return_value="salt")
         with patch.dict(archive.__salt__, {"cmd.run": mock}):
@@ -532,6 +546,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                         template=None,
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_unrar_raises_exception_if_not_found(self):
         with patch("salt.utils.path.which_bin", lambda exe: None):
             mock = MagicMock(return_value="salt")
@@ -544,6 +559,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertFalse(mock.called)
 
+    @skipIf(True, "FASTTEST skip")
     def test_trim_files(self):
         with patch("salt.utils.path.which_bin", lambda exe: exe):
             source = "file.tar.gz"

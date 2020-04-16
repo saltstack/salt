@@ -9,7 +9,7 @@ from salt.ext.six import text_type as text
 from salt.utils.sanitizers import clean, mask_args_value
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class SanitizersTestCase(TestCase):
@@ -17,6 +17,7 @@ class SanitizersTestCase(TestCase):
     TestCase for sanitizers
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_sanitized_trim(self):
         """
         Test sanitized input for trimming
@@ -26,6 +27,7 @@ class SanitizersTestCase(TestCase):
         assert response == "sample"
         assert type(response) == text
 
+    @skipIf(True, "FASTTEST skip")
     def test_sanitized_filename(self):
         """
         Test sanitized input for filename
@@ -38,6 +40,7 @@ class SanitizersTestCase(TestCase):
         response = clean.filename(value)
         assert response == "file.txt"
 
+    @skipIf(True, "FASTTEST skip")
     def test_sanitized_hostname(self):
         """
         Test sanitized input for hostname (id)
@@ -48,6 +51,7 @@ class SanitizersTestCase(TestCase):
 
     test_sanitized_id = test_sanitized_hostname
 
+    @skipIf(True, "FASTTEST skip")
     def test_value_masked(self):
         """
         Test if the values are masked.
@@ -56,6 +60,7 @@ class SanitizersTestCase(TestCase):
         out = mask_args_value("quantum: fluctuations", "quant*")
         assert out == "quantum: ** hidden **"
 
+    @skipIf(True, "FASTTEST skip")
     def test_value_not_masked(self):
         """
         Test if the values are not masked.

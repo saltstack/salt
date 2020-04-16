@@ -11,7 +11,7 @@ import tests.support.napalm as napalm_test_support
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 import salt.modules.napalm_probes as napalm_probes  # NOQA
 
@@ -65,22 +65,27 @@ class NapalmProbesModuleTestCase(TestCase, LoaderModuleMockMixin):
 
         return {napalm_probes: module_globals}
 
+    @skipIf(True, "FASTTEST skip")
     def test_probes_config(self):
         ret = napalm_probes.config()
         assert ret["out"] == napalm_test_support.TEST_PROBES_CONFIG
 
+    @skipIf(True, "FASTTEST skip")
     def test_probes_results(self):
         ret = napalm_probes.results()
         assert ret["out"] == napalm_test_support.TEST_PROBES_RESULTS
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_probes(self):
         ret = napalm_probes.set_probes(TEST_PROBES)
         assert ret["result"] is True
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_probes(self):
         ret = napalm_probes.delete_probes(TEST_DELETE_PROBES)
         assert ret["result"] is True
 
+    @skipIf(True, "FASTTEST skip")
     def test_schedule_probes(self):
         ret = napalm_probes.schedule_probes(TEST_SCHEDULE_PROBES)
         assert ret["result"] is True

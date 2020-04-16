@@ -12,7 +12,7 @@ import salt.modules.ipset as ipset
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class IpsetTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class IpsetTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {ipset: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_version(self):
         """
         Test for Return version from ipset --version
@@ -32,6 +33,7 @@ class IpsetTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(ipset.__salt__, {"cmd.run": mock}):
                 self.assertEqual(ipset.version(), "B")
 
+    @skipIf(True, "FASTTEST skip")
     def test_new_set(self):
         """
         Test for Create new custom set
@@ -50,6 +52,7 @@ class IpsetTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(ipset.__salt__, {"cmd.run": mock}):
             self.assertTrue(ipset.new_set("s", "bitmap:ip", range="range"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_set(self):
         """
         Test for Delete ipset set.
@@ -61,6 +64,7 @@ class IpsetTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(ipset.__salt__, {"cmd.run": mock}):
                 self.assertTrue(ipset.delete_set("set", "family"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_rename_set(self):
         """
         Test for Delete ipset set.
@@ -85,6 +89,7 @@ class IpsetTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(ipset.__salt__, {"cmd.run": mock}):
                     self.assertTrue(ipset.rename_set("set", "new_set"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_sets(self):
         """
         Test for List all ipset sets.
@@ -94,6 +99,7 @@ class IpsetTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(ipset.__salt__, {"cmd.run": mock}):
                 self.assertEqual(ipset.list_sets(), [{"A": ""}])
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_set(self):
         """
         Test for Check that given ipset set exists.
@@ -104,6 +110,7 @@ class IpsetTestCase(TestCase, LoaderModuleMockMixin):
             self.assertFalse(ipset.check_set("set"))
             self.assertTrue(ipset.check_set("set"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_add(self):
         """
         Test for Append an entry to the specified set.
@@ -151,6 +158,7 @@ comment support",
                 with patch.dict(ipset.__salt__, {"cmd.run": mock}):
                     self.assertEqual(ipset.add("set", "entry"), "Error: out")
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete(self):
         """
         Test for Delete an entry from the specified set.
@@ -171,6 +179,7 @@ comment support",
                     self.assertEqual(ipset.delete("set", "entry"), "Success")
                     self.assertEqual(ipset.delete("set", "entry"), "Error: A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_check(self):
         """
         Test for Check that an entry exists in the specified set.
@@ -228,6 +237,7 @@ comment support",
                 self.assertTrue(ipset.check("set", "192.168.0.4-192.168.0.5"))
                 self.assertFalse(ipset.check("set", "192.168.0.4-192.168.0.5"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_test(self):
         """
         Test for Test if an entry is in the specified set.
@@ -247,6 +257,7 @@ comment support",
                 self.assertFalse(ipset.test("set", "entry"))
                 self.assertTrue(ipset.test("set", "entry"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_flush(self):
         """
         Test for Flush entries in the specified set

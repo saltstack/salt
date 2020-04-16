@@ -9,13 +9,14 @@ import salt.fileserver.svnfs as svnfs
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class SvnfsFileTest(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {svnfs: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_env_is_exposed(self):
         """
         test _env_is_exposed method when
@@ -27,6 +28,7 @@ class SvnfsFileTest(TestCase, LoaderModuleMockMixin):
         ):
             assert svnfs._env_is_exposed("base")
 
+    @skipIf(True, "FASTTEST skip")
     def test_env_is_exposed_blacklist(self):
         """
         test _env_is_exposed method when

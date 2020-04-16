@@ -9,7 +9,7 @@ import salt.modules.selinux as selinux
 from salt.exceptions import SaltInvocationError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class SelinuxModuleTestCase(TestCase, LoaderModuleMockMixin):
@@ -20,6 +20,7 @@ class SelinuxModuleTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {selinux: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_fcontext_get_policy_parsing(self):
         """
         Test to verify that the parsing of the semanage output into fields is
@@ -86,6 +87,7 @@ class SelinuxModuleTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(ret["sel_type"], case["sel_type"])
                 self.assertEqual(ret["sel_level"], case["sel_level"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_protocol_port_positive(self):
         """
         Test to verify positive parsing name, protocol and port combinations
@@ -123,6 +125,7 @@ class SelinuxModuleTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertTupleEqual(ret, case["expected"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_protocol_port_negative(self):
         """
         Test to verify negative parsing of name, protocol and port combinations
@@ -144,6 +147,7 @@ class SelinuxModuleTestCase(TestCase, LoaderModuleMockMixin):
                 case["port"],
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_port_get_policy_parsing(self):
         """
         Test to verify that the parsing of the semanage port output into fields is correct.

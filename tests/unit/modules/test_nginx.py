@@ -9,7 +9,7 @@ import salt.modules.nginx as nginx
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import Mock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 MOCK_STATUS_OUTPUT = """Active connections: 7
 server accepts handled requests
@@ -34,6 +34,7 @@ class NginxTestCase(TestCase, LoaderModuleMockMixin):
         self.addCleanup(patcher.stop)
         return {nginx: {"_urlopen": Mock(return_value=MockUrllibStatus())}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_nginx_status(self):
         result = nginx.status()
         nginx._urlopen.assert_called_once_with("http://127.0.0.1/status")
@@ -50,6 +51,7 @@ class NginxTestCase(TestCase, LoaderModuleMockMixin):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_nginx_status_with_arg(self):
         other_path = "http://localhost/path"
         result = nginx.status(other_path)

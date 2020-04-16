@@ -15,7 +15,7 @@ from salt.ext import six
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class StatusTestCase(TestCase, LoaderModuleMockMixin):
@@ -69,6 +69,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
 
         return m
 
+    @skipIf(True, "FASTTEST skip")
     def test_uptime_linux(self):
         """
         Test modules.status.uptime function for Linux
@@ -100,6 +101,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
                 with self.assertRaises(CommandExecutionError):
                     status.uptime()
 
+    @skipIf(True, "FASTTEST skip")
     def test_uptime_sunos(self):
         """
         Test modules.status.uptime function for SunOS
@@ -126,6 +128,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
             ret = status.uptime()
             self.assertDictEqual(ret, m.ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_uptime_macos(self):
         """
         Test modules.status.uptime function for macOS
@@ -163,6 +166,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
                 with self.assertRaises(CommandExecutionError):
                     status.uptime()
 
+    @skipIf(True, "FASTTEST skip")
     def test_uptime_return_success_not_supported(self):
         """
         Test modules.status.uptime function for other platforms
@@ -204,6 +208,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
 
         return m
 
+    @skipIf(True, "FASTTEST skip")
     def test_cpustats_openbsd(self):
         """
         Test modules.status.cpustats function for OpenBSD
@@ -248,6 +253,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
 
         return m
 
+    @skipIf(True, "FASTTEST skip")
     def test_cpuinfo_freebsd(self):
         m = self._set_up_test_cpuinfo_bsd()
         sysctl = "hw.model:Intel(R) Core(TM) i5-7287U CPU @ 3.30GHz\nhw.ncpu:4"
@@ -259,6 +265,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
                 ret = status.cpuinfo()
                 self.assertDictEqual(ret, m.ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_cpuinfo_openbsd(self):
         m = self._set_up_test_cpuinfo_bsd()
         sysctl = "hw.model=Intel(R) Core(TM) i5-7287U CPU @ 3.30GHz\nhw.ncpu=4"
@@ -291,6 +298,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
 
         return m
 
+    @skipIf(True, "FASTTEST skip")
     def test_meminfo_openbsd(self):
         m = self._set_up_test_meminfo_openbsd()
         vmstat = (
@@ -355,6 +363,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
 
         return m
 
+    @skipIf(True, "FASTTEST skip")
     def test_w_linux(self):
         m = self._set_up_test_w_linux()
         w_output = "root   pts/1  13:42    0s  0.24s  0.16s nmap -sV 10.2.2.2"
@@ -366,6 +375,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
                 ret = status.w()
                 self.assertListEqual(ret, m.ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_w_bsd(self):
         m = self._set_up_test_w_bsd()
         w_output = "root   p1 10.2.2.1    1:42PM  0 nmap -sV 10.2.2.2"

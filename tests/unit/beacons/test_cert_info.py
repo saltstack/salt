@@ -11,7 +11,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import mock_open, patch
 
 # Salt testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -47,6 +47,7 @@ class CertInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {cert_info: {"__context__": {}, "__salt__": {}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_non_list_config(self):
         config = {}
 
@@ -56,6 +57,7 @@ class CertInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret, (False, "Configuration for cert_info beacon must be a list.")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_empty_config(self):
         config = [{}]
 
@@ -66,6 +68,7 @@ class CertInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
             (False, "Configuration for cert_info beacon must contain files option."),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_cert_information(self):
         with patch("salt.utils.files.fopen", mock_open(read_data=_TEST_CERT)):
             config = [{"files": ["/etc/pki/tls/certs/mycert.pem"], "notify_days": -1}]

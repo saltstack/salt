@@ -12,7 +12,7 @@ import salt.modules.locate as locate
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class LocateTestCase(TestCase, LoaderModuleMockMixin):
@@ -25,6 +25,7 @@ class LocateTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'version' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_version(self):
         """
         Test if it returns the version of locate
@@ -35,6 +36,7 @@ class LocateTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'stats' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_stats(self):
         """
         Test if it returns statistics about the locate database
@@ -58,6 +60,7 @@ class LocateTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'updatedb' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_updatedb(self):
         """
         Test if it updates the locate database
@@ -68,6 +71,7 @@ class LocateTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'locate' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_locate(self):
         """
         Test if it performs a file lookup.

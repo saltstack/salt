@@ -11,7 +11,7 @@ import salt.states.zabbix_template as zabbix_template
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 INPUT_PARAMS = {"applications": [{"name": "Ceph OSD"}]}
 
@@ -128,6 +128,7 @@ class ZabbixTemplateTestCase(TestCase, LoaderModuleMockMixin):
         return {zabbix_template: {}}
 
     @patch("salt.states.zabbix_template.CHANGE_STACK", [])
+    @skipIf(True, "FASTTEST skip")
     def test_present_create(self):
         """
         Test to ensure that named template is created
@@ -175,6 +176,7 @@ class ZabbixTemplateTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertDictEqual(zabbix_template.present(name, {}), ret)
 
     @patch("salt.states.zabbix_template.CHANGE_STACK", [])
+    @skipIf(True, "FASTTEST skip")
     def test_present_exists(self):
         """
         Test to ensure that named template is present and not changed
@@ -216,6 +218,7 @@ class ZabbixTemplateTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertDictEqual(zabbix_template.present(name, {}), ret)
 
     @patch("salt.states.zabbix_template.CHANGE_STACK", [])
+    @skipIf(True, "FASTTEST skip")
     def test_present_update(self):
         """
         Test to ensure that named template is present but must be updated
@@ -258,6 +261,7 @@ class ZabbixTemplateTestCase(TestCase, LoaderModuleMockMixin):
                 }
                 self.assertDictEqual(zabbix_template.present(name, {}), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_test_mode(self):
         """
         Test to ensure that named template is absent in test mode
@@ -279,6 +283,7 @@ class ZabbixTemplateTestCase(TestCase, LoaderModuleMockMixin):
                 }
                 self.assertDictEqual(zabbix_template.absent(name), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
         Test to ensure that named template is absent

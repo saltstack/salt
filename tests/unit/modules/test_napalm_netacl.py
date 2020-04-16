@@ -11,7 +11,7 @@ import tests.support.napalm as napalm_test_support
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 import salt.modules.napalm_netacl as napalm_acl  # NOQA
 
@@ -73,22 +73,27 @@ class NapalmAclModuleTestCase(TestCase, LoaderModuleMockMixin):
 
         return {napalm_acl: module_globals}
 
+    @skipIf(True, "FASTTEST skip")
     def test_load_term_config(self):
         ret = napalm_acl.load_term_config("test_filter", "test_term")
         assert ret["already_configured"] is False
 
+    @skipIf(True, "FASTTEST skip")
     def test_load_filter_config(self):
         ret = napalm_acl.load_filter_config("test_filter", "test_term")
         assert ret["already_configured"] is False
 
+    @skipIf(True, "FASTTEST skip")
     def test_load_policy_config(self):
         ret = napalm_acl.load_policy_config("test_filter", "test_term")
         assert ret["already_configured"] is False
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_filter_pillar(self):
         ret = napalm_acl.get_filter_pillar("test_filter")
         assert ret["test"] == "value"
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_term_pillar(self):
         ret = napalm_acl.get_term_pillar("test_filter", "test_term")
         assert ret["test"] == "value"

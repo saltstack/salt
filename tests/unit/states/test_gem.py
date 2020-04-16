@@ -9,13 +9,14 @@ import salt.states.gem as gem
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class TestGemState(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {gem: {"__opts__": {"test": False}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed(self):
         gems = {"foo": ["1.0"], "bar": ["2.0"]}
         gem_list = MagicMock(return_value=gems)
@@ -57,6 +58,7 @@ class TestGemState(TestCase, LoaderModuleMockMixin):
                     gem_bin=None,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_version(self):
         gems = {"foo": ["1.0"], "bar": ["2.0"]}
         gem_list = MagicMock(return_value=gems)
@@ -70,6 +72,7 @@ class TestGemState(TestCase, LoaderModuleMockMixin):
                     "Installed Gem meets version requirements.", ret["comment"]
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_removed(self):
         gems = ["foo", "bar"]
         gem_list = MagicMock(return_value=gems)
@@ -92,6 +95,7 @@ class TestGemState(TestCase, LoaderModuleMockMixin):
                     "bar", None, runas=None, gem_bin=None
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_sources_add(self):
         gem_sources = ["http://foo", "http://bar"]
         gem_sources_list = MagicMock(return_value=gem_sources)
@@ -115,6 +119,7 @@ class TestGemState(TestCase, LoaderModuleMockMixin):
                     source_uri="http://fui", ruby=None, runas=None
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_sources_remove(self):
         gem_sources = ["http://foo", "http://bar"]
         gem_sources_list = MagicMock(return_value=gem_sources)

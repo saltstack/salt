@@ -12,7 +12,7 @@ import salt.modules.xapi_virt as xapi
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class Mockxapi(object):
@@ -70,6 +70,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {xapi: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_domains(self):
         """
             Test to return a list of domain names on the minion
@@ -77,6 +78,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             self.assertListEqual(xapi.list_domains(), [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_info(self):
         """
             Test to return detailed information about the vms
@@ -86,6 +88,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(xapi, "_get_record_by_label", mock):
                 self.assertDictEqual(xapi.vm_info(True), {True: False})
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_state(self):
         """
             Test to return list of all the vms and their state.
@@ -97,6 +100,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
 
                 self.assertDictEqual(xapi.vm_state(), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_nics(self):
         """
             Test to return info about the network interfaces of a named vm
@@ -113,6 +117,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(xapi, "_get_record", mock):
                     self.assertDictEqual(xapi.get_nics("salt"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_macs(self):
         """
             Test to return a list off MAC addresses from the named vm
@@ -123,6 +128,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertListEqual(xapi.get_macs("salt"), ["a", "b", "c"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_disks(self):
         """
             Test to return the disks of a named vm
@@ -134,6 +140,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
 
                 self.assertDictEqual(xapi.get_disks("salt"), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_setmem(self):
         """
             Test to changes the amount of memory allocated to VM.
@@ -151,6 +158,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(xapi, "_get_label_uuid", mock):
                     self.assertFalse(xapi.setmem("salt", "1"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_setvcpus(self):
         """
             Test to changes the amount of vcpus allocated to VM.
@@ -168,6 +176,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(xapi, "_get_label_uuid", mock):
                     self.assertFalse(xapi.setvcpus("salt", "1"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_vcpu_pin(self):
         """
             Test to Set which CPUs a VCPU can use.
@@ -186,6 +195,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
                     with patch.dict(xapi.__salt__, {"cmd.run": mock}):
                         self.assertTrue(xapi.vcpu_pin("salt", "1", "2"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_freemem(self):
         """
             Test to return an int representing the amount of memory
@@ -195,6 +205,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(xapi, "node_info", mock):
             self.assertEqual(xapi.freemem(), 1024)
 
+    @skipIf(True, "FASTTEST skip")
     def test_freecpu(self):
         """
             Test to return an int representing the number
@@ -204,6 +215,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(xapi, "node_info", mock):
             self.assertEqual(xapi.freecpu(), 1024)
 
+    @skipIf(True, "FASTTEST skip")
     def test_full_info(self):
         """
             Test to return the node_info, vm_info and freemem
@@ -216,6 +228,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
                     xapi.full_info(), {"node_info": "salt", "vm_info": "stack"}
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_shutdown(self):
         """
             Test to send a soft shutdown signal to the named vm
@@ -233,6 +246,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(xapi, "_get_label_uuid", mock):
                     self.assertFalse(xapi.shutdown("salt"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_pause(self):
         """
             Test to pause the named vm
@@ -250,6 +264,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(xapi, "_get_label_uuid", mock):
                     self.assertFalse(xapi.pause("salt"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_resume(self):
         """
             Test to resume the named vm
@@ -267,6 +282,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(xapi, "_get_label_uuid", mock):
                     self.assertFalse(xapi.resume("salt"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_start(self):
         """
             Test to reboot a domain via ACPI request
@@ -275,6 +291,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(xapi, "start", mock):
             self.assertTrue(xapi.start("salt"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_reboot(self):
         """
             Test to reboot a domain via ACPI request
@@ -292,6 +309,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(xapi, "_get_label_uuid", mock):
                     self.assertFalse(xapi.reboot("salt"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_reset(self):
         """
             Test to reset a VM by emulating the
@@ -310,6 +328,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(xapi, "_get_label_uuid", mock):
                     self.assertFalse(xapi.reset("salt"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_migrate(self):
         """
             Test to migrates the virtual machine to another hypervisor
@@ -327,6 +346,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(xapi, "_get_label_uuid", mock):
                     self.assertFalse(xapi.migrate("salt", "stack"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_stop(self):
         """
             Test to Hard power down the virtual machine,
@@ -345,6 +365,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(xapi, "_get_label_uuid", mock):
                     self.assertFalse(xapi.stop("salt"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_hyper(self):
         """
             Test to returns a bool whether or not
@@ -370,6 +391,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
                     with patch.dict(xapi.__salt__, {"cmd.run": mock}):
                         self.assertTrue(xapi.is_hyper())
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_cputime(self):
         """
             Test to Return cputime used by the vms
@@ -388,6 +410,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(xapi, "list_domains", mock):
                 self.assertDictEqual(xapi.vm_cputime(""), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_netstats(self):
         """
             Test to return combined network counters used by the vms
@@ -395,6 +418,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             self.assertDictEqual(xapi.vm_netstats(""), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_vm_diskstats(self):
         """
             Test to return disk usage counters used by the vms

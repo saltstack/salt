@@ -156,10 +156,12 @@ class BotoUtilsTestCaseBase(TestCase, LoaderModuleMockMixin):
 
 
 class BotoUtilsCacheIdTestCase(BotoUtilsTestCaseBase):
+    @skipIf(True, "FASTTEST skip")
     def test_set_and_get_with_no_auth_params(self):
         botomod.cache_id(service, resource_name, resource_id=resource_id)
         self.assertEqual(botomod.cache_id(service, resource_name), resource_id)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_and_get_with_explicit_auth_params(self):
         botomod.cache_id(
             service, resource_name, resource_id=resource_id, **conn_parameters
@@ -168,6 +170,7 @@ class BotoUtilsCacheIdTestCase(BotoUtilsTestCaseBase):
             botomod.cache_id(service, resource_name, **conn_parameters), resource_id
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_and_get_with_different_region_returns_none(self):
         botomod.cache_id(
             service, resource_name, resource_id=resource_id, region="us-east-1"
@@ -176,6 +179,7 @@ class BotoUtilsCacheIdTestCase(BotoUtilsTestCaseBase):
             botomod.cache_id(service, resource_name, region="us-west-2"), None
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_and_get_after_invalidation_returns_none(self):
         botomod.cache_id(service, resource_name, resource_id=resource_id)
         botomod.cache_id(
@@ -183,6 +187,8 @@ class BotoUtilsCacheIdTestCase(BotoUtilsTestCaseBase):
         )
         self.assertEqual(botomod.cache_id(service, resource_name), None)
 
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_partial(self):
         cache_id = botomod.cache_id_func(service)
         cache_id(resource_name, resource_id=resource_id)
@@ -198,16 +204,19 @@ class BotoUtilsCacheIdTestCase(BotoUtilsTestCaseBase):
 )
 class BotoUtilsGetConnTestCase(BotoUtilsTestCaseBase):
     @mock_ec2
+    @skipIf(True, "FASTTEST skip")
     def test_conn_is_cached(self):
         conn = botomod.get_connection(service, **conn_parameters)
         self.assertTrue(conn in botomod.__context__.values())
 
     @mock_ec2
+    @skipIf(True, "FASTTEST skip")
     def test_conn_is_cache_with_profile(self):
         conn = botomod.get_connection(service, profile=conn_parameters)
         self.assertTrue(conn in botomod.__context__.values())
 
     @mock_ec2
+    @skipIf(True, "FASTTEST skip")
     def test_get_conn_with_no_auth_params_raises_invocation_error(self):
         with patch(
             "boto.{0}.connect_to_region".format(service),
@@ -217,6 +226,7 @@ class BotoUtilsGetConnTestCase(BotoUtilsTestCaseBase):
                 botomod.get_connection(service)
 
     @mock_ec2
+    @skipIf(True, "FASTTEST skip")
     def test_get_conn_error_raises_command_execution_error(self):
         with patch(
             "boto.{0}.connect_to_region".format(service),
@@ -226,6 +236,8 @@ class BotoUtilsGetConnTestCase(BotoUtilsTestCaseBase):
                 botomod.get_connection(service)
 
     @mock_ec2
+    @skipIf(True, "FASTTEST skip")
+    @skipIf(True, "FASTTEST skip")
     def test_partial(self):
         get_conn = botomod.get_connection_func(service)
         conn = get_conn(**conn_parameters)
@@ -239,6 +251,7 @@ class BotoUtilsGetConnTestCase(BotoUtilsTestCaseBase):
     " or equal to version {0}".format(required_boto_version),
 )
 class BotoUtilsGetErrorTestCase(BotoUtilsTestCaseBase):
+    @skipIf(True, "FASTTEST skip")
     def test_error_message(self):
         e = BotoServerError("400", "Mocked error", body=error_body)
         r = botomod.get_error(e)
@@ -253,6 +266,7 @@ class BotoUtilsGetErrorTestCase(BotoUtilsTestCaseBase):
         }
         self.assertEqual(r, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_exception_message_with_no_body(self):
         e = BotoServerError("400", "Mocked error")
         r = botomod.get_error(e)
@@ -262,6 +276,7 @@ class BotoUtilsGetErrorTestCase(BotoUtilsTestCaseBase):
         }
         self.assertEqual(r, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_exception_message_with_no_error_in_body(self):
         e = BotoServerError("400", "Mocked error", body=no_error_body)
         r = botomod.get_error(e)
@@ -285,6 +300,7 @@ class BotoUtilsGetErrorTestCase(BotoUtilsTestCaseBase):
     " or equal to version {0}".format(required_boto3_version),
 )
 class BotoBoto3CacheContextCollisionTest(BotoUtilsTestCaseBase):
+    @skipIf(True, "FASTTEST skip")
     def test_context_conflict_between_boto_and_boto3_utils(self):
         botomod.assign_funcs(__name__, "ec2")
         boto3mod.assign_funcs(__name__, "ec2", get_conn_funcname="_get_conn3")

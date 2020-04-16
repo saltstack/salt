@@ -8,7 +8,7 @@ import logging
 from salt.transport import MessageClientPool
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -19,6 +19,7 @@ class MessageClientPoolTest(TestCase):
             self.args = args
             self.kwargs = kwargs
 
+    @skipIf(True, "FASTTEST skip")
     def test_init(self):
         opts = {"sock_pool_size": 10}
         args = (0,)
@@ -33,6 +34,7 @@ class MessageClientPoolTest(TestCase):
             self.assertEqual(message_client.args, args)
             self.assertEqual(message_client.kwargs, kwargs)
 
+    @skipIf(True, "FASTTEST skip")
     def test_init_without_config(self):
         opts = {}
         args = (0,)
@@ -46,6 +48,7 @@ class MessageClientPoolTest(TestCase):
             self.assertEqual(message_client.args, args)
             self.assertEqual(message_client.kwargs, kwargs)
 
+    @skipIf(True, "FASTTEST skip")
     def test_init_less_than_one(self):
         opts = {"sock_pool_size": -1}
         args = (0,)

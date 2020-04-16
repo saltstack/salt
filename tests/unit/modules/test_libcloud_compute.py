@@ -223,10 +223,12 @@ class LibcloudComputeModuleTestCase(TestCase, LoaderModuleMockMixin):
 
         return {libcloud_compute: module_globals}
 
+    @skipIf(True, "FASTTEST skip")
     def test_module_creation(self):
         client = libcloud_compute._get_driver("test")
         self.assertFalse(client is None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_init(self):
         with patch("salt.utils.compat.pack_dunder", return_value=False) as dunder:
             libcloud_compute.__init__(None)
@@ -270,139 +272,169 @@ class LibcloudComputeModuleTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(key["fingerprint"], "abc123")
         self.assertEqual(key["extra"], {"ex_key": "ex_value"})
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_nodes(self):
         nodes = libcloud_compute.list_nodes("test")
         self.assertEqual(len(nodes), 1)
         self._validate_node(nodes[0])
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_sizes(self):
         sizes = libcloud_compute.list_sizes("test")
         self.assertEqual(len(sizes), 1)
         self._validate_size(sizes[0])
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_sizes_location(self):
         sizes = libcloud_compute.list_sizes("test", location_id="test_location")
         self.assertEqual(len(sizes), 1)
         self._validate_size(sizes[0])
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_locations(self):
         locations = libcloud_compute.list_locations("test")
         self.assertEqual(len(locations), 1)
         self._validate_location(locations[0])
 
+    @skipIf(True, "FASTTEST skip")
     def test_reboot_node(self):
         result = libcloud_compute.reboot_node("test_id", "test")
         self.assertTrue(result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_reboot_node_invalid(self):
         with self.assertRaises(ValueError):
             libcloud_compute.reboot_node("foo_node", "test")
 
+    @skipIf(True, "FASTTEST skip")
     def test_destroy_node(self):
         result = libcloud_compute.destroy_node("test_id", "test")
         self.assertTrue(result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_destroy_node_invalid(self):
         with self.assertRaises(ValueError):
             libcloud_compute.destroy_node("foo_node", "test")
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_volumes(self):
         volumes = libcloud_compute.list_volumes("test")
         self.assertEqual(len(volumes), 1)
         self._validate_volume(volumes[0])
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_volume_snapshots(self):
         volumes = libcloud_compute.list_volume_snapshots("vol1", "test")
         self.assertEqual(len(volumes), 1)
         self._validate_volume_snapshot(volumes[0])
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_volume(self):
         volume = libcloud_compute.create_volume(9000, "test_new_volume", "test")
         self._validate_volume(volume)
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_volume_in_location(self):
         volume = libcloud_compute.create_volume(
             9000, "test_new_volume", "test", location_id="test_location"
         )
         self._validate_volume(volume)
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_volume_snapshot(self):
         snapshot = libcloud_compute.create_volume_snapshot("vol1", "test")
         self._validate_volume_snapshot(snapshot)
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_volume_snapshot_named(self):
         snapshot = libcloud_compute.create_volume_snapshot(
             "vol1", "test", name="test_snapshot"
         )
         self._validate_volume_snapshot(snapshot)
 
+    @skipIf(True, "FASTTEST skip")
     def test_attach_volume(self):
         result = libcloud_compute.attach_volume("test_id", "vol1", "test")
         self.assertTrue(result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_detatch_volume(self):
         result = libcloud_compute.detach_volume("vol1", "test")
         self.assertTrue(result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_destroy_volume(self):
         result = libcloud_compute.destroy_volume("vol1", "test")
         self.assertTrue(result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_destroy_volume_snapshot(self):
         result = libcloud_compute.destroy_volume_snapshot("vol1", "snap1", "test")
         self.assertTrue(result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_images(self):
         images = libcloud_compute.list_images("test")
         self.assertEqual(len(images), 1)
         self._validate_image(images[0])
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_images_in_location(self):
         images = libcloud_compute.list_images("test", location_id="test_location")
         self.assertEqual(len(images), 1)
         self._validate_image(images[0])
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_image(self):
         image = libcloud_compute.create_image("test_id", "new_image", "test")
         self._validate_image(image)
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_image(self):
         result = libcloud_compute.delete_image("image1", "test")
         self.assertTrue(result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_image(self):
         image = libcloud_compute.get_image("image1", "test")
         self._validate_image(image)
 
+    @skipIf(True, "FASTTEST skip")
     def test_copy_image(self):
         new_image = libcloud_compute.copy_image(
             "us-east1", "image1", "copy_test", "test"
         )
         self._validate_image(new_image)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_key_pairs(self):
         keys = libcloud_compute.list_key_pairs("test")
         self.assertEqual(len(keys), 1)
         self._validate_key_pair(keys[0])
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_key_pair(self):
         key = libcloud_compute.get_key_pair("test_key", "test")
         self._validate_key_pair(key)
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_key_pair(self):
         key = libcloud_compute.create_key_pair("test_key", "test")
         self._validate_key_pair(key)
 
+    @skipIf(True, "FASTTEST skip")
     def test_import_key_string(self):
         key = libcloud_compute.import_key_pair("test_key", "test_key_value", "test")
         self._validate_key_pair(key)
 
+    @skipIf(True, "FASTTEST skip")
     def test_import_key_file(self):
         key = libcloud_compute.import_key_pair(
             "test_key", "/path/to/key", "test", key_type="FILE"
         )
         self._validate_key_pair(key)
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_key_pair(self):
         result = libcloud_compute.delete_key_pair("test_key", "test")
         self.assertTrue(result)

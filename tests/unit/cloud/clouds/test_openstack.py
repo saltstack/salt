@@ -15,7 +15,7 @@ from salt.cloud.clouds import openstack
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MockImage(object):
@@ -76,11 +76,13 @@ class OpenstackTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_configured_provider_bad(self):
         with patch.dict(openstack.__opts__, {"providers": {}}):
             result = openstack.get_configured_provider()
             self.assertEqual(result, False)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_configured_provider_auth(self):
         config = {
             "region_name": "westeros",
@@ -93,6 +95,7 @@ class OpenstackTestCase(TestCase, LoaderModuleMockMixin):
             result = openstack.get_configured_provider()
             self.assertEqual(config, result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_configured_provider_cloud(self):
         config = {
             "region_name": "westeros",
@@ -105,18 +108,21 @@ class OpenstackTestCase(TestCase, LoaderModuleMockMixin):
             result = openstack.get_configured_provider()
             self.assertEqual(config, result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_dependencies(self):
         HAS_SHADE = (True, "Please install newer version of shade: >= 1.19.0")
         with patch("salt.cloud.clouds.openstack.HAS_SHADE", HAS_SHADE):
             result = openstack.get_dependencies()
             self.assertEqual(result, True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_dependencies_no_shade(self):
         HAS_SHADE = (False, "Install pypi module shade >= 1.19.0")
         with patch("salt.cloud.clouds.openstack.HAS_SHADE", HAS_SHADE):
             result = openstack.get_dependencies()
             self.assertEqual(result, False)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_nodes_full_image_str(self):
         node_image = "node image"
         conn = MockConn(node_image)
@@ -124,12 +130,14 @@ class OpenstackTestCase(TestCase, LoaderModuleMockMixin):
             ret = openstack.list_nodes_full(conn=conn)
             self.assertEqual(ret[conn.node.name]["image"], node_image)
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_nodes_full_image_obj(self):
         conn = MockConn(MockImage())
         with patch("salt.cloud.clouds.openstack._get_ips", return_value=[]):
             ret = openstack.list_nodes_full(conn=conn)
             self.assertEqual(ret[conn.node.name]["image"], MockImage.name)
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_instance(self):
         conn = MockConn(MockImage())
         with patch("salt.cloud.clouds.openstack._get_ips", return_value=[]):

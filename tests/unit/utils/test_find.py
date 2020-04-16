@@ -23,6 +23,7 @@ from tests.support.unit import TestCase, skipIf
 
 
 class TestFind(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_parse_interval(self):
         self.assertRaises(ValueError, salt.utils.find._parse_interval, "w")
         self.assertRaises(ValueError, salt.utils.find._parse_interval, "1")
@@ -84,6 +85,7 @@ class TestFind(TestCase):
         self.assertEqual(resolution, 86400)
         self.assertEqual(modifier, "-")
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_size(self):
         self.assertRaises(ValueError, salt.utils.find._parse_size, "")
         self.assertRaises(ValueError, salt.utils.find._parse_size, "1s1s")
@@ -127,22 +129,26 @@ class TestFind(TestCase):
         self.assertEqual(min_size, 1048576)
         self.assertEqual(max_size, sys.maxsize)
 
+    @skipIf(True, "FASTTEST skip")
     def test_option_requires(self):
         option = salt.utils.find.Option()
         self.assertEqual(option.requires(), salt.utils.find._REQUIRES_PATH)
 
+    @skipIf(True, "FASTTEST skip")
     def test_name_option_match(self):
         option = salt.utils.find.NameOption("name", "*.txt")
         self.assertIs(option.match("", "", ""), None)
         self.assertIs(option.match("", "hello.txt", "").group(), "hello.txt")
         self.assertIs(option.match("", "HELLO.TXT", ""), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_iname_option_match(self):
         option = salt.utils.find.InameOption("name", "*.txt")
         self.assertIs(option.match("", "", ""), None)
         self.assertIs(option.match("", "hello.txt", "").group(), "hello.txt")
         self.assertIs(option.match("", "HELLO.TXT", "").group(), "HELLO.TXT")
 
+    @skipIf(True, "FASTTEST skip")
     def test_regex_option_match(self):
         self.assertRaises(ValueError, salt.utils.find.RegexOption, "name", "(.*}")
 
@@ -151,6 +157,7 @@ class TestFind(TestCase):
         self.assertIs(option.match("", "hello.txt", "").group(), "hello.txt")
         self.assertIs(option.match("", "HELLO.TXT", ""), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_iregex_option_match(self):
         self.assertRaises(ValueError, salt.utils.find.IregexOption, "name", "(.*}")
 
@@ -159,12 +166,14 @@ class TestFind(TestCase):
         self.assertIs(option.match("", "hello.txt", "").group(), "hello.txt")
         self.assertIs(option.match("", "HELLO.TXT", "").group(), "HELLO.TXT")
 
+    @skipIf(True, "FASTTEST skip")
     def test_type_option_requires(self):
         self.assertRaises(ValueError, salt.utils.find.TypeOption, "type", "w")
 
         option = salt.utils.find.TypeOption("type", "d")
         self.assertEqual(option.requires(), salt.utils.find._REQUIRES_STAT)
 
+    @skipIf(True, "FASTTEST skip")
     def test_type_option_match(self):
         option = salt.utils.find.TypeOption("type", "b")
         self.assertEqual(option.match("", "", [stat.S_IFREG]), False)
@@ -206,6 +215,7 @@ class TestFind(TestCase):
         self.assertEqual(option.match("", "", [stat.S_IFSOCK]), True)
 
     @skipIf(sys.platform.startswith("win"), "pwd not available on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_owner_option_requires(self):
         self.assertRaises(ValueError, salt.utils.find.OwnerOption, "owner", "notexist")
 
@@ -213,6 +223,7 @@ class TestFind(TestCase):
         self.assertEqual(option.requires(), salt.utils.find._REQUIRES_STAT)
 
     @skipIf(sys.platform.startswith("win"), "pwd not available on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_owner_option_match(self):
         option = salt.utils.find.OwnerOption("owner", "root")
         self.assertEqual(option.match("", "", [0] * 5), True)
@@ -221,6 +232,7 @@ class TestFind(TestCase):
         self.assertEqual(option.match("", "", [500] * 5), True)
 
     @skipIf(sys.platform.startswith("win"), "grp not available on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_group_option_requires(self):
         self.assertRaises(ValueError, salt.utils.find.GroupOption, "group", "notexist")
 
@@ -232,6 +244,7 @@ class TestFind(TestCase):
         self.assertEqual(option.requires(), salt.utils.find._REQUIRES_STAT)
 
     @skipIf(sys.platform.startswith("win"), "grp not available on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_group_option_match(self):
         if sys.platform.startswith(("darwin", "freebsd", "openbsd")):
             group_name = "wheel"
@@ -243,12 +256,14 @@ class TestFind(TestCase):
         option = salt.utils.find.GroupOption("group", "500")
         self.assertEqual(option.match("", "", [500] * 6), True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_size_option_requires(self):
         self.assertRaises(ValueError, salt.utils.find.SizeOption, "size", "1s1s")
 
         option = salt.utils.find.SizeOption("size", "+1G")
         self.assertEqual(option.requires(), salt.utils.find._REQUIRES_STAT)
 
+    @skipIf(True, "FASTTEST skip")
     def test_size_option_match(self):
         option = salt.utils.find.SizeOption("size", "+1k")
         self.assertEqual(option.match("", "", [10000] * 7), True)
@@ -256,12 +271,14 @@ class TestFind(TestCase):
         option = salt.utils.find.SizeOption("size", "+1G")
         self.assertEqual(option.match("", "", [10000] * 7), False)
 
+    @skipIf(True, "FASTTEST skip")
     def test_mtime_option_requires(self):
         self.assertRaises(ValueError, salt.utils.find.MtimeOption, "mtime", "4g")
 
         option = salt.utils.find.MtimeOption("mtime", "1d")
         self.assertEqual(option.requires(), salt.utils.find._REQUIRES_STAT)
 
+    @skipIf(True, "FASTTEST skip")
     def test_mtime_option_match(self):
         option = salt.utils.find.MtimeOption("mtime", "-1w")
         self.assertEqual(option.match("", "", [1] * 9), False)
@@ -279,6 +296,7 @@ class TestGrepOption(TestCase):
         shutil.rmtree(self.tmpdir)
         super(TestGrepOption, self).tearDown()
 
+    @skipIf(True, "FASTTEST skip")
     def test_grep_option_requires(self):
         self.assertRaises(ValueError, salt.utils.find.GrepOption, "grep", "(foo)|(bar}")
 
@@ -288,6 +306,7 @@ class TestGrepOption(TestCase):
             option.requires(), (find._REQUIRES_CONTENTS | find._REQUIRES_STAT)
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_grep_option_match_regular_file(self):
         hello_file = os.path.join(self.tmpdir, "hello.txt")
         with salt.utils.files.fopen(hello_file, "w") as fp_:
@@ -303,6 +322,7 @@ class TestGrepOption(TestCase):
         )
 
     @skipIf(sys.platform.startswith("win"), "No /dev/null on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_grep_option_match_dev_null(self):
         option = salt.utils.find.GrepOption("grep", "foo")
         self.assertEqual(option.match("dev", "null", os.stat("/dev/null")), None)
@@ -317,12 +337,14 @@ class TestPrintOption(TestCase):
         shutil.rmtree(self.tmpdir)
         super(TestPrintOption, self).tearDown()
 
+    @skipIf(True, "FASTTEST skip")
     def test_print_option_defaults(self):
         option = salt.utils.find.PrintOption("print", "")
         self.assertEqual(option.need_stat, False)
         self.assertEqual(option.print_title, False)
         self.assertEqual(option.fmt, ["path"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_print_option_requires(self):
         option = salt.utils.find.PrintOption("print", "")
         self.assertEqual(option.requires(), salt.utils.find._REQUIRES_PATH)
@@ -342,6 +364,7 @@ class TestPrintOption(TestCase):
         option = salt.utils.find.PrintOption("print", "path user")
         self.assertEqual(option.requires(), salt.utils.find._REQUIRES_STAT)
 
+    @skipIf(True, "FASTTEST skip")
     def test_print_option_execute(self):
         hello_file = os.path.join(self.tmpdir, "hello.txt")
         with salt.utils.files.fopen(hello_file, "w") as fp_:
@@ -383,6 +406,7 @@ class TestPrintOption(TestCase):
         self.assertEqual(option.execute("test_name", [0] * 9), [0, "test_name"])
 
     @skipIf(sys.platform.startswith("win"), "pwd not available on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_print_user(self):
         option = salt.utils.find.PrintOption("print", "user")
         self.assertEqual(option.execute("", [0] * 10), "root")
@@ -391,6 +415,7 @@ class TestPrintOption(TestCase):
         self.assertEqual(option.execute("", [2 ** 31] * 10), 2 ** 31)
 
     @skipIf(sys.platform.startswith("win"), "grp not available on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_print_group(self):
         option = salt.utils.find.PrintOption("print", "group")
         if sys.platform.startswith(("darwin", "freebsd", "openbsd")):
@@ -404,6 +429,7 @@ class TestPrintOption(TestCase):
         # self.assertEqual(option.execute('', [2 ** 31] * 10), 2 ** 31)
 
     @skipIf(sys.platform.startswith("win"), "no /dev/null on windows")
+    @skipIf(True, "FASTTEST skip")
     def test_print_md5(self):
         option = salt.utils.find.PrintOption("print", "md5")
         self.assertEqual(option.execute("/dev/null", os.stat("/dev/null")), "")
@@ -419,6 +445,7 @@ class TestFinder(TestCase):
         super(TestFinder, self).tearDown()
 
     @skipIf(sys.platform.startswith("win"), "No /dev/null on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_init(self):
         finder = salt.utils.find.Finder({})
         self.assertEqual(
@@ -526,6 +553,7 @@ class TestFinder(TestCase):
         )
         self.assertEqual(finder.criteria, [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_find(self):
         hello_file = os.path.join(self.tmpdir, "hello.txt")
         with salt.utils.files.fopen(hello_file, "w") as fp_:

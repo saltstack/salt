@@ -11,13 +11,14 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {assistive: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_assistive_bundle(self):
         """
         Test installing a bundle ID as being allowed to run with assistive access
@@ -27,6 +28,7 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(assistive.__grains__, {"osrelease": "10.11.3"}):
                 self.assertTrue(assistive.install("foo"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_assistive_error(self):
         """
         Test installing a bundle ID as being allowed to run with assistive access
@@ -36,6 +38,7 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(assistive.__grains__, {"osrelease": "10.11.3"}):
                 self.assertRaises(CommandExecutionError, assistive.install, "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_bundle(self):
         """
         Test checking to see if a bundle id is installed as being able to use assistive access
@@ -46,6 +49,7 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(assistive.installed("foo"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed_bundle_not(self):
         """
         Test checking to see if a bundle id is installed as being able to use assistive access
@@ -56,6 +60,7 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertFalse(assistive.installed("foo"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_enable_assistive(self):
         """
         Test enabling a bundle ID as being allowed to run with assistive access
@@ -67,6 +72,7 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(assistive.enable("foo", True))
 
+    @skipIf(True, "FASTTEST skip")
     def test_enable_error(self):
         """
         Test enabled a bundle ID that throws a command error
@@ -78,6 +84,7 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertRaises(CommandExecutionError, assistive.enable, "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_enable_false(self):
         """
         Test return of enable function when app isn't found.
@@ -88,6 +95,7 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertFalse(assistive.enable("foo"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_enabled_assistive(self):
         """
         Test enabling a bundle ID as being allowed to run with assistive access
@@ -98,6 +106,7 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(assistive.enabled("foo"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_enabled_assistive_false(self):
         """
         Test if a bundle ID is disabled for assistive access
@@ -108,6 +117,7 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertFalse(assistive.enabled("foo"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_assistive(self):
         """
         Test removing an assitive bundle.
@@ -116,6 +126,7 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(assistive.__salt__, {"cmd.run_all": mock_ret}):
             self.assertTrue(assistive.remove("foo"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_assistive_error(self):
         """
         Test removing an assitive bundle.
@@ -124,6 +135,7 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(assistive.__salt__, {"cmd.run_all": mock_ret}):
             self.assertRaises(CommandExecutionError, assistive.remove, "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_assistive_access(self):
         """
         Test if a bundle ID is enabled for assistive access
@@ -137,6 +149,7 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(assistive.__salt__, {"cmd.run_all": mock_ret}):
             self.assertEqual(assistive._get_assistive_access(), expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_assistive_access_error(self):
         """
         Test a CommandExecutionError is raised when something goes wrong.

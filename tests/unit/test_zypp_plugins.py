@@ -43,6 +43,7 @@ class ZyppPluginsTestCase(TestCase):
         not os.path.exists(ZYPPNOTIFY_FILE),
         "Required file '{}' does not exist.".format(ZYPPNOTIFY_FILE),
     )
+    @skipIf(True, "FASTTEST skip")
     def test_drift_detector(self):
         """
         Test drift detector for a correct cookie file.

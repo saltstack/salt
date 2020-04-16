@@ -87,6 +87,7 @@ class CloudUtilsTestCase(TestCase):
             shutil.rmtree(cls.gpg_keydir)
         del cls.gpg_keydir
 
+    @skipIf(True, "FASTTEST skip")
     def test_ssh_password_regex(self):
         """Test matching ssh password patterns"""
         for pattern in (
@@ -105,6 +106,7 @@ class CloudUtilsTestCase(TestCase):
                 cloud.SSH_PASSWORD_PROMP_RE.match(pattern.lower().strip()), None
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test__save_password_in_keyring(self):
         """
         Test storing password in the keyring
@@ -125,6 +127,7 @@ class CloudUtilsTestCase(TestCase):
         )
         self.assertEqual(stored_pw, "fake_password_c8231")
 
+    @skipIf(True, "FASTTEST skip")
     def test_retrieve_password_from_keyring(self):
         # Late import
         import keyring
@@ -139,6 +142,7 @@ class CloudUtilsTestCase(TestCase):
         )
         self.assertEqual(pw_in_keyring, "fake_password_c8231")
 
+    @skipIf(True, "FASTTEST skip")
     def test_sftp_file_with_content_under_python3(self):
         with self.assertRaises(Exception) as context:
             cloud.sftp_file("/tmp/test", "ТЕСТ test content")
@@ -149,6 +153,7 @@ class CloudUtilsTestCase(TestCase):
         )
 
     @skipIf(salt.utils.platform.is_windows(), "Not applicable to Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_check_key_path_and_mode(self):
         with tempfile.NamedTemporaryFile() as f:
             key_file = f.name

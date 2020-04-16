@@ -75,6 +75,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'ping' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_ping(self):
         """
         Test if it performs a ping to a host.
@@ -85,6 +86,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'netstat' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_netstat(self):
         """
         Test if it return information on open ports and states
@@ -118,6 +120,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'traceroute' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_traceroute(self):
         """
         Test if it performs a traceroute to a 3rd party host
@@ -161,6 +164,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'nslookup' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_nslookup(self):
         """
         Test if it query DNS for information about a domain or ip address
@@ -187,6 +191,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'dig' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_dig(self):
         """
         Test if it performs a DNS lookup with dig
@@ -198,6 +203,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
     # 'interfaces_names' function tests: 1
 
     @skipIf(not HAS_WMI, "WMI only available on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_interfaces_names(self):
         """
         Test if it return a list of all the interfaces names
@@ -212,6 +218,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'interfaces' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_interfaces(self):
         """
         Test if it return information about all the interfaces on the minion
@@ -223,6 +230,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'hw_addr' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_hw_addr(self):
         """
         Test if it return the hardware address (a.k.a. MAC address)
@@ -235,6 +243,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'subnets' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_subnets(self):
         """
         Test if it returns a list of subnets to which the host belongs
@@ -246,6 +255,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'in_subnet' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_in_subnet(self):
         """
         Test if it returns True if host is within specified subnet,
@@ -258,6 +268,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_route' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_route(self):
         """
         Test if it return information on open ports and states

@@ -18,7 +18,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, mock_open, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class CpTestCase(TestCase, LoaderModuleMockMixin):
@@ -29,6 +29,7 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {cp: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test__render_filenames_undefined_template(self):
         """
         Test if _render_filenames fails upon getting a template not in
@@ -43,6 +44,7 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
             CommandExecutionError, cp._render_filenames, path, dest, saltenv, template
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test__render_filenames_render_failed(self):
         """
         Test if _render_filenames fails when template rendering fails.
@@ -64,6 +66,7 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
                     template,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test__render_filenames_success(self):
         """
         Test if _render_filenames succeeds.
@@ -81,6 +84,7 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
                     cp._render_filenames(path, dest, saltenv, template), ret
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_file_not_found(self):
         """
         Test if get_file can't find the file.
@@ -91,6 +95,7 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
             ret = ""
             self.assertEqual(cp.get_file(path, dest), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_file_str_success(self):
         """
         Test if get_file_str succeeds.
@@ -104,6 +109,7 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
             with patch("salt.modules.cp.cache_file", MagicMock(return_value=dest)):
                 self.assertEqual(cp.get_file_str(path, dest), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_push_non_absolute_path(self):
         """
         Test if push fails on a non absolute path.
@@ -113,6 +119,7 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(cp.push(path), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_push_dir_non_absolute_path(self):
         """
         Test if push_dir fails on a non absolute path.
@@ -122,6 +129,7 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(cp.push_dir(path), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_push(self):
         """
         Test if push works with good posix path.

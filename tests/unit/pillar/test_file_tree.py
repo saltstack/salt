@@ -21,7 +21,7 @@ from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 MINION_ID = "test-host"
 NODEGROUP_PATH = os.path.join("nodegroups", "test-group", "files")
@@ -103,6 +103,7 @@ class FileTreePillarTestCase(TestCase, LoaderModuleMockMixin):
                 data_file.write(salt.utils.stringutils.to_str(FILE_DATA[filename]))
         return pillar_path
 
+    @skipIf(True, "FASTTEST skip")
     def test_absolute_path(self):
         "check file tree is imported correctly with an absolute path"
         absolute_path = os.path.join(self.pillar_path, "base")
@@ -117,6 +118,7 @@ class FileTreePillarTestCase(TestCase, LoaderModuleMockMixin):
                 mypillar = file_tree.ext_pillar(MINION_ID, None, absolute_path)
                 self.assertEqual(BASE_PILLAR_CONTENT, mypillar)
 
+    @skipIf(True, "FASTTEST skip")
     def test_relative_path(self):
         "check file tree is imported correctly with a relative path"
         with patch(
@@ -130,6 +132,7 @@ class FileTreePillarTestCase(TestCase, LoaderModuleMockMixin):
                 mypillar = file_tree.ext_pillar(MINION_ID, None, ".")
                 self.assertEqual(DEV_PILLAR_CONTENT, mypillar)
 
+    @skipIf(True, "FASTTEST skip")
     def test_parent_path(self):
         "check if file tree is merged correctly with a .. path"
         with patch(
@@ -140,6 +143,7 @@ class FileTreePillarTestCase(TestCase, LoaderModuleMockMixin):
                 mypillar = file_tree.ext_pillar(MINION_ID, None, "..")
                 self.assertEqual(PARENT_PILLAR_CONTENT, mypillar)
 
+    @skipIf(True, "FASTTEST skip")
     def test_no_pillarenv(self):
         "confirm that file_tree yells when pillarenv is missing for a relative path"
         with patch(

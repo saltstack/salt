@@ -33,6 +33,7 @@ class QueueTest(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_insert_runner(self):
         queue_insert = MagicMock(return_value=True)
         with patch.object(queue_mod, "insert", queue_insert):
@@ -44,7 +45,6 @@ class QueueTest(TestCase, LoaderModuleMockMixin):
         }
         queue_insert.assert_called_once_with(**expected_call)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_process_runner(self):
         ret = [{"fun": "test.stdout_print", "args": [], "kwargs": {}}]
 

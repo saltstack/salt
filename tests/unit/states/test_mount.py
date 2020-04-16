@@ -13,7 +13,7 @@ import salt.states.mount as mount
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MountTestCase(TestCase, LoaderModuleMockMixin):
@@ -26,6 +26,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'mounted' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_mounted(self):
         """
         Test to verify that a device is mounted.
@@ -298,6 +299,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'swap' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_swap(self):
         """
         Test to activates a swap device.
@@ -477,6 +479,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'unmounted' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_unmounted(self):
         """
         Test to verify that a device is not mounted
@@ -592,6 +595,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'mod_watch' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_mod_watch(self):
         """
         Test the mounted watcher, called to invoke the watch command.
@@ -607,6 +611,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertDictEqual(mount.mod_watch(name, sfun="unmount"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_mounted_multiple_mounts(self):
         """
         Test to verify that a device is mounted.
@@ -668,24 +673,28 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                             mount.mounted(name2, device2, fstype2, opts=[]), ret
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test__convert_to_fast_none(self):
         """
         Test the device name conversor
         """
         assert mount._convert_to("/dev/sda1", None) == "/dev/sda1"
 
+    @skipIf(True, "FASTTEST skip")
     def test__convert_to_fast_device(self):
         """
         Test the device name conversor
         """
         assert mount._convert_to("/dev/sda1", "device") == "/dev/sda1"
 
+    @skipIf(True, "FASTTEST skip")
     def test__convert_to_fast_token(self):
         """
         Test the device name conversor
         """
         assert mount._convert_to("LABEL=home", "label") == "LABEL=home"
 
+    @skipIf(True, "FASTTEST skip")
     def test__convert_to_device_none(self):
         """
         Test the device name conversor
@@ -697,6 +706,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
             assert mount._convert_to("/dev/sda1", "uuid") is None
             salt_mock["disk.blkid"].assert_called_with("/dev/sda1")
 
+    @skipIf(True, "FASTTEST skip")
     def test__convert_to_device_token(self):
         """
         Test the device name conversor
@@ -710,6 +720,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
             assert mount._convert_to("/dev/sda1", "uuid") == uuid
             salt_mock["disk.blkid"].assert_called_with("/dev/sda1")
 
+    @skipIf(True, "FASTTEST skip")
     def test__convert_to_token_device(self):
         """
         Test the device name conversor
@@ -723,6 +734,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
             assert mount._convert_to(uuid, "device") == "/dev/sda1"
             salt_mock["disk.blkid"].assert_called_with(token=uuid)
 
+    @skipIf(True, "FASTTEST skip")
     def test_fstab_present_macos_test_present(self):
         """
         Test fstab_present
@@ -751,6 +763,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 not_change=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_fstab_present_aix_test_present(self):
         """
         Test fstab_present
@@ -781,6 +794,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 not_change=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_fstab_present_test_present(self):
         """
         Test fstab_present
@@ -812,6 +826,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 not_change=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_fstab_present_test_new(self):
         """
         Test fstab_present
@@ -843,6 +858,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 not_change=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_fstab_present_test_change(self):
         """
         Test fstab_present
@@ -874,6 +890,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 not_change=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_fstab_present_test_error(self):
         """
         Test fstab_present
@@ -905,6 +922,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 not_change=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_fstab_present_macos_present(self):
         """
         Test fstab_present
@@ -932,6 +950,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 not_change=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_fstab_present_aix_present(self):
         """
         Test fstab_present
@@ -961,6 +980,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 not_change=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_fstab_present_present(self):
         """
         Test fstab_present
@@ -991,6 +1011,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 not_change=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_fstab_present_new(self):
         """
         Test fstab_present
@@ -1021,6 +1042,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 not_change=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_fstab_present_change(self):
         """
         Test fstab_present
@@ -1051,6 +1073,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 not_change=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_fstab_present_fail(self):
         """
         Test fstab_present
@@ -1081,6 +1104,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 not_change=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_fstab_absent_macos_test_absent(self):
         """
         Test fstab_absent
@@ -1101,6 +1125,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
             assert mount.fstab_absent("/dev/sda1", "/home") == ret
             salt_mock["mount.automaster"].assert_called_with("/etc/auto_salt")
 
+    @skipIf(True, "FASTTEST skip")
     def test_fstab_absent_aix_test_absent(self):
         """
         Test fstab_absent
@@ -1121,6 +1146,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
             assert mount.fstab_absent("/dev/sda1", "/home") == ret
             salt_mock["mount.filesystems"].assert_called_with("/etc/filesystems")
 
+    @skipIf(True, "FASTTEST skip")
     def test_fstab_absent_test_absent(self):
         """
         Test fstab_absent
@@ -1141,6 +1167,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
             assert mount.fstab_absent("/dev/sda1", "/home") == ret
             salt_mock["mount.fstab"].assert_called_with("/etc/fstab")
 
+    @skipIf(True, "FASTTEST skip")
     def test_fstab_absent_test_present(self):
         """
         Test fstab_absent
@@ -1161,6 +1188,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
             assert mount.fstab_absent("/dev/sda1", "/home") == ret
             salt_mock["mount.fstab"].assert_called_with("/etc/fstab")
 
+    @skipIf(True, "FASTTEST skip")
     def test_fstab_absent_macos_present(self):
         """
         Test fstab_absent
@@ -1187,6 +1215,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 name="/home", device="/dev/sda1", config="/etc/auto_salt"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_fstab_absent_aix_present(self):
         """
         Test fstab_absent
@@ -1213,6 +1242,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 name="/home", device="/dev/sda1", config="/etc/filesystems"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_fstab_absent_present(self):
         """
         Test fstab_absent
@@ -1239,6 +1269,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 name="/home", device="/dev/sda1", config="/etc/fstab"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_fstab_absent_absent(self):
         """
         Test fstab_absent

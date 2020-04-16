@@ -12,7 +12,7 @@ import salt.modules.pyenv as pyenv
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PyenvTestCase(TestCase, LoaderModuleMockMixin):
@@ -25,6 +25,7 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'install' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_install(self):
         """
         Test if it install pyenv systemwide
@@ -38,6 +39,7 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'update' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_update(self):
         """
         Test if it updates the current versions of pyenv and python-Build
@@ -48,6 +50,7 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'is_installed' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_installed(self):
         """
         Test if it check if pyenv is installed.
@@ -61,6 +64,7 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'install_python' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_python(self):
         """
         Test if it install a python implementation.
@@ -99,6 +103,7 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'uninstall_python' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_uninstall_python(self):
         """
         Test if it uninstall a python implementation.
@@ -120,6 +125,7 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'versions' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_versions(self):
         """
         Test if it list the installed versions of python.
@@ -141,6 +147,7 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'default' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_default(self):
         """
         Test if it returns or sets the currently defined default python.
@@ -163,6 +170,7 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list(self):
         """
         Test if it list the installable versions of python.
@@ -184,6 +192,7 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'rehash' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_rehash(self):
         """
         Test if it run pyenv rehash to update the installed shims.
@@ -205,6 +214,7 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'do' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_do(self):
         """
         Test if it execute a python command with pyenv's
@@ -240,6 +250,7 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'do_with_python' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_do_with_python(self):
         """
         Test if it execute a python command with pyenv's

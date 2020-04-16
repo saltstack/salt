@@ -39,6 +39,7 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
 
         self.addCleanup(reset_environ, patcher)
 
+    @skipIf(True, "FASTTEST skip")
     def test_setenv(self):
         """
         test that a subsequent calls of setenv changes nothing
@@ -54,6 +55,7 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret["changes"], {})
 
     @skipIf(not salt.utils.platform.is_windows(), "Windows only")
+    @skipIf(True, "FASTTEST skip")
     def test_setenv_permanent(self):
         """
         test that we can set perminent environment variables (requires pywin32)
@@ -74,6 +76,7 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
                 "HKCU", "Environment", "test"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_setenv_dict(self):
         """
         test that setenv can be invoked with dict
@@ -81,6 +84,7 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
         ret = envstate.setenv("notimportant", {"test": "value"})
         self.assertEqual(ret["changes"], {"test": "value"})
 
+    @skipIf(True, "FASTTEST skip")
     def test_setenv_int(self):
         """
         test that setenv can not be invoked with int
@@ -89,6 +93,7 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
         ret = envstate.setenv("test", 1)
         self.assertEqual(ret["result"], False)
 
+    @skipIf(True, "FASTTEST skip")
     def test_setenv_unset(self):
         """
         test that ``false_unsets`` option removes variable from environment
@@ -100,6 +105,7 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret["changes"], {"test": None})
         self.assertEqual(envstate.os.environ, {"INITIAL": "initial"})
 
+    @skipIf(True, "FASTTEST skip")
     def test_setenv_clearall(self):
         """
         test that ``clear_all`` option sets other values to ''
@@ -111,6 +117,7 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
         else:
             self.assertEqual(envstate.os.environ, {"test": "value", "INITIAL": ""})
 
+    @skipIf(True, "FASTTEST skip")
     def test_setenv_clearall_with_unset(self):
         """
         test that ``clear_all`` option combined with ``false_unsets``
@@ -123,6 +130,7 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
         else:
             self.assertEqual(envstate.os.environ, {"test": "value"})
 
+    @skipIf(True, "FASTTEST skip")
     def test_setenv_unset_multi(self):
         """
         test basically same things that above tests but with multiple values passed
@@ -152,6 +160,7 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
                 envstate.os.environ, {"INITIAL": "initial", "foo": "bax", "test": ""}
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_setenv_test_mode(self):
         """
         test that imitating action returns good values

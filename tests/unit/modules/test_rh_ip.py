@@ -18,7 +18,7 @@ from salt.ext.six.moves import range
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class RhipTestCase(TestCase, LoaderModuleMockMixin):
@@ -29,6 +29,7 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {rh_ip: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_error_message_iface_should_process_non_str_expected(self):
         values = [1, True, False, "no-kaboom"]
         iface = "ethtest"
@@ -36,11 +37,13 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
         msg = rh_ip._error_msg_iface(iface, option, values)
         self.assertTrue(msg.endswith("[1|True|False|no-kaboom]"), msg)
 
+    @skipIf(True, "FASTTEST skip")
     def test_error_message_network_should_process_non_str_expected(self):
         values = [1, True, False, "no-kaboom"]
         msg = rh_ip._error_msg_network("fnord", values)
         self.assertTrue(msg.endswith("[1|True|False|no-kaboom]"), msg)
 
+    @skipIf(True, "FASTTEST skip")
     def test_build_bond(self):
         """
         Test to create a bond script in /etc/modprobe.d with the passed
@@ -64,6 +67,7 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
                         with patch.object(rh_ip, "_read_file", return_value="A"):
                             self.assertEqual(rh_ip.build_bond("iface", test=None), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_build_interface(self):
         """
         Test to build an interface script for a network interface.
@@ -177,6 +181,7 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
                                                         "A",
                                                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_build_routes(self):
         """
         Test to build a route script for a network interface.
@@ -202,6 +207,7 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
                                     rh_ip.build_routes("i", test=None), ["A", "A"]
                                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_down(self):
         """
         Test to shutdown a network interface
@@ -211,6 +217,7 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(rh_ip.down("iface", "slave"), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_bond(self):
         """
         Test to return the content of a bond script
@@ -219,6 +226,7 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(rh_ip, "_read_file", return_value="A"):
                 self.assertEqual(rh_ip.get_bond("iface"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_interface(self):
         """
         Test to return the contents of an interface script
@@ -227,6 +235,7 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(rh_ip, "_read_file", return_value="A"):
                 self.assertEqual(rh_ip.get_interface("iface"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_up(self):
         """
         Test to start up a network interface
@@ -236,6 +245,7 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(rh_ip.up("iface", "slave"), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_routes(self):
         """
         Test to return the contents of the interface routes script.
@@ -244,6 +254,7 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(rh_ip, "_read_file", return_value=["A"]):
                 self.assertEqual(rh_ip.get_routes("iface"), ["A", "A"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_network_settings(self):
         """
         Test to return the contents of the global network script.
@@ -251,6 +262,7 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(rh_ip, "_read_file", return_value="A"):
             self.assertEqual(rh_ip.get_network_settings(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_apply_network_settings(self):
         """
         Test to apply global network configuration.
@@ -260,6 +272,7 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(rh_ip.apply_network_settings())
 
+    @skipIf(True, "FASTTEST skip")
     def test_build_network_settings(self):
         """
         Test to build the global network script.

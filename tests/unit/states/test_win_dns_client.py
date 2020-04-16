@@ -12,7 +12,7 @@ import salt.states.win_dns_client as win_dns_client
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {win_dns_client: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_dns_exists(self):
         """
             Test to configure the DNS server list in the specified interface
@@ -93,6 +94,7 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
                     )
                     self.assertDictEqual(win_dns_client.dns_exists("salt", ["a"]), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_dns_dhcp(self):
         """
             Test to configure the DNS server list from DHCP Server
@@ -128,6 +130,7 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
                     ret.update({"result": True})
                     self.assertDictEqual(win_dns_client.dns_dhcp("salt"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_primary_suffix(self):
         """
             Test to configure the global primary DNS suffix of a DHCP client.

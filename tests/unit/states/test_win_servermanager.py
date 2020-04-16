@@ -12,7 +12,7 @@ import salt.states.win_servermanager as win_servermanager
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class WinServermanagerTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class WinServermanagerTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {win_servermanager: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed(self):
         """
             Test to install the windows feature
@@ -86,6 +87,7 @@ class WinServermanagerTestCase(TestCase, LoaderModuleMockMixin):
                 }
                 self.assertDictEqual(win_servermanager.installed("squidward"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_removed(self):
         """
             Test to remove the windows feature

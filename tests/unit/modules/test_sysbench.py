@@ -11,7 +11,7 @@ import salt.modules.sysbench as sysbench
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class SysbenchTestCase(TestCase, LoaderModuleMockMixin):
@@ -22,6 +22,7 @@ class SysbenchTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {sysbench: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_cpu(self):
         """
         Test to tests to the CPU performance of minions.
@@ -40,6 +41,7 @@ class SysbenchTestCase(TestCase, LoaderModuleMockMixin):
                     },
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_threads(self):
         """
         Test to this tests the performance of the processor's scheduler
@@ -58,6 +60,7 @@ class SysbenchTestCase(TestCase, LoaderModuleMockMixin):
                     },
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_mutex(self):
         """
         Test to tests the implementation of mutex
@@ -81,6 +84,7 @@ class SysbenchTestCase(TestCase, LoaderModuleMockMixin):
                     },
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_memory(self):
         """
         Test to this tests the memory for read and write operations.
@@ -99,6 +103,7 @@ class SysbenchTestCase(TestCase, LoaderModuleMockMixin):
                     },
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_fileio(self):
         """
         Test to this tests for the file read and write operations
@@ -119,6 +124,7 @@ class SysbenchTestCase(TestCase, LoaderModuleMockMixin):
                     },
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_ping(self):
         """
         Test to ping

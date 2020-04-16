@@ -11,7 +11,7 @@ import salt.utils.xmlutil as xml
 from salt._compat import ElementTree as ET
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class XMLUtilTestCase(TestCase):
@@ -82,91 +82,109 @@ class XMLUtilTestCase(TestCase):
             },
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_xml_case_a(self):
         xmldata = ET.fromstring(self.cases["a"]["xml"])
         defaultdict = xml.to_dict(xmldata)
         self.assertEqual(defaultdict, self.cases["a"]["legacy"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_xml_case_a_legacy(self):
         xmldata = ET.fromstring(self.cases["a"]["xml"])
         defaultdict = xml.to_dict(xmldata, False)
         self.assertEqual(defaultdict, self.cases["a"]["legacy"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_xml_case_a_full(self):
         xmldata = ET.fromstring(self.cases["a"]["xml"])
         defaultdict = xml.to_dict(xmldata, True)
         self.assertEqual(defaultdict, self.cases["a"]["full"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_xml_case_b(self):
         xmldata = ET.fromstring(self.cases["b"]["xml"])
         defaultdict = xml.to_dict(xmldata)
         self.assertEqual(defaultdict, self.cases["b"]["legacy"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_xml_case_b_legacy(self):
         xmldata = ET.fromstring(self.cases["b"]["xml"])
         defaultdict = xml.to_dict(xmldata, False)
         self.assertEqual(defaultdict, self.cases["b"]["legacy"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_xml_case_b_full(self):
         xmldata = ET.fromstring(self.cases["b"]["xml"])
         defaultdict = xml.to_dict(xmldata, True)
         self.assertEqual(defaultdict, self.cases["b"]["full"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_xml_case_c(self):
         xmldata = ET.fromstring(self.cases["c"]["xml"])
         defaultdict = xml.to_dict(xmldata)
         self.assertEqual(defaultdict, self.cases["c"]["legacy"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_xml_case_c_legacy(self):
         xmldata = ET.fromstring(self.cases["c"]["xml"])
         defaultdict = xml.to_dict(xmldata, False)
         self.assertEqual(defaultdict, self.cases["c"]["legacy"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_xml_case_c_full(self):
         xmldata = ET.fromstring(self.cases["c"]["xml"])
         defaultdict = xml.to_dict(xmldata, True)
         self.assertEqual(defaultdict, self.cases["c"]["full"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_xml_case_d(self):
         xmldata = ET.fromstring(self.cases["d"]["xml"])
         defaultdict = xml.to_dict(xmldata)
         self.assertEqual(defaultdict, self.cases["d"]["legacy"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_xml_case_d_legacy(self):
         xmldata = ET.fromstring(self.cases["d"]["xml"])
         defaultdict = xml.to_dict(xmldata, False)
         self.assertEqual(defaultdict, self.cases["d"]["legacy"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_xml_case_d_full(self):
         xmldata = ET.fromstring(self.cases["d"]["xml"])
         defaultdict = xml.to_dict(xmldata, True)
         self.assertEqual(defaultdict, self.cases["d"]["full"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_xml_case_e(self):
         xmldata = ET.fromstring(self.cases["e"]["xml"])
         defaultdict = xml.to_dict(xmldata)
         self.assertEqual(defaultdict, self.cases["e"]["legacy"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_xml_case_e_legacy(self):
         xmldata = ET.fromstring(self.cases["e"]["xml"])
         defaultdict = xml.to_dict(xmldata, False)
         self.assertEqual(defaultdict, self.cases["e"]["legacy"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_xml_case_e_full(self):
         xmldata = ET.fromstring(self.cases["e"]["xml"])
         defaultdict = xml.to_dict(xmldata, True)
         self.assertEqual(defaultdict, self.cases["e"]["full"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_xml_case_f(self):
         xmldata = ET.fromstring(self.cases["f"]["xml"])
         defaultdict = xml.to_dict(xmldata)
         self.assertEqual(defaultdict, self.cases["f"]["legacy"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_xml_case_f_legacy(self):
         xmldata = ET.fromstring(self.cases["f"]["xml"])
         defaultdict = xml.to_dict(xmldata, False)
         self.assertEqual(defaultdict, self.cases["f"]["legacy"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_xml_case_f_full(self):
         xmldata = ET.fromstring(self.cases["f"]["xml"])
         defaultdict = xml.to_dict(xmldata, True)

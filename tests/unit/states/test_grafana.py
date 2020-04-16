@@ -14,7 +14,7 @@ from salt.exceptions import SaltInvocationError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class GrafanaTestCase(TestCase, LoaderModuleMockMixin):
@@ -27,6 +27,7 @@ class GrafanaTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'dashboard_present' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_dashboard_present(self):
         """
         Test to ensure the grafana dashboard exists and is managed.
@@ -120,6 +121,7 @@ class GrafanaTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'dashboard_absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_dashboard_absent(self):
         """
         Test to ensure the named grafana dashboard is deleted.

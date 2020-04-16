@@ -11,7 +11,7 @@ import salt.modules.modjk as modjk
 from tests.support.mock import patch
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ModjkTestCase(TestCase):
@@ -21,6 +21,7 @@ class ModjkTestCase(TestCase):
 
     # 'version' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_version(self):
         """
         Test for return the modjk version
@@ -32,6 +33,7 @@ class ModjkTestCase(TestCase):
 
     # 'get_running' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_running(self):
         """
         Test for get the current running config (not from disk)
@@ -41,6 +43,7 @@ class ModjkTestCase(TestCase):
 
     # 'dump_config' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_dump_config(self):
         """
         Test for dump the original configuration that was loaded from disk
@@ -50,6 +53,7 @@ class ModjkTestCase(TestCase):
 
     # 'list_configured_members' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_configured_members(self):
         """
         Test for return a list of member workers from the configuration files
@@ -68,6 +72,7 @@ class ModjkTestCase(TestCase):
 
     # 'workers' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_workers(self):
         """
         Test for return a list of member workers and their status
@@ -79,6 +84,7 @@ class ModjkTestCase(TestCase):
 
     # 'recover_all' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_recover_all(self):
         """
         Test for set the all the workers in lbn to recover and
@@ -104,6 +110,7 @@ class ModjkTestCase(TestCase):
 
     # 'reset_stats' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_reset_stats(self):
         """
         Test for reset all runtime statistics for the load balancer
@@ -113,6 +120,7 @@ class ModjkTestCase(TestCase):
 
     # 'lb_edit' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_lb_edit(self):
         """
         Test for edit the loadbalancer settings
@@ -122,6 +130,7 @@ class ModjkTestCase(TestCase):
 
     # 'bulk_stop' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_bulk_stop(self):
         """
         Test for stop all the given workers in the specific load balancer
@@ -133,6 +142,7 @@ class ModjkTestCase(TestCase):
 
     # 'bulk_activate' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_bulk_activate(self):
         """
         Test for activate all the given workers in the specific load balancer
@@ -144,6 +154,7 @@ class ModjkTestCase(TestCase):
 
     # 'bulk_disable' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_bulk_disable(self):
         """
         Test for disable all the given workers in the specific load balancer
@@ -155,6 +166,7 @@ class ModjkTestCase(TestCase):
 
     # 'bulk_recover' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_bulk_recover(self):
         """
         Test for recover all the given workers in the specific load balancer
@@ -166,6 +178,7 @@ class ModjkTestCase(TestCase):
 
     # 'worker_status' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_worker_status(self):
         """
         Test for return the state of the worker
@@ -184,6 +197,7 @@ class ModjkTestCase(TestCase):
 
     # 'worker_recover' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_worker_recover(self):
         """
         Test for set the worker to recover this module will fail
@@ -194,6 +208,7 @@ class ModjkTestCase(TestCase):
 
     # 'worker_disable' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_worker_disable(self):
         """
         Test for set the worker to disable state in the lbn load balancer
@@ -203,6 +218,7 @@ class ModjkTestCase(TestCase):
 
     # 'worker_activate' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_worker_activate(self):
         """
         Test for set the worker to activate state in the lbn load balancer
@@ -212,6 +228,7 @@ class ModjkTestCase(TestCase):
 
     # 'worker_stop' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_worker_stop(self):
         """
         Test for set the worker to stopped state in the lbn load balancer
@@ -221,6 +238,7 @@ class ModjkTestCase(TestCase):
 
     # 'worker_edit' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_worker_edit(self):
         """
         Test for edit the worker settings

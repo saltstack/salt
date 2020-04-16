@@ -12,7 +12,7 @@ from salt.ext.six.moves import range
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -26,6 +26,7 @@ class S3PillarTestCase(TestCase, LoaderModuleMockMixin):
         s3_pillar_globals = {"__utils__": {}}
         return {s3_pillar: s3_pillar_globals}
 
+    @skipIf(True, "FASTTEST skip")
     def test_refresh_buckets_cache_file(self):
         """
         Test pagination with refresh_buckets_cache_file

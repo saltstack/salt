@@ -11,7 +11,7 @@ import salt.modules.swift as swift
 from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class SwiftTestCase(TestCase):
@@ -21,6 +21,7 @@ class SwiftTestCase(TestCase):
 
     # 'delete' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete(self):
         """
         Test for delete a container, or delete an object from a container.
@@ -32,6 +33,7 @@ class SwiftTestCase(TestCase):
 
     # 'get' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get(self):
         """
         Test for list the contents of a container,
@@ -56,6 +58,7 @@ class SwiftTestCase(TestCase):
 
     # 'put' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_put(self):
         """
         Test for create a new container, or upload an object to a container.

@@ -13,7 +13,7 @@ import salt.modules.debconfmod as debconfmod
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class DebconfmodTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class DebconfmodTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {debconfmod: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_selections(self):
         """
         Test for Answers to debconf questions for all packages
@@ -33,6 +34,7 @@ class DebconfmodTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(debconfmod, "_unpack_lines", mock):
                 self.assertEqual(debconfmod.get_selections(False), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_show(self):
         """
         Test for Answers to debconf questions for a package
@@ -41,6 +43,7 @@ class DebconfmodTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(debconfmod, "get_selections", mock):
             self.assertEqual(debconfmod.show("name"), None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_(self):
         """
         Test for Set answers to debconf questions for a package.
@@ -54,6 +57,7 @@ class DebconfmodTestCase(TestCase, LoaderModuleMockMixin):
                             debconfmod.set_("package", "question", "type", "value")
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_template(self):
         """
         Test for Set answers to debconf questions from a template.
@@ -68,6 +72,7 @@ class DebconfmodTestCase(TestCase, LoaderModuleMockMixin):
                     "A",
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_file(self):
         """
         Test for Set answers to debconf questions from a file.

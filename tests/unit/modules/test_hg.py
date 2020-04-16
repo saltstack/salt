@@ -12,7 +12,7 @@ import salt.modules.hg as hg
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class HgTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class HgTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {hg: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_revision(self):
         """
         Test for Returns the long hash of a given identifier
@@ -35,6 +36,7 @@ class HgTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertEqual(hg.revision("cwd"), "")
 
+    @skipIf(True, "FASTTEST skip")
     def test_describe(self):
         """
         Test for Mimic git describe.
@@ -43,6 +45,7 @@ class HgTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(hg, "revision", return_value=False):
                 self.assertEqual(hg.describe("cwd"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_archive(self):
         """
         Test for Export a tarball from the repository
@@ -50,6 +53,7 @@ class HgTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(hg.__salt__, {"cmd.run": MagicMock(return_value="A")}):
             self.assertEqual(hg.archive("cwd", "output"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_pull(self):
         """
         Test for Perform a pull on the given repository
@@ -60,6 +64,7 @@ class HgTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(hg.pull("cwd"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_update(self):
         """
         Test for Update to a given revision
@@ -70,6 +75,7 @@ class HgTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(hg.update("cwd", "rev"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_clone(self):
         """
         Test for Clone a new repository
@@ -80,6 +86,7 @@ class HgTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(hg.clone("cwd", "repository"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_status_single(self):
         """
         Test for Status to a given repository
@@ -97,6 +104,7 @@ class HgTestCase(TestCase, LoaderModuleMockMixin):
                 {"added": ["added 0", "added 1"], "modified": ["modified"]},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_status_multiple(self):
         """
         Test for Status to a given repository (cwd is list)

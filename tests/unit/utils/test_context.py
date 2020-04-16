@@ -32,7 +32,6 @@ class ContextDictTests(AsyncTestCase):
         # set a global value
         self.cd["foo"] = "global"
 
-    @skipIf(True, "SLOWTEST skip")
     def test_threads(self):
         """Verify that ContextDict overrides properly within threads
         """
@@ -66,7 +65,6 @@ class ContextDictTests(AsyncTestCase):
             self.assertEqual(r[2], r[3])
 
     @gen_test
-    @skipIf(True, "SLOWTEST skip")
     def test_coroutines(self):
         """Verify that ContextDict overrides properly within coroutines
         """
@@ -117,6 +115,7 @@ class ContextDictTests(AsyncTestCase):
                 r[3], r[4]
             )  # verify that the override sticks across coroutines
 
+    @skipIf(True, "FASTTEST skip")
     def test_basic(self):
         """Test that the contextDict is a dict
         """
@@ -125,6 +124,7 @@ class ContextDictTests(AsyncTestCase):
             dict(self.cd), {"foo": "global"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_override(self):
         over = self.cd.clone()
         over["bar"] = "global"
@@ -155,6 +155,7 @@ class ContextDictTests(AsyncTestCase):
             dict(self.cd), {"foo": "global"},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_multiple_contexts(self):
         cds = []
         for x in range(0, 10):
@@ -174,21 +175,25 @@ class NamespacedDictWrapperTests(TestCase):
     def setUp(self):
         self._dict = {}
 
+    @skipIf(True, "FASTTEST skip")
     def test_single_key(self):
         self._dict["prefix"] = {"foo": "bar"}
         w = NamespacedDictWrapper(self._dict, "prefix")
         self.assertEqual(w["foo"], "bar")
 
+    @skipIf(True, "FASTTEST skip")
     def test_multiple_key(self):
         self._dict["prefix"] = {"foo": {"bar": "baz"}}
         w = NamespacedDictWrapper(self._dict, ("prefix", "foo"))
         self.assertEqual(w["bar"], "baz")
 
+    @skipIf(True, "FASTTEST skip")
     def test_json_dumps_single_key(self):
         self._dict["prefix"] = {"foo": {"bar": "baz"}}
         w = NamespacedDictWrapper(self._dict, "prefix")
         self.assertEqual(salt.utils.json.dumps(w), '{"foo": {"bar": "baz"}}')
 
+    @skipIf(True, "FASTTEST skip")
     def test_json_dumps_multiple_key(self):
         self._dict["prefix"] = {"foo": {"bar": "baz"}}
         w = NamespacedDictWrapper(self._dict, ("prefix", "foo"))

@@ -12,7 +12,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MemcachedTestCase(TestCase, LoaderModuleMockMixin):
@@ -25,6 +25,7 @@ class MemcachedTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'managed' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed(self):
         """
         Test to manage a memcached key.
@@ -63,6 +64,7 @@ class MemcachedTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
         Test to ensure that a memcached key is not present.

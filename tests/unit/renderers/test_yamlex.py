@@ -48,11 +48,13 @@ class RendererTests(TestCase, RendererMixin, LoaderModuleMockMixin):
         return {yamlex: {}}
 
     @skipIf(not yamlex.available, SKIP_MESSAGE % "yamlex")
+    @skipIf(True, "FASTTEST skip")
     def test_basic(self):
         sls_obj = self.render(basic_template)
         assert sls_obj == {"foo": "bar"}, sls_obj
 
     @skipIf(not yamlex.available, SKIP_MESSAGE % "yamlex")
+    @skipIf(True, "FASTTEST skip")
     def test_complex(self):
 
         sls_obj = self.render(complex_template)

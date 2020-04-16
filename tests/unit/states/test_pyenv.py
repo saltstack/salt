@@ -11,7 +11,7 @@ import salt.states.pyenv as pyenv
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PyenvTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'installed' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_installed(self):
         """
         Test to verify that the specified python is installed with pyenv.
@@ -63,6 +64,7 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'absent' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
         Test to verify that the specified python is not installed with pyenv.
@@ -107,6 +109,7 @@ class PyenvTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'install_pyenv' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_pyenv(self):
         """
         Test to install pyenv if not installed.

@@ -9,10 +9,11 @@ import salt.pillar.csvpillar as csvpillar
 from tests.support.mock import mock_open, patch
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class CSVPillarTestCase(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_001_load_utf8_csv(self):
         fake_csv = "id,foo,bar\r\nminion1,foo1,bar1"
         fake_dict = {"id": "minion1", "foo": "foo1", "bar": "bar1"}
@@ -27,6 +28,7 @@ class CSVPillarTestCase(TestCase):
             )
             self.assertDictEqual(fake_dict, result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_002_load_utf8_csv_namespc(self):
         fake_csv = "id,foo,bar\r\nminion1,foo1,bar1"
         fake_dict = {"baz": {"id": "minion1", "foo": "foo1", "bar": "bar1"}}

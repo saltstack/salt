@@ -172,6 +172,7 @@ class BotoElasticsearchDomainTestCase(
     TestCase for salt.modules.boto_elasticsearch_domain state.module
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_when_domain_does_not_exist(self):
         """
         Tests present on a domain that does not exist.
@@ -192,6 +193,7 @@ class BotoElasticsearchDomainTestCase(
             result["changes"]["new"]["domain"]["ElasticsearchClusterConfig"], None
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_when_domain_exists(self):
         self.conn.describe_elasticsearch_domain.return_value = {
             "DomainStatus": domain_ret
@@ -215,6 +217,7 @@ class BotoElasticsearchDomainTestCase(
             {"new": {"AccessPolicies": {}}, "old": {"AccessPolicies": {"a": "b"}}},
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_with_failure(self):
         self.conn.describe_elasticsearch_domain.side_effect = not_found_error
         self.conn.describe_elasticsearch_domain_config.return_value = {
@@ -229,6 +232,7 @@ class BotoElasticsearchDomainTestCase(
         self.assertFalse(result["result"])
         self.assertTrue("An error occurred" in result["comment"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_when_domain_does_not_exist(self):
         """
         Tests absent on a domain that does not exist.
@@ -240,6 +244,7 @@ class BotoElasticsearchDomainTestCase(
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"], {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_when_domain_exists(self):
         self.conn.describe_elasticsearch_domain.return_value = {
             "DomainStatus": domain_ret
@@ -253,6 +258,7 @@ class BotoElasticsearchDomainTestCase(
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"]["new"]["domain"], None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_with_failure(self):
         self.conn.describe_elasticsearch_domain.return_value = {
             "DomainStatus": domain_ret

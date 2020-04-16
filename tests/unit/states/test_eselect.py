@@ -11,7 +11,7 @@ import salt.states.eselect as eselect
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class EselectTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class EselectTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_(self):
         """
         Test to verify that the given module is set to the given target

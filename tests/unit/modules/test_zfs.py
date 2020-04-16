@@ -47,6 +47,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
 
         return zfs_obj
 
+    @skipIf(True, "FASTTEST skip")
     def test_exists_success(self):
         """
         Tests successful return of exists function
@@ -63,6 +64,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(zfs.exists("myzpool/mydataset"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_exists_failure_not_exists(self):
         """
         Tests unsuccessful return of exists function if dataset does not exist
@@ -77,6 +79,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertFalse(zfs.exists("myzpool/mydataset"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_exists_failure_invalid_name(self):
         """
         Tests unsuccessful return of exists function if dataset name is invalid
@@ -91,6 +94,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertFalse(zfs.exists("myzpool/"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_success(self):
         """
         Tests successful return of create function on ZFS file system creation
@@ -106,6 +110,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.create("myzpool/mydataset"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_success_with_create_parent(self):
         """
         Tests successful return of create function when ``create_parent=True``
@@ -123,6 +128,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
                 res, zfs.create("myzpool/mydataset/mysubdataset", create_parent=True)
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_success_with_properties(self):
         """
         Tests successful return of create function on ZFS file system creation (with properties)
@@ -144,6 +150,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
                 ),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_error_missing_dataset(self):
         """
         Tests unsuccessful return of create function if dataset name is missing
@@ -164,6 +171,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.create("myzpool"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_error_trailing_slash(self):
         """
         Tests unsuccessful return of create function if trailing slash in name is present
@@ -184,6 +192,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.create("myzpool/"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_error_no_such_pool(self):
         """
         Tests unsuccessful return of create function if the pool is not present
@@ -204,6 +213,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.create("myzpool/mydataset"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_error_missing_parent(self):
         """
         Tests unsuccessful return of create function if the parent datasets do not exist
@@ -229,6 +239,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.create("myzpool/mydataset/mysubdataset"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_destroy_success(self):
         """
         Tests successful return of destroy function on ZFS file system destruction
@@ -244,6 +255,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.destroy("myzpool/mydataset"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_destroy_error_not_exists(self):
         """
         Tests failure return of destroy function on ZFS file system destruction
@@ -264,6 +276,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.destroy("myzpool/mydataset"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_destroy_error_has_children(self):
         """
         Tests failure return of destroy function on ZFS file system destruction
@@ -299,7 +312,6 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.destroy("myzpool/mydataset"))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_rename_success(self):
         """
         Tests successful return of rename function
@@ -315,6 +327,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.rename("myzpool/mydataset", "myzpool/newdataset"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_rename_error_not_exists(self):
         """
         Tests failure return of rename function
@@ -335,6 +348,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.rename("myzpool/mydataset", "myzpool/newdataset"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_success(self):
         """
         Tests zfs list
@@ -364,7 +378,6 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.list_("myzpool"))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_list_parsable_success(self):
         """
         Tests zfs list with parsable set to False
@@ -394,6 +407,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.list_("myzpool", parsable=False))
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_custom_success(self):
         """
         Tests zfs list
@@ -425,6 +439,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
                 res, zfs.list_("myzpool", properties="canmount,used,avail,compression")
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_custom_parsable_success(self):
         """
         Tests zfs list
@@ -461,6 +476,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
                 ),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_error_no_dataset(self):
         """
         Tests zfs list
@@ -476,7 +492,6 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.list_("myzpool"))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_list_mount_success(self):
         """
         Tests zfs list_mount
@@ -496,6 +511,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.list_mount())
 
+    @skipIf(True, "FASTTEST skip")
     def test_mount_success(self):
         """
         Tests zfs mount of filesystem
@@ -511,6 +527,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.mount("myzpool/mydataset"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_mount_failure(self):
         """
         Tests zfs mount of already mounted filesystem
@@ -534,6 +551,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.mount("myzpool/mydataset"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_unmount_success(self):
         """
         Tests zfs unmount of filesystem
@@ -549,6 +567,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.unmount("myzpool/mydataset"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_unmount_failure(self):
         """
         Tests zfs unmount of already mounted filesystem
@@ -569,6 +588,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.unmount("myzpool/mydataset"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_inherit_success(self):
         """
         Tests zfs inherit of compression property
@@ -581,6 +601,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.inherit("compression", "myzpool/mydataset"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_inherit_failure(self):
         """
         Tests zfs inherit of canmount
@@ -603,7 +624,6 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.inherit("canmount", "myzpool/mydataset"))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_diff(self):
         """
         Tests zfs diff
@@ -631,6 +651,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
                 res, zfs.diff("myzpool/mydataset@yesterday", "myzpool/mydataset")
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_diff_parsed_time(self):
         """
         Tests zfs diff
@@ -671,7 +692,6 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
                 res, zfs.diff("myzpool/data@yesterday", "myzpool/data", parsable=False)
             )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_rollback_success(self):
         """
         Tests zfs rollback success
@@ -684,7 +704,6 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.rollback("myzpool/mydataset@yesterday"))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_rollback_failure(self):
         """
         Tests zfs rollback failure
@@ -718,6 +737,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.rollback("myzpool/mydataset@yesterday"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_clone_success(self):
         """
         Tests zfs clone success
@@ -732,6 +752,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
                 res, zfs.clone("myzpool/mydataset@yesterday", "myzpool/yesterday")
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_clone_failure(self):
         """
         Tests zfs clone failure
@@ -760,7 +781,6 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
                 zfs.clone("myzpool/mydataset@yesterday", "myzpool/archive/yesterday"),
             )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_promote_success(self):
         """
         Tests zfs promote success
@@ -773,6 +793,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.promote("myzpool/yesterday"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_promote_failure(self):
         """
         Tests zfs promote failure
@@ -798,7 +819,6 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.promote("myzpool/yesterday"))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_bookmark_success(self):
         """
         Tests zfs bookmark success
@@ -817,7 +837,6 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
                     ),
                 )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_holds_success(self):
         """
         Tests zfs holds success
@@ -840,6 +859,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.holds("myzpool/mydataset@baseline"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_holds_failure(self):
         """
         Tests zfs holds failure
@@ -864,6 +884,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.holds("myzpool/mydataset@baseline"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_hold_success(self):
         """
         Tests zfs hold success
@@ -883,6 +904,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
                 ),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_hold_failure(self):
         """
         Tests zfs hold failure
@@ -908,6 +930,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.hold("important", "myzpool/mydataset@baseline"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_release_success(self):
         """
         Tests zfs release success
@@ -927,7 +950,6 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
                 ),
             )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_release_failure(self):
         """
         Tests zfs release failure
@@ -955,6 +977,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
                 res, zfs.release("important", "myzpool/mydataset@baseline")
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_snapshot_success(self):
         """
         Tests zfs snapshot success
@@ -967,6 +990,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.snapshot("myzpool/mydataset@baseline"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_snapshot_failure(self):
         """
         Tests zfs snapshot failure
@@ -992,6 +1016,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.snapshot("myzpool/mydataset@baseline"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_snapshot_failure2(self):
         """
         Tests zfs snapshot failure
@@ -1014,6 +1039,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.snapshot("myzpool/mydataset@baseline"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_success(self):
         """
         Tests zfs set success
@@ -1026,7 +1052,6 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.set("myzpool/mydataset", compression="lz4"))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_set_failure(self):
         """
         Tests zfs set failure
@@ -1052,6 +1077,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.set("myzpool/mydataset", canmount="lz4"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_success(self):
         """
         Tests zfs get success
@@ -1076,6 +1102,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.get("myzpool", properties="used", fields="value"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_parsable_success(self):
         """
         Tests zfs get with parsable output

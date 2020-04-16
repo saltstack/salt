@@ -51,6 +51,7 @@ class AnsiblegateTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {ansible: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_ansible_module_help(self):
         """
         Test help extraction from the module
@@ -83,6 +84,7 @@ description:
             ) == ["one", "two"]
             assert ret.get("Description") == "describe the second part"
 
+    @skipIf(True, "FASTTEST skip")
     def test_module_resolver_modlist(self):
         """
         Test Ansible resolver modules list.
@@ -107,6 +109,7 @@ description:
         assert self.resolver.get_modules_list("one.two") == ["one.two.three"]
         assert self.resolver.get_modules_list("four") == ["four.five.six"]
 
+    @skipIf(True, "FASTTEST skip")
     def test_resolver_module_loader_failure(self):
         """
         Test Ansible module loader.
@@ -120,6 +123,7 @@ description:
         with pytest.raises(LoaderError) as loader_error:
             self.resolver.load_module(mod)
 
+    @skipIf(True, "FASTTEST skip")
     def test_resolver_module_loader(self):
         """
         Test Ansible module loader.
@@ -133,6 +137,7 @@ description:
                 == "ansible.modules.four.five.six"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_resolver_module_loader_import_failure(self):
         """
         Test Ansible module loader failure.
@@ -144,6 +149,7 @@ description:
             with pytest.raises(LoaderError) as loader_error:
                 self.resolver.load_module("something.strange")
 
+    @skipIf(True, "FASTTEST skip")
     def test_virtual_function(self):
         """
         Test Ansible module __virtual__ when ansible is not installed on the minion.

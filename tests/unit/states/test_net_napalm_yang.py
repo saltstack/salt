@@ -11,7 +11,7 @@ import salt.states.net_napalm_yang as netyang
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 TEST_DATA = {"foo": "bar"}
 
@@ -20,6 +20,7 @@ class NetyangTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {netyang: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed(self):
         ret = {"changes": {}, "comment": "Loaded.", "name": "test", "result": False}
         parse = MagicMock(return_value="abcdef")
@@ -49,6 +50,7 @@ class NetyangTestCase(TestCase, LoaderModuleMockMixin):
                     assert load_config.called
                     assert file_remove.called
 
+    @skipIf(True, "FASTTEST skip")
     def test_configured(self):
         ret = {"changes": {}, "comment": "Loaded.", "name": "test", "result": False}
         load_config = MagicMock(return_value={"comment": "Loaded."})

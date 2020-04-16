@@ -17,7 +17,7 @@ from salt.ext.six.moves import StringIO
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class HostsTestCase(TestCase, LoaderModuleMockMixin):
@@ -30,6 +30,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_hosts' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_hosts(self):
         """
         Tests return the hosts found in the hosts file
@@ -44,6 +45,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_ip' function tests: 3
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_ip(self):
         """
         Tests return ip associated with the named host
@@ -56,6 +58,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertEqual("", hosts.get_ip("Salt3"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_ip_none(self):
         """
         Tests return ip associated with the named host
@@ -65,6 +68,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_alias' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_alias(self):
         """
         Tests return the list of aliases associated with an ip
@@ -75,6 +79,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertListEqual(["Salt1", "Salt2"], hosts.get_alias("10.10.10.10"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_alias_none(self):
         """
         Tests return the list of aliases associated with an ip
@@ -87,6 +92,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'has_pair' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_has_pair(self):
         """
         Tests return True / False if the alias is set
@@ -101,6 +107,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_host' function tests: 3
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_host(self):
         """
         Tests true if the alias is set
@@ -117,6 +124,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertFalse(hosts.set_host("10.10.10.10", "Salt1"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_host_true(self):
         """
         Tests true if the alias is set
@@ -131,6 +139,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(hosts.__salt__, {"config.option": mock_opt}):
                 self.assertTrue(hosts.set_host("10.10.10.10", "Salt1"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_host_true_remove(self):
         """
         Test if an empty hosts value removes existing entries
@@ -230,6 +239,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'rm_host' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_rm_host(self):
         """
         Tests if specified host entry gets removed from the hosts file
@@ -244,6 +254,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(hosts.__salt__, {"config.option": mock_opt}):
                 self.assertTrue(hosts.rm_host("10.10.10.10", "Salt1"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_rm_host_false(self):
         """
         Tests if specified host entry gets removed from the hosts file
@@ -253,6 +264,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'add_host' function tests: 3
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_host(self):
         """
         Tests if specified host entry gets added from the hosts file
@@ -269,6 +281,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(hosts.__salt__, {"config.option": mock_opt}):
                 self.assertTrue(hosts.add_host("10.10.10.10", "Salt1"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_host_no_file(self):
         """
         Tests if specified host entry gets added from the hosts file
@@ -280,6 +293,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(hosts.__salt__, {"config.option": mock_opt}):
                 self.assertFalse(hosts.add_host("10.10.10.10", "Salt1"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_host_create_entry(self):
         """
         Tests if specified host entry gets added from the hosts file

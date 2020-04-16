@@ -15,7 +15,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
@@ -54,6 +54,7 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
             except AttributeError:
                 continue
 
+    @skipIf(True, "FASTTEST skip")
     def test_dc_name_different_proxy(self):
         with patch.dict(
             esxdatacenter.__salt__,
@@ -71,6 +72,7 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_dc_name_esxdatacenter_proxy(self):
         with patch.dict(
             esxdatacenter.__salt__,
@@ -93,6 +95,7 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_service_instance(self):
         mock_get_service_instance = MagicMock()
         with patch.dict(
@@ -102,6 +105,7 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
             esxdatacenter.datacenter_configured("fake_dc")
         mock_get_service_instance.assert_called_once_with()
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_datacenters(self):
         mock_list_datacenters = MagicMock()
         with patch.dict(
@@ -113,6 +117,7 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
             datacenter_names=["fake_dc"], service_instance=self.mock_si
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_datacenter(self):
         mock_create_datacenter = MagicMock()
         with patch.dict(
@@ -134,6 +139,7 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_datacenter_test_mode(self):
         with patch.dict(esxdatacenter.__opts__, {"test": True}):
             with patch.dict(
@@ -151,6 +157,7 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_nothing_to_be_done_test_mode(self):
         with patch.dict(esxdatacenter.__opts__, {"test": True}):
             with patch.dict(
@@ -169,6 +176,7 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_state_get_service_instance_raise_command_execution_error(self):
         mock_disconnect = MagicMock()
         with patch.dict(
@@ -186,6 +194,7 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
             res, {"name": "fake_dc", "changes": {}, "result": False, "comment": "Error"}
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_state_raise_command_execution_error_after_si(self):
         mock_disconnect = MagicMock()
         with patch.dict(
@@ -203,6 +212,7 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
             res, {"name": "fake_dc", "changes": {}, "result": False, "comment": "Error"}
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_state_raise_command_execution_error_test_mode(self):
         with patch.dict(esxdatacenter.__opts__, {"test": True}):
             with patch.dict(

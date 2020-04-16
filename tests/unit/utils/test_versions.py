@@ -38,6 +38,7 @@ else:
 
 
 class VersionTestCase(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_prerelease(self):
         version = StrictVersion("1.2.3a1")
         self.assertEqual(version.version, (1, 2, 3))
@@ -47,6 +48,7 @@ class VersionTestCase(TestCase):
         version = StrictVersion("1.2.0")
         self.assertEqual(six.text_type(version), "1.2")
 
+    @skipIf(True, "FASTTEST skip")
     def test_cmp_strict(self):
         versions = (
             ("1.5.1", "1.5.2b2", -1),
@@ -82,6 +84,7 @@ class VersionTestCase(TestCase):
                 res, wanted, "cmp(%s, %s) should be %s, got %s" % (v1, v2, wanted, res)
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_cmp(self):
         versions = (
             ("1.5.1", "1.5.2b2", -1),
@@ -104,7 +107,6 @@ class VersionTestCase(TestCase):
             )
 
     @skipIf(not salt.utils.platform.is_linux(), "only need to run on linux")
-    @skipIf(True, "SLOWTEST skip")
     def test_spelling_version_name(self):
         """
         check the spelling of the version name for the release
@@ -146,6 +148,7 @@ class VersionTestCase(TestCase):
 
 
 class VersionFuncsTestCase(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_compare(self):
         ret = salt.utils.versions.compare("1.0", "==", "1.0")
         self.assertTrue(ret)
@@ -159,10 +162,12 @@ class VersionFuncsTestCase(TestCase):
             )
             self.assertTrue(log_mock.error.called)
 
+    @skipIf(True, "FASTTEST skip")
     def test_kwargs_warn_until(self):
         # Test invalid version arg
         self.assertRaises(RuntimeError, salt.utils.versions.kwargs_warn_until, {}, [])
 
+    @skipIf(True, "FASTTEST skip")
     def test_warn_until_warning_raised(self):
         # We *always* want *all* warnings thrown on this module
         warnings.filterwarnings("always", "", DeprecationWarning, __name__)
@@ -267,6 +272,7 @@ class VersionFuncsTestCase(TestCase):
                 six.text_type(recorded_warnings[0].message),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_kwargs_warn_until_warning_raised(self):
         # We *always* want *all* warnings thrown on this module
         warnings.filterwarnings("always", "", DeprecationWarning, __name__)
@@ -312,6 +318,7 @@ class VersionFuncsTestCase(TestCase):
         ):
             raise_warning(bar="baz", qux="quux", _version_info_=(0, 17))  # some kwargs
 
+    @skipIf(True, "FASTTEST skip")
     def test_warn_until_date_warning_raised(self):
         # We *always* want *all* warnings thrown on this module
         warnings.filterwarnings("always", "", DeprecationWarning, __name__)
@@ -386,6 +393,7 @@ class VersionFuncsTestCase(TestCase):
                 _current_date=_current_date,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_warn_until_date_bad_strptime_format(self):
         # We *always* want *all* warnings thrown on this module
         warnings.filterwarnings("always", "", DeprecationWarning, __name__)

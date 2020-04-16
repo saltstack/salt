@@ -12,7 +12,7 @@ import salt.states.sysrc as sysrc
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class SysrcTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class SysrcTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {sysrc: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_managed(self):
         """
             Test to ensure a sysrc variable is set to a specific value.
@@ -54,6 +55,7 @@ class SysrcTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertDictEqual(sysrc.managed("salt", "stack"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
             Test to ensure a sysrc variable is absent.

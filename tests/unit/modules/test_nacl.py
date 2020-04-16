@@ -46,6 +46,7 @@ class NaclTest(TestCase, LoaderModuleMockMixin):
         self.pk = ret["pk"]
         self.sk = ret["sk"]
 
+    @skipIf(True, "FASTTEST skip")
     def test_keygen(self):
         """
         Test keygen
@@ -53,6 +54,7 @@ class NaclTest(TestCase, LoaderModuleMockMixin):
         self.assertEqual(len(self.pk), 44)
         self.assertEqual(len(self.sk), 44)
 
+    @skipIf(True, "FASTTEST skip")
     def test_enc_dec(self):
         """
         Generate keys, encrypt, then decrypt.
@@ -64,6 +66,7 @@ class NaclTest(TestCase, LoaderModuleMockMixin):
         decrypted_data = nacl.dec(data=encrypted_data, sk=self.sk)
         self.assertEqual(self.unencrypted_data, decrypted_data)
 
+    @skipIf(True, "FASTTEST skip")
     def test_sealedbox_enc_dec(self):
         """
         Generate keys, encrypt, then decrypt.
@@ -76,6 +79,7 @@ class NaclTest(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(self.unencrypted_data, decrypted_data)
 
+    @skipIf(True, "FASTTEST skip")
     def test_secretbox_enc_dec(self):
         """
         Generate keys, encrypt, then decrypt.

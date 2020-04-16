@@ -73,6 +73,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {syslog_ng: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_statement_without_options(self):
         s = syslog_ng.Statement("source", "s_local", options=[])
         b = s.build()
@@ -86,6 +87,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
             b,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_non_empty_statement(self):
         o1 = syslog_ng.Option("file")
         o2 = syslog_ng.Option("tcp")
@@ -105,6 +107,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
             b,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_option_with_parameters(self):
         o1 = syslog_ng.Option("file")
         p1 = syslog_ng.SimpleParameter('"/var/log/messages"')
@@ -130,6 +133,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
             b,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_parameter_with_values(self):
         p = syslog_ng.TypedParameter()
         p.type = "tls"
@@ -156,6 +160,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
             b,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_value_with_arguments(self):
         t = syslog_ng.TypedParameterValue()
         t.type = "key_file"
@@ -178,6 +183,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
             b,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_end_to_end_statement_generation(self):
         s = syslog_ng.Statement("source", "s_tls")
 
@@ -239,6 +245,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
         )
 
     @skipIf(salt.utils.platform.is_windows(), "Module not available on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_version(self):
         cmd_ret = {"retcode": 0, "stdout": VERSION_OUTPUT}
         expected_output = {"retcode": 0, "stdout": _VERSION}
@@ -263,6 +270,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
             )
 
     @skipIf(salt.utils.platform.is_windows(), "Module not available on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_stats(self):
         cmd_ret = {"retcode": 0, "stdout": STATS_OUTPUT}
         cmd_args = ["syslog-ng-ctl", "stats"]
@@ -286,6 +294,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
             )
 
     @skipIf(salt.utils.platform.is_windows(), "Module not available on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_modules(self):
         cmd_ret = {"retcode": 0, "stdout": VERSION_OUTPUT}
         expected_output = {"retcode": 0, "stdout": _MODULES}
@@ -310,6 +319,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
             )
 
     @skipIf(salt.utils.platform.is_windows(), "Module not available on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_config_test(self):
         cmd_ret = {"retcode": 0, "stderr": "", "stdout": "Foo"}
         cmd_args = ["syslog-ng", "--syntax-only"]
@@ -333,6 +343,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
             )
 
     @skipIf(salt.utils.platform.is_windows(), "Module not available on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_config_test_cfgfile(self):
         cfgfile = "/path/to/syslog-ng.conf"
         cmd_ret = {"retcode": 1, "stderr": "Syntax error...", "stdout": ""}

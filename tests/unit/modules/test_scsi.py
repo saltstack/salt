@@ -15,7 +15,7 @@ import salt.utils.path
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ScsiTestCase(TestCase, LoaderModuleMockMixin):
@@ -26,6 +26,7 @@ class ScsiTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {scsi: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_ls_(self):
         """
         Test for list SCSI devices, with details
@@ -85,6 +86,7 @@ class ScsiTestCase(TestCase, LoaderModuleMockMixin):
                 scsi.ls_(), "scsi.ls not available - lsscsi command not found"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_rescan_all(self):
         """
         Test for list scsi devices

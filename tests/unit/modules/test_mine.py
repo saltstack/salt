@@ -15,7 +15,7 @@ from salt.utils.odict import OrderedDict
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class FakeCache(object):
@@ -66,6 +66,7 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_local_empty(self):
         """
         Tests getting function data from the local mine that does not exist.
@@ -76,6 +77,7 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret_classic, {})
         self.assertEqual(ret_dict, {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_local_classic(self):
         """
         Tests getting function data from the local mine that was stored without minion-side ACL.
@@ -89,6 +91,7 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret_classic, {"webserver": "barfood"})
         self.assertEqual(ret_dict, {"foobard": {"webserver": "barfood"}})
 
+    @skipIf(True, "FASTTEST skip")
     def test_send_get_local(self):
         """
         Tests sending an item to the mine in the minion's local cache,
@@ -128,6 +131,7 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(ret_multi, ret_multi2)
 
+    @skipIf(True, "FASTTEST skip")
     def test_send_get_acl_local(self):
         """
         Tests sending an item to the mine in the minion's local cache,
@@ -169,6 +173,7 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
             ret_single = mine.get("*", "ip_addr")
         self.assertEqual(ret_single, {"webserver": self.ip_ret})
 
+    @skipIf(True, "FASTTEST skip")
     def test_send_master(self):
         """
         Tests sending an item to the mine stored on the master.
@@ -192,6 +197,7 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_send_master_acl(self):
         """
         Tests sending an item to the mine stored on the master. Now with ACL.
@@ -222,6 +228,7 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_master(self):
         """
         Tests loading a mine item from the mine stored on the master.
@@ -239,6 +246,7 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
             # Verify the correct load
             self.assertEqual(mine.get("*", "foo.bar"), mock_load)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_master_exclude_minion(self):
         """
         Tests the exclude_minion-parameter for mine.get
@@ -252,6 +260,7 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(mine.get("*", "foo.bar", exclude_minion=True), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_local(self):
         """
         Tests the ``update``-function on the minion's local cache.
@@ -300,6 +309,7 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_local_specific(self):
         """
         Tests the ``update``-function on the minion's local cache.
@@ -348,6 +358,7 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_master(self):
         """
         Tests whether the ``update``-function sends the correct data to the master.
@@ -385,6 +396,7 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
             # Verify the correct load
             self.assertEqual(mine.update(), mock_load)
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_local(self):
         """
         Tests the ``delete``-function on the minion's local cache.
@@ -395,6 +407,7 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
             ret = mine.delete("foobard")
             self.assertEqual(self.cache.fetch("minions/webserver", "mine_cache"), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_master(self):
         """
         Tests whether the ``delete``-function sends the correct data to the master.
@@ -412,6 +425,7 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
             # Verify the correct load
             self.assertEqual(mine.delete("foobard"), mock_load)
 
+    @skipIf(True, "FASTTEST skip")
     def test_flush_local(self):
         """
         Tests the ``flush``-function on the minion's local cache.
@@ -422,6 +436,7 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
             ret = mine.flush()
             self.assertEqual(self.cache.fetch("minions/webserver", "mine_cache"), {})
 
+    @skipIf(True, "FASTTEST skip")
     def test_flush_master(self):
         """
         Tests whether the ``flush``-function sends the correct data to the master.
@@ -433,6 +448,7 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
             # Verify the correct load
             self.assertEqual(mine.flush(), mock_load)
 
+    @skipIf(True, "FASTTEST skip")
     def test_valid(self):
         """
         Tests the ``valid``-function.
@@ -457,6 +473,7 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
                 {"network.ip_addrs": [], "kernel": {"grains.get": ["kernel"]}},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_docker(self):
         """
         Test for Get all mine data for 'docker.ps' and run an
@@ -531,6 +548,7 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_docker_with_container_id(self):
         """
         Test for Get all mine data for 'docker.ps' and run an

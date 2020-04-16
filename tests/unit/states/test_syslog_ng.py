@@ -16,7 +16,7 @@ import salt.utils.files
 import salt.utils.yaml
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 SOURCE_1_CONFIG = {
     "id": "s_tail",
@@ -284,30 +284,39 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {syslog_ng: {}, syslog_ng_module: {"__opts__": {"test": False}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_generate_source_config(self):
         self._config_generator_template(SOURCE_1_CONFIG, SOURCE_1_EXPECTED)
 
+    @skipIf(True, "FASTTEST skip")
     def test_generate_log_config(self):
         self._config_generator_template(LOG_1_CONFIG, LOG_1_EXPECTED)
 
+    @skipIf(True, "FASTTEST skip")
     def test_generate_tcp_source_config(self):
         self._config_generator_template(SOURCE_2_CONFIG, SOURCE_2_EXPECTED)
 
+    @skipIf(True, "FASTTEST skip")
     def test_generate_filter_config(self):
         self._config_generator_template(FILTER_1_CONFIG, FILTER_1_EXPECTED)
 
+    @skipIf(True, "FASTTEST skip")
     def test_generate_template_config(self):
         self._config_generator_template(TEMPLATE_1_CONFIG, TEMPLATE_1_EXPECTED)
 
+    @skipIf(True, "FASTTEST skip")
     def test_generate_rewrite_config(self):
         self._config_generator_template(REWRITE_1_CONFIG, REWRITE_1_EXPECTED)
 
+    @skipIf(True, "FASTTEST skip")
     def test_generate_global_options_config(self):
         self._config_generator_template(OPTIONS_1_CONFIG, OPTIONS_1_EXPECTED)
 
+    @skipIf(True, "FASTTEST skip")
     def test_generate_short_form_statement(self):
         self._config_generator_template(SHORT_FORM_CONFIG, SHORT_FORM_EXPECTED)
 
+    @skipIf(True, "FASTTEST skip")
     def test_generate_given_config(self):
         self._config_generator_template(GIVEN_CONFIG, SHORT_FORM_EXPECTED)
 
@@ -323,6 +332,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(remove_whitespaces(expected), remove_whitespaces(config))
             self.assertEqual(False, got["result"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_write_config(self):
         yaml_inputs = (
             SOURCE_2_CONFIG,
@@ -367,6 +377,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
             syslog_ng_module.set_config_file("")
             os.remove(config_file_name)
 
+    @skipIf(True, "FASTTEST skip")
     def test_started_state_generate_valid_cli_command(self):
         mock_func = MagicMock(return_value={"retcode": 0, "stdout": "", "pid": 1000})
 

@@ -11,7 +11,7 @@ import salt.modules.influxdb08mod as influx08
 from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 DB_LIST = ["A", "B", "C"]
 USER_LIST = [{"name": "A"}, {"name": "B"}]
@@ -57,6 +57,7 @@ class InfluxTestCase(TestCase):
     TestCase for the salt.modules.at module
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_db_list(self):
         """
         Test to list all InfluxDB databases
@@ -70,6 +71,7 @@ class InfluxTestCase(TestCase):
                 DB_LIST,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_db_exists(self):
         """
         Tests for checks if a database exists in InfluxDB
@@ -87,6 +89,7 @@ class InfluxTestCase(TestCase):
                 )
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_db_create(self):
         """
         Test to create a database
@@ -110,6 +113,7 @@ class InfluxTestCase(TestCase):
                     )
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_db_remove(self):
         """
         Test to remove a database
@@ -133,6 +137,7 @@ class InfluxTestCase(TestCase):
                     )
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_list(self):
         """
         Tests  for list cluster admins or database users.
@@ -157,6 +162,7 @@ class InfluxTestCase(TestCase):
                 USER_LIST,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_exists(self):
         """
         Test to checks if a cluster admin or database user exists.
@@ -174,6 +180,7 @@ class InfluxTestCase(TestCase):
                 )
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_chpass(self):
         """
         Tests to change password for a cluster admin or a database user.
@@ -228,6 +235,7 @@ class InfluxTestCase(TestCase):
                     )
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_remove(self):
         """
         Tests to remove a cluster admin or a database user.
@@ -274,6 +282,7 @@ class InfluxTestCase(TestCase):
                     )
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_query(self):
         """
         Test for querying data
@@ -291,6 +300,7 @@ class InfluxTestCase(TestCase):
                 )
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_retention_policy_get(self):
         client = MockInfluxDBClient()
         policy = {"name": "foo"}
@@ -300,6 +310,7 @@ class InfluxTestCase(TestCase):
                 policy, influx08.retention_policy_get(database="db", name="foo")
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_retention_policy_add(self):
         client = MockInfluxDBClient()
         with patch.object(influx08, "_client", MagicMock(return_value=client)):
@@ -313,6 +324,7 @@ class InfluxTestCase(TestCase):
                 "name", "30d", 1, "db", False
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_retention_policy_modify(self):
         client = MockInfluxDBClient()
         with patch.object(influx08, "_client", MagicMock(return_value=client)):

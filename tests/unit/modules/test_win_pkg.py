@@ -72,6 +72,7 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
             pkg_resource: {"__grains__": {"os": "Windows"}},
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_pkg__get_reg_software(self):
         result = win_pkg._get_reg_software()
         self.assertTrue(isinstance(result, dict))
@@ -82,6 +83,7 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
                 found_python = True
         self.assertTrue(found_python)
 
+    @skipIf(True, "FASTTEST skip")
     def test_pkg_install_not_found(self):
         """
         Test pkg.install when the Version is NOT FOUND in the Software
@@ -97,6 +99,7 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
             result = win_pkg.install(name="nsis", version="3.01")
             self.assertDictEqual(expected, result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_pkg_install_rollback(self):
         """
         test pkg.install rolling back to a previous version
@@ -118,6 +121,7 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
             result = win_pkg.install(name="nsis", version="3.02")
             self.assertDictEqual(expected, result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_pkg_install_existing(self):
         """
         test pkg.install when the package is already installed
@@ -140,6 +144,7 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
             result = win_pkg.install(name="nsis")
             self.assertDictEqual(expected, result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_pkg_install_existing_with_version(self):
         """
         test pkg.install when the package is already installed
@@ -162,6 +167,7 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
             result = win_pkg.install(name="nsis", version="3.03")
             self.assertDictEqual(expected, result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_pkg_install_name(self):
         """
         test pkg.install name extra_install_flags
@@ -204,6 +210,7 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
                 "-e True -test_flag True" in str(mock_cmd_run_all.call_args[0])
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_pkg_install_single_pkg(self):
         """
         test pkg.install pkg with extra_install_flags
@@ -245,6 +252,7 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
                 "-e True -test_flag True" in str(mock_cmd_run_all.call_args[0])
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_pkg_install_multiple_pkgs(self):
         """
         test pkg.install pkg with extra_install_flags

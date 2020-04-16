@@ -7,7 +7,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import salt.states.postgres_privileges as postgres_privileges
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PostgresPrivilegesTestCase(TestCase, LoaderModuleMockMixin):
@@ -34,6 +34,7 @@ class PostgresPrivilegesTestCase(TestCase, LoaderModuleMockMixin):
         del self.mock_true
         del self.mock_false
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_table(self):
         """
         Test present
@@ -81,6 +82,7 @@ class PostgresPrivilegesTestCase(TestCase, LoaderModuleMockMixin):
                     self.ret,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_group(self):
         """
         Test present group
@@ -114,6 +116,7 @@ class PostgresPrivilegesTestCase(TestCase, LoaderModuleMockMixin):
                     self.ret,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_table(self):
         """
         Test absent
@@ -162,6 +165,7 @@ class PostgresPrivilegesTestCase(TestCase, LoaderModuleMockMixin):
                     self.ret,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_group(self):
         """
         Test absent group

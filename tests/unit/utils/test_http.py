@@ -35,6 +35,7 @@ class HTTPTestCase(TestCase):
 
     # sanitize_url tests
 
+    @skipIf(True, "FASTTEST skip")
     def test_sanitize_url_hide_fields_none(self):
         """
         Tests sanitizing a url when the hide_fields kwarg is None.
@@ -43,6 +44,7 @@ class HTTPTestCase(TestCase):
         ret = http.sanitize_url(mock_url, hide_fields=None)
         self.assertEqual(ret, mock_url)
 
+    @skipIf(True, "FASTTEST skip")
     def test_sanitize_url_no_elements(self):
         """
         Tests sanitizing a url when no elements should be sanitized.
@@ -51,6 +53,7 @@ class HTTPTestCase(TestCase):
         ret = http.sanitize_url(mock_url, [""])
         self.assertEqual(ret, mock_url)
 
+    @skipIf(True, "FASTTEST skip")
     def test_sanitize_url_single_element(self):
         """
         Tests sanitizing a url with only a single element to be sanitized.
@@ -66,6 +69,7 @@ class HTTPTestCase(TestCase):
         ret = http.sanitize_url(mock_url, ["keep_it_secret"])
         self.assertEqual(ret, mock_ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_sanitize_url_multiple_elements(self):
         """
         Tests sanitizing a url with multiple elements to be sanitized.
@@ -85,6 +89,7 @@ class HTTPTestCase(TestCase):
 
     # _sanitize_components tests
 
+    @skipIf(True, "FASTTEST skip")
     def test_sanitize_components_no_elements(self):
         """
         Tests when zero elements need to be sanitized.
@@ -94,6 +99,7 @@ class HTTPTestCase(TestCase):
         ret = http._sanitize_url_components(mock_component_list, "api_key")
         self.assertEqual(ret, mock_ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_sanitize_components_one_element(self):
         """
         Tests a single component to be sanitized.
@@ -103,6 +109,7 @@ class HTTPTestCase(TestCase):
         ret = http._sanitize_url_components(mock_component_list, "api_key")
         self.assertEqual(ret, mock_ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_sanitize_components_multiple_elements(self):
         """
         Tests two componenets to be sanitized.
@@ -112,7 +119,6 @@ class HTTPTestCase(TestCase):
         ret = http._sanitize_url_components(mock_component_list, "foo")
         self.assertEqual(ret, mock_ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_query_null_response(self):
         """
         This tests that we get a null response when raise_error=False and the
@@ -129,6 +135,7 @@ class HTTPTestCase(TestCase):
         result = http.query(url, raise_error=False)
         assert result == {"body": None}, result
 
+    @skipIf(True, "FASTTEST skip")
     def test_requests_multipart_formdata_post(self):
         """
         Test handling of a multipart/form-data POST using the requests backend

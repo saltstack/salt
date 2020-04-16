@@ -25,6 +25,7 @@ class LoadBeaconTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {load: {"__context__": {}, "__salt__": {}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_non_list_config(self):
         config = {}
 
@@ -32,6 +33,7 @@ class LoadBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(ret, (False, "Configuration for load beacon must be a list."))
 
+    @skipIf(True, "FASTTEST skip")
     def test_empty_config(self):
         config = [{}]
 
@@ -42,6 +44,7 @@ class LoadBeaconTestCase(TestCase, LoaderModuleMockMixin):
         )
 
     @skipIf(salt.utils.platform.is_windows(), "os.getloadavg not available on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_load_match(self):
         with patch("os.getloadavg", MagicMock(return_value=(1.82, 1.84, 1.56))):
             config = [

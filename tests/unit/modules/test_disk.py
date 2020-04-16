@@ -142,6 +142,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {disk: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_usage_dict(self):
         with patch.dict(disk.__grains__, {"kernel": "Linux"}), patch(
             "salt.modules.disk.usage", MagicMock(return_value=STUB_DISK_USAGE)
@@ -150,6 +151,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(disk.__salt__, {"cmd.run": mock_cmd}):
                 self.assertDictEqual(STUB_DISK_USAGE, disk.usage(args=None))
 
+    @skipIf(True, "FASTTEST skip")
     def test_usage_none(self):
         with patch.dict(disk.__grains__, {"kernel": "Linux"}), patch(
             "salt.modules.disk.usage", MagicMock(return_value="")
@@ -158,6 +160,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(disk.__salt__, {"cmd.run": mock_cmd}):
                 self.assertEqual("", disk.usage(args=None))
 
+    @skipIf(True, "FASTTEST skip")
     def test_inodeusage(self):
         with patch.dict(disk.__grains__, {"kernel": "OpenBSD"}), patch(
             "salt.modules.disk.inodeusage", MagicMock(return_value=STUB_DISK_INODEUSAGE)
@@ -166,6 +169,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(disk.__salt__, {"cmd.run": mock}):
                 self.assertDictEqual(STUB_DISK_INODEUSAGE, disk.inodeusage(args=None))
 
+    @skipIf(True, "FASTTEST skip")
     def test_percent(self):
         with patch.dict(disk.__grains__, {"kernel": "Linux"}), patch(
             "salt.modules.disk.percent", MagicMock(return_value=STUB_DISK_PERCENT)
@@ -174,6 +178,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(disk.__salt__, {"cmd.run": mock}):
                 self.assertDictEqual(STUB_DISK_PERCENT, disk.percent(args=None))
 
+    @skipIf(True, "FASTTEST skip")
     def test_percent_args(self):
         with patch.dict(disk.__grains__, {"kernel": "Linux"}), patch(
             "salt.modules.disk.percent", MagicMock(return_value="/")
@@ -182,12 +187,14 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(disk.__salt__, {"cmd.run": mock}):
                 self.assertEqual("/", disk.percent("/"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_blkid(self):
         with patch.dict(
             disk.__salt__, {"cmd.run_stdout": MagicMock(return_value=1)}
         ), patch("salt.modules.disk.blkid", MagicMock(return_value=STUB_DISK_BLKID)):
             self.assertDictEqual(STUB_DISK_BLKID, disk.blkid())
 
+    @skipIf(True, "FASTTEST skip")
     def test_dump(self):
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
         with patch.dict(disk.__salt__, {"cmd.run_all": mock}):
@@ -199,12 +206,14 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False,
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_wipe(self):
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
         with patch.dict(disk.__salt__, {"cmd.run_all": mock}):
             disk.wipe("/dev/sda")
             mock.assert_called_once_with("wipefs -a /dev/sda", python_shell=False)
 
+    @skipIf(True, "FASTTEST skip")
     def test_tune(self):
         mock = MagicMock(
             return_value="712971264\n512\n512\n512\n0\n0\n88\n712971264\n365041287168\n512\n512"
@@ -229,6 +238,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(len(args[0].split()), 6)
                 self.assertEqual(kwargs, {"python_shell": False})
 
+    @skipIf(True, "FASTTEST skip")
     def test_format(self):
         """
         unit tests for disk.format
@@ -240,6 +250,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(disk.format_(device), True)
 
+    @skipIf(True, "FASTTEST skip")
     def test_fat_format(self):
         """
         unit tests for disk.format when using fat argument
@@ -258,6 +269,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         not salt.utils.path.which("lsblk") and not salt.utils.path.which("df"),
         "lsblk or df not found",
     )
+    @skipIf(True, "FASTTEST skip")
     def test_fstype(self):
         """
         unit tests for disk.fstype
@@ -270,6 +282,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         ), patch("salt.utils.path.which", MagicMock(return_value=True)):
             self.assertEqual(disk.fstype(device), fs_type)
 
+    @skipIf(True, "FASTTEST skip")
     def test_resize2fs(self):
         """
         unit tests for disk.resize2fs
@@ -286,6 +299,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
     @skipIf(not salt.utils.path.which("mkfs"), "mkfs not found")
+    @skipIf(True, "FASTTEST skip")
     def test_format_(self):
         """
         unit tests for disk.format_
@@ -298,6 +312,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
     @skipIf(not salt.utils.path.which("mkfs"), "mkfs not found")
+    @skipIf(True, "FASTTEST skip")
     def test_format__fat(self):
         """
         unit tests for disk.format_ with FAT parameter

@@ -11,7 +11,7 @@ import salt.modules.sdb as sdb
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class SdbTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class SdbTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get(self):
         """
         Test if it gets a value from a db, using a uri in the form of
@@ -33,6 +34,7 @@ class SdbTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_set(self):
         """
         Test if it sets a value from a db, using a uri in the form of

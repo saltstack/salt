@@ -12,7 +12,7 @@ import salt.modules.rpm_lowpkg as rpm
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class RpmTestCase(TestCase, LoaderModuleMockMixin):
@@ -25,6 +25,7 @@ class RpmTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_pkgs' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_pkgs(self):
         """
         Test if it list the packages currently installed in a dict
@@ -35,6 +36,7 @@ class RpmTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'verify' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_verify(self):
         """
         Test if it runs an rpm -Va on a system,
@@ -48,6 +50,7 @@ class RpmTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'file_list' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_file_list(self):
         """
         Test if it list the files that belong to a package.
@@ -58,6 +61,7 @@ class RpmTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'file_dict' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_file_dict(self):
         """
         Test if it list the files that belong to a package
@@ -68,6 +72,7 @@ class RpmTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'owner' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_owner(self):
         """
         Test if it return the name of the package that owns the file.
@@ -94,6 +99,7 @@ class RpmTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'checksum' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_checksum(self):
         """
         Test if checksum validate as expected
@@ -110,6 +116,7 @@ class RpmTestCase(TestCase, LoaderModuleMockMixin):
                 rpm.checksum("file1.rpm", "file2.rpm", "file3.rpm"), ret
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_version_cmp_rpm(self):
         """
         Test package version is called RPM version if RPM-Python is installed
@@ -123,6 +130,7 @@ class RpmTestCase(TestCase, LoaderModuleMockMixin):
                 0, rpm.version_cmp("1", "2")
             )  # mock returns 0, which means RPM was called
 
+    @skipIf(True, "FASTTEST skip")
     def test_version_cmp_fallback(self):
         """
         Test package version is called RPM version if RPM-Python is installed

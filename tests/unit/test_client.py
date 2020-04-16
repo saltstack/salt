@@ -24,6 +24,7 @@ from tests.support.unit import TestCase, skipIf
 
 
 class LocalClientTestCase(TestCase, SaltClientTestCaseMixin):
+    @skipIf(True, "FASTTEST skip")
     def test_job_result_return_success(self):
         """
         Should return the `expected_return`, since there is a job with the right jid.
@@ -39,6 +40,7 @@ class LocalClientTestCase(TestCase, SaltClientTestCaseMixin):
         val = next(ret)
         self.assertEqual(val, expected_return)
 
+    @skipIf(True, "FASTTEST skip")
     def test_job_result_return_failure(self):
         """
         We are _not_ getting a job return, because the jid is different. Instead we should
@@ -60,6 +62,7 @@ class LocalClientTestCase(TestCase, SaltClientTestCaseMixin):
         with self.assertRaises(StopIteration):
             next(ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_local_client(self):
         local_client = client.LocalClient(mopts=self.get_temp_config("master"))
         self.assertIsInstance(
@@ -68,6 +71,7 @@ class LocalClientTestCase(TestCase, SaltClientTestCaseMixin):
             "LocalClient did not create a LocalClient instance",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_pub_data(self):
         just_minions = {"minions": ["m1", "m2"]}
         jid_no_minions = {"jid": "1234", "minions": []}
@@ -93,6 +97,7 @@ class LocalClientTestCase(TestCase, SaltClientTestCaseMixin):
             valid_pub_data, self.client._check_pub_data(valid_pub_data)
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_cmd_subset(self):
         with patch(
             "salt.client.LocalClient.cmd",
@@ -176,6 +181,7 @@ class LocalClientTestCase(TestCase, SaltClientTestCaseMixin):
                     )
 
     @skipIf(salt.utils.platform.is_windows(), "Not supported on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_pub(self):
         """
         Tests that the client cleanly returns when the publisher is not running
@@ -210,7 +216,6 @@ class LocalClientTestCase(TestCase, SaltClientTestCaseMixin):
                 )
 
     @skipIf(not salt.utils.platform.is_windows(), "Windows only test")
-    @skipIf(True, "SLOWTEST skip")
     def test_pub_win32(self):
         """
         Tests that the client raises a timeout error when using ZeroMQ's TCP

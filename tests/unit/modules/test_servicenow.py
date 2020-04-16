@@ -11,7 +11,7 @@ import salt.modules.servicenow as servicenow
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MockServiceNowClient(object):
@@ -43,22 +43,26 @@ class ServiceNowModuleTestCase(TestCase, LoaderModuleMockMixin):
             ].api.Client = MockServiceNowClient
         return {servicenow: module_globals}
 
+    @skipIf(True, "FASTTEST skip")
     def test_module_creation(self):
         client = servicenow._get_client()
         self.assertFalse(client is None)
 
+    @skipIf(True, "FASTTEST skip")
     def test_non_structured_query(self):
         result = servicenow.non_structured_query("tests", "role=web")
         self.assertFalse(result is None)
         self.assertEqual(result[0]["query_size"], 8)
         self.assertEqual(result[0]["query_value"], "role=web")
 
+    @skipIf(True, "FASTTEST skip")
     def test_non_structured_query_kwarg(self):
         result = servicenow.non_structured_query("tests", role="web")
         self.assertFalse(result is None)
         self.assertEqual(result[0]["query_size"], 8)
         self.assertEqual(result[0]["query_value"], "role=web")
 
+    @skipIf(True, "FASTTEST skip")
     def test_non_structured_query_kwarg_multi(self):
         result = servicenow.non_structured_query("tests", role="web", type="computer")
         self.assertFalse(result is None)

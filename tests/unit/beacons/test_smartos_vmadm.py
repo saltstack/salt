@@ -9,7 +9,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 
 # Salt testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 # Mock Results
 MOCK_CLEAN_STATE = {"first_run": True, "vms": []}
@@ -60,6 +60,7 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {vmadm: {"__context__": {}, "__salt__": {}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_non_list_config(self):
         """
         We only have minimal validation so we test that here
@@ -70,6 +71,7 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(ret, (False, "Configuration for vmadm beacon must be a list!"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_created_startup(self):
         """
         Test with one vm and startup_create_event
@@ -101,6 +103,7 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ]
             self.assertEqual(ret, res)
 
+    @skipIf(True, "FASTTEST skip")
     def test_created_nostartup(self):
         """
         Test with one image and startup_import_event unset/false
@@ -127,6 +130,7 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertEqual(ret, res)
 
+    @skipIf(True, "FASTTEST skip")
     def test_created(self):
         """
         Test with one vm, create a 2nd one
@@ -164,6 +168,7 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertEqual(ret, res)
 
+    @skipIf(True, "FASTTEST skip")
     def test_deleted(self):
         """
         Test with two vms and one gets destroyed
@@ -195,6 +200,7 @@ class SmartOSImgAdmBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertEqual(ret, res)
 
+    @skipIf(True, "FASTTEST skip")
     def test_complex(self):
         """
         Test with two vms, stop one, delete one

@@ -11,13 +11,14 @@ from salt.exceptions import SaltInvocationError
 from salt.utils.odict import OrderedDict
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class UtilDictupdateTestCase(TestCase):
 
     dict1 = {"A": "B", "C": {"D": "E", "F": {"G": "H", "I": "J"}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_update(self):
 
         # level 1 value changes
@@ -146,6 +147,7 @@ class UtilDictMergeTestCase(TestCase):
 
     dict1 = {"A": "B", "C": {"D": "E", "F": {"G": "H", "I": "J"}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_merge_overwrite_traditional(self):
         """
         Test traditional overwrite, wherein a key in the second dict overwrites a key in the first
@@ -155,6 +157,7 @@ class UtilDictMergeTestCase(TestCase):
         ret = dictupdate.merge_overwrite(copy.deepcopy(self.dict1), {"A": "b"})
         self.assertEqual(mdict, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_merge_overwrite_missing_source_key(self):
         """
         Test case wherein the overwrite strategy is used but a key in the second dict is
@@ -165,6 +168,7 @@ class UtilDictMergeTestCase(TestCase):
         ret = dictupdate.merge_overwrite(copy.deepcopy(self.dict1), {"D": "new"})
         self.assertEqual(mdict, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_merge_aggregate_traditional(self):
         """
         Test traditional aggregation, where a val from dict2 overwrites one
@@ -175,6 +179,7 @@ class UtilDictMergeTestCase(TestCase):
         ret = dictupdate.merge_overwrite(copy.deepcopy(self.dict1), {"A": "b"})
         self.assertEqual(mdict, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_merge_list_traditional(self):
         """
         Test traditional list merge, where a key present in dict2 will be converted
@@ -185,6 +190,7 @@ class UtilDictMergeTestCase(TestCase):
         ret = dictupdate.merge_list(copy.deepcopy(self.dict1), {"A": "b"})
         self.assertEqual(mdict, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_merge_list_append(self):
         """
         This codifies the intended behaviour that items merged into a dict val that is already
@@ -206,6 +212,7 @@ class UtilDeepDictUpdateTestCase(TestCase):
 
     dict1 = {"A": "B", "C": {"D": "E", "F": {"G": "H", "I": "J"}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_deep_set_overwrite(self):
         """
         Test overwriting an existing value.
@@ -226,6 +233,7 @@ class UtilDeepDictUpdateTestCase(TestCase):
         res = dictupdate.set_dict_key_value(mdict, "C", None)
         self.assertEqual({"A": "B", "C": None}, res)
 
+    @skipIf(True, "FASTTEST skip")
     def test_deep_set_create(self):
         """
         Test creating new nested keys.
@@ -241,6 +249,7 @@ class UtilDeepDictUpdateTestCase(TestCase):
             res,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_deep_set_ordered_dicts(self):
         """
         Test creating new nested ordereddicts.
@@ -248,6 +257,7 @@ class UtilDeepDictUpdateTestCase(TestCase):
         res = dictupdate.set_dict_key_value({}, "A:B", "foo", ordered_dict=True)
         self.assertEqual({"A": OrderedDict([("B", "foo")])}, res)
 
+    @skipIf(True, "FASTTEST skip")
     def test_deep_append(self):
         """
         Test appending to a list.
@@ -262,6 +272,7 @@ class UtilDeepDictUpdateTestCase(TestCase):
         res = dictupdate.append_dict_key_value({}, "foo:bar:baz", 42)
         self.assertEqual({"foo": {"bar": {"baz": [42]}}}, res)
 
+    @skipIf(True, "FASTTEST skip")
     def test_deep_extend(self):
         """
         Test extending a list.
@@ -280,6 +291,7 @@ class UtilDeepDictUpdateTestCase(TestCase):
         res = dictupdate.extend_dict_key_value(sdict, "bar:baz", {"qux": "quux"})
         self.assertEqual({"bar": {"baz": [1, 2, 42, 42, "qux"]}}, res)
 
+    @skipIf(True, "FASTTEST skip")
     def test_deep_extend_illegal_addition(self):
         """
         Test errorhandling extending lists with illegal types.
@@ -292,6 +304,7 @@ class UtilDeepDictUpdateTestCase(TestCase):
             ):
                 dictupdate.extend_dict_key_value({}, "foo", extend_with)
 
+    @skipIf(True, "FASTTEST skip")
     def test_deep_extend_illegal_source(self):
         """
         Test errorhandling extending things that are not a list.
@@ -305,6 +318,7 @@ class UtilDeepDictUpdateTestCase(TestCase):
             ):
                 dictupdate.extend_dict_key_value({"foo": extend_this}, "foo", [42])
 
+    @skipIf(True, "FASTTEST skip")
     def test_deep_update(self):
         """
         Test updating a (sub)dict.
@@ -330,6 +344,7 @@ class UtilDeepDictUpdateTestCase(TestCase):
         )
         self.assertEqual({"foo": {"bar": {"baz": {"qux": "quux"}}}}, res)
 
+    @skipIf(True, "FASTTEST skip")
     def test_deep_update_illegal_update(self):
         """
         Test errorhandling updating a (sub)dict with illegal types.

@@ -23,10 +23,11 @@ import salt.utils.data
 import salt.utils.files
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class CacheDictTestCase(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_sanity(self):
         """
         Make sure you can instantiate etc.
@@ -41,6 +42,7 @@ class CacheDictTestCase(TestCase):
         del cd["foo"]
         self.assertNotIn("foo", cd)
 
+    @skipIf(True, "FASTTEST skip")
     def test_ttl(self):
         cd = cache.CacheDict(0.1)
         cd["foo"] = "bar"
@@ -59,6 +61,7 @@ class CacheContextTestCase(TestCase):
         if os.path.exists(context_dir):
             shutil.rmtree(os.path.join(tempfile.gettempdir(), "context"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_smoke_context(self):
         """
         Smoke test the context cache
@@ -76,6 +79,7 @@ class CacheContextTestCase(TestCase):
 
             self.assertDictEqual({"a": "b"}, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_context_wrapper(self):
         """
         Test to ensure that a module which decorates itself
@@ -115,6 +119,7 @@ class ContextCacheTest(TestCase):
         if os.path.isdir(context_dir):
             shutil.rmtree(context_dir)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_cache(self):
         """
         Tests to ensure the cache is written correctly
@@ -148,6 +153,7 @@ class ContextCacheTest(TestCase):
         retrieved_cache = cc.get_cache_context()
         self.assertDictEqual(retrieved_cache, __context__)
 
+    @skipIf(True, "FASTTEST skip")
     def test_refill_cache(self):
         """
         Tests to ensure that the context cache can rehydrate a wrapped function
@@ -170,6 +176,7 @@ class ContextCacheTest(TestCase):
 
 
 class CacheDiskTestCase(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_everything(self):
         """
         Make sure you can instantiate, add, update, remove, expire

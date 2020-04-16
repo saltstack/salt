@@ -27,6 +27,7 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'available' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_available(self):
         """
         Tests return a list of all available kernel modules
@@ -36,6 +37,7 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'check_available' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_available(self):
         """
         Tests if the specified kernel module is available
@@ -45,6 +47,7 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'lsmod' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_lsmod(self):
         """
         Tests return information about currently loaded modules
@@ -58,6 +61,7 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
     # 'mod_list' function tests: 1
 
     @skipIf(not os.path.isfile("/etc/modules"), "/etc/modules not present")
+    @skipIf(True, "FASTTEST skip")
     def test_mod_list(self):
         """
         Tests return a list of the loaded module names
@@ -77,6 +81,7 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'load' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_load(self):
         """
         Tests to loads specified kernel module.
@@ -103,6 +108,7 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'is_loaded' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_loaded(self):
         """
         Tests if specified kernel module is loaded.
@@ -112,6 +118,7 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'remove' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove(self):
         """
         Tests to remove the specified kernel module

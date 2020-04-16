@@ -12,7 +12,7 @@ import salt.states.iptables as iptables
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class IptablesTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {iptables: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_chain_present(self):
         """
             Test to verify the chain is exist.
@@ -72,6 +73,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
                     )
                     self.assertDictEqual(iptables.chain_present("salt"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_chain_absent(self):
         """
             Test to verify the chain is absent.
@@ -123,6 +125,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
                     )
                     self.assertDictEqual(iptables.chain_absent("salt"), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_append(self):
         """
             Test to append a rule to a chain
@@ -188,6 +191,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
                                 iptables.append("salt", table="", chain=""), ret
                             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_insert(self):
         """
             Test to insert a rule into a chain
@@ -258,6 +262,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
                                 ret,
                             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete(self):
         """
             Test to delete a rule to a chain
@@ -327,6 +332,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
                                 ret,
                             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_policy(self):
         """
             Test to sets the default policy for iptables firewall tables
@@ -393,6 +399,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
                             ret,
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_flush(self):
         """
             Test to flush current iptables state
@@ -436,6 +443,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
                         iptables.flush("salt", table="", chain=""), ret
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_mod_aggregate(self):
         """
             Test to mod_aggregate function

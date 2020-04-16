@@ -12,7 +12,7 @@ import salt.states.slack as slack
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class SlackTestCase(TestCase, LoaderModuleMockMixin):
@@ -25,6 +25,7 @@ class SlackTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'post_message' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_post_message_apikey(self):
         """
         Test to send a message to a Slack channel using an API Key.
@@ -119,6 +120,7 @@ class SlackTestCase(TestCase, LoaderModuleMockMixin):
                     ret,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_post_message_webhook(self):
         """
         Test to send a message to a Slack channel using an webhook.

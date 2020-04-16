@@ -12,7 +12,7 @@ import salt.states.webutil as htpasswd
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class HtpasswdTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,6 +23,7 @@ class HtpasswdTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {htpasswd: {"__opts__": {"test": False}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_user_exists_already(self):
         """
         Test if it returns True when user already exists in htpasswd file
@@ -40,6 +41,7 @@ class HtpasswdTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertEqual(ret, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_new_user_success(self):
         """
         Test if it returns True when new user is added to htpasswd file
@@ -60,6 +62,7 @@ class HtpasswdTestCase(TestCase, LoaderModuleMockMixin):
             }
             self.assertEqual(ret, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_new_user_error(self):
         """
         Test if it returns False when adding user to htpasswd failed

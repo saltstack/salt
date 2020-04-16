@@ -72,6 +72,7 @@ mock_writes_list = salt.utils.data.decode(
 
 
 class DNSUtilTestCase(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_parse_hosts(self):
         with patch("salt.utils.files.fopen", mock_open(read_data=mock_hosts_file)):
             self.assertEqual(
@@ -84,6 +85,7 @@ class DNSUtilTestCase(TestCase):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_hosts_append(self):
         with patch(
             "salt.utils.files.fopen", mock_open(read_data=mock_hosts_file)
@@ -102,6 +104,7 @@ class DNSUtilTestCase(TestCase):
             )
             assert writes[0] == expected, writes[0]
 
+    @skipIf(True, "FASTTEST skip")
     def test_hosts_remove(self):
         to_remove = "ad1.yuk.co"
         new_mock_file = mock_hosts_file + "\n127.0.0.1 " + to_remove + "\n"
@@ -118,6 +121,7 @@ class DNSUtilTestCase(TestCase):
             log.debug(mock_soa_zone)
             log.debug(dnsutil.parse_zone("/var/lib/named/example.com.zone"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_to_seconds_hour(self):
         self.assertEqual(
             dnsutil._to_seconds("4H"),
@@ -125,11 +129,13 @@ class DNSUtilTestCase(TestCase):
             msg="Did not detect valid hours as invalid",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_to_seconds_day(self):
         self.assertEqual(
             dnsutil._to_seconds("1D"), 86400, msg="Did not detect valid day as invalid"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_to_seconds_week(self):
         self.assertEqual(
             dnsutil._to_seconds("2W"),
@@ -137,11 +143,13 @@ class DNSUtilTestCase(TestCase):
             msg="Did not set time greater than one week to one week",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_to_seconds_empty(self):
         self.assertEqual(
             dnsutil._to_seconds(""), 604800, msg="Did not set empty time to one week"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_to_seconds_large(self):
         self.assertEqual(
             dnsutil._to_seconds("604801"),

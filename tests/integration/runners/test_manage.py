@@ -7,7 +7,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
-from tests.support.unit import skipIf
 
 
 class ManageTest(ShellCase):
@@ -15,7 +14,6 @@ class ManageTest(ShellCase):
     Test the manage runner
     """
 
-    @skipIf(True, "SLOWTEST skip")
     def test_up(self):
         """
         manage.up
@@ -26,7 +24,6 @@ class ManageTest(ShellCase):
         self.assertTrue(any("- minion" in out for out in ret["out"]))
         self.assertTrue(any("- sub_minion" in out for out in ret["out"]))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_down(self):
         """
         manage.down

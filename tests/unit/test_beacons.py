@@ -14,7 +14,7 @@ import salt.config
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -27,6 +27,7 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {beacons: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_beacon_module(self):
         """
         Test that beacon_module parameter for beacon configuration

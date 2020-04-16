@@ -54,6 +54,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'add' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_add(self):
         """
         Test for adding a user
@@ -72,6 +73,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
     # 'getent' function tests: 2
 
     @skipIf(HAS_PWD is False, "The pwd module is not available")
+    @skipIf(True, "FASTTEST skip")
     def test_getent(self):
         """
         Test if user.getent already have a value
@@ -80,6 +82,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(useradd.getent())
 
     @skipIf(HAS_PWD is False, "The pwd module is not available")
+    @skipIf(True, "FASTTEST skip")
     def test_getent_user(self):
         """
         Tests the return information on all users
@@ -109,6 +112,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'chuid' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_chuid(self):
         """
         Test if the uid of a user change
@@ -130,6 +134,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'chgid' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_chgid(self):
         """
         Test the default group of the user
@@ -151,6 +156,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'chshell' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_chshell(self):
         """
         Test the default shell of user
@@ -176,6 +182,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'chhome' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_chhome(self):
         """
         Test if home directory given is same as previous home directory
@@ -198,6 +205,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'chgroups' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_chgroups(self):
         """
         Test if user groups changed
@@ -219,6 +227,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'chfullname' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_chfullname(self):
         """
         Test if the user's Full Name is changed
@@ -249,6 +258,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'chroomnumber' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_chroomnumber(self):
         """
         Test if the user's Room Number is changed
@@ -279,6 +289,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'chworkphone' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_chworkphone(self):
         """
         Test if the user's Work Phone is changed
@@ -309,6 +320,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'chhomephone' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_chhomephone(self):
         """
         Test if the user's Home Phone is changed
@@ -339,6 +351,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'chother' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_chother(self):
         """
         Test if the user's other GECOS attribute is changed
@@ -370,6 +383,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
     # 'info' function tests: 1
 
     @skipIf(HAS_PWD is False, "The pwd module is not available")
+    @skipIf(True, "FASTTEST skip")
     def test_info(self):
         """
         Test the user information
@@ -396,6 +410,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_groups' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_groups(self):
         """
         Test if it return a list of groups the named user belongs to
@@ -406,6 +421,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
     # 'list_users' function tests: 1
 
     @skipIf(HAS_PWD is False, "The pwd module is not available")
+    @skipIf(True, "FASTTEST skip")
     def test_list_users(self):
         """
         Test if it returns a list of all users
@@ -414,6 +430,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_users' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_rename(self):
         """
         Test if the username for a named user changed
@@ -438,6 +455,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(useradd, "info", mock):
                 self.assertFalse(useradd.rename("salt", "salt"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_build_gecos_field(self):
         """
         Test if gecos fields are built correctly (removing trailing commas)

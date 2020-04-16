@@ -11,7 +11,7 @@ import tests.support.napalm as napalm_test_support
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 import salt.modules.napalm_network as napalm_network  # NOQA
 
@@ -32,18 +32,22 @@ class NapalmNetworkModuleTestCase(TestCase, LoaderModuleMockMixin):
 
         return {napalm_network: module_globals}
 
+    @skipIf(True, "FASTTEST skip")
     def test_connected_pass(self):
         ret = napalm_network.connected()
         assert ret["out"] is True
 
+    @skipIf(True, "FASTTEST skip")
     def test_facts(self):
         ret = napalm_network.facts()
         assert ret["out"] == napalm_test_support.TEST_FACTS
 
+    @skipIf(True, "FASTTEST skip")
     def test_environment(self):
         ret = napalm_network.environment()
         assert ret["out"] == napalm_test_support.TEST_ENVIRONMENT
 
+    @skipIf(True, "FASTTEST skip")
     def test_cli_single_command(self):
         """
         Test that CLI works with 1 arg
@@ -51,6 +55,7 @@ class NapalmNetworkModuleTestCase(TestCase, LoaderModuleMockMixin):
         ret = napalm_network.cli("show run")
         assert ret["out"] == napalm_test_support.TEST_COMMAND_RESPONSE
 
+    @skipIf(True, "FASTTEST skip")
     def test_cli_multi_command(self):
         """
         Test that CLI works with 2 arg
@@ -58,74 +63,92 @@ class NapalmNetworkModuleTestCase(TestCase, LoaderModuleMockMixin):
         ret = napalm_network.cli("show run", "show run")
         assert ret["out"] == napalm_test_support.TEST_COMMAND_RESPONSE
 
+    @skipIf(True, "FASTTEST skip")
     def test_traceroute(self):
         ret = napalm_network.traceroute("destination.com")
         assert list(ret["out"].keys())[0] == "success"
 
+    @skipIf(True, "FASTTEST skip")
     def test_ping(self):
         ret = napalm_network.ping("destination.com")
         assert list(ret["out"].keys())[0] == "success"
 
+    @skipIf(True, "FASTTEST skip")
     def test_arp(self):
         ret = napalm_network.arp()
         assert ret["out"] == napalm_test_support.TEST_ARP_TABLE
 
+    @skipIf(True, "FASTTEST skip")
     def test_ipaddrs(self):
         ret = napalm_network.ipaddrs()
         assert ret["out"] == napalm_test_support.TEST_IPADDRS
 
+    @skipIf(True, "FASTTEST skip")
     def test_interfaces(self):
         ret = napalm_network.interfaces()
         assert ret["out"] == napalm_test_support.TEST_INTERFACES
 
+    @skipIf(True, "FASTTEST skip")
     def test_lldp(self):
         ret = napalm_network.lldp()
         assert ret["out"] == napalm_test_support.TEST_LLDP_NEIGHBORS
 
+    @skipIf(True, "FASTTEST skip")
     def test_mac(self):
         ret = napalm_network.mac()
         assert ret["out"] == napalm_test_support.TEST_MAC_TABLE
 
+    @skipIf(True, "FASTTEST skip")
     def test_config(self):
         ret = napalm_network.config("running")
         assert ret["out"] == napalm_test_support.TEST_RUNNING_CONFIG
 
+    @skipIf(True, "FASTTEST skip")
     def test_optics(self):
         ret = napalm_network.optics()
         assert ret["out"] == napalm_test_support.TEST_OPTICS
 
+    @skipIf(True, "FASTTEST skip")
     def test_load_config(self):
         ret = napalm_network.load_config(text="new config")
         assert ret["result"]
 
+    @skipIf(True, "FASTTEST skip")
     def test_load_config_replace(self):
         ret = napalm_network.load_config(text="new config", replace=True)
         assert ret["result"]
 
+    @skipIf(True, "FASTTEST skip")
     def test_load_template(self):
         ret = napalm_network.load_template("set_ntp_peers", peers=["192.168.0.1"])
         assert ret["out"] is None
 
+    @skipIf(True, "FASTTEST skip")
     def test_commit(self):
         ret = napalm_network.commit()
         assert ret["out"] == napalm_test_support.TEST_RUNNING_CONFIG
 
+    @skipIf(True, "FASTTEST skip")
     def test_discard_config(self):
         ret = napalm_network.discard_config()
         assert ret["out"] == napalm_test_support.TEST_RUNNING_CONFIG
 
+    @skipIf(True, "FASTTEST skip")
     def test_compare_config(self):
         ret = napalm_network.compare_config()
         assert ret["out"] == napalm_test_support.TEST_RUNNING_CONFIG
 
+    @skipIf(True, "FASTTEST skip")
     def test_rollback(self):
         ret = napalm_network.rollback()
         assert ret["out"] == napalm_test_support.TEST_RUNNING_CONFIG
 
+    @skipIf(True, "FASTTEST skip")
     def test_config_changed(self):
         ret = napalm_network.config_changed()
         assert ret == (True, "")
 
+    @skipIf(True, "FASTTEST skip")
     def test_config_control(self):
         ret = napalm_network.config_control()
         assert ret == (True, "")

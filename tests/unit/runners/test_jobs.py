@@ -14,7 +14,7 @@ import salt.runners.jobs as jobs
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class JobsTest(TestCase, LoaderModuleMockMixin):
@@ -29,6 +29,7 @@ class JobsTest(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_jobs_with_search_target(self):
         """
         test jobs.list_jobs runner with search_target args

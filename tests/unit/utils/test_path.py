@@ -92,6 +92,7 @@ class PathJoinTestCase(TestCase):
         self.__unpatch_path()
 
     @skipIf(salt.utils.platform.is_windows(), "*nix-only test")
+    @skipIf(True, "FASTTEST skip")
     def test_mixed_unicode_and_binary(self):
         """
         This tests joining paths that contain a mix of components with unicode
@@ -136,6 +137,7 @@ class PathJoinTestCase(TestCase):
 
 
 class PathTestCase(TestCase):
+    @skipIf(True, "FASTTEST skip")
     def test_which_bin(self):
         ret = salt.utils.path.which_bin("str")
         self.assertIs(None, ret)
@@ -152,6 +154,7 @@ class PathTestCase(TestCase):
             ret = salt.utils.path.which_bin(test_exes)
             self.assertIs(None, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_sanitize_win_path(self):
         p = "\\windows\\system"
         self.assertEqual(
@@ -162,6 +165,7 @@ class PathTestCase(TestCase):
             "\\bo_g_us\\p_at_h_",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_or_die(self):
         self.assertRaises(CommandNotFoundError, salt.utils.path.check_or_die, None)
 
@@ -170,6 +174,7 @@ class PathTestCase(TestCase):
                 CommandNotFoundError, salt.utils.path.check_or_die, "FAKE COMMAND"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_join(self):
         with patch(
             "salt.utils.platform.is_windows", return_value=False
@@ -188,6 +193,7 @@ class TestWhich(TestCase):
 
     # The mock patch below will make sure that ALL calls to the which function
     # returns None
+    @skipIf(True, "FASTTEST skip")
     def test_missing_binary_in_linux(self):
         # salt.utils.path.which uses platform.is_windows to determine the platform, so we're using linux here
         with patch("salt.utils.platform.is_windows", lambda: False):
@@ -198,12 +204,14 @@ class TestWhich(TestCase):
 
     # The mock patch below will make sure that ALL calls to the which function
     # return whatever is sent to it
+    @skipIf(True, "FASTTEST skip")
     def test_existing_binary_in_linux(self):
         # salt.utils.path.which uses platform.is_windows to determine the platform, so we're using linux here
         with patch("salt.utils.platform.is_windows", lambda: False):
             with patch("salt.utils.path.which", lambda exe: exe):
                 self.assertTrue(salt.utils.path.which("this-binary-exists-under-linux"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_existing_binary_in_windows(self):
         with patch("os.path.isfile") as isfile:
             # We define the side_effect attribute on the mocked object in order to
@@ -242,6 +250,7 @@ class TestWhich(TestCase):
                                     ),
                                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_missing_binary_in_windows(self):
         with patch("os.access") as osaccess:
             osaccess.side_effect = [
@@ -272,6 +281,7 @@ class TestWhich(TestCase):
                             None,
                         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_existing_binary_in_windows_pathext(self):
         with patch("os.path.isfile") as isfile:
             # We define the side_effect attribute on the mocked object in order to

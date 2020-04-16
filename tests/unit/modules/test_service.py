@@ -13,7 +13,7 @@ import salt.modules.service as service
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ServiceTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {service: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_start(self):
         """
         Test to start the specified service
@@ -32,6 +33,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(service, "run", MagicMock(return_value=True)):
                 self.assertTrue(service.start("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_stop(self):
         """
         Test to stop the specified service
@@ -40,6 +42,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(service, "run", MagicMock(return_value=True)):
                 self.assertTrue(service.stop("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_restart(self):
         """
         Test to restart the specified service
@@ -48,6 +51,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(service, "run", MagicMock(return_value=True)):
                 self.assertTrue(service.restart("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_status(self):
         """
         Test to return the status for a service, returns the PID or an empty
@@ -57,6 +61,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(service.__salt__, {"status.pid": MagicMock(return_value=True)}):
             self.assertTrue(service.status("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_reload_(self):
         """
         Test to restart the specified service
@@ -65,6 +70,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(service, "run", MagicMock(return_value=True)):
                 self.assertTrue(service.reload_("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_run(self):
         """
         Test to run the specified service
@@ -73,6 +79,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(service, "run", MagicMock(return_value=True)):
                 self.assertTrue(service.run("name", "action"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_available(self):
         """
         Test to returns ``True`` if the specified service is available,
@@ -81,6 +88,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(service, "get_all", return_value=["name", "A"]):
             self.assertTrue(service.available("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_missing(self):
         """
         Test to inverse of service.available.
@@ -88,6 +96,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(service, "get_all", return_value=["name1", "A"]):
             self.assertTrue(service.missing("name"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_all(self):
         """
         Test to return a list of all available services

@@ -13,7 +13,7 @@ import salt.modules.solr as solr
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class SolrTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class SolrTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {solr: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_lucene_version(self):
         """
         Test to get the lucene version that solr is using.
@@ -63,6 +64,7 @@ class SolrTestCase(TestCase, LoaderModuleMockMixin):
                                 solr.lucene_version("c"), {"success": None}
                             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_version(self):
         """
         Test to get the solr version for the core specified
@@ -99,6 +101,7 @@ class SolrTestCase(TestCase, LoaderModuleMockMixin):
                     ):
                         self.assertDictEqual(solr.version(), {"success": None})
 
+    @skipIf(True, "FASTTEST skip")
     def test_optimize(self):
         """
         Test to search queries fast, but it is a very expensive operation.
@@ -128,6 +131,7 @@ class SolrTestCase(TestCase, LoaderModuleMockMixin):
                         with patch.object(solr, "_http_request", return_value="A"):
                             self.assertEqual(solr.optimize(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_ping(self):
         """
         Test to check on solr, makes sure solr can talk to the
@@ -158,6 +162,7 @@ class SolrTestCase(TestCase, LoaderModuleMockMixin):
                     with patch.object(solr, "_get_admin_info", return_value="A"):
                         self.assertEqual(solr.ping(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_replication_enabled(self):
         """
         Test to check for errors, and determine if a slave
@@ -180,6 +185,7 @@ class SolrTestCase(TestCase, LoaderModuleMockMixin):
                                     {"A": "a", "errors": [error], "success": False},
                                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_match_index_versions(self):
         """
         Test to verifies that the master and the slave versions are in sync by
@@ -204,6 +210,7 @@ class SolrTestCase(TestCase, LoaderModuleMockMixin):
                                     {"A": "a", "errors": [err], "success": False},
                                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_replication_details(self):
         """
         Test to get the full replication details.
@@ -235,6 +242,7 @@ class SolrTestCase(TestCase, LoaderModuleMockMixin):
                     ):
                         self.assertDictEqual(solr.replication_details(), tempdict1)
 
+    @skipIf(True, "FASTTEST skip")
     def test_backup(self):
         """
         Test to tell solr make a backup.
@@ -276,6 +284,7 @@ class SolrTestCase(TestCase, LoaderModuleMockMixin):
 
                                 self.assertDictEqual(solr.backup(), tempdict)
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_is_polling(self):
         """
         Test to prevent the slaves from polling the master for updates.
@@ -316,6 +325,7 @@ class SolrTestCase(TestCase, LoaderModuleMockMixin):
                         ):
                             self.assertEqual(solr.set_is_polling("p"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_replication_enabled(self):
         """
         Test to sets the master to ignore poll requests from the slaves.
@@ -340,6 +350,7 @@ class SolrTestCase(TestCase, LoaderModuleMockMixin):
                         self.assertEqual(solr.set_replication_enabled("s"), "A")
                         self.assertEqual(solr.set_replication_enabled(False), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_signal(self):
         """
         Test to signals Apache Solr to start, stop, or restart.
@@ -349,6 +360,7 @@ class SolrTestCase(TestCase, LoaderModuleMockMixin):
             ("signal is an invalid signal. Try: one of: start," " stop, or restart"),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_reload_core(self):
         """
         Test to load a new core from the same configuration as
@@ -373,6 +385,7 @@ class SolrTestCase(TestCase, LoaderModuleMockMixin):
                                 )
                                 self.assertEqual(solr.reload_core(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_core_status(self):
         """
         Test to get the status for a given core or all cores
@@ -398,6 +411,7 @@ class SolrTestCase(TestCase, LoaderModuleMockMixin):
 
                                 self.assertEqual(solr.core_status(), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_reload_import_config(self):
         """
         Test to re-loads the handler config XML file.
@@ -420,6 +434,7 @@ class SolrTestCase(TestCase, LoaderModuleMockMixin):
                                 )
                                 self.assertEqual(solr.reload_import_config("h"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_abort_import(self):
         """
         Test to aborts an existing import command to the specified handler.
@@ -438,6 +453,7 @@ class SolrTestCase(TestCase, LoaderModuleMockMixin):
                                 self.assertDictEqual(solr.abort_import("h"), {"A": "a"})
                                 self.assertEqual(solr.abort_import("h"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_full_import(self):
         """
         Test to submits an import command to the specified handler using
@@ -471,6 +487,7 @@ class SolrTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(solr.full_import("h"), {"A": "a"})
             self.assertEqual(solr.full_import("h"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_delta_import(self):
         """
         Test to submits an import command to the specified handler using
@@ -508,6 +525,7 @@ class SolrTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(solr.delta_import("h"), {"A": "a"})
             self.assertEqual(solr.delta_import("h"), "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_import_status(self):
         """
         Test to submits an import command to the specified handler using

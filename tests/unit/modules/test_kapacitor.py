@@ -11,7 +11,7 @@ import salt.utils.json
 # Import Salt testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import Mock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class KapacitorTestCase(TestCase, LoaderModuleMockMixin):
@@ -28,6 +28,7 @@ class KapacitorTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_task_success(self):
         http_body = salt.utils.json.dumps(
             {
@@ -46,6 +47,7 @@ class KapacitorTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual("test", task["script"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_task_not_found(self):
         query_ret = {"body": '{"Error":"unknown task taskname"}', "status": 404}
         with patch("salt.utils.http.query", return_value=query_ret) as http_mock:
@@ -56,6 +58,7 @@ class KapacitorTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(None, task)
 
+    @skipIf(True, "FASTTEST skip")
     def test_define_task(self):
         cmd_mock = Mock(return_value={"retcode": 0})
         with patch.dict(kapacitor.__salt__, {"cmd.run_all": cmd_mock}):
@@ -66,6 +69,7 @@ class KapacitorTestCase(TestCase, LoaderModuleMockMixin):
             env=self.__class__.env,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_enable_task(self):
         cmd_mock = Mock(return_value={"retcode": 0})
         with patch.dict(kapacitor.__salt__, {"cmd.run_all": cmd_mock}):
@@ -74,6 +78,7 @@ class KapacitorTestCase(TestCase, LoaderModuleMockMixin):
             "kapacitor enable taskname", env=self.__class__.env
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_disable_task(self):
         cmd_mock = Mock(return_value={"retcode": 0})
         with patch.dict(kapacitor.__salt__, {"cmd.run_all": cmd_mock}):
@@ -82,6 +87,7 @@ class KapacitorTestCase(TestCase, LoaderModuleMockMixin):
             "kapacitor disable taskname", env=self.__class__.env
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_task(self):
         cmd_mock = Mock(return_value={"retcode": 0})
         with patch.dict(kapacitor.__salt__, {"cmd.run_all": cmd_mock}):

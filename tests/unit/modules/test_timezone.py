@@ -38,6 +38,7 @@ class TimezoneTestCase(TestCase, LoaderModuleMockMixin):
                 pass
         del self.tempfiles
 
+    @skipIf(True, "FASTTEST skip")
     def test_zone_compare_equal(self):
         etc_localtime = self.create_tempfile_with_contents("a")
         zone_path = self.create_tempfile_with_contents("a")
@@ -47,6 +48,7 @@ class TimezoneTestCase(TestCase, LoaderModuleMockMixin):
 
                 self.assertTrue(timezone.zone_compare("foo"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_zone_compare_nonexistent(self):
         etc_localtime = self.create_tempfile_with_contents("a")
 
@@ -55,6 +57,7 @@ class TimezoneTestCase(TestCase, LoaderModuleMockMixin):
 
                 self.assertRaises(SaltInvocationError, timezone.zone_compare, "foo")
 
+    @skipIf(True, "FASTTEST skip")
     def test_zone_compare_unequal(self):
         etc_localtime = self.create_tempfile_with_contents("a")
         zone_path = self.create_tempfile_with_contents("b")
@@ -64,6 +67,7 @@ class TimezoneTestCase(TestCase, LoaderModuleMockMixin):
 
                 self.assertFalse(timezone.zone_compare("foo"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_missing_localtime(self):
         with patch(GET_ZONE_FILE, lambda p: "/nonexisting"):
             with patch(GET_LOCALTIME_PATH, lambda: "/also-missing"):
@@ -100,6 +104,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
         }
 
     @patch("salt.utils.path.which", MagicMock(return_value=False))
+    @skipIf(True, "FASTTEST skip")
     def test_get_zone_centos(self):
         """
         Test CentOS is recognized
@@ -113,6 +118,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
                 assert timezone.get_zone() == self.TEST_TZ
 
     @patch("salt.utils.path.which", MagicMock(return_value=False))
+    @skipIf(True, "FASTTEST skip")
     def test_get_zone_os_family_rh_suse(self):
         """
         Test RedHat and Suse are recognized
@@ -127,6 +133,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
                     assert timezone.get_zone() == self.TEST_TZ
 
     @patch("salt.utils.path.which", MagicMock(return_value=False))
+    @skipIf(True, "FASTTEST skip")
     def test_get_zone_os_family_debian_gentoo(self):
         """
         Test Debian and Gentoo are recognized
@@ -141,6 +148,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
                     assert timezone.get_zone() == self.TEST_TZ
 
     @patch("salt.utils.path.which", MagicMock(return_value=False))
+    @skipIf(True, "FASTTEST skip")
     def test_get_zone_os_family_allbsd_nilinuxrt(self):
         """
         Test *BSD and NILinuxRT are recognized
@@ -155,6 +163,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
                     assert timezone.get_zone() == self.TEST_TZ
 
     @patch("salt.utils.path.which", MagicMock(return_value=False))
+    @skipIf(True, "FASTTEST skip")
     def test_get_zone_os_family_slowlaris(self):
         """
         Test Slowlaris is recognized
@@ -168,6 +177,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
                 assert timezone.get_zone() == self.TEST_TZ
 
     @patch("salt.utils.path.which", MagicMock(return_value=False))
+    @skipIf(True, "FASTTEST skip")
     def test_get_zone_os_family_aix(self):
         """
         Test IBM AIX is recognized
@@ -185,6 +195,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
     @patch("os.path.exists", MagicMock(return_value=True))
     @patch("os.unlink", MagicMock())
     @patch("os.symlink", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_set_zone_redhat(self):
         """
         Test zone set on RH series
@@ -200,6 +211,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
     @patch("os.path.exists", MagicMock(return_value=True))
     @patch("os.unlink", MagicMock())
     @patch("os.symlink", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_set_zone_suse(self):
         """
         Test zone set on SUSE series
@@ -215,6 +227,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
     @patch("os.path.exists", MagicMock(return_value=True))
     @patch("os.unlink", MagicMock())
     @patch("os.symlink", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_set_zone_gentoo(self):
         """
         Test zone set on Gentoo series
@@ -232,6 +245,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
     @patch("os.path.exists", MagicMock(return_value=True))
     @patch("os.unlink", MagicMock())
     @patch("os.symlink", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_set_zone_debian(self):
         """
         Test zone set on Debian series
@@ -249,6 +263,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
     @patch("os.path.exists", MagicMock(return_value=True))
     @patch("os.unlink", MagicMock())
     @patch("os.symlink", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_get_hwclock_timedate_utc(self):
         """
         Test get hwclock UTC/localtime
@@ -270,6 +285,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
     @patch("os.path.exists", MagicMock(return_value=True))
     @patch("os.unlink", MagicMock())
     @patch("os.symlink", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_get_hwclock_suse(self):
         """
         Test get hwclock on SUSE
@@ -286,6 +302,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
     @patch("os.path.exists", MagicMock(return_value=True))
     @patch("os.unlink", MagicMock())
     @patch("os.symlink", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_get_hwclock_redhat(self):
         """
         Test get hwclock on RedHat
@@ -321,6 +338,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
     @patch("os.path.exists", MagicMock(return_value=True))
     @patch("os.unlink", MagicMock())
     @patch("os.symlink", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_get_hwclock_solaris(self):
         """
         Test get hwclock on Solaris
@@ -337,6 +355,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
     @patch("os.path.exists", MagicMock(return_value=True))
     @patch("os.unlink", MagicMock())
     @patch("os.symlink", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_get_hwclock_aix(self):
         """
         Test get hwclock on AIX
@@ -351,6 +370,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     @skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
     @patch("salt.utils.path.which", MagicMock(return_value=True))
+    @skipIf(True, "FASTTEST skip")
     def test_set_hwclock_timedatectl(self):
         """
         Test set hwclock with timedatectl
@@ -369,6 +389,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
     @patch("os.path.exists", MagicMock(return_value=True))
     @patch("os.unlink", MagicMock())
     @patch("os.symlink", MagicMock())
+    @skipIf(True, "FASTTEST skip")
     def test_set_hwclock_aix_nilinuxrt(self):
         """
         Test set hwclock on AIX and NILinuxRT
@@ -386,6 +407,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
     @patch("os.unlink", MagicMock())
     @patch("os.symlink", MagicMock())
     @patch("salt.modules.timezone.get_zone", MagicMock(return_value="TEST_TIMEZONE"))
+    @skipIf(True, "FASTTEST skip")
     def test_set_hwclock_solaris(self):
         """
         Test set hwclock on Solaris
@@ -407,6 +429,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
     @patch("os.unlink", MagicMock())
     @patch("os.symlink", MagicMock())
     @patch("salt.modules.timezone.get_zone", MagicMock(return_value="TEST_TIMEZONE"))
+    @skipIf(True, "FASTTEST skip")
     def test_set_hwclock_arch(self):
         """
         Test set hwclock on arch
@@ -424,6 +447,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
     @patch("os.unlink", MagicMock())
     @patch("os.symlink", MagicMock())
     @patch("salt.modules.timezone.get_zone", MagicMock(return_value="TEST_TIMEZONE"))
+    @skipIf(True, "FASTTEST skip")
     def test_set_hwclock_redhat(self):
         """
         Test set hwclock on RedHat
@@ -440,6 +464,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
     @patch("os.unlink", MagicMock())
     @patch("os.symlink", MagicMock())
     @patch("salt.modules.timezone.get_zone", MagicMock(return_value="TEST_TIMEZONE"))
+    @skipIf(True, "FASTTEST skip")
     def test_set_hwclock_suse(self):
         """
         Test set hwclock on SUSE
@@ -460,6 +485,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
     @patch("os.unlink", MagicMock())
     @patch("os.symlink", MagicMock())
     @patch("salt.modules.timezone.get_zone", MagicMock(return_value="TEST_TIMEZONE"))
+    @skipIf(True, "FASTTEST skip")
     def test_set_hwclock_debian(self):
         """
         Test set hwclock on Debian
@@ -480,6 +506,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
     @patch("os.unlink", MagicMock())
     @patch("os.symlink", MagicMock())
     @patch("salt.modules.timezone.get_zone", MagicMock(return_value="TEST_TIMEZONE"))
+    @skipIf(True, "FASTTEST skip")
     def test_set_hwclock_gentoo(self):
         """
         Test set hwclock on Gentoo

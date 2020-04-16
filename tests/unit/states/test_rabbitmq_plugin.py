@@ -11,7 +11,7 @@ import salt.states.rabbitmq_plugin as rabbitmq_plugin
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class RabbitmqPluginTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class RabbitmqPluginTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'enabled' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_enabled(self):
         """
         Test to ensure the RabbitMQ plugin is enabled.
@@ -46,6 +47,7 @@ class RabbitmqPluginTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'disabled' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_disabled(self):
         """
         Test to ensure the RabbitMQ plugin is disabled.

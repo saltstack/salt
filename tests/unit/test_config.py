@@ -83,6 +83,7 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
     Validate files in the salt/conf directory.
     """
 
+    @skipIf(True, "FASTTEST skip")
     def test_conf_master_sample_is_commented(self):
         """
         The sample config file located in salt/conf/master must be completely
@@ -96,6 +97,7 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
             "Sample config file '{}' must be commented out.".format(master_config),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_conf_minion_sample_is_commented(self):
         """
         The sample config file located in salt/conf/minion must be completely
@@ -109,6 +111,7 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
             "Sample config file '{}' must be commented out.".format(minion_config),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_conf_cloud_sample_is_commented(self):
         """
         The sample config file located in salt/conf/cloud must be completely
@@ -122,6 +125,7 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
             "Sample config file '{}' must be commented out.".format(cloud_config),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_conf_cloud_profiles_sample_is_commented(self):
         """
         The sample config file located in salt/conf/cloud.profiles must be completely
@@ -137,6 +141,7 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
             ),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_conf_cloud_providers_sample_is_commented(self):
         """
         The sample config file located in salt/conf/cloud.providers must be completely
@@ -152,6 +157,7 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
             ),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_conf_proxy_sample_is_commented(self):
         """
         The sample config file located in salt/conf/proxy must be completely
@@ -165,6 +171,7 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
             "Sample config file '{}' must be commented out.".format(proxy_config),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_conf_roster_sample_is_commented(self):
         """
         The sample config file located in salt/conf/roster must be completely
@@ -178,6 +185,7 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
             "Sample config file '{}' must be commented out.".format(roster_config),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_conf_cloud_profiles_d_files_are_commented(self):
         """
         All cloud profile sample configs in salt/conf/cloud.profiles.d/* must be completely
@@ -199,6 +207,7 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
                 "Sample config file '{}' must be commented out.".format(conf_file),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_conf_cloud_providers_d_files_are_commented(self):
         """
         All cloud profile sample configs in salt/conf/cloud.providers.d/* must be completely
@@ -220,6 +229,7 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
                 "Sample config file '{}' must be commented out.".format(conf_file),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_conf_cloud_maps_d_files_are_commented(self):
         """
         All cloud profile sample configs in salt/conf/cloud.maps.d/* must be completely
@@ -258,6 +268,7 @@ def _salt_configuration_error(filename):
 
 class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     @with_tempfile()
+    @skipIf(True, "FASTTEST skip")
     def test_sha256_is_default_for_master(self, fpath):
         with salt.utils.files.fopen(fpath, "w") as wfh:
             wfh.write("root_dir: /\n" "key_logfile: key\n")
@@ -265,6 +276,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(config["hash_type"], "sha256")
 
     @with_tempfile()
+    @skipIf(True, "FASTTEST skip")
     def test_sha256_is_default_for_minion(self, fpath):
         with salt.utils.files.fopen(fpath, "w") as wfh:
             wfh.write("root_dir: /\n" "key_logfile: key\n")
@@ -272,6 +284,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(config["hash_type"], "sha256")
 
     @with_tempfile()
+    @skipIf(True, "FASTTEST skip")
     def test_proper_path_joining(self, fpath):
         temp_config = "root_dir: /\n" "key_logfile: key\n"
         if salt.utils.platform.is_windows():
@@ -292,6 +305,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertNotEqual(config["key_logfile"], expect_sep_join)
 
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_common_prefix_stripping(self, tempdir):
         root_dir = os.path.join(tempdir, "foo", "bar")
         os.makedirs(root_dir)
@@ -302,6 +316,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(config["log_file"], fpath)
 
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_default_root_dir_included_in_config_root_dir(self, tempdir):
         root_dir = os.path.join(tempdir, "foo", "bar")
         os.makedirs(root_dir)
@@ -316,6 +331,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         "You can't set an environment dynamically in Windows",
     )
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_load_master_config_from_environ_var(self, tempdir):
         env_root_dir = os.path.join(tempdir, "foo", "env")
         os.makedirs(env_root_dir)
@@ -346,6 +362,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         "You can't set an environment dynamically in Windows",
     )
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_load_minion_config_from_environ_var(self, tempdir):
         env_root_dir = os.path.join(tempdir, "foo", "env")
         os.makedirs(env_root_dir)
@@ -373,6 +390,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             self.assertEqual(config["log_file"], fpath)
 
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_load_client_config_from_environ_var(self, tempdir):
         env_root_dir = os.path.join(tempdir, "foo", "env")
         os.makedirs(env_root_dir)
@@ -418,6 +436,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             self.assertEqual(config["log_file"], fpath)
 
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_issue_5970_minion_confd_inclusion(self, tempdir):
         minion_config = os.path.join(tempdir, "minion")
         minion_confd = os.path.join(tempdir, "minion.d")
@@ -449,6 +468,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertTrue(config["blah"])
 
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_master_confd_inclusion(self, tempdir):
         master_config = os.path.join(tempdir, "master")
         master_confd = os.path.join(tempdir, "master.d")
@@ -481,6 +501,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     @with_tempfile()
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_master_file_roots_glob(self, tempdir, fpath):
         # Create some files
         for f in "abc":
@@ -505,6 +526,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_validate_bad_file_roots(self):
         expected = salt.config._expand_glob_path([salt.syspaths.BASE_FILE_ROOTS_DIR])
         with patch("salt.config._normalize_roots") as mk:
@@ -514,6 +536,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     @with_tempfile()
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_master_pillar_roots_glob(self, tempdir, fpath):
         # Create some files.
         for f in "abc":
@@ -538,6 +561,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             },
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_validate_bad_pillar_roots(self):
         expected = salt.config._expand_glob_path([salt.syspaths.BASE_PILLAR_ROOTS_DIR])
         with patch("salt.config._normalize_roots") as mk:
@@ -546,7 +570,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         assert ret == {"base": expected}
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_master_id_function(self, tempdir):
         master_config = os.path.join(tempdir, "master")
 
@@ -568,6 +591,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     @with_tempfile()
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_minion_file_roots_glob(self, tempdir, fpath):
         # Create some files.
         for f in "abc":
@@ -594,6 +618,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     @with_tempfile()
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_minion_pillar_roots_glob(self, tempdir, fpath):
         # Create some files.
         for f in "abc":
@@ -619,7 +644,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         )
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_minion_id_function(self, tempdir):
         minion_config = os.path.join(tempdir, "minion")
 
@@ -639,7 +663,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(config["id"], "hello_world")
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_minion_id_lowercase(self, tempdir):
         """
         This tests that setting `minion_id_lowercase: True` does lower case
@@ -665,7 +688,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(config["id"], "king_bob")
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_minion_id_remove_domain_string_positive(self, tempdir):
         """
         This tests that the values of `minion_id_remove_domain` is suppressed from a generated minion id,
@@ -691,7 +713,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(config["id"], "king_bob")
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_minion_id_remove_domain_string_negative(self, tempdir):
         """
         See above
@@ -714,7 +735,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(config["id"], "king_bob.foo.org")
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_minion_id_remove_domain_bool_true(self, tempdir):
         """
         See above
@@ -736,7 +756,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(config["id"], "king_bob")
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_minion_id_remove_domain_bool_false(self, tempdir):
         """
         See above
@@ -758,6 +777,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(config["id"], "king_bob.foo.org")
 
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_backend_rename(self, tempdir):
         """
         This tests that we successfully rename git, hg, svn, and minion to
@@ -785,6 +805,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(master_config["fileserver_backend"], expected)
         self.assertEqual(minion_config["fileserver_backend"], expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_syndic_config(self):
         minion_conf_path = self.get_config_file_path("syndic")
         master_conf_path = os.path.join(os.path.dirname(minion_conf_path), "master")
@@ -882,6 +903,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         _count_strings(config)
         return tally
 
+    @skipIf(True, "FASTTEST skip")
     def test_conf_file_strings_are_unicode_for_master(self):
         """
         This ensures that any strings which are loaded are unicode strings
@@ -893,6 +915,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(len(non_unicode), 8 if six.PY2 else 0, non_unicode)
         self.assertTrue(tally["unicode"] > 0)
 
+    @skipIf(True, "FASTTEST skip")
     def test_conf_file_strings_are_unicode_for_minion(self):
         """
         This ensures that any strings which are loaded are unicode strings
@@ -908,6 +931,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     # cloud_config tests
 
+    @skipIf(True, "FASTTEST skip")
     def test_cloud_config_double_master_path(self):
         """
         Tests passing in master_config_path and master_config kwargs.
@@ -921,6 +945,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 master_config="bar",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_cloud_config_double_providers_path(self):
         """
         Tests passing in providers_config_path and providers_config kwargs.
@@ -934,6 +959,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 providers_config="bar",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_cloud_config_double_profiles_path(self):
         """
         Tests passing in profiles_config_path and profiles_config kwargs.
@@ -947,6 +973,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 profiles_config="bar",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_cloud_config_providers_in_opts(self):
         """
         Tests mixing old cloud providers with pre-configured providers configurations
@@ -964,6 +991,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                     providers_config="bar",
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_cloud_config_providers_in_opts_path(self):
         """
         Tests mixing old cloud providers with pre-configured providers configurations
@@ -982,6 +1010,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                         providers_config_path="bar",
                     )
 
+    @skipIf(True, "FASTTEST skip")
     def test_cloud_config_deploy_scripts_search_path(self):
         """
         Tests the contents of the 'deploy_scripts_search_path' tuple to ensure that
@@ -1011,6 +1040,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     # apply_cloud_config tests
 
+    @skipIf(True, "FASTTEST skip")
     def test_apply_cloud_config_no_provider_detail_list(self):
         """
         Tests when the provider is not contained in a list of details
@@ -1023,6 +1053,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             defaults=DEFAULT,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_apply_cloud_config_no_provider_detail_dict(self):
         """
         Tests when the provider is not contained in the details dictionary
@@ -1035,6 +1066,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             defaults=DEFAULT,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_apply_cloud_config_success_list(self):
         """
         Tests success when valid data is passed into the function as a list
@@ -1057,6 +1089,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 salt.config.apply_cloud_config(overrides, defaults=DEFAULT), ret
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_apply_cloud_config_success_dict(self):
         """
         Tests success when valid data is passed into function as a dictionary
@@ -1081,6 +1114,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     # apply_vm_profiles_config tests
 
+    @skipIf(True, "FASTTEST skip")
     def test_apply_vm_profiles_config_bad_profile_format(self):
         """
         Tests passing in a bad profile format in overrides
@@ -1094,6 +1128,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             defaults=DEFAULT,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_apply_vm_profiles_config_success(self):
         """
         Tests passing in valid provider and profile config files successfully
@@ -1126,6 +1161,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             ret,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_apply_vm_profiles_config_extend_success(self):
         """
         Tests profile extends functionality with valid provider and profile configs
@@ -1163,6 +1199,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             ret,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_apply_vm_profiles_config_extend_override_success(self):
         """
         Tests profile extends and recursively merges data elements
@@ -1206,6 +1243,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     # apply_cloud_providers_config tests
 
+    @skipIf(True, "FASTTEST skip")
     def test_apply_cloud_providers_config_same_providers(self):
         """
         Tests when two providers are given with the same provider name
@@ -1232,6 +1270,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             DEFAULT,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_apply_cloud_providers_config_extend(self):
         """
         Tests the successful extension of a cloud provider
@@ -1305,6 +1344,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             ret, salt.config.apply_cloud_providers_config(overrides, defaults=DEFAULT)
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_apply_cloud_providers_config_extend_multiple(self):
         """
         Tests the successful extension of two cloud providers
@@ -1403,6 +1443,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             ret, salt.config.apply_cloud_providers_config(overrides, defaults=DEFAULT)
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_apply_cloud_providers_config_extends_bad_alias(self):
         """
         Tests when the extension contains an alias not found in providers list
@@ -1433,6 +1474,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             DEFAULT,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_apply_cloud_providers_config_extends_bad_provider(self):
         """
         Tests when the extension contains a provider not found in providers list
@@ -1468,6 +1510,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             DEFAULT,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_apply_cloud_providers_config_extends_no_provider(self):
         """
         Tests when no provider is supplied in the extends statement
@@ -1503,6 +1546,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             DEFAULT,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_apply_cloud_providers_extends_not_in_providers(self):
         """
         Tests when extends is not in the list of providers
@@ -1541,6 +1585,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     # is_provider_configured tests
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_provider_configured_no_alias(self):
         """
         Tests when provider alias is not in opts
@@ -1549,6 +1594,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         provider = "foo:bar"
         self.assertFalse(salt.config.is_provider_configured(opts, provider))
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_provider_configured_no_driver(self):
         """
         Tests when provider driver is not in opts
@@ -1557,6 +1603,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         provider = "foo:bar"
         self.assertFalse(salt.config.is_provider_configured(opts, provider))
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_provider_configured_key_is_none(self):
         """
         Tests when a required configuration key is not set
@@ -1569,6 +1616,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             )
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_provider_configured_success(self):
         """
         Tests successful cloud provider configuration
@@ -1583,6 +1631,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             ret,
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_provider_configured_multiple_driver_not_provider(self):
         """
         Tests when the drive is not the same as the provider when
@@ -1592,6 +1641,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         provider = "foo"
         self.assertFalse(salt.config.is_provider_configured(opts, provider))
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_provider_configured_multiple_key_is_none(self):
         """
         Tests when a required configuration key is not set when
@@ -1605,6 +1655,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             )
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_provider_configured_multiple_success(self):
         """
         Tests successful cloud provider configuration when searching
@@ -1627,6 +1678,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         "You can't set an environment dynamically in Windows",
     )
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_load_cloud_config_from_environ_var(self, tempdir):
         env_root_dir = os.path.join(tempdir, "foo", "env")
         os.makedirs(env_root_dir)
@@ -1654,6 +1706,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             self.assertEqual(config["log_file"], fpath)
 
     @with_tempdir()
+    @skipIf(True, "FASTTEST skip")
     def test_deploy_search_path_as_string(self, temp_conf_dir):
         config_file_path = os.path.join(temp_conf_dir, "cloud")
         deploy_dir_path = os.path.join(temp_conf_dir, "test-deploy.d")
@@ -1676,6 +1729,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             deploy_dir_path, default_config["deploy_scripts_search_path"][0]
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_includes_load(self):
         """
         Tests that cloud.{providers,profiles}.d directories are loaded, even if not
@@ -1688,6 +1742,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     # <---- Salt Cloud Configuration Tests ---------------------------------------------
 
+    @skipIf(True, "FASTTEST skip")
     def test_include_config_without_errors(self):
         """
         Tests that include_config function returns valid configuration
@@ -1706,6 +1761,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         self.assertEqual(config_opts, configuration)
 
+    @skipIf(True, "FASTTEST skip")
     def test_include_config_with_errors(self):
         """
         Tests that include_config function returns valid configuration even on errors
@@ -1722,6 +1778,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         self.assertEqual(config_opts, configuration)
 
+    @skipIf(True, "FASTTEST skip")
     def test_include_config_with_errors_exit(self):
         """
         Tests that include_config exits on errors
@@ -1761,6 +1818,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         ret.update(kwargs)
         return ret
 
+    @skipIf(True, "FASTTEST skip")
     def test_apply_config(self):
         """
         Ensure that the environment and saltenv options work properly
@@ -1842,6 +1900,7 @@ class APIConfigTestCase(DefaultConfigsBase, TestCase):
         # Reset DEFAULT_API_OPTS settings as to not interfere with other unit tests
         salt.config.DEFAULT_API_OPTS = self.default_api_opts
 
+    @skipIf(True, "FASTTEST skip")
     def test_api_config_log_file_values(self):
         """
         Tests the opts value of the 'log_file' after running through the
@@ -1861,6 +1920,7 @@ class APIConfigTestCase(DefaultConfigsBase, TestCase):
             ret = salt.config.api_config("/some/fake/path")
             self.assertEqual(ret["log_file"], expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_api_config_pidfile_values(self):
         """
         Tests the opts value of the 'pidfile' after running through the
@@ -1882,6 +1942,7 @@ class APIConfigTestCase(DefaultConfigsBase, TestCase):
             ret = salt.config.api_config("/some/fake/path")
             self.assertEqual(ret["pidfile"], expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_master_config_file_overrides_defaults(self):
         """
         Tests the opts value of the api config values after running through the
@@ -1911,6 +1972,7 @@ class APIConfigTestCase(DefaultConfigsBase, TestCase):
             self.assertEqual(ret["api_logfile"], hello_dir)
             self.assertEqual(ret["log_file"], hello_dir)
 
+    @skipIf(True, "FASTTEST skip")
     def test_api_config_prepend_root_dirs_return(self):
         """
         Tests the opts value of the api_logfile, log_file, api_pidfile, and pidfile

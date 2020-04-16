@@ -9,13 +9,14 @@ import salt.modules.mac_keychain as keychain
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class KeychainTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {keychain: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_cert(self):
         """
             Test installing a certificate into the macOS keychain
@@ -28,6 +29,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
                 "-k /Library/Keychains/System.keychain"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_cert_extras(self):
         """
             Test installing a certificate into the macOS keychain with extras
@@ -48,6 +50,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
                 "security import /path/to/cert.p12 -P passw0rd -k /path/to/chain -A"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_uninstall_cert(self):
         """
             Test uninstalling a certificate from the macOS keychain
@@ -59,6 +62,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
                 'security delete-certificate -c "/path/to/cert.p12" passw0rd'
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_certs(self):
         """
             Test listing available certificates in a keychain
@@ -77,6 +81,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_friendly_name(self):
         """
             Test getting the friendly name of a certificate
@@ -93,6 +98,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertEqual(out, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_default_keychain(self):
         """
             Test getting the default keychain
@@ -104,6 +110,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
                 "security default-keychain -d system", runas="frank"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_default_keychain(self):
         """
             Test setting the default keychain
@@ -116,6 +123,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
                 runas="frank",
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_unlock_keychain(self):
         """
             Test unlocking the keychain

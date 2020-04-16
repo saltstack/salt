@@ -25,6 +25,7 @@ class WinTimezoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_zone' function tests: 3
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_zone(self):
         """
         Test if it gets current timezone (i.e. Asia/Calcutta)
@@ -40,6 +41,7 @@ class WinTimezoneTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(win_timezone.get_zone(), "Asia/Calcutta")
             self.assertEqual(win_timezone.get_zone(), "Unknown")
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_zone_null_terminated(self):
         """
         Test if it handles instances where the registry contains null values
@@ -57,6 +59,7 @@ class WinTimezoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_offset' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_offset(self):
         """
         Test if it get current numeric timezone offset from UCT (i.e. +0530)
@@ -68,6 +71,7 @@ class WinTimezoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_zonecode' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_zonecode(self):
         """
         Test if it get current timezone (i.e. PST, MDT, etc)
@@ -79,6 +83,7 @@ class WinTimezoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_zone' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_zone(self):
         """
         Test if it unlinks, then symlinks /etc/localtime to the set timezone.
@@ -96,6 +101,7 @@ class WinTimezoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'zone_compare' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_zone_compare(self):
         """
         Test if it checks the md5sum between the given timezone, and
@@ -109,6 +115,7 @@ class WinTimezoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_hwclock' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_hwclock(self):
         """
         Test if it get current hardware clock setting (UTC or localtime)
@@ -117,6 +124,7 @@ class WinTimezoneTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_hwclock' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_hwclock(self):
         """
         Test if it sets the hardware clock to be either UTC or localtime

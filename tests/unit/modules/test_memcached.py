@@ -13,7 +13,7 @@ from salt.ext.six import integer_types
 from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MemcachedTestCase(TestCase):
@@ -23,6 +23,7 @@ class MemcachedTestCase(TestCase):
 
     # 'status' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_status(self):
         """
         Test if it gets memcached status
@@ -45,6 +46,7 @@ class MemcachedTestCase(TestCase):
         ):
             self.assertDictEqual(memcached.status(), {"127.0.0.1:11211 (1)": {}})
 
+    @skipIf(True, "FASTTEST skip")
     def test_status_false(self):
         """
         Test if it gets memcached status
@@ -69,6 +71,7 @@ class MemcachedTestCase(TestCase):
 
     # 'get' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get(self):
         """
         Test if it retrieve value for a key
@@ -100,6 +103,7 @@ class MemcachedTestCase(TestCase):
 
     # 'set_' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_set(self):
         """
         Test if it set a key on the memcached server
@@ -152,6 +156,7 @@ class MemcachedTestCase(TestCase):
 
     # 'delete' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete(self):
         """
         Test if it delete a key from memcache server
@@ -192,6 +197,7 @@ class MemcachedTestCase(TestCase):
 
     # 'add' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_add(self):
         """
         Test if it add a key from memcache server
@@ -244,6 +250,7 @@ class MemcachedTestCase(TestCase):
 
     # 'replace' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_replace(self):
         """
         Test if it replace a key from memcache server
@@ -296,6 +303,7 @@ class MemcachedTestCase(TestCase):
 
     # 'increment' function tests: 3
 
+    @skipIf(True, "FASTTEST skip")
     def test_increment(self):
         """
         Test if it increment the value of a key
@@ -341,6 +349,7 @@ class MemcachedTestCase(TestCase):
                 SaltInvocationError, memcached.increment, "salt", delta="sa"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_increment_exist(self):
         """
         Test if it increment the value of a key
@@ -373,6 +382,7 @@ class MemcachedTestCase(TestCase):
         ):
             self.assertRaises(CommandExecutionError, memcached.increment, "salt")
 
+    @skipIf(True, "FASTTEST skip")
     def test_increment_none(self):
         """
         Test if it increment the value of a key
@@ -407,6 +417,7 @@ class MemcachedTestCase(TestCase):
 
     # 'decrement' function tests: 3
 
+    @skipIf(True, "FASTTEST skip")
     def test_decrement(self):
         """
         Test if it decrement the value of a key
@@ -452,6 +463,7 @@ class MemcachedTestCase(TestCase):
                 SaltInvocationError, memcached.decrement, "salt", delta="sa"
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_decrement_exist(self):
         """
         Test if it decrement the value of a key
@@ -484,6 +496,7 @@ class MemcachedTestCase(TestCase):
         ):
             self.assertRaises(CommandExecutionError, memcached.decrement, "salt")
 
+    @skipIf(True, "FASTTEST skip")
     def test_decrement_none(self):
         """
         Test if it decrement the value of a key

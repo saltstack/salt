@@ -49,7 +49,6 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'state' function tests: 1
 
-    @skipIf(True, "SLOWTEST skip")
     def test_state(self):
         """
         Test to invoke a state run on a given target
@@ -196,7 +195,6 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'function' function tests: 1
 
-    @skipIf(True, "SLOWTEST skip")
     def test_function(self):
         """
         Test to execute a single module function on a remote
@@ -231,6 +229,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'wait_for_event' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_wait_for_event(self):
         """
         Test to watch Salt's event bus and block until a condition is met
@@ -283,6 +282,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'runner' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_runner(self):
         """
         Test to execute a runner module on the master
@@ -303,6 +303,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'wheel' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_wheel(self):
         """
         Test to execute a wheel module on the master
@@ -321,7 +322,6 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(saltmod.__salt__, {"saltutil.wheel": wheel_mock}):
             self.assertDictEqual(saltmod.wheel(name), ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_state_ssh(self):
         """
         Test saltmod passes roster to saltutil.cmd
@@ -361,6 +361,7 @@ class StatemodTests(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_statemod_state(self):
         """ Smoke test for for salt.states.statemod.state().  Ensures that we
             don't take an exception if optional parameters are not specified in

@@ -70,6 +70,7 @@ class RosterMatcherTestCase(TestCase, mixins.LoaderModuleMockMixin):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_data(self):
         """
         Test that the get_data method returns the expected dictionaries.
@@ -83,6 +84,7 @@ class RosterMatcherTestCase(TestCase, mixins.LoaderModuleMockMixin):
         self.assertEqual(EXPECTED["host3"], roster_matcher.get_data("host3"))
         self.assertEqual({"host": EXPECTED["host4"]}, roster_matcher.get_data("host4"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_ret_glob_minions(self):
         """
         Test that we return minions matching a glob.
@@ -94,6 +96,7 @@ class RosterMatcherTestCase(TestCase, mixins.LoaderModuleMockMixin):
         self.assertIn("host4", result)
         self.assertNotIn("host5", result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_ret_pcre_minions(self):
         """
         Test that we return minions matching a regular expression.
@@ -105,6 +108,7 @@ class RosterMatcherTestCase(TestCase, mixins.LoaderModuleMockMixin):
         self.assertIn("host4", result)
         self.assertNotIn("host5", result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_ret_literal_list_minions(self):
         """
         Test that we return minions that are in a literal list.
@@ -118,6 +122,7 @@ class RosterMatcherTestCase(TestCase, mixins.LoaderModuleMockMixin):
         self.assertNotIn("host4", result)
         self.assertNotIn("host5", result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_ret_comma_delimited_string_minions(self):
         """
         Test that we return minions that are in a comma-delimited
@@ -132,6 +137,7 @@ class RosterMatcherTestCase(TestCase, mixins.LoaderModuleMockMixin):
         self.assertNotIn("host4", result)
         self.assertNotIn("host5", result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_ret_oops_minions(self):
         """
         Test that we return no minions when we try to use a matching
@@ -140,6 +146,7 @@ class RosterMatcherTestCase(TestCase, mixins.LoaderModuleMockMixin):
         result = salt.utils.roster_matcher.targets(EXPECTED, None, "xyzzy")
         self.assertEqual({}, result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_ret_literal_list_nodegroup_minions(self):
         """
         Test that we return minions that are in a nodegroup
@@ -154,6 +161,7 @@ class RosterMatcherTestCase(TestCase, mixins.LoaderModuleMockMixin):
         self.assertNotIn("host4", result)
         self.assertNotIn("host5", result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_ret_comma_delimited_string_nodegroup_minions(self):
         """
         Test that we return minions that are in a nodegroup
@@ -169,6 +177,7 @@ class RosterMatcherTestCase(TestCase, mixins.LoaderModuleMockMixin):
         self.assertIn("host4", result)
         self.assertNotIn("host5", result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_ret_no_range_installed_minions(self):
         """
         Test that range matcher raises a Runtime Error if seco.range is not installed.

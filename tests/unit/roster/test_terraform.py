@@ -16,7 +16,7 @@ from salt.roster import terraform
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class TerraformTestCase(TestCase, LoaderModuleMockMixin):
@@ -31,6 +31,7 @@ class TerraformTestCase(TestCase, LoaderModuleMockMixin):
         utils = salt.loader.utils(opts, whitelist=["roster_matcher"])
         return {terraform: {"__utils__": utils, "__opts__": {}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_default_output(self):
         """
         Test the output of a fixture tfstate file wich contains libvirt
@@ -80,6 +81,7 @@ class TerraformTestCase(TestCase, LoaderModuleMockMixin):
             ret = terraform.targets("*")
             self.assertDictEqual(expected_result, ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_default_matching(self):
         """
         Test the output of a fixture tfstate file wich contains libvirt

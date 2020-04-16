@@ -15,7 +15,7 @@ import salt.states.saltutil as saltutil_state
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class Saltutil(TestCase, LoaderModuleMockMixin):
@@ -26,6 +26,7 @@ class Saltutil(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {saltutil_state: {"__opts__": {"test": False}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_saltutil_sync_all_nochange(self):
         sync_output = {
             "clouds": [],
@@ -60,6 +61,7 @@ class Saltutil(TestCase, LoaderModuleMockMixin):
             result = saltutil_state.sync_all(state_id, refresh=True)
             self.assertEqual(result, state_result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_saltutil_sync_all_test(self):
         sync_output = {
             "clouds": [],
@@ -95,6 +97,7 @@ class Saltutil(TestCase, LoaderModuleMockMixin):
                 result = saltutil_state.sync_all(state_id, refresh=True)
                 self.assertEqual(result, state_result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_saltutil_sync_all_change(self):
         sync_output = {
             "clouds": [],
@@ -132,6 +135,7 @@ class Saltutil(TestCase, LoaderModuleMockMixin):
             result = saltutil_state.sync_all(state_id, refresh=True)
             self.assertEqual(result, state_result)
 
+    @skipIf(True, "FASTTEST skip")
     def test_saltutil_sync_states_should_match_saltutil_module(self):
         module_functions = [
             f[0]

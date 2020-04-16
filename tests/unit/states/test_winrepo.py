@@ -17,7 +17,7 @@ from salt.syspaths import BASE_FILE_ROOTS_DIR
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MockRunnerClient(object):
@@ -59,6 +59,7 @@ class WinrepoTestCase(TestCase, LoaderModuleMockMixin):
         self.addCleanup(patcher.stop)
         return {winrepo: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_genrepo(self):
         """
         Test to refresh the winrepo.p file of the repository
@@ -87,6 +88,7 @@ class WinrepoTestCase(TestCase, LoaderModuleMockMixin):
                 expected.update({"changes": {"winrepo": []}})
                 self.assertDictEqual(winrepo.genrepo("salt", True), expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_genrepo_no_dir(self):
         """
         Test genrepo when the dir does not exist
@@ -105,6 +107,7 @@ class WinrepoTestCase(TestCase, LoaderModuleMockMixin):
             ret = winrepo.genrepo("salt")
             self.assertDictEqual(ret, expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_genrepo_no_dir_force(self):
         """
         Test genrepo when the dir does not exist and force=True

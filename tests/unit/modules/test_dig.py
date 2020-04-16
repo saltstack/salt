@@ -53,26 +53,32 @@ class DigTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {dig: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_ip(self):
         self.assertTrue(dig.check_ip("127.0.0.1"), msg="Not a valid ip address")
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_ip_ipv6(self):
         self.assertTrue(
             dig.check_ip("1111:2222:3333:4444:5555:6666:7777:8888"),
             msg="Not a valid ip address",
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_ip_ipv6_valid(self):
         self.assertTrue(dig.check_ip("2607:fa18:0:3::4"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_ip_neg(self):
         self.assertFalse(
             dig.check_ip("-127.0.0.1"), msg="Did not detect negative value as invalid"
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_ip_empty(self):
         self.assertFalse(dig.check_ip(""), msg="Did not detect empty value as invalid")
 
+    @skipIf(True, "FASTTEST skip")
     def test_a(self):
         dig_mock = MagicMock(
             return_value={
@@ -100,6 +106,7 @@ class DigTestCase(TestCase, LoaderModuleMockMixin):
                 ],
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_aaaa(self):
         dig_mock = MagicMock(
             return_value={
@@ -112,6 +119,7 @@ class DigTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(dig.__salt__, {"cmd.run_all": dig_mock}):
             self.assertEqual(dig.AAAA("www.google.com"), ["2607:f8b0:400f:801::1014"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_ns(self):
         with patch("salt.modules.dig.A", MagicMock(return_value=["ns4.google.com."])):
             dig_mock = MagicMock(
@@ -125,11 +133,13 @@ class DigTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(dig.__salt__, {"cmd.run_all": dig_mock}):
                 self.assertEqual(dig.NS("google.com"), ["ns4.google.com."])
 
+    @skipIf(True, "FASTTEST skip")
     def test_spf(self):
         dig_mock = MagicMock(side_effect=_spf_side_effect)
         with patch.dict(dig.__salt__, {"cmd.run_all": dig_mock}):
             self.assertEqual(dig.SPF("foo.com"), ["216.73.93.70/31", "216.73.93.72/31"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_spf_redir(self):
         """
         Test for SPF records which use the 'redirect' SPF mechanism
@@ -141,6 +151,7 @@ class DigTestCase(TestCase, LoaderModuleMockMixin):
                 dig.SPF("xmission-redirect.com"), ["198.60.22.0/24", "166.70.13.0/24"]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_spf_include(self):
         """
         Test for SPF records which use the 'include' SPF mechanism
@@ -152,6 +163,7 @@ class DigTestCase(TestCase, LoaderModuleMockMixin):
                 dig.SPF("xmission.com"), ["198.60.22.0/24", "166.70.13.0/24"]
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_mx(self):
         dig_mock = MagicMock(
             return_value={

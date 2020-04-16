@@ -174,6 +174,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
         self.addCleanup(delattr, self, "paginator")
         self.conn.configure_mock(get_paginator=MagicMock(return_value=self.paginator))
 
+    @skipIf(True, "FASTTEST skip")
     def test_describe_elasticsearch_domain_positive(self):
         """
         Test that when describing a domain when the domain actually exists,
@@ -194,6 +195,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 {"result": True, "response": DOMAIN_RET},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_describe_elasticsearch_domain_error(self):
         """
         Test that when describing a domain when the domain does not exist,
@@ -212,6 +214,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertFalse(result["result"])
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_elasticsearch_domain_positive(self):
         """
         Test that when creating a domain, and it succeeds,
@@ -244,6 +247,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 {"result": True, "response": DOMAIN_RET},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_elasticsearch_domain_error(self):
         """
         Test that when creating a domain, and boto3 returns an error,
@@ -276,6 +280,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 result.get("error", ""), ERROR_MESSAGE.format(101, "create_domain")
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_domain_positive(self):
         """
         Test that when deleting a domain, and it succeeds,
@@ -289,6 +294,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 {"result": True},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_domain_error(self):
         """
         Test that when deleting a domain, and boto3 returns an error,
@@ -307,6 +313,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 result.get("error", ""), ERROR_MESSAGE.format(101, "delete_domain")
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_domain_positive(self):
         """
         Test that when updating a domain succeeds, the .update method returns {'result': True}.
@@ -337,6 +344,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 {"result": True, "response": DOMAIN_RET},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_domain_error(self):
         """
         Test that when updating a domain fails, and boto3 returns an error,
@@ -367,6 +375,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 result.get("error", ""), ERROR_MESSAGE.format(101, "update_domain")
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_tags_positive(self):
         """
         Test that when adding tags is succesful, the .add_tags method returns {'result': True}.
@@ -383,6 +392,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 {"result": True},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_tags_error(self):
         """
         Test that when adding tags fails, and boto3 returns an error,
@@ -403,6 +413,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 result.get("error", ""), ERROR_MESSAGE.format(101, "add_tags")
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_tags_positive(self):
         """
         Test that when removing tags is succesful, the .remove_tags method returns {'tagged': True}.
@@ -419,6 +430,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 {"result": True},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_tag_error(self):
         """
         Test that when removing tags fails, and boto3 returns an error,
@@ -441,6 +453,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 result.get("error", ""), ERROR_MESSAGE.format(101, "remove_tags")
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_tags_positive(self):
         """
         Test that when listing tags is succesful,
@@ -462,6 +475,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(result, {"result": True, "response": {"foo": "bar"}})
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_tags_error(self):
         """
         Test that when listing tags causes boto3 to return an error,
@@ -482,6 +496,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 result.get("error", ""), ERROR_MESSAGE.format(101, "list_tags")
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_cancel_elasticsearch_service_software_update_positive(self):
         """
         Test that when calling cancel_elasticsearch_service_software_update and
@@ -508,6 +523,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(result, {"result": True})
 
+    @skipIf(True, "FASTTEST skip")
     def test_cancel_elasticsearch_service_software_update_error(self):
         """
         Test that when calling cancel_elasticsearch_service_software_update and
@@ -531,6 +547,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 ),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_elasticsearch_service_role_positive(self):
         """
         Test that when calling delete_elasticsearch_service_role and
@@ -544,6 +561,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(result, {"result": True})
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_elasticsearch_service_role_error(self):
         """
         Test that when calling delete_elasticsearch_service_role and boto3 returns
@@ -563,6 +581,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 ERROR_MESSAGE.format(101, "delete_elasticsearch_service_role"),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_describe_elasticsearch_domain_config_positive(self):
         """
         Test that when calling describe_elasticsearch_domain_config and
@@ -580,6 +599,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 {"result": True, "response": DOMAIN_RET},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_describe_elasticsearch_domain_config_error(self):
         """
         Test that when calling describe_elasticsearch_domain_config and boto3 returns
@@ -601,6 +621,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 ERROR_MESSAGE.format(101, "describe_elasticsearch_domain_config"),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_describe_elasticsearch_domains_positive(self):
         """
         Test that when calling describe_elasticsearch_domains and it is succesful,
@@ -618,6 +639,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 {"result": True, "response": [DOMAIN_RET]},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_describe_elasticsearch_domains_error(self):
         """
         Test that when calling describe_elasticsearch_domains and boto3 returns
@@ -637,6 +659,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 ERROR_MESSAGE.format(101, "describe_elasticsearch_domains"),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_describe_elasticsearch_instance_type_limits_positive(self):
         """
         Test that when calling describe_elasticsearch_instance_type_limits and
@@ -681,6 +704,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 {"result": True, "response": ret_val["LimitsByRole"]},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_describe_elasticsearch_instance_type_limits_error(self):
         """
         Test that when calling describe_elasticsearch_instance_type_limits and boto3 returns
@@ -707,6 +731,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 ),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_describe_reserved_elasticsearch_instance_offerings_positive(self):
         """
         Test that when calling describe_reserved_elasticsearch_instance_offerings
@@ -743,6 +768,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_describe_reserved_elasticsearch_instance_offerings_error(self):
         """
         Test that when calling describe_reserved_elasticsearch_instance_offerings
@@ -766,6 +792,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 ),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_describe_reserved_elasticsearch_instances_positive(self):
         """
         Test that when calling describe_reserved_elasticsearch_instances and it
@@ -804,6 +831,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 {"result": True, "response": ret_val["ReservedElasticsearchInstances"]},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_describe_reserved_elasticsearch_instances_error(self):
         """
         Test that when calling describe_reserved_elasticsearch_instances and boto3
@@ -825,6 +853,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 ERROR_MESSAGE.format(101, "describe_reserved_elasticsearch_instances"),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_compatible_elasticsearch_versions_positive(self):
         """
         Test that when calling get_compatible_elasticsearch_versions and it
@@ -848,6 +877,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_compatible_elasticsearch_versions_error(self):
         """
         Test that when calling get_compatible_elasticsearch_versions and boto3
@@ -869,6 +899,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 ERROR_MESSAGE.format(101, "get_compatible_elasticsearch_versions"),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_upgrade_history_positive(self):
         """
         Test that when calling get_upgrade_history and it
@@ -900,6 +931,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 {"result": True, "response": ret_val["UpgradeHistories"]},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_upgrade_history_error(self):
         """
         Test that when calling get_upgrade_history and boto3
@@ -919,6 +951,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 ERROR_MESSAGE.format(101, "get_upgrade_history"),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_upgrade_status_positive(self):
         """
         Test that when calling get_upgrade_status and it
@@ -938,6 +971,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 {"result": True, "response": ret_val},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_upgrade_status_error(self):
         """
         Test that when calling get_upgrade_status and boto3
@@ -956,6 +990,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 result.get("error", ""), ERROR_MESSAGE.format(101, "get_upgrade_status")
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_domain_names_positive(self):
         """
         Test that when calling list_domain_names and it
@@ -971,6 +1006,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_domain_names_error(self):
         """
         Test that when calling list_domain_names and boto3
@@ -987,6 +1023,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 result.get("error", ""), ERROR_MESSAGE.format(101, "list_domain_names")
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_elasticsearch_instance_types_positive(self):
         """
         Test that when calling list_elasticsearch_instance_types and it
@@ -1045,6 +1082,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 {"result": True, "response": ret_val["ElasticsearchInstanceTypes"]},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_elasticsearch_instance_types_error(self):
         """
         Test that when calling list_elasticsearch_instance_types and boto3
@@ -1064,6 +1102,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 ERROR_MESSAGE.format(101, "list_elasticsearch_instance_types"),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_elasticsearch_versions_positive(self):
         """
         Test that when calling list_elasticsearch_versions and it
@@ -1076,6 +1115,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 {"result": True, "response": ret_val["ElasticsearchVersions"]},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_elasticsearch_versions_error(self):
         """
         Test that when calling list_elasticsearch_versions and boto3
@@ -1093,6 +1133,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 ERROR_MESSAGE.format(101, "list_elasticsearch_versions"),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_purchase_reserved_elasticsearch_instance_offering_positive(self):
         """
         Test that when calling purchase_reserved_elasticsearch_instance_offering and it
@@ -1116,6 +1157,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 {"result": True, "response": ret_val},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_purchase_reserved_elasticsearch_instance_offering_error(self):
         """
         Test that when calling purchase_reserved_elasticsearch_instance_offering and boto3
@@ -1141,6 +1183,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 ),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_start_elasticsearch_service_software_update_positive(self):
         """
         Test that when calling start_elasticsearch_service_software_update and it
@@ -1169,6 +1212,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 {"result": True, "response": ret_val["ServiceSoftwareOptions"]},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_start_elasticsearch_service_software_update_error(self):
         """
         Test that when calling start_elasticsearch_service_software_update and boto3
@@ -1192,6 +1236,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 ),
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_upgrade_elasticsearch_domain_positive(self):
         """
         Test that when calling upgrade_elasticsearch_domain and it
@@ -1212,6 +1257,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 {"result": True, "response": ret_val},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_upgrade_elasticsearch_domain_error(self):
         """
         Test that when calling upgrade_elasticsearch_domain and boto3

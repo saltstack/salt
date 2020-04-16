@@ -53,12 +53,14 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {wtmp: {"__context__": {"wtmp.loc": 2}, "__salt__": {}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_non_list_config(self):
         config = {}
         ret = wtmp.validate(config)
 
         self.assertEqual(ret, (False, "Configuration for wtmp beacon must be a list."))
 
+    @skipIf(True, "FASTTEST skip")
     def test_empty_config(self):
         config = [{}]
 
@@ -66,6 +68,7 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(ret, (True, "Valid beacon configuration"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_no_match(self):
         config = [
             {
@@ -90,6 +93,7 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
             assert call_args == (wtmp.WTMP, "rb"), call_args
             assert ret == [], ret
 
+    @skipIf(True, "FASTTEST skip")
     def test_invalid_users(self):
         config = [{"users": ["gareth"]}]
 
@@ -99,6 +103,7 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret, (False, "User configuration for wtmp beacon must be a dictionary.")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_invalid_groups(self):
         config = [{"groups": ["docker"]}]
 
@@ -108,6 +113,7 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret, (False, "Group configuration for wtmp beacon must be a dictionary.")
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_default_invalid_time_range(self):
         config = [{"defaults": {"time_range": {"start": "3pm"}}}]
 
@@ -121,6 +127,7 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_users_invalid_time_range(self):
         config = [{"users": {"gareth": {"time_range": {"start": "3pm"}}}}]
 
@@ -134,6 +141,7 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_groups_invalid_time_range(self):
         config = [{"groups": {"docker": {"time_range": {"start": "3pm"}}}}]
 
@@ -147,6 +155,7 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ),
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_match(self):
         with patch("salt.utils.files.fopen", mock_open(read_data=raw)):
             with patch("struct.unpack", MagicMock(return_value=pack)):
@@ -177,6 +186,7 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(ret, _expected)
 
     @skipIf(not _TIME_SUPPORTED, "dateutil.parser is missing.")
+    @skipIf(True, "FASTTEST skip")
     def test_match_time(self):
         with patch("salt.utils.files.fopen", mock_open(read_data=raw)):
             mock_now = datetime.datetime(2017, 9, 22, 16, 0, 0, 0)
@@ -220,6 +230,7 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
                     ret = wtmp.beacon(config)
                     self.assertEqual(ret, _expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_match_group(self):
 
         for groupadd in (

@@ -14,7 +14,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
@@ -25,6 +25,7 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {linux_sysctl: {}, systemd: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_get(self):
         """
         Tests the return of get function
@@ -33,6 +34,7 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(linux_sysctl.__salt__, {"cmd.run": mock_cmd}):
             self.assertEqual(linux_sysctl.get("net.ipv4.ip_forward"), 1)
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_ignore(self):
         """
         Tests the return of get function with ignore
@@ -41,6 +43,7 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(linux_sysctl.__salt__, {"cmd.run": mock_cmd}):
             self.assertEqual(linux_sysctl.get("net.ipv4.ip_forward", ignore=True), "")
 
+    @skipIf(True, "FASTTEST skip")
     def test_assign_proc_sys_failed(self):
         """
         Tests if /proc/sys/<kernel-subsystem> exists or not
@@ -58,6 +61,7 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
                     CommandExecutionError, linux_sysctl.assign, "net.ipv4.ip_forward", 1
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_assign_cmd_failed(self):
         """
         Tests if the assignment was successful or not
@@ -78,6 +82,7 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
                     "backward",
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_assign_success(self):
         """
         Tests the return of successful assign function
@@ -94,6 +99,7 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(linux_sysctl.__salt__, {"cmd.run_all": mock_cmd}):
                 self.assertEqual(linux_sysctl.assign("net.ipv4.ip_forward", 1), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_assign_ignore(self):
         """
         Tests the ignore assign function
@@ -107,6 +113,7 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
                     linux_sysctl.assign("net.ipv4.ip_forward", 1, ignore=True), ret
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_persist_no_conf_failure(self):
         """
         Tests adding of config file failure
@@ -133,6 +140,7 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
                     config=None,
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_persist_no_conf_success(self):
         """
         Tests successful add of config file when previously not one
@@ -165,6 +173,7 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
                 writes = m_open.write_calls()
                 assert writes == ["#\n# Kernel sysctl configuration\n#\n"], writes
 
+    @skipIf(True, "FASTTEST skip")
     def test_persist_read_conf_success(self):
         """
         Tests sysctl.conf read success

@@ -9,13 +9,14 @@ import salt.modules.mac_pkgutil as mac_pkgutil
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MacPkgutilTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {mac_pkgutil: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_install(self):
         # Given
         source = "/foo/bar/fubar.pkg"
@@ -31,6 +32,7 @@ class MacPkgutilTestCase(TestCase, LoaderModuleMockMixin):
         # Then
         _install_from_path.assert_called_with(source)
 
+    @skipIf(True, "FASTTEST skip")
     def test_install_already_there(self):
         # Given
         source = "/foo/bar/fubar.pkg"

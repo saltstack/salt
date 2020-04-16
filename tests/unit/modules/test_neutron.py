@@ -12,7 +12,7 @@ import salt.modules.neutron as neutron
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MockNeutron(object):
@@ -530,6 +530,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_quotas_tenant' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_quotas_tenant(self):
         """
         Test if it fetches tenant info in server's context for
@@ -539,6 +540,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_quotas' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_quotas(self):
         """
         Test if it fetches all tenants quotas
@@ -547,6 +549,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'show_quota' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_quota(self):
         """
         Test if it fetches information of a certain tenant's quotas
@@ -555,6 +558,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'update_quota' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_quota(self):
         """
         Test if it update a tenant's quota
@@ -574,6 +578,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete_quota' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_quota(self):
         """
         Test if it delete the specified tenant's quota value
@@ -582,6 +587,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_extensions' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_extensions(self):
         """
         Test if it fetches a list of all extensions on server side
@@ -590,6 +596,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_ports' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_ports(self):
         """
         Test if it fetches a list of all networks for a tenant
@@ -598,6 +605,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'show_port' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_port(self):
         """
         Test if it fetches information of a certain port
@@ -606,6 +614,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'create_port' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_port(self):
         """
         Test if it creates a new port
@@ -622,6 +631,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'update_port' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_port(self):
         """
         Test if it updates a port
@@ -634,6 +644,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete_port' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_port(self):
         """
         Test if it deletes the specified port
@@ -642,6 +653,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_networks' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_networks(self):
         """
         Test if it fetches a list of all networks for a tenant
@@ -650,6 +662,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'show_network' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_network(self):
         """
         Test if it fetches information of a certain network
@@ -658,6 +671,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'create_network' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_network(self):
         """
         Test if it creates a new network
@@ -666,6 +680,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'update_network' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_network(self):
         """
         Test if it updates a network
@@ -676,6 +691,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete_network' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_network(self):
         """
         Test if it deletes the specified network
@@ -684,6 +700,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_subnets' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_subnets(self):
         """
         Test if it fetches a list of all networks for a tenant
@@ -692,6 +709,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'show_subnet' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_subnet(self):
         """
         Test if it fetches information of a certain subnet
@@ -700,6 +718,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'create_subnet' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_subnet(self):
         """
         Test if it creates a new subnet
@@ -716,6 +735,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'update_subnet' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_subnet(self):
         """
         Test if it updates a subnet
@@ -726,6 +746,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete_subnet' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_subnet(self):
         """
         Test if it deletes the specified subnet
@@ -734,6 +755,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_routers' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_routers(self):
         """
         Test if it fetches a list of all routers for a tenant
@@ -742,6 +764,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'show_router' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_router(self):
         """
         Test if it fetches information of a certain router
@@ -750,6 +773,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'create_router' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_router(self):
         """
         Test if it creates a new router
@@ -762,6 +786,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'update_router' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_router(self):
         """
         Test if it updates a router
@@ -772,6 +797,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete_router' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_router(self):
         """
         Test if it delete the specified router
@@ -780,6 +806,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'add_interface_router' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_interface_router(self):
         """
         Test if it adds an internal network interface to the specified router
@@ -790,6 +817,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'remove_interface_router' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_interface_router(self):
         """
         Test if it removes an internal network interface from the specified
@@ -803,6 +831,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'add_gateway_router' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_add_gateway_router(self):
         """
         Test if it adds an external network gateway to the specified router
@@ -813,6 +842,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'remove_gateway_router' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_remove_gateway_router(self):
         """
         Test if it removes an external network gateway from the specified router
@@ -824,6 +854,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_floatingips' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_floatingips(self):
         """
         Test if it fetch a list of all floatingIPs for a tenant
@@ -832,6 +863,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'show_floatingip' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_floatingip(self):
         """
         Test if it fetches information of a certain floatingIP
@@ -840,6 +872,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'create_floatingip' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_floatingip(self):
         """
         Test if it creates a new floatingIP
@@ -850,6 +883,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'update_floatingip' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_floatingip(self):
         """
         Test if it updates a floatingIP
@@ -860,6 +894,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete_floatingip' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_floatingip(self):
         """
         Test if it deletes the specified floating IP
@@ -868,6 +903,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_security_groups' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_security_groups(self):
         """
         Test if it fetches a list of all security groups for a tenant
@@ -876,6 +912,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'show_security_group' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_security_group(self):
         """
         Test if it fetches information of a certain security group
@@ -884,6 +921,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'create_security_group' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_security_group(self):
         """
         Test if it creates a new security group
@@ -896,6 +934,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'update_security_group' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_security_group(self):
         """
         Test if it updates a security group
@@ -908,6 +947,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete_security_group' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_security_group(self):
         """
         Test if it deletes the specified security group
@@ -916,6 +956,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_security_group_rules' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_security_group_rules(self):
         """
         Test if it fetches a list of all security group rules for a tenant
@@ -924,6 +965,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'show_security_group_rule' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_security_group_rule(self):
         """
         Test if it fetches information of a certain security group rule
@@ -934,6 +976,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'create_security_group_rule' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_security_group_rule(self):
         """
         Test if it creates a new security group rule
@@ -944,6 +987,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete_security_group_rule' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_security_group_rule(self):
         """
         Test if it deletes the specified security group rule
@@ -954,6 +998,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_vpnservices' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_vpnservices(self):
         """
         Test if it fetches a list of all configured VPN services for a tenant
@@ -962,6 +1007,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'show_vpnservice' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_vpnservice(self):
         """
         Test if it fetches information of a specific VPN service
@@ -970,6 +1016,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'create_vpnservice' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_vpnservice(self):
         """
         Test if it creates a new VPN service
@@ -982,6 +1029,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'update_vpnservice' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_vpnservice(self):
         """
         Test if it updates a VPN service
@@ -992,6 +1040,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete_vpnservice' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_vpnservice(self):
         """
         Test if it deletes the specified VPN service
@@ -1002,6 +1051,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_ipsec_site_connections' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_ipsec_site(self):
         """
         Test if it fetches all configured IPsec Site Connections for a tenant
@@ -1010,6 +1060,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'show_ipsec_site_connection' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_ipsec_site_connection(self):
         """
         Test if it fetches information of a specific IPsecSiteConnection
@@ -1020,6 +1071,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'create_ipsec_site_connection' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_ipsec_site(self):
         """
         Test if it creates a new IPsecSiteConnection
@@ -1040,6 +1092,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete_ipsec_site_connection' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_ipsec_site(self):
         """
         Test if it deletes the specified IPsecSiteConnection
@@ -1052,6 +1105,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_ikepolicies' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_ikepolicies(self):
         """
         Test if it fetches a list of all configured IKEPolicies for a tenant
@@ -1060,6 +1114,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'show_ikepolicy' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_ikepolicy(self):
         """
         Test if it fetches information of a specific IKEPolicy
@@ -1068,6 +1123,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'create_ikepolicy' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_ikepolicy(self):
         """
         Test if it creates a new IKEPolicy
@@ -1076,6 +1132,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete_ikepolicy' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_ikepolicy(self):
         """
         Test if it deletes the specified IKEPolicy
@@ -1084,6 +1141,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_ipsecpolicies' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_ipsecpolicies(self):
         """
         Test if it fetches a list of all configured IPsecPolicies for a tenant
@@ -1092,6 +1150,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'show_ipsecpolicy' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_show_ipsecpolicy(self):
         """
         Test if it fetches information of a specific IPsecPolicy
@@ -1100,6 +1159,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'create_ipsecpolicy' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_ipsecpolicy(self):
         """
         Test if it creates a new IPsecPolicy
@@ -1108,6 +1168,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete_ipsecpolicy' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_ipsecpolicy(self):
         """
         Test if it deletes the specified IPsecPolicy

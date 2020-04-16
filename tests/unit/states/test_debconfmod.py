@@ -11,7 +11,7 @@ import salt.states.debconfmod as debconfmod
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class DebconfmodTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,6 +24,7 @@ class DebconfmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_file' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_file(self):
         """
         Test to set debconf selections from a file or a template
@@ -55,6 +56,7 @@ class DebconfmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_set(self):
         """
         Test to set debconf selections

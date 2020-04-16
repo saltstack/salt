@@ -15,7 +15,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
@@ -38,6 +38,7 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
         except AttributeError:
             pass
 
+    @skipIf(True, "FASTTEST skip")
     def test_expand_user_token(self):
         """
         Test if the %u, %h, and %% tokens are correctly expanded
@@ -68,12 +69,14 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
             CommandExecutionError, ssh._expand_authorized_keys_path, path, user, home
         )
 
+    @skipIf(True, "FASTTEST skip")
     def test_set_auth_key_invalid(self):
         self.user_info_mock = {"home": "/dev/null"}
         # Inserting invalid public key should be rejected
         invalid_key = "AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY"  # missing padding
         self.assertEqual(ssh.set_auth_key("user", invalid_key), "Invalid public key")
 
+    @skipIf(True, "FASTTEST skip")
     def test_replace_auth_key(self):
         """
         Test the _replace_auth_key with some different authorized_keys examples

@@ -18,6 +18,7 @@ from tests.support.helpers import requires_system_grains
 
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf
 
 
 class TestModulesJinja(ModuleCase):
@@ -32,12 +33,14 @@ class TestModulesJinja(ModuleCase):
         else:
             return path
 
+    @skipIf(True, "FASTTEST skip")
     def test_import_json(self):
         json_file = "osarchmap.json"
         ret = self.run_function("jinja.import_json", [self._path(json_file)])
         with salt.utils.files.fopen(self._path(json_file, absolute=True)) as fh_:
             self.assertDictEqual(salt.utils.json.load(fh_), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_import_yaml(self):
         yaml_file = "defaults.yaml"
         ret = self.run_function("jinja.import_yaml", [self._path(yaml_file)])
@@ -45,6 +48,7 @@ class TestModulesJinja(ModuleCase):
             self.assertDictEqual(salt.utils.yaml.safe_load(fh_), ret)
 
     @requires_system_grains
+    @skipIf(True, "FASTTEST skip")
     def test_load_map(self, grains):
         ret = self.run_function("jinja.load_map", [self._path("map.jinja"), "template"])
 

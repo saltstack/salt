@@ -14,7 +14,7 @@ import salt.modules.poudriere as poudriere
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
@@ -27,6 +27,7 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'is_jail' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_is_jail(self):
         """
         Test if it return True if jail exists False if not.
@@ -41,6 +42,7 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'make_pkgng_aware' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_make_pkgng_aware(self):
         """
         Test if it make jail ``jname`` pkgng aware.
@@ -67,6 +69,7 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'parse_config' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_parse_config(self):
         """
         Test if it returns a dict of poudriere main configuration definitions.
@@ -85,6 +88,7 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'version' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_version(self):
         """
         Test if it return poudriere version.
@@ -95,6 +99,7 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_jails' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_jails(self):
         """
         Test if it return a list of current jails managed by poudriere.
@@ -107,6 +112,7 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_ports' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_list_ports(self):
         """
         Test if it return a list of current port trees managed by poudriere.
@@ -119,6 +125,7 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'create_jail' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_jail(self):
         """
         Test if it creates a new poudriere jail if one does not exist.
@@ -152,6 +159,7 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'update_jail' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_jail(self):
         """
         Test if it run freebsd-update on `name` poudriere jail.
@@ -168,6 +176,7 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete_jail' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete_jail(self):
         """
         Test if it deletes poudriere jail with `name`.
@@ -201,6 +210,7 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'create_ports_tree' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_create_ports_tree(self):
         """
         Test if it not working need to run portfetch non interactive.
@@ -213,6 +223,7 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'update_ports_tree' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_update_ports_tree(self):
         """
         Test if it updates the ports tree, either the default
@@ -226,6 +237,7 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'bulk_build' function tests: 1
 
+    @skipIf(True, "FASTTEST skip")
     def test_bulk_build(self):
         """
         Test if it run bulk build on poudriere server.

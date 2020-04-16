@@ -16,7 +16,7 @@ import salt.modules.telegram as telegram
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -84,6 +84,7 @@ class TelegramModuleTest(TestCase, LoaderModuleMockMixin):
         }
         return {telegram: module_globals}
 
+    @skipIf(True, "FASTTEST skip")
     def test_post_message(self):
         """
         Test the post_message function.

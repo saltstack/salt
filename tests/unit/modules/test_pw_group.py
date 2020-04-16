@@ -24,6 +24,7 @@ class PwGroupTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {pw_group: {"grinfo": {}}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_add(self):
         """
         Tests to add the specified group
@@ -32,6 +33,7 @@ class PwGroupTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pw_group.__salt__, {"cmd.run_all": mock}):
             self.assertTrue(pw_group.add("a"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_delete(self):
         """
         Tests to remove the named group
@@ -41,6 +43,7 @@ class PwGroupTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(pw_group.delete("a"))
 
     @skipIf(salt.utils.platform.is_windows(), "grp not available on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_info(self):
         """
         Tests to return information about a group
@@ -59,6 +62,7 @@ class PwGroupTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(pw_group.info("name"), {})
 
     @skipIf(salt.utils.platform.is_windows(), "grp not available on Windows")
+    @skipIf(True, "FASTTEST skip")
     def test_getent(self):
         """
         Tests for return info on all groups
@@ -73,6 +77,7 @@ class PwGroupTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(pw_group, "info", mock):
             self.assertEqual(pw_group.getent(True)[0], "A")
 
+    @skipIf(True, "FASTTEST skip")
     def test_chgid(self):
         """
         tests to change the gid for a named group

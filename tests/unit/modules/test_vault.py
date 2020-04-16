@@ -12,7 +12,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class TestVaultModule(LoaderModuleMockMixin, TestCase):
@@ -33,6 +33,7 @@ class TestVaultModule(LoaderModuleMockMixin, TestCase):
             }
         }
 
+    @skipIf(True, "FASTTEST skip")
     def test_read_secret_v1(self):
         """
         Test salt.modules.vault.read_secret function
@@ -49,6 +50,7 @@ class TestVaultModule(LoaderModuleMockMixin, TestCase):
 
         self.assertDictEqual(vault_return, {"key": "test"})
 
+    @skipIf(True, "FASTTEST skip")
     def test_read_secret_v1_key(self):
         """
         Test salt.modules.vault.read_secret function specifying key
@@ -65,6 +67,7 @@ class TestVaultModule(LoaderModuleMockMixin, TestCase):
 
         self.assertEqual(vault_return, "somevalue")
 
+    @skipIf(True, "FASTTEST skip")
     def test_read_secret_v2(self):
         """
         Test salt.modules.vault.read_secret function for v2 of kv secret backend
@@ -102,6 +105,7 @@ class TestVaultModule(LoaderModuleMockMixin, TestCase):
             vault_return = vault.read_secret("/secret/my/secret")
             self.assertDictContainsSubset({"akey": "avalue"}, vault_return)
 
+    @skipIf(True, "FASTTEST skip")
     def test_read_secret_v2_key(self):
         """
         Test salt.modules.vault.read_secret function for v2 of kv secret backend

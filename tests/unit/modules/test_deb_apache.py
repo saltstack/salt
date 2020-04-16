@@ -13,7 +13,7 @@ from salt.ext import six
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
@@ -26,6 +26,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'check_site_enabled' function tests: 3
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_site_enabled(self):
         """
         Test if the specific Site symlink is enabled.
@@ -33,6 +34,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
         with patch("os.path.islink", MagicMock(return_value=True)):
             self.assertTrue(deb_apache.check_site_enabled("saltstack.com"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_site_enabled_default(self):
         """
         Test if the specific Site symlink is enabled.
@@ -40,6 +42,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
         with patch("os.path.islink", MagicMock(side_effect=[False, True])):
             self.assertTrue(deb_apache.check_site_enabled("default"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_site_enabled_false(self):
         """
         Test if the specific Site symlink is enabled.
@@ -49,6 +52,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'a2ensite' function tests: 4
 
+    @skipIf(True, "FASTTEST skip")
     def test_a2ensite_notfound(self):
         """
         Test if it runs a2ensite for the given site.
@@ -64,6 +68,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_a2ensite_enabled(self):
         """
         Test if it runs a2ensite for the given site.
@@ -79,6 +84,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_a2ensite(self):
         """
         Test if it runs a2ensite for the given site.
@@ -90,6 +96,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
                 {"Name": "Apache2 Enable Site", "Site": "saltstack.com", "Status": 2},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_a2ensite_exception(self):
         """
         Test if it runs a2ensite for the given site.
@@ -102,6 +109,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'a2dissite' function tests: 4
 
+    @skipIf(True, "FASTTEST skip")
     def test_a2dissite_notfound(self):
         """
         Test if it runs a2dissite for the given site.
@@ -117,6 +125,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_a2dissite_disabled(self):
         """
         Test if it runs a2dissite for the given site.
@@ -132,6 +141,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_a2dissite(self):
         """
         Test if it runs a2dissite for the given site.
@@ -143,6 +153,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
                 {"Name": "Apache2 Disable Site", "Site": "saltstack.com", "Status": 2},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_a2dissite_exception(self):
         """
         Test if it runs a2dissite for the given site.
@@ -155,6 +166,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'check_mod_enabled' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_mod_enabled(self):
         """
         Test if the specific mod symlink is enabled.
@@ -162,6 +174,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
         with patch("os.path.islink", MagicMock(return_value=True)):
             self.assertTrue(deb_apache.check_mod_enabled("status.conf"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_mod_enabled_false(self):
         """
         Test if the specific mod symlink is enabled.
@@ -171,6 +184,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'a2enmod' function tests: 4
 
+    @skipIf(True, "FASTTEST skip")
     def test_a2enmod_notfound(self):
         """
         Test if it runs a2enmod for the given module.
@@ -186,6 +200,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_a2enmod_enabled(self):
         """
         Test if it runs a2enmod for the given module.
@@ -201,6 +216,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_a2enmod(self):
         """
         Test if it runs a2enmod for the given module.
@@ -212,6 +228,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
                 {"Name": "Apache2 Enable Mod", "Mod": "vhost_alias", "Status": 2},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_a2enmod_exception(self):
         """
         Test if it runs a2enmod for the given module.
@@ -222,6 +239,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'a2dismod' function tests: 4
 
+    @skipIf(True, "FASTTEST skip")
     def test_a2dismod_notfound(self):
         """
         Test if it runs a2dismod for the given module.
@@ -237,6 +255,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_a2dismod_disabled(self):
         """
         Test if it runs a2dismod for the given module.
@@ -252,6 +271,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_a2dismod(self):
         """
         Test if it runs a2dismod for the given module.
@@ -263,6 +283,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
                 {"Name": "Apache2 Disable Mod", "Mod": "vhost_alias", "Status": 2},
             )
 
+    @skipIf(True, "FASTTEST skip")
     def test_a2dismod_exception(self):
         """
         Test if it runs a2dismod for the given module.
@@ -273,6 +294,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'check_conf_enabled' function tests: 2
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_conf_enabled(self):
         """
         Test if the specific conf symlink is enabled.
@@ -280,6 +302,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
         with patch("os.path.islink", MagicMock(return_value=True)):
             self.assertTrue(deb_apache.check_conf_enabled("security.conf"))
 
+    @skipIf(True, "FASTTEST skip")
     def test_check_conf_enabled_false(self):
         """
         Test if the specific conf symlink is enabled.
@@ -289,6 +312,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'a2enconf' function tests: 4
 
+    @skipIf(True, "FASTTEST skip")
     def test_a2enconf_notfound(self):
         """
         Test if it runs a2enconf for the given conf.
@@ -305,6 +329,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
                     },
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_a2enconf_enabled(self):
         """
         Test if it runs a2enconf for the given conf.
@@ -321,6 +346,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
                     },
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_a2enconf(self):
         """
         Test if it runs a2enconf for the given conf.
@@ -333,6 +359,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
                     {"Name": "Apache2 Enable Conf", "Conf": "security", "Status": 2},
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_a2enconf_exception(self):
         """
         Test if it runs a2enconf for the given conf.
@@ -346,6 +373,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'a2disconf' function tests: 4
 
+    @skipIf(True, "FASTTEST skip")
     def test_a2disconf_notfound(self):
         """
         Test if it runs a2disconf for the given conf.
@@ -362,6 +390,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
                     },
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_a2disconf_disabled(self):
         """
         Test if it runs a2disconf for the given conf.
@@ -378,6 +407,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
                     },
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_a2disconf(self):
         """
         Test if it runs a2disconf for the given conf.
@@ -390,6 +420,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
                     {"Name": "Apache2 Disable Conf", "Conf": "security", "Status": 2},
                 )
 
+    @skipIf(True, "FASTTEST skip")
     def test_a2disconf_exception(self):
         """
         Test if it runs a2disconf for the given conf.

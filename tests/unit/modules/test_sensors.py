@@ -11,7 +11,7 @@ import salt.modules.sensors as sensors
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class SensorTestCase(TestCase, LoaderModuleMockMixin):
@@ -22,6 +22,7 @@ class SensorTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {sensors: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_sense(self):
         """
         Test to gather lm-sensors data from a given chip

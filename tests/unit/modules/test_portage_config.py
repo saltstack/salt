@@ -18,7 +18,7 @@ from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PortageConfigTestCase(TestCase, LoaderModuleMockMixin):
@@ -60,6 +60,7 @@ class PortageConfigTestCase(TestCase, LoaderModuleMockMixin):
             self.addCleanup(delattr, self, "portage")
             return {portage_config: {"portage": self.portage}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_get_config_file_wildcards(self):
         pairs = [
             ("*/*::repo", "/etc/portage/package.mask/repo"),
@@ -72,6 +73,7 @@ class PortageConfigTestCase(TestCase, LoaderModuleMockMixin):
         for (atom, expected) in pairs:
             self.assertEqual(portage_config._get_config_file("mask", atom), expected)
 
+    @skipIf(True, "FASTTEST skip")
     def test_enforce_nice_config(self):
         atoms = [
             ("*/*::repo", "repo"),

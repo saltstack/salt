@@ -11,7 +11,7 @@ import salt.states.zabbix_action as zabbix_action
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 INPUT_PARAMS = {
     "status": "0",
@@ -121,6 +121,7 @@ class ZabbixActionTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {zabbix_action: {}}
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_create(self):
         """
         Test to ensure that named action is created
@@ -163,6 +164,7 @@ class ZabbixActionTestCase(TestCase, LoaderModuleMockMixin):
                 }
                 self.assertDictEqual(zabbix_action.present(name, {}), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_exists(self):
         """
         Test to ensure that named action is present and not changed
@@ -194,6 +196,7 @@ class ZabbixActionTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertDictEqual(zabbix_action.present(name, {}), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_present_update(self):
         """
         Test to ensure that named action is present but must be updated
@@ -235,6 +238,7 @@ class ZabbixActionTestCase(TestCase, LoaderModuleMockMixin):
                 }
                 self.assertDictEqual(zabbix_action.present(name, {}), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent_test_mode(self):
         """
         Test to ensure that named action is absent in test mode
@@ -256,6 +260,7 @@ class ZabbixActionTestCase(TestCase, LoaderModuleMockMixin):
                 }
                 self.assertDictEqual(zabbix_action.absent(name), ret)
 
+    @skipIf(True, "FASTTEST skip")
     def test_absent(self):
         """
         Test to ensure that named action is absent
