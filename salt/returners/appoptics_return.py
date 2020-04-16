@@ -69,11 +69,12 @@ the name of the state that was invoked, e.g. ``role_salt_master.netapi``.
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
+import salt.returners
 # Import Salt libs
 import salt.utils.jid
-import salt.returners
 
 # Import third party libs
 try:
