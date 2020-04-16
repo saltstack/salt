@@ -24,12 +24,13 @@ import os
 import traceback
 from functools import wraps
 
+import yaml
+
 # Import Salt libs
 import salt.utils.args
 import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
-import yaml
 from salt.exceptions import MinionError
 from salt.ext import six
 
@@ -82,7 +83,7 @@ def __virtual__():
         return (
             False,
             "The junos or dependent module could not be loaded: "
-            "junos-eznc or jxmlease or or yamlordereddictloader or "
+            "junos-eznc or jxmlease or yamlordereddictloader or "
             "proxy could not be loaded.",
         )
 
@@ -1094,6 +1095,8 @@ def install_os(path=None, **kwargs):
         When True (default), executes the software install on all Routing Engines of the Junos
         device. When False, execute the software install only on the current Routing Engine.
 
+        .. versionadded:: Sodium
+
     .. note::
         Any additional keyword arguments specified are passed down to PyEZ sw.install() as is.
         Please refer to below URl for PyEZ sw.install() documentaion:
@@ -1366,13 +1369,12 @@ def load(path=None, **kwargs):
 
     try:
         template_cached_path = salt.utils.files.mkstemp()
-        __salt__["cp.get_template"](
-            path,
-            template_cached_path,
-            **kwargs)
+        __salt__["cp.get_template"](path, template_cached_path, **kwargs)
     except Exception as ex:  # pylint: disable=broad-except
-        ret["message"] = "Salt failed to render the template, please check file path and syntax." \
-                         "\nError: {0}".format(str(ex))
+        ret["message"] = (
+            "Salt failed to render the template, please check file path and syntax."
+            "\nError: {0}".format(str(ex))
+        )
         ret["out"] = False
         return ret
 
@@ -1402,7 +1404,7 @@ def load(path=None, **kwargs):
     # Allow only one config_action, providing multiple config_action value is not allowed
     actions = [
         item
-        for item in ('overwrite', 'replace', 'update', 'merge')
+        for item in ("overwrite", "replace", "update", "merge")
         if op.get(item, False)
     ]
     if len(list(actions)) > 1:
@@ -1468,9 +1470,11 @@ def get_table(
     key=None,
     key_items=None,
     filters=None,
-    template_args=None
+    template_args=None,
 ):
     """
+    .. versionadded:: Sodium
+
     Retrieve data from a Junos device using Tables/Views
 
     table (required)
@@ -1539,9 +1543,10 @@ def get_table(
                 ret["table"] = yaml.load(fp.read(), Loader=yamlordereddictloader.Loader)
                 globals().update(FactoryLoader().load(ret["table"]))
         except IOError as err:
-            ret["message"] = (
-                "Uncaught exception during YAML Load - please report: {0}".format(
-                    six.text_type(err))
+            ret[
+                "message"
+            ] = "Uncaught exception during YAML Load - please report: {0}".format(
+                six.text_type(err)
             )
             ret["out"] = False
             return ret
@@ -1549,17 +1554,17 @@ def get_table(
             data = globals()[table](conn)
             data.get(**get_kvargs)
         except KeyError as err:
-            ret["message"] = (
-                "Uncaught exception during get API call - please report: {0}".format
-                (six.text_type(err))
+            ret[
+                "message"
+            ] = "Uncaught exception during get API call - please report: {0}".format(
+                six.text_type(err)
             )
             ret["out"] = False
             return ret
         except ConnectClosedError:
-            ret["message"] = (
-                "Got ConnectClosedError exception. Connection lost with {}".format(
-                    conn)
-            )
+            ret[
+                "message"
+            ] = "Got ConnectClosedError exception. Connection lost with {}".format(conn)
             ret["out"] = False
             return ret
         ret["reply"] = json.loads(data.to_json())

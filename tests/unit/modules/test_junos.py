@@ -4,6 +4,7 @@
 """
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import os
 
 # Import salt modules
@@ -28,6 +29,7 @@ try:
     import jxmlease  # pylint: disable=unused-import
     import jnpr.junos.op as tables_dir
     from jnpr.junos.exception import ConnectClosedError, LockError, UnlockError
+
     HAS_JUNOS = True
 except ImportError:
     HAS_JUNOS = False
@@ -970,7 +972,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 "__pub_jid": "20170221182531323467",
                 "__pub_tgt": "mac_min",
                 "__pub_tgt_type": "glob",
-                "__pub_ret": ""
+                "__pub_ret": "",
             }
             ret = dict()
             ret["message"] = "Test return"
@@ -994,7 +996,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 "__pub_jid": "20170221182531323467",
                 "__pub_tgt": "mac_min",
                 "__pub_tgt_type": "glob",
-                "__pub_ret": ""
+                "__pub_ret": "",
             }
             ret = dict()
             ret["message"] = 'Unable to open "/path/to/file" to write'
@@ -1243,10 +1245,14 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             mock_commit_check.return_value = True
 
             args = {
-                "__pub_user": "root", "__pub_arg": [{"replace": True}],
-                "replace": True, "__pub_fun": "junos.install_config",
-                "__pub_jid": "20170222213858582619", "__pub_tgt": "mac_min",
-                "__pub_tgt_type": "glob", "__pub_ret": ""
+                "__pub_user": "root",
+                "__pub_arg": [{"replace": True}],
+                "replace": True,
+                "__pub_fun": "junos.install_config",
+                "__pub_jid": "20170222213858582619",
+                "__pub_tgt": "mac_min",
+                "__pub_tgt_type": "glob",
+                "__pub_ret": "",
             }
 
             ret = dict()
@@ -1852,7 +1858,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 remote_path=remote_path,
                 progress=True,
                 validate=True,
-                timeout=1800
+                timeout=1800,
             )
 
     def test_file_copy_without_args(self):
@@ -1909,8 +1915,8 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             res = (
                 False,
                 "The junos or dependent module could not be loaded: "
-                "junos-eznc or jxmlease or or yamlordereddictloader or "
-                "proxy could not be loaded."
+                "junos-eznc or jxmlease or yamlordereddictloader or "
+                "proxy could not be loaded.",
             )
             self.assertEqual(junos.__virtual__(), res)
 
@@ -2268,8 +2274,9 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             "out": False,
             "hostname": "1.1.1.1",
             "tablename": "ModuleTable",
-           "message": "Uncaught exception during YAML Load - please report: {}".format(
-               message),
+            "message": "Uncaught exception during YAML Load - please report: {}".format(
+                message
+            ),
         }
         with patch(
             "salt.utils.files.fopen", mock_open(IOError(message))
@@ -2286,7 +2293,8 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             "hostname": "1.1.1.1",
             "tablename": "sample",
             "message": "Uncaught exception during get API call - please report:"
-            " \'{}\'".format(six.text_type(table))}
+            " '{}'".format(six.text_type(table)),
+        }
         with patch("jnpr.junos.device.Device.execute") as mock_execute:
             ret = junos.get_table(table, file)
             self.assertEqual(ret["out"], ret_exp["out"])

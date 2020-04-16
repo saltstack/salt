@@ -71,7 +71,7 @@ def rpc(name, **kwargs):
               Name of the interface whose information you want.
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
-    ret['changes'] = __salt__["junos.rpc"](name, **kwargs)
+    ret["changes"] = __salt__["junos.rpc"](name, **kwargs)
     return ret
 
 
@@ -533,6 +533,8 @@ def commit_check(name):
 @resultdecorator
 def get_table(name, table, table_file, **kwargs):
     """
+    .. versionadded:: Sodium
+
     Retrieve data from a Junos device using Tables/Views
 
     .. code-block:: yaml
