@@ -47,7 +47,7 @@ class ManageTest(ShellCase):
         # default returns lexical sort of items
         ret = self.run_run_plus(
             'queue.list_items',
-            'myqueue')
+            'testqueue')
         self.assertEqual(ret,
                          ['a', 'b', 'e', 'r', 'z'],
                          msg='queue item list not returned as expected')
@@ -55,7 +55,7 @@ class ManageTest(ShellCase):
         # fifo list
         ret = self.run_run_plus(
             'queue.list_items',
-            'myqueue',
+            'testqueue',
             mode='fifo')
         # ensure fifo output
         self.assertEqual(ret,
@@ -65,7 +65,7 @@ class ManageTest(ShellCase):
         # lifo list
         ret = self.run_run_plus(
             'queue.list_items',
-            'myqueue',
+            'testqueue',
             mode='fifo')
         # ensure fifo output
         self.assertEqual(ret,

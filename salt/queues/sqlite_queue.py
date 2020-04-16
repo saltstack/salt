@@ -240,7 +240,7 @@ def pop(queue, quantity=1, is_runner=False, mode=None):
     Pop one or more or all items from the queue return them.
     """
     order_by = _process_mode(mode)
-    cmd = 'SELECT id, data FROM {0}{1}'.format(queue, order_by)
+    cmd = 'SELECT name FROM {0}{1}'.format(queue, order_by)
     if quantity != "all":
         try:
             quantity = int(quantity)
