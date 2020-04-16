@@ -10,7 +10,6 @@
 # pylint: disable=wrong-import-order,wrong-import-position,3rd-party-local-module-not-gated
 # pylint: disable=redefined-outer-name,invalid-name,3rd-party-module-not-gated
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import fnmatch
@@ -27,15 +26,9 @@ from contextlib import contextmanager
 
 import _pytest.logging
 import _pytest.skipping
-
-# Import 3rd-party libs
 import psutil
-
-# Import pytest libs
 import pytest
 import salt.config
-
-# Import salt libs
 import salt.loader
 import salt.log.mixins
 import salt.log.setup
@@ -44,14 +37,10 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.win_functions
 from _pytest.mark.evaluate import MarkEvaluator
-
-# Import Pytest Salt libs
 from pytestsalt.utils import cli_scripts
 from salt.ext import six
 from salt.serializers import yaml
 from salt.utils.immutabletypes import freeze
-
-# Import test libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
 
@@ -271,7 +260,10 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         "markers",
-        "requires_salt_modules(*required_module_names): Skip if at least one module is not available. ",
+        "requires_salt_modules(*required_module_names): Skip if at least one module is not available.",
+    )
+    config.addinivalue_line(
+        "markers", "windows_whitelisted: Mark test as whitelisted to run under Windows"
     )
     # Make sure the test suite "knows" this is a pytest test run
     RUNTIME_VARS.PYTEST_SESSION = True
@@ -550,6 +542,15 @@ def pytest_runtest_setup(item):
                     ", ".join(not_available_modules)
                 )
             )
+
+    if salt.utils.platform.is_windows():
+        if not item.fspath.fnmatch(os.path.join(CODE_DIR, "tests", "unit", "*")):
+            # Unit tests are whitelisted on windows by default, so, we're only
+            # after all other tests
+            windows_whitelisted_marker = item.get_closest_marker("windows_whitelisted")
+            if windows_whitelisted_marker is None:
+                item._skipped_by_mark = True
+                pytest.skip("Test is not whitelisted for Windows")
 
 
 # <---- Test Setup ---------------------------------------------------------------------------------------------------
