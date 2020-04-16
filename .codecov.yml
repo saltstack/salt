@@ -28,9 +28,12 @@ coverage:
   status:
       project:                   # measuring the overall project coverage
         default:
-          enabled: no            # disable the default status that measures entire project
+          informational: true    # Use Codecov in informational mode. Default is false. If true is specified the
+                                 # resulting status will pass no matter what the coverage is or what other settings
+                                 # are specified. Informational mode is great to use if you want to expose codecov
+                                 # information to other developers in your pull request without necessarily gating
+                                 # PRs on that information.
         salt:                    # declare a new status context "salt"
-          enabled: no            # must be yes|true to enable this status
           paths: "!tests/"       # remove all files in "tests/"
           target: auto           # will use the coverage from the base commit (pull request base or parent commit) coverage to compare against.
           base: auto             # will use the pull request base if the commit is on a pull request. If not, the parent commit will be used.
@@ -39,7 +42,6 @@ coverage:
           if_not_found: success  # if parent is not found report status as success, error, or failure
           if_ci_failed: error    # if ci fails report status as success, error, or failure
         tests:                   # declare a new status context "tests"
-          enabled: no            # must be yes|true to enable this status
           #target: 100%          # we always want 100% coverage here
           target: auto           # auto while we get this going
           base: auto             # will use the pull request base if the commit is on a pull request. If not, the parent commit will be used.
@@ -53,7 +55,11 @@ coverage:
                                  # entire pull requests Coverage Diff. Checking if the lines
                                  # adjusted are covered at least X%.
         default:
-          enabled: no            # must be yes|true to enable this status
+          informational: true    # Use Codecov in informational mode. Default is false. If true is specified the
+                                 # resulting status will pass no matter what the coverage is or what other settings
+                                 # are specified. Informational mode is great to use if you want to expose codecov
+                                 # information to other developers in your pull request without necessarily gating
+                                 # PRs on that information.
           target: 100%           # Newly added lines must have 100% coverage
           if_no_uploads: error   # will post commit status of "error" if no coverage reports were uploaded
                                  # options: success, error, failure
@@ -62,7 +68,11 @@ coverage:
 
       changes:                   # if there are any unexpected changes in coverage
         default:
-          enabled: no            # must be yes|true to enable this status
+          informational: true    # Use Codecov in informational mode. Default is false. If true is specified the
+                                 # resulting status will pass no matter what the coverage is or what other settings
+                                 # are specified. Informational mode is great to use if you want to expose codecov
+                                 # information to other developers in your pull request without necessarily gating
+                                 # PRs on that information.
           if_no_uploads: error
           if_not_found: success
           if_ci_failed: error
