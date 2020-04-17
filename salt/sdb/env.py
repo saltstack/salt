@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Environment sdb Module
 
 :maintainer:    SaltStack
@@ -56,35 +56,33 @@ in the environment:
     compute_name: sdb://osenv/compute
     ..snip
 
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import os
 
-__func_alias__ = {
-    'set_': 'set'
-}
+__func_alias__ = {"set_": "set"}
 
 
 def __virtual__():
-    '''
+    """
     Always load
-    '''
+    """
     return True
 
 
 def set_(key, value, profile=None):
-    '''
+    """
     Set a key/value pair
-    '''
+    """
     # pylint: disable=unused-argument
     return os.environ.setdefault(key, value)
 
 
 def get(key, profile=None):
-    '''
+    """
     Get a value
-    '''
+    """
     # pylint: disable=unused-argument
     return os.environ.get(key)

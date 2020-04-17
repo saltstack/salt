@@ -565,7 +565,7 @@ the ``engine_module`` parameter in the engine configuration.
           host: localhost
           port: 24224
 
-  .. code-block::
+  .. code-block:: none
 
     <source>
       @type forward

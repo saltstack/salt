@@ -903,8 +903,8 @@ if the gluster commands return a 0 ret value.
                 - /etc/crontab
                 - 'entry1'
 
-runas
-~~~~~
+listen
+~~~~~~
 
 .. versionadded:: 2017.7.0
 
