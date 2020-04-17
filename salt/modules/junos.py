@@ -24,13 +24,12 @@ import os
 import traceback
 from functools import wraps
 
-import yaml
-
 # Import Salt libs
 import salt.utils.args
 import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
+import yaml
 from salt.exceptions import MinionError
 from salt.ext import six
 
