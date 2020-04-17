@@ -9,7 +9,7 @@ import salt.utils.win_update as win_update
 
 # Import Salt Testing Libs
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
