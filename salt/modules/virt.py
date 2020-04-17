@@ -452,7 +452,7 @@ def _get_loader(dom):
     return out
 
 
-def _get_disks(dom):
+def _get_disks(conn, dom):
     """
     Get domain disks from a libvirt domain object.
     """
@@ -463,49 +463,98 @@ def _get_disks(dom):
         if source is None:
             continue
         target = elem.find("target")
+        driver = elem.find("driver")
         if target is None:
             continue
+        qemu_target = None
+        extra_properties = None
         if "dev" in target.attrib:
-            qemu_target = source.get("file", "")
-            if not qemu_target:
+            disk_type = elem.get("type")
+            if disk_type == "file":
+                qemu_target = source.get("file", "")
+                if qemu_target.startswith("/dev/zvol/"):
+                    disks[target.get("dev")] = {"file": qemu_target, "zfs": True}
+                    continue
+                # Extract disk sizes, snapshots, backing files
+                if elem.get("device", "disk") != "cdrom":
+                    try:
+                        stdout = subprocess.Popen(
+                            [
+                                "qemu-img",
+                                "info",
+                                "-U",
+                                "--output",
+                                "json",
+                                "--backing-chain",
+                                qemu_target,
+                            ],
+                            shell=False,
+                            stdout=subprocess.PIPE,
+                        ).communicate()[0]
+                        qemu_output = salt.utils.stringutils.to_str(stdout)
+                        output = _parse_qemu_img_info(qemu_output)
+                        extra_properties = output
+                    except TypeError:
+                        disk.update({"file": "Does not exist"})
+            elif disk_type == "block":
                 qemu_target = source.get("dev", "")
-            if (
-                not qemu_target
-                and "protocol" in source.attrib
-                and "name" in source.attrib
-            ):  # for rbd network
-                qemu_target = "{0}:{1}".format(
-                    source.get("protocol"), source.get("name")
-                )
-            elif qemu_target.startswith("/dev/zvol/"):
-                disks[target.get("dev")] = {"file": qemu_target, "zfs": True}
-                continue
+            elif disk_type == "network":
+                qemu_target = source.get("protocol")
+                source_name = source.get("name")
+                if source_name:
+                    qemu_target = "{0}:{1}".format(qemu_target, source_name)
+            elif disk_type == "volume":
+                pool_name = source.get("pool")
+                volume_name = source.get("volume")
+                qemu_target = "{}/{}".format(pool_name, volume_name)
+                pool = conn.storagePoolLookupByName(pool_name)
+                vol = pool.storageVolLookupByName(volume_name)
+                vol_info = vol.info()
+                extra_properties = {
+                    "virtual size": vol_info[1],
+                    "disk size": vol_info[2],
+                }
+
+                backing_files = [
+                    {
+                        "file": node.find("source").get("file"),
+                        "file format": node.find("format").get("type"),
+                    }
+                    for node in elem.findall(".//backingStore[source]")
+                ]
+
+                if backing_files:
+                    # We had the backing files in a flat list, nest them again.
+                    extra_properties["backing file"] = backing_files[0]
+                    parent = extra_properties["backing file"]
+                    for sub_backing_file in backing_files[1:]:
+                        parent["backing file"] = sub_backing_file
+                        parent = sub_backing_file
+
+                else:
+                    # In some cases the backing chain is not displayed by the domain definition
+                    # Try to see if we have some of it in the volume definition.
+                    vol_desc = ElementTree.fromstring(vol.XMLDesc())
+                    backing_path = vol_desc.find("./backingStore/path")
+                    backing_format = vol_desc.find("./backingStore/format")
+                    if backing_path is not None:
+                        extra_properties["backing file"] = {"file": backing_path.text}
+                        if backing_format is not None:
+                            extra_properties["backing file"][
+                                "file format"
+                            ] = backing_format.get("type")
+
             if not qemu_target:
                 continue
 
-            disk = {"file": qemu_target, "type": elem.get("device")}
-
-            driver = elem.find("driver")
-            if driver is not None and driver.get("type") == "qcow2":
-                try:
-                    stdout = subprocess.Popen(
-                        [
-                            "qemu-img",
-                            "info",
-                            "-U",
-                            "--output",
-                            "json",
-                            "--backing-chain",
-                            disk["file"],
-                        ],
-                        shell=False,
-                        stdout=subprocess.PIPE,
-                    ).communicate()[0]
-                    qemu_output = salt.utils.stringutils.to_str(stdout)
-                    output = _parse_qemu_img_info(qemu_output)
-                    disk.update(output)
-                except TypeError:
-                    disk.update({"file": "Does not exist"})
+            disk = {
+                "file": qemu_target,
+                "type": elem.get("device"),
+            }
+            if driver is not None and "type" in driver.attrib:
+                disk["file format"] = driver.get("type")
+            if extra_properties:
+                disk.update(extra_properties)
 
             disks[target.get("dev")] = disk
     return disks
@@ -2429,7 +2478,7 @@ def vm_info(vm_=None, **kwargs):
         salt '*' virt.vm_info
     """
 
-    def _info(dom):
+    def _info(conn, dom):
         """
         Compute the infos of a domain
         """
@@ -2437,7 +2486,7 @@ def vm_info(vm_=None, **kwargs):
         return {
             "cpu": raw[3],
             "cputime": int(raw[4]),
-            "disks": _get_disks(dom),
+            "disks": _get_disks(conn, dom),
             "graphics": _get_graphics(dom),
             "nics": _get_nics(dom),
             "uuid": _get_uuid(dom),
@@ -2453,10 +2502,10 @@ def vm_info(vm_=None, **kwargs):
     info = {}
     conn = __get_conn(**kwargs)
     if vm_:
-        info[vm_] = _info(_get_domain(conn, vm_))
+        info[vm_] = _info(conn, _get_domain(conn, vm_))
     else:
         for domain in _get_domain(conn, iterable=True):
-            info[domain.name()] = _info(domain)
+            info[domain.name()] = _info(conn, domain)
     conn.close()
     return info
 
@@ -2676,7 +2725,7 @@ def get_disks(vm_, **kwargs):
         salt '*' virt.get_disks <domain>
     """
     conn = __get_conn(**kwargs)
-    disks = _get_disks(_get_domain(conn, vm_))
+    disks = _get_disks(conn, _get_domain(conn, vm_))
     conn.close()
     return disks
 
@@ -3653,7 +3702,7 @@ def purge(vm_, dirs=False, removables=False, **kwargs):
     """
     conn = __get_conn(**kwargs)
     dom = _get_domain(conn, vm_)
-    disks = _get_disks(dom)
+    disks = _get_disks(conn, dom)
     if (
         VIRT_STATE_NAME_MAP.get(dom.info()[0], "unknown") != "shutdown"
         and dom.destroy() != 0
