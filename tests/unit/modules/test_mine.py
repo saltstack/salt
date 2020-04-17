@@ -452,10 +452,16 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
                 "grains.get": lambda: True,
             },
         ):
-            self.assertEqual(
-                mine.valid(),
-                {"network.ip_addrs": [], "kernel": {"grains.get": ["kernel", {'os': 'win32'}, {'v': '2018'}]}},
-            )
+            ret = mine.valid()
+
+            self.assertIsInstance(ret["kernel"]["grains.get"], list)
+            self.assertEqual(len(ret["kernel"]["grains.get"]), 3)
+            for item in ("kernel", {'os': 'win32'}, {'v': '2018'}):
+                self.assertTrue(item in ret["kernel"]["grains.get"])
+            ret["kernel"]["grains.get"] = None  # list cant be made to set "dict can't be hashed" and order changes
+
+            self.assertEqual(ret, {"network.ip_addrs": [],
+                                   "kernel": {"grains.get": None}})
 
     def test_get_docker(self):
         """
