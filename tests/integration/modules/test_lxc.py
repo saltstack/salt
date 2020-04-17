@@ -4,13 +4,10 @@
 Test the lxc module
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import 3rd-party libs
+import pytest
 from salt.ext import six
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import skip_if_binaries_missing, skip_if_not_root
 from tests.support.unit import skipIf
@@ -25,6 +22,7 @@ from tests.support.unit import skipIf
 @skip_if_binaries_missing(
     "lxc-start", message="LXC is not installed or minimal version not met"
 )
+@pytest.mark.windows_whitelisted
 class LXCModuleTest(ModuleCase):
     """
     Test the lxc module

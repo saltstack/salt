@@ -3,7 +3,6 @@
 Test the grains module
 """
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
@@ -11,10 +10,8 @@ import os
 import pprint
 import time
 
-# Import Salt libs
+import pytest
 from salt.ext.six.moves import range
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import flaky
 from tests.support.unit import skipIf
@@ -22,6 +19,7 @@ from tests.support.unit import skipIf
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.windows_whitelisted
 class TestModulesGrains(ModuleCase):
     """
     Test the grains module
@@ -149,6 +147,7 @@ class TestModulesGrains(ModuleCase):
             )
 
 
+@pytest.mark.windows_whitelisted
 class GrainsAppendTestCase(ModuleCase):
     """
     Tests written specifically for the grains.append function.
