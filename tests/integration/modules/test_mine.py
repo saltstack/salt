@@ -2,20 +2,18 @@
 """
 Test the salt mine system
 """
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import pprint
 import time
 
-# Import Salt libs
+import pytest
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase, ShellCase
 from tests.support.runtests import RUNTIME_VARS
 
 
+@pytest.mark.windows_whitelisted
 class MineTest(ModuleCase, ShellCase):
     """
     Test the mine system

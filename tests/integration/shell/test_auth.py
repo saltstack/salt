@@ -4,18 +4,15 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import random
 import string
 
-# Import Salt libs
+import pytest
 import salt.utils.platform
-
-# Import 3rd-party libs
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import range
 from salt.utils.pycrypto import gen_hash
 from tests.support.case import ModuleCase, ShellCase
 from tests.support.helpers import (
@@ -25,8 +22,6 @@ from tests.support.helpers import (
     skip_if_not_root,
 )
 from tests.support.mixins import SaltReturnAssertsMixin
-
-# Import Salt Testing libs
 from tests.support.unit import skipIf
 
 try:
@@ -54,8 +49,9 @@ def gen_password():
 @requires_salt_states("user.absent", "user.present")
 @requires_salt_modules("shadow.set_password")
 @skip_if_not_root
-@skipIf(pwd is None or grp is None, "No crypt module available")
+@skipIf(pwd is None or grp is None, "No pwd or grp module available")
 @destructiveTest
+@pytest.mark.windows_whitelisted
 class UserAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
     """
     Test user auth mechanisms

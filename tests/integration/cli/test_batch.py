@@ -2,16 +2,14 @@
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
+import pytest
 import salt.utils.platform
-
-# Import Salt Testing Libs
 from tests.support.case import ShellCase
 
 
+@pytest.mark.windows_whitelisted
 class BatchTest(ShellCase):
     """
     Integration tests for the salt.cli.batch module

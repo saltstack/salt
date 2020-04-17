@@ -2,13 +2,13 @@
 """
 Tests for the salt-run command
 """
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Testing libs
+import pytest
 from tests.support.case import ShellCase
 
 
+@pytest.mark.windows_whitelisted
 class ManageTest(ShellCase):
     """
     Test the manage runner

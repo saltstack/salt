@@ -6,9 +6,6 @@
     tests.integration.shell.call
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
-# pylint: disable=invalid-name
-
-# Import python libs
 from __future__ import absolute_import
 
 import logging
@@ -17,7 +14,7 @@ import re
 import shutil
 import sys
 
-# Import salt libs
+import pytest
 import salt.utils.files
 import salt.utils.json
 import salt.utils.platform
@@ -27,14 +24,13 @@ from tests.integration.utils import testprogram
 from tests.support.case import ShellCase
 from tests.support.helpers import flaky, with_tempfile
 from tests.support.mixins import ShellCaseCommonTestsMixin
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.windows_whitelisted
 class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
 
     _call_binary_ = "salt-call"

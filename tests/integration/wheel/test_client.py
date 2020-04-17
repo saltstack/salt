@@ -1,18 +1,16 @@
 # -*- coding: utf-8 -*-
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
+import pytest
 import salt.auth
 import salt.utils.platform
 import salt.wheel
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 
 
+@pytest.mark.windows_whitelisted
 class WheelModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
 
     eauth_creds = {

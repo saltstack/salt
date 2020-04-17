@@ -7,7 +7,6 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
@@ -17,7 +16,7 @@ import pprint
 import shutil
 import sys
 
-# Import salt libs
+import pytest
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -26,12 +25,8 @@ import salt.utils.win_dacl
 import salt.utils.win_functions
 import salt.utils.win_runas
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
 from salt.ext import six
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
@@ -76,6 +71,7 @@ class VirtualEnv(object):
 @skipIf(
     salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, "virtualenv not installed"
 )
+@pytest.mark.windows_whitelisted
 class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
     def _create_virtualenv(self, path, **kwargs):
         """
@@ -619,6 +615,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 shutil.rmtree(venv_dir)
 
 
+@pytest.mark.windows_whitelisted
 class PipStateInRequisiteTest(ModuleCase, SaltReturnAssertsMixin):
     @with_tempdir()
     def test_issue_54755(self, tmpdir):
