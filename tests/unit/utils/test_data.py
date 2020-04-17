@@ -227,6 +227,20 @@ class DataTestCase(TestCase):
             ),
         )
 
+    def test_issue_39709(self):
+        test_two_level_dict_and_list = {
+            "foo": ["bar", "baz", {"lorem": {"ipsum": [{"dolor": "sit"}]}}]
+        }
+
+        self.assertEqual(
+            "sit",
+            salt.utils.data.traverse_dict_and_list(
+                test_two_level_dict_and_list,
+                ["foo", "lorem", "ipsum", "dolor"],
+                {"not_found": "not_found"},
+            ),
+        )
+
     def test_compare_dicts(self):
         ret = salt.utils.data.compare_dicts(old={"foo": "bar"}, new={"foo": "bar"})
         self.assertEqual(ret, {})

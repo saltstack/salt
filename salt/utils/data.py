@@ -743,7 +743,10 @@ def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DEL
     then return data['foo']['bar']['0']
     """
     ptr = data
-    for each in key.split(delimiter):
+    if isinstance(key, str):
+        key = key.split(delimiter)
+
+    for each in key:
         if isinstance(ptr, list):
             try:
                 idx = int(each)
