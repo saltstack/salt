@@ -6,12 +6,13 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import yaml
+
 import salt.modules.pkg_resource as pkg_resource
 
 # Import Salt Libs
 import salt.utils.data
 import salt.utils.yaml
-import yaml
 from salt.ext import six
 
 # Import Salt Testing Libs
@@ -289,3 +290,16 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(pkg_resource.check_extra_requirements("a", "b"), "A")
 
         self.assertTrue(pkg_resource.check_extra_requirements("a", False))
+
+    def test_version_compare(self):
+        """
+        Test the version_compare function
+
+        TODO: Come up with a good way to test epoch handling across different
+        platforms. This function will look in the ``__salt__`` dunder for a
+        version_cmp function (which not all pkg modules implement) and use that
+        to perform platform-specific handling (including interpretation of
+        epochs), but even an integration test would need to take into account
+        the fact that not all package managers grok epochs.
+        """
+        assert pkg_resource.version_compare("2.0", "<", "3.0") is True
