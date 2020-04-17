@@ -1509,14 +1509,16 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
     cert.set_serial_number(serial_number)
 
     # Handle not_before and not_after dates for custom certificate validity
-    fmt = '%Y-%m-%d %H:%M:%S'
-    if 'not_before' in kwargs:
+    fmt = "%Y-%m-%d %H:%M:%S"
+    if "not_before" in kwargs:
         try:
-            time = datetime.datetime.strptime(kwargs['not_before'], fmt)
+            time = datetime.datetime.strptime(kwargs["not_before"], fmt)
         except:
             raise salt.exceptions.SaltInvocationError(
-                'not_before: {0} is not in required format {1}'.format(
-                    kwargs['not_before'], fmt))
+                "not_before: {0} is not in required format {1}".format(
+                    kwargs["not_before"], fmt
+                )
+            )
 
         # If we do not set an explicit timezone to this naive datetime object,
         # the M2Crypto code will assume it is from the local machine timezone
@@ -1526,13 +1528,15 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
         asn1_not_before.set_datetime(time)
         cert.set_not_before(asn1_not_before)
 
-    if 'not_after' in kwargs:
+    if "not_after" in kwargs:
         try:
-            time = datetime.datetime.strptime(kwargs['not_after'], fmt)
+            time = datetime.datetime.strptime(kwargs["not_after"], fmt)
         except:
             raise salt.exceptions.SaltInvocationError(
-                'not_after: {0} is not in required format {1}'.format(
-                    kwargs['not_after'], fmt))
+                "not_after: {0} is not in required format {1}".format(
+                    kwargs["not_after"], fmt
+                )
+            )
 
         # Forcing the datetime to have an explicit tzinfo here as well.
         time = time.replace(tzinfo=M2Crypto.ASN1.UTC)
@@ -1550,10 +1554,10 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
     not_after = M2Crypto.m2.x509_get_not_after(cert.x509)
 
     # Only process the dynamic dates if start and end are not specified.
-    if 'not_before' not in kwargs:
+    if "not_before" not in kwargs:
         M2Crypto.m2.x509_gmtime_adj(not_before, 0)
-    if 'not_after' not in kwargs:
-        valid_seconds = 60 * 60 * 24 * kwargs['days_valid']  # 60s * 60m * 24 * days
+    if "not_after" not in kwargs:
+        valid_seconds = 60 * 60 * 24 * kwargs["days_valid"]  # 60s * 60m * 24 * days
         M2Crypto.m2.x509_gmtime_adj(not_after, valid_seconds)
 
     # pylint: enable=no-member

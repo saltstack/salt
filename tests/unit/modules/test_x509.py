@@ -17,6 +17,7 @@
 
 # Import Salt Testing Libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import datetime
 import os
 import tempfile
@@ -43,7 +44,7 @@ except ImportError:
 
 
 default_values = {
-    'ca_key': b'''-----BEGIN RSA PRIVATE KEY-----
+    "ca_key": b"""-----BEGIN RSA PRIVATE KEY-----
 MIICWwIBAAKBgQCjdjbgL4kQ8Lu73xeRRM1q3C3K3ptfCLpyfw38LRnymxaoJ6ls
 pNSx2dU1uJ89YKFlYLo1QcEk4rJ2fdIjarV0kuNCY3rC8jYUp9BpAU5Z6p9HKeT1
 2rTPH81JyjbQDR5PyfCyzYOQtpwpB4zIUUK/Go7tTm409xGKbbUFugJNgQIDAQAB
@@ -58,43 +59,43 @@ TcKK0A8kOy0kMp3yvDHmJZ1L7wr7bBGIZPBlQ0Ddh8i1sJExm1gJ+uN2QKyg/XrK
 tDFf52zWnCdVGgDwcQJALW/WcbSEK+JVV6KDJYpwCzWpKIKpBI0F6fdCr1G7Xcwj
 c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
 -----END RSA PRIVATE KEY-----
-''',
-    'x509_args_ca': {
-        'text': True,
-        'CN': 'Redacted Root CA',
-        'O': 'Redacted',
-        'C': 'BE',
-        'ST': 'Antwerp',
-        'L': 'Local Town',
-        'Email': 'certadm@example.org',
-        'basicConstraints': "critical CA:true",
-        'keyUsage': "critical cRLSign, keyCertSign",
-        'subjectKeyIdentifier': 'hash',
-        'authorityKeyIdentifier': 'keyid,issuer:always',
-        'days_valid': 3650,
-        'days_remaining': 0
+""",
+    "x509_args_ca": {
+        "text": True,
+        "CN": "Redacted Root CA",
+        "O": "Redacted",
+        "C": "BE",
+        "ST": "Antwerp",
+        "L": "Local Town",
+        "Email": "certadm@example.org",
+        "basicConstraints": "critical CA:true",
+        "keyUsage": "critical cRLSign, keyCertSign",
+        "subjectKeyIdentifier": "hash",
+        "authorityKeyIdentifier": "keyid,issuer:always",
+        "days_valid": 3650,
+        "days_remaining": 0,
     },
-    'x509_args_cert': {
-        'text': True,
-        'CN': 'Redacted Normal Certificate',
-        'O': 'Redacted',
-        'C': 'BE',
-        'ST': 'Antwerp',
-        'L': 'Local Town',
-        'Email': 'certadm@example.org',
-        'basicConstraints': 'critical CA:false',
-        'keyUsage': 'critical keyEncipherment',
-        'subjectKeyIdentifier': 'hash',
-        'authorityKeyIdentifier': 'keyid,issuer:always'
+    "x509_args_cert": {
+        "text": True,
+        "CN": "Redacted Normal Certificate",
+        "O": "Redacted",
+        "C": "BE",
+        "ST": "Antwerp",
+        "L": "Local Town",
+        "Email": "certadm@example.org",
+        "basicConstraints": "critical CA:false",
+        "keyUsage": "critical keyEncipherment",
+        "subjectKeyIdentifier": "hash",
+        "authorityKeyIdentifier": "keyid,issuer:always",
     },
-    'crl_args': {
-        'text': False,
-        'signing_private_key_passphrase': None,
-        'revoked': None,
-        'include_expired': False,
-        'days_valid': 100,
-        'digest': 'sha512'
-    }
+    "crl_args": {
+        "text": False,
+        "signing_private_key_passphrase": None,
+        "revoked": None,
+        "include_expired": False,
+        "days_valid": 100,
+        "digest": "sha512",
+    },
 }
 
 
@@ -130,27 +131,27 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         assert x509.log.trace.call_args[0][1] == list(subj.nid.keys())[0]
         assert isinstance(x509.log.trace.call_args[0][2], TypeError)
 
-    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailable')
+    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
     def test_get_pem_entry(self):
         """
         Test private function _parse_subject(subject) it handles a missing fields
         :return:
         """
-        ca_key = default_values['ca_key']
+        ca_key = default_values["ca_key"]
         ret = x509.get_pem_entry(ca_key)
         self.assertEqual(ret, ca_key)
 
-    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailable')
+    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
     def test_get_private_key_size(self):
         """
         Test private function _parse_subject(subject) it handles a missing fields
         :return:
         """
-        ca_key = default_values['ca_key']
+        ca_key = default_values["ca_key"]
         ret = x509.get_private_key_size(ca_key)
         self.assertEqual(ret, 1024)
 
-    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailable')
+    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
     def test_create_key(self):
         """
         Test that x509.create_key returns a private key
@@ -159,28 +160,28 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         ret = x509.create_private_key(text=True, passphrase="super_secret_passphrase")
         self.assertIn("BEGIN RSA PRIVATE KEY", ret)
 
-    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailable')
+    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
     def test_create_certificate(self):
         """
         Test private function _parse_subject(subject) it handles a missing fields
         :return:
         """
-        ca_key = default_values['ca_key']
-        ca_kwargs = default_values['x509_args_ca'].copy()
-        ca_kwargs['signing_private_key'] = ca_key
+        ca_key = default_values["ca_key"]
+        ca_kwargs = default_values["x509_args_ca"].copy()
+        ca_kwargs["signing_private_key"] = ca_key
         ret = x509.create_certificate(**ca_kwargs)
-        self.assertIn('BEGIN CERTIFICATE', ret)
+        self.assertIn("BEGIN CERTIFICATE", ret)
 
-    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailable')
+    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
     def test_create_certificate_with_not_after(self):
-        ca_key = default_values['ca_key']
-        ca_kwargs = default_values['x509_args_ca'].copy()
-        ca_kwargs['signing_private_key'] = ca_key
+        ca_key = default_values["ca_key"]
+        ca_kwargs = default_values["x509_args_ca"].copy()
+        ca_kwargs["signing_private_key"] = ca_key
 
         # Issue the CA certificate (self-signed)
         ca_cert = x509.create_certificate(**ca_kwargs)
 
-        fmt = '%Y-%m-%d %H:%M:%S'
+        fmt = "%Y-%m-%d %H:%M:%S"
         # We also gonna use the current date in UTC format for verification
         not_after = datetime.datetime.utcnow()
         # And set the UTC timezone to the naive datetime resulting from parsing
@@ -188,38 +189,38 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         not_after_str = datetime.datetime.strftime(not_after, fmt)
 
         # Sign a new server certificate with the CA
-        ca_key = default_values['ca_key']
-        cert_kwargs = default_values['x509_args_cert'].copy()
-        cert_kwargs['signing_private_key'] = ca_key
-        cert_kwargs['signing_cert'] = ca_cert
-        cert_kwargs['not_after'] = not_after_str
+        ca_key = default_values["ca_key"]
+        cert_kwargs = default_values["x509_args_cert"].copy()
+        cert_kwargs["signing_private_key"] = ca_key
+        cert_kwargs["signing_cert"] = ca_cert
+        cert_kwargs["not_after"] = not_after_str
         server_cert = x509.create_certificate(**cert_kwargs)
 
-        not_after_from_cert = ''
+        not_after_from_cert = ""
         # Save server certificate to disk so we can check its properties
-        with tempfile.NamedTemporaryFile('w+') as server_cert_file:
+        with tempfile.NamedTemporaryFile("w+") as server_cert_file:
             server_cert_file.write(salt.utils.stringutils.to_str(server_cert))
             server_cert_file.flush()
 
             # Retrieve not_after property from server certificate
             server_cert_details = x509.read_certificate(server_cert_file.name)
-            not_after_from_cert = server_cert_details['Not After']
+            not_after_from_cert = server_cert_details["Not After"]
 
         # Check if property is the one we've added to the certificate. The
         # property from the certificate will come as a string with no timezone
         # information in it.
         self.assertIn(not_after_str, not_after_from_cert)
 
-    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailable')
+    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
     def test_create_certificate_with_not_before(self):
-        ca_key = default_values['ca_key']
-        ca_kwargs = default_values.get('x509_args_ca').copy()
-        ca_kwargs['signing_private_key'] = ca_key
+        ca_key = default_values["ca_key"]
+        ca_kwargs = default_values.get("x509_args_ca").copy()
+        ca_kwargs["signing_private_key"] = ca_key
 
         # Issue the CA certificate (self-signed)
         ca_cert = x509.create_certificate(**ca_kwargs)
 
-        fmt = '%Y-%m-%d %H:%M:%S'
+        fmt = "%Y-%m-%d %H:%M:%S"
         # We also gonna use the current date in UTC format for verification
         not_before = datetime.datetime.utcnow()
         # And set the UTC timezone to the naive datetime resulting from parsing
@@ -227,79 +228,79 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         not_before_str = datetime.datetime.strftime(not_before, fmt)
 
         # Sign a new server certificate with the CA
-        ca_key = default_values['ca_key']
-        cert_kwargs = default_values['x509_args_cert'].copy()
-        cert_kwargs['signing_private_key'] = ca_key
-        cert_kwargs['signing_cert'] = ca_cert
-        cert_kwargs['not_before'] = not_before_str
+        ca_key = default_values["ca_key"]
+        cert_kwargs = default_values["x509_args_cert"].copy()
+        cert_kwargs["signing_private_key"] = ca_key
+        cert_kwargs["signing_cert"] = ca_cert
+        cert_kwargs["not_before"] = not_before_str
         server_cert = x509.create_certificate(**cert_kwargs)
 
-        not_before_from_cert = ''
+        not_before_from_cert = ""
         # Save server certificate to disk so we can check its properties
-        with tempfile.NamedTemporaryFile('w+') as server_cert_file:
+        with tempfile.NamedTemporaryFile("w+") as server_cert_file:
             server_cert_file.write(salt.utils.stringutils.to_str(server_cert))
             server_cert_file.flush()
             # Retrieve not_after property from server certificate
             server_cert_details = x509.read_certificate(server_cert_file.name)
-            not_before_from_cert = server_cert_details['Not Before']
+            not_before_from_cert = server_cert_details["Not Before"]
 
         # Check if property is the one we've added to the certificate. The
         # property will come from the certificate as a string with no timezone
         # information in it.
         self.assertIn(not_before_str, not_before_from_cert)
 
-    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailable')
+    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
     def test_create_certificate_with_not_before_wrong_date(self):
-        ca_key = default_values['ca_key']
-        ca_kwargs = default_values.get('x509_args_ca').copy()
-        ca_kwargs['signing_private_key'] = ca_key
+        ca_key = default_values["ca_key"]
+        ca_kwargs = default_values.get("x509_args_ca").copy()
+        ca_kwargs["signing_private_key"] = ca_key
 
         # Issue the CA certificate (self-signed)
         ca_cert = x509.create_certificate(**ca_kwargs)
 
-        not_before_str = 'this is an intentionally wrong format'
+        not_before_str = "this is an intentionally wrong format"
 
         # Try to sign a new server certificate with the wrong date
-        msg = 'not_before: this is an intentionally wrong format is not in required format %Y-%m-%d %H:%M:%S'
+        msg = "not_before: this is an intentionally wrong format is not in required format %Y-%m-%d %H:%M:%S"
         with self.assertRaisesRegex(salt.exceptions.SaltInvocationError, msg):
-            ca_key = default_values['ca_key']
-            cert_kwargs = default_values['x509_args_cert'].copy()
-            cert_kwargs['signing_private_key'] = ca_key
-            cert_kwargs['signing_cert'] = ca_cert
-            cert_kwargs['not_before'] = not_before_str
+            ca_key = default_values["ca_key"]
+            cert_kwargs = default_values["x509_args_cert"].copy()
+            cert_kwargs["signing_private_key"] = ca_key
+            cert_kwargs["signing_cert"] = ca_cert
+            cert_kwargs["not_before"] = not_before_str
             x509.create_certificate(**cert_kwargs)
 
-    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailable')
+    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
     def test_create_certificate_with_not_after_wrong_date(self):
-        ca_key = default_values['ca_key']
-        ca_kwargs = default_values.get('x509_args_ca').copy()
-        ca_kwargs['signing_private_key'] = ca_key
+        ca_key = default_values["ca_key"]
+        ca_kwargs = default_values.get("x509_args_ca").copy()
+        ca_kwargs["signing_private_key"] = ca_key
 
         # Issue the CA certificate (self-signed)
         ca_cert = x509.create_certificate(**ca_kwargs)
 
-        not_after_str = 'this is an intentionally wrong format'
+        not_after_str = "this is an intentionally wrong format"
 
         # Try to sign a new server certificate with the wrong date
         msg = "not_after: this is an intentionally wrong format is not in required format %Y-%m-%d %H:%M:%S"
         with self.assertRaisesRegex(salt.exceptions.SaltInvocationError, msg):
-            ca_key = default_values['ca_key']
-            cert_kwargs = default_values['x509_args_cert'].copy()
-            cert_kwargs['signing_private_key'] = ca_key
-            cert_kwargs['signing_cert'] = ca_cert
-            cert_kwargs['not_after'] = not_after_str
+            ca_key = default_values["ca_key"]
+            cert_kwargs = default_values["x509_args_cert"].copy()
+            cert_kwargs["signing_private_key"] = ca_key
+            cert_kwargs["signing_cert"] = ca_cert
+            cert_kwargs["not_after"] = not_after_str
             x509.create_certificate(**cert_kwargs)
 
-    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailable')
+    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
     def test_create_certificate_with_not_before_and_not_after(self):
-        ca_key = default_values['ca_key']
-        ca_kwargs = default_values.get('x509_args_ca').copy()
-        ca_kwargs['signing_private_key'] = ca_key
+        ca_key = default_values["ca_key"]
+        ca_kwargs = default_values.get("x509_args_ca").copy()
+        ca_kwargs["signing_private_key"] = ca_key
 
         # Issue the CA certificate (self-signed)
         ca_cert = x509.create_certificate(**ca_kwargs)
 
-        fmt = '%Y-%m-%d %H:%M:%S'
+        fmt = "%Y-%m-%d %H:%M:%S"
         # Here we gonna use the current date as the not_before date
         # First we again take the UTC for verification
         not_before = datetime.datetime.utcnow()
@@ -314,25 +315,25 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         not_after_str = datetime.datetime.strftime(not_after, fmt)
 
         # Sign a new server certificate with the CA
-        ca_key = default_values['ca_key']
-        cert_kwargs = default_values['x509_args_cert'].copy()
-        cert_kwargs['signing_private_key'] = ca_key
-        cert_kwargs['signing_cert'] = ca_cert
-        cert_kwargs['not_after'] = not_after_str
-        cert_kwargs['not_before'] = not_before_str
+        ca_key = default_values["ca_key"]
+        cert_kwargs = default_values["x509_args_cert"].copy()
+        cert_kwargs["signing_private_key"] = ca_key
+        cert_kwargs["signing_cert"] = ca_cert
+        cert_kwargs["not_after"] = not_after_str
+        cert_kwargs["not_before"] = not_before_str
         server_cert = x509.create_certificate(**cert_kwargs)
 
-        not_after_from_cert = ''
-        not_before_from_cert = ''
+        not_after_from_cert = ""
+        not_before_from_cert = ""
         # Save server certificate to disk so we can check its properties
-        with tempfile.NamedTemporaryFile('w+') as server_cert_file:
+        with tempfile.NamedTemporaryFile("w+") as server_cert_file:
             server_cert_file.write(salt.utils.stringutils.to_str(server_cert))
             server_cert_file.flush()
 
             # Retrieve not_after property from server certificate
             server_cert_details = x509.read_certificate(server_cert_file.name)
-            not_before_from_cert = server_cert_details['Not Before']
-            not_after_from_cert = server_cert_details['Not After']
+            not_before_from_cert = server_cert_details["Not Before"]
+            not_after_from_cert = server_cert_details["Not After"]
 
         # Check if property values are the ones we've added to the certificate.
         # The values will come as strings containing no timezone information in
@@ -340,15 +341,15 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         self.assertIn(not_before_str, not_before_from_cert)
         self.assertIn(not_after_str, not_after_from_cert)
 
-    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailable')
+    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
     def test_create_crl(self):
-        ca_key = default_values['ca_key']
-        ca_kwargs = default_values.get('x509_args_ca').copy()
-        ca_kwargs['signing_private_key'] = ca_key
+        ca_key = default_values["ca_key"]
+        ca_kwargs = default_values.get("x509_args_ca").copy()
+        ca_kwargs["signing_private_key"] = ca_key
 
         ca_cert = x509.create_certificate(**ca_kwargs)
 
-        with tempfile.NamedTemporaryFile('w+', delete=False) as ca_key_file:
+        with tempfile.NamedTemporaryFile("w+", delete=False) as ca_key_file:
             ca_key_file.write(salt.utils.stringutils.to_str(ca_key))
             ca_key_file.flush()
 
@@ -356,14 +357,14 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
             ca_cert_file.write(salt.utils.stringutils.to_str(ca_cert))
             ca_cert_file.flush()
 
-        with tempfile.NamedTemporaryFile('w+', delete=False) as ca_crl_file:
-            crl_kwargs = default_values.get('crl_args').copy()
-            crl_kwargs['path'] = ca_crl_file.name
-            crl_kwargs['signing_private_key'] = ca_key_file.name
-            crl_kwargs['signing_cert'] = ca_cert_file.name
+        with tempfile.NamedTemporaryFile("w+", delete=False) as ca_crl_file:
+            crl_kwargs = default_values.get("crl_args").copy()
+            crl_kwargs["path"] = ca_crl_file.name
+            crl_kwargs["signing_private_key"] = ca_key_file.name
+            crl_kwargs["signing_cert"] = ca_cert_file.name
             x509.create_crl(**crl_kwargs)
 
-        with salt.utils.files.fopen(ca_crl_file.name, 'r') as crl_file:
+        with salt.utils.files.fopen(ca_crl_file.name, "r") as crl_file:
             crl = crl_file.read()
 
         os.remove(ca_key_file.name)
@@ -373,24 +374,24 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         # Ensure that a CRL was actually created
         self.assertIn("BEGIN X509 CRL", crl)
 
-    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailable')
+    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
     def test_revoke_certificate_with_crl(self):
-        ca_key = default_values['ca_key']
-        ca_kwargs = default_values.get('x509_args_ca').copy()
-        ca_kwargs['signing_private_key'] = ca_key
+        ca_key = default_values["ca_key"]
+        ca_kwargs = default_values.get("x509_args_ca").copy()
+        ca_kwargs["signing_private_key"] = ca_key
 
         # Issue the CA certificate (self-signed)
         ca_cert = x509.create_certificate(**ca_kwargs)
 
         # Sign a new server certificate with the CA
-        ca_key = default_values['ca_key']
-        cert_kwargs = default_values['x509_args_cert'].copy()
-        cert_kwargs['signing_private_key'] = ca_key
-        cert_kwargs['signing_cert'] = ca_cert
+        ca_key = default_values["ca_key"]
+        cert_kwargs = default_values["x509_args_cert"].copy()
+        cert_kwargs["signing_private_key"] = ca_key
+        cert_kwargs["signing_cert"] = ca_cert
         server_cert = x509.create_certificate(**cert_kwargs)
 
         # Save CA cert + key and server cert to disk as PEM files
-        with tempfile.NamedTemporaryFile('w+', delete=False) as ca_key_file:
+        with tempfile.NamedTemporaryFile("w+", delete=False) as ca_key_file:
             ca_key_file.write(salt.utils.stringutils.to_str(ca_key))
             ca_key_file.flush()
 
@@ -409,13 +410,13 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
                 "revocation_date": "2015-03-01 00:00:00",
             }
         ]
-        with tempfile.NamedTemporaryFile('w+', delete=False) as ca_crl_file:
-            crl_kwargs = default_values.get('crl_args').copy()
-            crl_kwargs['path'] = ca_crl_file.name
-            crl_kwargs['signing_private_key'] = ca_key_file.name
-            crl_kwargs['signing_cert'] = ca_cert_file.name
+        with tempfile.NamedTemporaryFile("w+", delete=False) as ca_crl_file:
+            crl_kwargs = default_values.get("crl_args").copy()
+            crl_kwargs["path"] = ca_crl_file.name
+            crl_kwargs["signing_private_key"] = ca_key_file.name
+            crl_kwargs["signing_cert"] = ca_cert_file.name
             # Add list of revoked certificates
-            crl_kwargs['revoked'] = revoked
+            crl_kwargs["revoked"] = revoked
             x509.create_crl(**crl_kwargs)
 
         # Retrieve serial number from server certificate

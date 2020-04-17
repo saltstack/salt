@@ -576,16 +576,17 @@ def certificate_managed(
 
     # We will compare the date difference here only if it wasn't specified by
     # default.
-    if 'not_after' in kwargs or 'not_before' in kwargs:
+    if "not_after" in kwargs or "not_before" in kwargs:
         remaining_days_ok = True
     else:
-        remaining_days_ok = (current_days_remaining > days_remaining)
+        remaining_days_ok = current_days_remaining > days_remaining
 
-    if (current_comp == new_comp and
-            remaining_days_ok and
-            __salt__['x509.verify_signature'](name, new_issuer_public_key)):
-        certificate = __salt__['x509.get_pem_entry'](
-            name, pem_type='CERTIFICATE')
+    if (
+        current_comp == new_comp
+        and remaining_days_ok
+        and __salt__["x509.verify_signature"](name, new_issuer_public_key)
+    ):
+        certificate = __salt__["x509.get_pem_entry"](name, pem_type="CERTIFICATE")
     else:
         if rotate_private_key and not new_private_key:
             new_private_key = True
