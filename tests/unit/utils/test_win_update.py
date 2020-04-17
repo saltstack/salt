@@ -5,12 +5,14 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
 import salt.utils.win_update as win_update
+import salt.utils.platform
 
 # Import Salt Testing Libs
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
+@skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
 class WinUpdateTestCase(TestCase):
     """
     Test cases for salt.utils.win_update

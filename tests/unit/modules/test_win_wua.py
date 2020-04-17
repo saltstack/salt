@@ -12,7 +12,7 @@ import salt.utils.win_update
 
 # Import Salt Testing Libs
 from tests.support.mock import patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 UPDATES_LIST = {
     "ca3bb521-a8ea-4e26-a563-2ad6e3108b9a": {"KBs": ["KB4481252"]},
@@ -39,6 +39,7 @@ class Updates(object):
         return UPDATES_SUMMARY
 
 
+@skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
 class WinWuaInstalledTestCase(TestCase):
     """
     Test the functions in the win_wua.installed function
