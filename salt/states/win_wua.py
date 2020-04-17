@@ -487,8 +487,7 @@ def uptodate(
     post_info = wua.updates().list()
 
     # First gather list of updates that weren't installed
-    updates_not_installed = [item for item in install.list()
-                             if item not in post_info]
+    updates_not_installed = [item for item in install.list() if item not in post_info]
 
     # Verify the installation
     for item in install.list():
@@ -497,8 +496,8 @@ def uptodate(
             if not salt.utils.data.is_true(post_info[item]["Installed"]):
                 ret["changes"]["failed"] = {
                     item: {
-                      "Title": post_info[item]["Title"][:40] + "...",
-                      "KBs": post_info[item]["KBs"],
+                        "Title": post_info[item]["Title"][:40] + "...",
+                        "KBs": post_info[item]["KBs"],
                     }
                 }
                 ret["result"] = False
