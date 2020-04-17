@@ -317,6 +317,9 @@ def insert_runner(fun, args=None, kwargs=None, queue=None, backend=None):
     if kwargs is None:
         kwargs = {}
     queue_kwargs = __get_queue_opts(queue=queue, backend=backend)
+    # mode not needed for inserting...
+    if 'mode' in queue_kwargs:
+        queue_kwargs.pop('mode')
     data = {"fun": fun, "args": args, "kwargs": kwargs}
     return insert(items=data, **queue_kwargs)
 
