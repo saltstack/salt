@@ -424,7 +424,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
         salt_mock = {
             "cmd.run_all": MagicMock(return_value={"recode": 0}),
         }
-        expected_path = os.path.join('/mnt', 'var')
+        expected_path = os.path.join("/mnt", "var")
         with patch.dict(btrfs.__salt__, salt_mock):
             assert btrfs.subvolume_create("var", dest="/mnt")
             subvolume_exists.assert_called_once()
