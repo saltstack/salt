@@ -2217,10 +2217,71 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             qemu_infos
         ]  # pylint: disable=no-member
 
-        res = virt.purge("test-vm")
-        self.assertTrue(res)
-        mock_remove.assert_called_once()
-        mock_remove.assert_any_call("/disks/test.qcow2")
+        with patch.dict(os.path.__dict__, {"exists": MagicMock(return_value=True)}):
+            res = virt.purge("test-vm")
+            self.assertTrue(res)
+            mock_remove.assert_called_once()
+            mock_remove.assert_any_call("/disks/test.qcow2")
+
+    @patch("salt.modules.virt.stop", return_value=True)
+    @patch("salt.modules.virt.undefine")
+    def test_purge_volumes(self, mock_undefine, mock_stop):
+        """
+        Test virt.purge() with volume disks
+        """
+        xml = """<domain type='kvm' id='7'>
+              <name>test-vm</name>
+              <devices>
+                <disk type='volume' device='disk'>
+                  <driver name='qemu' type='qcow2' cache='none' io='native'/>
+                  <source pool='default' volume='vm05_system'/>
+                  <backingStore type='file' index='1'>
+                    <format type='qcow2'/>
+                    <source file='/var/lib/libvirt/images/vm04_system.qcow2'/>
+                    <backingStore type='file' index='2'>
+                      <format type='qcow2'/>
+                      <source file='/var/testsuite-data/disk-image-template.qcow2'/>
+                      <backingStore/>
+                    </backingStore>
+                  </backingStore>
+                  <target dev='vda' bus='virtio'/>
+                  <alias name='virtio-disk0'/>
+                  <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x0'/>
+                </disk>
+              </devices>
+            </domain>
+        """
+        self.set_mock_vm("test-vm", xml)
+
+        pool_mock = MagicMock()
+        pool_mock.storageVolLookupByName.return_value.info.return_value = [
+            0,
+            1234567,
+            12345,
+        ]
+        pool_mock.storageVolLookupByName.return_value.XMLDesc.return_value = [
+            """
+            <volume type='file'>
+              <name>vm05_system</name>
+              <target>
+                <path>/var/lib/libvirt/images/vm05_system</path>
+                <format type='qcow2'/>
+              </target>
+              <backingStore>
+                <path>/var/lib/libvirt/images/vm04_system.qcow2</path>
+                <format type='qcow2'/>
+              </backingStore>
+            </volume>
+            """,
+        ]
+        pool_mock.listVolumes.return_value = ["vm05_system", "vm04_system.qcow2"]
+        self.mock_conn.storagePoolLookupByName.return_value = pool_mock
+        self.mock_conn.listStoragePools.return_value = ["default"]
+
+        with patch.dict(os.path.__dict__, {"exists": MagicMock(return_value=False)}):
+            res = virt.purge("test-vm")
+            self.assertTrue(res)
+            pool_mock.storageVolLookupByName.return_value.delete.assert_called_once()
 
     @patch("salt.modules.virt.stop", return_value=True)
     @patch("salt.modules.virt.undefine")
@@ -2276,10 +2337,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             qemu_infos
         ]  # pylint: disable=no-member
 
-        res = virt.purge("test-vm", removables=True)
-        self.assertTrue(res)
-        mock_remove.assert_any_call("/disks/test.qcow2")
-        mock_remove.assert_any_call("/disks/test-cdrom.iso")
+        with patch.dict(os.path.__dict__, {"exists": MagicMock(return_value=True)}):
+            res = virt.purge("test-vm", removables=True)
+            self.assertTrue(res)
+            mock_remove.assert_any_call("/disks/test.qcow2")
+            mock_remove.assert_any_call("/disks/test-cdrom.iso")
 
     def test_capabilities(self):
         """

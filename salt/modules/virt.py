@@ -3712,15 +3712,25 @@ def purge(vm_, dirs=False, removables=False, **kwargs):
     for disk in disks:
         if not removables and disks[disk]["type"] in ["cdrom", "floppy"]:
             continue
-        elif disks[disk].get("zfs", False):
+        if disks[disk].get("zfs", False):
             # TODO create solution for 'dataset is busy'
             time.sleep(3)
             fs_name = disks[disk]["file"][len("/dev/zvol/") :]
             log.info("Destroying VM ZFS volume {0}".format(fs_name))
             __salt__["zfs.destroy"](name=fs_name, force=True)
-        else:
+        elif os.path.exists(disks[disk]["file"]):
             os.remove(disks[disk]["file"])
             directories.add(os.path.dirname(disks[disk]["file"]))
+        else:
+            # We may have a volume to delete here
+            matcher = re.match("^([^/]+)/(.*)$", disks[disk]["file"])
+            if matcher:
+                if matcher.group(1) in conn.listStoragePools():
+                    pool = conn.storagePoolLookupByName(matcher.group(1))
+                    if matcher.group(2) in pool.listVolumes():
+                        volume = pool.storageVolLookupByName(matcher.group(2))
+                        volume.delete()
+
     if dirs:
         for dir_ in directories:
             shutil.rmtree(dir_)
