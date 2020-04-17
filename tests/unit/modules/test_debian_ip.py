@@ -5,8 +5,9 @@
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-from collections import OrderedDict as odict
+
 import tempfile
+from collections import OrderedDict as odict
 
 # Import third party libs
 import jinja2.exceptions
@@ -19,7 +20,6 @@ import salt.utils
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
-
 
 # Big pile of interface data for unit tests
 #   To skip, search for 'DebianIpTestCase'
