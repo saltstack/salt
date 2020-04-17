@@ -6,13 +6,12 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-import yaml
-
 import salt.modules.pkg_resource as pkg_resource
 
 # Import Salt Libs
 import salt.utils.data
 import salt.utils.yaml
+import yaml
 from salt.ext import six
 
 # Import Salt Testing Libs
