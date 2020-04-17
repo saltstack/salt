@@ -9,18 +9,17 @@
     Test Salt's loader regarding external overrides
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import time
 
+import pytest
 from tests.support.case import ModuleCase
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 
 
+@pytest.mark.windows_whitelisted
 class LoaderOverridesTest(ModuleCase):
     def setUp(self):
         self.run_function("saltutil.sync_modules")
