@@ -453,12 +453,12 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
             },
         ):
             ret = mine.valid()
-
+            # list cant be made to set "dict can't be hashed" and order changes
             self.assertIsInstance(ret["kernel"]["grains.get"], list)
             self.assertEqual(len(ret["kernel"]["grains.get"]), 3)
             for item in ("kernel", {'os': 'win32'}, {'v': '2018'}):
                 self.assertTrue(item in ret["kernel"]["grains.get"])
-            ret["kernel"]["grains.get"] = None  # list cant be made to set "dict can't be hashed" and order changes
+            ret["kernel"]["grains.get"] = None
 
             self.assertEqual(ret, {"network.ip_addrs": [],
                                    "kernel": {"grains.get": None}})
