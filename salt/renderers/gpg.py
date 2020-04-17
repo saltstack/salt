@@ -322,7 +322,7 @@ def _get_key_dir():
         gpg_keydir = __opts__.get(
             "gpg_keydir",
             os.path.join(
-                __opts__.get("config_dir", os.path.dirname(__opts__["conf_file"]),),
+                __opts__.get("config_dir", os.path.dirname(__opts__["conf_file"])),
                 "gpgkeys",
             ),
         )

@@ -461,8 +461,7 @@ IPV4_ATTR_MAP = {
     #
     "vlan-raw-device": __anything,
     #
-    'network': __anything,  # i don't know what this is
-
+    "network": __anything,  # i don't know what this is
     "test": __anything,  # TODO
     "enable_ipv4": __anything,  # TODO
     "enable_ipv6": __anything,  # TODO
@@ -504,7 +503,6 @@ IPV6_ATTR_MAP = {
     "dns-search": __space_delimited_list,
     #
     "vlan-raw-device": __anything,
-
     "test": __anything,  # TODO
     "enable_ipv4": __anything,  # TODO
     "enable_ipv6": __anything,  # TODO
@@ -707,7 +705,9 @@ def _parse_interfaces(interface_files=None):
             for inet in ["inet", "inet6"]:
                 if inet in adapters[iface_name]["data"]:
                     if opt in adapters[iface_name]["data"][inet]:
-                        opt_keys = sorted(adapters[iface_name]["data"][inet][opt].keys())
+                        opt_keys = sorted(
+                            adapters[iface_name]["data"][inet][opt].keys()
+                        )
                         adapters[iface_name]["data"][inet][opt + "_keys"] = opt_keys
 
     return adapters
@@ -1263,8 +1263,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         adapters[iface]["hotplug"] = True
 
     if opts.get("enable_ipv6", None) and opts.get("iface_type", "") == "vlan":
-        iface_data["inet6"]["vlan_raw_device"] = (
-            re.sub(r"\.\d*", "", iface))
+        iface_data["inet6"]["vlan_raw_device"] = re.sub(r"\.\d*", "", iface)
 
     for addrfam in ["inet", "inet6"]:
         if iface_type not in ["bridge"]:
@@ -1308,7 +1307,9 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             tmp_ethtool = _parse_ethtool_pppoe_opts(opts, iface)
             if tmp_ethtool:
                 for item in tmp_ethtool:
-                    adapters[iface]["data"][addrfam][_DEB_CONFIG_PPPOE_OPTS[item]] = tmp_ethtool[item]
+                    adapters[iface]["data"][addrfam][
+                        _DEB_CONFIG_PPPOE_OPTS[item]
+                    ] = tmp_ethtool[item]
             iface_data[addrfam]["addrfam"] = addrfam
 
     opts.pop("mode", None)
@@ -1323,7 +1324,14 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             iface_data["inet6"]["addrfam"] = "inet6"
             opt = opt[4:]
             inet = "inet6"
-        elif opt in ["ipaddr", "address", "ipaddresses", "addresses", "gateway", "proto"]:
+        elif opt in [
+            "ipaddr",
+            "address",
+            "ipaddresses",
+            "addresses",
+            "gateway",
+            "proto",
+        ]:
             iface_data["inet"]["addrfam"] = "inet"
             inet = "inet"
 
@@ -1331,7 +1339,9 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         _debopt = _opt.replace("-", "_")
 
         for addrfam in ["inet", "inet6"]:
-            (valid, value, errmsg) = _validate_interface_option(_opt, val, addrfam=addrfam)
+            (valid, value, errmsg) = _validate_interface_option(
+                _opt, val, addrfam=addrfam
+            )
             if not valid:
                 continue
             if inet is None and _debopt not in iface_data[addrfam]:

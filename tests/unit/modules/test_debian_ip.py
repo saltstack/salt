@@ -902,22 +902,25 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
     # '_parse_interfaces' function tests: 1
 
     def test_parse_interfaces(self):
-        '''
+        """
         Test if it returns the correct data for parsed configuration file
-        '''
-        with tempfile.NamedTemporaryFile(mode='r', delete=True) as tfile:
+        """
+        with tempfile.NamedTemporaryFile(mode="r", delete=True) as tfile:
             for iface in test_interfaces:
-                iname = iface['iface_name']
-                if iface.get('skip_test', False):
+                iname = iface["iface_name"]
+                if iface.get("skip_test", False):
                     continue
-                with salt.utils.files.fopen(str(tfile.name), 'w') as fh:
-                    fh.writelines(iface['return'])
-                for inet in ['inet', 'inet6']:
-                    if inet in iface['get_interface'][iname]['data']:
-                        iface['get_interface'][iname]['data'][inet]['filename'] = str(tfile.name)
+                with salt.utils.files.fopen(str(tfile.name), "w") as fh:
+                    fh.writelines(iface["return"])
+                for inet in ["inet", "inet6"]:
+                    if inet in iface["get_interface"][iname]["data"]:
+                        iface["get_interface"][iname]["data"][inet]["filename"] = str(
+                            tfile.name
+                        )
                 self.assertDictEqual(
-                        debian_ip._parse_interfaces([str(tfile.name)]),
-                        iface['get_interface'])
+                    debian_ip._parse_interfaces([str(tfile.name)]),
+                    iface["get_interface"],
+                )
 
     # 'get_interface' function tests: 1
 
@@ -926,14 +929,16 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
         Test if it return the contents of an interface script
         """
         for iface in test_interfaces:
-            if iface.get('skip_test', False):
+            if iface.get("skip_test", False):
                 continue
             with patch.object(
-                    debian_ip, '_parse_interfaces',
-                    MagicMock(return_value=iface['get_interface'])):
+                debian_ip,
+                "_parse_interfaces",
+                MagicMock(return_value=iface["get_interface"]),
+            ):
                 self.assertListEqual(
-                        debian_ip.get_interface(iface['iface_name']),
-                        iface['return'])
+                    debian_ip.get_interface(iface["iface_name"]), iface["return"]
+                )
 
     # 'build_interface' function tests: 1
 
@@ -941,35 +946,52 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test if it builds an interface script for a network interface.
         """
-        with patch('salt.modules.debian_ip._write_file_ifaces',
-                   MagicMock(return_value='salt')):
-            self.assertEqual(debian_ip.build_interface('eth0', 'eth', 'enabled'),
-                             ['s\n', 'a\n', 'l\n', 't\n'])
+        with patch(
+            "salt.modules.debian_ip._write_file_ifaces", MagicMock(return_value="salt")
+        ):
+            self.assertEqual(
+                debian_ip.build_interface("eth0", "eth", "enabled"),
+                ["s\n", "a\n", "l\n", "t\n"],
+            )
 
-            self.assertTrue(debian_ip.build_interface('eth0', 'eth', 'enabled', test='True'))
+            self.assertTrue(
+                debian_ip.build_interface("eth0", "eth", "enabled", test="True")
+            )
 
-            with patch.object(debian_ip, '_parse_settings_eth', MagicMock(return_value={'routes': []})):
-                for eth_t in ['bridge', 'slave', 'bond']:
-                    self.assertRaises(AttributeError, debian_ip.build_interface, 'eth0', eth_t, 'enabled')
+            with patch.object(
+                debian_ip, "_parse_settings_eth", MagicMock(return_value={"routes": []})
+            ):
+                for eth_t in ["bridge", "slave", "bond"]:
+                    self.assertRaises(
+                        AttributeError,
+                        debian_ip.build_interface,
+                        "eth0",
+                        eth_t,
+                        "enabled",
+                    )
 
-            self.assertTrue(debian_ip.build_interface('eth0', 'eth', 'enabled', test='True'))
+            self.assertTrue(
+                debian_ip.build_interface("eth0", "eth", "enabled", test="True")
+            )
 
-        with tempfile.NamedTemporaryFile(mode='r', delete=True) as tfile:
-            with patch('salt.modules.debian_ip._DEB_NETWORK_FILE', str(tfile.name)):
+        with tempfile.NamedTemporaryFile(mode="r", delete=True) as tfile:
+            with patch("salt.modules.debian_ip._DEB_NETWORK_FILE", str(tfile.name)):
                 for iface in test_interfaces:
-                    if iface.get('skip_test', False):
+                    if iface.get("skip_test", False):
                         continue
                     # Skip tests that require __salt__['pkg.install']()
-                    if iface['iface_type'] in ['bridge', 'pppoe', 'vlan']:
+                    if iface["iface_type"] in ["bridge", "pppoe", "vlan"]:
                         continue
                     self.assertListEqual(
-                            debian_ip.build_interface(
-                                    iface=iface['iface_name'],
-                                    iface_type=iface['iface_type'],
-                                    enabled=iface['enabled'],
-                                    interface_file=tfile.name,
-                                    **iface['build_interface']),
-                            iface['return'])
+                        debian_ip.build_interface(
+                            iface=iface["iface_name"],
+                            iface_type=iface["iface_type"],
+                            enabled=iface["enabled"],
+                            interface_file=tfile.name,
+                            **iface["build_interface"]
+                        ),
+                        iface["return"],
+                    )
 
     # 'up' function tests: 1
 
@@ -989,24 +1011,34 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test if it return the contents of the global network script.
         """
-        with patch.dict(debian_ip.__grains__, {'osfullname': 'Ubuntu',
-                                               'osrelease': '14'}), \
-                patch('salt.modules.debian_ip._parse_hostname',
-                      MagicMock(return_value='SaltStack')), \
-                        patch('salt.modules.debian_ip._parse_domainname',
-                              MagicMock(return_value='saltstack.com')):
+        with patch.dict(
+            debian_ip.__grains__, {"osfullname": "Ubuntu", "osrelease": "14"}
+        ), patch(
+            "salt.modules.debian_ip._parse_hostname",
+            MagicMock(return_value="SaltStack"),
+        ), patch(
+            "salt.modules.debian_ip._parse_domainname",
+            MagicMock(return_value="saltstack.com"),
+        ):
             mock_avai = MagicMock(return_value=True)
-            with patch.dict(debian_ip.__salt__, {'service.available': mock_avai,
-                                                 'service.status': mock_avai}):
-                self.assertEqual(debian_ip.get_network_settings(),
-                                 ['NETWORKING=yes\n',
-                                  'HOSTNAME=SaltStack\n',
-                                  'DOMAIN=saltstack.com\n'])
+            with patch.dict(
+                debian_ip.__salt__,
+                {"service.available": mock_avai, "service.status": mock_avai},
+            ):
+                self.assertEqual(
+                    debian_ip.get_network_settings(),
+                    [
+                        "NETWORKING=yes\n",
+                        "HOSTNAME=SaltStack\n",
+                        "DOMAIN=saltstack.com\n",
+                    ],
+                )
 
-                mock = MagicMock(side_effect=jinja2.exceptions.TemplateNotFound
-                                 ('error'))
-                with patch.object(jinja2.Environment, 'get_template', mock):
-                    self.assertEqual(debian_ip.get_network_settings(), '')
+                mock = MagicMock(
+                    side_effect=jinja2.exceptions.TemplateNotFound("error")
+                )
+                with patch.object(jinja2.Environment, "get_template", mock):
+                    self.assertEqual(debian_ip.get_network_settings(), "")
 
     # 'get_routes' function tests: 1
 
