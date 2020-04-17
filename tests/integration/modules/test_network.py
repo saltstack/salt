@@ -1,19 +1,17 @@
 # -*- coding: utf-8 -*-
 
-# Import Python libs
 from __future__ import absolute_import
 
-# Import Salt Libs
+import pytest
 import salt.utils.path
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 
 URL = "google-public-dns-a.google.com"
 
 
+@pytest.mark.windows_whitelisted
 class NetworkTest(ModuleCase):
     """
     Validate network module
