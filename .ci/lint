@@ -4,4 +4,3 @@ runLint(
     env: env)
 
 // vim: ft=groovy
-
