@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
 from __future__ import absolute_import
 
 import os
 
-# Import Salt Testing libs
+import pytest
 from tests.support.case import ShellCase, SPMCase
 
 
+@pytest.mark.windows_whitelisted
 class SPMTest(ShellCase, SPMCase):
     """
     Test spm script

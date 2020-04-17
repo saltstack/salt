@@ -9,24 +9,22 @@
            in the python importer with the expected ``salt`` namespace and breaks imports.
 """
 
-# Import python libs
 from __future__ import absolute_import
 
 import logging
 import os
 
-# Import Salt libs
+import pytest
 import salt.defaults.exitcodes
 import salt.utils.files
 import salt.utils.path
 from tests.integration.utils import testprogram
-
-# Import Salt Testing libs
 from tests.support.case import ShellCase
 
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.windows_whitelisted
 class SaltTest(testprogram.TestProgramCase):
     """
     Various integration tests for the salt executable.
@@ -69,6 +67,7 @@ class SaltTest(testprogram.TestProgramCase):
         )
 
 
+@pytest.mark.windows_whitelisted
 class RetcodeTestCase(ShellCase):
     """
     Tests to ensure that we set non-zero retcodes when execution fails

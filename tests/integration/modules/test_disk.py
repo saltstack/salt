@@ -1,24 +1,20 @@
 # -*- coding: utf-8 -*-
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
 
-# Import Salt libs
+import pytest
 import salt.utils.platform
-
-# Import 3rd-party libs
 from salt.ext import six
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest
 from tests.support.unit import skipIf
 
 
 @destructiveTest
+@pytest.mark.windows_whitelisted
 @skipIf(salt.utils.platform.is_darwin(), "No mtab on Darwin")
 @skipIf(salt.utils.platform.is_freebsd(), "No mtab on FreeBSD")
 @skipIf(salt.utils.platform.is_windows(), "No mtab on Windows")
@@ -43,6 +39,7 @@ class DiskModuleVirtualizationTest(ModuleCase):
             shutil.move("/tmp/mtab", "/etc/mtab")
 
 
+@pytest.mark.windows_whitelisted
 class DiskModuleTest(ModuleCase):
     """
     Validate the disk module
