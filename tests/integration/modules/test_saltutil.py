@@ -3,24 +3,22 @@
 Integration tests for the saltutil module.
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import textwrap
 import time
 
-# Import Salt Libs
+import pytest
 import salt.utils.files
 import salt.utils.stringutils
 from tests.support.case import ModuleCase
 from tests.support.helpers import flaky
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
 
+@pytest.mark.windows_whitelisted
 class SaltUtilModuleTest(ModuleCase):
     """
     Testcase for the saltutil execution module
@@ -66,12 +64,14 @@ class SaltUtilModuleTest(ModuleCase):
         self.assertIn("priv", ret["return"])
 
 
+@pytest.mark.windows_whitelisted
 class SyncGrainsTest(ModuleCase):
     def test_sync_grains(self):
         ret = self.run_function("saltutil.sync_grains")
         self.assertEqual(ret, [])
 
 
+@pytest.mark.windows_whitelisted
 class SaltUtilSyncModuleTest(ModuleCase):
     """
     Testcase for the saltutil sync execution module
@@ -220,6 +220,7 @@ class SaltUtilSyncModuleTest(ModuleCase):
 
 
 @skipIf(True, "Pillar refresh test is flaky. Skipping for now.")
+@pytest.mark.windows_whitelisted
 class SaltUtilSyncPillarTest(ModuleCase):
     """
     Testcase for the saltutil sync pillar module

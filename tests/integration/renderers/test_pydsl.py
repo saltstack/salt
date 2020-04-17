@@ -1,22 +1,20 @@
 # -*- coding: utf-8 -*-
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
 import textwrap
 
-# Import Salt libs
+import pytest
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest
 
 
+@pytest.mark.windows_whitelisted
 class PyDSLRendererIncludeTestCase(ModuleCase):
     def setUp(self):
         self.directory_created = False

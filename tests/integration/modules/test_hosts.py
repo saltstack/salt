@@ -2,24 +2,22 @@
 """
 Test the hosts module
 """
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import shutil
 
-# Import Salt libs
+import pytest
 import salt.utils.files
 import salt.utils.stringutils
 from tests.support.case import ModuleCase
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.windows_whitelisted
 class HostsModuleTest(ModuleCase):
     """
     Test the hosts module

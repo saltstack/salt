@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Testing libs
+import pytest
 from tests.support.case import ModuleCase
 from tests.support.helpers import requires_salt_modules, skip_if_not_root
 
 
 @skip_if_not_root
 @requires_salt_modules("rabbitmq")
+@pytest.mark.windows_whitelisted
 class RabbitModuleTest(ModuleCase):
     """
     Validates the rabbitmqctl functions.
