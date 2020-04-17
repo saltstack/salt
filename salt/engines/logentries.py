@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 An engine that sends events to the Logentries logging service.
 
 :maintainer:  Jimmy Tang (jimmy_tang@rapid7.com)
@@ -41,8 +41,17 @@ To test this engine
 
          salt '*' test.ping cmd.run uptime
 
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
+import logging
+import random
+
+# Import Python libs
+import socket
+import time
+import uuid
+
 # Import Salt libs
 import salt.utils.event
 import salt.utils.json
@@ -50,6 +59,7 @@ import salt.utils.json
 # Import third party libs
 try:
     import certifi
+
     HAS_CERTIFI = True
 except ImportError:
     HAS_CERTIFI = False
@@ -58,16 +68,11 @@ except ImportError:
 # encrypted tcp connection
 try:
     import ssl
+
     HAS_SSL = True
 except ImportError:  # for systems without TLS support.
     HAS_SSL = False
 
-# Import Python libs
-import socket
-import random
-import time
-import uuid
-import logging
 
 log = logging.getLogger(__name__)
 
@@ -77,11 +82,9 @@ def __virtual__():
 
 
 class PlainTextSocketAppender(object):
-    def __init__(self,
-                 verbose=True,
-                 LE_API='data.logentries.com',
-                 LE_PORT=80,
-                 LE_TLS_PORT=443):
+    def __init__(
+        self, verbose=True, LE_API="data.logentries.com", LE_PORT=80, LE_TLS_PORT=443
+    ):
 
         self.LE_API = LE_API
         self.LE_PORT = LE_PORT
@@ -89,10 +92,12 @@ class PlainTextSocketAppender(object):
         self.MIN_DELAY = 0.1
         self.MAX_DELAY = 10
         # Error message displayed when an incorrect Token has been detected
-        self.INVALID_TOKEN = ("\n\nIt appears the LOGENTRIES_TOKEN "
-                              "parameter you entered is incorrect!\n\n")
+        self.INVALID_TOKEN = (
+            "\n\nIt appears the LOGENTRIES_TOKEN "
+            "parameter you entered is incorrect!\n\n"
+        )
         # Encoded unicode line separator
-        self.LINE_SEP = salt.utils.stringutils.to_str('\u2028')
+        self.LINE_SEP = salt.utils.stringutils.to_str("\u2028")
 
         self.verbose = verbose
         self._conn = None
@@ -111,7 +116,7 @@ class PlainTextSocketAppender(object):
                 return
             except Exception:  # pylint: disable=broad-except
                 if self.verbose:
-                    log.warning('Unable to connect to Logentries')
+                    log.warning("Unable to connect to Logentries")
 
             root_delay *= 2
             if root_delay > self.MAX_DELAY:
@@ -130,7 +135,9 @@ class PlainTextSocketAppender(object):
 
     def put(self, data):
         # Replace newlines with Unicode line separator for multi-line events
-        multiline = data.replace('\n', self.LINE_SEP) + str('\n')  # future lint: disable=blacklisted-function
+        multiline = data.replace("\n", self.LINE_SEP) + str(
+            "\n"
+        )  # future lint: disable=blacklisted-function
         # Send data, reconnect if needed
         while True:
             try:
@@ -145,6 +152,7 @@ class PlainTextSocketAppender(object):
 
 try:
     import ssl
+
     HAS_SSL = True
 except ImportError:  # for systems without TLS support.
     SocketAppender = PlainTextSocketAppender
@@ -160,11 +168,11 @@ else:
                 certfile=None,
                 server_side=False,
                 cert_reqs=ssl.CERT_REQUIRED,
-                ssl_version=getattr(
-                    ssl, 'PROTOCOL_TLSv1_2', ssl.PROTOCOL_TLSv1),
+                ssl_version=getattr(ssl, "PROTOCOL_TLSv1_2", ssl.PROTOCOL_TLSv1),
                 ca_certs=certifi.where(),
                 do_handshake_on_connect=True,
-                suppress_ragged_eofs=True, )
+                suppress_ragged_eofs=True,
+            )
             sock.connect((self.LE_API, self.LE_TLS_PORT))
             self._conn = sock
 
@@ -172,34 +180,36 @@ else:
 
 
 def event_bus_context(opts):
-    if opts.get('id').endswith('_master'):
+    if opts.get("id").endswith("_master"):
         event_bus = salt.utils.event.get_master_event(
-            opts,
-            opts['sock_dir'],
-            listen=True)
+            opts, opts["sock_dir"], listen=True
+        )
     else:
         event_bus = salt.utils.event.get_event(
-            'minion',
-            transport=opts['transport'],
+            "minion",
+            transport=opts["transport"],
             opts=opts,
-            sock_dir=opts['sock_dir'],
-            listen=True)
+            sock_dir=opts["sock_dir"],
+            listen=True,
+        )
     return event_bus
 
 
-def start(endpoint='data.logentries.com',
-          port=10000,
-          token=None,
-          tag='salt/engines/logentries'):
-    '''
+def start(
+    endpoint="data.logentries.com",
+    port=10000,
+    token=None,
+    tag="salt/engines/logentries",
+):
+    """
     Listen to salt events and forward them to Logentries
-    '''
+    """
     with event_bus_context(__opts__) as event_bus:
-        log.debug('Logentries engine started')
+        log.debug("Logentries engine started")
         try:
             val = uuid.UUID(token)
         except ValueError:
-            log.warning('Not a valid logentries token')
+            log.warning("Not a valid logentries token")
 
         appender = SocketAppender(verbose=False, LE_API=endpoint, LE_PORT=port)
         appender.reopen_connection()
@@ -208,11 +218,13 @@ def start(endpoint='data.logentries.com',
             event = event_bus.get_event()
             if event:
                 # future lint: disable=blacklisted-function
-                msg = str(' ').join((
-                    salt.utils.stringutils.to_str(token),
-                    salt.utils.stringutils.to_str(tag),
-                    salt.utils.json.dumps(event)
-                ))
+                msg = str(" ").join(
+                    (
+                        salt.utils.stringutils.to_str(token),
+                        salt.utils.stringutils.to_str(tag),
+                        salt.utils.json.dumps(event),
+                    )
+                )
                 # future lint: enable=blacklisted-function
                 appender.put(msg)
 
