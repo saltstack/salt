@@ -96,7 +96,9 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    return "panos.commit" in __salt__
+    if "panos.commit" in __salt__:
+        return True
+    return (False, "panos module could not be loaded")
 
 
 def _build_members(members, anycheck=False):
