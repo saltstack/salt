@@ -94,6 +94,10 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(acme.needs_renewal("test_valid", window=5))
             # Test with string-like window parameter
             self.assertTrue(acme.needs_renewal("test_valid", window="5"))
+            # Test with 'force' parameter
+            self.assertTrue(acme.needs_renewal("test_valid", window="force"))
+            # Test with 'true' parameter
+            self.assertTrue(acme.needs_renewal("test_valid", window=True))
             # Test with invalid window parameter
             self.assertRaises(
                 SaltInvocationError, acme.needs_renewal, "test_valid", window="foo"

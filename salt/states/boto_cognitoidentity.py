@@ -62,11 +62,9 @@ def __virtual__():
     """
     Only load if boto is available.
     """
-    return (
-        "boto_cognitoidentity"
-        if "boto_cognitoidentity.describe_identity_pools" in __salt__
-        else False
-    )
+    if "boto_cognitoidentity.describe_identity_pools" in __salt__:
+        return "boto_cognitoidentity"
+    return (False, "boto_cognitoidentity module could not be loaded")
 
 
 def _get_object(objname, objtype):

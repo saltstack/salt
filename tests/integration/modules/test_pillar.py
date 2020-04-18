@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
 from tests.support.case import ModuleCase
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 
 
+@pytest.mark.windows_whitelisted
 class PillarModuleTest(ModuleCase):
     """
     Validate the pillar module

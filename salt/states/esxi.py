@@ -144,7 +144,9 @@ except ImportError:
 
 
 def __virtual__():
-    return "esxi.cmd" in __salt__
+    if "esxi.cmd" in __salt__:
+        return True
+    return (False, "esxi module could not be loaded")
 
 
 def coredump_configured(name, enabled, dump_ip, host_vnic="vmk0", dump_port=6500):

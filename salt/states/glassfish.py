@@ -7,6 +7,7 @@ Management of glassfish using it's RESTful API
 You can setup connection parameters like this
 
 .. code-block:: yaml
+
     - server:
       - ssl: true
       - url: localhost
@@ -31,7 +32,9 @@ def __virtual__():
     """
     Only load if glassfish module is available
     """
-    return "glassfish.enum_connector_c_pool" in __salt__ and HAS_LIBS
+    if "glassfish.enum_connector_c_pool" in __salt__ and HAS_LIBS:
+        return True
+    return (False, "glassfish module could not be loaded")
 
 
 def _json_to_unicode(data):

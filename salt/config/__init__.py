@@ -513,11 +513,11 @@ VALID_OPTS = immutabletypes.freeze(
         "minionfs_update_interval": int,
         "s3fs_update_interval": int,
         "svnfs_update_interval": int,
-        # NOTE: git_pillar_base, git_pillar_branch, git_pillar_env, and
-        # git_pillar_root omitted here because their values could conceivably be
-        # loaded as non-string types, which is OK because git_pillar will normalize
-        # them to strings. But rather than include all the possible types they
-        # could be, we'll just skip type-checking.
+        # NOTE: git_pillar_base, git_pillar_fallback, git_pillar_branch,
+        # git_pillar_env, and git_pillar_root omitted here because their values
+        # could conceivably be loaded as non-string types, which is OK because
+        # git_pillar will normalize them to strings. But rather than include all the
+        # possible types they could be, we'll just skip type-checking.
         "git_pillar_ssl_verify": bool,
         "git_pillar_global_lock": bool,
         "git_pillar_user": six.string_types,
@@ -529,10 +529,10 @@ VALID_OPTS = immutabletypes.freeze(
         "git_pillar_refspecs": list,
         "git_pillar_includes": bool,
         "git_pillar_verify_config": bool,
-        # NOTE: gitfs_base, gitfs_mountpoint, and gitfs_root omitted here because
-        # their values could conceivably be loaded as non-string types, which is OK
-        # because gitfs will normalize them to strings. But rather than include all
-        # the possible types they could be, we'll just skip type-checking.
+        # NOTE: gitfs_base, gitfs_fallback, gitfs_mountpoint, and gitfs_root omitted
+        # here because their values could conceivably be loaded as non-string types,
+        # which is OK because gitfs will normalize them to strings. But rather than
+        # include all the possible types they could be, we'll just skip type-checking.
         "gitfs_remotes": list,
         "gitfs_insecure_auth": bool,
         "gitfs_privkey": six.string_types,
@@ -786,6 +786,7 @@ VALID_OPTS = immutabletypes.freeze(
         "ssh_log_file": six.string_types,
         "ssh_config_file": six.string_types,
         "ssh_merge_pillar": bool,
+        "ssh_run_pre_flight": bool,
         "cluster_mode": bool,
         "sqlite_queue_dir": six.string_types,
         "queue_dirs": list,
@@ -1032,6 +1033,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "git_pillar_base": "master",
         "git_pillar_branch": "master",
         "git_pillar_env": "",
+        "git_pillar_fallback": "",
         "git_pillar_root": "",
         "git_pillar_ssl_verify": True,
         "git_pillar_global_lock": True,
@@ -1047,6 +1049,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "gitfs_mountpoint": "",
         "gitfs_root": "",
         "gitfs_base": "master",
+        "gitfs_fallback": "",
         "gitfs_user": "",
         "gitfs_password": "",
         "gitfs_insecure_auth": False,
@@ -1271,6 +1274,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "git_pillar_base": "master",
         "git_pillar_branch": "master",
         "git_pillar_env": "",
+        "git_pillar_fallback": "",
         "git_pillar_root": "",
         "git_pillar_ssl_verify": True,
         "git_pillar_global_lock": True,
@@ -1287,6 +1291,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "gitfs_mountpoint": "",
         "gitfs_root": "",
         "gitfs_base": "master",
+        "gitfs_fallback": "",
         "gitfs_user": "",
         "gitfs_password": "",
         "gitfs_insecure_auth": False,

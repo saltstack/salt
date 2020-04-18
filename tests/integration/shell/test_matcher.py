@@ -1,16 +1,12 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=invalid-name
 
-# Import python libs
 from __future__ import absolute_import
 
 import time
 
-# Import salt libs
+import pytest
 import salt.utils.files
 import salt.utils.yaml
-
-# Import Salt Testing libs
 from tests.support.case import ShellCase
 from tests.support.helpers import dedent, flaky
 from tests.support.mixins import ShellCaseCommonTestsMixin
@@ -21,6 +17,7 @@ def minion_in_returns(minion, lines):
     return bool([True for line in lines if line == "{0}:".format(minion)])
 
 
+@pytest.mark.windows_whitelisted
 class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
     """
     Test salt matchers
@@ -41,7 +38,7 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         self.assertIn("minion", data)
         self.assertIn("sub_minion", data)
 
-    # compound matcher tests: 11
+    # compound matcher tests: 12
 
     def test_compound_min_with_grain(self):
         """
@@ -88,7 +85,7 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         assert minion_in_returns("minion", data) is True
         assert minion_in_returns("sub_minion", data) is False
 
-    def test_coumpound_pcre_grain_regex(self):
+    def test_compound_pcre_grain_regex(self):
         data = self.run_salt('-C "P%@planets%^(mercury|saturn)$" test.ping')
         assert minion_in_returns("minion", data) is True
         assert minion_in_returns("sub_minion", data) is True
@@ -102,25 +99,23 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
 
     @skipIf(True, "This test is unreliable. Need to investigate why more deeply.")
     @flaky
-    def test_coumpound_pillar_pcre(self):
+    def test_compound_pillar_pcre(self):
         data = self.run_salt("-C 'J%@knights%^(Lancelot|Galahad)$' test.ping")
         self.assertTrue(minion_in_returns("minion", data))
         self.assertTrue(minion_in_returns("sub_minion", data))
-        # The multiline nodegroup tests are failing in develop.
-        # This needs to be fixed for Fluorine. @skipIf wasn't used, because
-        # the rest of the assertions above pass just fine, so we don't want
-        # to bypass the whole test.
-        # time.sleep(2)
-        # data = self.run_salt("-C 'N@multiline_nodegroup' test.ping")
-        # self.assertTrue(minion_in_returns('minion', data))
-        # self.assertTrue(minion_in_returns('sub_minion', data))
-        # time.sleep(2)
-        # data = self.run_salt("-C 'N@multiline_nodegroup not sub_minion' test.ping")
-        # self.assertTrue(minion_in_returns('minion', data))
-        # self.assertFalse(minion_in_returns('sub_minion', data))
-        # data = self.run_salt("-C 'N@multiline_nodegroup not @fakenodegroup not sub_minion' test.ping")
-        # self.assertTrue(minion_in_returns('minion', data))
-        # self.assertFalse(minion_in_returns('sub_minion', data))
+
+    def test_compound_nodegroup(self):
+        data = self.run_salt('-C "N@multiline_nodegroup" test.ping')
+        self.assertTrue(minion_in_returns("minion", data))
+        self.assertTrue(minion_in_returns("sub_minion", data))
+        data = self.run_salt('-C "N@multiline_nodegroup not sub_minion" test.ping')
+        self.assertTrue(minion_in_returns("minion", data))
+        self.assertFalse(minion_in_returns("sub_minion", data))
+        data = self.run_salt(
+            '-C "N@multiline_nodegroup not @fakenodegroup not sub_minion" test.ping'
+        )
+        self.assertTrue(minion_in_returns("minion", data))
+        self.assertFalse(minion_in_returns("sub_minion", data))
 
     def test_nodegroup(self):
         """

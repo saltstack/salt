@@ -7,17 +7,14 @@ user present
 user present with custom homedir
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import sys
 from random import randint
 
-# Import Salt libs
+import pytest
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
@@ -51,6 +48,7 @@ else:
 
 @destructiveTest
 @skip_if_not_root
+@pytest.mark.windows_whitelisted
 class UserTest(ModuleCase, SaltReturnAssertsMixin):
     """
     test for user absent
@@ -288,6 +286,21 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual("", ret["workphone"])
             self.assertEqual("", ret["homephone"])
 
+    @skipIf(
+        salt.utils.platform.is_windows(), "windows minon does not support createhome"
+    )
+    def test_user_present_home_directory_created(self):
+        """
+        This is a DESTRUCTIVE TEST it creates a new user on the minion.
+
+        It ensures that the home directory is created.
+        """
+        ret = self.run_state("user.present", name=self.user_name, createhome=True)
+        self.assertSaltTrueReturn(ret)
+
+        user_info = self.run_function("user.info", [self.user_name])
+        self.assertTrue(os.path.exists(user_info["home"]))
+
     def tearDown(self):
         if salt.utils.platform.is_darwin():
             check_user = self.run_function("user.list_users")
@@ -299,6 +312,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
 @destructiveTest
 @skip_if_not_root
 @skipIf(not salt.utils.platform.is_windows(), "Windows only tests")
+@pytest.mark.windows_whitelisted
 class WinUserTest(ModuleCase, SaltReturnAssertsMixin):
     """
     test for user absent
