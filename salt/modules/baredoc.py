@@ -169,9 +169,6 @@ def list_states(name=False, names_only=False):
 
     :param name: specify a specific module to list. If not specified, all modules will be listed.
     :param names_only: Return only a list of the callable functions instead of a dictionary with arguments
-    :return: An OrderedDict with callable function names as keys and lists of arguments as
-             values (if ``names_only``==False) or simply an ordered list of callable
-             function nanes (if ``names_only``==True).
 
     CLI Example:
     (example truncated for brevity)
@@ -221,9 +218,6 @@ def list_modules(name=False, names_only=False):
 
     :param name: specify a specific module to list. If not specified, all modules will be listed.
     :param names_only: Return only a list of the callable functions instead of a dictionary with arguments
-    :return: An OrderedDict with callable function names as keys and lists of arguments as
-             values (if ``names_only``==False) or simply an ordered list of callable
-             function nanes (if ``names_only``==True).
 
     CLI Example:
     (example truncated for brevity)
