@@ -5,13 +5,10 @@ include HACKING.rst
 include LICENSE
 include NOTICE
 include README.rst
-include requirements/base.txt
-include requirements/raet.txt
-include requirements/cloud.txt
-include requirements/zeromq.txt
 include SUPPORT.rst
 include tests/*.py
 recursive-include tests *
+recursive-include requirements *.txt
 include tests/integration/modules/files/*
 include tests/integration/files/*
 include tests/unit/templates/files/*
