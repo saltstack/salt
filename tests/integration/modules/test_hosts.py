@@ -46,8 +46,8 @@ class HostsModuleTest(ModuleCase):
         """
         hosts = self.run_function("hosts.list_hosts")
         self.assertEqual(len(hosts), 10)
-        self.assertEqual(hosts["::1"], ["ip6-localhost", "ip6-loopback"])
-        self.assertEqual(hosts["127.0.0.1"], ["localhost", "myname"])
+        self.assertEqual(hosts["::1"], {"aliases": ["ip6-localhost", "ip6-loopback"]})
+        self.assertEqual(hosts["127.0.0.1"], {"aliases": ["localhost", "myname"]})
 
     def test_list_hosts_nofile(self):
         """
