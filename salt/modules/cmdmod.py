@@ -852,11 +852,11 @@ def _run(
             )
             log.error(log_callback(msg))
         if ret["stdout"]:
-            log.log(output_loglevel, "stdout: {0}".format(log_callback(ret["stdout"])))
+            log.log(output_loglevel, "stdout: %s", log_callback(ret["stdout"]))
         if ret["stderr"]:
-            log.log(output_loglevel, "stderr: {0}".format(log_callback(ret["stderr"])))
+            log.log(output_loglevel, "stderr: %s", log_callback(ret["stderr"]))
         if ret["retcode"]:
-            log.log(output_loglevel, "retcode: {0}".format(ret["retcode"]))
+            log.log(output_loglevel, "retcode: %s", ret["retcode"])
 
     return ret
 
@@ -3339,7 +3339,7 @@ def shell_info(shell, list_modules=False):
             hive="HKEY_LOCAL_MACHINE", key="Software\\Microsoft\\PowerShell"
         )
         pw_keys.sort(key=int)
-        if len(pw_keys) == 0:
+        if not pw_keys:
             return {
                 "error": "Unable to locate 'powershell' Reason: Cannot be "
                 "found in registry.",

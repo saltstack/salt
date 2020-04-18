@@ -788,7 +788,7 @@ def create_secret(
                     return ret
             data[sname] = encoded
 
-    log.trace("secret data is: {0}".format(data))
+    log.trace('secret data is: %s', data)
 
     if secret and update:
         if not data:
