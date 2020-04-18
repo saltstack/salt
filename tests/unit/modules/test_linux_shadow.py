@@ -4,7 +4,8 @@
 """
 
 # Import Python libs
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
+
 import textwrap
 
 # Import Salt Testing libs
@@ -15,7 +16,7 @@ import salt.utils.stringutils
 from salt.ext import six
 from tests.support.helpers import skip_if_not_root
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch, mock_open, DEFAULT
+from tests.support.mock import DEFAULT, MagicMock, mock_open, patch
 from tests.support.unit import TestCase, skipIf
 
 # Import salt libs

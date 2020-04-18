@@ -12,10 +12,10 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import functools
+import logging
 
 # Import python libs
 import os
-import logging
 
 # Import salt libs
 import salt.utils.data
