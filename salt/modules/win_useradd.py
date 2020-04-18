@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module for managing Windows Users
 
 .. important::
@@ -21,26 +21,28 @@ Module for managing Windows Users
 
 .. note::
     This currently only works with local user accounts, not domain accounts
-'''
+"""
 # Import Python libs
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import time
 from datetime import datetime
-
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except Exception:
-    from pipes import quote as _cmd_quote
 
 # Import Salt libs
 import salt.utils.args
 import salt.utils.dateutils
 import salt.utils.platform
 import salt.utils.winapi
+from salt.exceptions import CommandExecutionError
 from salt.ext import six
 from salt.ext.six import string_types
-from salt.exceptions import CommandExecutionError
+
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except Exception:  # pylint: disable=broad-except
+    from pipes import quote as _cmd_quote
+
 
 log = logging.getLogger(__name__)
 
@@ -54,29 +56,30 @@ try:
     import win32profile
     import win32security
     import win32ts
+
     HAS_WIN32NET_MODS = True
 except ImportError:
     HAS_WIN32NET_MODS = False
 
 # Define the module's virtual name
-__virtualname__ = 'user'
+__virtualname__ = "user"
 
 
 def __virtual__():
-    '''
+    """
     Requires Windows and Windows Modules
-    '''
+    """
     if not salt.utils.platform.is_windows():
-        return False, 'Module win_useradd: Windows Only'
+        return False, "Module win_useradd: Windows Only"
 
     if not HAS_WIN32NET_MODS:
-        return False, 'Module win_useradd: Missing Win32 Modules'
+        return False, "Module win_useradd: Missing Win32 Modules"
 
     return __virtualname__
 
 
 def _to_unicode(instr):
-    '''
+    """
     Internal function for converting to Unicode Strings
 
     The NetUser* series of API calls in this module requires input parameters to
@@ -89,23 +92,25 @@ def _to_unicode(instr):
 
     Returns:
         str: Unicode type string
-    '''
+    """
     if instr is None or isinstance(instr, six.text_type):
         return instr
     else:
-        return six.text_type(instr, 'utf-8')
+        return six.text_type(instr, "utf-8")
 
 
-def add(name,
-        password=None,
-        fullname=None,
-        description=None,
-        groups=None,
-        home=None,
-        homedrive=None,
-        profile=None,
-        logonscript=None):
-    '''
+def add(
+    name,
+    password=None,
+    fullname=None,
+    description=None,
+    groups=None,
+    home=None,
+    homedrive=None,
+    profile=None,
+    logonscript=None,
+):
+    """
     Add a user to the minion.
 
     Args:
@@ -140,7 +145,7 @@ def add(name,
     .. code-block:: bash
 
         salt '*' user.add name password
-    '''
+    """
     if six.PY2:
         name = _to_unicode(name)
         password = _to_unicode(password)
@@ -153,51 +158,50 @@ def add(name,
 
     user_info = {}
     if name:
-        user_info['name'] = name
+        user_info["name"] = name
     else:
         return False
-    user_info['password'] = password
-    user_info['priv'] = win32netcon.USER_PRIV_USER
-    user_info['home_dir'] = home
-    user_info['comment'] = description
-    user_info['flags'] = win32netcon.UF_SCRIPT
-    user_info['script_path'] = logonscript
+    user_info["password"] = password
+    user_info["priv"] = win32netcon.USER_PRIV_USER
+    user_info["home_dir"] = home
+    user_info["comment"] = description
+    user_info["flags"] = win32netcon.UF_SCRIPT
+    user_info["script_path"] = logonscript
 
     try:
         win32net.NetUserAdd(None, 1, user_info)
     except win32net.error as exc:
-        log.error('Failed to create user %s', name)
-        log.error('nbr: %s', exc.winerror)
-        log.error('ctx: %s', exc.funcname)
-        log.error('msg: %s', exc.strerror)
+        log.error("Failed to create user %s", name)
+        log.error("nbr: %s", exc.winerror)
+        log.error("ctx: %s", exc.funcname)
+        log.error("msg: %s", exc.strerror)
         return False
 
-    update(name=name,
-           homedrive=homedrive,
-           profile=profile,
-           fullname=fullname)
+    update(name=name, homedrive=homedrive, profile=profile, fullname=fullname)
 
     ret = chgroups(name, groups) if groups else True
 
     return ret
 
 
-def update(name,
-           password=None,
-           fullname=None,
-           description=None,
-           home=None,
-           homedrive=None,
-           logonscript=None,
-           profile=None,
-           expiration_date=None,
-           expired=None,
-           account_disabled=None,
-           unlock_account=None,
-           password_never_expires=None,
-           disallow_change_password=None):
+def update(
+    name,
+    password=None,
+    fullname=None,
+    description=None,
+    home=None,
+    homedrive=None,
+    logonscript=None,
+    profile=None,
+    expiration_date=None,
+    expired=None,
+    account_disabled=None,
+    unlock_account=None,
+    password_never_expires=None,
+    disallow_change_password=None,
+):
     # pylint: disable=anomalous-backslash-in-string
-    '''
+    """
     Updates settings for the windows user. Name is the only required parameter.
     Settings will only be changed if the parameter is passed a value.
 
@@ -252,7 +256,7 @@ def update(name,
 
         salt '*' user.update bob password=secret profile=C:\\Users\\Bob
                  home=\\server\homeshare\bob homedrive=U:
-    '''
+    """
     # pylint: enable=anomalous-backslash-in-string
     if six.PY2:
         name = _to_unicode(name)
@@ -269,78 +273,76 @@ def update(name,
     try:
         user_info = win32net.NetUserGetInfo(None, name, 4)
     except win32net.error as exc:
-        log.error('Failed to update user %s', name)
-        log.error('nbr: %s', exc.winerror)
-        log.error('ctx: %s', exc.funcname)
-        log.error('msg: %s', exc.strerror)
+        log.error("Failed to update user %s", name)
+        log.error("nbr: %s", exc.winerror)
+        log.error("ctx: %s", exc.funcname)
+        log.error("msg: %s", exc.strerror)
         return False
 
     # Check parameters to update
     # Update the user object with new settings
     if password:
-        user_info['password'] = password
+        user_info["password"] = password
     if home:
-        user_info['home_dir'] = home
+        user_info["home_dir"] = home
     if homedrive:
-        user_info['home_dir_drive'] = homedrive
+        user_info["home_dir_drive"] = homedrive
     if description:
-        user_info['comment'] = description
+        user_info["comment"] = description
     if logonscript:
-        user_info['script_path'] = logonscript
+        user_info["script_path"] = logonscript
     if fullname:
-        user_info['full_name'] = fullname
+        user_info["full_name"] = fullname
     if profile:
-        user_info['profile'] = profile
+        user_info["profile"] = profile
     if expiration_date:
-        if expiration_date == 'Never':
-            user_info['acct_expires'] = win32netcon.TIMEQ_FOREVER
+        if expiration_date == "Never":
+            user_info["acct_expires"] = win32netcon.TIMEQ_FOREVER
         else:
             try:
                 dt_obj = salt.utils.dateutils.date_cast(expiration_date)
             except (ValueError, RuntimeError):
-                return 'Invalid Date/Time Format: {0}'.format(expiration_date)
-            user_info['acct_expires'] = time.mktime(dt_obj.timetuple())
+                return "Invalid Date/Time Format: {0}".format(expiration_date)
+            user_info["acct_expires"] = time.mktime(dt_obj.timetuple())
     if expired is not None:
         if expired:
-            user_info['password_expired'] = 1
+            user_info["password_expired"] = 1
         else:
-            user_info['password_expired'] = 0
+            user_info["password_expired"] = 0
     if account_disabled is not None:
         if account_disabled:
-            user_info['flags'] |= win32netcon.UF_ACCOUNTDISABLE
+            user_info["flags"] |= win32netcon.UF_ACCOUNTDISABLE
         else:
-            user_info['flags'] &= ~win32netcon.UF_ACCOUNTDISABLE
+            user_info["flags"] &= ~win32netcon.UF_ACCOUNTDISABLE
     if unlock_account is not None:
         if unlock_account:
-            user_info['flags'] &= ~win32netcon.UF_LOCKOUT
+            user_info["flags"] &= ~win32netcon.UF_LOCKOUT
     if password_never_expires is not None:
         if password_never_expires:
-            user_info['flags'] |= win32netcon.UF_DONT_EXPIRE_PASSWD
+            user_info["flags"] |= win32netcon.UF_DONT_EXPIRE_PASSWD
         else:
-            user_info['flags'] &= ~win32netcon.UF_DONT_EXPIRE_PASSWD
+            user_info["flags"] &= ~win32netcon.UF_DONT_EXPIRE_PASSWD
     if disallow_change_password is not None:
         if disallow_change_password:
-            user_info['flags'] |= win32netcon.UF_PASSWD_CANT_CHANGE
+            user_info["flags"] |= win32netcon.UF_PASSWD_CANT_CHANGE
         else:
-            user_info['flags'] &= ~win32netcon.UF_PASSWD_CANT_CHANGE
+            user_info["flags"] &= ~win32netcon.UF_PASSWD_CANT_CHANGE
 
     # Apply new settings
     try:
         win32net.NetUserSetInfo(None, name, 4, user_info)
     except win32net.error as exc:
-        log.error('Failed to update user %s', name)
-        log.error('nbr: %s', exc.winerror)
-        log.error('ctx: %s', exc.funcname)
-        log.error('msg: %s', exc.strerror)
+        log.error("Failed to update user %s", name)
+        log.error("nbr: %s", exc.winerror)
+        log.error("ctx: %s", exc.funcname)
+        log.error("msg: %s", exc.strerror)
         return False
 
     return True
 
 
-def delete(name,
-           purge=False,
-           force=False):
-    '''
+def delete(name, purge=False, force=False):
+    """
     Remove a user from the minion
 
     Args:
@@ -362,7 +364,7 @@ def delete(name,
     .. code-block:: bash
 
         salt '*' user.delete name
-    '''
+    """
     if six.PY2:
         name = _to_unicode(name)
 
@@ -370,10 +372,10 @@ def delete(name,
     try:
         user_info = win32net.NetUserGetInfo(None, name, 4)
     except win32net.error as exc:
-        log.error('User not found: %s', name)
-        log.error('nbr: %s', exc.winerror)
-        log.error('ctx: %s', exc.funcname)
-        log.error('msg: %s', exc.strerror)
+        log.error("User not found: %s", name)
+        log.error("nbr: %s", exc.winerror)
+        log.error("ctx: %s", exc.funcname)
+        log.error("msg: %s", exc.strerror)
         return False
 
     # Check if the user is logged in
@@ -381,17 +383,22 @@ def delete(name,
     try:
         sess_list = win32ts.WTSEnumerateSessions()
     except win32ts.error as exc:
-        log.error('No logged in users found')
-        log.error('nbr: %s', exc.winerror)
-        log.error('ctx: %s', exc.funcname)
-        log.error('msg: %s', exc.strerror)
+        log.error("No logged in users found")
+        log.error("nbr: %s", exc.winerror)
+        log.error("ctx: %s", exc.funcname)
+        log.error("msg: %s", exc.strerror)
 
     # Is the user one that is logged in
     logged_in = False
     session_id = None
     for sess in sess_list:
-        if win32ts.WTSQuerySessionInformation(None, sess['SessionId'], win32ts.WTSUserName) == name:
-            session_id = sess['SessionId']
+        if (
+            win32ts.WTSQuerySessionInformation(
+                None, sess["SessionId"], win32ts.WTSUserName
+            )
+            == name
+        ):
+            session_id = sess["SessionId"]
             logged_in = True
 
     # If logged in and set to force, log the user out and continue
@@ -399,15 +406,17 @@ def delete(name,
     if logged_in:
         if force:
             try:
-                win32ts.WTSLogoffSession(win32ts.WTS_CURRENT_SERVER_HANDLE, session_id, True)
+                win32ts.WTSLogoffSession(
+                    win32ts.WTS_CURRENT_SERVER_HANDLE, session_id, True
+                )
             except win32ts.error as exc:
-                log.error('User not found: %s', name)
-                log.error('nbr: %s', exc.winerror)
-                log.error('ctx: %s', exc.funcname)
-                log.error('msg: %s', exc.strerror)
+                log.error("User not found: %s", name)
+                log.error("nbr: %s", exc.winerror)
+                log.error("ctx: %s", exc.funcname)
+                log.error("msg: %s", exc.strerror)
                 return False
         else:
-            log.error('User %s is currently logged in.', name)
+            log.error("User %s is currently logged in.", name)
             return False
 
     # Remove the User Profile directory
@@ -420,27 +429,27 @@ def delete(name,
             if number == 2:  # Profile Folder Not Found
                 pass
             else:
-                log.error('Failed to remove profile for %s', name)
-                log.error('nbr: %s', exc.winerror)
-                log.error('ctx: %s', exc.funcname)
-                log.error('msg: %s', exc.strerror)
+                log.error("Failed to remove profile for %s", name)
+                log.error("nbr: %s", exc.winerror)
+                log.error("ctx: %s", exc.funcname)
+                log.error("msg: %s", exc.strerror)
                 return False
 
     # And finally remove the user account
     try:
         win32net.NetUserDel(None, name)
     except win32net.error as exc:
-        log.error('Failed to delete user %s', name)
-        log.error('nbr: %s', exc.winerror)
-        log.error('ctx: %s', exc.funcname)
-        log.error('msg: %s', exc.strerror)
+        log.error("Failed to delete user %s", name)
+        log.error("nbr: %s", exc.winerror)
+        log.error("ctx: %s", exc.funcname)
+        log.error("msg: %s", exc.strerror)
         return False
 
     return True
 
 
 def getUserSid(username):
-    '''
+    """
     Get the Security ID for the user
 
     Args:
@@ -454,21 +463,22 @@ def getUserSid(username):
     .. code-block:: bash
 
         salt '*' user.getUserSid jsnuffy
-    '''
+    """
     if six.PY2:
         username = _to_unicode(username)
 
     domain = win32api.GetComputerName()
-    if username.find('\\') != -1:
-        domain = username.split('\\')[0]
-        username = username.split('\\')[-1]
+    if username.find("\\") != -1:
+        domain = username.split("\\")[0]
+        username = username.split("\\")[-1]
     domain = domain.upper()
     return win32security.ConvertSidToStringSid(
-        win32security.LookupAccountName(None, domain + '\\' + username)[0])
+        win32security.LookupAccountName(None, domain + "\\" + username)[0]
+    )
 
 
 def setpassword(name, password):
-    '''
+    """
     Set the user's password
 
     Args:
@@ -484,12 +494,12 @@ def setpassword(name, password):
     .. code-block:: bash
 
         salt '*' user.setpassword jsnuffy sup3rs3cr3t
-    '''
+    """
     return update(name=name, password=password)
 
 
 def addgroup(name, group):
-    '''
+    """
     Add user to a group
 
     Args:
@@ -505,28 +515,28 @@ def addgroup(name, group):
     .. code-block:: bash
 
         salt '*' user.addgroup jsnuffy 'Power Users'
-    '''
+    """
     if six.PY2:
         name = _to_unicode(name)
         group = _to_unicode(group)
 
     name = _cmd_quote(name)
-    group = _cmd_quote(group).lstrip('\'').rstrip('\'')
+    group = _cmd_quote(group).lstrip("'").rstrip("'")
 
     user = info(name)
     if not user:
         return False
-    if group in user['groups']:
+    if group in user["groups"]:
         return True
 
     cmd = 'net localgroup "{0}" {1} /add'.format(group, name)
-    ret = __salt__['cmd.run_all'](cmd, python_shell=True)
+    ret = __salt__["cmd.run_all"](cmd, python_shell=True)
 
-    return ret['retcode'] == 0
+    return ret["retcode"] == 0
 
 
 def removegroup(name, group):
-    '''
+    """
     Remove user from a group
 
     Args:
@@ -542,30 +552,30 @@ def removegroup(name, group):
     .. code-block:: bash
 
         salt '*' user.removegroup jsnuffy 'Power Users'
-    '''
+    """
     if six.PY2:
         name = _to_unicode(name)
         group = _to_unicode(group)
 
     name = _cmd_quote(name)
-    group = _cmd_quote(group).lstrip('\'').rstrip('\'')
+    group = _cmd_quote(group).lstrip("'").rstrip("'")
 
     user = info(name)
 
     if not user:
         return False
 
-    if group not in user['groups']:
+    if group not in user["groups"]:
         return True
 
     cmd = 'net localgroup "{0}" {1} /delete'.format(group, name)
-    ret = __salt__['cmd.run_all'](cmd, python_shell=True)
+    ret = __salt__["cmd.run_all"](cmd, python_shell=True)
 
-    return ret['retcode'] == 0
+    return ret["retcode"] == 0
 
 
 def chhome(name, home, **kwargs):
-    '''
+    """
     Change the home directory of the user, pass True for persist to move files
     to the new home directory if the old home directory exist.
 
@@ -582,38 +592,38 @@ def chhome(name, home, **kwargs):
     .. code-block:: bash
 
         salt '*' user.chhome foo \\\\fileserver\\home\\foo True
-    '''
+    """
     if six.PY2:
         name = _to_unicode(name)
         home = _to_unicode(home)
 
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
-    persist = kwargs.pop('persist', False)
+    persist = kwargs.pop("persist", False)
     if kwargs:
         salt.utils.args.invalid_kwargs(kwargs)
     if persist:
-        log.info('Ignoring unsupported \'persist\' argument to user.chhome')
+        log.info("Ignoring unsupported 'persist' argument to user.chhome")
 
     pre_info = info(name)
 
     if not pre_info:
         return False
 
-    if home == pre_info['home']:
+    if home == pre_info["home"]:
         return True
 
     if not update(name=name, home=home):
         return False
 
     post_info = info(name)
-    if post_info['home'] != pre_info['home']:
-        return post_info['home'] == home
+    if post_info["home"] != pre_info["home"]:
+        return post_info["home"] == home
 
     return False
 
 
 def chprofile(name, profile):
-    '''
+    """
     Change the profile directory of the user
 
     Args:
@@ -629,12 +639,12 @@ def chprofile(name, profile):
     .. code-block:: bash
 
         salt '*' user.chprofile foo \\\\fileserver\\profiles\\foo
-    '''
+    """
     return update(name=name, profile=profile)
 
 
 def chfullname(name, fullname):
-    '''
+    """
     Change the full name of the user
 
     Args:
@@ -650,12 +660,12 @@ def chfullname(name, fullname):
     .. code-block:: bash
 
         salt '*' user.chfullname user 'First Last'
-    '''
+    """
     return update(name=name, fullname=fullname)
 
 
 def chgroups(name, groups, append=True):
-    '''
+    """
     Change the groups this user belongs to, add append=False to make the user a
     member of only the specified groups
 
@@ -678,14 +688,14 @@ def chgroups(name, groups, append=True):
     .. code-block:: bash
 
         salt '*' user.chgroups jsnuffy Administrators,Users True
-    '''
+    """
     if six.PY2:
         name = _to_unicode(name)
 
     if isinstance(groups, string_types):
-        groups = groups.split(',')
+        groups = groups.split(",")
 
-    groups = [x.strip(' *') for x in groups]
+    groups = [x.strip(" *") for x in groups]
     if six.PY2:
         groups = [_to_unicode(x) for x in groups]
 
@@ -697,19 +707,19 @@ def chgroups(name, groups, append=True):
 
     if not append:
         for group in ugrps:
-            group = _cmd_quote(group).lstrip('\'').rstrip('\'')
+            group = _cmd_quote(group).lstrip("'").rstrip("'")
             if group not in groups:
                 cmd = 'net localgroup "{0}" {1} /delete'.format(group, name)
-                __salt__['cmd.run_all'](cmd, python_shell=True)
+                __salt__["cmd.run_all"](cmd, python_shell=True)
 
     for group in groups:
         if group in ugrps:
             continue
-        group = _cmd_quote(group).lstrip('\'').rstrip('\'')
+        group = _cmd_quote(group).lstrip("'").rstrip("'")
         cmd = 'net localgroup "{0}" {1} /add'.format(group, name)
-        out = __salt__['cmd.run_all'](cmd, python_shell=True)
-        if out['retcode'] != 0:
-            log.error(out['stdout'])
+        out = __salt__["cmd.run_all"](cmd, python_shell=True)
+        if out["retcode"] != 0:
+            log.error(out["stdout"])
             return False
 
     agrps = set(list_groups(name))
@@ -717,7 +727,7 @@ def chgroups(name, groups, append=True):
 
 
 def info(name):
-    '''
+    """
     Return user information
 
     Args:
@@ -752,7 +762,7 @@ def info(name):
     .. code-block:: bash
 
         salt '*' user.info jsnuffy
-    '''
+    """
     if six.PY2:
         name = _to_unicode(name)
 
@@ -770,53 +780,56 @@ def info(name):
         except win32net.error:
             pass
 
-        ret['fullname'] = items['full_name']
-        ret['name'] = items['name']
-        ret['uid'] = win32security.ConvertSidToStringSid(items['user_sid'])
-        ret['passwd'] = items['password']
-        ret['comment'] = items['comment']
-        ret['description'] = items['comment']
-        ret['active'] = (not bool(items['flags'] & win32netcon.UF_ACCOUNTDISABLE))
-        ret['logonscript'] = items['script_path']
-        ret['profile'] = items['profile']
-        ret['failed_logon_attempts'] = items['bad_pw_count']
-        ret['successful_logon_attempts'] = items['num_logons']
-        secs = time.mktime(datetime.now().timetuple()) - items['password_age']
-        ret['password_changed'] = datetime.fromtimestamp(secs). \
-            strftime('%Y-%m-%d %H:%M:%S')
-        if items['last_logon'] == 0:
-            ret['last_logon'] = 'Never'
+        ret["fullname"] = items["full_name"]
+        ret["name"] = items["name"]
+        ret["uid"] = win32security.ConvertSidToStringSid(items["user_sid"])
+        ret["passwd"] = items["password"]
+        ret["comment"] = items["comment"]
+        ret["description"] = items["comment"]
+        ret["active"] = not bool(items["flags"] & win32netcon.UF_ACCOUNTDISABLE)
+        ret["logonscript"] = items["script_path"]
+        ret["profile"] = items["profile"]
+        ret["failed_logon_attempts"] = items["bad_pw_count"]
+        ret["successful_logon_attempts"] = items["num_logons"]
+        secs = time.mktime(datetime.now().timetuple()) - items["password_age"]
+        ret["password_changed"] = datetime.fromtimestamp(secs).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+        if items["last_logon"] == 0:
+            ret["last_logon"] = "Never"
         else:
-            ret['last_logon'] = datetime.fromtimestamp(items['last_logon']).\
-                strftime('%Y-%m-%d %H:%M:%S')
-        ret['expiration_date'] = datetime.fromtimestamp(items['acct_expires']).\
-            strftime('%Y-%m-%d %H:%M:%S')
-        ret['expired'] = items['password_expired'] == 1
-        if not ret['profile']:
-            ret['profile'] = _get_userprofile_from_registry(name, ret['uid'])
-        ret['home'] = items['home_dir']
-        ret['homedrive'] = items['home_dir_drive']
-        if not ret['home']:
-            ret['home'] = ret['profile']
-        ret['groups'] = groups
-        if items['flags'] & win32netcon.UF_DONT_EXPIRE_PASSWD == 0:
-            ret['password_never_expires'] = False
+            ret["last_logon"] = datetime.fromtimestamp(items["last_logon"]).strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+        ret["expiration_date"] = datetime.fromtimestamp(items["acct_expires"]).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+        ret["expired"] = items["password_expired"] == 1
+        if not ret["profile"]:
+            ret["profile"] = _get_userprofile_from_registry(name, ret["uid"])
+        ret["home"] = items["home_dir"]
+        ret["homedrive"] = items["home_dir_drive"]
+        if not ret["home"]:
+            ret["home"] = ret["profile"]
+        ret["groups"] = groups
+        if items["flags"] & win32netcon.UF_DONT_EXPIRE_PASSWD == 0:
+            ret["password_never_expires"] = False
         else:
-            ret['password_never_expires'] = True
-        if items['flags'] & win32netcon.UF_ACCOUNTDISABLE == 0:
-            ret['account_disabled'] = False
+            ret["password_never_expires"] = True
+        if items["flags"] & win32netcon.UF_ACCOUNTDISABLE == 0:
+            ret["account_disabled"] = False
         else:
-            ret['account_disabled'] = True
-        if items['flags'] & win32netcon.UF_LOCKOUT == 0:
-            ret['account_locked'] = False
+            ret["account_disabled"] = True
+        if items["flags"] & win32netcon.UF_LOCKOUT == 0:
+            ret["account_locked"] = False
         else:
-            ret['account_locked'] = True
-        if items['flags'] & win32netcon.UF_PASSWD_CANT_CHANGE == 0:
-            ret['disallow_change_password'] = False
+            ret["account_locked"] = True
+        if items["flags"] & win32netcon.UF_PASSWD_CANT_CHANGE == 0:
+            ret["disallow_change_password"] = False
         else:
-            ret['disallow_change_password'] = True
+            ret["disallow_change_password"] = True
 
-        ret['gid'] = ''
+        ret["gid"] = ""
 
         return ret
 
@@ -826,7 +839,7 @@ def info(name):
 
 
 def _get_userprofile_from_registry(user, sid):
-    '''
+    """
     In case net user doesn't return the userprofile we can get it from the
     registry
 
@@ -837,21 +850,18 @@ def _get_userprofile_from_registry(user, sid):
 
     Returns:
         str: Profile directory
-    '''
-    profile_dir = __salt__['reg.read_value'](
-        'HKEY_LOCAL_MACHINE',
-        'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{0}'.format(sid),
-        'ProfileImagePath'
-    )['vdata']
-    log.debug(
-        'user %s with sid=%s profile is located at "%s"',
-        user, sid, profile_dir
-    )
+    """
+    profile_dir = __salt__["reg.read_value"](
+        "HKEY_LOCAL_MACHINE",
+        "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{0}".format(sid),
+        "ProfileImagePath",
+    )["vdata"]
+    log.debug('user %s with sid=%s profile is located at "%s"', user, sid, profile_dir)
     return profile_dir
 
 
 def list_groups(name):
-    '''
+    """
     Return a list of groups the named user belongs to
 
     Args:
@@ -865,23 +875,23 @@ def list_groups(name):
     .. code-block:: bash
 
         salt '*' user.list_groups foo
-    '''
+    """
     if six.PY2:
         name = _to_unicode(name)
 
     ugrp = set()
     try:
-        user = info(name)['groups']
+        user = info(name)["groups"]
     except KeyError:
         return False
     for group in user:
-        ugrp.add(group.strip(' *'))
+        ugrp.add(group.strip(" *"))
 
     return sorted(list(ugrp))
 
 
 def getent(refresh=False):
-    '''
+    """
     Return the list of all info for all users
 
     Args:
@@ -896,31 +906,31 @@ def getent(refresh=False):
     .. code-block:: bash
 
         salt '*' user.getent
-    '''
-    if 'user.getent' in __context__ and not refresh:
-        return __context__['user.getent']
+    """
+    if "user.getent" in __context__ and not refresh:
+        return __context__["user.getent"]
 
     ret = []
-    for user in __salt__['user.list_users']():
+    for user in __salt__["user.list_users"]():
         stuff = {}
-        user_info = __salt__['user.info'](user)
+        user_info = __salt__["user.info"](user)
 
-        stuff['gid'] = ''
-        stuff['groups'] = user_info['groups']
-        stuff['home'] = user_info['home']
-        stuff['name'] = user_info['name']
-        stuff['passwd'] = user_info['passwd']
-        stuff['shell'] = ''
-        stuff['uid'] = user_info['uid']
+        stuff["gid"] = ""
+        stuff["groups"] = user_info["groups"]
+        stuff["home"] = user_info["home"]
+        stuff["name"] = user_info["name"]
+        stuff["passwd"] = user_info["passwd"]
+        stuff["shell"] = ""
+        stuff["uid"] = user_info["uid"]
 
         ret.append(stuff)
 
-    __context__['user.getent'] = ret
+    __context__["user.getent"] = ret
     return ret
 
 
 def list_users():
-    '''
+    """
     Return a list of all users on Windows
 
     Returns:
@@ -931,7 +941,7 @@ def list_users():
     .. code-block:: bash
 
         salt '*' user.list_users
-    '''
+    """
     res = 0
     user_list = []
     dowhile = True
@@ -943,17 +953,17 @@ def list_users():
                 0,
                 win32netcon.FILTER_NORMAL_ACCOUNT,
                 res,
-                win32netcon.MAX_PREFERRED_LENGTH
+                win32netcon.MAX_PREFERRED_LENGTH,
             )
             for user in users:
-                user_list.append(user['name'])
+                user_list.append(user["name"])
         return user_list
     except win32net.error:
         pass
 
 
 def rename(name, new_name):
-    '''
+    """
     Change the username for a named user
 
     Args:
@@ -969,7 +979,7 @@ def rename(name, new_name):
     .. code-block:: bash
 
         salt '*' user.rename jsnuffy jshmoe
-    '''
+    """
     if six.PY2:
         name = _to_unicode(name)
         new_name = _to_unicode(new_name)
@@ -977,14 +987,12 @@ def rename(name, new_name):
     # Load information for the current name
     current_info = info(name)
     if not current_info:
-        raise CommandExecutionError('User \'{0}\' does not exist'.format(name))
+        raise CommandExecutionError("User '{0}' does not exist".format(name))
 
     # Look for an existing user with the new name
     new_info = info(new_name)
     if new_info:
-        raise CommandExecutionError(
-            'User \'{0}\' already exists'.format(new_name)
-        )
+        raise CommandExecutionError("User '{0}' already exists".format(new_name))
 
     # Rename the user account
     # Connect to WMI
@@ -995,7 +1003,7 @@ def rename(name, new_name):
     try:
         user = c.Win32_UserAccount(Name=name)[0]
     except IndexError:
-        raise CommandExecutionError('User \'{0}\' does not exist'.format(name))
+        raise CommandExecutionError("User '{0}' does not exist".format(name))
 
     # Rename the user
     result = user.Rename(new_name)[0]
@@ -1003,27 +1011,30 @@ def rename(name, new_name):
     # Check the result (0 means success)
     if not result == 0:
         # Define Error Dict
-        error_dict = {0: 'Success',
-                      1: 'Instance not found',
-                      2: 'Instance required',
-                      3: 'Invalid parameter',
-                      4: 'User not found',
-                      5: 'Domain not found',
-                      6: 'Operation is allowed only on the primary domain controller of the domain',
-                      7: 'Operation is not allowed on the last administrative account',
-                      8: 'Operation is not allowed on specified special groups: user, admin, local, or guest',
-                      9: 'Other API error',
-                      10: 'Internal error'}
+        error_dict = {
+            0: "Success",
+            1: "Instance not found",
+            2: "Instance required",
+            3: "Invalid parameter",
+            4: "User not found",
+            5: "Domain not found",
+            6: "Operation is allowed only on the primary domain controller of the domain",
+            7: "Operation is not allowed on the last administrative account",
+            8: "Operation is not allowed on specified special groups: user, admin, local, or guest",
+            9: "Other API error",
+            10: "Internal error",
+        }
         raise CommandExecutionError(
-            'There was an error renaming \'{0}\' to \'{1}\'. Error: {2}'
-            .format(name, new_name, error_dict[result])
+            "There was an error renaming '{0}' to '{1}'. Error: {2}".format(
+                name, new_name, error_dict[result]
+            )
         )
 
-    return info(new_name).get('name') == new_name
+    return info(new_name).get("name") == new_name
 
 
 def current(sam=False):
-    '''
+    """
     Get the username that salt-minion is running under. If salt-minion is
     running as a service it should return the Local System account. If salt is
     running from a command prompt it should return the username that started the
@@ -1044,20 +1055,20 @@ def current(sam=False):
     .. code-block:: bash
 
         salt '*' user.current
-    '''
+    """
     try:
         if sam:
             user_name = win32api.GetUserNameEx(win32con.NameSamCompatible)
         else:
             user_name = win32api.GetUserName()
     except pywintypes.error as exc:
-        log.error('Failed to get current user')
-        log.error('nbr: %s', exc.winerror)
-        log.error('ctx: %s', exc.funcname)
-        log.error('msg: %s', exc.strerror)
-        raise CommandExecutionError('Failed to get current user', info=exc)
+        log.error("Failed to get current user")
+        log.error("nbr: %s", exc.winerror)
+        log.error("ctx: %s", exc.funcname)
+        log.error("msg: %s", exc.strerror)
+        raise CommandExecutionError("Failed to get current user", info=exc)
 
     if not user_name:
-        raise CommandExecutionError('Failed to get current user')
+        raise CommandExecutionError("Failed to get current user")
 
     return user_name

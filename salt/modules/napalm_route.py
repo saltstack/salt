@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 NAPALM Route
 ============
 
 Retrieves route details from network devices.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
@@ -15,25 +15,27 @@ Dependencies
 - :mod:`NAPALM proxy minion <salt.proxy.napalm>`
 
 .. versionadded:: 2016.11.0
-'''
+"""
 
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-log = logging.getLogger(__file__)
 
 # import NAPALM utils
 import salt.utils.napalm
 from salt.utils.napalm import proxy_napalm_wrap
 
+log = logging.getLogger(__file__)
+
+
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
 # ----------------------------------------------------------------------------------------------------------------------
 
-__virtualname__ = 'route'
-__proxyenabled__ = ['napalm']
+__virtualname__ = "route"
+__proxyenabled__ = ["napalm"]
 # uses NAPALM-based proxy to interact with network devices
-__virtual_aliases__ = ('napalm_route',)
+__virtual_aliases__ = ("napalm_route",)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # property functions
@@ -41,10 +43,11 @@ __virtual_aliases__ = ('napalm_route',)
 
 
 def __virtual__():
-    '''
+    """
     NAPALM library must be installed for this module to work and run in a (proxy) minion.
-    '''
+    """
     return salt.utils.napalm.virtual(__opts__, __virtualname__, __file__)
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
@@ -58,7 +61,7 @@ def __virtual__():
 @proxy_napalm_wrap
 def show(destination, protocol=None, **kwargs):  # pylint: disable=unused-argument
 
-    '''
+    """
     Displays all details for a certain route learned via a specific protocol.
     If the protocol is not specified, will return all possible routes.
 
@@ -146,13 +149,10 @@ def show(destination, protocol=None, **kwargs):  # pylint: disable=unused-argume
                 }
             ]
         }
-    '''
+    """
 
     return salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
-        'get_route_to',
-        **{
-            'destination': destination,
-            'protocol': protocol
-        }
+        "get_route_to",
+        **{"destination": destination, "protocol": protocol}
     )

@@ -1,20 +1,21 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, unicode_literals
-import os
+
 import logging
+import os
+import textwrap
 
 import salt.utils.files
 from salt.ext import six
-import textwrap
-
-from tests.support.helpers import with_tempfile
-from tests.support.paths import BASE_FILES, TMP, TMP_PILLAR_TREE
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
+from tests.support.helpers import with_tempfile
 from tests.support.mixins import SaltReturnAssertsMixin
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf
 
 try:
     import M2Crypto  # pylint: disable=W0611
+
     HAS_M2CRYPTO = True
 except ImportError:
     HAS_M2CRYPTO = False
@@ -23,18 +24,21 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-@skipIf(not HAS_M2CRYPTO, 'Skip when no M2Crypto found')
+@skipIf(not HAS_M2CRYPTO, "Skip when no M2Crypto found")
 class x509Test(ModuleCase, SaltReturnAssertsMixin):
-
     @classmethod
     def setUpClass(cls):
-        cert_path = os.path.join(BASE_FILES, 'x509_test.crt')
+        cert_path = os.path.join(RUNTIME_VARS.BASE_FILES, "x509_test.crt")
         with salt.utils.files.fopen(cert_path) as fp:
             cls.x509_cert_text = fp.read()
 
     def setUp(self):
-        with salt.utils.files.fopen(os.path.join(TMP_PILLAR_TREE, 'signing_policies.sls'), 'w') as fp:
-            fp.write(textwrap.dedent('''\
+        with salt.utils.files.fopen(
+            os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, "signing_policies.sls"), "w"
+        ) as fp:
+            fp.write(
+                textwrap.dedent(
+                    """\
                 x509_signing_policies:
                   ca_policy:
                     - minions: '*'
@@ -48,58 +52,70 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
                     - authorityKeyIdentifier: keyid
                     - days_valid: 730
                     - copypath: {0}/pki
-                     '''.format(TMP)))
-        with salt.utils.files.fopen(os.path.join(TMP_PILLAR_TREE, 'top.sls'), 'w') as fp:
-            fp.write(textwrap.dedent('''\
+                     """.format(
+                        RUNTIME_VARS.TMP
+                    )
+                )
+            )
+        with salt.utils.files.fopen(
+            os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, "top.sls"), "w"
+        ) as fp:
+            fp.write(
+                textwrap.dedent(
+                    """\
                      base:
                        '*':
                          - signing_policies
-                     '''))
-        self.run_function('saltutil.refresh_pillar')
+                     """
+                )
+            )
+        self.run_function("saltutil.refresh_pillar")
 
     def tearDown(self):
-        os.remove(os.path.join(TMP_PILLAR_TREE, 'signing_policies.sls'))
-        os.remove(os.path.join(TMP_PILLAR_TREE, 'top.sls'))
-        certs_path = os.path.join(TMP, 'pki')
+        os.remove(os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, "signing_policies.sls"))
+        os.remove(os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, "top.sls"))
+        certs_path = os.path.join(RUNTIME_VARS.TMP, "pki")
         if os.path.exists(certs_path):
             salt.utils.files.rm_rf(certs_path)
-        self.run_function('saltutil.refresh_pillar')
+        self.run_function("saltutil.refresh_pillar")
 
-    def run_function(self, *args, **kwargs):
+    def run_function(self, *args, **kwargs):  # pylint: disable=arguments-differ
         ret = super(x509Test, self).run_function(*args, **kwargs)
-        log.debug('ret = %s', ret)
+        log.debug("ret = %s", ret)
         return ret
 
-    @with_tempfile(suffix='.pem', create=False)
+    @with_tempfile(suffix=".pem", create=False)
     def test_issue_49027(self, pemfile):
-        ret = self.run_state(
-            'x509.pem_managed',
-            name=pemfile,
-            text=self.x509_cert_text)
+        ret = self.run_state("x509.pem_managed", name=pemfile, text=self.x509_cert_text)
         assert isinstance(ret, dict), ret
         ret = ret[next(iter(ret))]
-        assert ret.get('result') is True, ret
+        assert ret.get("result") is True, ret
         with salt.utils.files.fopen(pemfile) as fp:
             result = fp.readlines()
         self.assertEqual(self.x509_cert_text.splitlines(True), result)
 
-    @with_tempfile(suffix='.crt', create=False)
-    @with_tempfile(suffix='.key', create=False)
+    @with_tempfile(suffix=".crt", create=False)
+    @with_tempfile(suffix=".key", create=False)
     def test_issue_49008(self, keyfile, crtfile):
         ret = self.run_function(
-            'state.apply',
-            ['issue-49008'],
-            pillar={'keyfile': keyfile, 'crtfile': crtfile})
+            "state.apply",
+            ["issue-49008"],
+            pillar={"keyfile": keyfile, "crtfile": crtfile},
+        )
         assert isinstance(ret, dict), ret
         for state_result in six.itervalues(ret):
-            assert state_result['result'] is True, state_result
+            assert state_result["result"] is True, state_result
         assert os.path.exists(keyfile)
         assert os.path.exists(crtfile)
 
     def test_cert_signing(self):
-        ret = self.run_function('state.apply', ['test_cert'], pillar={'tmp_dir': TMP})
-        key = 'x509_|-test_crt_|-{}/pki/test.crt_|-certificate_managed'.format(TMP)
+        ret = self.run_function(
+            "state.apply", ["test_cert"], pillar={"tmp_dir": RUNTIME_VARS.TMP}
+        )
+        key = "x509_|-test_crt_|-{}/pki/test.crt_|-certificate_managed".format(
+            RUNTIME_VARS.TMP
+        )
         assert key in ret
-        assert 'changes' in ret[key]
-        assert 'Certificate' in ret[key]['changes']
-        assert 'New' in ret[key]['changes']['Certificate']
+        assert "changes" in ret[key]
+        assert "Certificate" in ret[key]["changes"]
+        assert "New" in ret[key]["changes"]["Certificate"]

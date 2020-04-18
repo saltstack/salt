@@ -2,14 +2,15 @@
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import time
 
-# Import test libs
-from tests.support.unit import TestCase
-
 # Import Salt libs
 from salt.utils.timeout import wait_for
+
+# Import test libs
+from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
 

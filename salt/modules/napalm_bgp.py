@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 NAPALM BGP
 ==========
 
 Manages BGP configuration on network devices and provides statistics.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net> & Jerome Fleury <jf@cloudflare.com>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
@@ -16,26 +16,28 @@ Dependencies
 - :mod:`napalm proxy minion <salt.proxy.napalm>`
 
 .. versionadded:: 2016.11.0
-'''
+"""
 
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python lib
 import logging
-log = logging.getLogger(__file__)
 
 # import NAPALM utils
 import salt.utils.napalm
 from salt.utils.napalm import proxy_napalm_wrap
 
+log = logging.getLogger(__file__)
+
+
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
 # ----------------------------------------------------------------------------------------------------------------------
 
-__virtualname__ = 'bgp'
-__proxyenabled__ = ['napalm']
+__virtualname__ = "bgp"
+__proxyenabled__ = ["napalm"]
 # uses NAPALM-based proxy to interact with network devices
-__virtual_aliases__ = ('napalm_bgp',)
+__virtual_aliases__ = ("napalm_bgp",)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # property functions
@@ -43,10 +45,11 @@ __virtual_aliases__ = ('napalm_bgp',)
 
 
 def __virtual__():
-    '''
+    """
     NAPALM library must be installed for this module to work and run in a (proxy) minion.
-    '''
+    """
     return salt.utils.napalm.virtual(__opts__, __virtualname__, __file__)
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
@@ -60,7 +63,7 @@ def __virtual__():
 @proxy_napalm_wrap
 def config(group=None, neighbor=None, **kwargs):
 
-    '''
+    """
     Provides the BGP configuration on the device.
 
     :param group: Name of the group selected to display the configuration.
@@ -158,22 +161,19 @@ def config(group=None, neighbor=None, **kwargs):
                 }
             }
         }
-    '''
+    """
 
     return salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
-        'get_bgp_config',
-        **{
-            'group': group,
-            'neighbor': neighbor
-        }
+        "get_bgp_config",
+        **{"group": group, "neighbor": neighbor}
     )
 
 
 @proxy_napalm_wrap
 def neighbors(neighbor=None, **kwargs):
 
-    '''
+    """
     Provides details regarding the BGP sessions configured on the network device.
 
     :param neighbor: IP Address of a specific neighbor.
@@ -269,12 +269,10 @@ def neighbors(neighbor=None, **kwargs):
                 ]
             }
         }
-    '''
+    """
 
     return salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
-        'get_bgp_neighbors_detail',
-        **{
-            'neighbor_address': neighbor
-        }
+        "get_bgp_neighbors_detail",
+        **{"neighbor_address": neighbor}
     )

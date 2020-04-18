@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 The status beacon is intended to send a basic health check event up to the
 master, this allows for event driven routines based on presence to be set up.
 
@@ -87,12 +87,14 @@ markers for specific list items:
     Not all status functions are supported for every operating system. Be certain
     to check the minion log for errors after configuring this beacon.
 
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import, unicode_literals
-import logging
+
 import datetime
+import logging
+
 import salt.exceptions
 
 # Import salt libs
@@ -100,16 +102,16 @@ import salt.utils.platform
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'status'
+__virtualname__ = "status"
 
 
 def validate(config):
-    '''
+    """
     Validate the the config is a dict
-    '''
+    """
     if not isinstance(config, list):
-        return False, ('Configuration for status beacon must be a list.')
-    return True, 'Valid beacon configuration'
+        return False, ("Configuration for status beacon must be a list.")
+    return True, "Valid beacon configuration"
 
 
 def __virtual__():
@@ -117,20 +119,22 @@ def __virtual__():
 
 
 def beacon(config):
-    '''
+    """
     Return status for requested information
-    '''
+    """
     log.debug(config)
     ctime = datetime.datetime.utcnow().isoformat()
 
     if len(config) < 1:
-        config = [{
-            'loadavg': ['all'],
-            'cpustats': ['all'],
-            'meminfo': ['all'],
-            'vmstats': ['all'],
-            'time': ['all'],
-        }]
+        config = [
+            {
+                "loadavg": ["all"],
+                "cpustats": ["all"],
+                "meminfo": ["all"],
+                "vmstats": ["all"],
+                "time": ["all"],
+            }
+        ]
 
     if not isinstance(config, list):
         # To support the old dictionary config format
@@ -141,17 +145,21 @@ def beacon(config):
         for func in entry:
             ret[func] = {}
             try:
-                data = __salt__['status.{0}'.format(func)]()
+                data = __salt__["status.{0}".format(func)]()
             except salt.exceptions.CommandExecutionError as exc:
-                log.debug('Status beacon attempted to process function %s '
-                          'but encountered error: %s', func, exc)
+                log.debug(
+                    "Status beacon attempted to process function %s "
+                    "but encountered error: %s",
+                    func,
+                    exc,
+                )
                 continue
             if not isinstance(entry[func], list):
                 func_items = [entry[func]]
             else:
                 func_items = entry[func]
             for item in func_items:
-                if item == 'all':
+                if item == "all":
                     ret[func] = data
                 else:
                     try:
@@ -160,9 +168,8 @@ def beacon(config):
                         except TypeError:
                             ret[func][item] = data[int(item)]
                     except KeyError as exc:
-                        ret[func] = 'Status beacon is incorrectly configured: {0}'.format(exc)
+                        ret[
+                            func
+                        ] = "Status beacon is incorrectly configured: {0}".format(exc)
 
-    return [{
-        'tag': ctime,
-        'data': ret,
-    }]
+    return [{"tag": ctime, "data": ret}]

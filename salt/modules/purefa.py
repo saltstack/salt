@@ -14,7 +14,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-'''
+"""
 
 Management of Pure Storage FlashArray
 
@@ -49,50 +49,58 @@ Installation Prerequisites
 
 .. versionadded:: 2018.3.0
 
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import os
 import platform
 from datetime import datetime
 
+from salt.exceptions import CommandExecutionError
+
 # Import Salt libs
 from salt.ext import six
-from salt.exceptions import CommandExecutionError
 
 # Import 3rd party modules
 try:
     import purestorage
+
     HAS_PURESTORAGE = True
 except ImportError:
     HAS_PURESTORAGE = False
 
-__docformat__ = 'restructuredtext en'
+__docformat__ = "restructuredtext en"
 
-VERSION = '1.0.0'
-USER_AGENT_BASE = 'Salt'
+VERSION = "1.0.0"
+USER_AGENT_BASE = "Salt"
 
-__virtualname__ = 'purefa'
+__virtualname__ = "purefa"
 
 # Default symbols to use for passwords. Avoids visually confusing characters.
 # ~6 bits per symbol
-DEFAULT_PASSWORD_SYMBOLS = ('23456789',  # Removed: 0,1
-                            'ABCDEFGHJKLMNPQRSTUVWXYZ',   # Removed: I, O
-                            'abcdefghijkmnopqrstuvwxyz')  # Removed: l
+DEFAULT_PASSWORD_SYMBOLS = (
+    "23456789",  # Removed: 0,1
+    "ABCDEFGHJKLMNPQRSTUVWXYZ",  # Removed: I, O
+    "abcdefghijkmnopqrstuvwxyz",
+)  # Removed: l
 
 
 def __virtual__():
-    '''
+    """
     Determine whether or not to load this module
-    '''
+    """
     if HAS_PURESTORAGE:
         return __virtualname__
-    return (False, 'purefa execution module not loaded: purestorage python library not available.')
+    return (
+        False,
+        "purefa execution module not loaded: purestorage python library not available.",
+    )
 
 
 def _get_system():
-    '''
+    """
     Get Pure Storage FlashArray configuration
 
     1) From the minion config
@@ -103,44 +111,49 @@ def _get_system():
     2) From environment (PUREFA_IP and PUREFA_API)
     3) From the pillar (PUREFA_IP and PUREFA_API)
 
-  '''
-    agent = {'base': USER_AGENT_BASE,
-             'class': __name__,
-             'version': VERSION,
-             'platform': platform.platform()
-             }
+  """
+    agent = {
+        "base": USER_AGENT_BASE,
+        "class": __name__,
+        "version": VERSION,
+        "platform": platform.platform(),
+    }
 
-    user_agent = '{base} {class}/{version} ({platform})'.format(**agent)
+    user_agent = "{base} {class}/{version} ({platform})".format(**agent)
 
     try:
-        array = __opts__['pure_tags']['fa'].get('san_ip')
-        api = __opts__['pure_tags']['fa'].get('api_token')
+        array = __opts__["pure_tags"]["fa"].get("san_ip")
+        api = __opts__["pure_tags"]["fa"].get("api_token")
         if array and api:
             system = purestorage.FlashArray(array, api_token=api, user_agent=user_agent)
     except (KeyError, NameError, TypeError):
         try:
-            san_ip = os.environ.get('PUREFA_IP')
-            api_token = os.environ.get('PUREFA_API')
-            system = purestorage.FlashArray(san_ip,
-                                            api_token=api_token,
-                                            user_agent=user_agent)
+            san_ip = os.environ.get("PUREFA_IP")
+            api_token = os.environ.get("PUREFA_API")
+            system = purestorage.FlashArray(
+                san_ip, api_token=api_token, user_agent=user_agent
+            )
         except (ValueError, KeyError, NameError):
             try:
-                system = purestorage.FlashArray(__pillar__['PUREFA_IP'],
-                                                api_token=__pillar__['PUREFA_API'],
-                                                user_agent=user_agent)
+                system = purestorage.FlashArray(
+                    __pillar__["PUREFA_IP"],
+                    api_token=__pillar__["PUREFA_API"],
+                    user_agent=user_agent,
+                )
             except (KeyError, NameError):
-                raise CommandExecutionError('No Pure Storage FlashArray credentials found.')
+                raise CommandExecutionError(
+                    "No Pure Storage FlashArray credentials found."
+                )
 
     try:
         system.get()
-    except Exception:
-        raise CommandExecutionError('Pure Storage FlashArray authentication failed.')
+    except Exception:  # pylint: disable=broad-except
+        raise CommandExecutionError("Pure Storage FlashArray authentication failed.")
     return system
 
 
 def _get_volume(name, array):
-    '''Private function to check volume'''
+    """Private function to check volume"""
     try:
         return array.get_volume(name)
     except purestorage.PureError:
@@ -148,64 +161,64 @@ def _get_volume(name, array):
 
 
 def _get_snapshot(name, suffix, array):
-    '''Private function to check snapshot'''
-    snapshot = name + '.' + suffix
+    """Private function to check snapshot"""
+    snapshot = name + "." + suffix
     try:
         for snap in array.get_volume(name, snap=True):
-            if snap['name'] == snapshot:
+            if snap["name"] == snapshot:
                 return snapshot
     except purestorage.PureError:
         return None
 
 
 def _get_deleted_volume(name, array):
-    '''Private function to check deleted volume'''
+    """Private function to check deleted volume"""
     try:
-        return array.get_volume(name, pending='true')
+        return array.get_volume(name, pending="true")
     except purestorage.PureError:
         return None
 
 
 def _get_pgroup(name, array):
-    '''Private function to check protection group'''
+    """Private function to check protection group"""
     pgroup = None
     for temp in array.list_pgroups():
-        if temp['name'] == name:
+        if temp["name"] == name:
             pgroup = temp
             break
     return pgroup
 
 
 def _get_deleted_pgroup(name, array):
-    '''Private function to check deleted protection group'''
+    """Private function to check deleted protection group"""
     try:
-        return array.get_pgroup(name, pending='true')
+        return array.get_pgroup(name, pending="true")
     except purestorage.PureError:
         return None
 
 
 def _get_hgroup(name, array):
-    '''Private function to check hostgroup'''
+    """Private function to check hostgroup"""
     hostgroup = None
     for temp in array.list_hgroups():
-        if temp['name'] == name:
+        if temp["name"] == name:
             hostgroup = temp
             break
     return hostgroup
 
 
 def _get_host(name, array):
-    '''Private function to check host'''
+    """Private function to check host"""
     host = None
     for temp in array.list_hosts():
-        if temp['name'] == name:
+        if temp["name"] == name:
             host = temp
             break
     return host
 
 
 def snap_create(name, suffix=None):
-    '''
+    """
 
     Create a volume snapshot on a Pure Storage FlashArray.
 
@@ -225,11 +238,13 @@ def snap_create(name, suffix=None):
         salt '*' purefa.snap_create foo
         salt '*' purefa.snap_create foo suffix=bar
 
-    '''
+    """
     array = _get_system()
     if suffix is None:
-        suffix = 'snap-' + six.text_type((datetime.utcnow() - datetime(1970, 1, 1, 0, 0, 0, 0)).total_seconds())
-        suffix = suffix.replace('.', '')
+        suffix = "snap-" + six.text_type(
+            (datetime.utcnow() - datetime(1970, 1, 1, 0, 0, 0, 0)).total_seconds()
+        )
+        suffix = suffix.replace(".", "")
     if _get_volume(name, array) is not None:
         try:
             array.create_snapshot(name, suffix=suffix)
@@ -241,7 +256,7 @@ def snap_create(name, suffix=None):
 
 
 def snap_delete(name, suffix=None, eradicate=False):
-    '''
+    """
 
     Delete a volume snapshot on a Pure Storage FlashArray.
 
@@ -262,11 +277,11 @@ def snap_delete(name, suffix=None, eradicate=False):
 
         salt '*' purefa.snap_delete foo suffix=snap eradicate=True
 
-    '''
+    """
     array = _get_system()
     if _get_snapshot(name, suffix, array) is not None:
         try:
-            snapname = name + '.' + suffix
+            snapname = name + "." + suffix
             array.destroy_volume(snapname)
         except purestorage.PureError:
             return False
@@ -283,7 +298,7 @@ def snap_delete(name, suffix=None, eradicate=False):
 
 
 def snap_eradicate(name, suffix=None):
-    '''
+    """
 
     Eradicate a deleted volume snapshot on a Pure Storage FlashArray.
 
@@ -302,10 +317,10 @@ def snap_eradicate(name, suffix=None):
 
         salt '*' purefa.snap_eradicate foo suffix=snap
 
-    '''
+    """
     array = _get_system()
     if _get_snapshot(name, suffix, array) is not None:
-        snapname = name + '.' + suffix
+        snapname = name + "." + suffix
         try:
             array.eradicate_volume(snapname)
             return True
@@ -316,7 +331,7 @@ def snap_eradicate(name, suffix=None):
 
 
 def volume_create(name, size=None):
-    '''
+    """
 
     Create a volume on a Pure Storage FlashArray.
 
@@ -337,13 +352,13 @@ def volume_create(name, size=None):
         salt '*' purefa.volume_create foo
         salt '*' purefa.volume_create foo size=10T
 
-    '''
+    """
     if len(name) > 63:
         name = name[0:63]
     array = _get_system()
     if _get_volume(name, array) is None:
         if size is None:
-            size = '1G'
+            size = "1G"
         try:
             array.create_volume(name, size)
             return True
@@ -354,7 +369,7 @@ def volume_create(name, size=None):
 
 
 def volume_delete(name, eradicate=False):
-    '''
+    """
 
     Delete a volume on a Pure Storage FlashArray.
 
@@ -373,7 +388,7 @@ def volume_delete(name, eradicate=False):
 
         salt '*' purefa.volume_delete foo eradicate=True
 
-    '''
+    """
     array = _get_system()
     if _get_volume(name, array) is not None:
         try:
@@ -393,7 +408,7 @@ def volume_delete(name, eradicate=False):
 
 
 def volume_eradicate(name):
-    '''
+    """
 
     Eradicate a deleted volume on a Pure Storage FlashArray.
 
@@ -410,7 +425,7 @@ def volume_eradicate(name):
 
         salt '*' purefa.volume_eradicate foo
 
-    '''
+    """
     array = _get_system()
     if _get_deleted_volume(name, array) is not None:
         try:
@@ -423,7 +438,7 @@ def volume_eradicate(name):
 
 
 def volume_extend(name, size):
-    '''
+    """
 
     Extend an existing volume on a Pure Storage FlashArray.
 
@@ -443,11 +458,11 @@ def volume_extend(name, size):
 
         salt '*' purefa.volume_extend foo 10T
 
-    '''
+    """
     array = _get_system()
     vol = _get_volume(name, array)
     if vol is not None:
-        if __utils__['stringutils.human_to_bytes'](size) > vol['size']:
+        if __utils__["stringutils.human_to_bytes"](size) > vol["size"]:
             try:
                 array.extend_volume(name, size)
                 return True
@@ -460,7 +475,7 @@ def volume_extend(name, size):
 
 
 def snap_volume_create(name, target, overwrite=False):
-    '''
+    """
 
     Create R/W volume from snapshot on a Pure Storage FlashArray.
 
@@ -482,9 +497,9 @@ def snap_volume_create(name, target, overwrite=False):
 
         salt '*' purefa.snap_volume_create foo.bar clone overwrite=True
 
-    '''
+    """
     array = _get_system()
-    source, suffix = name.split('.')
+    source, suffix = name.split(".")
     if _get_snapshot(source, suffix, array) is not None:
         if _get_volume(target, array) is None:
             try:
@@ -506,7 +521,7 @@ def snap_volume_create(name, target, overwrite=False):
 
 
 def volume_clone(name, target, overwrite=False):
-    '''
+    """
 
     Clone an existing volume on a Pure Storage FlashArray.
 
@@ -528,7 +543,7 @@ def volume_clone(name, target, overwrite=False):
 
         salt '*' purefa.volume_clone foo bar overwrite=True
 
-    '''
+    """
     array = _get_system()
     if _get_volume(name, array) is not None:
         if _get_volume(target, array) is None:
@@ -551,7 +566,7 @@ def volume_clone(name, target, overwrite=False):
 
 
 def volume_attach(name, host):
-    '''
+    """
 
     Attach a volume to a host on a Pure Storage FlashArray.
 
@@ -570,7 +585,7 @@ def volume_attach(name, host):
 
         salt '*' purefa.volume_attach foo bar
 
-    '''
+    """
     array = _get_system()
     if _get_volume(name, array) is not None and _get_host(host, array) is not None:
         try:
@@ -583,7 +598,7 @@ def volume_attach(name, host):
 
 
 def volume_detach(name, host):
-    '''
+    """
 
     Detach a volume from a host on a Pure Storage FlashArray.
 
@@ -603,7 +618,7 @@ def volume_detach(name, host):
 
         salt '*' purefa.volume_detach foo bar
 
-    '''
+    """
     array = _get_system()
     if _get_volume(name, array) is None or _get_host(host, array) is None:
         return False
@@ -616,7 +631,7 @@ def volume_detach(name, host):
 
 
 def host_create(name, iqn=None, wwn=None):
-    '''
+    """
 
     Add a host on a Pure Storage FlashArray.
 
@@ -639,7 +654,7 @@ def host_create(name, iqn=None, wwn=None):
 
         salt '*' purefa.host_create foo iqn='<Valid iSCSI IQN>' wwn='<Valid WWN>'
 
-    '''
+    """
     array = _get_system()
     if len(name) > 63:
         name = name[0:63]
@@ -667,7 +682,7 @@ def host_create(name, iqn=None, wwn=None):
 
 
 def host_update(name, iqn=None, wwn=None):
-    '''
+    """
 
     Update a hosts port definitions on a Pure Storage FlashArray.
 
@@ -690,7 +705,7 @@ def host_update(name, iqn=None, wwn=None):
 
         salt '*' purefa.host_update foo iqn='<Valid iSCSI IQN>' wwn='<Valid WWN>'
 
-    '''
+    """
     array = _get_system()
     if _get_host(name, array) is not None:
         if iqn is not None:
@@ -709,7 +724,7 @@ def host_update(name, iqn=None, wwn=None):
 
 
 def host_delete(name):
-    '''
+    """
 
     Delete a host on a Pure Storage FlashArray (detaches all volumes).
 
@@ -726,12 +741,12 @@ def host_delete(name):
 
         salt '*' purefa.host_delete foo
 
-    '''
+    """
     array = _get_system()
     if _get_host(name, array) is not None:
         for vol in array.list_host_connections(name):
             try:
-                array.disconnect_host(name, vol['vol'])
+                array.disconnect_host(name, vol["vol"])
             except purestorage.PureError:
                 return False
         try:
@@ -744,7 +759,7 @@ def host_delete(name):
 
 
 def hg_create(name, host=None, volume=None):
-    '''
+    """
 
     Create a hostgroup on a Pure Storage FlashArray.
 
@@ -766,7 +781,7 @@ def hg_create(name, host=None, volume=None):
 
         salt '*' purefa.hg_create foo host=bar volume=vol
 
-    '''
+    """
     array = _get_system()
     if len(name) > 63:
         name = name[0:63]
@@ -800,7 +815,7 @@ def hg_create(name, host=None, volume=None):
 
 
 def hg_update(name, host=None, volume=None):
-    '''
+    """
 
     Adds entries to a hostgroup on a Pure Storage FlashArray.
 
@@ -822,7 +837,7 @@ def hg_update(name, host=None, volume=None):
 
         salt '*' purefa.hg_update foo host=bar volume=vol
 
-    '''
+    """
     array = _get_system()
     if _get_hgroup(name, array) is not None:
         if host is not None:
@@ -847,7 +862,7 @@ def hg_update(name, host=None, volume=None):
 
 
 def hg_delete(name):
-    '''
+    """
 
     Delete a hostgroup on a Pure Storage FlashArray (removes all volumes and hosts).
 
@@ -864,17 +879,17 @@ def hg_delete(name):
 
         salt '*' purefa.hg_delete foo
 
-    '''
+    """
     array = _get_system()
     if _get_hgroup(name, array) is not None:
         for vol in array.list_hgroup_connections(name):
             try:
-                array.disconnect_hgroup(name, vol['vol'])
+                array.disconnect_hgroup(name, vol["vol"])
             except purestorage.PureError:
                 return False
         host = array.get_hgroup(name)
         try:
-            array.set_hgroup(name, remhostlist=host['hosts'])
+            array.set_hgroup(name, remhostlist=host["hosts"])
             array.delete_hgroup(name)
             return True
         except purestorage.PureError:
@@ -884,7 +899,7 @@ def hg_delete(name):
 
 
 def hg_remove(name, volume=None, host=None):
-    '''
+    """
 
     Remove a host and/or volume from a hostgroup on a Pure Storage FlashArray.
 
@@ -906,13 +921,13 @@ def hg_remove(name, volume=None, host=None):
 
         salt '*' purefa.hg_remove foo volume=test host=bar
 
-    '''
+    """
     array = _get_system()
     if _get_hgroup(name, array) is not None:
         if volume is not None:
             if _get_volume(volume, array):
                 for temp in array.list_hgroup_connections(name):
-                    if temp['vol'] == volume:
+                    if temp["vol"] == volume:
                         try:
                             array.disconnect_hgroup(name, volume)
                             return True
@@ -924,7 +939,7 @@ def hg_remove(name, volume=None, host=None):
         if host is not None:
             if _get_host(host, array):
                 temp = _get_host(host, array)
-                if temp['hgroup'] == name:
+                if temp["hgroup"] == name:
                     try:
                         array.set_hgroup(name, remhostlist=[host])
                         return True
@@ -941,7 +956,7 @@ def hg_remove(name, volume=None, host=None):
 
 
 def pg_create(name, hostgroup=None, host=None, volume=None, enabled=True):
-    '''
+    """
 
     Create a protection group on a Pure Storage FlashArray.
 
@@ -969,7 +984,7 @@ def pg_create(name, hostgroup=None, host=None, volume=None, enabled=True):
 
         salt '*' purefa.pg_create foo [hostgroup=foo | host=bar | volume=vol] enabled=[true | false]
 
-    '''
+    """
     array = _get_system()
     if hostgroup is None and host is None and volume is None:
         if _get_pgroup(name, array) is None:
@@ -985,7 +1000,7 @@ def pg_create(name, hostgroup=None, host=None, volume=None, enabled=True):
                 return False
         else:
             return False
-    elif __utils__['value.xor'](hostgroup, host, volume):
+    elif __utils__["value.xor"](hostgroup, host, volume):
         if _get_pgroup(name, array) is None:
             try:
                 array.create_pgroup(name)
@@ -1036,7 +1051,7 @@ def pg_create(name, hostgroup=None, host=None, volume=None, enabled=True):
 
 
 def pg_update(name, hostgroup=None, host=None, volume=None):
-    '''
+    """
 
     Update a protection group on a Pure Storage FlashArray.
 
@@ -1062,11 +1077,11 @@ def pg_update(name, hostgroup=None, host=None, volume=None):
 
         salt '*' purefa.pg_update foo [hostgroup=foo | host=bar | volume=vol]
 
-    '''
+    """
     array = _get_system()
     pgroup = _get_pgroup(name, array)
     if pgroup is not None:
-        if hostgroup is not None and pgroup['hgroups'] is not None:
+        if hostgroup is not None and pgroup["hgroups"] is not None:
             if _get_hgroup(hostgroup, array) is not None:
                 try:
                     array.add_hgroup(hostgroup, name)
@@ -1075,7 +1090,7 @@ def pg_update(name, hostgroup=None, host=None, volume=None):
                     return False
             else:
                 return False
-        elif host is not None and pgroup['hosts'] is not None:
+        elif host is not None and pgroup["hosts"] is not None:
             if _get_host(host, array) is not None:
                 try:
                     array.add_host(host, name)
@@ -1084,7 +1099,7 @@ def pg_update(name, hostgroup=None, host=None, volume=None):
                     return False
             else:
                 return False
-        elif volume is not None and pgroup['volumes'] is not None:
+        elif volume is not None and pgroup["volumes"] is not None:
             if _get_volume(volume, array) is not None:
                 try:
                     array.add_volume(volume, name)
@@ -1094,7 +1109,11 @@ def pg_update(name, hostgroup=None, host=None, volume=None):
             else:
                 return False
         else:
-            if pgroup['hgroups'] is None and pgroup['hosts'] is None and pgroup['volumes'] is None:
+            if (
+                pgroup["hgroups"] is None
+                and pgroup["hosts"] is None
+                and pgroup["volumes"] is None
+            ):
                 if hostgroup is not None:
                     if _get_hgroup(hostgroup, array) is not None:
                         try:
@@ -1129,7 +1148,7 @@ def pg_update(name, hostgroup=None, host=None, volume=None):
 
 
 def pg_delete(name, eradicate=False):
-    '''
+    """
 
     Delete a protecton group on a Pure Storage FlashArray.
 
@@ -1146,7 +1165,7 @@ def pg_delete(name, eradicate=False):
 
         salt '*' purefa.pg_delete foo
 
-    '''
+    """
     array = _get_system()
     if _get_pgroup(name, array) is not None:
         try:
@@ -1166,7 +1185,7 @@ def pg_delete(name, eradicate=False):
 
 
 def pg_eradicate(name):
-    '''
+    """
 
     Eradicate a deleted protecton group on a Pure Storage FlashArray.
 
@@ -1183,7 +1202,7 @@ def pg_eradicate(name):
 
         salt '*' purefa.pg_eradicate foo
 
-    '''
+    """
     array = _get_system()
     if _get_deleted_pgroup(name, array) is not None:
         try:
@@ -1196,7 +1215,7 @@ def pg_eradicate(name):
 
 
 def pg_remove(name, hostgroup=None, host=None, volume=None):
-    '''
+    """
 
     Remove a hostgroup, host or volume from a protection group on a Pure Storage FlashArray.
 
@@ -1221,11 +1240,11 @@ def pg_remove(name, hostgroup=None, host=None, volume=None):
 
         salt '*' purefa.pg_remove foo [hostgroup=bar | host=test | volume=bar]
 
-    '''
+    """
     array = _get_system()
     pgroup = _get_pgroup(name, array)
     if pgroup is not None:
-        if hostgroup is not None and pgroup['hgroups'] is not None:
+        if hostgroup is not None and pgroup["hgroups"] is not None:
             if _get_hgroup(hostgroup, array) is not None:
                 try:
                     array.remove_hgroup(hostgroup, name)
@@ -1234,7 +1253,7 @@ def pg_remove(name, hostgroup=None, host=None, volume=None):
                     return False
             else:
                 return False
-        elif host is not None and pgroup['hosts'] is not None:
+        elif host is not None and pgroup["hosts"] is not None:
             if _get_host(host, array) is not None:
                 try:
                     array.remove_host(host, name)
@@ -1243,7 +1262,7 @@ def pg_remove(name, hostgroup=None, host=None, volume=None):
                     return False
             else:
                 return False
-        elif volume is not None and pgroup['volumes'] is not None:
+        elif volume is not None and pgroup["volumes"] is not None:
             if _get_volume(volume, array) is not None:
                 try:
                     array.remove_volume(volume, name)

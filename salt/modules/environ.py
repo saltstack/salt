@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Support for getting and setting the environment variables
 of the current salt process.
-'''
+"""
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import os
+
 import logging
+import os
 
 # Import Salt libs
 import salt.utils.platform
@@ -18,14 +19,14 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     No dependency checks, and not renaming, just return True
-    '''
+    """
     return True
 
 
 def setval(key, val, false_unsets=False, permanent=False):
-    '''
+    """
     Set a single salt process environment variable. Returns True
     on success.
 
@@ -59,60 +60,60 @@ def setval(key, val, false_unsets=False, permanent=False):
         salt '*' environ.setval baz val=False false_unsets=True
         salt '*' environ.setval baz bar permanent=True
         salt '*' environ.setval baz bar permanent=HKLM
-    '''
+    """
     is_windows = salt.utils.platform.is_windows()
     if is_windows:
-        permanent_hive = 'HKCU'
-        permanent_key = 'Environment'
-        if permanent == 'HKLM':
-            permanent_hive = 'HKLM'
-            permanent_key = r'SYSTEM\CurrentControlSet\Control\Session Manager\Environment'
+        permanent_hive = "HKCU"
+        permanent_key = "Environment"
+        if permanent == "HKLM":
+            permanent_hive = "HKLM"
+            permanent_key = (
+                r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"
+            )
 
     if not isinstance(key, six.string_types):
         log.debug(
-            '{0}: \'key\' argument is not a string type: \'{1}\''
-            .format(__name__, key)
+            "{0}: 'key' argument is not a string type: '{1}'".format(__name__, key)
         )
     if val is False:
         if false_unsets is True:
             try:
                 os.environ.pop(key, None)
                 if permanent and is_windows:
-                    __salt__['reg.delete_value'](permanent_hive, permanent_key, key)
+                    __salt__["reg.delete_value"](permanent_hive, permanent_key, key)
                 return None
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.error(
-                    '{0}: Exception occurred when unsetting '
-                    'environ key \'{1}\': \'{2}\''
-                    .format(__name__, key, exc)
+                    "{0}: Exception occurred when unsetting "
+                    "environ key '{1}': '{2}'".format(__name__, key, exc)
                 )
                 return False
         else:
-            val = ''
+            val = ""
     if isinstance(val, six.string_types):
         try:
             os.environ[key] = val
             if permanent and is_windows:
-                __salt__['reg.set_value'](permanent_hive, permanent_key, key, val)
+                __salt__["reg.set_value"](permanent_hive, permanent_key, key, val)
             return os.environ[key]
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error(
-                '{0}: Exception occurred when setting'
-                'environ key \'{1}\': \'{2}\''
-                .format(__name__, key, exc)
+                "{0}: Exception occurred when setting"
+                "environ key '{1}': '{2}'".format(__name__, key, exc)
             )
             return False
     else:
         log.debug(
-            '{0}: \'val\' argument for key \'{1}\' is not a string '
-            'or False: \'{2}\''
-            .format(__name__, key, val)
+            "{0}: 'val' argument for key '{1}' is not a string "
+            "or False: '{2}'".format(__name__, key, val)
         )
         return False
 
 
-def setenv(environ, false_unsets=False, clear_all=False, update_minion=False, permanent=False):
-    '''
+def setenv(
+    environ, false_unsets=False, clear_all=False, update_minion=False, permanent=False
+):
+    """
     Set multiple salt process environment variables from a dict.
     Returns a dict.
 
@@ -157,12 +158,11 @@ def setenv(environ, false_unsets=False, clear_all=False, update_minion=False, pe
 
         salt '*' environ.setenv '{"foo": "bar", "baz": "quux"}'
         salt '*' environ.setenv '{"a": "b", "c": False}' false_unsets=True
-    '''
+    """
     ret = {}
     if not isinstance(environ, dict):
         log.debug(
-            '{0}: \'environ\' argument is not a dict: \'{1}\''
-            .format(__name__, environ)
+            "{0}: 'environ' argument is not a dict: '{1}'".format(__name__, environ)
         )
         return False
     if clear_all is True:
@@ -177,24 +177,26 @@ def setenv(environ, false_unsets=False, clear_all=False, update_minion=False, pe
             ret[key] = setval(key, val, false_unsets, permanent=permanent)
         else:
             log.debug(
-                '{0}: \'val\' argument for key \'{1}\' is not a string '
-                'or False: \'{2}\''
-                .format(__name__, key, val)
+                "{0}: 'val' argument for key '{1}' is not a string "
+                "or False: '{2}'".format(__name__, key, val)
             )
             return False
 
     if update_minion is True:
-        __salt__['event.fire']({'environ': environ,
-                                'false_unsets': false_unsets,
-                                'clear_all': clear_all,
-                                'permanent': permanent
-                                },
-                               'environ_setenv')
+        __salt__["event.fire"](
+            {
+                "environ": environ,
+                "false_unsets": false_unsets,
+                "clear_all": clear_all,
+                "permanent": permanent,
+            },
+            "environ_setenv",
+        )
     return ret
 
 
-def get(key, default=''):
-    '''
+def get(key, default=""):
+    """
     Get a single salt process environment variable.
 
     key
@@ -211,18 +213,17 @@ def get(key, default=''):
 
         salt '*' environ.get foo
         salt '*' environ.get baz default=False
-    '''
+    """
     if not isinstance(key, six.string_types):
         log.debug(
-            '{0}: \'key\' argument is not a string type: \'{1}\''
-            .format(__name__, key)
+            "{0}: 'key' argument is not a string type: '{1}'".format(__name__, key)
         )
         return False
     return os.environ.get(key, default)
 
 
 def has_value(key, value=None):
-    '''
+    """
     Determine whether the key exists in the current salt process
     environment dictionary. Optionally compare the current value
     of the environment against the supplied value string.
@@ -239,11 +240,10 @@ def has_value(key, value=None):
     .. code-block:: bash
 
         salt '*' environ.has_value foo
-    '''
+    """
     if not isinstance(key, six.string_types):
         log.debug(
-            '{0}: \'key\' argument is not a string type: \'{1}\''
-            .format(__name__, key)
+            "{0}: 'key' argument is not a string type: '{1}'".format(__name__, key)
         )
         return False
     try:
@@ -258,8 +258,8 @@ def has_value(key, value=None):
     return True
 
 
-def item(keys, default=''):
-    '''
+def item(keys, default=""):
+    """
     Get one or more salt process environment variables.
     Returns a dict.
 
@@ -277,7 +277,7 @@ def item(keys, default=''):
 
         salt '*' environ.item foo
         salt '*' environ.item '[foo, baz]' default=None
-    '''
+    """
     ret = {}
     key_list = []
     if isinstance(keys, six.string_types):
@@ -286,8 +286,9 @@ def item(keys, default=''):
         key_list = keys
     else:
         log.debug(
-            '{0}: \'keys\' argument is not a string or list type: \'{1}\''
-            .format(__name__, keys)
+            "{0}: 'keys' argument is not a string or list type: '{1}'".format(
+                __name__, keys
+            )
         )
     for key in key_list:
         ret[key] = os.environ.get(key, default)
@@ -295,7 +296,7 @@ def item(keys, default=''):
 
 
 def items():
-    '''
+    """
     Return a dict of the entire environment set for the salt process
 
     CLI Example:
@@ -303,5 +304,5 @@ def items():
     .. code-block:: bash
 
         salt '*' environ.items
-    '''
+    """
     return dict(os.environ)

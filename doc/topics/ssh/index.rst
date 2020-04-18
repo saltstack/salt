@@ -242,6 +242,59 @@ Boolean-style options should be specified in their YAML representation.
 At last you can create ``~/.salt/Saltfile`` and ``salt-ssh``
 will automatically load it by default.
 
+Advanced options with salt-ssh
+==============================
+
+Salt's ability to allow users to have custom grains and custom modules
+is also applicable to using salt-ssh. This is done through first packing
+the custom grains into the thin tarball before it is deployed on the system.
+
+For this to happen, the ``config`` file must be explicit enough to indicate
+where the custom grains are located on the machine like so:
+
+.. code-block:: yaml
+
+    file_client: local
+    file_roots:
+      base:
+        - /home/user/.salt
+        - /home/user/.salt/_states
+        - /home/user/.salt/_grains
+    module_dirs:
+      - /home/user/.salt
+    pillar_roots:
+      base:
+        - /home/user/.salt/_pillar
+    root_dir: /tmp/.salt-root
+
+It's better to be explicit rather than implicit in this situation. This will
+allow urls all under `salt://` to be resolved such as `salt://_grains/custom_grain.py`.
+
+One can confirm this action by executing a properly setup salt-ssh minion with
+`salt-ssh minion grains.items`. During this process, a `saltutil.sync_all` is
+ran to discover the thin tarball and then consumed. Output similar to this
+indicates a successful sync with custom grains.
+
+.. code-block:: yaml
+
+    local:
+        ----------
+        ...
+        executors:
+        grains:
+            - grains.custom_grain
+        log_handlers:
+        ...
+
+This is especially important when using a custom `file_roots` that differ from
+`/etc/salt/`.
+
+.. note::
+
+    Please see https://docs.saltstack.com/en/latest/topics/grains/ for more
+    information on grains and custom grains.
+
+
 Debugging salt-ssh
 ==================
 
