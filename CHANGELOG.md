@@ -16,9 +16,11 @@ Versions are `MAJOR.PATCH`.
 ### Changed
 
 ### Fixed
-
 - [#56237](https://github.com/saltstack/salt/pull/56237) - Fix alphabetical ordering and remove duplicates across all documentation indexes - [@myii](https://github.com/myii)
 - [#56325](https://github.com/saltstack/salt/pull/56325) - Fix hyperlinks to `salt.serializers` and other documentation issues - [@myii](https://github.com/myii)
+
+### Added
+- [#56627](https://github.com/saltstack/salt/pull/56627) - Add new salt-ssh set_path option
 
 ## 3000.1
 
