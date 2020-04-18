@@ -152,7 +152,7 @@ class VaultDefaultTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
             vault: {
-                "__grains__": {"id": "foo",},
+                "__grains__": {"id": "foo"},
                 "__utils__": {
                     "vault.make_request": MagicMock(side_effect=Exception("FAILED")),
                 },
