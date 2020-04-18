@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-'''
+"""
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -9,12 +9,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import (
-    MagicMock,
-    patch,
-    NO_MOCK,
-    NO_MOCK_REASON
-)
+from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt Libs
 import salt.modules.dpkg_lowpkg as dpkg
@@ -22,125 +17,135 @@ import salt.modules.dpkg_lowpkg as dpkg
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class DpkgTestCase(TestCase, LoaderModuleMockMixin):
-    '''
+    """
     Test cases for salt.modules.dpkg
-    '''
+    """
+
     def setup_loader_modules(self):
         return {dpkg: {}}
 
     # 'unpurge' function tests: 2
 
     def test_unpurge(self):
-        '''
+        """
         Test if it change package selection for each package
         specified to 'install'
-        '''
+        """
         mock = MagicMock(return_value=[])
-        with patch.dict(dpkg.__salt__, {'pkg.list_pkgs': mock,
-                                        'cmd.run': mock}):
-            self.assertDictEqual(dpkg.unpurge('curl'), {})
+        with patch.dict(dpkg.__salt__, {"pkg.list_pkgs": mock, "cmd.run": mock}):
+            self.assertDictEqual(dpkg.unpurge("curl"), {})
 
     def test_unpurge_empty_package(self):
-        '''
+        """
         Test if it change package selection for each package
         specified to 'install'
-        '''
+        """
         self.assertDictEqual(dpkg.unpurge(), {})
 
     # 'list_pkgs' function tests: 1
 
     def test_list_pkgs(self):
-        '''
+        """
         Test if it lists the packages currently installed
-        '''
-        mock = MagicMock(return_value={'retcode': 0,
-                                       'stderr': '',
-                                       'stdout': 'Salt'})
-        with patch.dict(dpkg.__salt__, {'cmd.run_all': mock}):
-            self.assertDictEqual(dpkg.list_pkgs('httpd'), {})
+        """
+        mock = MagicMock(return_value={"retcode": 0, "stderr": "", "stdout": "Salt"})
+        with patch.dict(dpkg.__salt__, {"cmd.run_all": mock}):
+            self.assertDictEqual(dpkg.list_pkgs("httpd"), {})
 
-        mock = MagicMock(return_value={'retcode': 1,
-                                       'stderr': 'error',
-                                       'stdout': 'Salt'})
-        with patch.dict(dpkg.__salt__, {'cmd.run_all': mock}):
-            self.assertEqual(dpkg.list_pkgs('httpd'), 'Error:  error')
+        mock = MagicMock(
+            return_value={"retcode": 1, "stderr": "error", "stdout": "Salt"}
+        )
+        with patch.dict(dpkg.__salt__, {"cmd.run_all": mock}):
+            self.assertEqual(dpkg.list_pkgs("httpd"), "Error:  error")
 
     # 'file_list' function tests: 1
 
     def test_file_list(self):
-        '''
+        """
         Test if it lists the files that belong to a package.
-        '''
-        mock = MagicMock(return_value={'retcode': 0,
-                                       'stderr': '',
-                                       'stdout': 'Salt'})
-        with patch.dict(dpkg.__salt__, {'cmd.run_all': mock}):
-            self.assertDictEqual(dpkg.file_list('httpd'),
-                                 {'errors': [], 'files': []})
+        """
+        mock = MagicMock(return_value={"retcode": 0, "stderr": "", "stdout": "Salt"})
+        with patch.dict(dpkg.__salt__, {"cmd.run_all": mock}):
+            self.assertDictEqual(dpkg.file_list("httpd"), {"errors": [], "files": []})
 
-        mock = MagicMock(return_value={'retcode': 1,
-                                       'stderr': 'error',
-                                       'stdout': 'Salt'})
-        with patch.dict(dpkg.__salt__, {'cmd.run_all': mock}):
-            self.assertEqual(dpkg.file_list('httpd'), 'Error:  error')
+        mock = MagicMock(
+            return_value={"retcode": 1, "stderr": "error", "stdout": "Salt"}
+        )
+        with patch.dict(dpkg.__salt__, {"cmd.run_all": mock}):
+            self.assertEqual(dpkg.file_list("httpd"), "Error:  error")
 
     # 'file_dict' function tests: 1
 
     def test_file_dict(self):
-        '''
+        """
         Test if it lists the files that belong to a package, grouped by package
-        '''
-        mock = MagicMock(return_value={'retcode': 0,
-                                       'stderr': '',
-                                       'stdout': 'Salt'})
-        with patch.dict(dpkg.__salt__, {'cmd.run_all': mock}):
-            self.assertDictEqual(dpkg.file_dict('httpd'),
-                                 {'errors': [], 'packages': {}})
+        """
+        mock = MagicMock(return_value={"retcode": 0, "stderr": "", "stdout": "Salt"})
+        with patch.dict(dpkg.__salt__, {"cmd.run_all": mock}):
+            self.assertDictEqual(
+                dpkg.file_dict("httpd"), {"errors": [], "packages": {}}
+            )
 
-        mock = MagicMock(return_value={'retcode': 1,
-                                       'stderr': 'error',
-                                       'stdout': 'Salt'})
-        with patch.dict(dpkg.__salt__, {'cmd.run_all': mock}):
-            self.assertEqual(dpkg.file_dict('httpd'), 'Error:  error')
+        mock = MagicMock(
+            return_value={"retcode": 1, "stderr": "error", "stdout": "Salt"}
+        )
+        with patch.dict(dpkg.__salt__, {"cmd.run_all": mock}):
+            self.assertEqual(dpkg.file_dict("httpd"), "Error:  error")
 
     def test_bin_pkg_info_spaces(self):
-        '''
+        """
         Test the bin_pkg_info function
-        '''
+        """
         file_proto_mock = MagicMock(return_value=True)
-        with patch.dict(dpkg.__salt__, {'config.valid_fileproto': file_proto_mock}):
-            cache_mock = MagicMock(return_value='/path/to/some/package.deb')
-            with patch.dict(dpkg.__salt__, {'cp.cache_file': cache_mock}):
-                dpkg_info_mock = MagicMock(return_value={'retcode': 0,
-                                                         'stderr': '',
-                                                         'stdout': (' new Debian package, version 2.0\n'
-                                                                    ' size 123456 bytes: control archive: 4029  bytes.\n'
-                                                                    ' Package          : package_name\n'
-                                                                    ' Version          : 1.0\n'
-                                                                    ' Section          : section_name\n'
-                                                                    ' Priority         : priority\n'
-                                                                    ' Architecture     : all\n'
-                                                                    ' Description      : some package\n')})
-                with patch.dict(dpkg.__salt__, {'cmd.run_all': dpkg_info_mock}):
-                    self.assertEqual(dpkg.bin_pkg_info('package.deb')['name'], 'package_name')
+        with patch.dict(dpkg.__salt__, {"config.valid_fileproto": file_proto_mock}):
+            cache_mock = MagicMock(return_value="/path/to/some/package.deb")
+            with patch.dict(dpkg.__salt__, {"cp.cache_file": cache_mock}):
+                dpkg_info_mock = MagicMock(
+                    return_value={
+                        "retcode": 0,
+                        "stderr": "",
+                        "stdout": (
+                            " new Debian package, version 2.0\n"
+                            " size 123456 bytes: control archive: 4029  bytes.\n"
+                            " Package          : package_name\n"
+                            " Version          : 1.0\n"
+                            " Section          : section_name\n"
+                            " Priority         : priority\n"
+                            " Architecture     : all\n"
+                            " Description      : some package\n"
+                        ),
+                    }
+                )
+                with patch.dict(dpkg.__salt__, {"cmd.run_all": dpkg_info_mock}):
+                    self.assertEqual(
+                        dpkg.bin_pkg_info("package.deb")["name"], "package_name"
+                    )
 
     def test_bin_pkg_info_no_spaces(self):
-        '''
+        """
         Test the bin_pkg_info function
-        '''
+        """
         file_proto_mock = MagicMock(return_value=True)
-        with patch.dict(dpkg.__salt__, {'config.valid_fileproto': file_proto_mock}):
-            cache_mock = MagicMock(return_value='/path/to/some/package.deb')
-            with patch.dict(dpkg.__salt__, {'cp.cache_file': cache_mock}):
-                dpkg_info_mock = MagicMock(return_value={'retcode': 0,
-                                                         'stderr': '',
-                                                         'stdout': (' new Debian package, version 2.0\n'
-                                                                    ' size 123456 bytes: control archive: 4029  bytes.\n'
-                                                                    ' Package: package_name\n'
-                                                                    ' Version: 1.0\n'
-                                                                    ' Section: section_name\n'
-                                                                    ' Priority: priority\n'
-                                                                    ' Architecture: all\n'
-                                                                    ' Description: some package\n')})
-                with patch.dict(dpkg.__salt__, {'cmd.run_all': dpkg_info_mock}):
-                    self.assertEqual(dpkg.bin_pkg_info('package.deb')['name'], 'package_name')
+        with patch.dict(dpkg.__salt__, {"config.valid_fileproto": file_proto_mock}):
+            cache_mock = MagicMock(return_value="/path/to/some/package.deb")
+            with patch.dict(dpkg.__salt__, {"cp.cache_file": cache_mock}):
+                dpkg_info_mock = MagicMock(
+                    return_value={
+                        "retcode": 0,
+                        "stderr": "",
+                        "stdout": (
+                            " new Debian package, version 2.0\n"
+                            " size 123456 bytes: control archive: 4029  bytes.\n"
+                            " Package: package_name\n"
+                            " Version: 1.0\n"
+                            " Section: section_name\n"
+                            " Priority: priority\n"
+                            " Architecture: all\n"
+                            " Description: some package\n"
+                        ),
+                    }
+                )
+                with patch.dict(dpkg.__salt__, {"cmd.run_all": dpkg_info_mock}):
+                    self.assertEqual(
+                        dpkg.bin_pkg_info("package.deb")["name"], "package_name"
+                    )
