@@ -2698,6 +2698,7 @@ class FileSelinuxTestCase(TestCase, LoaderModuleMockMixin):
             filemod: {
                 "__salt__": {
                     "cmd.run": cmdmod.run,
+                    "cmd.run_all": cmdmod.run_all,
                     "cmd.retcode": cmdmod.retcode,
                     "selinux.fcontext_add_policy": MagicMock(
                         return_value={"retcode": 0, "stdout": ""}
