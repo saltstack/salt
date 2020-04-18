@@ -568,6 +568,12 @@ def _gen_xml(
         # TODO: make bus and model parameterized, this works for 64-bit Linux
         context["controller_model"] = "lsilogic"
 
+    if hypervisor in ["qemu", "kvm"]:
+        if "hidden" in kwargs:
+            context["hidden"] = kwargs["hidden"]
+        else:
+            context["hidden"] = False
+
     # By default, set the graphics to listen to all addresses
     if graphics:
         if "listen" not in graphics:
@@ -1252,6 +1258,8 @@ def init(
     :param serial_type: Serial device type. One of ``'pty'``, ``'tcp'`` (Default: ``None``)
     :param telnet_port: Telnet port to use for serial device of type ``tcp``.
     :param console: ``True`` to add a console device along with serial one (Default: ``True``)
+    :param hidden: ``True`` to hide the KVM hypervisor from standard MSR based discovery.
+        (Default: ``False``)
     :param connection: libvirt connection URI, overriding defaults
 
                        .. versionadded:: 2019.2.0

@@ -288,6 +288,7 @@ def running(
     connection=None,
     username=None,
     password=None,
+    hidden=None,
     os_type=None,
     arch=None,
     boot=None,
@@ -367,6 +368,10 @@ def running(
         Only used when creating a new virtual machine.
 
         .. versionadded:: 3000
+    :param hidden: ``True`` to hide the KVM hypervisor from standard MSR based discovery.
+        (Default: ``False``)
+
+        .. versionadded:: 3001
     :param arch:
         architecture of the virtual machine. The default value is taken from the host capabilities,
         but ``x86_64`` is prefed over ``i686``. Only used when creating a new virtual machine.
@@ -510,6 +515,8 @@ def running(
                 nic=nic_profile,
                 interfaces=interfaces,
                 graphics=graphics,
+                hidden=hidden,
+                loader=loader,
                 seed=seed,
                 install=install,
                 pub_key=pub_key,

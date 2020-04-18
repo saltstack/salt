@@ -100,5 +100,10 @@
         </devices>
         <features>
                 <acpi />
+                {% if hidden %}
+                <kvm>
+                        <hidden state='on'/>
+                </kvm>
+                {% endif %}
         </features>
 </domain>
