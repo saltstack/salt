@@ -18,7 +18,9 @@ def __virtual__():
     """
     Only load if sysrc executable exists
     """
-    return __salt__["cmd.has_exec"]("sysrc")
+    if __salt__["cmd.has_exec"]("sysrc"):
+        return True
+    return (False, "Command not found: sysrc")
 
 
 def managed(name, value, **kwargs):

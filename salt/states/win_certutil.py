@@ -29,7 +29,7 @@ def __virtual__():
     """
     if salt.utils.platform.is_windows():
         return __virtualname__
-    return False
+    return (False, "Only Windows supported")
 
 
 def add_store(name, store, saltenv="base"):

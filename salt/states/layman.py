@@ -18,7 +18,9 @@ def __virtual__():
     """
     Only load if the layman module is available in __salt__
     """
-    return "layman" if "layman.add" in __salt__ else False
+    if "layman.add" in __salt__:
+        return "layman"
+    return (False, "layman module could not be loaded")
 
 
 def present(name):
