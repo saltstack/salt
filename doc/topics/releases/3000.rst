@@ -555,7 +555,7 @@ the ``engine_module`` parameter in the engine configuration.
           host: localhost
           port: 24224
 
-  .. code-block::
+  .. code-block:: none
 
     <source>
       @type forward
@@ -591,6 +591,19 @@ Enhancements to chroot
   :py:func:`sls<salt.modules.chroot.sls>`, and
   :py:func:`highstate<salt.modules.chroot.highstate>` that allow executing
   states in sls files or running apply/highstate inside of a chroot.
+
+Minion-side ACL
+---------------
+
+Salt has had master-side ACL for the salt mine for some time, where the master
+configuration contained `mine_get` that specified which minions could request
+which functions. However, now you can specify which minions can access a function
+in the salt mine function definition itself (or when calling :py:func:`mine.send <salt.modules.mine.send>`).
+This targeting works the same as the generic minion targeting as specified
+:ref:`here <targeting>`. The parameters used are ``allow_tgt`` and ``allow_tgt_type``.
+See also :ref:`the documentation of the Salt Mine <mine_minion-side-acl>`. Please
+note that if you want to use this new feature both your minion and masters will need
+to be on atleast version 3000.
 
 Deprecations
 ============
