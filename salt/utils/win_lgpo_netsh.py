@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-r'''
+r"""
 A salt util for modifying firewall settings.
 
 .. versionadded:: 2018.3.4
@@ -65,15 +65,16 @@ Usage:
                                                     inbound='blockinbound',
                                                     outbound='allowoutbound',
                                                     store='lgpo')
-'''
+"""
 # Import Python libs
-from __future__ import absolute_import, unicode_literals, print_function
-from textwrap import dedent
+from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import os
 import re
 import socket
 import tempfile
+from textwrap import dedent
 
 import salt.modules.cmdmod
 from salt.exceptions import CommandExecutionError
@@ -81,23 +82,23 @@ from salt.ext.six.moves import zip
 
 log = logging.getLogger(__name__)
 __hostname__ = socket.gethostname()
-__virtualname__ = 'netsh'
+__virtualname__ = "netsh"
 
 
 # Although utils are often directly imported, it is also possible to use the
 # loader.
 def __virtual__():
-    '''
+    """
     Only load if on a Windows system
-    '''
+    """
     if not salt.utils.platform.is_windows():
-        return False, 'This utility only available on Windows'
+        return False, "This utility only available on Windows"
 
     return __virtualname__
 
 
 def _netsh_file(content):
-    '''
+    """
     helper function to get the results of ``netsh -f content.txt``
 
     Running ``netsh`` will drop you into a ``netsh`` prompt where you can issue
@@ -113,40 +114,49 @@ def _netsh_file(content):
 
     Returns:
         str: The text returned by the netsh command
-    '''
-    with tempfile.NamedTemporaryFile(mode='w',
-                                     prefix='salt-',
-                                     suffix='.netsh',
-                                     delete=False) as fp:
+    """
+    with tempfile.NamedTemporaryFile(
+        mode="w", prefix="salt-", suffix=".netsh", delete=False
+    ) as fp:
         fp.write(content)
     try:
-        log.debug('{0}:\n{1}'.format(fp.name, content))
-        return salt.modules.cmdmod.run('netsh -f {0}'.format(fp.name), python_shell=True)
+        log.debug("{0}:\n{1}".format(fp.name, content))
+        return salt.modules.cmdmod.run(
+            "netsh -f {0}".format(fp.name), python_shell=True
+        )
     finally:
         os.remove(fp.name)
 
 
 def _netsh_command(command, store):
-    if store.lower() not in ('local', 'lgpo'):
-        raise ValueError('Incorrect store: {0}'.format(store))
+    if store.lower() not in ("local", "lgpo"):
+        raise ValueError("Incorrect store: {0}".format(store))
     # set the store for local or lgpo
-    if store.lower() == 'local':
-        netsh_script = dedent('''\
+    if store.lower() == "local":
+        netsh_script = dedent(
+            """\
             advfirewall
-            set store local 
+            set store local
             {0}
-        '''.format(command))
+        """.format(
+                command
+            )
+        )
     else:
-        netsh_script = dedent('''\
+        netsh_script = dedent(
+            """\
             advfirewall
             set store gpo = {0}
             {1}
-        '''.format(__hostname__, command))
+        """.format(
+                __hostname__, command
+            )
+        )
     return _netsh_file(content=netsh_script).splitlines()
 
 
-def get_settings(profile, section, store='local'):
-    '''
+def get_settings(profile, section, store="local"):
+    """
     Get the firewall property from the specified profile in the specified store
     as returned by ``netsh advfirewall``.
 
@@ -183,15 +193,15 @@ def get_settings(profile, section, store='local'):
     Raises:
         CommandExecutionError: If an error occurs
         ValueError: If the parameters are incorrect
-    '''
+    """
     # validate input
-    if profile.lower() not in ('domain', 'public', 'private'):
-        raise ValueError('Incorrect profile: {0}'.format(profile))
-    if section.lower() not in ('state', 'firewallpolicy', 'settings', 'logging'):
-        raise ValueError('Incorrect section: {0}'.format(section))
-    if store.lower() not in ('local', 'lgpo'):
-        raise ValueError('Incorrect store: {0}'.format(store))
-    command = 'show {0}profile {1}'.format(profile, section)
+    if profile.lower() not in ("domain", "public", "private"):
+        raise ValueError("Incorrect profile: {0}".format(profile))
+    if section.lower() not in ("state", "firewallpolicy", "settings", "logging"):
+        raise ValueError("Incorrect section: {0}".format(section))
+    if store.lower() not in ("local", "lgpo"):
+        raise ValueError("Incorrect store: {0}".format(store))
+    command = "show {0}profile {1}".format(profile, section)
     # run it
     results = _netsh_command(command=command, store=store)
     # sample output:
@@ -205,27 +215,27 @@ def get_settings(profile, section, store='local'):
 
     # if it's less than 3 lines it failed
     if len(results) < 3:
-        raise CommandExecutionError('Invalid results: {0}'.format(results))
+        raise CommandExecutionError("Invalid results: {0}".format(results))
     ret = {}
     # Skip the first 2 lines. Add everything else to a dictionary
     for line in results[3:]:
-        ret.update(dict(list(zip(*[iter(re.split(r"\s{2,}", line))]*2))))
+        ret.update(dict(list(zip(*[iter(re.split(r"\s{2,}", line))] * 2))))
 
     # Remove spaces from the values so that `Not Configured` is detected
     # correctly
     for item in ret:
-        ret[item] = ret[item].replace(' ', '')
+        ret[item] = ret[item].replace(" ", "")
 
     # special handling for firewallpolicy
-    if section == 'firewallpolicy':
-        inbound, outbound = ret['Firewall Policy'].split(',')
-        return {'Inbound': inbound, 'Outbound': outbound}
+    if section == "firewallpolicy":
+        inbound, outbound = ret["Firewall Policy"].split(",")
+        return {"Inbound": inbound, "Outbound": outbound}
 
     return ret
 
 
-def get_all_settings(profile, store='local'):
-    '''
+def get_all_settings(profile, store="local"):
+    """
     Gets all the properties for the specified profile in the specified store
 
     Args:
@@ -248,17 +258,17 @@ def get_all_settings(profile, store='local'):
 
     Returns:
         dict: A dictionary containing the specified settings
-    '''
+    """
     ret = dict()
-    ret.update(get_settings(profile=profile, section='state', store=store))
-    ret.update(get_settings(profile=profile, section='firewallpolicy', store=store))
-    ret.update(get_settings(profile=profile, section='settings', store=store))
-    ret.update(get_settings(profile=profile, section='logging', store=store))
+    ret.update(get_settings(profile=profile, section="state", store=store))
+    ret.update(get_settings(profile=profile, section="firewallpolicy", store=store))
+    ret.update(get_settings(profile=profile, section="settings", store=store))
+    ret.update(get_settings(profile=profile, section="logging", store=store))
     return ret
 
 
-def get_all_profiles(store='local'):
-    '''
+def get_all_profiles(store="local"):
+    """
     Gets all properties for all profiles in the specified store
 
     Args:
@@ -274,19 +284,16 @@ def get_all_profiles(store='local'):
 
     Returns:
         dict: A dictionary containing the specified settings for each profile
-    '''
+    """
     return {
-        'Domain Profile': get_all_settings(profile='domain', store=store),
-        'Private Profile': get_all_settings(profile='private', store=store),
-        'Public Profile': get_all_settings(profile='public', store=store)
+        "Domain Profile": get_all_settings(profile="domain", store=store),
+        "Private Profile": get_all_settings(profile="private", store=store),
+        "Public Profile": get_all_settings(profile="public", store=store),
     }
 
 
-def set_firewall_settings(profile,
-                          inbound=None,
-                          outbound=None,
-                          store='local'):
-    '''
+def set_firewall_settings(profile, inbound=None, outbound=None, store="local"):
+    """
     Set the firewall inbound/outbound settings for the specified profile and
     store
 
@@ -335,47 +342,50 @@ def set_firewall_settings(profile,
     Raises:
         CommandExecutionError: If an error occurs
         ValueError: If the parameters are incorrect
-    '''
+    """
     # Input validation
-    if profile.lower() not in ('domain', 'public', 'private'):
-        raise ValueError('Incorrect profile: {0}'.format(profile))
-    if inbound and inbound.lower() not in ('blockinbound',
-                                           'blockinboundalways',
-                                           'allowinbound',
-                                           'notconfigured'):
-        raise ValueError('Incorrect inbound value: {0}'.format(inbound))
-    if outbound and outbound.lower() not in ('allowoutbound',
-                                             'blockoutbound',
-                                             'notconfigured'):
-        raise ValueError('Incorrect outbound value: {0}'.format(outbound))
+    if profile.lower() not in ("domain", "public", "private"):
+        raise ValueError("Incorrect profile: {0}".format(profile))
+    if inbound and inbound.lower() not in (
+        "blockinbound",
+        "blockinboundalways",
+        "allowinbound",
+        "notconfigured",
+    ):
+        raise ValueError("Incorrect inbound value: {0}".format(inbound))
+    if outbound and outbound.lower() not in (
+        "allowoutbound",
+        "blockoutbound",
+        "notconfigured",
+    ):
+        raise ValueError("Incorrect outbound value: {0}".format(outbound))
     if not inbound and not outbound:
-        raise ValueError('Must set inbound or outbound')
+        raise ValueError("Must set inbound or outbound")
 
     # You have to specify inbound and outbound setting at the same time
     # If you're only specifying one, you have to get the current setting for the
     # other
     if not inbound or not outbound:
-        ret = get_settings(profile=profile,
-                           section='firewallpolicy',
-                           store=store)
+        ret = get_settings(profile=profile, section="firewallpolicy", store=store)
         if not inbound:
-            inbound = ret['Inbound']
+            inbound = ret["Inbound"]
         if not outbound:
-            outbound = ret['Outbound']
+            outbound = ret["Outbound"]
 
-    command = 'set {0}profile firewallpolicy {1},{2}' \
-              ''.format(profile, inbound, outbound)
+    command = "set {0}profile firewallpolicy {1},{2}" "".format(
+        profile, inbound, outbound
+    )
 
     results = _netsh_command(command=command, store=store)
 
     if results:
-        raise CommandExecutionError('An error occurred: {0}'.format(results))
+        raise CommandExecutionError("An error occurred: {0}".format(results))
 
     return True
 
 
-def set_logging_settings(profile, setting, value, store='local'):
-    '''
+def set_logging_settings(profile, setting, value, store="local"):
+    """
     Configure logging settings for the Windows firewall.
 
     Args:
@@ -436,42 +446,44 @@ def set_logging_settings(profile, setting, value, store='local'):
     Raises:
         CommandExecutionError: If an error occurs
         ValueError: If the parameters are incorrect
-    '''
+    """
     # Input validation
-    if profile.lower() not in ('domain', 'public', 'private'):
-        raise ValueError('Incorrect profile: {0}'.format(profile))
-    if setting.lower() not in ('allowedconnections',
-                               'droppedconnections',
-                               'filename',
-                               'maxfilesize'):
-        raise ValueError('Incorrect setting: {0}'.format(setting))
-    if setting.lower() in ('allowedconnections', 'droppedconnections'):
-        if value.lower() not in ('enable', 'disable', 'notconfigured'):
-            raise ValueError('Incorrect value: {0}'.format(value))
+    if profile.lower() not in ("domain", "public", "private"):
+        raise ValueError("Incorrect profile: {0}".format(profile))
+    if setting.lower() not in (
+        "allowedconnections",
+        "droppedconnections",
+        "filename",
+        "maxfilesize",
+    ):
+        raise ValueError("Incorrect setting: {0}".format(setting))
+    if setting.lower() in ("allowedconnections", "droppedconnections"):
+        if value.lower() not in ("enable", "disable", "notconfigured"):
+            raise ValueError("Incorrect value: {0}".format(value))
     # TODO: Consider adding something like the following to validate filename
     # https://stackoverflow.com/questions/9532499/check-whether-a-path-is-valid-in-python-without-creating-a-file-at-the-paths-ta
-    if setting.lower() == 'maxfilesize':
-        if value.lower() != 'notconfigured':
+    if setting.lower() == "maxfilesize":
+        if value.lower() != "notconfigured":
             # Must be a number between 1 and 32767
             try:
                 int(value)
             except ValueError:
-                raise ValueError('Incorrect value: {0}'.format(value))
+                raise ValueError("Incorrect value: {0}".format(value))
             if not 1 <= int(value) <= 32767:
-                raise ValueError('Incorrect value: {0}'.format(value))
+                raise ValueError("Incorrect value: {0}".format(value))
     # Run the command
-    command = 'set {0}profile logging {1} {2}'.format(profile, setting, value)
+    command = "set {0}profile logging {1} {2}".format(profile, setting, value)
     results = _netsh_command(command=command, store=store)
 
     # A successful run should return an empty list
     if results:
-        raise CommandExecutionError('An error occurred: {0}'.format(results))
+        raise CommandExecutionError("An error occurred: {0}".format(results))
 
     return True
 
 
-def set_settings(profile, setting, value, store='local'):
-    '''
+def set_settings(profile, setting, value, store="local"):
+    """
     Configure firewall settings.
 
     Args:
@@ -514,32 +526,34 @@ def set_settings(profile, setting, value, store='local'):
     Raises:
         CommandExecutionError: If an error occurs
         ValueError: If the parameters are incorrect
-    '''
+    """
     # Input validation
-    if profile.lower() not in ('domain', 'public', 'private'):
-        raise ValueError('Incorrect profile: {0}'.format(profile))
-    if setting.lower() not in ('localfirewallrules',
-                               'localconsecrules',
-                               'inboundusernotification',
-                               'remotemanagement',
-                               'unicastresponsetomulticast'):
-        raise ValueError('Incorrect setting: {0}'.format(setting))
-    if value.lower() not in ('enable', 'disable', 'notconfigured'):
-        raise ValueError('Incorrect value: {0}'.format(value))
+    if profile.lower() not in ("domain", "public", "private"):
+        raise ValueError("Incorrect profile: {0}".format(profile))
+    if setting.lower() not in (
+        "localfirewallrules",
+        "localconsecrules",
+        "inboundusernotification",
+        "remotemanagement",
+        "unicastresponsetomulticast",
+    ):
+        raise ValueError("Incorrect setting: {0}".format(setting))
+    if value.lower() not in ("enable", "disable", "notconfigured"):
+        raise ValueError("Incorrect value: {0}".format(value))
 
     # Run the command
-    command = 'set {0}profile settings {1} {2}'.format(profile, setting, value)
+    command = "set {0}profile settings {1} {2}".format(profile, setting, value)
     results = _netsh_command(command=command, store=store)
 
     # A successful run should return an empty list
     if results:
-        raise CommandExecutionError('An error occurred: {0}'.format(results))
+        raise CommandExecutionError("An error occurred: {0}".format(results))
 
     return True
 
 
-def set_state(profile, state, store='local'):
-    '''
+def set_state(profile, state, store="local"):
+    """
     Configure the firewall state.
 
     Args:
@@ -573,19 +587,19 @@ def set_state(profile, state, store='local'):
     Raises:
         CommandExecutionError: If an error occurs
         ValueError: If the parameters are incorrect
-    '''
+    """
     # Input validation
-    if profile.lower() not in ('domain', 'public', 'private'):
-        raise ValueError('Incorrect profile: {0}'.format(profile))
-    if state.lower() not in ('on', 'off', 'notconfigured'):
-        raise ValueError('Incorrect state: {0}'.format(state))
+    if profile.lower() not in ("domain", "public", "private"):
+        raise ValueError("Incorrect profile: {0}".format(profile))
+    if state.lower() not in ("on", "off", "notconfigured"):
+        raise ValueError("Incorrect state: {0}".format(state))
 
     # Run the command
-    command = 'set {0}profile state {1}'.format(profile, state)
+    command = "set {0}profile state {1}".format(profile, state)
     results = _netsh_command(command=command, store=store)
 
     # A successful run should return an empty list
     if results:
-        raise CommandExecutionError('An error occurred: {0}'.format(results))
+        raise CommandExecutionError("An error occurred: {0}".format(results))
 
     return True
