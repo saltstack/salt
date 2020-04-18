@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module for managing ext2/3/4 file systems
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
 # Import salt libs
@@ -14,20 +15,20 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only work on POSIX-like systems
-    '''
+    """
     if salt.utils.platform.is_windows():
         return (
             False,
-            'The extfs execution module cannot be loaded: only available on '
-            'non-Windows systems.'
+            "The extfs execution module cannot be loaded: only available on "
+            "non-Windows systems.",
         )
     return True
 
 
 def mkfs(device, fs_type, **kwargs):
-    '''
+    """
     Create a file system on the specified device
 
     CLI Example:
@@ -67,64 +68,66 @@ def mkfs(device, fs_type, **kwargs):
 
     See the ``mke2fs(8)`` manpage for a more complete description of these
     options.
-    '''
-    kwarg_map = {'block_size': 'b',
-                 'check': 'c',
-                 'direct': 'D',
-                 'ext_opts': 'E',
-                 'fragment_size': 'f',
-                 'force': 'F',
-                 'blocks_per_group': 'g',
-                 'number_of_groups': 'G',
-                 'bytes_per_inode': 'i',
-                 'inode_size': 'I',
-                 'journal': 'j',
-                 'journal_opts': 'J',
-                 'blocks_file': 'l',
-                 'label': 'L',
-                 'reserved': 'm',
-                 'last_dir': 'M',
-                 'test': 'n',
-                 'number_of_inodes': 'N',
-                 'creator_os': 'o',
-                 'opts': 'O',
-                 'revision': 'r',
-                 'super': 'S',
-                 'usage_type': 'T',
-                 'uuid': 'U'}
+    """
+    kwarg_map = {
+        "block_size": "b",
+        "check": "c",
+        "direct": "D",
+        "ext_opts": "E",
+        "fragment_size": "f",
+        "force": "F",
+        "blocks_per_group": "g",
+        "number_of_groups": "G",
+        "bytes_per_inode": "i",
+        "inode_size": "I",
+        "journal": "j",
+        "journal_opts": "J",
+        "blocks_file": "l",
+        "label": "L",
+        "reserved": "m",
+        "last_dir": "M",
+        "test": "n",
+        "number_of_inodes": "N",
+        "creator_os": "o",
+        "opts": "O",
+        "revision": "r",
+        "super": "S",
+        "usage_type": "T",
+        "uuid": "U",
+    }
 
-    opts = ''
+    opts = ""
     for key in kwargs:
         if key in kwarg_map:
             opt = kwarg_map[key]
-            if kwargs[key] == 'True':
-                opts += '-{0} '.format(opt)
+            if kwargs[key] == "True":
+                opts += "-{0} ".format(opt)
             else:
-                opts += '-{0} {1} '.format(opt, kwargs[key])
-    cmd = 'mke2fs -F -t {0} {1}{2}'.format(fs_type, opts, device)
-    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
+                opts += "-{0} {1} ".format(opt, kwargs[key])
+    cmd = "mke2fs -F -t {0} {1}{2}".format(fs_type, opts, device)
+    out = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
     ret = []
     for line in out:
         if not line:
             continue
-        elif line.startswith('mke2fs'):
+        elif line.startswith("mke2fs"):
             continue
-        elif line.startswith('Discarding device blocks'):
+        elif line.startswith("Discarding device blocks"):
             continue
-        elif line.startswith('Allocating group tables'):
+        elif line.startswith("Allocating group tables"):
             continue
-        elif line.startswith('Writing inode tables'):
+        elif line.startswith("Writing inode tables"):
             continue
-        elif line.startswith('Creating journal'):
+        elif line.startswith("Creating journal"):
             continue
-        elif line.startswith('Writing superblocks'):
+        elif line.startswith("Writing superblocks"):
             continue
         ret.append(line)
     return ret
 
 
 def tune(device, **kwargs):
-    '''
+    """
     Set attributes for the specified device (using tune2fs)
 
     CLI Example:
@@ -158,41 +161,43 @@ def tune(device, **kwargs):
 
     See the ``mke2fs(8)`` manpage for a more complete description of these
     options.
-    '''
-    kwarg_map = {'max': 'c',
-                 'count': 'C',
-                 'error': 'e',
-                 'extended_opts': 'E',
-                 'force': 'f',
-                 'group': 'g',
-                 'interval': 'i',
-                 'journal': 'j',
-                 'journal_opts': 'J',
-                 'label': 'L',
-                 'last_dir': 'M',
-                 'opts': 'o',
-                 'feature': 'O',
-                 'mmp_check': 'p',
-                 'reserved': 'r',
-                 'quota_opts': 'Q',
-                 'time': 'T',
-                 'user': 'u',
-                 'uuid': 'U'}
-    opts = ''
+    """
+    kwarg_map = {
+        "max": "c",
+        "count": "C",
+        "error": "e",
+        "extended_opts": "E",
+        "force": "f",
+        "group": "g",
+        "interval": "i",
+        "journal": "j",
+        "journal_opts": "J",
+        "label": "L",
+        "last_dir": "M",
+        "opts": "o",
+        "feature": "O",
+        "mmp_check": "p",
+        "reserved": "r",
+        "quota_opts": "Q",
+        "time": "T",
+        "user": "u",
+        "uuid": "U",
+    }
+    opts = ""
     for key in kwargs:
         if key in kwarg_map:
             opt = kwarg_map[key]
-            if kwargs[key] == 'True':
-                opts += '-{0} '.format(opt)
+            if kwargs[key] == "True":
+                opts += "-{0} ".format(opt)
             else:
-                opts += '-{0} {1} '.format(opt, kwargs[key])
-    cmd = 'tune2fs {0}{1}'.format(opts, device)
-    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
+                opts += "-{0} {1} ".format(opt, kwargs[key])
+    cmd = "tune2fs {0}{1}".format(opts, device)
+    out = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
     return out
 
 
 def attributes(device, args=None):
-    '''
+    """
     Return attributes from dumpe2fs for a specified device
 
     CLI Example:
@@ -200,13 +205,13 @@ def attributes(device, args=None):
     .. code-block:: bash
 
         salt '*' extfs.attributes /dev/sda1
-    '''
+    """
     fsdump = dump(device, args)
-    return fsdump['attributes']
+    return fsdump["attributes"]
 
 
 def blocks(device, args=None):
-    '''
+    """
     Return block and inode info from dumpe2fs for a specified device
 
     CLI Example:
@@ -214,13 +219,13 @@ def blocks(device, args=None):
     .. code-block:: bash
 
         salt '*' extfs.blocks /dev/sda1
-    '''
+    """
     fsdump = dump(device, args)
-    return fsdump['blocks']
+    return fsdump["blocks"]
 
 
 def dump(device, args=None):
-    '''
+    """
     Return all contents of dumpe2fs for a specified device
 
     CLI Example:
@@ -228,58 +233,60 @@ def dump(device, args=None):
     .. code-block:: bash
 
         salt '*' extfs.dump /dev/sda1
-    '''
-    cmd = 'dumpe2fs {0}'.format(device)
+    """
+    cmd = "dumpe2fs {0}".format(device)
     if args:
-        cmd = cmd + ' -' + args
-    ret = {'attributes': {}, 'blocks': {}}
-    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
-    mode = 'opts'
+        cmd = cmd + " -" + args
+    ret = {"attributes": {}, "blocks": {}}
+    out = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
+    mode = "opts"
     group = None
     for line in out:
         if not line:
             continue
-        if line.startswith('dumpe2fs'):
+        if line.startswith("dumpe2fs"):
             continue
-        if mode == 'opts':
-            line = line.replace('\t', ' ')
-            comps = line.split(': ')
-            if line.startswith('Filesystem features'):
-                ret['attributes'][comps[0]] = comps[1].split()
-            elif line.startswith('Group') and not line.startswith('Group descriptor size'):
-                mode = 'blocks'
+        if mode == "opts":
+            line = line.replace("\t", " ")
+            comps = line.split(": ")
+            if line.startswith("Filesystem features"):
+                ret["attributes"][comps[0]] = comps[1].split()
+            elif line.startswith("Group") and not line.startswith(
+                "Group descriptor size"
+            ):
+                mode = "blocks"
             else:
                 if len(comps) < 2:
                     continue
-                ret['attributes'][comps[0]] = comps[1].strip()
+                ret["attributes"][comps[0]] = comps[1].strip()
 
-        if mode == 'blocks':
-            if line.startswith('Group'):
-                line = line.replace(':', '')
-                line = line.replace('(', '')
-                line = line.replace(')', '')
-                line = line.replace('[', '')
-                line = line.replace(']', '')
+        if mode == "blocks":
+            if line.startswith("Group"):
+                line = line.replace(":", "")
+                line = line.replace("(", "")
+                line = line.replace(")", "")
+                line = line.replace("[", "")
+                line = line.replace("]", "")
                 comps = line.split()
                 blkgrp = comps[1]
-                group = 'Group {0}'.format(blkgrp)
-                ret['blocks'][group] = {}
-                ret['blocks'][group]['group'] = blkgrp
-                ret['blocks'][group]['range'] = comps[3]
+                group = "Group {0}".format(blkgrp)
+                ret["blocks"][group] = {}
+                ret["blocks"][group]["group"] = blkgrp
+                ret["blocks"][group]["range"] = comps[3]
                 # TODO: comps[4:], which may look one one of the following:
                 #     ITABLE_ZEROED
                 #     INODE_UNINIT, ITABLE_ZEROED
                 # Does anyone know what to call these?
-                ret['blocks'][group]['extra'] = []
-            elif 'Free blocks:' in line:
-                comps = line.split(': ')
-                free_blocks = comps[1].split(', ')
-                ret['blocks'][group]['free blocks'] = free_blocks
-            elif 'Free inodes:' in line:
-                comps = line.split(': ')
-                inodes = comps[1].split(', ')
-                ret['blocks'][group]['free inodes'] = inodes
+                ret["blocks"][group]["extra"] = []
+            elif "Free blocks:" in line:
+                comps = line.split(": ")
+                free_blocks = comps[1].split(", ")
+                ret["blocks"][group]["free blocks"] = free_blocks
+            elif "Free inodes:" in line:
+                comps = line.split(": ")
+                inodes = comps[1].split(", ")
+                ret["blocks"][group]["free inodes"] = inodes
             else:
                 line = line.strip()
-                ret['blocks'][group]['extra'].append(line)
+                ret["blocks"][group]["extra"].append(line)
     return ret
