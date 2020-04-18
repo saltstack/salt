@@ -16,12 +16,12 @@ import tempfile
 # Import salt libs
 import salt.utils.data
 import salt.utils.platform
-from requests.structures import CaseInsensitiveDict
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
     SaltInvocationError,
 )
+from salt.utils.data import CaseInsensitiveDict
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
