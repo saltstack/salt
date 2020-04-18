@@ -75,6 +75,8 @@ def _get_args(function):
         for arg_default in list_arg_defaults:
             if isinstance(arg_default, ast.NameConstant):
                 arg_default_strings.append(arg_default.value)
+            elif isinstance(arg_default, ast.Str):
+                arg_default_strings.append(arg_default.s)
             elif isinstance(arg_default, ast.Num):
                 arg_default_strings.append(arg_default.n)
 
@@ -132,25 +134,31 @@ def _modules_and_args(name=False, type="states", names_only=False):
     Determine if modules or states directories or files are requested
     """
     ret = {}
-    dirs = ""
-    module_dir = os.path.dirname(os.path.realpath(__file__))
-    state_dir = os.path.join(os.path.dirname(module_dir), "states")
+    dirs = []
+
+    if type == "modules":
+        dirs.append(os.path.join(__opts__["extension_modules"], "modules"))
+        dirs.append(os.path.join(__grains__["saltpath"], "modules"))
+    elif type == "states":
+        dirs.append(os.path.join(__opts__["extension_modules"], "states"))
+        dirs.append(os.path.join(__grains__["saltpath"], "states"))
 
     if name:
-        if type == "modules":
-            module_py = os.path.join(module_dir, name + ".py")
-        else:
-            module_py = os.path.join(state_dir, name + ".py")
-        return _mods_with_args(module_py, names_only)
+        for dir in dirs:
+            # Process custom dirs first to custom results are returned
+            if os.path.exists(os.path.join(dir, name + ".py")):
+                return _mods_with_args(os.path.join(dir, name + ".py"), names_only)
     else:
-        if type == "modules":
-            dirs = module_dir
-        if type == "states":
-            dirs = state_dir
-
-    for module_py in os.listdir(dirs):
-        if module_py.endswith(".py") and module_py != "__init__.py":
-            ret.update(_mods_with_args(os.path.join(dirs, module_py), names_only))
+        for dir in reversed(dirs):
+            # Process custom dirs last so they are displayed
+            try:
+                for module_py in os.listdir(dir):
+                    if module_py.endswith(".py") and module_py != "__init__.py":
+                        ret.update(
+                            _mods_with_args(os.path.join(dir, module_py), names_only)
+                        )
+            except FileNotFoundError:
+                pass
     return ret
 
 
