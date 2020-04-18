@@ -53,10 +53,10 @@ class BaredocTest(TestCase):
         assert "get_value" in ret["xml"][0]
         assert "file" in ret["xml"][0]["get_value"]
 
-    def test_baredoc_list_modules_single(self):
+    def test_baredoc_list_modules_single_and_alias(self):
         """
         test baredoc single module listing
         """
-        ret = baredoc.list_modules("xml")
-        assert "get_value" in ret["xml"][0]
-        assert "file" in ret["xml"][0]["get_value"]
+        ret = baredoc.list_modules("mdata")
+        assert "put" in ret["mdata"][2]
+        assert "keyname" in ret["mdata"][2]["put"]
