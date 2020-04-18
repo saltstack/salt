@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 This module helps include encrypted passwords in pillars, grains and salt state files.
 
 :depends: libnacl, https://github.com/saltstack/libnacl
@@ -148,7 +148,7 @@ Optional small program to encrypt data without needing salt modules.
 
     echo 'apassword' | nacl_enc.py
 
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -156,7 +156,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt libs
 import salt.utils.nacl
 
-__virtualname__ = 'nacl'
+__virtualname__ = "nacl"
 
 
 def __virtual__():
@@ -164,7 +164,7 @@ def __virtual__():
 
 
 def keygen(sk_file=None, pk_file=None, **kwargs):
-    '''
+    """
     Use libnacl to generate a keypair.
 
     If no `sk_file` is defined return a keypair.
@@ -182,23 +182,23 @@ def keygen(sk_file=None, pk_file=None, **kwargs):
         salt-call nacl.keygen sk_file=/etc/salt/pki/master/nacl
         salt-call nacl.keygen sk_file=/etc/salt/pki/master/nacl pk_file=/etc/salt/pki/master/nacl.pub
         salt-call --local nacl.keygen
-    '''
-    kwargs['opts'] = __opts__
+    """
+    kwargs["opts"] = __opts__
     return salt.utils.nacl.keygen(sk_file, pk_file, **kwargs)
 
 
 def enc(data, **kwargs):
-    '''
+    """
     Alias to `{box_type}_encrypt`
 
     box_type: secretbox, sealedbox(default)
-    '''
-    kwargs['opts'] = __opts__
+    """
+    kwargs["opts"] = __opts__
     return salt.utils.nacl.enc(data, **kwargs)
 
 
 def enc_file(name, out=None, **kwargs):
-    '''
+    """
     This is a helper function to encrypt a file and return its contents.
 
     You can provide an optional output file using `out`
@@ -213,23 +213,23 @@ def enc_file(name, out=None, **kwargs):
         salt-call nacl.enc_file name=salt://crt/mycert out=/tmp/cert
         salt-run nacl.enc_file name=/tmp/id_rsa box_type=secretbox \
             sk_file=/etc/salt/pki/master/nacl.pub
-    '''
-    kwargs['opts'] = __opts__
+    """
+    kwargs["opts"] = __opts__
     return salt.utils.nacl.enc_file(name, out, **kwargs)
 
 
 def dec(data, **kwargs):
-    '''
+    """
     Alias to `{box_type}_decrypt`
 
     box_type: secretbox, sealedbox(default)
-    '''
-    kwargs['opts'] = __opts__
+    """
+    kwargs["opts"] = __opts__
     return salt.utils.nacl.dec(data, **kwargs)
 
 
 def dec_file(name, out=None, **kwargs):
-    '''
+    """
     This is a helper function to decrypt a file and return its contents.
 
     You can provide an optional output file using `out`
@@ -244,13 +244,13 @@ def dec_file(name, out=None, **kwargs):
         salt-call nacl.dec_file name=salt://crt/mycert.nacl out=/tmp/id_rsa
         salt-run nacl.dec_file name=/tmp/id_rsa.nacl box_type=secretbox \
             sk_file=/etc/salt/pki/master/nacl.pub
-    '''
-    kwargs['opts'] = __opts__
+    """
+    kwargs["opts"] = __opts__
     return salt.utils.nacl.dec_file(name, out, **kwargs)
 
 
 def sealedbox_encrypt(data, **kwargs):
-    '''
+    """
     Encrypt data using a public key generated from `nacl.keygen`.
     The encryptd data can be decrypted using `nacl.sealedbox_decrypt` only with the secret key.
 
@@ -261,13 +261,13 @@ def sealedbox_encrypt(data, **kwargs):
         salt-run nacl.sealedbox_encrypt datatoenc
         salt-call --local nacl.sealedbox_encrypt datatoenc pk_file=/etc/salt/pki/master/nacl.pub
         salt-call --local nacl.sealedbox_encrypt datatoenc pk='vrwQF7cNiNAVQVAiS3bvcbJUnF0cN6fU9YTZD9mBfzQ='
-    '''
-    kwargs['opts'] = __opts__
+    """
+    kwargs["opts"] = __opts__
     return salt.utils.nacl.sealedbox_encrypt(data, **kwargs)
 
 
 def sealedbox_decrypt(data, **kwargs):
-    '''
+    """
     Decrypt data using a secret key that was encrypted using a public key with `nacl.sealedbox_encrypt`.
 
     CLI Examples:
@@ -277,13 +277,13 @@ def sealedbox_decrypt(data, **kwargs):
         salt-call nacl.sealedbox_decrypt pEXHQM6cuaF7A=
         salt-call --local nacl.sealedbox_decrypt data='pEXHQM6cuaF7A=' sk_file=/etc/salt/pki/master/nacl
         salt-call --local nacl.sealedbox_decrypt data='pEXHQM6cuaF7A=' sk='YmFkcGFzcwo='
-    '''
-    kwargs['opts'] = __opts__
+    """
+    kwargs["opts"] = __opts__
     return salt.utils.nacl.sealedbox_decrypt(data, **kwargs)
 
 
 def secretbox_encrypt(data, **kwargs):
-    '''
+    """
     Encrypt data using a secret key generated from `nacl.keygen`.
     The same secret key can be used to decrypt the data using `nacl.secretbox_decrypt`.
 
@@ -294,13 +294,13 @@ def secretbox_encrypt(data, **kwargs):
         salt-run nacl.secretbox_encrypt datatoenc
         salt-call --local nacl.secretbox_encrypt datatoenc sk_file=/etc/salt/pki/master/nacl
         salt-call --local nacl.secretbox_encrypt datatoenc sk='YmFkcGFzcwo='
-    '''
-    kwargs['opts'] = __opts__
+    """
+    kwargs["opts"] = __opts__
     return salt.utils.nacl.secretbox_encrypt(data, **kwargs)
 
 
 def secretbox_decrypt(data, **kwargs):
-    '''
+    """
     Decrypt data that was encrypted using `nacl.secretbox_encrypt` using the secret key
     that was generated from `nacl.keygen`.
 
@@ -311,6 +311,6 @@ def secretbox_decrypt(data, **kwargs):
         salt-call nacl.secretbox_decrypt pEXHQM6cuaF7A=
         salt-call --local nacl.secretbox_decrypt data='pEXHQM6cuaF7A=' sk_file=/etc/salt/pki/master/nacl
         salt-call --local nacl.secretbox_decrypt data='pEXHQM6cuaF7A=' sk='YmFkcGFzcwo='
-    '''
-    kwargs['opts'] = __opts__
+    """
+    kwargs["opts"] = __opts__
     return salt.utils.nacl.secretbox_decrypt(data, **kwargs)

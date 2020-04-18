@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Docker Swarm Module using Docker's Python SDK
 =============================================
 
@@ -23,39 +23,43 @@ Docker Python SDK
     pip install -U docker
 
 More information: https://docker-py.readthedocs.io/en/stable/
-'''
+"""
 # Import python libraries
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 import salt.utils.json
 
 try:
     import docker
+
     HAS_DOCKER = True
 except ImportError:
     HAS_DOCKER = False
 
-__virtualname__ = 'swarm'
+__virtualname__ = "swarm"
 
 
 def __virtual__():
-    '''
+    """
     Load this module if the docker python module is installed
-    '''
+    """
     if HAS_DOCKER:
         return __virtualname__
-    return False, 'The swarm module failed to load: Docker python module is not available.'
+    return (
+        False,
+        "The swarm module failed to load: Docker python module is not available.",
+    )
 
 
 def __init__(self):
     if HAS_DOCKER:
-        __context__['client'] = docker.from_env()
-    __context__['server_name'] = __grains__['id']
+        __context__["client"] = docker.from_env()
+    __context__["server_name"] = __grains__["id"]
 
 
 def swarm_tokens():
-    '''
+    """
     Get the Docker Swarm Manager or Worker join tokens
 
     CLI Example:
@@ -63,16 +67,14 @@ def swarm_tokens():
     .. code-block:: bash
 
         salt '*' swarm.swarm_tokens
-    '''
-    client = docker.APIClient(base_url='unix://var/run/docker.sock')
+    """
+    client = docker.APIClient(base_url="unix://var/run/docker.sock")
     service = client.inspect_swarm()
-    return service['JoinTokens']
+    return service["JoinTokens"]
 
 
-def swarm_init(advertise_addr=str,
-               listen_addr=int,
-               force_new_cluster=bool):
-    '''
+def swarm_init(advertise_addr=str, listen_addr=int, force_new_cluster=bool):
+    """
     Initalize Docker on Minion as a Swarm Manager
 
     advertise_addr
@@ -95,27 +97,30 @@ def swarm_init(advertise_addr=str,
     .. code-block:: bash
 
         salt '*' swarm.swarm_init advertise_addr='192.168.50.10' listen_addr='0.0.0.0' force_new_cluster=False
-    '''
+    """
     try:
         salt_return = {}
-        __context__['client'].swarm.init(advertise_addr,
-                                         listen_addr,
-                                         force_new_cluster)
-        output = 'Docker swarm has been initialized on {0} ' \
-                 'and the worker/manager Join token is below'.format(__context__['server_name'])
-        salt_return.update({'Comment': output,
-                            'Tokens': swarm_tokens()})
+        __context__["client"].swarm.init(advertise_addr, listen_addr, force_new_cluster)
+        output = (
+            "Docker swarm has been initialized on {0} "
+            "and the worker/manager Join token is below".format(
+                __context__["server_name"]
+            )
+        )
+        salt_return.update({"Comment": output, "Tokens": swarm_tokens()})
     except TypeError:
         salt_return = {}
-        salt_return.update({'Error': 'Please make sure you are passing advertise_addr, '
-                                     'listen_addr and force_new_cluster correctly.'})
+        salt_return.update(
+            {
+                "Error": "Please make sure you are passing advertise_addr, "
+                "listen_addr and force_new_cluster correctly."
+            }
+        )
     return salt_return
 
 
-def joinswarm(remote_addr=int,
-              listen_addr=int,
-              token=str):
-    '''
+def joinswarm(remote_addr=int, listen_addr=int, token=str):
+    """
     Join a Swarm Worker to the cluster
 
     remote_addr
@@ -135,23 +140,27 @@ def joinswarm(remote_addr=int,
 
         salt '*' swarm.joinswarm remote_addr=192.168.50.10 listen_addr='0.0.0.0' \
             token='SWMTKN-1-64tux2g0701r84ofq93zppcih0pe081akq45owe9ts61f30x4t-06trjugdu7x2z47j938s54il'
-    '''
+    """
     try:
         salt_return = {}
-        __context__['client'].swarm.join(remote_addrs=[remote_addr],
-                                         listen_addr=listen_addr,
-                                         join_token=token)
-        output = __context__['server_name'] + ' has joined the Swarm'
-        salt_return.update({'Comment': output, 'Manager_Addr': remote_addr})
+        __context__["client"].swarm.join(
+            remote_addrs=[remote_addr], listen_addr=listen_addr, join_token=token
+        )
+        output = __context__["server_name"] + " has joined the Swarm"
+        salt_return.update({"Comment": output, "Manager_Addr": remote_addr})
     except TypeError:
         salt_return = {}
-        salt_return.update({'Error': 'Please make sure this minion is not part of a swarm and you are '
-                                     'passing remote_addr, listen_addr and token correctly.'})
+        salt_return.update(
+            {
+                "Error": "Please make sure this minion is not part of a swarm and you are "
+                "passing remote_addr, listen_addr and token correctly."
+            }
+        )
     return salt_return
 
 
 def leave_swarm(force=bool):
-    '''
+    """
     Force the minion to leave the swarm
 
     force
@@ -162,22 +171,24 @@ def leave_swarm(force=bool):
     .. code-block:: bash
 
         salt '*' swarm.leave_swarm force=False
-    '''
+    """
     salt_return = {}
-    __context__['client'].swarm.leave(force=force)
-    output = __context__['server_name'] + ' has left the swarm'
-    salt_return.update({'Comment': output})
+    __context__["client"].swarm.leave(force=force)
+    output = __context__["server_name"] + " has left the swarm"
+    salt_return.update({"Comment": output})
     return salt_return
 
 
-def service_create(image=str,
-                   name=str,
-                   command=str,
-                   hostname=str,
-                   replicas=int,
-                   target_port=int,
-                   published_port=int):
-    '''
+def service_create(
+    image=str,
+    name=str,
+    command=str,
+    hostname=str,
+    replicas=int,
+    target_port=int,
+    published_port=int,
+):
+    """
     Create Docker Swarm Service Create
 
     image
@@ -207,35 +218,49 @@ def service_create(image=str,
 
         salt '*' swarm.service_create image=httpd name=Test_Service \
             command=None hostname=salthttpd replicas=6 target_port=80 published_port=80
-    '''
+    """
     try:
         salt_return = {}
-        replica_mode = docker.types.ServiceMode('replicated', replicas=replicas)
+        replica_mode = docker.types.ServiceMode("replicated", replicas=replicas)
         ports = docker.types.EndpointSpec(ports={target_port: published_port})
-        __context__['client'].services.create(name=name,
-                                              image=image,
-                                              command=command,
-                                              mode=replica_mode,
-                                              endpoint_spec=ports)
-        echoback = __context__['server_name'] + ' has a Docker Swarm Service running named ' + name
-        salt_return.update({'Info': echoback,
-                            'Minion': __context__['server_name'],
-                            'Name': name,
-                            'Image': image,
-                            'Command': command,
-                            'Hostname': hostname,
-                            'Replicas': replicas,
-                            'Target_Port': target_port,
-                            'Published_Port': published_port})
+        __context__["client"].services.create(
+            name=name,
+            image=image,
+            command=command,
+            mode=replica_mode,
+            endpoint_spec=ports,
+        )
+        echoback = (
+            __context__["server_name"]
+            + " has a Docker Swarm Service running named "
+            + name
+        )
+        salt_return.update(
+            {
+                "Info": echoback,
+                "Minion": __context__["server_name"],
+                "Name": name,
+                "Image": image,
+                "Command": command,
+                "Hostname": hostname,
+                "Replicas": replicas,
+                "Target_Port": target_port,
+                "Published_Port": published_port,
+            }
+        )
     except TypeError:
         salt_return = {}
-        salt_return.update({'Error': 'Please make sure you are passing arguments correctly '
-                                     '[image, name, command, hostname, replicas, target_port and published_port]'})
+        salt_return.update(
+            {
+                "Error": "Please make sure you are passing arguments correctly "
+                "[image, name, command, hostname, replicas, target_port and published_port]"
+            }
+        )
     return salt_return
 
 
 def swarm_service_info(service_name=str):
-    '''
+    """
     Swarm Service Information
 
     service_name
@@ -246,51 +271,55 @@ def swarm_service_info(service_name=str):
     .. code-block:: bash
 
         salt '*' swarm.swarm_service_info service_name=Test_Service
-    '''
+    """
     try:
         salt_return = {}
-        client = docker.APIClient(base_url='unix://var/run/docker.sock')
+        client = docker.APIClient(base_url="unix://var/run/docker.sock")
         service = client.inspect_service(service=service_name)
         getdata = salt.utils.json.dumps(service)
         dump = salt.utils.json.loads(getdata)
-        version = dump['Version']['Index']
-        name = dump['Spec']['Name']
-        network_mode = dump['Spec']['EndpointSpec']['Mode']
-        ports = dump['Spec']['EndpointSpec']['Ports']
-        swarm_id = dump['ID']
-        create_date = dump['CreatedAt']
-        update_date = dump['UpdatedAt']
-        labels = dump['Spec']['Labels']
-        replicas = dump['Spec']['Mode']['Replicated']['Replicas']
-        network = dump['Endpoint']['VirtualIPs']
-        image = dump['Spec']['TaskTemplate']['ContainerSpec']['Image']
+        version = dump["Version"]["Index"]
+        name = dump["Spec"]["Name"]
+        network_mode = dump["Spec"]["EndpointSpec"]["Mode"]
+        ports = dump["Spec"]["EndpointSpec"]["Ports"]
+        swarm_id = dump["ID"]
+        create_date = dump["CreatedAt"]
+        update_date = dump["UpdatedAt"]
+        labels = dump["Spec"]["Labels"]
+        replicas = dump["Spec"]["Mode"]["Replicated"]["Replicas"]
+        network = dump["Endpoint"]["VirtualIPs"]
+        image = dump["Spec"]["TaskTemplate"]["ContainerSpec"]["Image"]
         for items in ports:
-            published_port = items['PublishedPort']
-            target_port = items['TargetPort']
-            published_mode = items['PublishMode']
-            protocol = items['Protocol']
-            salt_return.update({'Service Name': name,
-                                'Replicas': replicas,
-                                'Service ID': swarm_id,
-                                'Network': network,
-                                'Network Mode': network_mode,
-                                'Creation Date': create_date,
-                                'Update Date': update_date,
-                                'Published Port': published_port,
-                                'Target Port': target_port,
-                                'Published Mode': published_mode,
-                                'Protocol': protocol,
-                                'Docker Image': image,
-                                'Minion Id': __context__['server_name'],
-                                'Version': version})
+            published_port = items["PublishedPort"]
+            target_port = items["TargetPort"]
+            published_mode = items["PublishMode"]
+            protocol = items["Protocol"]
+            salt_return.update(
+                {
+                    "Service Name": name,
+                    "Replicas": replicas,
+                    "Service ID": swarm_id,
+                    "Network": network,
+                    "Network Mode": network_mode,
+                    "Creation Date": create_date,
+                    "Update Date": update_date,
+                    "Published Port": published_port,
+                    "Target Port": target_port,
+                    "Published Mode": published_mode,
+                    "Protocol": protocol,
+                    "Docker Image": image,
+                    "Minion Id": __context__["server_name"],
+                    "Version": version,
+                }
+            )
     except TypeError:
         salt_return = {}
-        salt_return.update({'Error': 'service_name arg is missing?'})
+        salt_return.update({"Error": "service_name arg is missing?"})
     return salt_return
 
 
 def remove_service(service=str):
-    '''
+    """
     Remove Swarm Service
 
     service
@@ -301,21 +330,22 @@ def remove_service(service=str):
     .. code-block:: bash
 
         salt '*' swarm.remove_service service=Test_Service
-    '''
+    """
     try:
         salt_return = {}
-        client = docker.APIClient(base_url='unix://var/run/docker.sock')
+        client = docker.APIClient(base_url="unix://var/run/docker.sock")
         service = client.remove_service(service)
-        salt_return.update({'Service Deleted': service,
-                            'Minion ID': __context__['server_name']})
+        salt_return.update(
+            {"Service Deleted": service, "Minion ID": __context__["server_name"]}
+        )
     except TypeError:
         salt_return = {}
-        salt_return.update({'Error': 'service arg is missing?'})
+        salt_return.update({"Error": "service arg is missing?"})
     return salt_return
 
 
 def node_ls(server=str):
-    '''
+    """
     Displays Information about Swarm Nodes with passing in the server
 
     server
@@ -326,38 +356,44 @@ def node_ls(server=str):
     .. code-block:: bash
 
         salt '*' swarm.node_ls server=minion1
-    '''
+    """
     try:
         salt_return = {}
-        client = docker.APIClient(base_url='unix://var/run/docker.sock')
-        service = client.nodes(filters=({'name': server}))
+        client = docker.APIClient(base_url="unix://var/run/docker.sock")
+        service = client.nodes(filters=({"name": server}))
         getdata = salt.utils.json.dumps(service)
         dump = salt.utils.json.loads(getdata)
         for items in dump:
-            docker_version = items['Description']['Engine']['EngineVersion']
-            platform = items['Description']['Platform']
-            hostnames = items['Description']['Hostname']
-            ids = items['ID']
-            role = items['Spec']['Role']
-            availability = items['Spec']['Availability']
-            status = items['Status']
-            version = items['Version']['Index']
-            salt_return.update({'Docker Version': docker_version,
-                                'Platform': platform,
-                                'Hostname': hostnames,
-                                'ID': ids,
-                                'Roles': role,
-                                'Availability': availability,
-                                'Status': status,
-                                'Version': version})
+            docker_version = items["Description"]["Engine"]["EngineVersion"]
+            platform = items["Description"]["Platform"]
+            hostnames = items["Description"]["Hostname"]
+            ids = items["ID"]
+            role = items["Spec"]["Role"]
+            availability = items["Spec"]["Availability"]
+            status = items["Status"]
+            version = items["Version"]["Index"]
+            salt_return.update(
+                {
+                    "Docker Version": docker_version,
+                    "Platform": platform,
+                    "Hostname": hostnames,
+                    "ID": ids,
+                    "Roles": role,
+                    "Availability": availability,
+                    "Status": status,
+                    "Version": version,
+                }
+            )
     except TypeError:
         salt_return = {}
-        salt_return.update({'Error': 'The server arg is missing or you not targeting a Manager node?'})
+        salt_return.update(
+            {"Error": "The server arg is missing or you not targeting a Manager node?"}
+        )
     return salt_return
 
 
 def remove_node(node_id=str, force=bool):
-    '''
+    """
     Remove a node from a swarm and the target needs to be a swarm manager
 
     node_id
@@ -371,10 +407,10 @@ def remove_node(node_id=str, force=bool):
     .. code-block:: bash
 
         salt '*' swarm.remove_node node_id=z4gjbe9rwmqahc2a91snvolm5 force=false
-    '''
-    client = docker.APIClient(base_url='unix://var/run/docker.sock')
+    """
+    client = docker.APIClient(base_url="unix://var/run/docker.sock")
     try:
-        if force == 'True':
+        if force == "True":
             service = client.remove_node(node_id, force=True)
             return service
         else:
@@ -382,16 +418,12 @@ def remove_node(node_id=str, force=bool):
             return service
     except TypeError:
         salt_return = {}
-        salt_return.update({'Error': 'Is the node_id and/or force=True/False missing?'})
+        salt_return.update({"Error": "Is the node_id and/or force=True/False missing?"})
         return salt_return
 
 
-def update_node(availability=str,
-                node_name=str,
-                role=str,
-                node_id=str,
-                version=int):
-    '''
+def update_node(availability=str, node_name=str, role=str, node_id=str, version=int):
+    """
     Updates docker swarm nodes/needs to target a manager node/minion
 
     availability
@@ -415,18 +447,18 @@ def update_node(availability=str,
 
         salt '*' docker_util.update_node availability=drain node_name=minion2 \
             role=worker node_id=3k9x7t8m4pel9c0nqr3iajnzp version=19
-    '''
-    client = docker.APIClient(base_url='unix://var/run/docker.sock')
+    """
+    client = docker.APIClient(base_url="unix://var/run/docker.sock")
     try:
         salt_return = {}
-        node_spec = {'Availability': availability,
-                     'Name': node_name,
-                     'Role': role}
-        client.update_node(node_id=node_id,
-                           version=version,
-                           node_spec=node_spec)
-        salt_return.update({'Node Information': node_spec})
+        node_spec = {"Availability": availability, "Name": node_name, "Role": role}
+        client.update_node(node_id=node_id, version=version, node_spec=node_spec)
+        salt_return.update({"Node Information": node_spec})
     except TypeError:
         salt_return = {}
-        salt_return.update({'Error': 'Make sure all args are passed [availability, node_name, role, node_id, version]'})
+        salt_return.update(
+            {
+                "Error": "Make sure all args are passed [availability, node_name, role, node_id, version]"
+            }
+        )
     return salt_return
