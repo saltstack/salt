@@ -104,7 +104,7 @@ Glossary
         or stored externally.
 
     Job ID
-        A unique identifier to represent a given :term:`job`.  This is often
+        A unique identifier to represent a given :term:`job <Job>`.  This is often
         shortened to JID.
 
     Low State
@@ -227,7 +227,7 @@ Glossary
         Contains a set of :term:`state declarations <State Declaration>`.
 
     State Compiler
-        Translates :term:`highdata` into lowdata.
+        Translates :term:`highdata <Highdata>` into lowdata.
 
     State Declaration
         A data structure which contains a unique ID and describes one or more

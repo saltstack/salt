@@ -2,7 +2,6 @@
 """
 Tests for runner_returns
 """
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
@@ -10,18 +9,17 @@ import os
 import socket
 import tempfile
 
-# Import salt libs
+import pytest
 import salt.payload
 import salt.utils.args
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.yaml
-
-# Import Salt Testing libs
 from tests.support.case import ShellCase
 from tests.support.runtests import RUNTIME_VARS
 
 
+@pytest.mark.windows_whitelisted
 class RunnerReturnsTest(ShellCase):
     """
     Test the "runner_returns" feature

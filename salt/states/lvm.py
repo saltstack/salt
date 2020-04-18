@@ -37,7 +37,7 @@ def __virtual__():
     """
     if salt.utils.path.which("lvm"):
         return "lvm"
-    return False
+    return (False, "lvm command not found")
 
 
 def pv_present(name, **kwargs):

@@ -2,24 +2,22 @@
 """
 Test the hosts module
 """
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import shutil
 
-# Import Salt libs
+import pytest
 import salt.utils.files
 import salt.utils.stringutils
 from tests.support.case import ModuleCase
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.windows_whitelisted
 class HostsModuleTest(ModuleCase):
     """
     Test the hosts module
@@ -48,8 +46,8 @@ class HostsModuleTest(ModuleCase):
         """
         hosts = self.run_function("hosts.list_hosts")
         self.assertEqual(len(hosts), 10)
-        self.assertEqual(hosts["::1"], ["ip6-localhost", "ip6-loopback"])
-        self.assertEqual(hosts["127.0.0.1"], ["localhost", "myname"])
+        self.assertEqual(hosts["::1"], {"aliases": ["ip6-localhost", "ip6-loopback"]})
+        self.assertEqual(hosts["127.0.0.1"], {"aliases": ["localhost", "myname"]})
 
     def test_list_hosts_nofile(self):
         """

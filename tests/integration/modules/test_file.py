@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import getpass
@@ -8,11 +7,9 @@ import os
 import shutil
 import sys
 
-# Import salt libs
+import pytest
 import salt.utils.files
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import requires_system_grains
 from tests.support.runtests import RUNTIME_VARS
@@ -42,6 +39,7 @@ def symlink(source, link_name):
         os.symlink(source, link_name)
 
 
+@pytest.mark.windows_whitelisted
 class FileModuleTest(ModuleCase):
     """
     Validate the file module

@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
 from salt.ext import six
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 
 
+@pytest.mark.windows_whitelisted
 class SysModuleTest(ModuleCase):
     """
     Validate the sys module
