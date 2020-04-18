@@ -13,10 +13,10 @@ import ast
 # Import python libs
 import logging
 import os
-from itertools import zip_longest
 
 # Import salt libs
 import salt.utils.files
+from salt.ext.six.moves import zip_longest
 
 # Import 3rd-party libs
 from salt.utils.odict import OrderedDict
@@ -38,6 +38,22 @@ def _get_module_name(tree, filename):
         except AttributeError:
             pass
     return module_name
+
+
+def _get_func_aliases(tree):
+    """
+    Get __func_alias__ dict for mapping function names
+    """
+    fun_aliases = {}
+    assignments = [node for node in tree.body if isinstance(node, ast.Assign)]
+    for assign in assignments:
+        try:
+            if assign.targets[0].id == "__func_alias__":
+                for key, value in zip_longest(assign.value.keys, assign.value.values):
+                    fun_aliases.update({key.s: value.s})
+        except AttributeError:
+            pass
+    return fun_aliases
 
 
 def _get_args(function):
@@ -88,16 +104,24 @@ def _mods_with_args(module_py, names_only):
     with salt.utils.files.fopen(module_py, "r") as cur_file:
         tree = ast.parse(cur_file.read())
         module_name = _get_module_name(tree, module_py)
+        fun_aliases = _get_func_aliases(tree)
+
         functions = [node for node in tree.body if isinstance(node, ast.FunctionDef)]
         func_list = []
         for fn in functions:
             if not fn.name.startswith("_"):
+                function_name = fn.name
+                if fun_aliases:
+                    # Translate name to __func_alias__ version
+                    for k, v in fun_aliases.items():
+                        if fn.name == k:
+                            function_name = v
                 args = _get_args(fn)
                 if names_only:
-                    func_list.append(fn.name)
+                    func_list.append(function_name)
                 else:
                     fun_entry = {}
-                    fun_entry[fn.name] = args
+                    fun_entry[function_name] = args
                     func_list.append(fun_entry)
         ret[module_name] = func_list
     return ret
