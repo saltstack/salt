@@ -1875,11 +1875,9 @@ def get_network_settings():
 
         hostname = _parse_hostname()
         domainname = _parse_domainname()
-        searchdomain = _parse_searchdomain()
 
         settings["hostname"] = hostname
         settings["domainname"] = domainname
-        settings["searchdomain"] = searchdomain
 
     else:
         settings = _parse_current_network_settings()
