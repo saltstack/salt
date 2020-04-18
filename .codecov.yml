@@ -2,21 +2,23 @@ codecov:
   ci:
     - drone.saltstack.com
     - jenkinsci.saltstack.com
+#  max_report_age: 24           # The age you want coverage reports to expire at, or if you
+#                               # want to disable this check. Expired reports will not be processed by codecov.
+#  require_ci_to_pass: yes      # Less spammy. Only notify on passing builds.
 
-  branch: master
 
 #  notify:
-#    require_ci_to_pass: yes      # Less spammy. Only notify on passing builds.
-#    after_n_builds: 46           # Only notify after N builds
+#    after_n_builds: 25           # Only notify after N builds
 #                                 # This value is the output of:
 #                                 #    sh -c 'echo "$(ls .ci/ | grep kitchen | wc -l)"'
+#    wait_for_ci: yes             # Should Codecov wait for all CI statuses to complete before sending ours.
+#                                 # Note: Codecov considers all non-codecov statues to be CI statuses
 
-# Disable Notifications
-  notify: off
 
 ignore:
   - ^*.py$                       # python files at the repo root, ie, setup.py
   - doc/.*                       # ignore any code under doc/
+  - salt/ext/.*                  # ignore any code under salt/ext
 
 coverage:
   round: up
@@ -25,9 +27,13 @@ coverage:
 
   status:
       project:                   # measuring the overall project coverage
-        default: false           # disable the default status that measures entire project
+        default:
+          informational: true    # Use Codecov in informational mode. Default is false. If true is specified the
+                                 # resulting status will pass no matter what the coverage is or what other settings
+                                 # are specified. Informational mode is great to use if you want to expose codecov
+                                 # information to other developers in your pull request without necessarily gating
+                                 # PRs on that information.
         salt:                    # declare a new status context "salt"
-          enabled: yes           # must be yes|true to enable this status
           paths: "!tests/"       # remove all files in "tests/"
           target: auto           # will use the coverage from the base commit (pull request base or parent commit) coverage to compare against.
           base: auto             # will use the pull request base if the commit is on a pull request. If not, the parent commit will be used.
@@ -36,7 +42,6 @@ coverage:
           if_not_found: success  # if parent is not found report status as success, error, or failure
           if_ci_failed: error    # if ci fails report status as success, error, or failure
         tests:                   # declare a new status context "tests"
-          enabled: yes           # must be yes|true to enable this status
           #target: 100%          # we always want 100% coverage here
           target: auto           # auto while we get this going
           base: auto             # will use the pull request base if the commit is on a pull request. If not, the parent commit will be used.
@@ -50,7 +55,11 @@ coverage:
                                  # entire pull requests Coverage Diff. Checking if the lines
                                  # adjusted are covered at least X%.
         default:
-          enabled: yes           # must be yes|true to enable this status
+          informational: true    # Use Codecov in informational mode. Default is false. If true is specified the
+                                 # resulting status will pass no matter what the coverage is or what other settings
+                                 # are specified. Informational mode is great to use if you want to expose codecov
+                                 # information to other developers in your pull request without necessarily gating
+                                 # PRs on that information.
           target: 100%           # Newly added lines must have 100% coverage
           if_no_uploads: error   # will post commit status of "error" if no coverage reports were uploaded
                                  # options: success, error, failure
@@ -59,7 +68,11 @@ coverage:
 
       changes:                   # if there are any unexpected changes in coverage
         default:
-          enabled: yes           # must be yes|true to enable this status
+          informational: true    # Use Codecov in informational mode. Default is false. If true is specified the
+                                 # resulting status will pass no matter what the coverage is or what other settings
+                                 # are specified. Informational mode is great to use if you want to expose codecov
+                                 # information to other developers in your pull request without necessarily gating
+                                 # PRs on that information.
           if_no_uploads: error
           if_not_found: success
           if_ci_failed: error
@@ -68,9 +81,11 @@ flags:
   salt:
     paths:
       - salt/
+    carryforward: true           # https://docs.codecov.io/docs/carryforward-flags
   tests:
     paths:
       - tests/
+    carryforward: true
 
 #comment:
 #  layout: "reach, diff, flags, files"
