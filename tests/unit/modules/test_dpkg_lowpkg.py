@@ -5,20 +5,17 @@
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import os
 
-# Import Salt Testing Libs
-from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
+import os
 
 # Import Salt Libs
 import salt.modules.dpkg_lowpkg as dpkg
 
 # Import Salt Testing Libs
+# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.unit import TestCase, skipIf
 
 
 class DpkgTestCase(TestCase, LoaderModuleMockMixin):
