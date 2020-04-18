@@ -4,11 +4,12 @@ Support for DEB packages
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
+import datetime
+
 # Import python libs
 import logging
 import os
 import re
-import datetime
 
 # Import salt libs
 import salt.utils.args
@@ -284,6 +285,7 @@ def _get_pkg_info(*packages, **kwargs):
         "SHA256:${SHA256}\\n"
         "origin:${Origin}\\n"
         "homepage:${Homepage}\\n"
+        "status:${db:Status-Abbrev}\\n"
         "======\\n"
         "description:${Description}\\n"
         "------\\n'"

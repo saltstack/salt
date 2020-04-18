@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Platform independent versions of some os/os.path functions. Gets around PY2's
 lack of support for reading NTFS links.
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import collections
+
 import errno
 import logging
 import os
@@ -20,15 +20,24 @@ import salt.utils.args
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandNotFoundError
-from salt.utils.decorators import memoize as real_memoize
-from salt.utils.decorators.jinja import jinja_filter
 
 # Import 3rd-party libs
 from salt.ext import six
+from salt.utils.decorators.jinja import jinja_filter
+
+try:
+    from collections.abc import Iterable
+except ImportError:
+    # pylint: disable=no-name-in-module
+    from collections import Iterable
+
+    # pylint: enable=no-name-in-module
+
 
 try:
     import win32file
     from pywintypes import error as pywinerror
+
     HAS_WIN32FILE = True
 except ImportError:
     HAS_WIN32FILE = False
@@ -37,14 +46,14 @@ log = logging.getLogger(__name__)
 
 
 def islink(path):
-    '''
+    """
     Equivalent to os.path.islink()
-    '''
+    """
     if six.PY3 or not salt.utils.platform.is_windows():
         return os.path.islink(path)
 
     if not HAS_WIN32FILE:
-        log.error('Cannot check if %s is a link, missing required modules', path)
+        log.error("Cannot check if %s is a link, missing required modules", path)
 
     if not _is_reparse_point(path):
         return False
@@ -62,8 +71,8 @@ def islink(path):
     # http://msdn.microsoft.com/en-us/library/ff552012.aspx
 
     # parse the structure header to work out which type of reparse point this is
-    header_parser = struct.Struct('L')
-    ReparseTag, = header_parser.unpack(reparse_data[:header_parser.size])
+    header_parser = struct.Struct("L")
+    (ReparseTag,) = header_parser.unpack(reparse_data[: header_parser.size])
     # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365511.aspx
     if not ReparseTag & 0xA000FFFF == 0xA000000C:
         return False
@@ -72,49 +81,59 @@ def islink(path):
 
 
 def readlink(path):
-    '''
+    """
     Equivalent to os.readlink()
-    '''
+    """
     if six.PY3 or not salt.utils.platform.is_windows():
         return os.readlink(path)
 
     if not HAS_WIN32FILE:
-        log.error('Cannot read %s, missing required modules', path)
+        log.error("Cannot read %s, missing required modules", path)
 
     reparse_data = _get_reparse_data(path)
 
     if not reparse_data:
         # Reproduce *NIX behavior when os.readlink is performed on a path that
         # is not a symbolic link.
-        raise OSError(errno.EINVAL, 'Invalid argument: \'{0}\''.format(path))
+        raise OSError(errno.EINVAL, "Invalid argument: '{0}'".format(path))
 
     # REPARSE_DATA_BUFFER structure - see
     # http://msdn.microsoft.com/en-us/library/ff552012.aspx
 
     # parse the structure header to work out which type of reparse point this is
-    header_parser = struct.Struct('L')
-    ReparseTag, = header_parser.unpack(reparse_data[:header_parser.size])
+    header_parser = struct.Struct("L")
+    (ReparseTag,) = header_parser.unpack(reparse_data[: header_parser.size])
     # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365511.aspx
     if not ReparseTag & 0xA000FFFF == 0xA000000C:
         raise OSError(
             errno.EINVAL,
-            '{0} is not a symlink, but another type of reparse point '
-            '(0x{0:X}).'.format(ReparseTag)
+            "{0} is not a symlink, but another type of reparse point "
+            "(0x{0:X}).".format(ReparseTag),
         )
 
     # parse as a symlink reparse point structure (the structure for other
     # reparse points is different)
-    data_parser = struct.Struct('LHHHHHHL')
-    ReparseTag, ReparseDataLength, Reserved, SubstituteNameOffset, \
-    SubstituteNameLength, PrintNameOffset, \
-    PrintNameLength, Flags = data_parser.unpack(reparse_data[:data_parser.size])
+    data_parser = struct.Struct("LHHHHHHL")
+    (
+        ReparseTag,
+        ReparseDataLength,
+        Reserved,
+        SubstituteNameOffset,
+        SubstituteNameLength,
+        PrintNameOffset,
+        PrintNameLength,
+        Flags,
+    ) = data_parser.unpack(reparse_data[: data_parser.size])
 
     path_buffer_offset = data_parser.size
     absolute_substitute_name_offset = path_buffer_offset + SubstituteNameOffset
-    target_bytes = reparse_data[absolute_substitute_name_offset:absolute_substitute_name_offset+SubstituteNameLength]
-    target = target_bytes.decode('UTF-16')
+    target_bytes = reparse_data[
+        absolute_substitute_name_offset : absolute_substitute_name_offset
+        + SubstituteNameLength
+    ]
+    target = target_bytes.decode("UTF-16")
 
-    if target.startswith('\\??\\'):
+    if target.startswith("\\??\\"):
         target = target[4:]
 
     try:
@@ -124,8 +143,8 @@ def readlink(path):
         # If target is on a UNC share, the decoded target will be in the format
         # "UNC\hostanme\sharename\additional\subdirs\under\share". So, in
         # these cases, return the target path in the proper UNC path format.
-        if target.startswith('UNC\\'):
-            return re.sub(r'^UNC\\+', r'\\\\', target)
+        if target.startswith("UNC\\"):
+            return re.sub(r"^UNC\\+", r"\\\\", target)
         # if file is not found (i.e. bad symlink), return it anyway like on *nix
         if exc.winerror == 2:
             return target
@@ -135,9 +154,9 @@ def readlink(path):
 
 
 def _is_reparse_point(path):
-    '''
+    """
     Returns True if path is a reparse point; False otherwise.
-    '''
+    """
     result = win32file.GetFileAttributesW(path)
 
     if result == -1:
@@ -147,14 +166,14 @@ def _is_reparse_point(path):
 
 
 def _get_reparse_data(path):
-    '''
+    """
     Retrieves the reparse point data structure for the given path.
 
     If the path is not a reparse point, None is returned.
 
     See http://msdn.microsoft.com/en-us/library/ff552012.aspx for details on the
     REPARSE_DATA_BUFFER structure returned.
-    '''
+    """
     # ensure paths are using the right slashes
     path = os.path.normpath(path)
 
@@ -169,14 +188,15 @@ def _get_reparse_data(path):
             1,  # share with other readers
             None,  # no inherit, default security descriptor
             3,  # OPEN_EXISTING
-            0x00200000 | 0x02000000  # FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS
+            0x00200000
+            | 0x02000000,  # FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS
         )
 
         reparseData = win32file.DeviceIoControl(
             fileHandle,
-            0x900a8,  # FSCTL_GET_REPARSE_POINT
+            0x900A8,  # FSCTL_GET_REPARSE_POINT
             None,  # in buffer
-            16384  # out buffer size (MAXIMUM_REPARSE_DATA_BUFFER_SIZE)
+            16384,  # out buffer size (MAXIMUM_REPARSE_DATA_BUFFER_SIZE)
         )
 
     finally:
@@ -186,83 +206,131 @@ def _get_reparse_data(path):
     return reparseData
 
 
-@jinja_filter('which')
+@jinja_filter("which")
 def which(exe=None):
-    '''
+    """
     Python clone of /usr/bin/which
-    '''
-    def _is_executable_file_or_link(exe):
-        # check for os.X_OK doesn't suffice because directory may executable
-        return (os.access(exe, os.X_OK) and
-                (os.path.isfile(exe) or os.path.islink(exe)))
+    """
 
-    if exe:
-        if _is_executable_file_or_link(exe):
-            # executable in cwd or fullpath
-            return exe
+    if not exe:
+        log.error("No executable was passed to be searched by salt.utils.path.which()")
+        return None
 
-        ext_list = salt.utils.stringutils.to_str(
-            os.environ.get('PATHEXT', str('.EXE'))
-        ).split(str(';'))
+    ## define some utilities (we use closures here because our predecessor used them)
+    def is_executable_common(path):
+        """
+        This returns truth if posixy semantics (which python simulates on
+        windows) states that this is executable.
+        """
+        return os.path.isfile(path) and os.access(path, os.X_OK)
 
-        @real_memoize
-        def _exe_has_ext():
-            '''
-            Do a case insensitive test if exe has a file extension match in
-            PATHEXT
-            '''
-            for ext in ext_list:
-                try:
-                    pattern = r'.*\.{0}$'.format(
-                        salt.utils.stringutils.to_unicode(ext).lstrip('.')
-                    )
-                    re.match(
-                        pattern,
-                        salt.utils.stringutils.to_unicode(exe),
-                        re.I).groups()
-                    return True
-                except AttributeError:
-                    continue
-            return False
+    def resolve(path):
+        """
+        This will take a path and recursively follow the link until we get to a
+        real file.
+        """
+        while os.path.islink(path):
+            res = os.readlink(path)
 
-        # Enhance POSIX path for the reliability at some environments, when $PATH is changing
-        # This also keeps order, where 'first came, first win' for cases to find optional alternatives
-        system_path = salt.utils.stringutils.to_unicode(os.environ.get('PATH', ''))
-        search_path = system_path.split(os.pathsep)
-        if not salt.utils.platform.is_windows():
-            search_path.extend([
-                x for x in ('/bin', '/sbin', '/usr/bin',
-                            '/usr/sbin', '/usr/local/bin')
-                if x not in search_path
-            ])
+            # if the link points to a relative target, then convert it to an
+            # absolute path relative to the original path
+            if not os.path.isabs(res):
+                directory, _ = os.path.split(path)
+                res = join(directory, res)
+            path = res
+        return path
 
-        for path in search_path:
-            full_path = join(path, exe)
-            if _is_executable_file_or_link(full_path):
-                return full_path
-            elif salt.utils.platform.is_windows() and not _exe_has_ext():
-                # On Windows, check for any extensions in PATHEXT.
-                # Allows both 'cmd' and 'cmd.exe' to be matched.
-                for ext in ext_list:
-                    # Windows filesystem is case insensitive so we
-                    # safely rely on that behavior
-                    if _is_executable_file_or_link(full_path + ext):
-                        return full_path + ext
-        log.trace(
-            '\'%s\' could not be found in the following search path: \'%s\'',
-            exe, search_path
-        )
+    # windows-only
+    def has_executable_ext(path, ext_membership):
+        """
+        Extract the extension from the specified path, lowercase it so we
+        can be insensitive, and then check it against the available exts.
+        """
+        p, ext = os.path.splitext(path)
+        return ext.lower() in ext_membership
+
+    ## prepare related variables from the environment
+    res = salt.utils.stringutils.to_unicode(os.environ.get("PATH", ""))
+    system_path = res.split(os.pathsep)
+
+    # add some reasonable defaults in case someone's PATH is busted
+    if not salt.utils.platform.is_windows():
+        res = set(system_path)
+        extended_path = [
+            "/sbin",
+            "/bin",
+            "/usr/sbin",
+            "/usr/bin",
+            "/usr/local/sbin",
+            "/usr/local/bin",
+        ]
+        system_path.extend([p for p in extended_path if p not in res])
+
+    ## now to define the semantics of what's considered executable on a given platform
+    if salt.utils.platform.is_windows():
+        # executable semantics on windows requires us to search PATHEXT
+        res = salt.utils.stringutils.to_str(os.environ.get("PATHEXT", str(".EXE")))
+
+        # generate two variables, one of them for O(n) searches (but ordered)
+        # and another for O(1) searches. the previous guy was trying to use
+        # memoization with a function that has no arguments, this provides
+        # the exact same benefit
+        pathext = res.split(os.pathsep)
+        res = {ext.lower() for ext in pathext}
+
+        # check if our caller already specified a valid extension as then we don't need to match it
+        _, ext = os.path.splitext(exe)
+        if ext.lower() in res:
+            pathext = [""]
+
+            is_executable = is_executable_common
+
+        # The specified extension isn't valid, so we just assume it's part of the
+        # filename and proceed to walk the pathext list
+        else:
+            is_executable = lambda path, membership=res: is_executable_common(
+                path
+            ) and has_executable_ext(path, membership)
+
     else:
-        log.error('No executable was passed to be searched by salt.utils.path.which()')
+        # in posix, there's no such thing as file extensions..only zuul
+        pathext = [""]
 
+        # executable semantics are pretty simple on reasonable platforms...
+        is_executable = is_executable_common
+
+    ## search for the executable
+
+    # check to see if the full path was specified as then we don't need
+    # to actually walk the system_path for any reason
+    if is_executable(exe):
+        return exe
+
+    # now to search through our system_path
+    for path in system_path:
+        p = join(path, exe)
+
+        # iterate through all extensions to see which one is executable
+        for ext in pathext:
+            pext = p + ext
+            rp = resolve(pext)
+            if is_executable(rp):
+                return p + ext
+            continue
+        continue
+
+    ## if something was executable, we should've found it already...
+    log.trace(
+        "'%s' could not be found in the following search path: '%s'", exe, system_path
+    )
     return None
 
 
 def which_bin(exes):
-    '''
+    """
     Scan over some possible executables and return the first one that is found
-    '''
-    if not isinstance(exes, collections.Iterable):
+    """
+    if not isinstance(exes, Iterable):
         return None
     for exe in exes:
         path = which(exe)
@@ -272,9 +340,9 @@ def which_bin(exes):
     return None
 
 
-@jinja_filter('path_join')
+@jinja_filter("path_join")
 def join(*parts, **kwargs):
-    '''
+    """
     This functions tries to solve some issues when joining multiple absolute
     paths on both *nix and windows platforms.
 
@@ -283,7 +351,7 @@ def join(*parts, **kwargs):
 
     The "use_posixpath" kwarg can be be used to force joining using poxixpath,
     which is useful for Salt fileserver paths on Windows masters.
-    '''
+    """
     if six.PY3:
         new_parts = []
         for part in parts:
@@ -291,7 +359,7 @@ def join(*parts, **kwargs):
         parts = new_parts
 
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
-    use_posixpath = kwargs.pop('use_posixpath', False)
+    use_posixpath = kwargs.pop("use_posixpath", False)
     if kwargs:
         salt.utils.args.invalid_kwargs(kwargs)
 
@@ -304,7 +372,7 @@ def join(*parts, **kwargs):
         root = parts.pop(0)
     except IndexError:
         # No args passed to func
-        return ''
+        return ""
 
     root = salt.utils.stringutils.to_unicode(root)
     if not parts:
@@ -316,36 +384,38 @@ def join(*parts, **kwargs):
 
 
 def check_or_die(command):
-    '''
+    """
     Simple convenience function for modules to use for gracefully blowing up
     if a required tool is not available in the system path.
 
     Lazily import `salt.modules.cmdmod` to avoid any sort of circular
     dependencies.
-    '''
+    """
     if command is None:
-        raise CommandNotFoundError('\'None\' is not a valid command.')
+        raise CommandNotFoundError("'None' is not a valid command.")
 
     if not which(command):
-        raise CommandNotFoundError('\'{0}\' is not in the path'.format(command))
+        raise CommandNotFoundError("'{0}' is not in the path".format(command))
 
 
 def sanitize_win_path(winpath):
-    '''
+    """
     Remove illegal path characters for windows
-    '''
-    intab = '<>:|?*'
+    """
+    intab = "<>:|?*"
     if isinstance(winpath, six.text_type):
-        winpath = winpath.translate(dict((ord(c), '_') for c in intab))
+        winpath = winpath.translate(dict((ord(c), "_") for c in intab))
     elif isinstance(winpath, six.string_types):
-        outtab = '_' * len(intab)
-        trantab = ''.maketrans(intab, outtab) if six.PY3 else string.maketrans(intab, outtab)  # pylint: disable=no-member
+        outtab = "_" * len(intab)
+        trantab = (
+            "".maketrans(intab, outtab) if six.PY3 else string.maketrans(intab, outtab)
+        )  # pylint: disable=no-member
         winpath = winpath.translate(trantab)
     return winpath
 
 
 def safe_path(path, allow_path=None):
-    r'''
+    r"""
     .. versionadded:: 2017.7.3
 
     Checks that the path is safe for modification by Salt. For example, you
@@ -365,13 +435,13 @@ def safe_path(path, allow_path=None):
 
     Returns:
         bool: True if safe, otherwise False
-    '''
+    """
     # Create regex definitions for directories that may be unsafe to modify
-    system_root = os.environ.get('SystemRoot', 'C:\\Windows')
+    system_root = os.environ.get("SystemRoot", "C:\\Windows")
     deny_paths = (
-        r'[a-z]\:\\$',  # C:\, D:\, etc
-        r'\\$',  # \
-        re.escape(system_root)  # C:\Windows
+        r"[a-z]\:\\$",  # C:\, D:\, etc
+        r"\\$",  # \
+        re.escape(system_root),  # C:\Windows
     )
 
     # Make allow_path a list
@@ -402,10 +472,10 @@ def safe_path(path, allow_path=None):
 
 
 def os_walk(top, *args, **kwargs):
-    '''
+    """
     This is a helper than ensures that all paths returned from os.walk are
     unicode.
-    '''
+    """
     if six.PY2 and salt.utils.platform.is_windows():
         top_query = top
     else:

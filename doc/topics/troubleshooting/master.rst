@@ -174,10 +174,32 @@ time one must send SIGUSR2 again to stop profiling and save results to file. If
 run in foreground salt-master will report filename for the results, which are
 usually located under ``/tmp`` on Unix-based OSes and ``c:\temp`` on windows.
 
+Make sure you have yappi installed.
+
 Results can then be analyzed with `kcachegrind`_ or similar tool.
 
 .. _`kcachegrind`: http://kcachegrind.sourceforge.net/html/Home.html
 
+
+On Windows, in the absense of kcachegrind, a simple file-based workflow to create
+profiling graphs could use `gprof2dot`_, `graphviz`_ and this batch file:
+
+.. _`gprof2dot`: https://pypi.org/project/gprof2dot
+.. _`graphviz`: https://graphviz.gitlab.io
+
+.. code-block:: bash
+
+    ::
+    :: Converts callgrind* profiler output to *.pdf, via *.dot
+    ::
+    @echo off
+    del *.dot.pdf
+    for /r %%f in (callgrind*) do (
+    echo "%%f"
+        gprof2dot.exe -f callgrind --show-samples  "%%f" -o "%%f.dot"
+        dot.exe "%%f.dot" -Tpdf -O
+        del "%%f.dot"
+    )
 
 Commands Time Out or Do Not Return Output
 =========================================

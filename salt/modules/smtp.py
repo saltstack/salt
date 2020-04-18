@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module for Sending Messages via SMTP
 
 .. versionadded:: 2014.7.0
@@ -39,9 +39,10 @@ Module for Sending Messages via SMTP
             smtp.username: myuser
             smtp.password: verybadpass
 
-'''
+"""
 
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import os
 import socket
@@ -57,34 +58,37 @@ try:
     import email.mime.text
     import email.mime.application
     import email.mime.multipart
+
     HAS_LIBS = True
 except ImportError:
     pass
 
 
-__virtualname__ = 'smtp'
+__virtualname__ = "smtp"
 
 
 def __virtual__():
-    '''
+    """
     Only load this module if smtplib is available on this minion.
-    '''
+    """
     if HAS_LIBS:
         return __virtualname__
-    return (False, 'This module is only loaded if smtplib is available')
+    return (False, "This module is only loaded if smtplib is available")
 
 
-def send_msg(recipient,
-             message,
-             subject='Message from Salt',
-             sender=None,
-             server=None,
-             use_ssl='True',
-             username=None,
-             password=None,
-             profile=None,
-             attachments=None):
-    '''
+def send_msg(
+    recipient,
+    message,
+    subject="Message from Salt",
+    sender=None,
+    server=None,
+    use_ssl="True",
+    username=None,
+    password=None,
+    profile=None,
+    attachments=None,
+):
+    """
     Send a message to an SMTP recipient. Designed for use in states.
 
     CLI Examples:
@@ -94,27 +98,27 @@ def send_msg(recipient,
         salt '*' smtp.send_msg 'admin@example.com' 'This is a salt module test' profile='my-smtp-account'
         salt '*' smtp.send_msg 'admin@example.com' 'This is a salt module test' username='myuser' password='verybadpass' sender='admin@example.com' server='smtp.domain.com'
         salt '*' smtp.send_msg 'admin@example.com' 'This is a salt module test' username='myuser' password='verybadpass' sender='admin@example.com' server='smtp.domain.com' attachments="['/var/log/messages']"
-    '''
+    """
     if profile:
-        creds = __salt__['config.option'](profile)
-        server = creds.get('smtp.server')
-        use_ssl = creds.get('smtp.tls')
-        sender = creds.get('smtp.sender')
-        username = creds.get('smtp.username')
-        password = creds.get('smtp.password')
+        creds = __salt__["config.option"](profile)
+        server = creds.get("smtp.server")
+        use_ssl = creds.get("smtp.tls")
+        sender = creds.get("smtp.sender")
+        username = creds.get("smtp.username")
+        password = creds.get("smtp.password")
 
     if attachments:
         msg = email.mime.multipart.MIMEMultipart()
         msg.attach(email.mime.text.MIMEText(message))
     else:
         msg = email.mime.text.MIMEText(message)
-    msg['Subject'] = subject
-    msg['From'] = sender
-    msg['To'] = recipient
-    recipients = [r.strip() for r in recipient.split(',')]
+    msg["Subject"] = subject
+    msg["From"] = sender
+    msg["To"] = recipient
+    recipients = [r.strip() for r in recipient.split(",")]
 
     try:
-        if use_ssl in ['True', 'true']:
+        if use_ssl in ["True", "true"]:
             smtpconn = smtplib.SMTP_SSL(server)
         else:
             smtpconn = smtplib.SMTP(server)
@@ -123,21 +127,25 @@ def send_msg(recipient,
         log.debug("Exception: %s", _error)
         return False
 
-    if use_ssl not in ('True', 'true'):
+    if use_ssl not in ("True", "true"):
         smtpconn.ehlo()
-        if smtpconn.has_extn('STARTTLS'):
+        if smtpconn.has_extn("STARTTLS"):
             try:
                 smtpconn.starttls()
             except smtplib.SMTPHeloError:
-                log.debug("The server didn’t reply properly \
-                        to the HELO greeting.")
+                log.debug(
+                    "The server didn’t reply properly \
+                        to the HELO greeting."
+                )
                 return False
             except smtplib.SMTPException:
                 log.debug("The server does not support the STARTTLS extension.")
                 return False
             except RuntimeError:
-                log.debug("SSL/TLS support is not available \
-                        to your Python interpreter.")
+                log.debug(
+                    "SSL/TLS support is not available \
+                        to your Python interpreter."
+                )
                 return False
             smtpconn.ehlo()
 
@@ -151,9 +159,9 @@ def send_msg(recipient,
     if attachments:
         for f in attachments:
             name = os.path.basename(f)
-            with salt.utils.files.fopen(f, 'rb') as fin:
+            with salt.utils.files.fopen(f, "rb") as fin:
                 att = email.mime.application.MIMEApplication(fin.read(), Name=name)
-            att['Content-Disposition'] = 'attachment; filename="{0}"'.format(name)
+            att["Content-Disposition"] = 'attachment; filename="{0}"'.format(name)
             msg.attach(att)
 
     try:

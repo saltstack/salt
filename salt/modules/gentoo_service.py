@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Top level package command wrapper, used to translate the os detected by grains
 to the correct service manager
 
@@ -8,45 +8,55 @@ to the correct service manager
     minion, and it is using a different module (or gives an error similar to
     *'service.start' is not available*), see :ref:`here
     <module-provider-override>`.
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import logging
+
 import fnmatch
+import logging
 import re
+
+import salt.utils.odict as odict
 
 # Import salt libs
 import salt.utils.systemd
-import salt.utils.odict as odict
 
 # Set up logging
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = 'service'
+__virtualname__ = "service"
+
+# Define the module's function aliases
+__func_alias__ = {"reload_": "reload"}
 
 
 def __virtual__():
-    '''
+    """
     Only work on systems which default to OpenRC
-    '''
-    if __grains__['os'] == 'Gentoo' and not salt.utils.systemd.booted(__context__):
+    """
+    if __grains__["os"] == "Gentoo" and not salt.utils.systemd.booted(__context__):
         return __virtualname__
-    if __grains__['os'] == 'Alpine':
+    if __grains__["os"] == "Alpine":
         return __virtualname__
-    return (False, 'The gentoo_service execution module cannot be loaded: '
-            'only available on Gentoo/Open-RC systems.')
+    return (
+        False,
+        "The gentoo_service execution module cannot be loaded: "
+        "only available on Gentoo/Open-RC systems.",
+    )
 
 
 def _ret_code(cmd, ignore_retcode=False):
-    log.debug('executing [{0}]'.format(cmd))
-    sts = __salt__['cmd.retcode'](cmd, python_shell=False, ignore_retcode=ignore_retcode)
+    log.debug("executing [{0}]".format(cmd))
+    sts = __salt__["cmd.retcode"](
+        cmd, python_shell=False, ignore_retcode=ignore_retcode
+    )
     return sts
 
 
 def _list_services():
-    return __salt__['cmd.run']('rc-update -v show').splitlines()
+    return __salt__["cmd.run"]("rc-update -v show").splitlines()
 
 
 def _get_service_list(include_enabled=True, include_disabled=False):
@@ -54,9 +64,9 @@ def _get_service_list(include_enabled=True, include_disabled=False):
     disabled_services = set()
     lines = _list_services()
     for line in lines:
-        if '|' not in line:
+        if "|" not in line:
             continue
-        service = [l.strip() for l in line.split('|')]
+        service = [l.strip() for l in line.split("|")]
         # enabled service should have runlevels
         if service[1]:
             if include_enabled:
@@ -83,15 +93,17 @@ def _disable_delta(name, requested_runlevels):
 
 
 def _service_cmd(*args):
-    return '/etc/init.d/{0} {1}'.format(args[0], ' '.join(args[1:]))
+    return "/etc/init.d/{0} {1}".format(args[0], " ".join(args[1:]))
 
 
 def _enable_disable_cmd(name, command, runlevels=()):
-    return 'rc-update {0} {1} {2}'.format(command, name, ' '.join(sorted(runlevels))).strip()
+    return "rc-update {0} {1} {2}".format(
+        command, name, " ".join(sorted(runlevels))
+    ).strip()
 
 
 def get_enabled():
-    '''
+    """
     Return a list of service that are enabled on boot
 
     CLI Example:
@@ -99,13 +111,13 @@ def get_enabled():
     .. code-block:: bash
 
         salt '*' service.get_enabled
-    '''
+    """
     (enabled_services, disabled_services) = _get_service_list()
     return odict.OrderedDict(enabled_services)
 
 
 def get_disabled():
-    '''
+    """
     Return a set of services that are installed but disabled
 
     CLI Example:
@@ -113,14 +125,15 @@ def get_disabled():
     .. code-block:: bash
 
         salt '*' service.get_disabled
-    '''
-    (enabled_services, disabled_services) = _get_service_list(include_enabled=False,
-                                                              include_disabled=True)
+    """
+    (enabled_services, disabled_services) = _get_service_list(
+        include_enabled=False, include_disabled=True
+    )
     return sorted(disabled_services)
 
 
 def available(name):
-    '''
+    """
     Returns ``True`` if the specified service is available, otherwise returns
     ``False``.
 
@@ -129,14 +142,15 @@ def available(name):
     .. code-block:: bash
 
         salt '*' service.available sshd
-    '''
-    (enabled_services, disabled_services) = _get_service_list(include_enabled=True,
-                                                              include_disabled=True)
+    """
+    (enabled_services, disabled_services) = _get_service_list(
+        include_enabled=True, include_disabled=True
+    )
     return name in enabled_services or name in disabled_services
 
 
 def missing(name):
-    '''
+    """
     The inverse of service.available.
     Returns ``True`` if the specified service is not available, otherwise returns
     ``False``.
@@ -146,12 +160,12 @@ def missing(name):
     .. code-block:: bash
 
         salt '*' service.missing sshd
-    '''
+    """
     return not available(name)
 
 
 def get_all():
-    '''
+    """
     Return all available boot services
 
     CLI Example:
@@ -159,15 +173,16 @@ def get_all():
     .. code-block:: bash
 
         salt '*' service.get_all
-    '''
-    (enabled_services, disabled_services) = _get_service_list(include_enabled=True,
-                                                              include_disabled=True)
+    """
+    (enabled_services, disabled_services) = _get_service_list(
+        include_enabled=True, include_disabled=True
+    )
     enabled_services.update(dict([(s, []) for s in disabled_services]))
     return odict.OrderedDict(enabled_services)
 
 
 def start(name):
-    '''
+    """
     Start the specified service
 
     CLI Example:
@@ -175,13 +190,13 @@ def start(name):
     .. code-block:: bash
 
         salt '*' service.start <service name>
-    '''
-    cmd = _service_cmd(name, 'start')
+    """
+    cmd = _service_cmd(name, "start")
     return not _ret_code(cmd)
 
 
 def stop(name):
-    '''
+    """
     Stop the specified service
 
     CLI Example:
@@ -189,13 +204,13 @@ def stop(name):
     .. code-block:: bash
 
         salt '*' service.stop <service name>
-    '''
-    cmd = _service_cmd(name, 'stop')
+    """
+    cmd = _service_cmd(name, "stop")
     return not _ret_code(cmd)
 
 
 def restart(name):
-    '''
+    """
     Restart the named service
 
     CLI Example:
@@ -203,13 +218,13 @@ def restart(name):
     .. code-block:: bash
 
         salt '*' service.restart <service name>
-    '''
-    cmd = _service_cmd(name, 'restart')
+    """
+    cmd = _service_cmd(name, "restart")
     return not _ret_code(cmd)
 
 
 def reload_(name):
-    '''
+    """
     Reload the named service
 
     CLI Example:
@@ -217,13 +232,13 @@ def reload_(name):
     .. code-block:: bash
 
         salt '*' service.reload <service name>
-    '''
-    cmd = _service_cmd(name, 'reload')
+    """
+    cmd = _service_cmd(name, "reload")
     return not _ret_code(cmd)
 
 
 def zap(name):
-    '''
+    """
     Resets service state
 
     CLI Example:
@@ -231,13 +246,13 @@ def zap(name):
     .. code-block:: bash
 
         salt '*' service.zap <service name>
-    '''
-    cmd = _service_cmd(name, 'zap')
+    """
+    cmd = _service_cmd(name, "zap")
     return not _ret_code(cmd)
 
 
 def status(name, sig=None):
-    '''
+    """
     Return the status for a service.
     If the name contains globbing, a dict mapping service name to True/False
     values is returned.
@@ -258,18 +273,18 @@ def status(name, sig=None):
     .. code-block:: bash
 
         salt '*' service.status <service name> [service signature]
-    '''
+    """
     if sig:
-        return bool(__salt__['status.pid'](sig))
+        return bool(__salt__["status.pid"](sig))
 
-    contains_globbing = bool(re.search(r'\*|\?|\[.+\]', name))
+    contains_globbing = bool(re.search(r"\*|\?|\[.+\]", name))
     if contains_globbing:
         services = fnmatch.filter(get_all(), name)
     else:
         services = [name]
     results = {}
     for service in services:
-        cmd = _service_cmd(service, 'status')
+        cmd = _service_cmd(service, "status")
         results[service] = not _ret_code(cmd, ignore_retcode=True)
     if contains_globbing:
         return results
@@ -277,7 +292,7 @@ def status(name, sig=None):
 
 
 def enable(name, **kwargs):
-    '''
+    """
     Enable the named service to start at boot
 
     CLI Example:
@@ -286,20 +301,23 @@ def enable(name, **kwargs):
 
         salt '*' service.enable <service name> <runlevels=single-runlevel>
         salt '*' service.enable <service name> <runlevels=[runlevel1,runlevel2]>
-    '''
-    if 'runlevels' in kwargs:
-        requested_levels = set(kwargs['runlevels'] if isinstance(kwargs['runlevels'],
-                                                                 list) else [kwargs['runlevels']])
+    """
+    if "runlevels" in kwargs:
+        requested_levels = set(
+            kwargs["runlevels"]
+            if isinstance(kwargs["runlevels"], list)
+            else [kwargs["runlevels"]]
+        )
         enabled_levels, disabled_levels = _enable_delta(name, requested_levels)
         commands = []
         if disabled_levels:
-            commands.append(_enable_disable_cmd(name, 'delete', disabled_levels))
+            commands.append(_enable_disable_cmd(name, "delete", disabled_levels))
         if enabled_levels:
-            commands.append(_enable_disable_cmd(name, 'add', enabled_levels))
+            commands.append(_enable_disable_cmd(name, "add", enabled_levels))
         if not commands:
             return True
     else:
-        commands = [_enable_disable_cmd(name, 'add')]
+        commands = [_enable_disable_cmd(name, "add")]
     for cmd in commands:
         if _ret_code(cmd):
             return False
@@ -307,7 +325,7 @@ def enable(name, **kwargs):
 
 
 def disable(name, **kwargs):
-    '''
+    """
     Disable the named service to start at boot
 
     CLI Example:
@@ -316,20 +334,23 @@ def disable(name, **kwargs):
 
         salt '*' service.disable <service name> <runlevels=single-runlevel>
         salt '*' service.disable <service name> <runlevels=[runlevel1,runlevel2]>
-    '''
+    """
     levels = []
-    if 'runlevels' in kwargs:
-        requested_levels = set(kwargs['runlevels'] if isinstance(kwargs['runlevels'],
-                                                                 list) else [kwargs['runlevels']])
+    if "runlevels" in kwargs:
+        requested_levels = set(
+            kwargs["runlevels"]
+            if isinstance(kwargs["runlevels"], list)
+            else [kwargs["runlevels"]]
+        )
         levels = _disable_delta(name, requested_levels)
         if not levels:
             return True
-    cmd = _enable_disable_cmd(name, 'delete', levels)
+    cmd = _enable_disable_cmd(name, "delete", levels)
     return not _ret_code(cmd)
 
 
 def enabled(name, **kwargs):
-    '''
+    """
     Return True if the named service is enabled, false otherwise
 
     CLI Example:
@@ -338,19 +359,22 @@ def enabled(name, **kwargs):
 
         salt '*' service.enabled <service name> <runlevels=single-runlevel>
         salt '*' service.enabled <service name> <runlevels=[runlevel1,runlevel2]>
-    '''
+    """
     enabled_services = get_enabled()
     if name not in enabled_services:
         return False
-    if 'runlevels' not in kwargs:
+    if "runlevels" not in kwargs:
         return True
-    requested_levels = set(kwargs['runlevels'] if isinstance(kwargs['runlevels'],
-                                                             list) else [kwargs['runlevels']])
+    requested_levels = set(
+        kwargs["runlevels"]
+        if isinstance(kwargs["runlevels"], list)
+        else [kwargs["runlevels"]]
+    )
     return len(requested_levels - set(enabled_services[name])) == 0
 
 
 def disabled(name):
-    '''
+    """
     Return True if the named service is enabled, false otherwise
 
     CLI Example:
@@ -358,5 +382,5 @@ def disabled(name):
     .. code-block:: bash
 
         salt '*' service.disabled <service name> <runlevels=[runlevel]>
-    '''
+    """
     return name in get_disabled()

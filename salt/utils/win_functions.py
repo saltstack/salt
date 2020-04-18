@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Various functions to be used by windows during start up and to monkey patch
 missing functions in other modules
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
+import ctypes
 import platform
 import re
-import ctypes
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
@@ -20,6 +21,7 @@ try:
     import win32net
     import win32security
     from win32con import HWND_BROADCAST, WM_SETTINGCHANGE, SMTO_ABORTIFHUNG
+
     HAS_WIN32 = True
 except ImportError:
     HAS_WIN32 = False
@@ -28,28 +30,28 @@ except ImportError:
 # Although utils are often directly imported, it is also possible to use the
 # loader.
 def __virtual__():
-    '''
+    """
     Only load if Win32 Libraries are installed
-    '''
+    """
     if not HAS_WIN32:
-        return False, 'This utility requires pywin32'
+        return False, "This utility requires pywin32"
 
-    return 'win_functions'
+    return "win_functions"
 
 
 def get_parent_pid():
-    '''
+    """
     This is a monkey patch for os.getppid. Used in:
     - salt.utils.parsers
 
     Returns:
         int: The parent process id
-    '''
+    """
     return psutil.Process().ppid()
 
 
 def is_admin(name):
-    '''
+    """
     Is the passed user a member of the Administrators group
 
     Args:
@@ -58,18 +60,18 @@ def is_admin(name):
     Returns:
         bool: True if user is a member of the Administrators group, False
         otherwise
-    '''
+    """
     groups = get_user_groups(name, True)
 
     for group in groups:
-        if group in ('S-1-5-32-544', 'S-1-5-18'):
+        if group in ("S-1-5-32-544", "S-1-5-18"):
             return True
 
     return False
 
 
 def get_user_groups(name, sid=False):
-    '''
+    """
     Get the groups to which a user belongs
 
     Args:
@@ -79,25 +81,35 @@ def get_user_groups(name, sid=False):
 
     Returns:
         list: A list of group names or sids
-    '''
-    if name == 'SYSTEM':
+    """
+    groups = []
+    if name.upper() == "SYSTEM":
         # 'win32net.NetUserGetLocalGroups' will fail if you pass in 'SYSTEM'.
-        groups = [name]
+        groups = ["SYSTEM"]
     else:
-        groups = win32net.NetUserGetLocalGroups(None, name)
+        try:
+            groups = win32net.NetUserGetLocalGroups(None, name)
+        except win32net.error as exc:
+            # ERROR_ACCESS_DENIED, NERR_DCNotFound, RPC_S_SERVER_UNAVAILABLE
+            if exc.winerror in (5, 1722, 2453):
+                # Try without LG_INCLUDE_INDIRECT flag, because the user might
+                # not have permissions for it or something is wrong with DC
+                groups = win32net.NetUserGetLocalGroups(None, name, 0)
+            else:
+                raise
 
     if not sid:
         return groups
 
-    ret_groups = set()
+    ret_groups = []
     for group in groups:
-        ret_groups.add(get_sid_from_name(group))
+        ret_groups.append(get_sid_from_name(group))
 
     return ret_groups
 
 
 def get_sid_from_name(name):
-    '''
+    """
     This is a tool for getting a sid from a name. The name can be any object.
     Usually a user or a group
 
@@ -106,22 +118,21 @@ def get_sid_from_name(name):
 
     Returns:
         str: The corresponding SID
-    '''
+    """
     # If None is passed, use the Universal Well-known SID "Null SID"
     if name is None:
-        name = 'NULL SID'
+        name = "NULL SID"
 
     try:
         sid = win32security.LookupAccountName(None, name)[0]
     except pywintypes.error as exc:
-        raise CommandExecutionError(
-            'User {0} not found: {1}'.format(name, exc))
+        raise CommandExecutionError("User {0} not found: {1}".format(name, exc))
 
     return win32security.ConvertSidToStringSid(sid)
 
 
 def get_current_user(with_domain=True):
-    '''
+    """
     Gets the user executing the process
 
     Args:
@@ -132,22 +143,21 @@ def get_current_user(with_domain=True):
 
     Returns:
         str: The user name
-    '''
+    """
     try:
         user_name = win32api.GetUserNameEx(win32api.NameSamCompatible)
-        if user_name[-1] == '$':
+        if user_name[-1] == "$":
             # Make the system account easier to identify.
             # Fetch sid so as to handle other language than english
             test_user = win32api.GetUserName()
-            if test_user == 'SYSTEM':
-                user_name = 'SYSTEM'
-            elif get_sid_from_name(test_user) == 'S-1-5-18':
-                user_name = 'SYSTEM'
+            if test_user == "SYSTEM":
+                user_name = "SYSTEM"
+            elif get_sid_from_name(test_user) == "S-1-5-18":
+                user_name = "SYSTEM"
         elif not with_domain:
             user_name = win32api.GetUserName()
     except pywintypes.error as exc:
-        raise CommandExecutionError(
-            'Failed to get current user: {0}'.format(exc))
+        raise CommandExecutionError("Failed to get current user: {0}".format(exc))
 
     if not user_name:
         return False
@@ -156,7 +166,7 @@ def get_current_user(with_domain=True):
 
 
 def get_sam_name(username):
-    r'''
+    r"""
     Gets the SAM name for a user. It basically prefixes a username without a
     backslash with the computer name. If the user does not exist, a SAM
     compatible name will be returned using the local hostname as the domain.
@@ -164,26 +174,25 @@ def get_sam_name(username):
     i.e. salt.utils.get_same_name('Administrator') would return 'DOMAIN.COM\Administrator'
 
     .. note:: Long computer names are truncated to 15 characters
-    '''
+    """
     try:
         sid_obj = win32security.LookupAccountName(None, username)[0]
     except pywintypes.error:
-        return '\\'.join([platform.node()[:15].upper(), username])
+        return "\\".join([platform.node()[:15].upper(), username])
     username, domain, _ = win32security.LookupAccountSid(None, sid_obj)
-    return '\\'.join([domain, username])
+    return "\\".join([domain, username])
 
 
 def enable_ctrl_logoff_handler():
     if HAS_WIN32:
         ctrl_logoff_event = 5
         win32api.SetConsoleCtrlHandler(
-            lambda event: True if event == ctrl_logoff_event else False,
-            1
+            lambda event: True if event == ctrl_logoff_event else False, 1
         )
 
 
 def escape_argument(arg, escape=True):
-    '''
+    """
     Escape the argument for the cmd.exe shell.
     See http://blogs.msdn.com/b/twistylittlepassagesallalike/archive/2011/04/23/everyone-quotes-arguments-the-wrong-way.aspx
 
@@ -200,9 +209,9 @@ def escape_argument(arg, escape=True):
 
     Returns:
         str: an escaped string suitable to be passed as a program argument to the cmd.exe shell
-    '''
+    """
     if not arg or re.search(r'(["\s])', arg):
-        arg = '"' + arg.replace('"', r'\"') + '"'
+        arg = '"' + arg.replace('"', r"\"") + '"'
 
     if not escape:
         return arg
@@ -210,7 +219,7 @@ def escape_argument(arg, escape=True):
 
 
 def escape_for_cmd_exe(arg):
-    '''
+    """
     Escape an argument string to be suitable to be passed to
     cmd.exe on Windows
 
@@ -227,9 +236,11 @@ def escape_for_cmd_exe(arg):
 
     Returns:
         str: an escaped string suitable to be passed as a program argument to cmd.exe
-    '''
+    """
     meta_chars = '()%!^"<>&|'
-    meta_re = re.compile('(' + '|'.join(re.escape(char) for char in list(meta_chars)) + ')')
+    meta_re = re.compile(
+        "(" + "|".join(re.escape(char) for char in list(meta_chars)) + ")"
+    )
     meta_map = {char: "^{0}".format(char) for char in meta_chars}
 
     def escape_meta_chars(m):
@@ -239,8 +250,8 @@ def escape_for_cmd_exe(arg):
     return meta_re.sub(escape_meta_chars, arg)
 
 
-def broadcast_setting_change(message='Environment'):
-    '''
+def broadcast_setting_change(message="Environment"):
+    """
     Send a WM_SETTINGCHANGE Broadcast to all Windows
 
     Args:
@@ -280,7 +291,7 @@ def broadcast_setting_change(message='Environment'):
 
         import salt.utils.win_functions
         salt.utils.win_functions.broadcast_setting_change('Environment')
-    '''
+    """
     # Listen for messages sent by this would involve working with the
     # SetWindowLong function. This can be accessed via win32gui or through
     # ctypes. You can find examples on how to do this by searching for
@@ -301,15 +312,21 @@ def broadcast_setting_change(message='Environment'):
     # new_function = WndProcType
     # old_function = user32.SetWindowLongW(window_handle, win32con.GWL_WNDPROC, new_function)
     broadcast_message = ctypes.create_unicode_buffer(message)
-    user32 = ctypes.WinDLL('user32', use_last_error=True)
-    result = user32.SendMessageTimeoutW(HWND_BROADCAST, WM_SETTINGCHANGE, 0,
-                                        broadcast_message, SMTO_ABORTIFHUNG,
-                                        5000, 0)
+    user32 = ctypes.WinDLL("user32", use_last_error=True)
+    result = user32.SendMessageTimeoutW(
+        HWND_BROADCAST,
+        WM_SETTINGCHANGE,
+        0,
+        broadcast_message,
+        SMTO_ABORTIFHUNG,
+        5000,
+        0,
+    )
     return result == 1
 
 
 def guid_to_squid(guid):
-    '''
+    """
     Converts a GUID   to a compressed guid (SQUID)
 
     Each Guid has 5 parts separated by '-'. For the first three each one will be
@@ -329,10 +346,12 @@ def guid_to_squid(guid):
 
     Returns:
         str: A valid compressed GUID (SQUID)
-    '''
-    guid_pattern = re.compile(r'^\{(\w{8})-(\w{4})-(\w{4})-(\w\w)(\w\w)-(\w\w)(\w\w)(\w\w)(\w\w)(\w\w)(\w\w)\}$')
+    """
+    guid_pattern = re.compile(
+        r"^\{(\w{8})-(\w{4})-(\w{4})-(\w\w)(\w\w)-(\w\w)(\w\w)(\w\w)(\w\w)(\w\w)(\w\w)\}$"
+    )
     guid_match = guid_pattern.match(guid)
-    squid = ''
+    squid = ""
     if guid_match is not None:
         for index in range(1, 12):
             squid += guid_match.group(index)[::-1]
@@ -340,7 +359,7 @@ def guid_to_squid(guid):
 
 
 def squid_to_guid(squid):
-    '''
+    """
     Converts a compressed GUID (SQUID) back into a GUID
 
     Args:
@@ -349,17 +368,26 @@ def squid_to_guid(squid):
 
     Returns:
         str: A valid GUID
-    '''
-    squid_pattern = re.compile(r'^(\w{8})(\w{4})(\w{4})(\w\w)(\w\w)(\w\w)(\w\w)(\w\w)(\w\w)(\w\w)(\w\w)$')
+    """
+    squid_pattern = re.compile(
+        r"^(\w{8})(\w{4})(\w{4})(\w\w)(\w\w)(\w\w)(\w\w)(\w\w)(\w\w)(\w\w)(\w\w)$"
+    )
     squid_match = squid_pattern.match(squid)
-    guid = ''
+    guid = ""
     if squid_match is not None:
-        guid = '{' + \
-               squid_match.group(1)[::-1]+'-' + \
-               squid_match.group(2)[::-1]+'-' + \
-               squid_match.group(3)[::-1]+'-' + \
-               squid_match.group(4)[::-1]+squid_match.group(5)[::-1] + '-'
+        guid = (
+            "{"
+            + squid_match.group(1)[::-1]
+            + "-"
+            + squid_match.group(2)[::-1]
+            + "-"
+            + squid_match.group(3)[::-1]
+            + "-"
+            + squid_match.group(4)[::-1]
+            + squid_match.group(5)[::-1]
+            + "-"
+        )
         for index in range(6, 12):
             guid += squid_match.group(index)[::-1]
-        guid += '}'
+        guid += "}"
     return guid
