@@ -1,22 +1,19 @@
 # -*- coding: utf-8 -*-
 
-# Import Python Libs
 from __future__ import absolute_import
 
 import os
 import textwrap
 
+import pytest
 import salt.utils.files
-
-# Import Salt Libs
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
 
+@pytest.mark.windows_whitelisted
 class EnabledTest(ModuleCase):
     """
     validate the use of shell processing for cmd.run on the salt command line
