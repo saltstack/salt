@@ -197,7 +197,7 @@ Several Jinja Filters Renamed
 
 The following Jinja filters (originally added in 2017.7.0) have been renamed
 due to the fact that they were inaccurately named when initially added. The
-original names will be supported until the Neon release of Salt.
+original names will be supported until the 3000 release of Salt.
 
 - :jinja_ref:`rand_str` renamed to :jinja_ref:`random_hash`
 - :jinja_ref:`jinja_decode_dict` renamed to :jinja_ref:`jinja_encode_dict`
@@ -1624,7 +1624,7 @@ NaCL Module and Runner changes
 ==============================
 
 In addition to argument changes in both the NaCL module and runner for future
-removal in the Neon release, the default "box_type" has changed from
+removal in the 3000 release, the default "box_type" has changed from
 ``secretbox`` to ``sealedbox``.  SecretBox is data encrypted using private key
 ``sk`` and Sealedbox is encrypted using public key ``pk``.
 
@@ -1634,7 +1634,7 @@ removal in the Neon release, the default "box_type" has changed from
 The Salt utility functions from ``salt.utils`` (typically used by those
 developing extension modules for Salt) have been moved into different modules,
 grouped logically based on their functionality. The old function names will
-continue to work until the ``Neon`` release of Salt (due around Q1 2019).
+continue to work until the ``3000`` release of Salt (due around Q1 2019).
 
 The renamed functions are:
 
@@ -1919,7 +1919,7 @@ Grain Deprecations
 ------------------
 
 - For ``smartos``, some grains have been deprecated. These grains will be
-  removed in Neon:
+  removed in 3000:
 
     - The ``hypervisor_uuid`` grain has been replaced with
       ``mdata:sdc:server_uuid``
@@ -1974,5 +1974,5 @@ RAET transport
 
 We haven't been doing development on RAET for quite some time and decided that
 2018.3.0 is the time to announce the deprecation. RAET support will be removed
-in Neon. Please consider to move to ``zeromq`` or ``tcp`` transport instead of
+in 3000. Please consider to move to ``zeromq`` or ``tcp`` transport instead of
 ``raet``.

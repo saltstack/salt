@@ -14,7 +14,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-'''
+"""
 
 Management of Pure Storage FlashBlade
 
@@ -49,41 +49,47 @@ Installation Prerequisites
 
 .. versionadded::  2019.2.0
 
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import os
 from datetime import datetime
 
+from salt.exceptions import CommandExecutionError
+
 # Import Salt libs
 from salt.ext import six
-from salt.exceptions import CommandExecutionError
 
 # Import 3rd party modules
 try:
     from purity_fb import PurityFb, FileSystem, FileSystemSnapshot, SnapshotSuffix
     from purity_fb import rest, NfsRule, ProtocolRule
+
     HAS_PURITY_FB = True
 except ImportError:
     HAS_PURITY_FB = False
 
-__docformat__ = 'restructuredtext en'
+__docformat__ = "restructuredtext en"
 
-__virtualname__ = 'purefb'
+__virtualname__ = "purefb"
 
 
 def __virtual__():
-    '''
+    """
     Determine whether or not to load this module
-    '''
+    """
     if HAS_PURITY_FB:
         return __virtualname__
-    return (False, 'purefb execution module not loaded: purity_fb python library not available.')
+    return (
+        False,
+        "purefb execution module not loaded: purity_fb python library not available.",
+    )
 
 
 def _get_blade():
-    '''
+    """
     Get Pure Storage FlasBlade configuration
 
     1) From the minion config
@@ -94,40 +100,42 @@ def _get_blade():
     2) From environment (PUREFB_IP and PUREFB_API)
     3) From the pillar (PUREFB_IP and PUREFB_API)
 
-  '''
+  """
 
     try:
-        blade_name = __opts__['pure_tags']['fb'].get('san_ip')
-        api_token = __opts__['pure_tags']['fb'].get('api_token')
+        blade_name = __opts__["pure_tags"]["fb"].get("san_ip")
+        api_token = __opts__["pure_tags"]["fb"].get("api_token")
         if blade_name and api:
             blade = PurityFb(blade_name)
             blade.disable_verify_ssl()
     except (KeyError, NameError, TypeError):
         try:
-            blade_name = os.environ.get('PUREFB_IP')
-            api_token = os.environ.get('PUREFB_API')
+            blade_name = os.environ.get("PUREFB_IP")
+            api_token = os.environ.get("PUREFB_API")
             if blade_name:
                 blade = PurityFb(blade_name)
                 blade.disable_verify_ssl()
         except (ValueError, KeyError, NameError):
             try:
-                api_token = __pillar__['PUREFB_API']
-                blade = PurityFb(__pillar__['PUREFB_IP'])
+                api_token = __pillar__["PUREFB_API"]
+                blade = PurityFb(__pillar__["PUREFB_IP"])
                 blade.disable_verify_ssl()
             except (KeyError, NameError):
-                raise CommandExecutionError('No Pure Storage FlashBlade credentials found.')
+                raise CommandExecutionError(
+                    "No Pure Storage FlashBlade credentials found."
+                )
     try:
         blade.login(api_token)
-    except Exception:
-        raise CommandExecutionError('Pure Storage FlashBlade authentication failed.')
+    except Exception:  # pylint: disable=broad-except
+        raise CommandExecutionError("Pure Storage FlashBlade authentication failed.")
     return blade
 
 
 def _get_fs(name, blade):
-    '''
+    """
     Private function to
     check for existance of a filesystem
-    '''
+    """
     _fs = []
     _fs.append(name)
     try:
@@ -138,12 +146,12 @@ def _get_fs(name, blade):
 
 
 def _get_snapshot(name, suffix, blade):
-    '''
+    """
     Return name of Snapshot
     or None
-    '''
+    """
     try:
-        filt = 'source=\'{}\' and suffix=\'{}\''.format(name, suffix)
+        filt = "source='{}' and suffix='{}'".format(name, suffix)
         res = blade.file_system_snapshots.list_file_system_snapshots(filter=filt)
         return res.items[0]
     except rest.ApiException:
@@ -151,10 +159,10 @@ def _get_snapshot(name, suffix, blade):
 
 
 def _get_deleted_fs(name, blade):
-    '''
+    """
     Private function to check
     if a file systeem has already been deleted
-    '''
+    """
     try:
         _fs = _get_fs(name, blade)
         if _fs and _fs.destroyed:
@@ -164,7 +172,7 @@ def _get_deleted_fs(name, blade):
 
 
 def snap_create(name, suffix=None):
-    '''
+    """
 
     Create a filesystem snapshot on a Pure Storage FlashBlade.
 
@@ -184,19 +192,20 @@ def snap_create(name, suffix=None):
         salt '*' purefb.snap_create foo
         salt '*' purefb.snap_create foo suffix=bar
 
-    '''
+    """
     blade = _get_blade()
     if suffix is None:
-        suffix = ('snap-' +
-                  six.text_type((datetime.utcnow() -
-                                 datetime(1970, 1, 1, 0, 0, 0, 0)).total_seconds()))
-        suffix = suffix.replace('.', '')
+        suffix = "snap-" + six.text_type(
+            (datetime.utcnow() - datetime(1970, 1, 1, 0, 0, 0, 0)).total_seconds()
+        )
+        suffix = suffix.replace(".", "")
     if _get_fs(name, blade) is not None:
         try:
             source = []
             source.append(name)
-            blade.file_system_snapshots.create_file_system_snapshots(sources=source,
-                                                                     suffix=SnapshotSuffix(suffix))
+            blade.file_system_snapshots.create_file_system_snapshots(
+                sources=source, suffix=SnapshotSuffix(suffix)
+            )
             return True
         except rest.ApiException:
             return False
@@ -205,7 +214,7 @@ def snap_create(name, suffix=None):
 
 
 def snap_delete(name, suffix=None, eradicate=False):
-    '''
+    """
 
     Delete a filesystem snapshot on a Pure Storage FlashBlade.
 
@@ -226,14 +235,15 @@ def snap_delete(name, suffix=None, eradicate=False):
 
         salt '*' purefb.snap_delete foo suffix=snap eradicate=True
 
-    '''
+    """
     blade = _get_blade()
     if _get_snapshot(name, suffix, blade) is not None:
         try:
-            snapname = name + '.' + suffix
+            snapname = name + "." + suffix
             new_attr = FileSystemSnapshot(destroyed=True)
-            blade.file_system_snapshots.update_file_system_snapshots(name=snapname,
-                                                                     attributes=new_attr)
+            blade.file_system_snapshots.update_file_system_snapshots(
+                name=snapname, attributes=new_attr
+            )
         except rest.ApiException:
             return False
         if eradicate is True:
@@ -249,7 +259,7 @@ def snap_delete(name, suffix=None, eradicate=False):
 
 
 def snap_eradicate(name, suffix=None):
-    '''
+    """
 
     Eradicate a deleted filesystem snapshot on a Pure Storage FlashBlade.
 
@@ -268,10 +278,10 @@ def snap_eradicate(name, suffix=None):
 
         salt '*' purefb.snap_eradicate foo suffix=snap
 
-    '''
+    """
     blade = _get_blade()
     if _get_snapshot(name, suffix, blade) is not None:
-        snapname = name + '.' + suffix
+        snapname = name + "." + suffix
         try:
             blade.file_system_snapshots.delete_file_system_snapshots(name=snapname)
             return True
@@ -281,8 +291,10 @@ def snap_eradicate(name, suffix=None):
         return False
 
 
-def fs_create(name, size=None, proto='NFS', nfs_rules='*(rw,no_root_squash)', snapshot=False):
-    '''
+def fs_create(
+    name, size=None, proto="NFS", nfs_rules="*(rw,no_root_squash)", snapshot=False
+):
+    """
 
     Create a filesystem on a Pure Storage FlashBlade.
 
@@ -311,37 +323,40 @@ def fs_create(name, size=None, proto='NFS', nfs_rules='*(rw,no_root_squash)', sn
         salt '*' purefb.fs_create foo proto=CIFS
         salt '*' purefb.fs_create foo size=10T
 
-    '''
+    """
     if len(name) > 63:
         name = name[0:63]
     blade = _get_blade()
     print(proto)
     if _get_fs(name, blade) is None:
         if size is None:
-            size = __utils__['stringutils.human_to_bytes']('32G')
+            size = __utils__["stringutils.human_to_bytes"]("32G")
         else:
-            size = __utils__['stringutils.human_to_bytes'](size)
-        if proto.lower() == 'nfs':
-            fs_obj = FileSystem(name=name,
-                                provisioned=size,
-                                fast_remove_directory_enabled=True,
-                                snapshot_directory_enabled=snapshot,
-                                nfs=NfsRule(enabled=True, rules=nfs_rules),
-                               )
-        elif proto.lower() == 'cifs':
-            fs_obj = FileSystem(name=name,
-                                provisioned=size,
-                                fast_remove_directory_enabled=True,
-                                snapshot_directory_enabled=snapshot,
-                                smb=ProtocolRule(enabled=True),
-                               )
-        elif proto.lower() == 'http':
-            fs_obj = FileSystem(name=name,
-                                provisioned=size,
-                                fast_remove_directory_enabled=True,
-                                snapshot_directory_enabled=snapshot,
-                                http=ProtocolRule(enabled=True),
-                               )
+            size = __utils__["stringutils.human_to_bytes"](size)
+        if proto.lower() == "nfs":
+            fs_obj = FileSystem(
+                name=name,
+                provisioned=size,
+                fast_remove_directory_enabled=True,
+                snapshot_directory_enabled=snapshot,
+                nfs=NfsRule(enabled=True, rules=nfs_rules),
+            )
+        elif proto.lower() == "cifs":
+            fs_obj = FileSystem(
+                name=name,
+                provisioned=size,
+                fast_remove_directory_enabled=True,
+                snapshot_directory_enabled=snapshot,
+                smb=ProtocolRule(enabled=True),
+            )
+        elif proto.lower() == "http":
+            fs_obj = FileSystem(
+                name=name,
+                provisioned=size,
+                fast_remove_directory_enabled=True,
+                snapshot_directory_enabled=snapshot,
+                http=ProtocolRule(enabled=True),
+            )
         else:
             return False
         try:
@@ -354,7 +369,7 @@ def fs_create(name, size=None, proto='NFS', nfs_rules='*(rw,no_root_squash)', sn
 
 
 def fs_delete(name, eradicate=False):
-    '''
+    """
 
     Delete a share on a Pure Storage FlashBlade.
 
@@ -373,16 +388,19 @@ def fs_delete(name, eradicate=False):
 
         salt '*' purefb.fs_delete foo eradicate=True
 
-    '''
+    """
     blade = _get_blade()
     if _get_fs(name, blade) is not None:
         try:
-            blade.file_systems.update_file_systems(name=name,
-                                                   attributes=FileSystem(nfs=NfsRule(enabled=False),
-                                                                         smb=ProtocolRule(enabled=False),
-                                                                         http=ProtocolRule(enabled=False),
-                                                                         destroyed=True)
-                                                  )
+            blade.file_systems.update_file_systems(
+                name=name,
+                attributes=FileSystem(
+                    nfs=NfsRule(enabled=False),
+                    smb=ProtocolRule(enabled=False),
+                    http=ProtocolRule(enabled=False),
+                    destroyed=True,
+                ),
+            )
         except rest.ApiException:
             return False
         if eradicate is True:
@@ -398,7 +416,7 @@ def fs_delete(name, eradicate=False):
 
 
 def fs_eradicate(name):
-    '''
+    """
 
     Eradicate a deleted filesystem on a Pure Storage FlashBlade.
 
@@ -415,7 +433,7 @@ def fs_eradicate(name):
 
         salt '*' purefb.fs_eradicate foo
 
-    '''
+    """
     blade = _get_blade()
     if _get_deleted_fs(name, blade) is not None:
         try:
@@ -428,7 +446,7 @@ def fs_eradicate(name):
 
 
 def fs_extend(name, size):
-    '''
+    """
 
     Resize an existing filesystem on a Pure Storage FlashBlade.
 
@@ -448,14 +466,14 @@ def fs_extend(name, size):
 
         salt '*' purefb.fs_extend foo 10T
 
-    '''
+    """
     attr = {}
     blade = _get_blade()
     _fs = _get_fs(name, blade)
     if _fs is not None:
-        if __utils__['stringutils.human_to_bytes'](size) > _fs.provisioned:
+        if __utils__["stringutils.human_to_bytes"](size) > _fs.provisioned:
             try:
-                attr['provisioned'] = __utils__['stringutils.human_to_bytes'](size)
+                attr["provisioned"] = __utils__["stringutils.human_to_bytes"](size)
                 n_attr = FileSystem(**attr)
                 blade.file_systems.update_file_systems(name=name, attributes=n_attr)
                 return True
@@ -468,7 +486,7 @@ def fs_extend(name, size):
 
 
 def fs_update(name, rules, snapshot=False):
-    '''
+    """
 
     Update filesystem on a Pure Storage FlashBlade.
 
@@ -491,15 +509,15 @@ def fs_update(name, rules, snapshot=False):
 
         salt '*' purefb.fs_nfs_update foo rules='10.234.112.23(ro), 10.234.112.24(rw)' snapshot=True
 
-    '''
+    """
     blade = _get_blade()
     attr = {}
     _fs = _get_fs(name, blade)
     if _fs is not None:
         try:
             if _fs.nfs.enabled:
-                attr['nfs'] = NfsRule(rules=rules)
-            attr['snapshot_directory_enabled'] = snapshot
+                attr["nfs"] = NfsRule(rules=rules)
+            attr["snapshot_directory_enabled"] = snapshot
             n_attr = FileSystem(**attr)
             blade.file_systems.update_file_systems(name=name, attributes=n_attr)
             return True

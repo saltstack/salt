@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Pillar data from vCenter or an ESXi host
 
 .. versionadded:: 2017.7.0
@@ -141,7 +141,7 @@ Optionally, the following keyword arguments can be passed to the ext_pillar for 
             vCenter "Custom Attributes" (i.e. Annotations) will always be returned if it exists on the object as
             part of the pillar regardless of this setting.
 
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
@@ -153,317 +153,269 @@ import salt.utils.vmware
 
 # Import 3rd-party libs
 from salt.ext import six
+
 try:
+    # pylint: disable=no-name-in-module
     from pyVmomi import vim
     from pyVim.connect import Disconnect
+
     HAS_LIBS = True
+    # pylint: enable=no-name-in-module
 except ImportError:
     HAS_LIBS = False
 
 
-__virtualname__ = 'vmware'
+__virtualname__ = "vmware"
 
 # Set up logging
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only return if python-etcd is installed
-    '''
+    """
     return __virtualname__ if HAS_LIBS else False
 
 
-def ext_pillar(minion_id,
-               pillar,  # pylint: disable=W0613
-               **kwargs):
-    '''
+def ext_pillar(minion_id, pillar, **kwargs):  # pylint: disable=W0613
+    """
     Check vmware/vcenter for all data
-    '''
+    """
     vmware_pillar = {}
     host = None
     username = None
     password = None
     property_types = []
-    property_name = 'name'
+    property_name = "name"
     protocol = None
     port = None
-    pillar_key = 'vmware'
+    pillar_key = "vmware"
     replace_default_attributes = False
     type_specific_pillar_attributes = {
-        'VirtualMachine': [
+        "VirtualMachine": [
             {
-                'config':
-                    [
-                        'version',
-                        'guestId',
-                        'files',
-                        'tools',
-                        'flags',
-                        'memoryHotAddEnabled',
-                        'cpuHotAddEnabled',
-                        'cpuHotRemoveEnabled',
-                        'datastoreUrl',
-                        'swapPlacement',
-                        'bootOptions',
-                        'scheduledHardwareUpgradeInfo',
-                        'memoryAllocation',
-                        'cpuAllocation',
-                    ]
+                "config": [
+                    "version",
+                    "guestId",
+                    "files",
+                    "tools",
+                    "flags",
+                    "memoryHotAddEnabled",
+                    "cpuHotAddEnabled",
+                    "cpuHotRemoveEnabled",
+                    "datastoreUrl",
+                    "swapPlacement",
+                    "bootOptions",
+                    "scheduledHardwareUpgradeInfo",
+                    "memoryAllocation",
+                    "cpuAllocation",
+                ]
             },
             {
-                'summary':
-                    [
-                        {
-                            'runtime':
-                                [
-                                    {
-                                        'host':
-                                        [
-                                            'name',
-                                            {'parent': 'name'},
-                                        ]
-                                    },
-                                    'bootTime',
-                                ]
-                        },
-                        {
-                            'guest':
-                                [
-                                    'toolsStatus',
-                                    'toolsVersionStatus',
-                                    'toolsVersionStatus2',
-                                    'toolsRunningStatus',
-                                ]
-                        },
-                        {
-                            'config':
-                                [
-                                    'cpuReservation',
-                                    'memoryReservation',
-                                ]
-                        },
-                        {
-                            'storage':
-                                [
-                                    'committed',
-                                    'uncommitted',
-                                    'unshared',
-                                ]
-                        },
-                        {'dasVmProtection': ['dasProtected']},
-                    ]
+                "summary": [
+                    {"runtime": [{"host": ["name", {"parent": "name"}]}, "bootTime"]},
+                    {
+                        "guest": [
+                            "toolsStatus",
+                            "toolsVersionStatus",
+                            "toolsVersionStatus2",
+                            "toolsRunningStatus",
+                        ]
+                    },
+                    {"config": ["cpuReservation", "memoryReservation"]},
+                    {"storage": ["committed", "uncommitted", "unshared"]},
+                    {"dasVmProtection": ["dasProtected"]},
+                ]
             },
             {
-                'storage':
-                    [
-                        {
-                            'perDatastoreUsage':
-                                [
-                                    {
-                                        'datastore': 'name'
-                                    },
-                                    'committed',
-                                    'uncommitted',
-                                    'unshared',
-                                ]
-                        }
-                    ]
+                "storage": [
+                    {
+                        "perDatastoreUsage": [
+                            {"datastore": "name"},
+                            "committed",
+                            "uncommitted",
+                            "unshared",
+                        ]
+                    }
+                ]
             },
         ],
-        'HostSystem': [
+        "HostSystem": [
             {
-                'datastore':
-                    [
-                        'name',
-                        'overallStatus',
-                        {
-                            'summary':
-                                [
-                                    'url',
-                                    'freeSpace',
-                                    'maxFileSize',
-                                    'maxVirtualDiskCapacity',
-                                    'maxPhysicalRDMFileSize',
-                                    'maxVirtualRDMFileSize',
-                                    {
-                                        'vmfs':
-                                            [
-                                                'capacity',
-                                                'blockSizeMb',
-                                                'maxBlocks',
-                                                'majorVersion',
-                                                'version',
-                                                'uuid',
-                                                {
-                                                    'extent':
-                                                        [
-                                                            'diskName',
-                                                            'partition',
-                                                        ]
-                                                },
-                                                'vmfsUpgradeable',
-                                                'ssd',
-                                                'local',
-                                            ],
-                                    },
+                "datastore": [
+                    "name",
+                    "overallStatus",
+                    {
+                        "summary": [
+                            "url",
+                            "freeSpace",
+                            "maxFileSize",
+                            "maxVirtualDiskCapacity",
+                            "maxPhysicalRDMFileSize",
+                            "maxVirtualRDMFileSize",
+                            {
+                                "vmfs": [
+                                    "capacity",
+                                    "blockSizeMb",
+                                    "maxBlocks",
+                                    "majorVersion",
+                                    "version",
+                                    "uuid",
+                                    {"extent": ["diskName", "partition"]},
+                                    "vmfsUpgradeable",
+                                    "ssd",
+                                    "local",
                                 ],
-                        },
-                        {'vm': 'name'}
-                    ]
+                            },
+                        ],
+                    },
+                    {"vm": "name"},
+                ]
             },
             {
-                'vm':
-                    [
-                        'name',
-                        'overallStatus',
-                        {
-                            'summary':
-                                [
-                                    {'runtime': 'powerState'},
-                                ]
-                        },
-                    ]
+                "vm": [
+                    "name",
+                    "overallStatus",
+                    {"summary": [{"runtime": "powerState"}]},
+                ]
             },
-        ]
+        ],
     }
     pillar_attributes = [
-        {
-            'summary':
-                [
-                    'overallStatus'
-                ]
-        },
-        {
-            'network':
-                [
-                    'name',
-                    {'config': {'distributedVirtualSwitch': 'name'}},
-                ]
-        },
-        {
-            'datastore':
-                [
-                    'name',
-                ]
-        },
-        {
-            'parent':
-                [
-                    'name'
-                ]
-        },
+        {"summary": ["overallStatus"]},
+        {"network": ["name", {"config": {"distributedVirtualSwitch": "name"}}]},
+        {"datastore": ["name"]},
+        {"parent": ["name"]},
     ]
 
-    if 'pillar_key' in kwargs:
-        pillar_key = kwargs['pillar_key']
+    if "pillar_key" in kwargs:
+        pillar_key = kwargs["pillar_key"]
     vmware_pillar[pillar_key] = {}
 
-    if 'host' not in kwargs:
-        log.error('VMWare external pillar configured but host is not specified in ext_pillar configuration.')
+    if "host" not in kwargs:
+        log.error(
+            "VMWare external pillar configured but host is not specified in ext_pillar configuration."
+        )
         return vmware_pillar
     else:
-        host = kwargs['host']
-        log.debug('vmware_pillar -- host = %s', host)
+        host = kwargs["host"]
+        log.debug("vmware_pillar -- host = %s", host)
 
-    if 'username' not in kwargs:
-        log.error('VMWare external pillar requested but username is not specified in ext_pillar configuration.')
+    if "username" not in kwargs:
+        log.error(
+            "VMWare external pillar requested but username is not specified in ext_pillar configuration."
+        )
         return vmware_pillar
     else:
-        username = kwargs['username']
-        log.debug('vmware_pillar -- username = %s', username)
+        username = kwargs["username"]
+        log.debug("vmware_pillar -- username = %s", username)
 
-    if 'password' not in kwargs:
-        log.error('VMWare external pillar requested but password is not specified in ext_pillar configuration.')
+    if "password" not in kwargs:
+        log.error(
+            "VMWare external pillar requested but password is not specified in ext_pillar configuration."
+        )
         return vmware_pillar
     else:
-        password = kwargs['password']
-        log.debug('vmware_pillar -- password = %s', password)
+        password = kwargs["password"]
+        log.debug("vmware_pillar -- password = %s", password)
 
-    if 'replace_default_attributes' in kwargs:
-        replace_default_attributes = kwargs['replace_default_attributes']
+    if "replace_default_attributes" in kwargs:
+        replace_default_attributes = kwargs["replace_default_attributes"]
         if replace_default_attributes:
             pillar_attributes = []
             type_specific_pillar_attributes = {}
 
-    if 'property_types' in kwargs:
-        for prop_type in kwargs['property_types']:
+    if "property_types" in kwargs:
+        for prop_type in kwargs["property_types"]:
             if isinstance(prop_type, dict):
                 property_types.append(getattr(vim, prop_type.keys()[0]))
                 if isinstance(prop_type[prop_type.keys()[0]], list):
-                    pillar_attributes = pillar_attributes + prop_type[prop_type.keys()[0]]
+                    pillar_attributes = (
+                        pillar_attributes + prop_type[prop_type.keys()[0]]
+                    )
                 else:
-                    log.warning('A property_type dict was specified, but its value is not a list')
+                    log.warning(
+                        "A property_type dict was specified, but its value is not a list"
+                    )
             else:
                 property_types.append(getattr(vim, prop_type))
     else:
         property_types = [vim.VirtualMachine]
-    log.debug('vmware_pillar -- property_types = %s', property_types)
+    log.debug("vmware_pillar -- property_types = %s", property_types)
 
-    if 'property_name' in kwargs:
-        property_name = kwargs['property_name']
+    if "property_name" in kwargs:
+        property_name = kwargs["property_name"]
     else:
-        property_name = 'name'
-    log.debug('vmware_pillar -- property_name = %s', property_name)
+        property_name = "name"
+    log.debug("vmware_pillar -- property_name = %s", property_name)
 
-    if 'protocol' in kwargs:
-        protocol = kwargs['protocol']
-        log.debug('vmware_pillar -- protocol = %s', protocol)
+    if "protocol" in kwargs:
+        protocol = kwargs["protocol"]
+        log.debug("vmware_pillar -- protocol = %s", protocol)
 
-    if 'port' in kwargs:
-        port = kwargs['port']
-        log.debug('vmware_pillar -- port = %s', port)
+    if "port" in kwargs:
+        port = kwargs["port"]
+        log.debug("vmware_pillar -- port = %s", port)
 
     virtualgrain = None
     osgrain = None
-    if 'virtual' in __grains__:
-        virtualgrain = __grains__['virtual'].lower()
-    if 'os' in __grains__:
-        osgrain = __grains__['os'].lower()
+    if "virtual" in __grains__:
+        virtualgrain = __grains__["virtual"].lower()
+    if "os" in __grains__:
+        osgrain = __grains__["os"].lower()
 
-    if virtualgrain == 'vmware' or osgrain == 'vmware esxi' or osgrain == 'esxi':
+    if virtualgrain == "vmware" or osgrain == "vmware esxi" or osgrain == "esxi":
         vmware_pillar[pillar_key] = {}
         try:
-            _conn = salt.utils.vmware.get_service_instance(host,
-                                                           username,
-                                                           password,
-                                                           protocol,
-                                                           port)
+            _conn = salt.utils.vmware.get_service_instance(
+                host, username, password, protocol, port
+            )
             if _conn:
                 data = None
                 for prop_type in property_types:
-                    data = salt.utils.vmware.get_mor_by_property(_conn,
-                                                                 prop_type,
-                                                                 minion_id,
-                                                                 property_name=property_name)
+                    data = salt.utils.vmware.get_mor_by_property(
+                        _conn, prop_type, minion_id, property_name=property_name
+                    )
                     if data:
-                        type_name = type(data).__name__.replace('vim.', '')
-                        if hasattr(data, 'availableField'):
-                            vmware_pillar[pillar_key]['annotations'] = {}
+                        type_name = type(data).__name__.replace("vim.", "")
+                        if hasattr(data, "availableField"):
+                            vmware_pillar[pillar_key]["annotations"] = {}
                             for availableField in data.availableField:
                                 for customValue in data.customValue:
                                     if availableField.key == customValue.key:
-                                        vmware_pillar[pillar_key]['annotations'][availableField.name] = customValue.value
+                                        vmware_pillar[pillar_key]["annotations"][
+                                            availableField.name
+                                        ] = customValue.value
                         type_specific_pillar_attribute = []
                         if type_name in type_specific_pillar_attributes:
-                            type_specific_pillar_attribute = type_specific_pillar_attributes[type_name]
-                        vmware_pillar[pillar_key] = dictupdate.update(vmware_pillar[pillar_key],
-                                                                      _crawl_attribute(data,
-                                                                      pillar_attributes +
-                                                                      type_specific_pillar_attribute))
+                            type_specific_pillar_attribute = type_specific_pillar_attributes[
+                                type_name
+                            ]
+                        vmware_pillar[pillar_key] = dictupdate.update(
+                            vmware_pillar[pillar_key],
+                            _crawl_attribute(
+                                data, pillar_attributes + type_specific_pillar_attribute
+                            ),
+                        )
                         break
                 # explicitly disconnect from vCenter when we are done, connections linger idle otherwise
                 Disconnect(_conn)
             else:
                 log.error(
-                    'Unable to obtain a connection with %s, please verify '
-                    'your vmware ext_pillar configuration', host
+                    "Unable to obtain a connection with %s, please verify "
+                    "your vmware ext_pillar configuration",
+                    host,
                 )
         except RuntimeError:
-            log.error(('A runtime error occurred in the vmware_pillar, '
-                       'this is likely caused by an infinite recursion in '
-                       'a requested attribute.  Verify your requested attributes '
-                       'and reconfigure the pillar.'))
+            log.error(
+                (
+                    "A runtime error occurred in the vmware_pillar, "
+                    "this is likely caused by an infinite recursion in "
+                    "a requested attribute.  Verify your requested attributes "
+                    "and reconfigure the pillar."
+                )
+            )
 
         return vmware_pillar
     else:
@@ -471,9 +423,9 @@ def ext_pillar(minion_id,
 
 
 def _recurse_config_to_dict(t_data):
-    '''
+    """
     helper function to recurse through a vim object and attempt to return all child objects
-    '''
+    """
     if not isinstance(t_data, type(None)):
         if isinstance(t_data, list):
             t_list = []
@@ -486,16 +438,16 @@ def _recurse_config_to_dict(t_data):
                 t_dict[k] = _recurse_config_to_dict(v)
             return t_dict
         else:
-            if hasattr(t_data, '__dict__'):
+            if hasattr(t_data, "__dict__"):
                 return _recurse_config_to_dict(t_data.__dict__)
             else:
                 return _serializer(t_data)
 
 
 def _crawl_attribute(this_data, this_attr):
-    '''
+    """
     helper function to crawl an attribute specified for retrieval
-    '''
+    """
     if isinstance(this_data, list):
         t_list = []
         for d in this_data:
@@ -506,7 +458,9 @@ def _crawl_attribute(this_data, this_attr):
             t_dict = {}
             for k in this_attr:
                 if hasattr(this_data, k):
-                    t_dict[k] = _crawl_attribute(getattr(this_data, k, None), this_attr[k])
+                    t_dict[k] = _crawl_attribute(
+                        getattr(this_data, k, None), this_attr[k]
+                    )
             return t_dict
         elif isinstance(this_attr, list):
             this_dict = {}
@@ -514,14 +468,17 @@ def _crawl_attribute(this_data, this_attr):
                 this_dict = dictupdate.update(this_dict, _crawl_attribute(this_data, l))
             return this_dict
         else:
-            return {this_attr: _recurse_config_to_dict(getattr(this_data, this_attr, None))}
+            return {
+                this_attr: _recurse_config_to_dict(getattr(this_data, this_attr, None))
+            }
 
 
 def _serializer(obj):
-    '''
+    """
     helper function to serialize some objects for prettier return
-    '''
+    """
     import datetime
+
     if isinstance(obj, datetime.datetime):
         if obj.utcoffset() is not None:
             obj = obj - obj.utcoffset()

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
     Logstash Logging Handler
     ========================
 
@@ -153,23 +153,27 @@
     .. _`ZeroMQ input`: http://logstash.net/docs/latest/inputs/zeromq
     .. _`high water mark`: http://api.zeromq.org/3-2:zmq-setsockopt
 
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import os
+
+import datetime
 import logging
 import logging.handlers
-import datetime
+import os
 
-# Import salt libs
-from salt.log.setup import LOG_LEVELS
-from salt.log.mixins import NewStyleClassMixIn
 import salt.utils.json
 import salt.utils.network
+import salt.utils.stringutils
 
 # Import Third party libs
 from salt.ext import six
+from salt.log.mixins import NewStyleClassMixIn
+
+# Import salt libs
+from salt.log.setup import LOG_LEVELS
+
 try:
     import zmq
 except ImportError:
@@ -178,17 +182,18 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = 'logstash'
+__virtualname__ = "logstash"
 
 
 def __virtual__():
-    if not any(['logstash_udp_handler' in __opts__,
-                'logstash_zmq_handler' in __opts__]):
+    if not any(
+        ["logstash_udp_handler" in __opts__, "logstash_zmq_handler" in __opts__]
+    ):
         log.trace(
-            'None of the required configuration sections, '
-            '\'logstash_udp_handler\' and \'logstash_zmq_handler\', '
-            'were found in the configuration. Not loading the Logstash '
-            'logging handlers module.'
+            "None of the required configuration sections, "
+            "'logstash_udp_handler' and 'logstash_zmq_handler', "
+            "were found in the configuration. Not loading the Logstash "
+            "logging handlers module."
         )
         return False
     return __virtualname__
@@ -197,17 +202,17 @@ def __virtual__():
 def setup_handlers():
     host = port = address = None
 
-    if 'logstash_udp_handler' in __opts__:
-        host = __opts__['logstash_udp_handler'].get('host', None)
-        port = __opts__['logstash_udp_handler'].get('port', None)
-        version = __opts__['logstash_udp_handler'].get('version', 0)
-        msg_type = __opts__['logstash_udp_handler'].get('msg_type', 'logstash')
+    if "logstash_udp_handler" in __opts__:
+        host = __opts__["logstash_udp_handler"].get("host", None)
+        port = __opts__["logstash_udp_handler"].get("port", None)
+        version = __opts__["logstash_udp_handler"].get("version", 0)
+        msg_type = __opts__["logstash_udp_handler"].get("msg_type", "logstash")
 
         if host is None and port is None:
             log.debug(
-                'The required \'logstash_udp_handler\' configuration keys, '
-                '\'host\' and/or \'port\', are not properly configured. Not '
-                'configuring the logstash UDP logging handler.'
+                "The required 'logstash_udp_handler' configuration keys, "
+                "'host' and/or 'port', are not properly configured. Not "
+                "configuring the logstash UDP logging handler."
             )
         else:
             logstash_formatter = LogstashFormatter(msg_type=msg_type, version=version)
@@ -215,30 +220,30 @@ def setup_handlers():
             udp_handler.setFormatter(logstash_formatter)
             udp_handler.setLevel(
                 LOG_LEVELS[
-                    __opts__['logstash_udp_handler'].get(
-                        'log_level',
+                    __opts__["logstash_udp_handler"].get(
+                        "log_level",
                         # Not set? Get the main salt log_level setting on the
                         # configuration file
                         __opts__.get(
-                            'log_level',
+                            "log_level",
                             # Also not set?! Default to 'error'
-                            'error'
-                        )
+                            "error",
+                        ),
                     )
                 ]
             )
             yield udp_handler
 
-    if 'logstash_zmq_handler' in __opts__:
-        address = __opts__['logstash_zmq_handler'].get('address', None)
-        zmq_hwm = __opts__['logstash_zmq_handler'].get('hwm', 1000)
-        version = __opts__['logstash_zmq_handler'].get('version', 0)
+    if "logstash_zmq_handler" in __opts__:
+        address = __opts__["logstash_zmq_handler"].get("address", None)
+        zmq_hwm = __opts__["logstash_zmq_handler"].get("hwm", 1000)
+        version = __opts__["logstash_zmq_handler"].get("version", 0)
 
         if address is None:
             log.debug(
-                'The required \'logstash_zmq_handler\' configuration key, '
-                '\'address\', is not properly configured. Not '
-                'configuring the logstash ZMQ logging handler.'
+                "The required 'logstash_zmq_handler' configuration key, "
+                "'address', is not properly configured. Not "
+                "configuring the logstash ZMQ logging handler."
             )
         else:
             logstash_formatter = LogstashFormatter(version=version)
@@ -246,15 +251,15 @@ def setup_handlers():
             zmq_handler.setFormatter(logstash_formatter)
             zmq_handler.setLevel(
                 LOG_LEVELS[
-                    __opts__['logstash_zmq_handler'].get(
-                        'log_level',
+                    __opts__["logstash_zmq_handler"].get(
+                        "log_level",
                         # Not set? Get the main salt log_level setting on the
                         # configuration file
                         __opts__.get(
-                            'log_level',
+                            "log_level",
                             # Also not set?! Default to 'error'
-                            'error'
-                        )
+                            "error",
+                        ),
                     )
                 ]
             )
@@ -265,98 +270,130 @@ def setup_handlers():
 
 
 class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
-    def __init__(self, msg_type='logstash', msg_path='logstash', version=0):
+    def __init__(self, msg_type="logstash", msg_path="logstash", version=0):
         self.msg_path = msg_path
         self.msg_type = msg_type
         self.version = version
-        self.format = getattr(self, 'format_v{0}'.format(version))
+        self.format = getattr(self, "format_v{0}".format(version))
         super(LogstashFormatter, self).__init__(fmt=None, datefmt=None)
 
     def formatTime(self, record, datefmt=None):
-        return datetime.datetime.utcfromtimestamp(record.created).isoformat()[:-3] + 'Z'
+        return datetime.datetime.utcfromtimestamp(record.created).isoformat()[:-3] + "Z"
 
     def format_v0(self, record):
         host = salt.utils.network.get_fqhostname()
         message_dict = {
-            '@timestamp': self.formatTime(record),
-            '@fields': {
-                'levelname': record.levelname,
-                'logger': record.name,
-                'lineno': record.lineno,
-                'pathname': record.pathname,
-                'process': record.process,
-                'threadName': record.threadName,
-                'funcName': record.funcName,
-                'processName': record.processName
+            "@timestamp": self.formatTime(record),
+            "@fields": {
+                "levelname": record.levelname,
+                "logger": record.name,
+                "lineno": record.lineno,
+                "pathname": record.pathname,
+                "process": record.process,
+                "threadName": record.threadName,
+                "funcName": record.funcName,
+                "processName": record.processName,
             },
-            '@message': record.getMessage(),
-            '@source': '{0}://{1}/{2}'.format(
-                self.msg_type,
-                host,
-                self.msg_path
-            ),
-            '@source_host': host,
-            '@source_path': self.msg_path,
-            '@tags': ['salt'],
-            '@type': self.msg_type,
+            "@message": record.getMessage(),
+            "@source": "{0}://{1}/{2}".format(self.msg_type, host, self.msg_path),
+            "@source_host": host,
+            "@source_path": self.msg_path,
+            "@tags": ["salt"],
+            "@type": self.msg_type,
         }
 
         if record.exc_info:
-            message_dict['@fields']['exc_info'] = self.formatException(
-                record.exc_info
-            )
+            message_dict["@fields"]["exc_info"] = self.formatException(record.exc_info)
 
         # Add any extra attributes to the message field
         for key, value in six.iteritems(record.__dict__):
-            if key in ('args', 'asctime', 'created', 'exc_info', 'exc_text',
-                       'filename', 'funcName', 'id', 'levelname', 'levelno',
-                       'lineno', 'module', 'msecs', 'msecs', 'message', 'msg',
-                       'name', 'pathname', 'process', 'processName',
-                       'relativeCreated', 'thread', 'threadName'):
+            if key in (
+                "args",
+                "asctime",
+                "created",
+                "exc_info",
+                "exc_text",
+                "filename",
+                "funcName",
+                "id",
+                "levelname",
+                "levelno",
+                "lineno",
+                "module",
+                "msecs",
+                "msecs",
+                "message",
+                "msg",
+                "name",
+                "pathname",
+                "process",
+                "processName",
+                "relativeCreated",
+                "thread",
+                "threadName",
+            ):
                 # These are already handled above or not handled at all
                 continue
 
             if value is None:
-                message_dict['@fields'][key] = value
+                message_dict["@fields"][key] = value
                 continue
 
             if isinstance(value, (six.string_types, bool, dict, float, int, list)):
-                message_dict['@fields'][key] = value
+                message_dict["@fields"][key] = value
                 continue
 
-            message_dict['@fields'][key] = repr(value)
+            message_dict["@fields"][key] = repr(value)
         return salt.utils.json.dumps(message_dict)
 
     def format_v1(self, record):
         message_dict = {
-            '@version': 1,
-            '@timestamp': self.formatTime(record),
-            'host': salt.utils.network.get_fqhostname(),
-            'levelname': record.levelname,
-            'logger': record.name,
-            'lineno': record.lineno,
-            'pathname': record.pathname,
-            'process': record.process,
-            'threadName': record.threadName,
-            'funcName': record.funcName,
-            'processName': record.processName,
-            'message': record.getMessage(),
-            'tags': ['salt'],
-            'type': self.msg_type
+            "@version": 1,
+            "@timestamp": self.formatTime(record),
+            "host": salt.utils.network.get_fqhostname(),
+            "levelname": record.levelname,
+            "logger": record.name,
+            "lineno": record.lineno,
+            "pathname": record.pathname,
+            "process": record.process,
+            "threadName": record.threadName,
+            "funcName": record.funcName,
+            "processName": record.processName,
+            "message": record.getMessage(),
+            "tags": ["salt"],
+            "type": self.msg_type,
         }
 
         if record.exc_info:
-            message_dict['exc_info'] = self.formatException(
-                record.exc_info
-            )
+            message_dict["exc_info"] = self.formatException(record.exc_info)
 
         # Add any extra attributes to the message field
         for key, value in six.iteritems(record.__dict__):
-            if key in ('args', 'asctime', 'created', 'exc_info', 'exc_text',
-                       'filename', 'funcName', 'id', 'levelname', 'levelno',
-                       'lineno', 'module', 'msecs', 'msecs', 'message', 'msg',
-                       'name', 'pathname', 'process', 'processName',
-                       'relativeCreated', 'thread', 'threadName'):
+            if key in (
+                "args",
+                "asctime",
+                "created",
+                "exc_info",
+                "exc_text",
+                "filename",
+                "funcName",
+                "id",
+                "levelname",
+                "levelno",
+                "lineno",
+                "module",
+                "msecs",
+                "msecs",
+                "message",
+                "msg",
+                "name",
+                "pathname",
+                "process",
+                "processName",
+                "relativeCreated",
+                "thread",
+                "threadName",
+            ):
                 # These are already handled above or not handled at all
                 continue
 
@@ -373,18 +410,18 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
 
 
 class DatagramLogstashHandler(logging.handlers.DatagramHandler):
-    '''
+    """
     Logstash UDP logging handler.
-    '''
+    """
 
     def makePickle(self, record):
-        return self.format(record)
+        return salt.utils.stringutils.to_bytes(self.format(record))
 
 
 class ZMQLogstashHander(logging.Handler, NewStyleClassMixIn):
-    '''
+    """
     Logstash ZMQ logging handler.
-    '''
+    """
 
     def __init__(self, address, level=logging.NOTSET, zmq_hwm=1000):
         super(ZMQLogstashHander, self).__init__(level=level)
@@ -396,7 +433,7 @@ class ZMQLogstashHander(logging.Handler, NewStyleClassMixIn):
     @property
     def publisher(self):
         current_pid = os.getpid()
-        if not getattr(self, '_publisher') or self._pid != current_pid:
+        if not getattr(self, "_publisher") or self._pid != current_pid:
             # We forked? Multiprocessing? Recreate!!!
             self._pid = current_pid
             self._context = zmq.Context()
@@ -416,16 +453,16 @@ class ZMQLogstashHander(logging.Handler, NewStyleClassMixIn):
         return self._publisher
 
     def emit(self, record):
-        formatted_object = self.format(record)
+        formatted_object = salt.utils.stringutils.to_bytes(self.format(record))
         self.publisher.send(formatted_object)
 
     def close(self):
         if self._context is not None:
             # One second to send any queued messages
-            if hasattr(self._context, 'destroy'):
+            if hasattr(self._context, "destroy"):
                 self._context.destroy(1 * 1000)
             else:
-                if getattr(self, '_publisher', None) is not None:
+                if getattr(self, "_publisher", None) is not None:
                     self._publisher.setsockopt(zmq.LINGER, 1 * 1000)
                     self._publisher.close()
 
