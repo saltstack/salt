@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# Import Python libs
 from __future__ import absolute_import
 
 import copy
@@ -10,13 +9,10 @@ import os
 import random
 import time
 
+import pytest
 import salt.utils.platform
-
-# Import Salt libs
 import salt.utils.schedule
 from salt.modules.test import ping
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.mock import MagicMock, patch
@@ -32,7 +28,7 @@ except ImportError:
 
 
 try:
-    import croniter  # pylint: disable=W0611
+    import croniter  # pylint: disable=unused-import
 
     HAS_CRONITER = True
 except ImportError:
@@ -51,6 +47,7 @@ DEFAULT_CONFIG["cachedir"] = os.path.join(ROOT_DIR, "cache")
 
 
 @skipIf(HAS_DATEUTIL_PARSER is False, "The 'dateutil.parser' library is not available")
+@pytest.mark.windows_whitelisted
 class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
     """
     Validate the pkg module

@@ -7,27 +7,20 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import python libs
 from __future__ import absolute_import
 
 import logging
 from collections import OrderedDict
 
-# Import 3rd-party libs
 import psutil
-
-# Import salt libs
+import pytest
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.yaml
 from tests.integration.utils import testprogram
-
-# Import Salt Testing libs
 from tests.support.case import ShellCase
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.unit import skipIf
-
-# import pytest
 
 log = logging.getLogger(__name__)
 
@@ -57,6 +50,7 @@ def session_salt_syndic(request, session_salt_master_of_masters, session_salt_sy
             log.warning("Failed to terminate daemon: %s", daemon.__class__.__name__)
 
 
+@pytest.mark.windows_whitelisted
 class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
     """
     Test the salt-syndic command

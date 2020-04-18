@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
@@ -11,16 +10,13 @@ import subprocess
 import textwrap
 import time
 
+import pytest
 import salt.states.file
-
-# Import Salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 from salt.ext import six
 from salt.ext.six.moves import range
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
@@ -34,6 +30,7 @@ log = logging.getLogger(__name__)
 
 
 @skipIf(not salt.utils.platform.is_linux(), "These tests can only be run on linux")
+@pytest.mark.windows_whitelisted
 class SystemModuleTest(ModuleCase):
     """
     Validate the date/time functions in the system module
@@ -395,6 +392,7 @@ class SystemModuleTest(ModuleCase):
 
 
 @skipIf(not salt.utils.platform.is_windows(), "These tests can only be run on windows")
+@pytest.mark.windows_whitelisted
 class WinSystemModuleTest(ModuleCase):
     """
     Validate the date/time functions in the win_system module
