@@ -2553,6 +2553,8 @@ def blockreplace(
     dry_run=False,
     show_changes=True,
     append_newline=False,
+    insert_before_match=None,
+    insert_after_match=None,
 ):
     """
     .. versionadded:: 2014.1.0
@@ -2595,6 +2597,17 @@ def blockreplace(
         If markers are not found and set to ``True`` then, the markers and
         content will be prepended to the file.
 
+    insert_before_match
+        If markers are not found, this parameter can be set to a regex which will
+        insert the block before the first found occurrence in the file.
+
+        .. versionadded:: Sodium
+
+    insert_after_match
+        If markers are not found, this parameter can be set to a regex which will
+        insert the block after the first found occurrence in the file.
+
+        .. versionadded:: Sodium
 
     backup
         The file extension to use for a backup of the file if any edit is made.
@@ -2633,9 +2646,16 @@ def blockreplace(
         '#-- end managed zone foobar --' $'10.0.1.1 foo.foobar\\n10.0.1.2 bar.foobar' True
 
     """
-    if append_if_not_found and prepend_if_not_found:
+    exclusive_params = [
+        append_if_not_found,
+        prepend_if_not_found,
+        bool(insert_before_match),
+        bool(insert_after_match),
+    ]
+    if sum(exclusive_params) > 1:
         raise SaltInvocationError(
-            "Only one of append and prepend_if_not_found is permitted"
+            "Only one of append_if_not_found, prepend_if_not_found,"
+            " insert_before_match, and insert_after_match is permitted"
         )
 
     path = os.path.expanduser(path)
@@ -2653,6 +2673,18 @@ def blockreplace(
             raise SaltInvocationError(
                 "Cannot perform string replacements on a binary file: {0}".format(path)
             )
+
+    if insert_before_match or insert_after_match:
+        if insert_before_match:
+            if not isinstance(insert_before_match, six.string_types):
+                raise CommandExecutionError(
+                    "RegEx expected in insert_before_match parameter."
+                )
+        elif insert_after_match:
+            if not isinstance(insert_after_match, six.string_types):
+                raise CommandExecutionError(
+                    "RegEx expected in insert_after_match parameter."
+                )
 
     if append_newline is None and not content.endswith((os.linesep, "\n")):
         append_newline = True
@@ -2776,76 +2808,78 @@ def blockreplace(
             block_found = True
         elif append_if_not_found:
             # Make sure we have a newline at the end of the file
-            if 0 != len(new_file):
+            if new_file:
                 if not new_file[-1].endswith(linesep):
                     new_file[-1] += linesep
             # add the markers and content at the end of file
             _add_content(linesep, lines=new_file)
             block_found = True
-        else:
-            raise CommandExecutionError(
-                "Cannot edit marked block. Markers were not found in file."
-            )
+        elif insert_before_match or insert_after_match:
+            match_regex = insert_before_match or insert_after_match
+            match_idx = [
+                i for i, item in enumerate(orig_file) if re.search(match_regex, item)
+            ]
+            if match_idx:
+                match_idx = match_idx[0]
+                for line in _add_content(linesep):
+                    if insert_after_match:
+                        match_idx += 1
+                    new_file.insert(match_idx, line)
+                    if insert_before_match:
+                        match_idx += 1
+                block_found = True
 
-    if block_found:
-        diff = __utils__["stringutils.get_diff"](orig_file, new_file)
-        has_changes = diff is not ""
-        if has_changes and not dry_run:
-            # changes detected
-            # backup file attrs
-            perms = {}
-            perms["user"] = get_user(path)
-            perms["group"] = get_group(path)
-            perms["mode"] = salt.utils.files.normalize_mode(get_mode(path))
+    if not block_found:
+        raise CommandExecutionError(
+            "Cannot edit marked block. Markers were not found in file."
+        )
 
-            # backup old content
-            if backup is not False:
-                backup_path = "{0}{1}".format(path, backup)
-                shutil.copy2(path, backup_path)
-                # copy2 does not preserve ownership
-                if salt.utils.platform.is_windows():
-                    # This function resides in win_file.py and will be available
-                    # on Windows. The local function will be overridden
-                    # pylint: disable=E1120,E1123
-                    check_perms(path=backup_path, ret=None, owner=perms["user"])
-                    # pylint: enable=E1120,E1123
-                else:
-                    check_perms(
-                        name=backup_path,
-                        ret=None,
-                        user=perms["user"],
-                        group=perms["group"],
-                        mode=perms["mode"],
-                    )
+    diff = __utils__["stringutils.get_diff"](orig_file, new_file)
+    has_changes = diff is not ""
+    if has_changes and not dry_run:
+        # changes detected
+        # backup file attrs
+        perms = {}
+        perms["user"] = get_user(path)
+        perms["group"] = get_group(path)
+        perms["mode"] = salt.utils.files.normalize_mode(get_mode(path))
 
-            # write new content in the file while avoiding partial reads
-            try:
-                fh_ = salt.utils.atomicfile.atomic_open(path, "wb")
-                for line in new_file:
-                    fh_.write(
-                        salt.utils.stringutils.to_bytes(line, encoding=file_encoding)
-                    )
-            finally:
-                fh_.close()
-
-            # this may have overwritten file attrs
+        # backup old content
+        if backup is not False:
+            backup_path = "{0}{1}".format(path, backup)
+            shutil.copy2(path, backup_path)
+            # copy2 does not preserve ownership
             if salt.utils.platform.is_windows():
                 # This function resides in win_file.py and will be available
                 # on Windows. The local function will be overridden
                 # pylint: disable=E1120,E1123
-                check_perms(path=path, ret=None, owner=perms["user"])
+                check_perms(path=backup_path, ret=None, owner=perms["user"])
                 # pylint: enable=E1120,E1123
             else:
                 check_perms(
-                    path,
-                    ret=None,
-                    user=perms["user"],
-                    group=perms["group"],
-                    mode=perms["mode"],
+                    backup_path, None, perms["user"], perms["group"], perms["mode"]
                 )
 
-        if show_changes:
-            return diff
+        # write new content in the file while avoiding partial reads
+        try:
+            fh_ = salt.utils.atomicfile.atomic_open(path, "wb")
+            for line in new_file:
+                fh_.write(salt.utils.stringutils.to_bytes(line, encoding=file_encoding))
+        finally:
+            fh_.close()
+
+        # this may have overwritten file attrs
+        if salt.utils.platform.is_windows():
+            # This function resides in win_file.py and will be available
+            # on Windows. The local function will be overridden
+            # pylint: disable=E1120,E1123
+            check_perms(path=path, ret=None, owner=perms["user"])
+            # pylint: enable=E1120,E1123
+        else:
+            check_perms(path, None, perms["user"], perms["group"], perms["mode"])
+
+    if show_changes:
+        return diff
 
     return has_changes
 

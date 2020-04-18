@@ -494,6 +494,44 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                 fp.read(),
             )
 
+    def test_replace_insert_after(self):
+        new_content = "Well, I didn't vote for you."
+
+        self.assertRaises(
+            CommandExecutionError,
+            filemod.blockreplace,
+            self.tfile.name,
+            marker_start="#-- START BLOCK 2",
+            marker_end="#-- END BLOCK 2",
+            content=new_content,
+            insert_after_match="not in the text",
+            backup=False,
+        )
+        with salt.utils.files.fopen(self.tfile.name, "r") as fp:
+            self.assertNotIn(
+                "#-- START BLOCK 2" + "\n" + new_content + "#-- END BLOCK 2",
+                salt.utils.stringutils.to_unicode(fp.read()),
+            )
+
+        filemod.blockreplace(
+            self.tfile.name,
+            marker_start="#-- START BLOCK 2",
+            marker_end="#-- END BLOCK 2",
+            content=new_content,
+            backup=False,
+            insert_after_match="malesuada",
+        )
+
+        with salt.utils.files.fopen(self.tfile.name, "rb") as fp:
+            self.assertIn(
+                salt.utils.stringutils.to_bytes(
+                    os.linesep.join(
+                        ["#-- START BLOCK 2", "{0}#-- END BLOCK 2".format(new_content)]
+                    )
+                ),
+                fp.read(),
+            )
+
     def test_replace_append_newline_at_eof(self):
         """
         Check that file.blockreplace works consistently on files with and
@@ -598,6 +636,44 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                         )
                     )
                 )
+            )
+
+    def test_replace_insert_before(self):
+        new_content = "Well, I didn't vote for you."
+
+        self.assertRaises(
+            CommandExecutionError,
+            filemod.blockreplace,
+            self.tfile.name,
+            marker_start="#-- START BLOCK 2",
+            marker_end="#-- END BLOCK 2",
+            content=new_content,
+            insert_before_match="not in the text",
+            backup=False,
+        )
+        with salt.utils.files.fopen(self.tfile.name, "r") as fp:
+            self.assertNotIn(
+                "#-- START BLOCK 2" + "\n" + new_content + "#-- END BLOCK 2",
+                salt.utils.stringutils.to_unicode(fp.read()),
+            )
+
+        filemod.blockreplace(
+            self.tfile.name,
+            marker_start="#-- START BLOCK 2",
+            marker_end="#-- END BLOCK 2",
+            content=new_content,
+            backup=False,
+            insert_before_match="malesuada",
+        )
+
+        with salt.utils.files.fopen(self.tfile.name, "rb") as fp:
+            self.assertIn(
+                salt.utils.stringutils.to_bytes(
+                    os.linesep.join(
+                        ["#-- START BLOCK 2", "{0}#-- END BLOCK 2".format(new_content)]
+                    )
+                ),
+                fp.read(),
             )
 
     def test_replace_partial_marked_lines(self):
