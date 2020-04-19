@@ -13,7 +13,7 @@ from salt.netapi.rest_tornado import saltnado
 from salt.utils.versions import StrictVersion
 from salt.utils.zeromq import ZMQDefaultLoop as ZMQIOLoop
 from salt.utils.zeromq import zmq
-from tests.support.helpers import flaky, slowTest
+from tests.support.helpers import TstSuiteLoggingHandler, flaky, slowTest
 from tests.support.unit import skipIf
 from tests.unit.netapi.test_rest_tornado import SaltnadoTestCase
 
@@ -83,6 +83,38 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertEqual(response.headers["Location"], "/login")
 
     # Local client tests
+
+    @slowTest
+    def test_regression_49572(self):
+        with TstSuiteLoggingHandler() as handler:
+            GATHER_JOB_TIMEOUT = 1
+            self.application.opts["gather_job_timeout"] = GATHER_JOB_TIMEOUT
+
+            low = [{"client": "local", "tgt": "*", "fun": "test.ping"}]
+            fetch_kwargs = {
+                "method": "POST",
+                "body": salt.utils.json.dumps(low),
+                "headers": {
+                    "Content-Type": self.content_type_map["json"],
+                    saltnado.AUTH_TOKEN_HEADER: self.token["token"],
+                },
+                "connect_timeout": 30,
+                "request_timeout": 30,
+            }
+
+            self.fetch("/", **fetch_kwargs)
+            time.sleep(GATHER_JOB_TIMEOUT + 0.1)  # ick
+
+            #  While the traceback is in the logs after the sleep without this
+            #  follow up fetch, the logging handler doesn't see it in its list
+            #  of messages unless something else runs.
+            self.fetch("/", **fetch_kwargs)
+
+            for message in handler.messages:
+                if "TypeError: 'NoneType' object is not iterable" in message:
+                    raise AssertionError(
+                        "#49572: regression: set_result on completed event"
+                    )
 
     def test_simple_local_post(self):
         """
