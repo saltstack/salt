@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Use Azure Blob as a Pillar source.
 
 .. versionadded:: Sodium
@@ -36,35 +36,40 @@ The Azure Blob ext_pillar can be configured with the following parameters:
 
 :param blob_sync_on_update: Specifies if the cache is synced on update. Defaults to True.
 
-'''
+"""
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import os
-import time
 import pickle
+import time
 from copy import deepcopy
+
+import salt.utils.files
+import salt.utils.hashutils
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves import filter
+
+# Import Salt libs
+from salt.pillar import Pillar
+
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import Azure libs
 HAS_LIBS = False
 try:
     from azure.storage.blob import BlobServiceClient
+
     HAS_LIBS = True
 except ImportError:
     pass
 
-# Import Salt libs
-from salt.pillar import Pillar
-import salt.utils.files
-import salt.utils.hashutils
 
-__virtualname__ = 'azureblob'
+__virtualname__ = "azureblob"
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -74,22 +79,24 @@ def __virtual__():
     if not HAS_LIBS:
         return (
             False,
-            'The following dependency is required to use the Azure Blob ext_pillar: '
-            'Microsoft Azure Storage Blob >= 12.0.0 '
+            "The following dependency is required to use the Azure Blob ext_pillar: "
+            "Microsoft Azure Storage Blob >= 12.0.0 ",
         )
 
     return __virtualname__
 
 
-def ext_pillar(minion_id,
-               pillar,  # pylint: disable=W0613
-               container,
-               connection_string,
-               multiple_env=False,
-               environment='base',
-               blob_cache_expire=30,
-               blob_sync_on_update=True):
-    '''
+def ext_pillar(
+    minion_id,
+    pillar,  # pylint: disable=W0613
+    container,
+    connection_string,
+    multiple_env=False,
+    environment="base",
+    blob_cache_expire=30,
+    blob_sync_on_update=True,
+):
+    """
     Execute a command and read the output as YAML.
 
     :param container: The name of the target Azure Blob Container.
@@ -106,35 +113,50 @@ def ext_pillar(minion_id,
 
     :param blob_sync_on_update: Specifies if the cache is synced on update. Defaults to True.
 
-    '''
+    """
     # normpath is needed to remove appended '/' if root is empty string.
-    pillar_dir = os.path.normpath(os.path.join(_get_cache_dir(), environment, container))
+    pillar_dir = os.path.normpath(
+        os.path.join(_get_cache_dir(), environment, container)
+    )
 
-    if __opts__['pillar_roots'].get(environment, []) == [pillar_dir]:
+    if __opts__["pillar_roots"].get(environment, []) == [pillar_dir]:
         return {}
 
-    metadata = _init(connection_string, container, multiple_env, environment, blob_cache_expire)
+    metadata = _init(
+        connection_string, container, multiple_env, environment, blob_cache_expire
+    )
 
-    log.debug('Blob metadata: %s', metadata)
+    log.debug("Blob metadata: %s", metadata)
 
     if blob_sync_on_update:
         # sync the containers to the local cache
-        log.info('Syncing local pillar cache from Azure Blob...')
+        log.info("Syncing local pillar cache from Azure Blob...")
         for saltenv, env_meta in six.iteritems(metadata):
             for container, files in six.iteritems(_find_files(env_meta)):
                 for file_path in files:
-                    cached_file_path = _get_cached_file_name(container, saltenv, file_path)
-                    log.info('%s - %s : %s', container, saltenv, file_path)
+                    cached_file_path = _get_cached_file_name(
+                        container, saltenv, file_path
+                    )
+                    log.info("%s - %s : %s", container, saltenv, file_path)
                     # load the file from Azure Blob if not in the cache or too old
-                    _get_file_from_blob(connection_string, metadata, saltenv, container, file_path, cached_file_path)
+                    _get_file_from_blob(
+                        connection_string,
+                        metadata,
+                        saltenv,
+                        container,
+                        file_path,
+                        cached_file_path,
+                    )
 
-        log.info('Sync local pillar cache from Azure Blob completed.')
+        log.info("Sync local pillar cache from Azure Blob completed.")
 
     opts = deepcopy(__opts__)
-    opts['pillar_roots'][environment] = [os.path.join(pillar_dir, environment)] if multiple_env else [pillar_dir]
+    opts["pillar_roots"][environment] = (
+        [os.path.join(pillar_dir, environment)] if multiple_env else [pillar_dir]
+    )
 
     # Avoid recursively re-adding this same pillar
-    opts['ext_pillar'] = [x for x in opts['ext_pillar'] if 'azureblob' not in x]
+    opts["ext_pillar"] = [x for x in opts["ext_pillar"] if "azureblob" not in x]
 
     pil = Pillar(opts, __grains__, minion_id, environment)
 
@@ -144,7 +166,7 @@ def ext_pillar(minion_id,
 
 
 def _init(connection_string, container, multiple_env, environment, blob_cache_expire):
-    '''
+    """
     .. versionadded:: Sodium
 
     Connect to Blob Storage and download the metadata for each file in all containers specified and
@@ -162,7 +184,7 @@ def _init(connection_string, container, multiple_env, environment, blob_cache_ex
 
     :param blob_cache_expire: Specifies expiration time of the Azure Blob metadata cache file. Defaults to 30s.
 
-    '''
+    """
     cache_file = _get_containers_cache_filename(container)
     exp = time.time() - blob_cache_expire
 
@@ -173,45 +195,46 @@ def _init(connection_string, container, multiple_env, environment, blob_cache_ex
         # If the file does not exist then set mtime to 0 (aka epoch)
         cache_file_mtime = 0
 
-    expired = (cache_file_mtime <= exp)
+    expired = cache_file_mtime <= exp
 
     log.debug(
-        'Blob storage container cache file %s is %sexpired, mtime_diff=%ss, expiration=%ss',
+        "Blob storage container cache file %s is %sexpired, mtime_diff=%ss, expiration=%ss",
         cache_file,
-        '' if expired else 'not ',
+        "" if expired else "not ",
         cache_file_mtime - exp,
-        blob_cache_expire
+        blob_cache_expire,
     )
 
     if expired:
-        pillars = _refresh_containers_cache_file(connection_string, container, cache_file,
-                                                 multiple_env, environment)
+        pillars = _refresh_containers_cache_file(
+            connection_string, container, cache_file, multiple_env, environment
+        )
     else:
         pillars = _read_containers_cache_file(cache_file)
 
-    log.debug('Blob container retrieved pillars %s', pillars)
+    log.debug("Blob container retrieved pillars %s", pillars)
 
     return pillars
 
 
 def _get_cache_dir():
-    '''
+    """
     .. versionadded:: Sodium
 
     Get pillar cache directory. Initialize it if it does not exist.
 
-    '''
-    cache_dir = os.path.join(__opts__['cachedir'], 'pillar_azureblob')
+    """
+    cache_dir = os.path.join(__opts__["cachedir"], "pillar_azureblob")
 
     if not os.path.isdir(cache_dir):
-        log.debug('Initializing Azure Blob Pillar Cache')
+        log.debug("Initializing Azure Blob Pillar Cache")
         os.makedirs(cache_dir)
 
     return cache_dir
 
 
 def _get_cached_file_name(container, saltenv, path):
-    '''
+    """
     .. versionadded:: Sodium
 
     Return the cached file name for a container path file.
@@ -222,7 +245,7 @@ def _get_cached_file_name(container, saltenv, path):
 
     :param path: The path of the file in the container.
 
-    '''
+    """
     file_path = os.path.join(_get_cache_dir(), saltenv, container, path)
 
     # make sure container and saltenv directories exist
@@ -233,24 +256,25 @@ def _get_cached_file_name(container, saltenv, path):
 
 
 def _get_containers_cache_filename(container):
-    '''
+    """
     .. versionadded:: Sodium
 
     Return the filename of the cache for container contents. Create the path if it does not exist.
 
     :param container: The name of the target Azure Blob Container.
 
-    '''
+    """
     cache_dir = _get_cache_dir()
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
 
-    return os.path.join(cache_dir, '{0}-files.cache'.format(container))
+    return os.path.join(cache_dir, "{0}-files.cache".format(container))
 
 
-def _refresh_containers_cache_file(connection_string, container, cache_file,
-                                   multiple_env=False, environment='base'):
-    '''
+def _refresh_containers_cache_file(
+    connection_string, container, cache_file, multiple_env=False, environment="base"
+):
+    """
     .. versionadded:: Sodium
 
     Downloads the entire contents of an Azure storage container to the local filesystem.
@@ -266,20 +290,22 @@ def _refresh_containers_cache_file(connection_string, container, cache_file,
     :param environment: Specifies which environment the container represents when in single environment mode. This is
         ignored if multiple_env is set as True.
 
-    '''
+    """
     try:
         # Create the BlobServiceClient object which will be used to create a container client
-        blob_service_client = BlobServiceClient.from_connection_string(connection_string)
+        blob_service_client = BlobServiceClient.from_connection_string(
+            connection_string
+        )
 
         # Create the ContainerClient object
         container_client = blob_service_client.get_container_client(container)
     except Exception as exc:  # pylint: disable=broad-except
-        log.error('Exception: %s', exc)
+        log.error("Exception: %s", exc)
         return False
 
     metadata = {}
 
-    def _walk_blobs(saltenv='base', prefix=None):
+    def _walk_blobs(saltenv="base", prefix=None):
         # Walk the blobs in the container with a generator
         blob_list = container_client.walk_blobs(name_starts_with=prefix)
 
@@ -290,16 +316,16 @@ def _refresh_containers_cache_file(connection_string, container, cache_file,
             except StopIteration:
                 break
 
-            log.debug('Raw blob attributes: %s', blob)
+            log.debug("Raw blob attributes: %s", blob)
 
             # Directories end with "/".
-            if blob.name.endswith('/'):
+            if blob.name.endswith("/"):
                 # Recurse into the directory
                 _walk_blobs(prefix=blob.name)
                 continue
 
             if multiple_env:
-                saltenv = ('base' if (not prefix or prefix == '.') else prefix[:-1])
+                saltenv = "base" if (not prefix or prefix == ".") else prefix[:-1]
 
             if saltenv not in metadata:
                 metadata[saltenv] = {}
@@ -315,40 +341,40 @@ def _refresh_containers_cache_file(connection_string, container, cache_file,
     if os.path.isfile(cache_file):
         os.remove(cache_file)
 
-    log.debug('Writing Azure blobs pillar cache file')
+    log.debug("Writing Azure blobs pillar cache file")
 
-    with salt.utils.files.fopen(cache_file, 'wb') as fp_:
+    with salt.utils.files.fopen(cache_file, "wb") as fp_:
         pickle.dump(metadata, fp_)
 
     return metadata
 
 
 def _read_containers_cache_file(cache_file):
-    '''
+    """
     .. versionadded:: Sodium
 
     Return the contents of the containers cache file.
 
     :param cache_file: The path for where the file will be cached.
 
-    '''
-    log.debug('Reading containers cache file')
+    """
+    log.debug("Reading containers cache file")
 
-    with salt.utils.files.fopen(cache_file, 'rb') as fp_:
+    with salt.utils.files.fopen(cache_file, "rb") as fp_:
         data = pickle.load(fp_)
 
     return data
 
 
 def _find_files(metadata):
-    '''
+    """
     .. versionadded:: Sodium
 
     Looks for all the files in the Azure Blob container cache metadata.
 
     :param metadata: The metadata for the container files.
 
-    '''
+    """
     ret = {}
 
     for container, data in six.iteritems(metadata):
@@ -356,15 +382,15 @@ def _find_files(metadata):
             ret[container] = []
 
         # grab the paths from the metadata
-        file_paths = [k['name'] for k in data]
+        file_paths = [k["name"] for k in data]
         # filter out the dirs
-        ret[container] += [k for k in file_paths if not k.endswith('/')]
+        ret[container] += [k for k in file_paths if not k.endswith("/")]
 
     return ret
 
 
 def _find_file_meta(metadata, container, saltenv, path):
-    '''
+    """
     .. versionadded:: Sodium
 
     Looks for a file's metadata in the Azure Blob Container cache file.
@@ -377,18 +403,20 @@ def _find_file_meta(metadata, container, saltenv, path):
 
     :param path: The path of the file in the container.
 
-    '''
+    """
     env_meta = metadata[saltenv] if saltenv in metadata else {}
     container_meta = env_meta[container] if container in env_meta else {}
 
     for item_meta in container_meta:
         item_meta = dict(item_meta)
-        if 'name' in item_meta and item_meta['name'] == path:
+        if "name" in item_meta and item_meta["name"] == path:
             return item_meta
 
 
-def _get_file_from_blob(connection_string, metadata, saltenv, container, path, cached_file_path):
-    '''
+def _get_file_from_blob(
+    connection_string, metadata, saltenv, container, path, cached_file_path
+):
+    """
     .. versionadded:: Sodium
 
     Downloads the entire contents of an Azure storage container to the local filesystem.
@@ -406,24 +434,31 @@ def _get_file_from_blob(connection_string, metadata, saltenv, container, path, c
 
     :param cached_file_path: The path of where the file will be cached.
 
-    '''
+    """
     # check the local cache...
     if os.path.isfile(cached_file_path):
         file_meta = _find_file_meta(metadata, container, saltenv, path)
-        file_md5 = ''.join(list(filter(str.isalnum, file_meta['etag']))) \
-            if file_meta else None
+        file_md5 = (
+            "".join(list(filter(str.isalnum, file_meta["etag"]))) if file_meta else None
+        )
 
-        cached_md5 = salt.utils.hashutils.get_hash(cached_file_path, 'md5')
+        cached_md5 = salt.utils.hashutils.get_hash(cached_file_path, "md5")
 
         # hashes match we have a cache hit
-        log.debug('Cached file: path=%s, md5=%s, etag=%s',
-                  cached_file_path, cached_md5, file_md5)
+        log.debug(
+            "Cached file: path=%s, md5=%s, etag=%s",
+            cached_file_path,
+            cached_md5,
+            file_md5,
+        )
         if cached_md5 == file_md5:
             return
 
     try:
         # Create the BlobServiceClient object which will be used to create a container client
-        blob_service_client = BlobServiceClient.from_connection_string(connection_string)
+        blob_service_client = BlobServiceClient.from_connection_string(
+            connection_string
+        )
 
         # Create the ContainerClient object
         container_client = blob_service_client.get_container_client(container)
@@ -431,10 +466,10 @@ def _get_file_from_blob(connection_string, metadata, saltenv, container, path, c
         # Create the BlobClient object
         blob_client = container_client.get_blob_client(path)
     except Exception as exc:  # pylint: disable=broad-except
-        log.error('Exception: %s', exc)
+        log.error("Exception: %s", exc)
         return False
 
-    with salt.utils.files.fopen(cached_file_path, 'wb') as outfile:
+    with salt.utils.files.fopen(cached_file_path, "wb") as outfile:
         outfile.write(blob_client.download_blob().readall())
 
     return
