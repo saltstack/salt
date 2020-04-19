@@ -130,6 +130,8 @@ class SaltnadoTestCase(TestCase, AdaptedConfigurationTestCaseMixin, AsyncHTTPTes
             del self._test_generator
         if hasattr(self, "application"):
             del self.application
+        if hasattr(self, "patched_environ"):
+            del self.patched_environ
 
     def build_tornado_app(self, urls):
         application = salt.ext.tornado.web.Application(urls, debug=True)
