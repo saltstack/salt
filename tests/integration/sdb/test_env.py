@@ -7,15 +7,14 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import textwrap
 
-# Import salt libs
+import pytest
 import salt.utils.files
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 
 
+@pytest.mark.windows_whitelisted
 class EnvTestCase(ModuleCase, SaltReturnAssertsMixin):
     def setUp(self):
         self.state_name = "test_sdb_env"

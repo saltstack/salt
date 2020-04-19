@@ -1,16 +1,14 @@
 # coding: utf-8
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
+import pytest
 import salt.runner
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
 
 
+@pytest.mark.windows_whitelisted
 class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
     # This is really an integration test since it needs a salt-master running
     eauth_creds = {
