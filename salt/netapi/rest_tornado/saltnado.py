@@ -1120,7 +1120,8 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         Return a future which will complete once jid (passed in) is no longer
         running on tgt
         """
-        ping_pub_data = yield self.saltclients["local"](
+        local_client = self.saltclients["local"]
+        ping_pub_data = yield local_client(
             tgt, "saltutil.find_job", [jid], tgt_type=tgt_type
         )
         ping_tag = tagify([ping_pub_data["jid"], "ret"], "job")
@@ -1141,7 +1142,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                 if not minion_running:
                     raise salt.ext.tornado.gen.Return(True)
                 else:
-                    ping_pub_data = yield self.saltclients["local"](
+                    ping_pub_data = yield local_client(
                         tgt, "saltutil.find_job", [jid], tgt_type=tgt_type
                     )
                     ping_tag = tagify([ping_pub_data["jid"], "ret"], "job")
