@@ -84,7 +84,6 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
 
     # Local client tests
 
-    @skipIf(True, "to be re-enabled when #23623 is merged")
     def test_simple_local_post(self):
         """
         Test a basic API of /
@@ -138,7 +137,6 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
 
     # local client request body test
 
-    @skipIf(True, "Undetermined race condition in test. Temporarily disabled.")
     def test_simple_local_post_only_dictionary_request(self):
         """
         Test a basic API of /
@@ -417,7 +415,6 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
         application.event_listener = saltnado.EventListener({}, self.opts)
         return application
 
-    @skipIf(True, "issue #34753")
     def test_get_no_mid(self):
         response = self.fetch(
             "/minions",
@@ -433,7 +430,6 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
         for minion_id, grains in six.iteritems(response_obj["return"][0]):
             self.assertEqual(minion_id, grains["id"])
 
-    @skipIf(True, "to be re-enabled when #23623 is merged")
     @slowTest
     def test_get(self):
         response = self.fetch(
@@ -523,7 +519,6 @@ class TestJobsSaltAPIHandler(_SaltnadoIntegrationTestCase):
         application.event_listener = saltnado.EventListener({}, self.opts)
         return application
 
-    @skipIf(True, "to be re-enabled when #23623 is merged")
     @slowTest
     def test_get(self):
         # test with no JID
@@ -580,7 +575,6 @@ class TestRunSaltAPIHandler(_SaltnadoIntegrationTestCase):
         application.event_listener = saltnado.EventListener({}, self.opts)
         return application
 
-    @skipIf(True, "to be re-enabled when #23623 is merged")
     @slowTest
     def test_get(self):
         low = [{"client": "local", "tgt": "*", "fun": "test.ping"}]
@@ -700,9 +694,7 @@ class TestWebhookSaltAPIHandler(_SaltnadoIntegrationTestCase):
                 )
             self.assertEqual(event["tag"], "salt/netapi/hook")
             self.assertIn("headers", event["data"])
-            self.assertEqual(
-                event["data"]["post"], {"foo": salt.utils.stringutils.to_bytes("bar")}
-            )
+            self.assertEqual(event["data"]["post"], {"foo": "bar"})
         finally:
             self._future_resolved.clear()
             del self._future_resolved
