@@ -131,7 +131,7 @@ def _mods_with_args(module_py, names_only):
 
 def _modules_and_args(name=False, type="states", names_only=False):
     """
-    Determine if modules or states directories or files are requested
+    Determine if modules/states directories or files are requested
     """
     ret = {}
     dirs = []
@@ -145,7 +145,7 @@ def _modules_and_args(name=False, type="states", names_only=False):
 
     if name:
         for dir in dirs:
-            # Process custom dirs first to custom results are returned
+            # Process custom dirs first so custom results are returned
             if os.path.exists(os.path.join(dir, name + ".py")):
                 return _mods_with_args(os.path.join(dir, name + ".py"), names_only)
     else:
