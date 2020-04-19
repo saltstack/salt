@@ -37,6 +37,7 @@ class SSHMasterTestCase(SSHCase):
             service = "org.ntp.ntpd"
             if int(os_release.split(".")[1]) >= 13:
                 service = "com.apple.AirPlayXPCHelper"
+        self.run_function("service.enable", [service])
         ret = self.run_function("service.get_all")
         self.assertIn(service, ret)
         self.run_function("service.stop", [service])

@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Testing libs
+import pytest
 from tests.support.case import ModuleCase
 
 
+@pytest.mark.windows_whitelisted
 class DataModuleTest(ModuleCase):
     """
     Validate the data module

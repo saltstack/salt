@@ -2,15 +2,12 @@
 """
 Tests for the librato returner
 """
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import salt libs
+import pytest
 from salt.returners import librato_return
-
-# Import Salt Testing libs
 from tests.support.case import ShellCase
 
 log = logging.getLogger(__name__)
@@ -48,6 +45,7 @@ MOCK_RET_OBJ = {
 }
 
 
+@pytest.mark.windows_whitelisted
 class libratoTest(ShellCase):
     """
     Test the librato returner
