@@ -18,6 +18,7 @@ and failures for your salt highstate runs (the default) would look
 like this:
 
 .. code-block:: yaml
+
     return: appoptics
     appoptics.api_token: <token string here>
 
@@ -35,6 +36,7 @@ You can add a tags section to specify which tags should be attached to
 all metrics created by the returner.
 
 .. code-block:: yaml
+
     appoptics.tags:
       host_hostname_alias: <the minion ID - matches @host>
       tier: <the tier/etc. of this node>
@@ -51,6 +53,7 @@ In order to return metrics for ``state.sls`` runs (distinct from highstates), yo
 specify a list of state names to the key ``appoptics.sls_states`` like so:
 
 .. code-block:: yaml
+
     appoptics.sls_states:
       - role_salt_master.netapi
       - role_redis.config
