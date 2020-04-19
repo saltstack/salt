@@ -53,7 +53,9 @@ def __virtual__():
     """
     Only load if zc.buildout libs available
     """
-    return __virtualname__
+    if "buildout.buildout" in __salt__:
+        return __virtualname__
+    return (False, "buildout module could not be loaded")
 
 
 INVALID_RESPONSE = "We did not get any expectable answer from docker"

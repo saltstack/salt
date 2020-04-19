@@ -3,13 +3,13 @@
 Test the core grains
 """
 
-# Import python libs
 from __future__ import absolute_import, unicode_literals
 
-# Import Salt Testing libs
+import pytest
 from tests.support.case import ModuleCase
 
 
+@pytest.mark.windows_whitelisted
 class TestGrainsCore(ModuleCase):
     """
     Test the core grains grains

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import hashlib
@@ -8,24 +7,18 @@ import logging
 import os
 import shutil
 import signal
-import sys
 import tempfile
 import textwrap
 import time
 import uuid
 
 import psutil
-
-# Import 3rd party libs
+import pytest
 import salt.ext.six as six
-
-# Import salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     get_unused_localhost_port,
@@ -38,9 +31,7 @@ from tests.support.unit import skipIf
 log = logging.getLogger(__name__)
 
 
-SSL3_SUPPORT = sys.version_info >= (2, 7, 9)
-
-
+@pytest.mark.windows_whitelisted
 class CPModuleTest(ModuleCase):
     """
     Validate the cp module
@@ -233,7 +224,6 @@ class CPModuleTest(ModuleCase):
         self.assertIn("KNIGHT:  They're nervous, sire.", data)
         self.assertNotIn("bacon", data)
 
-    @skipIf(not SSL3_SUPPORT, "Requires python with SSL3 support")
     @skipIf(
         salt.utils.platform.is_darwin() and six.PY2, "This test hangs on OS X on Py2"
     )
@@ -250,7 +240,6 @@ class CPModuleTest(ModuleCase):
         self.assertIn("Windows", data)
         self.assertNotIn("AYBABTU", data)
 
-    @skipIf(not SSL3_SUPPORT, "Requires python with SSL3 support")
     @skipIf(
         salt.utils.platform.is_darwin() and six.PY2, "This test hangs on OS X on Py2"
     )
@@ -267,7 +256,6 @@ class CPModuleTest(ModuleCase):
         self.assertIn("Windows", data)
         self.assertNotIn("AYBABTU", data)
 
-    @skipIf(not SSL3_SUPPORT, "Requires python with SSL3 support")
     @skipIf(
         salt.utils.platform.is_darwin() and six.PY2, "This test hangs on OS X on Py2"
     )
@@ -349,7 +337,6 @@ class CPModuleTest(ModuleCase):
         ret = self.run_function("cp.get_file_str", [src])
         self.assertEqual(ret, False)
 
-    @skipIf(not SSL3_SUPPORT, "Requires python with SSL3 support")
     @skipIf(
         salt.utils.platform.is_darwin() and six.PY2, "This test hangs on OS X on Py2"
     )

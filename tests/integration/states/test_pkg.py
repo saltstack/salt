@@ -3,24 +3,19 @@
 """
 tests for pkg state
 """
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import time
 
-# Import Salt libs
+import pytest
 import salt.utils.files
 import salt.utils.path
 import salt.utils.pkg.rpm
 import salt.utils.platform
-
-# Import 3rd-party libs
 from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-
-# Import Salt Testing libs
+from salt.ext.six.moves import range
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
@@ -37,6 +32,7 @@ log = logging.getLogger(__name__)
 
 
 @destructiveTest
+@pytest.mark.windows_whitelisted
 class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     _PKG_EPOCH_TARGETS = []
     _PKG_32_TARGETS = []

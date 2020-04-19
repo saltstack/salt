@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
@@ -12,21 +11,17 @@ import textwrap
 import threading
 import time
 
-# Import Salt libs
+import pytest
 import salt.utils.atomicfile
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
-
-# Import 3rd-party libs
 from salt.ext import six
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_tempdir
 from tests.support.mixins import SaltReturnAssertsMixin
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -64,6 +59,7 @@ def reline(source, dest, force=False, ending=DEFAULT_ENDING):
     os.rename(tmp, dest)
 
 
+@pytest.mark.windows_whitelisted
 class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
     """
     Validate the state module
