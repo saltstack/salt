@@ -80,7 +80,22 @@ class JsonTestCase(TestCase, LoaderModuleMockMixin):
                         "name": "call_sleep_state",
                         "result": True,
                         "start_time": "15:35:29.762657",
-                    }
+                    },
+                    "salt_|-cmd_run_example_|-cmd.run_|-function": {
+                        "__id__": "cmd_run_example",
+                        "__jid__": "20200411195112288850",
+                        "__run_num__": 1,
+                        "__sls__": "orch.simple",
+                        "changes": {
+                            "out": "highstate",
+                            "ret": {"minion": "file1\nfile2\nfile3"},
+                        },
+                        "comment": "Function ran successfully. Function cmd.run ran on minion.",
+                        "duration": 412.397,
+                        "name": "cmd.run",
+                        "result": True,
+                        "start_time": "21:51:12.185868",
+                    },
                 }
             },
             "outputter": "highstate",
@@ -93,6 +108,7 @@ class JsonTestCase(TestCase, LoaderModuleMockMixin):
         self.assertIn("Succeeded: 1 (changed=1)", ret)
         self.assertIn("Failed:    0", ret)
         self.assertIn("Total states run:     1", ret)
+        self.assertIn("                  file2", ret)
 
     def test_output_comment_is_not_unicode(self):
         entry = None
@@ -117,6 +133,7 @@ class JsonTestCase(TestCase, LoaderModuleMockMixin):
         self.assertIn("Succeeded: 1 (changed=1)", ret)
         self.assertIn("Failed:    0", ret)
         self.assertIn("Total states run:     1", ret)
+        self.assertIn("                  file2", ret)
 
 
 # this should all pass the above tests
