@@ -4768,7 +4768,7 @@ def shutdown_host(kwargs=None, call=None):
 
     try:
         host_ref.ShutdownHost_Task(force)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             "Error while shutting down host %s: %s",
             host_name,
