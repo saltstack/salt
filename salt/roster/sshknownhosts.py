@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Parses roster entries out of Host directives from SSH known_hosts
 
 Sample configuration:
@@ -33,7 +33,7 @@ Or with a Saltfile
 
     salt-ssh --roster sshknownhosts '*' -r "echo hi"
 
-'''
+"""
 
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -49,12 +49,12 @@ log = logging.getLogger(__name__)
 
 
 def _parse_ssh_known_hosts_line(line):
-    '''
+    """
     Parse one line from a known_hosts line
 
     :param line: Individual lines from the ssh known_hosts file
     :return: Dict that contain the three fields from a known_hosts line
-    '''
+    """
     line_unicode = salt.utils.stringutils.to_unicode(line)
     fields = line_unicode.split(" ")
 
@@ -67,42 +67,44 @@ def _parse_ssh_known_hosts_line(line):
     names, keytype, key = fields
     names = names.split(",")
 
-    return {'names': names, 'keytype': keytype, 'key': key}
+    return {"names": names, "keytype": keytype, "key": key}
 
 
 def _parse_ssh_known_hosts(lines):
-    '''
+    """
     Parses lines from the SSH known_hosts to create roster targets.
 
     :param lines: lines from the ssh known_hosts file
     :return: Dictionary of targets in similar style to the flat roster
-    '''
+    """
 
     targets_ = {}
     for line in lines:
         host_key = _parse_ssh_known_hosts_line(line)
 
-        for host in host_key['names']:
-            targets_.update({host: {'host': host}})
+        for host in host_key["names"]:
+            targets_.update({host: {"host": host}})
 
     return targets_
 
 
-def targets(tgt, tgt_type='glob'):
-    '''
+def targets(tgt, tgt_type="glob"):
+    """
     Return the targets from a known_hosts file
-    '''
+    """
 
-    ssh_known_hosts_file = __opts__.get('ssh_known_hosts_file')
+    ssh_known_hosts_file = __opts__.get("ssh_known_hosts_file")
 
     if not os.path.isfile(ssh_known_hosts_file):
-        log.error('Cannot find SSH known_hosts file')
-        raise IOError('Cannot find SSH known_hosts file')
+        log.error("Cannot find SSH known_hosts file")
+        raise IOError("Cannot find SSH known_hosts file")
     if not os.access(ssh_known_hosts_file, os.R_OK):
-        log.error('Cannot access SSH known_hosts file: %s', ssh_known_hosts_file)
-        raise IOError('Cannot access SSH known_hosts file: {}'.format(ssh_known_hosts_file))
+        log.error("Cannot access SSH known_hosts file: %s", ssh_known_hosts_file)
+        raise IOError(
+            "Cannot access SSH known_hosts file: {}".format(ssh_known_hosts_file)
+        )
 
-    with salt.utils.files.fopen(ssh_known_hosts_file, 'r') as hostfile:
+    with salt.utils.files.fopen(ssh_known_hosts_file, "r") as hostfile:
         raw = _parse_ssh_known_hosts([line.rstrip() for line in hostfile])
 
-    return __utils__['roster_matcher.targets'](raw, tgt, tgt_type, 'ipv4')
+    return __utils__["roster_matcher.targets"](raw, tgt, tgt_type, "ipv4")

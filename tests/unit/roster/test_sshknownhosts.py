@@ -16,64 +16,61 @@ import salt.loader
 import salt.roster.sshknownhosts as sshknownhosts
 
 _ALL = {
-    'server1': {'host': 'server1'},
-    'server2': {'host': 'server2'},
-    'server3.local': {'host': 'server3.local'},
-    'eu-mysql-1.local': {'host': 'eu-mysql-1.local'},
-    'eu-mysql-2': {'host': 'eu-mysql-2'},
-    'eu-mysql-2.local': {'host': 'eu-mysql-2.local'}
+    "server1": {"host": "server1"},
+    "server2": {"host": "server2"},
+    "server3.local": {"host": "server3.local"},
+    "eu-mysql-1.local": {"host": "eu-mysql-1.local"},
+    "eu-mysql-2": {"host": "eu-mysql-2"},
+    "eu-mysql-2.local": {"host": "eu-mysql-2.local"},
 }
 
 _TEST_GLOB = {
-    'server1': {'host': 'server1'},
-    'server2': {'host': 'server2'},
-    'server3.local': {'host': 'server3.local'}
+    "server1": {"host": "server1"},
+    "server2": {"host": "server2"},
+    "server3.local": {"host": "server3.local"},
 }
 
-_TEST_PCRE = {
-    'eu-mysql-2': {'host': 'eu-mysql-2'}
-}
+_TEST_PCRE = {"eu-mysql-2": {"host": "eu-mysql-2"}}
 
 
 class SSHKnownHostsRosterTestCase(TestCase, mixins.LoaderModuleMockMixin):
-
     @classmethod
     def setUpClass(cls):
-        cls.tests_dir = os.path.join(RUNTIME_VARS.TESTS_DIR, 'unit/files/rosters/sshknownhosts/')
-        cls.opts = {'ssh_known_hosts_file': 'known_hosts'}
+        cls.tests_dir = os.path.join(
+            RUNTIME_VARS.TESTS_DIR, "unit/files/rosters/sshknownhosts/"
+        )
+        cls.opts = {"ssh_known_hosts_file": "known_hosts"}
 
     @classmethod
     def tearDownClass(cls):
-        delattr(cls, 'tests_dir')
-        delattr(cls, 'opts')
+        delattr(cls, "tests_dir")
+        delattr(cls, "opts")
 
     def setup_loader_modules(self):
-        opts = salt.config.master_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'master'))
+        opts = salt.config.master_config(
+            os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "master")
+        )
         utils = salt.loader.utils(opts)
         runner = salt.loader.runner(opts, utils=utils)
 
         return {
-            sshknownhosts: {
-                '__utils__': utils,
-                '__opts__': {},
-                '__runner__': runner
-            }
+            sshknownhosts: {"__utils__": utils, "__opts__": {}, "__runner__": runner}
         }
 
     def test_all(self):
-        self.opts['ssh_known_hosts_file'] = os.path.join(self.tests_dir, 'known_hosts')
+        self.opts["ssh_known_hosts_file"] = os.path.join(self.tests_dir, "known_hosts")
         with patch.dict(sshknownhosts.__opts__, self.opts):
-            targets = sshknownhosts.targets(tgt='*')
+            targets = sshknownhosts.targets(tgt="*")
             self.assertDictEqual(targets, _ALL)
 
     def test_glob(self):
-        self.opts['ssh_known_hosts_file'] = os.path.join(self.tests_dir, 'known_hosts')
+        self.opts["ssh_known_hosts_file"] = os.path.join(self.tests_dir, "known_hosts")
         with patch.dict(sshknownhosts.__opts__, self.opts):
-            targets = sshknownhosts.targets(tgt='server*')
+            targets = sshknownhosts.targets(tgt="server*")
             self.assertDictEqual(targets, _TEST_GLOB)
 
     def test_pcre(self):
-        self.opts['ssh_known_hosts_file'] = os.path.join(self.tests_dir, 'known_hosts')
+        self.opts["ssh_known_hosts_file"] = os.path.join(self.tests_dir, "known_hosts")
         with patch.dict(sshknownhosts.__opts__, self.opts):
-            targets = sshknownhosts.targets(tgt='eu-mysql-2$', tgt_type='pcre')
+            targets = sshknownhosts.targets(tgt="eu-mysql-2$", tgt_type="pcre")
             self.assertDictEqual(targets, _TEST_PCRE)
