@@ -259,15 +259,6 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(win_system.get_pending_servermanager())
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
-    def test_get_pending_servermanager_key_not_present(self):
-        """
-        Test to get pending servermanager, key no present. Should return False
-        """
-        reg_mock = MagicMock(return_value={"success": False})
-        with patch.dict(win_system.__utils__, {"reg.read_value": reg_mock}):
-            self.assertFalse(win_system.get_pending_servermanager())
-
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
     def test_set_reboot_required_witnessed(self):
         """
         Test set_reboot_required_witnessed, Should return True
