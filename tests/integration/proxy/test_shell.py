@@ -5,20 +5,16 @@ Test salt-call --proxyid commands
 tests.integration.proxy.test_shell
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
-
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import json
 import logging
 import sys
 
-# Import Salt Libs
 import salt.ext.six as six
 import salt.utils.json as json
-
-# Import salt tests libs
 from tests.support.case import ShellCase
+from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
 
@@ -41,7 +37,10 @@ class ProxyCallerSimpleTestCase(ShellCase):
         Ensure the proxy can ping
         """
         ret = self._load_return(
-            self.run_call("--proxyid proxytest --out=json test.ping")
+            self.run_call(
+                "--proxyid proxytest --out=json test.ping",
+                config_dir=RUNTIME_VARS.TMP_PROXY_CONF_DIR,
+            )
         )
         self.assertEqual(ret["local"], True)
 
@@ -51,7 +50,10 @@ class ProxyCallerSimpleTestCase(ShellCase):
         is working OK.
         """
         ret = self._load_return(
-            self.run_call("--proxyid proxytest --out=json pkg.list_pkgs")
+            self.run_call(
+                "--proxyid proxytest --out=json pkg.list_pkgs",
+                config_dir=RUNTIME_VARS.TMP_PROXY_CONF_DIR,
+            )
         )
         self.assertIn("coreutils", ret["local"])
         self.assertIn("apache", ret["local"])
@@ -59,35 +61,53 @@ class ProxyCallerSimpleTestCase(ShellCase):
 
     def test_upgrade(self):
         ret = self._load_return(
-            self.run_call("--proxyid proxytest --out=json pkg.upgrade")
+            self.run_call(
+                "--proxyid proxytest --out=json pkg.upgrade",
+                config_dir=RUNTIME_VARS.TMP_PROXY_CONF_DIR,
+            )
         )
         self.assertEqual(ret["local"]["coreutils"]["new"], "2.0")
         self.assertEqual(ret["local"]["redbull"]["new"], "1000.99")
 
     def test_service_list(self):
         ret = self._load_return(
-            self.run_call("--proxyid proxytest --out=json service.list")
+            self.run_call(
+                "--proxyid proxytest --out=json service.list",
+                config_dir=RUNTIME_VARS.TMP_PROXY_CONF_DIR,
+            )
         )
         self.assertIn("ntp", ret["local"])
 
     def test_service_start(self):
         ret = self._load_return(
-            self.run_call("--proxyid proxytest --out=json service.start samba")
+            self.run_call(
+                "--proxyid proxytest --out=json service.start samba",
+                config_dir=RUNTIME_VARS.TMP_PROXY_CONF_DIR,
+            )
         )
         ret = self._load_return(
-            self.run_call("--proxyid proxytest --out=json service.status samba")
+            self.run_call(
+                "--proxyid proxytest --out=json service.status samba",
+                config_dir=RUNTIME_VARS.TMP_PROXY_CONF_DIR,
+            )
         )
         self.assertTrue(ret)
 
     def test_service_get_all(self):
         ret = self._load_return(
-            self.run_call("--proxyid proxytest --out=json service.get_all")
+            self.run_call(
+                "--proxyid proxytest --out=json service.get_all",
+                config_dir=RUNTIME_VARS.TMP_PROXY_CONF_DIR,
+            )
         )
         self.assertIn("samba", ret["local"])
 
     def test_grains_items(self):
         ret = self._load_return(
-            self.run_call("--proxyid proxytest --out=json grains.items")
+            self.run_call(
+                "--proxyid proxytest --out=json grains.items",
+                config_dir=RUNTIME_VARS.TMP_PROXY_CONF_DIR,
+            )
         )
         self.assertEqual(ret["local"]["kernel"], "proxy")
         self.assertEqual(ret["local"]["kernelrelease"], "proxy")
