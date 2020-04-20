@@ -93,6 +93,9 @@ class SyncGrainsTest(ModuleCase):
 
 @pytest.mark.windows_whitelisted
 @pytest.mark.skip_on_windows(reason=PYTEST_MIGRATION_SKIP_REASON)
+@pytest.mark.skipif(
+    "grains['os_family'] == 'Suse'", reason=PYTEST_MIGRATION_SKIP_REASON
+)
 class SaltUtilSyncModuleTest(ModuleCase):
     """
     Testcase for the saltutil sync execution module
