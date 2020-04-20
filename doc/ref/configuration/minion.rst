@@ -710,7 +710,7 @@ This directory may contain sensitive data and should be protected accordingly.
 
     cachedir: /var/cache/salt/minion
 
-.. conf_master:: color_theme
+.. conf_minion:: color_theme
 
 ``color_theme``
 ---------------
@@ -2223,6 +2223,9 @@ auto-loading modules when states run, set this value to ``False``.
 
 .. conf_minion:: clean_dynamic_modules
 
+``clean_dynamic_modules``
+-------------------------
+
 Default: ``True``
 
 clean_dynamic_modules keeps the dynamic modules on the minion in sync with
@@ -2716,7 +2719,7 @@ minion to clean the keys.
 Default: ``''``
 
 Fingerprint of the master public key to validate the identity of your Salt master
-before the initial key exchange. The master fingerprint can be found by running
+before the initial key exchange. The master fingerprint can be found as ``master.pub`` by running
 "salt-key -F master" on the Salt master.
 
 .. code-block:: yaml

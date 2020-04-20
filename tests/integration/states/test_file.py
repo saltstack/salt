@@ -4,7 +4,6 @@
 Tests for the file state
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
@@ -18,19 +17,16 @@ import sys
 import tempfile
 import textwrap
 
+import pytest
 import salt.serializers.configparser
-
-# Import Salt libs
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
-
-# Import 3rd-party libs
 from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import range
 from salt.utils.versions import LooseVersion as _LooseVersion
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
@@ -43,8 +39,6 @@ from tests.support.helpers import (
     with_tempfile,
 )
 from tests.support.mixins import SaltReturnAssertsMixin
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -122,6 +116,7 @@ def _test_managed_file_mode_keep_helper(testcase, local=False):
         os.chmod(grail_fs_path, grail_fs_mode)
 
 
+@pytest.mark.windows_whitelisted
 class FileTest(ModuleCase, SaltReturnAssertsMixin):
     """
     Validate the file state
@@ -2901,6 +2896,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
 
+@pytest.mark.windows_whitelisted
 class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
     marker_start = "# start"
     marker_end = "# end"
@@ -4336,6 +4332,7 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret[job]["changes"]["diff"], diff)
 
 
+@pytest.mark.windows_whitelisted
 class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
     """
     Uses a local tornado webserver to test http(s) file.managed states with and
@@ -4427,6 +4424,7 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
 
 
 @skipIf(not salt.utils.path.which("patch"), "patch is not installed")
+@pytest.mark.windows_whitelisted
 class PatchTest(ModuleCase, SaltReturnAssertsMixin):
     def _check_patch_version(self, min_version):
         """
@@ -5000,6 +4998,7 @@ WIN_TEST_FILE = "c:/testfile"
 
 @destructiveTest
 @skipIf(not IS_WINDOWS, "windows test only")
+@pytest.mark.windows_whitelisted
 class WinFileTest(ModuleCase):
     """
     Test for the file state on Windows

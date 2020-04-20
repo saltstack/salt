@@ -3,7 +3,6 @@
     :codeauthor: Erik Johnson <erik@saltstack.com>
 """
 
-# Import Python libs
 from __future__ import absolute_import
 
 import copy
@@ -14,17 +13,14 @@ import shutil
 import subprocess
 import textwrap
 
+import pytest
 import salt.pillar as pillar
-
-# Import salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.yaml
 from tests.support.case import ModuleCase
 from tests.support.helpers import dedent, requires_system_grains
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -236,6 +232,7 @@ class _CommonBase(ModuleCase):
         return ret
 
 
+@pytest.mark.windows_whitelisted
 class BasePillarTest(_CommonBase):
     """
     Tests for pillar decryption
@@ -305,6 +302,7 @@ class BasePillarTest(_CommonBase):
 
 
 @skipIf(not salt.utils.path.which("gpg"), "GPG is not installed")
+@pytest.mark.windows_whitelisted
 class DecryptGPGPillarTest(_CommonBase):
     """
     Tests for pillar decryption
@@ -548,6 +546,7 @@ class DecryptGPGPillarTest(_CommonBase):
         )
 
 
+@pytest.mark.windows_whitelisted
 class RefreshPillarTest(ModuleCase):
     """
     These tests validate the behavior defined in the documentation:

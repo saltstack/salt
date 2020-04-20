@@ -104,7 +104,9 @@ def __virtual__():
     """
     Only load if modifying repos is available for this package type
     """
-    return "pkg.mod_repo" in __salt__
+    if "pkg.mod_repo" in __salt__:
+        return True
+    return (False, "pkg module could not be loaded")
 
 
 def managed(name, ppa=None, **kwargs):
