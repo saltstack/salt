@@ -23,6 +23,7 @@ import sqlite3
 
 import salt.utils.json
 from salt.exceptions import SaltInvocationError
+
 # Import 3rd-party libs
 from salt.ext import six
 
