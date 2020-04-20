@@ -201,26 +201,26 @@ def create(
         # Virtualenv package
         try:
             import virtualenv
-            version = getattr(virtualenv, '__version__', False)
+
+            version = getattr(virtualenv, "__version__", False)
             if not version:  # virtualenv<1.7.2
                 version = virtualenv.virtualenv_version
             virtualenv_version_info = tuple(
-                [int(i) for i in version.split('rc')[0].split('.')]
+                [int(i) for i in version.split("rc")[0].split(".")]
             )
         except ImportError:
             # Unable to import?? Let's parse the version from the console
-            version_cmd = [venv_bin, '--version']
-            ret = __salt__['cmd.run_all'](
-                    version_cmd, runas=user, python_shell=False, **kwargs
-                )
-            if ret['retcode'] > 0 or not ret['stdout'].strip():
+            version_cmd = [venv_bin, "--version"]
+            ret = __salt__["cmd.run_all"](
+                version_cmd, runas=user, python_shell=False, **kwargs
+            )
+            if ret["retcode"] > 0 or not ret["stdout"].strip():
                 raise CommandExecutionError(
-                    'Unable to get the virtualenv version output using \'{0}\'. '
-                    'Returned data: {1}'.format(version_cmd, ret)
+                    "Unable to get the virtualenv version output using '{0}'. "
+                    "Returned data: {1}".format(version_cmd, ret)
                 )
             virtualenv_version_info = tuple(
-                [int(i) for i in
-                 ret['stdout'].strip().split('rc')[0].split('.')]
+                [int(i) for i in ret["stdout"].strip().split("rc")[0].split(".")]
             )
 
         virtualenv_version_info = virtualenv_ver(venv_bin, user=user, **kwargs)

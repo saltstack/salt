@@ -29,37 +29,39 @@ class LegacyVirtualenvTestCase(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        base_virtualenv_mock = MagicMock(spec=['virtualenv_version'])
-        base_virtualenv_mock.virtualenv_version = '1.6.1'
-        patcher = patch('salt.utils.path.which', lambda exe: exe)
+        base_virtualenv_mock = MagicMock(spec=["virtualenv_version"])
+        base_virtualenv_mock.virtualenv_version = "1.6.1"
+        patcher = patch("salt.utils.path.which", lambda exe: exe)
         patcher.start()
         self.addCleanup(patcher.stop)
         return {
             virtualenv_mod: {
-                '__opts__': {'venv_bin': 'virtualenv'},
-                '_install_script': MagicMock(return_value={'retcode': 0,
-                                                           'stdout': 'Installed script!',
-                                                           'stderr': ''}),
-                'sys.modules': {'virtualenv': base_virtualenv_mock}
+                "__opts__": {"venv_bin": "virtualenv"},
+                "_install_script": MagicMock(
+                    return_value={
+                        "retcode": 0,
+                        "stdout": "Installed script!",
+                        "stderr": "",
+                    }
+                ),
+                "sys.modules": {"virtualenv": base_virtualenv_mock},
             }
         }
 
     def test_issue_56238_legacy_version_attribute(self):
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
-            virtualenv_mod.create('/tmp/foo')
+        mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
+        with patch.dict(virtualenv_mod.__salt__, {"cmd.run_all": mock}):
+            virtualenv_mod.create("/tmp/foo")
             mock.assert_called_once_with(
-                ['virtualenv', '/tmp/foo'],
-                runas=None,
-                python_shell=False
+                ["virtualenv", "/tmp/foo"], runas=None, python_shell=False
             )
 
 
 class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
-        base_virtualenv_mock = MagicMock(spec=['__version__'])
-        base_virtualenv_mock.__version__ = '1.9.1'
-        patcher = patch('salt.utils.path.which', lambda exe: exe)
+        base_virtualenv_mock = MagicMock(spec=["__version__"])
+        base_virtualenv_mock.__version__ = "1.9.1"
+        patcher = patch("salt.utils.path.which", lambda exe: exe)
         base_virtualenv_mock = MagicMock()
         base_virtualenv_mock.__version__ = "1.9.1"
         patcher = patch("salt.utils.path.which", lambda exe: exe)
