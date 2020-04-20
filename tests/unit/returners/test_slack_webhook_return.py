@@ -13,7 +13,6 @@ from __future__ import absolute_import
 
 # Import Salt libs
 import salt.returners.slack_webhook_return as slack_webhook
-
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
