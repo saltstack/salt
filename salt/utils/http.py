@@ -645,7 +645,9 @@ def query(
             if status is True:
                 ret["status"] = 0
             ret["error"] = six.text_type(exc)
-            log.debug("Cannot perform 'http.query': {0} - {1}".format(url_full, ret["error"]))
+            log.debug(
+                "Cannot perform 'http.query': {0} - {1}".format(url_full, ret["error"])
+            )
             return ret
 
         if stream is True or handle is True:
