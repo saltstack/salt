@@ -9,11 +9,13 @@ import os
 
 import pytest
 import salt.modules.btrfs as btrfs
+
 # Import Salt Libs
 import salt.utils.files
 import salt.utils.fsutils
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
+
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
