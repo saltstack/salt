@@ -25,14 +25,12 @@ import salt.utils.json
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.yaml
-
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import queue
 from tests.support.case import ShellCase
 from tests.support.helpers import expensiveTest, flaky
 from tests.support.mock import MagicMock, patch
-
 # Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf

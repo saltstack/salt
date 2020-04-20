@@ -2,10 +2,9 @@
 import types
 
 from salt.modules import highstate_doc
-from tests.support.mock import create_autospec, MagicMock, patch
-
-from tests.support.unit import TestCase
 from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mock import MagicMock, create_autospec, patch
+from tests.support.unit import TestCase
 
 
 def copy_func(func, globals=None):

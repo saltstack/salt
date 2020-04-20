@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
+import salt.modules.saltutil as saltutil
 from salt.client import LocalClient
 from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mock import create_autospec
+from tests.support.mock import sentinel as s
 from tests.support.unit import TestCase
-from tests.support.mock import create_autospec, sentinel as s
-
-import salt.modules.saltutil as saltutil
 
 
 class ScheduleTestCase(TestCase, LoaderModuleMockMixin):

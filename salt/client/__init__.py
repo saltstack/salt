@@ -13,7 +13,6 @@ The data structure needs to be:
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
 # The components here are simple, and they need to be and stay simple, we
 # want a client to have 3 external concerns, and maybe a forth configurable
 # option.
@@ -32,7 +31,6 @@ from datetime import datetime
 import salt.cache
 import salt.config
 import salt.defaults.exitcodes
-
 # Import tornado
 import salt.ext.tornado.gen  # pylint: disable=F0401
 import salt.loader
