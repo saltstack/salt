@@ -16,7 +16,6 @@ import salt.grains.core as core
 import salt.modules.cmdmod
 import salt.modules.network
 import salt.modules.smbios
-
 # Import Salt Libs
 import salt.utils.dns
 import salt.utils.files
@@ -24,7 +23,6 @@ import salt.utils.network
 import salt.utils.path
 import salt.utils.platform
 from salt._compat import ipaddress
-
 # Import 3rd-party libs
 from salt.ext import six
 from tests.support.mixins import LoaderModuleMockMixin

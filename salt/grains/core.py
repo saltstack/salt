@@ -25,7 +25,6 @@ from errno import EACCES, EPERM
 
 import salt.exceptions
 import salt.log
-
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
 import salt.modules.cmdmod
@@ -42,7 +41,6 @@ import salt.utils.stringutils
 from distro import linux_distribution
 from salt.ext import six
 from salt.ext.six.moves import range
-
 from salt.utils.network import _get_interfaces
 
 try:
