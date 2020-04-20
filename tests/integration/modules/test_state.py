@@ -23,6 +23,7 @@ from tests.support.case import ModuleCase
 from tests.support.helpers import with_tempdir
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.sminion import create_sminion
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
@@ -80,9 +81,16 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                     fhw.write(line + ending)
 
         destpath = os.path.join(RUNTIME_VARS.BASE_FILES, "testappend", "firstif")
+        _reline(destpath)
         destpath = os.path.join(RUNTIME_VARS.BASE_FILES, "testappend", "secondif")
         _reline(destpath)
-        cls.TIMEOUT = 600 if salt.utils.platform.is_windows() else 10
+        if salt.utils.platform.is_windows():
+            cls.TIMEOUT = 600
+            # Be sure to have everything sync'ed
+            sminion = create_sminion()
+            sminion.functions.saltutil.sync_all()
+        else:
+            cls.TIMEOUT = 10
 
     def test_show_highstate(self):
         """
