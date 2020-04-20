@@ -99,11 +99,9 @@ def __virtual__():
     """
     Only make this state available if the azurearm_compute module is available.
     """
-    return (
-        __virtualname__
-        if "azurearm_compute.availability_set_create_or_update" in __salt__
-        else False
-    )
+    if "azurearm_compute.availability_set_create_or_update" in __salt__:
+        return __virtualname__
+    return (False, "azurearm module could not be loaded")
 
 
 def availability_set_present(

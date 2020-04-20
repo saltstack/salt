@@ -2,16 +2,13 @@
 """
 Tests for the service state
 """
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import re
 
-# Import salt libs
+import pytest
 import salt.utils.path
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
@@ -20,6 +17,7 @@ INIT_DELAY = 5
 
 
 @destructiveTest
+@pytest.mark.windows_whitelisted
 class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
     """
     Validate the service state

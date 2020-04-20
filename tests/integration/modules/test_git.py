@@ -7,7 +7,6 @@ destructive as a result. If no values are set for user.name or user.email in
 the user's global .gitconfig, then these tests will set one.
 """
 
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
@@ -20,18 +19,14 @@ import tarfile
 import tempfile
 from contextlib import closing
 
-# Import salt libs
+import pytest
 import salt.utils.data
 import salt.utils.files
 import salt.utils.platform
-
-# Import 3rd-party libs
 from salt.ext import six
 from salt.utils.versions import LooseVersion
 from tests.support.case import ModuleCase
 from tests.support.helpers import skip_if_binaries_missing
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -79,6 +74,7 @@ def _makedirs(path):
 
 
 @skip_if_binaries_missing("git")
+@pytest.mark.windows_whitelisted
 class GitModuleTest(ModuleCase):
     def setUp(self):
         super(GitModuleTest, self).setUp()

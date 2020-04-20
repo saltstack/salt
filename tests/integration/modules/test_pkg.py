@@ -1,17 +1,14 @@
 # -*- coding: utf-8 -*-
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import pprint
 
-# Import Salt libs
+import pytest
 import salt.utils.path
 import salt.utils.pkg
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
@@ -25,6 +22,7 @@ from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 
 
+@pytest.mark.windows_whitelisted
 class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
     """
     Validate the pkg module

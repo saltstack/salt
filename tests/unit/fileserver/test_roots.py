@@ -62,6 +62,12 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
                 os.chdir(cwd)
             cls.test_symlink_list_file_roots = {"base": [root_dir]}
         else:
+            dest_sym = os.path.join(RUNTIME_VARS.BASE_FILES, "dest_sym")
+            if not os.path.islink(dest_sym):
+                # Fix broken symlink by recreating it
+                if os.path.exists(dest_sym):
+                    os.remove(dest_sym)
+                os.symlink("source_sym", dest_sym)
             cls.test_symlink_list_file_roots = None
         cls.tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         full_path_to_file = os.path.join(RUNTIME_VARS.BASE_FILES, "testfile")

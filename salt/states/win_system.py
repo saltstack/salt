@@ -40,7 +40,7 @@ def __virtual__():
     """
     if salt.utils.platform.is_windows() and "system.get_computer_desc" in __salt__:
         return __virtualname__
-    return False
+    return (False, "system module could not be loaded")
 
 
 def computer_desc(name):
