@@ -419,6 +419,7 @@ def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=Non
 
     return ret
 
+
 def cql_query_with_prepare(
     query,
     statement_name,
