@@ -32,6 +32,7 @@ import time
 
 import salt.exceptions
 import salt.output
+
 # Import salt libs
 import salt.syspaths
 import salt.utils.data

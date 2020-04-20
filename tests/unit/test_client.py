@@ -7,6 +7,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.platform
+
 # Import Salt libs
 from salt import client
 from salt.exceptions import (
@@ -15,6 +16,7 @@ from salt.exceptions import (
     SaltInvocationError,
     SaltReqTimeoutError,
 )
+
 # Import Salt Testing libs
 from tests.support.mixins import SaltClientTestCaseMixin
 from tests.support.mock import MagicMock, patch

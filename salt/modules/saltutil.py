@@ -43,6 +43,7 @@ from salt.exceptions import (
     SaltRenderError,
     SaltReqTimeoutError,
 )
+
 # pylint: disable=no-name-in-module
 from salt.ext import six
 from salt.ext.six.moves.urllib.error import URLError
