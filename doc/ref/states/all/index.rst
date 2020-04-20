@@ -124,6 +124,7 @@ state modules
     grains
     group
     heat
+    helm
     hg
     highstate_doc
     host

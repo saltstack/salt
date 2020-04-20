@@ -1,16 +1,14 @@
 # coding: utf-8
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
+import pytest
 import salt.wheel
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
 
 
+@pytest.mark.windows_whitelisted
 class KeyWheelModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
     def setUp(self):
         self.wheel = salt.wheel.Wheel(dict(self.get_config("client_config")))
