@@ -58,6 +58,9 @@ PRE_PYTEST_SKIP = pytest.mark.skipif(
     PRE_PYTEST_SKIP_OR_NOT, reason=PRE_PYTEST_SKIP_REASON
 )
 PYTEST_MIGRATION_SKIP_REASON = "Test disabled during the migration to PyTest"
+PYTEST_MIGRATION_XFAIL_REASON = (
+    "Test marked as expected failure during the migration to PyTest"
+)
 
 
 def no_symlinks():

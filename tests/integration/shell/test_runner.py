@@ -11,6 +11,8 @@ import pytest
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.yaml
+from saltfactories.exceptions import ProcessTimeout
+from tests.support.helpers import PYTEST_MIGRATION_XFAIL_REASON
 
 USERA = "saltdev-runner"
 USERA_PWD = "saltdev"
@@ -94,23 +96,30 @@ class TestSaltRun(object):
     @pytest.mark.skip_if_not_root
     @pytest.mark.parametrize("flag", ["--auth", "--eauth", "--external-auth", "-a"])
     @pytest.mark.skip_on_windows(reason="PAM is not supported on Windows")
-    def test_salt_run_with_eauth_all_args(self, salt_run_cli, saltdev_account, flag):
+    def test_salt_run_with_eauth_all_args(
+        self, salt_run_cli, saltdev_account, flag, grains
+    ):
         """
         test salt-run with eauth
         tests all eauth args
         """
-        ret = salt_run_cli.run(
-            flag,
-            "pam",
-            "--username",
-            USERA,
-            "--password",
-            USERA_PWD,
-            "test.arg",
-            "arg",
-            kwarg="kwarg1",
-            _timeout=240,
-        )
+        try:
+            ret = salt_run_cli.run(
+                flag,
+                "pam",
+                "--username",
+                USERA,
+                "--password",
+                USERA_PWD,
+                "test.arg",
+                "arg",
+                kwarg="kwarg1",
+            )
+        except ProcessTimeout as exc:
+            if grains["os_family"] != "Debian":
+                # This test only seems to be flaky on Debian and Ubuntu
+                raise exc from None
+            pytest.xfail(PYTEST_MIGRATION_XFAIL_REASON)
         assert ret.exitcode == 0, ret
         assert ret.json, ret
         expected = {"args": ["arg"], "kwargs": {"kwarg": "kwarg1"}}
