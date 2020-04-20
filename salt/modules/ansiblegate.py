@@ -56,9 +56,7 @@ except ImportError:
     ansible = None
 
 # Function alias to make sure not to shadow built-in's
-__func_alias__ = {
-    'list_': 'list'
-}
+__func_alias__ = {"list_": "list"}
 
 __virtualname__ = "ansible"
 
@@ -192,7 +190,7 @@ class AnsibleModuleCaller(object):
             [sys.executable, module.__file__],
             stdin=proc_out_stdout,
             stdout=subprocess.PIPE,
-            timeout=self.timeout
+            timeout=self.timeout,
         )
         proc_exc.run()
 

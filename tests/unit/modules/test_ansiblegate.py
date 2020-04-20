@@ -164,6 +164,7 @@ description:
             """
             An ansible module mock.
             """
+
             __name__ = "one.two.three"
             __file__ = "foofile"
 
@@ -172,21 +173,43 @@ description:
 
         ANSIBLE_MODULE_ARGS = "{'ANSIBLE_MODULE_ARGS': ['arg_1', {'kwarg1': 'foobar'}]}"
 
-        proc = MagicMock(side_effect=[
-            MockTimedProc(
-                stdout=ANSIBLE_MODULE_ARGS.encode(),
-                stderr=None),
-            MockTimedProc(stdout="{'completed': true}".encode(), stderr=None)
-        ])
+        proc = MagicMock(
+            side_effect=[
+                MockTimedProc(stdout=ANSIBLE_MODULE_ARGS.encode(), stderr=None),
+                MockTimedProc(stdout="{'completed': true}".encode(), stderr=None),
+            ]
+        )
 
-        with patch.object(ansible, "_resolver", self.resolver), \
-            patch.object(ansible._resolver, "load_module", MagicMock(return_value=Module())):
+        with patch.object(ansible, "_resolver", self.resolver), patch.object(
+            ansible._resolver, "load_module", MagicMock(return_value=Module())
+        ):
             _ansible_module_caller = ansible.AnsibleModuleCaller(ansible._resolver)
             with patch("salt.utils.timed_subprocess.TimedProc", proc):
-                ret = _ansible_module_caller.call("one.two.three", "arg_1", kwarg1="foobar")
-                proc.assert_any_call([sys.executable, "foofile"], stdin=ANSIBLE_MODULE_ARGS, stdout=-1, timeout=1200)
+                ret = _ansible_module_caller.call(
+                    "one.two.three", "arg_1", kwarg1="foobar"
+                )
+                proc.assert_any_call(
+                    [sys.executable, "foofile"],
+                    stdin=ANSIBLE_MODULE_ARGS,
+                    stdout=-1,
+                    timeout=1200,
+                )
                 try:
-                    proc.assert_any_call(["echo", "{'ANSIBLE_MODULE_ARGS': {'kwarg1': 'foobar', '_raw_params': 'arg_1'}}"], stdout=-1, timeout=1200)
+                    proc.assert_any_call(
+                        [
+                            "echo",
+                            "{'ANSIBLE_MODULE_ARGS': {'kwarg1': 'foobar', '_raw_params': 'arg_1'}}",
+                        ],
+                        stdout=-1,
+                        timeout=1200,
+                    )
                 except AssertionError:
-                    proc.assert_any_call(["echo", "{'ANSIBLE_MODULE_ARGS': {'_raw_params': 'arg_1', 'kwarg1': 'foobar'}}"], stdout=-1, timeout=1200)
+                    proc.assert_any_call(
+                        [
+                            "echo",
+                            "{'ANSIBLE_MODULE_ARGS': {'_raw_params': 'arg_1', 'kwarg1': 'foobar'}}",
+                        ],
+                        stdout=-1,
+                        timeout=1200,
+                    )
                 assert ret == {"completed": True, "timeout": 1200}
