@@ -2092,8 +2092,14 @@ def fqdns():
 
     start = time.time()
 
-    addresses = salt.utils.network.ip_addrs(include_loopback=False, interface_data=salt.utils.network._get_interfaces())
-    addresses.extend(salt.utils.network.ip_addrs6(include_loopback=False, interface_data=salt.utils.network._get_interfaces()))
+    addresses = salt.utils.network.ip_addrs(
+        include_loopback=False, interface_data=salt.utils.network._get_interfaces()
+    )
+    addresses.extend(
+        salt.utils.network.ip_addrs6(
+            include_loopback=False, interface_data=salt.utils.network._get_interfaces()
+        )
+    )
     err_message = "Exception during resolving address: %s"
 
     # Create a ThreadPool to process the underlying calls to 'socket.gethostbyaddr' in parallel.

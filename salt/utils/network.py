@@ -59,9 +59,9 @@ _INTERFACES = {}
 
 
 def _get_interfaces():
-    '''
+    """
     Provide a dict of the connected interfaces and their ip addresses
-    '''
+    """
 
     global _INTERFACES
     if not _INTERFACES:
