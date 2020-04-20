@@ -796,6 +796,5 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         assert len(results) == send_num, (len(results), set(expect).difference(results))
 
     def test_get_multiprocessing_logging_queue_aix(self):
-        with patch('salt.utils.platform.is_aix', MagicMock(return_value=True)):
+        with patch("salt.utils.platform.is_aix", MagicMock(return_value=True)):
             self.assertEqual(32767, get_multiprocessing_logging_queue())
-
