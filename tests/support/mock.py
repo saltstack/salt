@@ -25,6 +25,7 @@ import sys
 # By these days, we should blowup if mock is not available
 import mock  # pylint: disable=blacklisted-external-import
 import salt.utils.stringutils
+
 # pylint: disable=no-name-in-module,no-member
 from mock import (
     ANY,
@@ -41,6 +42,7 @@ from mock import (
     patch,
     sentinel,
 )
+
 # Import salt libs
 from salt.ext import six
 
