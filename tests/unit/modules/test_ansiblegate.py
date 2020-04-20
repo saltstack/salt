@@ -25,7 +25,7 @@ import salt.modules.ansiblegate as ansible
 import salt.utils.platform
 from salt.exceptions import LoaderError
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch, MockTimedProc
+from tests.support.mock import MagicMock, MockTimedProc, patch
 from tests.support.unit import TestCase, skipIf
 
 try:
