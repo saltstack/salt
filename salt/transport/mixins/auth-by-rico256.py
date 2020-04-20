@@ -2,29 +2,29 @@
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
-import multiprocessing
-import ctypes
-import logging
-import os
-import hashlib
-import shutil
+
 import binascii
+import ctypes
+import hashlib
+import logging
+import multiprocessing
+import os
+import shutil
 
 # Import Salt Libs
 import salt.crypt
-import salt.payload
+import salt.ext.tornado.gen
 import salt.master
+import salt.payload
 import salt.transport.frame
 import salt.utils.event
 import salt.utils.files
 import salt.utils.minions
 import salt.utils.stringutils
 import salt.utils.verify
-from salt.utils.cache import CacheCli
-
 # Import Third Party Libs
 from salt.ext import six
-import salt.ext.tornado.gen
+from salt.utils.cache import CacheCli
 
 try:
     from M2Crypto import RSA
