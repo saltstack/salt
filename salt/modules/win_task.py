@@ -687,14 +687,14 @@ def create_task_from_xml(
             0x80041318: "Value incorrectly formatted or out of range",
             0x80020005: "Access denied",
             0x80041309: "A task's trigger is not found",
-            0x8004130a: "One or more of the properties required to run this "
+            0x8004130A: "One or more of the properties required to run this "
             "task have not been set",
-            0x8004130c: "The Task Scheduler service is not installed on this "
+            0x8004130C: "The Task Scheduler service is not installed on this "
             "computer",
-            0x8004130d: "The task object could not be opened",
-            0x8004130e: "The object is either an invalid task object or is not "
+            0x8004130D: "The task object could not be opened",
+            0x8004130E: "The object is either an invalid task object or is not "
             "a task object",
-            0x8004130f: "No account information could be found in the Task "
+            0x8004130F: "No account information could be found in the Task "
             "Scheduler security database for the task indicated",
             0x80041310: "Unable to establish existence of the account "
             "specified",
@@ -708,11 +708,11 @@ def create_task_from_xml(
             0x80041316: "The task XML contains an unexpected node",
             0x80041317: "The task XML contains an element or attribute from an "
             "unexpected namespace",
-            0x8004131a: "The task XML is malformed",
-            0x0004131c: "The task is registered, but may fail to start. Batch "
+            0x8004131A: "The task XML is malformed",
+            0x0004131C: "The task is registered, but may fail to start. Batch "
             "logon privilege needs to be enabled for the task "
             "principal",
-            0x8004131d: "The task XML contains too many nodes of the same type",
+            0x8004131D: "The task XML contains too many nodes of the same type",
         }
         try:
             failure_code = fc[error_code]
