@@ -2,8 +2,8 @@
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import glob
 
+import glob
 import logging
 import os
 import shutil
@@ -15,7 +15,6 @@ from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 from tests.support.case import SSHCase
 from tests.support.helpers import flaky
-
 # Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
 

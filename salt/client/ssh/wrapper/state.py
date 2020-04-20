@@ -5,7 +5,6 @@ Create ssh executor system
 from __future__ import absolute_import, print_function
 
 import logging
-
 # Import python libs
 import os
 import time
@@ -26,10 +25,8 @@ import salt.utils.json
 import salt.utils.platform
 import salt.utils.state
 import salt.utils.thin
-
 # Import salt libs
 from salt.exceptions import SaltInvocationError
-
 # Import 3rd-party libs
 from salt.ext import six
 
