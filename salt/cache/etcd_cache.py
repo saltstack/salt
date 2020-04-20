@@ -128,24 +128,24 @@ def _init_client():
 
 
 def _cache_update(bank):
-    '''
+    """
     Update the key cache.
-    '''
+    """
     global cache
-    if cache is None or cache['last_update'] < datetime.datetime.now() - datetime.timedelta(seconds=5):
+    if cache is None or cache[
+        "last_update"
+    ] < datetime.datetime.now() - datetime.timedelta(seconds=5):
         _init_client()
-        etcd_key = '{0}/{1}'.format(path_prefix, bank.split('/')[0])
+        etcd_key = "{0}/{1}".format(path_prefix, bank.split("/")[0])
         try:
             data = client.read(etcd_key, recursive=True)
-            cache = {'last_update': datetime.datetime.now()}
-            cache['data'] = {}
+            cache = {"last_update": datetime.datetime.now()}
+            cache["data"] = {}
             for leaf in data.leaves:
-                cache['data'][leaf.key] = leaf.value
+                cache["data"][leaf.key] = leaf.value
         except Exception as exc:
             raise SaltCacheError(
-                'There was an error caching the key, {0}: {1}'.format(
-                    etcd_key, exc
-                )
+                "There was an error caching the key, {0}: {1}".format(etcd_key, exc)
             )
 
 
@@ -167,10 +167,14 @@ def store(bank, key, data):
 def fetch(bank, key):
     """
     Fetch a key value.
-    '''
+    """
     _cache_update(bank)
     try:
-        return __context__['serial'].loads(base64.b64decode(cache['data']['{0}/{1}/{2}'.format(path_prefix, bank, key)]))
+        return __context__["serial"].loads(
+            base64.b64decode(
+                cache["data"]["{0}/{1}/{2}".format(path_prefix, bank, key)]
+            )
+        )
     except KeyError:
         return {}
 
@@ -206,7 +210,7 @@ def ls(bank):
     try:
         ret = []
         for child in client.read(path).children:
-            ret.append(child.key.split('/', 3)[3])
+            ret.append(child.key.split("/", 3)[3])
         return ret
     except Exception as exc:
         raise SaltCacheError(
@@ -217,9 +221,9 @@ def ls(bank):
 def contains(bank, key):
     """
     Checks if the specified bank contains the specified key.
-    '''
+    """
     _cache_update(bank)
     try:
-        return '{0}/{1}/{2}'.format(path_prefix, bank, key) in cache['data']
+        return "{0}/{1}/{2}".format(path_prefix, bank, key) in cache["data"]
     except KeyError:
         return False
