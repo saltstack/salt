@@ -1091,7 +1091,7 @@ def docs_html(session, compress):
     if pydir == "py3.4":
         session.error("Sphinx only runs on Python >= 3.5")
     requirements_file = "requirements/static/docs.in"
-    distro_constraints = ["requirements/static/{}/docs.txt".format(pydir)]
+    distro_constraints = ["requirements/static/{}/docs.txt".format(_get_pydir(session))]
     install_command = ["--progress-bar=off", "-r", requirements_file]
     for distro_constraint in distro_constraints:
         install_command.extend(["--constraint", distro_constraint])
@@ -1115,7 +1115,7 @@ def docs_man(session, compress, update):
     if pydir == "py3.4":
         session.error("Sphinx only runs on Python >= 3.5")
     requirements_file = "requirements/static/docs.in"
-    distro_constraints = ["requirements/static/{}/docs.txt".format(pydir)]
+    distro_constraints = ["requirements/static/{}/docs.txt".format(_get_pydir(session))]
     install_command = ["--progress-bar=off", "-r", requirements_file]
     for distro_constraint in distro_constraints:
         install_command.extend(["--constraint", distro_constraint])

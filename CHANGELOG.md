@@ -6,8 +6,6 @@ This changelog follows [keepachangelog](https://keepachangelog.com/en/1.0.0/) fo
 This project versioning is _similar_ to [Semantic Versioning](https://semver.org), and is documented in [SEP 14](https://github.com/saltstack/salt-enhancement-proposals/pull/20/files).
 Versions are `MAJOR.PATCH`.
 
-# Changelog
-
 ## 3001 - Sodium
 
 ### Removed
