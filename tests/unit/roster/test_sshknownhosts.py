@@ -2,18 +2,18 @@
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import os
 
-# Import Salt Testing Libs
-from tests.support.mock import patch
-from tests.support import mixins
-from tests.support.unit import TestCase
-from tests.support.runtests import RUNTIME_VARS
+import os
 
 # Import Salt Libs
 import salt.config
 import salt.loader
 import salt.roster.sshknownhosts as sshknownhosts
+from tests.support import mixins
+# Import Salt Testing Libs
+from tests.support.mock import patch
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import TestCase
 
 _ALL = {
     "server1": {"host": "server1"},
