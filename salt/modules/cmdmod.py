@@ -345,7 +345,7 @@ def _run(
         if isinstance(cmd, six.string_types):
             cmd = cmd.strip()
         elif isinstance(cmd, list):
-            cmd = ' '.join(cmd).strip()
+            cmd = " ".join(cmd).strip()
 
         # If we were called by script(), then fakeout the Windows
         # shell to run a Powershell script.
