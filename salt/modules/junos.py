@@ -196,7 +196,6 @@ def rpc(cmd=None, dest=None, **kwargs):
         salt 'device' junos.rpc get-interface-information dest=/home/user/interface.xml interface_name='lo0' terse=True
         salt 'device' junos.rpc get-chassis-inventory
     """
-
     conn = __proxy__["junos.conn"]()
     ret = {}
     ret["out"] = True
@@ -217,9 +216,9 @@ def rpc(cmd=None, dest=None, **kwargs):
                 op[key] = value
     else:
         op.update(kwargs)
-
     format_ = op.pop("format", "xml")
-    dest = op.pop("dest", None)
+    # when called from state, dest becomes part of op via __pub_arg
+    dest = dest or op.pop("dest", None)
 
     if cmd in ["get-config", "get_config"]:
         filter_reply = None
