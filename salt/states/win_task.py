@@ -2,10 +2,6 @@
 # https://msdn.microsoft.com/en-us/library/windows/desktop/aa383608(v=vs.85).aspx
 from __future__ import absolute_import, print_function, unicode_literals
 
-
-# State Module for managing task scheduler on Windows.
-# You can add or remove tasks.
-
 # Import Python libs
 import copy
 import logging
@@ -13,8 +9,13 @@ import time
 
 # Import salt libs
 import salt.utils.data
-import salt.utils.platform
 import salt.utils.dateutils
+import salt.utils.platform
+
+# State Module for managing task scheduler on Windows.
+# You can add or remove tasks.
+
+
 
 # Import 3rd-party libs
 try:

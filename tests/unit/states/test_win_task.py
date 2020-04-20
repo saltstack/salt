@@ -5,13 +5,12 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Libs
 import salt.modules.win_task
 import salt.states.win_task as win_task
-
 # Import Salt Testing Libs
 import salt.utils.platform
+from tests.support.helpers import destructiveTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import destructiveTest
+from tests.support.unit import TestCase, skipIf
 
 
 @destructiveTest
