@@ -42,10 +42,9 @@ import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.loader import _format_cached_grains
-
 # Import 3rd-party libs
 from salt.ext import six
+from salt.loader import _format_cached_grains
 from salt.runners.state import orchestrate as _orchestrate
 from salt.utils.odict import OrderedDict
 
