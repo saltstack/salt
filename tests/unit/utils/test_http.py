@@ -12,7 +12,6 @@ from contextlib import closing
 # Import Salt Libs
 import salt.utils.http as http
 from tests.support.helpers import MirrorPostHandler, Webserver
-
 # Import Salt Testing Libs
 from tests.support.unit import TestCase
 
