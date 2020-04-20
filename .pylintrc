@@ -128,7 +128,8 @@ disable=R,
   import-outside-toplevel,
   deprecated-method,
   repr-flag-used-in-string,
-  keyword-arg-before-vararg
+  keyword-arg-before-vararg,
+  incompatible-py3-code
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
