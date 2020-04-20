@@ -10,6 +10,7 @@ import salt.config
 import salt.loader
 import salt.roster.sshknownhosts as sshknownhosts
 from tests.support import mixins
+
 # Import Salt Testing Libs
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
