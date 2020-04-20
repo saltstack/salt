@@ -1646,19 +1646,26 @@ def list_repo_pkgs(*args, **kwargs):  # pylint: disable=unused-import
 
 
 def _skip_source(source):
-    '''
+    """
     Decide to skip source or not.
 
     :param source:
     :return:
-    '''
+    """
     if source.invalid:
-        if source.uri and source.type and source.type in ("deb", "deb-src", "rpm", "rpm-src"):
+        if (
+            source.uri
+            and source.type
+            and source.type in ("deb", "deb-src", "rpm", "rpm-src")
+        ):
             pieces = source.mysplit(source.line)
             if pieces[1].strip()[0] == "[":
                 options = pieces.pop(1).strip("[]").split()
                 if len(options) > 0:
-                    log.debug("Source %s will be included although is marked invalid", source.uri)
+                    log.debug(
+                        "Source %s will be included although is marked invalid",
+                        source.uri,
+                    )
                     return False
             return True
         else:
