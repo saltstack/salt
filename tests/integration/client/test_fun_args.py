@@ -19,9 +19,7 @@ class TestFunArgs(ShellCase):
 
     def run_test(self, minion):
         data = self.run_salt(
-            "-v {} test.arg foo bar baz named=arg other=also_named".format(
-                minion
-            )
+            "-v {} test.arg foo bar baz named=arg other=also_named".format(minion)
         )
         jid = data[0].split()[-1]
         job = self.run_run_plus("jobs.print_job", jid)["return"][jid]
