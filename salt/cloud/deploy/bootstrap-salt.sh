@@ -1868,10 +1868,8 @@ if [ "$ITYPE" = "git" ]; then
 
     if [ "$_POST_NEON_INSTALL" -eq $BS_TRUE ]; then
         echo
-        echowarn "Post Neon git based installations will always install salt and its dependencies using pip"
-        echowarn "You have 10 seconds to cancel and stop the bootstrap process"
         echowarn "Post Neon git based installations will always install salt"
-        echowarn "and it's dependencies using pip which will be upgraded to"
+        echowarn "and its dependencies using pip which will be upgraded to"
         echowarn "at least v${_MINIMUM_PIP_VERSION}, and, in case the setuptools version is also"
         echowarn "too old, it will be upgraded to at least v${_MINIMUM_SETUPTOOLS_VERSION}"
         echo
