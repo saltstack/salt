@@ -116,9 +116,10 @@ pyximport = None
 
 import weakref
 import collections
-class Pack(collections.MutableMapping):
 
-    def __init__(self, obj,  mapping):
+
+class Pack(collections.MutableMapping):
+    def __init__(self, obj, mapping):
         self.obj_ref = weakref.ref(obj)
         self.mymap = dict()
         for k, v in mapping.items():
