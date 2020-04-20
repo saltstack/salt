@@ -42,6 +42,7 @@ import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+
 # Import 3rd-party libs
 from salt.ext import six
 from salt.loader import _format_cached_grains
