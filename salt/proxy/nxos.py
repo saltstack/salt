@@ -172,8 +172,8 @@ import re
 
 # Import Salt libs
 import salt.utils.nxos
-from salt.utils.args import clean_kwargs
 from salt.exceptions import CommandExecutionError, NxosCliError
+from salt.utils.args import clean_kwargs
 from salt.utils.vt import TerminalException
 from salt.utils.vt_helper import SSHConnection
 
@@ -393,7 +393,7 @@ def _ping_ssh():
 
 
 def _shutdown_ssh():
-    return 'Shutdown of ssh proxy minion is not supported'
+    return "Shutdown of ssh proxy minion is not supported"
 
 
 def _sendline_ssh(command, **kwargs):
@@ -420,8 +420,8 @@ def _parse_output_for_errors(data, command, **kwargs):
                 "cli_error": data.lstrip(),
             }
         )
-    if kwargs.get('error_pattern'):
-        error_pattern = kwargs.get('error_pattern')
+    if kwargs.get("error_pattern"):
+        error_pattern = kwargs.get("error_pattern")
         if isinstance(error_pattern, str):
             error_pattern = [error_pattern]
         for re_line in error_pattern:
@@ -488,7 +488,7 @@ def _ping_nxapi():
 
 
 def _shutdown_nxapi():
-    return 'Shutdown of nxapi proxy minion is not supported'
+    return "Shutdown of nxapi proxy minion is not supported"
 
 
 def _nxapi_request(commands, method="cli_conf", **kwargs):
