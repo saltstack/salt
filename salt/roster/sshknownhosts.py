@@ -38,6 +38,7 @@ Or with a Saltfile
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
+
 # Import python libs
 import os
 
