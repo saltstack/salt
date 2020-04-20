@@ -183,12 +183,116 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             win_system, "get_computer_name", MagicMock(return_value="salt")
         ):
             reg_mock = MagicMock(return_value={"vdata": "salt"})
-            with patch.dict(win_system.__salt__, {"reg.read_value": reg_mock}):
+            with patch.dict(win_system.__utils__, {"reg.read_value": reg_mock}):
                 self.assertFalse(win_system.get_pending_computer_name())
 
             reg_mock = MagicMock(return_value={"vdata": "salt_pending"})
-            with patch.dict(win_system.__salt__, {"reg.read_value": reg_mock}):
+            with patch.dict(win_system.__utils__, {"reg.read_value": reg_mock}):
                 self.assertEqual(win_system.get_pending_computer_name(), "salt_pending")
+
+    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    def test_get_pending_file_rename_no_key(self):
+        """
+        Test to get a pending file rename, keys don't exist. Should return False
+        """
+        reg_mock = MagicMock(return_value={"success": False})
+        with patch.dict(win_system.__utils__, {"reg.read_value": reg_mock}):
+            self.assertFalse(win_system.get_pending_file_rename())
+
+    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    def test_get_pending_file_rename_key_no_value(self):
+        """
+        Test to get a pending file rename, keys exist but not set. Should return
+        False
+        """
+        reg_mock = MagicMock(return_value={"success": True, "vdata": "(value not set)"})
+        with patch.dict(win_system.__utils__, {"reg.read_value": reg_mock}):
+            self.assertFalse(win_system.get_pending_file_rename())
+
+    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    def test_get_pending_file_rename_key_present_value_set(self):
+        """
+        Test to get a pending file rename, keys exist and value set. Should
+        return True
+        """
+        reg_mock = MagicMock(return_value={"success": True, "vdata": "something"})
+        with patch.dict(win_system.__utils__, {"reg.read_value": reg_mock}):
+            self.assertTrue(win_system.get_pending_file_rename())
+
+    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    def test_get_pending_servermanager_key_not_present(self):
+        """
+        Test to get pending servermanager, key not present. Should return False
+        """
+        reg_mock = MagicMock(return_value={"success": False})
+        with patch.dict(win_system.__utils__, {"reg.read_value": reg_mock}):
+            self.assertFalse(win_system.get_pending_servermanager())
+
+    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    def test_get_pending_servermanager_key_present_not_int(self):
+        """
+        Test to get pending servermanager, key present, value not int. Should
+        return False
+        """
+        reg_mock = MagicMock(return_value={"success": True, "vdata": "(value not set)"})
+        with patch.dict(win_system.__utils__, {"reg.read_value": reg_mock}):
+            self.assertFalse(win_system.get_pending_servermanager())
+
+    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    def test_get_pending_servermanager_key_present_int_0(self):
+        """
+        Test to get pending servermanager, key present, value is int 0. Should
+        return False
+        """
+        reg_mock = MagicMock(return_value={"success": True, "vdata": 0})
+        with patch.dict(win_system.__utils__, {"reg.read_value": reg_mock}):
+            self.assertFalse(win_system.get_pending_servermanager())
+
+    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    def test_get_pending_servermanager_key_present_int_1(self):
+        """
+        Test to get pending servermanager, key present, value is int 1. Should
+        return True
+        """
+        reg_mock = MagicMock(return_value={"success": True, "vdata": 1})
+        with patch.dict(win_system.__utils__, {"reg.read_value": reg_mock}):
+            self.assertTrue(win_system.get_pending_servermanager())
+
+    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    def test_get_pending_servermanager_key_not_present(self):
+        """
+        Test to get pending servermanager, key no present. Should return False
+        """
+        reg_mock = MagicMock(return_value={"success": False})
+        with patch.dict(win_system.__utils__, {"reg.read_value": reg_mock}):
+            self.assertFalse(win_system.get_pending_servermanager())
+
+    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    def test_set_reboot_required_witnessed(self):
+        """
+        Test set_reboot_required_witnessed, Should return True
+        """
+        reg_mock = MagicMock(return_value=True)
+        with patch.dict(win_system.__utils__, {"reg.set_value": reg_mock}):
+            self.assertTrue(win_system.set_reboot_required_witnessed())
+
+    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    def test_get_reboot_required_witnessed_false(self):
+        """
+        Test get_reboot_required_witnessed, not witnessed. Should return False
+        """
+        reg_mock = MagicMock(return_value={"success": False, "vdata": None})
+        with patch.dict(win_system.__utils__, {"reg.read_value": reg_mock}):
+            self.assertFalse(win_system.get_reboot_required_witnessed())
+
+    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    def test_get_reboot_required_witnessed_true(self):
+        """
+        Test get_reboot_required_witnessed, witnessed. Should return True
+        """
+        reg_mock = MagicMock(return_value={"success": True, "vdata": 1})
+        with patch.dict(win_system.__utils__, {"reg.read_value": reg_mock}):
+            self.assertTrue(win_system.get_reboot_required_witnessed())
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
     def test_get_computer_name(self):
