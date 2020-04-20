@@ -831,12 +831,21 @@ def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DEL
                 # Late import to avoid circular import
                 import salt.utils.args
 
-                # YAML-load the current key (catches integer dict keys)
+                # YAML-load the current key (catches integer/float dict keys)
                 try:
                     loaded_key = salt.utils.args.yamlify_arg(each)
                 except Exception:  # pylint: disable=broad-except
                     return default
-                if loaded_key != each:
+                if loaded_key == each:
+                    # After YAML-loading, the desired key is unchanged. This
+                    # means that the KeyError caught above is a legitimate
+                    # failure to match the desired key. Therefore, return the
+                    # default.
+                    return default
+                else:
+                    # YAML-loading the key changed its value, so re-check with
+                    # the loaded key. This is how we can match a numeric key
+                    # with a string-based expression.
                     try:
                         ptr = ptr[loaded_key]
                     except (KeyError, TypeError):
