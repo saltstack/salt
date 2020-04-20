@@ -22,6 +22,7 @@ import salt.utils.files
 import salt.utils.minions
 import salt.utils.stringutils
 import salt.utils.verify
+
 # Import Third Party Libs
 from salt.ext import six
 from salt.utils.cache import CacheCli
