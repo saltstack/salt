@@ -5,6 +5,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Libs
 import salt.modules.win_task
 import salt.states.win_task as win_task
+
 # Import Salt Testing Libs
 import salt.utils.platform
 from tests.support.helpers import destructiveTest

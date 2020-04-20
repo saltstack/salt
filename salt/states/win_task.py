@@ -16,7 +16,6 @@ import salt.utils.platform
 # You can add or remove tasks.
 
 
-
 # Import 3rd-party libs
 try:
     import pywintypes
