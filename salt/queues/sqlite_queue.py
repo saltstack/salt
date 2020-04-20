@@ -76,17 +76,19 @@ def _create_table(con, queue):
 
 
 def _process_mode(mode=None):
-    '''
+    """
     return the order by statement for the mode
-    '''
-    if mode and mode.lower() not in ['fifo', 'lifo']:
-        log.warning('An invalid queue mode was specified, supported modes are "fifo" and "lifo"')
-    order_by = ''
+    """
+    if mode and mode.lower() not in ["fifo", "lifo"]:
+        log.warning(
+            'An invalid queue mode was specified, supported modes are "fifo" and "lifo"'
+        )
+    order_by = ""
     if mode:
-        if mode.lower() == 'fifo':
-            order_by = ' ORDER BY id ASC'
-        elif mode.lower() == 'lifo':
-            order_by = ' ORDER BY id DESC'
+        if mode.lower() == "fifo":
+            order_by = " ORDER BY id ASC"
+        elif mode.lower() == "lifo":
+            order_by = " ORDER BY id DESC"
     return order_by
 
 
@@ -240,7 +242,7 @@ def pop(queue, quantity=1, is_runner=False, mode=None):
     Pop one or more or all items from the queue return them.
     """
     order_by = _process_mode(mode)
-    cmd = 'SELECT name FROM {0}{1}'.format(queue, order_by)
+    cmd = "SELECT name FROM {0}{1}".format(queue, order_by)
     if quantity != "all":
         try:
             quantity = int(quantity)

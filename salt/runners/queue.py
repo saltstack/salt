@@ -212,7 +212,9 @@ def pop(queue, quantity=1, backend="sqlite", is_runner=False, mode=None):
     cmd = "{0}.pop".format(backend)
     if cmd not in queue_funcs:
         raise SaltInvocationError('Function "{0}" is not available'.format(cmd))
-    ret = queue_funcs[cmd](quantity=quantity, queue=queue, is_runner=is_runner, mode=mode)
+    ret = queue_funcs[cmd](
+        quantity=quantity, queue=queue, is_runner=is_runner, mode=mode
+    )
     return ret
 
 
@@ -254,7 +256,11 @@ def process_queue(queue, quantity=1, backend="sqlite", is_runner=False, mode=Non
     ) as event_bus:
         try:
             items = pop(
-                queue=queue, quantity=quantity, backend=backend, is_runner=is_runner, mode=mode
+                queue=queue,
+                quantity=quantity,
+                backend=backend,
+                is_runner=is_runner,
+                mode=mode,
             )
         except SaltInvocationError as exc:
             error_txt = "{0}".format(exc)
@@ -318,8 +324,8 @@ def insert_runner(fun, args=None, kwargs=None, queue=None, backend=None):
         kwargs = {}
     queue_kwargs = __get_queue_opts(queue=queue, backend=backend)
     # mode not needed for inserting...
-    if 'mode' in queue_kwargs:
-        queue_kwargs.pop('mode')
+    if "mode" in queue_kwargs:
+        queue_kwargs.pop("mode")
     data = {"fun": fun, "args": args, "kwargs": kwargs}
     return insert(items=data, **queue_kwargs)
 
