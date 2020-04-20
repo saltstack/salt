@@ -226,12 +226,22 @@ class DataTestCase(TestCase):
                 {"not_found": "not_found"},
             ),
         )
+
         # Traverse and match integer key in a nested dict
         # https://github.com/saltstack/salt/issues/56444
         self.assertEqual(
             "it worked",
             salt.utils.data.traverse_dict_and_list(
                 {"foo": {1234: "it worked"}}, "foo:1234", "it didn't work",
+            ),
+        )
+        # Make sure that we properly return the default value when the initial
+        # attempt fails and YAML-loading the target key doesn't change its
+        # value.
+        self.assertEqual(
+            "default",
+            salt.utils.data.traverse_dict_and_list(
+                {"foo": {"baz": "didn't work"}}, "foo:bar", "default",
             ),
         )
 
