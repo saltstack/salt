@@ -158,7 +158,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
         nicp = virt._nic_profile("default", "kvm")
-        xml_data = virt._gen_xml("hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64")
+        xml_data = virt._gen_xml(
+            self.mock_conn, "hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64"
+        )
         root = ET.fromstring(xml_data)
         self.assertEqual(root.find("os/boot").attrib["dev"], "hd")
         self.assertEqual(root.find("os/type").attrib["arch"], "x86_64")
@@ -171,7 +173,16 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
         nicp = virt._nic_profile("default", "kvm")
         xml_data = virt._gen_xml(
-            "hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64", boot_dev="cdrom"
+            self.mock_conn,
+            "hello",
+            1,
+            512,
+            diskp,
+            nicp,
+            "kvm",
+            "hvm",
+            "x86_64",
+            boot_dev="cdrom",
         )
         root = ET.fromstring(xml_data)
         self.assertEqual(root.find("os/boot").attrib["dev"], "cdrom")
@@ -183,6 +194,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
         nicp = virt._nic_profile("default", "kvm")
         xml_data = virt._gen_xml(
+            self.mock_conn,
             "hello",
             1,
             512,
@@ -204,6 +216,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
         nicp = virt._nic_profile("default", "kvm")
         xml_data = virt._gen_xml(
+            self.mock_conn,
             "hello",
             1,
             512,
@@ -226,6 +239,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
         nicp = virt._nic_profile("default", "kvm")
         xml_data = virt._gen_xml(
+            self.mock_conn,
             "hello",
             1,
             512,
@@ -248,6 +262,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
         nicp = virt._nic_profile("default", "kvm")
         xml_data = virt._gen_xml(
+            self.mock_conn,
             "hello",
             1,
             512,
@@ -272,6 +287,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
         nicp = virt._nic_profile("default", "kvm")
         xml_data = virt._gen_xml(
+            self.mock_conn,
             "hello",
             1,
             512,
@@ -297,6 +313,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
         nicp = virt._nic_profile("default", "kvm")
         xml_data = virt._gen_xml(
+            self.mock_conn,
             "hello",
             1,
             512,
@@ -319,6 +336,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
         nicp = virt._nic_profile("default", "kvm")
         xml_data = virt._gen_xml(
+            self.mock_conn,
             "hello",
             1,
             512,
@@ -340,7 +358,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
         nicp = virt._nic_profile("default", "kvm")
-        xml_data = virt._gen_xml("hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64")
+        xml_data = virt._gen_xml(
+            self.mock_conn, "hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64"
+        )
         root = ET.fromstring(xml_data)
         self.assertIsNone(root.find("devices/graphics"))
 
@@ -350,7 +370,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
         nicp = virt._nic_profile("default", "kvm")
-        xml_data = virt._gen_xml("hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64")
+        xml_data = virt._gen_xml(
+            self.mock_conn, "hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64"
+        )
         root = ET.fromstring(xml_data)
         self.assertIsNone(root.find("os/loader"))
 
@@ -361,6 +383,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
         nicp = virt._nic_profile("default", "kvm")
         xml_data = virt._gen_xml(
+            self.mock_conn,
             "hello",
             1,
             512,
@@ -394,6 +417,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
         nicp = virt._nic_profile("default", "kvm")
         xml_data = virt._gen_xml(
+            self.mock_conn,
             "hello",
             1,
             512,
@@ -420,6 +444,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
         nicp = virt._nic_profile("default", "kvm")
         xml_data = virt._gen_xml(
+            self.mock_conn,
             "hello",
             1,
             512,
@@ -608,7 +633,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
         nicp = virt._nic_profile("default", "kvm")
-        xml_data = virt._gen_xml("hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64",)
+        xml_data = virt._gen_xml(
+            self.mock_conn, "hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64",
+        )
         root = ET.fromstring(xml_data)
         self.assertEqual(root.attrib["type"], "kvm")
         self.assertEqual(root.find("vcpu").text, "1")
@@ -640,7 +667,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         diskp = virt._disk_profile(self.mock_conn, "default", "vmware", [], "hello")
         nicp = virt._nic_profile("default", "vmware")
         xml_data = virt._gen_xml(
-            "hello", 1, 512, diskp, nicp, "vmware", "hvm", "x86_64",
+            self.mock_conn, "hello", 1, 512, diskp, nicp, "vmware", "hvm", "x86_64",
         )
         root = ET.fromstring(xml_data)
         self.assertEqual(root.attrib["type"], "vmware")
@@ -674,7 +701,16 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             virt.__grains__, {"os_family": "Suse"}  # pylint: disable=no-member
         ):
             xml_data = virt._gen_xml(
-                "hello", 1, 512, diskp, nicp, "xen", "xen", "x86_64", boot=None
+                self.mock_conn,
+                "hello",
+                1,
+                512,
+                diskp,
+                nicp,
+                "xen",
+                "xen",
+                "x86_64",
+                boot=None,
             )
             root = ET.fromstring(xml_data)
             self.assertEqual(root.attrib["type"], "xen")
@@ -728,7 +764,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             )
             nicp = virt._nic_profile("noeffect", "vmware")
             xml_data = virt._gen_xml(
-                "hello", 1, 512, diskp, nicp, "vmware", "hvm", "x86_64",
+                self.mock_conn, "hello", 1, 512, diskp, nicp, "vmware", "hvm", "x86_64",
             )
             root = ET.fromstring(xml_data)
             self.assertEqual(root.attrib["type"], "vmware")
@@ -761,7 +797,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             diskp = virt._disk_profile(self.mock_conn, "noeffect", "kvm", [], "hello")
             nicp = virt._nic_profile("noeffect", "kvm")
             xml_data = virt._gen_xml(
-                "hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64",
+                self.mock_conn, "hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64",
             )
             root = ET.fromstring(xml_data)
             self.assertEqual(root.attrib["type"], "kvm")
@@ -845,8 +881,13 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             ],
             "hello",
         )
+        self.mock_conn.storagePoolLookupByName.return_value.XMLDesc.return_value = (
+            "<pool type='dir'/>"
+        )
         nicp = virt._nic_profile(None, "kvm")
-        xml_data = virt._gen_xml("hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64",)
+        xml_data = virt._gen_xml(
+            self.mock_conn, "hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64",
+        )
         root = ET.fromstring(xml_data)
         disk = root.findall(".//disk")[0]
         self.assertEqual(disk.attrib["device"], "disk")
@@ -855,6 +896,116 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual("default", source.attrib["pool"])
         self.assertEqual("hello_system", source.attrib["volume"])
         self.assertEqual("myvolume", root.find(".//disk[2]/source").get("volume"))
+
+        # RBD volume usage auth test case
+        self.mock_conn.listStoragePools.return_value = ["test-rbd"]
+        self.mock_conn.storagePoolLookupByName.return_value.XMLDesc.return_value = """
+            <pool type='rbd'>
+              <name>test-rbd</name>
+              <uuid>ede33e0a-9df0-479f-8afd-55085a01b244</uuid>
+              <capacity unit='bytes'>526133493760</capacity>
+              <allocation unit='bytes'>589928</allocation>
+              <available unit='bytes'>515081306112</available>
+              <source>
+                <host name='ses2.tf.local'/>
+                <host name='ses3.tf.local' port='1234'/>
+                <name>libvirt-pool</name>
+                <auth type='ceph' username='libvirt'>
+                  <secret usage='pool_test-rbd'/>
+                </auth>
+              </source>
+            </pool>
+        """
+        self.mock_conn.getStoragePoolCapabilities.return_value = """
+            <storagepoolCapabilities>
+              <pool type='rbd' supported='yes'>
+                <volOptions>
+                  <defaultFormat type='raw'/>
+                  <enum name='targetFormatType'>
+                  </enum>
+                </volOptions>
+              </pool>
+            </storagepoolCapabilities>
+        """
+        diskp = virt._disk_profile(
+            self.mock_conn,
+            None,
+            "kvm",
+            [{"name": "system", "pool": "test-rbd"}],
+            "test-vm",
+        )
+        xml_data = virt._gen_xml(
+            self.mock_conn, "hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64",
+        )
+        root = ET.fromstring(xml_data)
+        disk = root.findall(".//disk")[0]
+        self.assertDictEqual(
+            {
+                "type": "network",
+                "device": "disk",
+                "source": {
+                    "protocol": "rbd",
+                    "name": "libvirt-pool/test-vm_system",
+                    "host": [
+                        {"name": "ses2.tf.local"},
+                        {"name": "ses3.tf.local", "port": "1234"},
+                    ],
+                    "auth": {
+                        "username": "libvirt",
+                        "secret": {"type": "ceph", "usage": "pool_test-rbd"},
+                    },
+                },
+                "target": {"dev": "vda", "bus": "virtio"},
+                "driver": {
+                    "name": "qemu",
+                    "type": "raw",
+                    "cache": "none",
+                    "io": "native",
+                },
+            },
+            salt.utils.xmlutil.to_dict(disk, True),
+        )
+
+        # RBD volume UUID auth test case
+        self.mock_conn.storagePoolLookupByName.return_value.XMLDesc.return_value = """
+            <pool type='rbd'>
+              <name>test-rbd</name>
+              <uuid>ede33e0a-9df0-479f-8afd-55085a01b244</uuid>
+              <capacity unit='bytes'>526133493760</capacity>
+              <allocation unit='bytes'>589928</allocation>
+              <available unit='bytes'>515081306112</available>
+              <source>
+                <host name='ses2.tf.local'/>
+                <host name='ses3.tf.local' port='1234'/>
+                <name>libvirt-pool</name>
+                <auth type='ceph' username='libvirt'>
+                  <secret uuid='some-uuid'/>
+                </auth>
+              </source>
+            </pool>
+        """
+        self.mock_conn.secretLookupByUUIDString.return_value.usageID.return_value = (
+            "pool_test-rbd"
+        )
+        diskp = virt._disk_profile(
+            self.mock_conn,
+            None,
+            "kvm",
+            [{"name": "system", "pool": "test-rbd"}],
+            "test-vm",
+        )
+        xml_data = virt._gen_xml(
+            self.mock_conn, "hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64",
+        )
+        root = ET.fromstring(xml_data)
+        self.assertDictEqual(
+            {
+                "username": "libvirt",
+                "secret": {"type": "ceph", "usage": "pool_test-rbd"},
+            },
+            salt.utils.xmlutil.to_dict(root.find(".//disk/source/auth"), True),
+        )
+        self.mock_conn.secretLookupByUUIDString.assert_called_once_with("some-uuid")
 
     def test_gen_xml_cdrom(self):
         """
@@ -875,7 +1026,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "hello",
         )
         nicp = virt._nic_profile(None, "kvm")
-        xml_data = virt._gen_xml("hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64",)
+        xml_data = virt._gen_xml(
+            self.mock_conn, "hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64",
+        )
         root = ET.fromstring(xml_data)
         disk = root.findall(".//disk")[0]
         self.assertEqual(disk.get("type"), "file")
@@ -889,7 +1042,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         diskp = virt._disk_profile(self.mock_conn, "default", "vmware", [], "hello")
         nicp = virt._nic_profile("default", "vmware")
         xml_data = virt._gen_xml(
-            "hello", 1, 512, diskp, nicp, "vmware", "hvm", "x86_64",
+            self.mock_conn, "hello", 1, 512, diskp, nicp, "vmware", "hvm", "x86_64",
         )
         root = ET.fromstring(xml_data)
         controllers = root.findall(".//devices/controller")
@@ -903,7 +1056,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
         nicp = virt._nic_profile("default", "kvm")
-        xml_data = virt._gen_xml("hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64",)
+        xml_data = virt._gen_xml(
+            self.mock_conn, "hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64",
+        )
         root = ET.fromstring(xml_data)
         controllers = root.findall(".//devices/controller")
         # There should be no controller
@@ -1429,6 +1584,19 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                   <alias name='virtio-disk1'/>
                   <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x1'/>
                 </disk>
+                <disk type="network" device="disk">
+                  <driver name='raw' type='qcow2'/>
+                  <source protocol='rbd' name='libvirt-pool/my_vm_data2'>
+                    <host name='ses2.tf.local'/>
+                    <host name='ses3.tf.local' port='1234'/>
+                    <auth username='libvirt'>
+                      <secret type='ceph' usage='pool_test-rbd'/>
+                    </auth>
+                  </source>
+                  <target dev='vdc' bus='virtio'/>
+                  <alias name='virtio-disk2'/>
+                  <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x2'/>
+                </disk>
                 <interface type='network'>
                   <mac address='52:54:00:39:02:b1'/>
                   <source network='default' bridge='virbr0'/>
@@ -1638,14 +1806,15 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 )
 
                 self.assertListEqual(
-                    ["my_vm_data"],
+                    ["my_vm_data", "libvirt-pool/my_vm_data2"],
                     [
                         ET.fromstring(disk).find("source").get("volume")
+                        or ET.fromstring(disk).find("source").get("name")
                         for disk in ret["disk"]["detached"]
                     ],
                 )
                 self.assertEqual(devattach_mock.call_count, 2)
-                devdetach_mock.assert_called_once()
+                self.assertEqual(devdetach_mock.call_count, 2)
 
         # Update nics case
         yaml_config = """
@@ -1705,7 +1874,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         devdetach_mock.reset_mock()
         ret = virt.update("my_vm", disk_profile=None, disks=[])
         self.assertEqual([], ret["disk"]["attached"])
-        self.assertEqual(2, len(ret["disk"]["detached"]))
+        self.assertEqual(3, len(ret["disk"]["detached"]))
         devattach_mock.assert_not_called()
         devdetach_mock.assert_called()
 
@@ -1723,9 +1892,28 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
         # Update with no diff case
         pool_mock = MagicMock()
-        pool_mock.XMLDesc.return_value = "<pool type='dir'></pool>"
+        default_pool_desc = "<pool type='dir'></pool>"
+        rbd_pool_desc = """
+            <pool type='rbd'>
+              <name>test-rbd</name>
+              <source>
+                <host name='ses2.tf.local'/>
+                <host name='ses3.tf.local' port='1234'/>
+                <name>libvirt-pool</name>
+                <auth type='ceph' username='libvirt'>
+                  <secret usage='pool_test-rbd'/>
+                </auth>
+              </source>
+            </pool>
+            """
+        pool_mock.XMLDesc.side_effect = [
+            default_pool_desc,
+            rbd_pool_desc,
+            default_pool_desc,
+            rbd_pool_desc,
+        ]
         self.mock_conn.storagePoolLookupByName.return_value = pool_mock
-        self.mock_conn.listStoragePools.return_value = ["default"]
+        self.mock_conn.listStoragePools.return_value = ["test-rbd", "default"]
         self.assertEqual(
             {
                 "definition": False,
@@ -1737,7 +1925,15 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 cpu=1,
                 mem=1024,
                 disk_profile="default",
-                disks=[{"name": "data", "size": 2048, "pool": "default"}],
+                disks=[
+                    {"name": "data", "size": 2048, "pool": "default"},
+                    {
+                        "name": "data2",
+                        "size": 4096,
+                        "pool": "test-rbd",
+                        "format": "raw",
+                    },
+                ],
                 nic_profile="myprofile",
                 interfaces=[
                     {
@@ -2276,6 +2472,75 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         ]
         pool_mock.listVolumes.return_value = ["vm05_system", "vm04_system.qcow2"]
         self.mock_conn.storagePoolLookupByName.return_value = pool_mock
+        self.mock_conn.listStoragePools.return_value = ["default"]
+
+        with patch.dict(os.path.__dict__, {"exists": MagicMock(return_value=False)}):
+            res = virt.purge("test-vm")
+            self.assertTrue(res)
+            pool_mock.storageVolLookupByName.return_value.delete.assert_called_once()
+
+    @patch("salt.modules.virt.stop", return_value=True)
+    @patch("salt.modules.virt.undefine")
+    def test_purge_rbd(self, mock_undefine, mock_stop):
+        """
+        Test virt.purge() with RBD disks
+        """
+        xml = """<domain type='kvm' id='7'>
+              <name>test-vm</name>
+              <devices>
+                <disk type="network" device="disk">
+                  <driver name='raw' type='qcow2'/>
+                  <source protocol='rbd' name='libvirt-pool/my_vm_data2'>
+                    <host name='ses2.tf.local'/>
+                    <host name='ses3.tf.local' port='1234'/>
+                    <auth username='libvirt'>
+                      <secret type='ceph' usage='pool_test-rbd'/>
+                    </auth>
+                  </source>
+                  <target dev='vdc' bus='virtio'/>
+                  <alias name='virtio-disk2'/>
+                  <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x2'/>
+                </disk>
+              </devices>
+            </domain>
+        """
+        self.set_mock_vm("test-vm", xml)
+
+        pool_mock = MagicMock()
+        pool_mock.storageVolLookupByName.return_value.info.return_value = [
+            0,
+            1234567,
+            12345,
+        ]
+        pool_mock.XMLDesc.return_value = """
+        <pool type='rbd'>
+          <name>test-ses</name>
+          <source>
+            <host name='ses2.tf.local'/>
+            <name>libvirt-pool</name>
+            <auth type='ceph' username='libvirt'>
+              <secret usage='pool_test-ses'/>
+            </auth>
+          </source>
+        </pool>
+        """
+        pool_mock.storageVolLookupByName.return_value.XMLDesc.return_value = [
+            """
+            <volume type='network'>
+              <name>my_vm_data2</name>
+              <source>
+              </source>
+              <capacity unit='bytes'>536870912</capacity>
+              <allocation unit='bytes'>0</allocation>
+              <target>
+                <path>libvirt-pool/my_vm_data2</path>
+                <format type='raw'/>
+              </target>
+            </volume>
+            """,
+        ]
+        pool_mock.listVolumes.return_value = ["my_vm_data2"]
+        self.mock_conn.listAllStoragePools.return_value = [pool_mock]
         self.mock_conn.listStoragePools.return_value = ["default"]
 
         with patch.dict(os.path.__dict__, {"exists": MagicMock(return_value=False)}):

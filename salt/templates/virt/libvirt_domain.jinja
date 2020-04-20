@@ -35,6 +35,18 @@
                         {% if disk.type == 'volume' and 'pool' in disk -%}
                         <source pool='{{ disk.pool }}' volume='{{ disk.volume }}' />
                         {% endif %}
+                        {%- if disk.type == 'network' %}
+                        <source protocol='{{ disk.protocol }}' name='{{ disk.volume }}'>
+                          {%- for host in disk.get('hosts') %}
+                          <host name='{{ host.name }}'{% if host.get("port") %} port='{{ host.port }}'{% endif %}/>
+                          {%- endfor %}
+                          {%- if disk.get("auth") %}
+                          <auth username='{{ disk.auth.username }}'>
+                            <secret type='{{ disk.auth.type }}' usage='{{ disk.auth.usage}}'/>
+                          </auth>
+                          {%- endif %}
+                        </source>
+                        {%- endif %}
                         <target dev='{{ disk.target_dev }}' bus='{{ disk.disk_bus }}' />
                         {% if disk.address -%}
                         <address type='drive' controller='0' bus='0' target='0' unit='{{ disk.index }}' />
