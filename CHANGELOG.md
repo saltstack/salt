@@ -14,6 +14,7 @@ Versions are `MAJOR.PATCH`.
 ### Deprecated
 
 ### Changed
+- [#56731](https://github.com/saltstack/salt/pull/56731) - Backport #53994
 
 ### Fixed
 - [#56237](https://github.com/saltstack/salt/pull/56237) - Fix alphabetical ordering and remove duplicates across all documentation indexes - [@myii](https://github.com/myii)
