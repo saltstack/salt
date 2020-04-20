@@ -196,8 +196,8 @@ def _remove_circular_refs(ob, _seen=None):
         # Here we caught a circular reference.
         # Alert user and cleanup to continue.
         log.exception(
-            'Caught a circular reference in data structure below.'
-            'Cleaning and continuing execution.\n%r\n',
+            "Caught a circular reference in data structure below."
+            "Cleaning and continuing execution.\n%r\n",
             ob,
         )
         return None
@@ -206,7 +206,8 @@ def _remove_circular_refs(ob, _seen=None):
     if isinstance(ob, dict):
         res = {
             _remove_circular_refs(k, _seen): _remove_circular_refs(v, _seen)
-            for k, v in ob.items()}
+            for k, v in ob.items()
+        }
     elif isinstance(ob, (list, tuple, set, frozenset)):
         res = type(ob)(_remove_circular_refs(v, _seen) for v in ob)
     # remove id again; only *nested* references count
