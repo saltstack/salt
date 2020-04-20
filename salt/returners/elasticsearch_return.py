@@ -106,7 +106,6 @@ from datetime import timedelta, tzinfo
 import salt.returners
 import salt.utils.jid
 import salt.utils.json
-
 # Import 3rd-party libs
 from salt.ext import six
 
