@@ -29,7 +29,6 @@ import salt.utils.stringutils
 import salt.utils.zeromq
 from salt._compat import ipaddress
 from salt.exceptions import SaltClientError, SaltSystemExit
-
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
