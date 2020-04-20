@@ -18,7 +18,6 @@ from argparse import Namespace
 # Import 3rd-party libs
 import jinja2
 import jinja2.ext
-
 # Import Salt libs
 import salt.utils.data
 import salt.utils.dateutils
@@ -572,7 +571,7 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
             return {}
 
         base_fname = os.path.basename(sfn)
-        name = base_fname.split('.')[0]
+        name = base_fname.split(".")[0]
 
         if USE_IMPORTLIB:
             # pylint: disable=no-member

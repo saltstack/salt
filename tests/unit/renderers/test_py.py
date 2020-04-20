@@ -3,19 +3,15 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Testing libs
-from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
-from tests.support.mock import (
-    patch
-)
-
 # Import Salt libs
 import salt.renderers.py as pyrender
+# Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mock import patch
+from tests.support.unit import TestCase
 
 
 class PyRendererTestCase(TestCase, LoaderModuleMockMixin):
-
     def setup_loader_modules(self):
         return {pyrender: {}}
 

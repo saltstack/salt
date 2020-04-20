@@ -114,9 +114,9 @@ Full Example
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
+import salt.utils.templates
 # Import salt libs
 from salt.exceptions import SaltRenderError
-import salt.utils.templates
 
 
 def render(template, saltenv="base", sls="", tmplpath=None, **kws):
