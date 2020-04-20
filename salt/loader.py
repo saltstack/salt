@@ -39,6 +39,7 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import LoaderError
+
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import reload_module
@@ -114,7 +115,6 @@ LIBCLOUD_FUNCS_NOT_SUPPORTED = (
 
 # Will be set to pyximport module at runtime if cython is enabled in config.
 pyximport = None
-
 
 
 class Pack(collections.MutableMapping):
