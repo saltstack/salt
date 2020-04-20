@@ -24,12 +24,13 @@ import os
 import traceback
 from functools import wraps
 
+import yaml
+
 # Import Salt libs
 import salt.utils.args
 import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
-import yaml
 from salt.exceptions import MinionError
 from salt.ext import six
 
@@ -160,7 +161,7 @@ def facts():
 
 
 @timeoutDecorator
-def rpc(cmd=None, **kwargs):
+def rpc(cmd=None, dest=None, **kwargs):
     """
     This function executes the RPC provided as arguments on the junos device.
     The returned data can be stored in a file.
