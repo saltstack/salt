@@ -1,17 +1,14 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
 import salt.utils.platform
-
-# Import 3rd-party libs
 from salt.ext import six
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 
 
+@pytest.mark.windows_whitelisted
 class StdTest(ModuleCase):
     """
     Test standard client calls

@@ -17,7 +17,9 @@ def __virtual__():
     """
     Only make these states available if Zabbix module is available.
     """
-    return "zabbix.mediatype_create" in __salt__
+    if "zabbix.mediatype_create" in __salt__:
+        return True
+    return (False, "zabbix module could not be loaded")
 
 
 def present(name, mediatype, **kwargs):
