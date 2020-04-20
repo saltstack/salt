@@ -176,26 +176,32 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
         Test _generate_payload private method
         """
 
-        test_ping_ret = {"jid": "20200124204109195206",
-                         "return": True, "retcode": 0,
-                         "id": self._MINION_NAME,
-                         "fun": "test.ping",
-                         "fun_args": [],
-                         "success": True}
-        expected_payload = {"attachments": [
-            {"fallback": "{} | Succeeded".format(self._MINION_NAME),
-             "color": "#272727",
-             "author_name": self._MINION_NAME,
-             "author_link": self._MINION_NAME,
-             "author_icon": self._AUTHOR_ICON,
-             "title": "Success: True",
-             "text": "Function: test.ping\nJID: 20200124204109195206\n"},
-            {"color": "good",
-             "title": "Return: True"}]}
+        test_ping_ret = {
+            "jid": "20200124204109195206",
+            "return": True,
+            "retcode": 0,
+            "id": self._MINION_NAME,
+            "fun": "test.ping",
+            "fun_args": [],
+            "success": True,
+        }
+        expected_payload = {
+            "attachments": [
+                {
+                    "fallback": "{} | Succeeded".format(self._MINION_NAME),
+                    "color": "#272727",
+                    "author_name": self._MINION_NAME,
+                    "author_link": self._MINION_NAME,
+                    "author_icon": self._AUTHOR_ICON,
+                    "title": "Success: True",
+                    "text": "Function: test.ping\nJID: 20200124204109195206\n",
+                },
+                {"color": "good", "title": "Return: True"},
+            ]
+        }
 
         test_title = "{} | Succeeded".format(self._MINION_NAME)
-        test_report = slack_webhook._generate_report(
-            test_ping_ret, self._SHOW_TASKS)
+        test_report = slack_webhook._generate_report(test_ping_ret, self._SHOW_TASKS)
 
         custom_grains = slack_webhook.__grains__
         custom_grains["id"] = self._MINION_NAME
@@ -203,6 +209,7 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(slack_webhook.__grains__, custom_grains):
             test_payload = slack_webhook._generate_payload(
-                self._AUTHOR_ICON, test_title, test_report)
+                self._AUTHOR_ICON, test_title, test_report
+            )
 
         self.assertDictEqual(test_payload, expected_payload)
