@@ -10,7 +10,6 @@ import time
 # Import Salt Libs
 import salt.utils.json
 import salt.utils.stringutils
-
 # Import 3rd-party libs
 from salt.ext import six
 from salt.netapi.rest_tornado import saltnado
@@ -19,7 +18,6 @@ from salt.utils.zeromq import ZMQDefaultLoop as ZMQIOLoop
 from salt.utils.zeromq import zmq
 from tests.support.helpers import flaky
 from tests.support.unit import skipIf
-
 # Import Salt Testing Libs
 from tests.unit.netapi.test_rest_tornado import SaltnadoTestCase
 

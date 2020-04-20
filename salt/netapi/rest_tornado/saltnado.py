@@ -198,7 +198,6 @@ from copy import copy
 
 import salt.auth
 import salt.client
-
 # salt imports
 import salt.ext.six as six
 import salt.ext.tornado.escape
@@ -212,8 +211,8 @@ import salt.utils.args
 import salt.utils.event
 import salt.utils.json
 import salt.utils.minions
-import salt.utils.yaml
 import salt.utils.versions
+import salt.utils.yaml
 import salt.utils.zeromq
 from salt.exceptions import (
     AuthenticationError,
