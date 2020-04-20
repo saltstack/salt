@@ -748,8 +748,8 @@ def _set_network_adapter_mapping(adapter_specs):
 def _get_fixed_ip_network_adapter(adapter_specs):
     fixed_ip = None
 
-    if 'ip' in list(adapter_specs.keys()):
-        fixed_ip = six.text_type(adapter_specs['ip'])
+    if "ip" in list(adapter_specs.keys()):
+        fixed_ip = six.text_type(adapter_specs["ip"])
 
     return fixed_ip
 
@@ -900,7 +900,9 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                         )
                         device_specs.append(network_spec)
                         nics_map.append(adapter_mapping)
-                        adapter_fixed_ip = _get_fixed_ip_network_adapter(devices['network'][device.deviceInfo.label])
+                        adapter_fixed_ip = _get_fixed_ip_network_adapter(
+                            devices["network"][device.deviceInfo.label]
+                        )
                         if adapter_fixed_ip != None:
                             fixed_ips.append(adapter_fixed_ip)
 
@@ -997,7 +999,9 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
             )
             device_specs.append(network_spec)
             nics_map.append(adapter_mapping)
-            adapter_fixed_ip = _get_fixed_ip_network_adapter(devices['network'][network_adapter_label])
+            adapter_fixed_ip = _get_fixed_ip_network_adapter(
+                devices["network"][network_adapter_label]
+            )
             if adapter_fixed_ip != None:
                 fixed_ips.append(adapter_fixed_ip)
 
@@ -2808,10 +2812,10 @@ def create(vm_):
         "wait_for_ip_timeout", vm_, __opts__, default=20 * 60
     )
     wait_for_ip_priority = config.get_cloud_config_value(
-        'wait_for_ip_priority', vm_, __opts__, default='any'
+        "wait_for_ip_priority", vm_, __opts__, default="any"
     )
     wait_for_ip_address = config.get_cloud_config_value(
-        'wait_for_ip_address', vm_, __opts__, default=None
+        "wait_for_ip_address", vm_, __opts__, default=None
     )
     domain = config.get_cloud_config_value(
         "domain", vm_, __opts__, search_global=False, default="local"
@@ -3067,27 +3071,45 @@ def create(vm_):
             devices, vm=object_ref, container_ref=container_ref, new_vm_name=vm_name
         )
         config_spec.deviceChange = specs["device_specs"]
-        fixed_ips = specs['fixed_ips']
+        fixed_ips = specs["fixed_ips"]
 
-    if wait_for_ip_priority == 'any' or wait_for_ip_priority == 'dhcp':
+    if wait_for_ip_priority == "any" or wait_for_ip_priority == "dhcp":
         fixed_ips = []
-        log.debug("Setting wait_for_ip_priority set to '{0}', using the first IP to be registered".format(wait_for_ip_priority))
-    elif wait_for_ip_priority == 'static':
+        log.debug(
+            "Setting wait_for_ip_priority set to '{0}', using the first IP to be registered".format(
+                wait_for_ip_priority
+            )
+        )
+    elif wait_for_ip_priority == "static":
         if len(fixed_ips) == 0:
-            log.debug("Setting wait_for_ip_priority set to 'static', but no static IPs have been defined in network devices")
+            log.debug(
+                "Setting wait_for_ip_priority set to 'static', but no static IPs have been defined in network devices"
+            )
         else:
-            log.debug("Setting wait_for_ip_priority set to 'static', waiting any of the following IPs: {0}".format(",".join(fixed_ips)))
-    elif wait_for_ip_priority == 'ip':
+            log.debug(
+                "Setting wait_for_ip_priority set to 'static', waiting any of the following IPs: {0}".format(
+                    ",".join(fixed_ips)
+                )
+            )
+    elif wait_for_ip_priority == "ip":
         fixed_ip = six.text_type(wait_for_ip_address)
         if _valid_ip(fixed_ip) or (_master_supports_ipv6() and _valid_ip6(fixed_ip)):
             fixed_ips = [fixed_ip]
-            log.debug("Setting wait_for_ip_priority set to 'ip', waiting for IP: {0}".format(fixed_ip))
-        else: 
-            log.debug("Setting wait_for_ip_priority set to 'ip', but IP in wait_for_ip_address is not valid. Skipping.")
-    else:          
-        err_msg = "Invalid wait_for_ip_priority specified: '{0}'".format(wait_for_ip_priority)
+            log.debug(
+                "Setting wait_for_ip_priority set to 'ip', waiting for IP: {0}".format(
+                    fixed_ip
+                )
+            )
+        else:
+            log.debug(
+                "Setting wait_for_ip_priority set to 'ip', but IP in wait_for_ip_address is not valid. Skipping."
+            )
+    else:
+        err_msg = "Invalid wait_for_ip_priority specified: '{0}'".format(
+            wait_for_ip_priority
+        )
         log.error(err_msg)
-        return {'Error': err_msg}
+        return {"Error": err_msg}
 
     if extra_config:
         for key, value in six.iteritems(extra_config):
