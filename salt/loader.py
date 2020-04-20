@@ -8,6 +8,7 @@ plugin interfaces used by Salt.
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import collections
 import functools
 import inspect
 import logging
@@ -19,6 +20,7 @@ import threading
 import time
 import traceback
 import types
+import weakref
 from zipimport import zipimporter
 
 # Import salt libs
@@ -37,7 +39,6 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import LoaderError
-
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import reload_module
@@ -114,8 +115,6 @@ LIBCLOUD_FUNCS_NOT_SUPPORTED = (
 # Will be set to pyximport module at runtime if cython is enabled in config.
 pyximport = None
 
-import weakref
-import collections
 
 
 class Pack(collections.MutableMapping):
