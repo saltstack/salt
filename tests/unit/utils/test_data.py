@@ -226,6 +226,14 @@ class DataTestCase(TestCase):
                 {"not_found": "not_found"},
             ),
         )
+        # Traverse and match integer key in a nested dict
+        # https://github.com/saltstack/salt/issues/56444
+        self.assertEqual(
+            "it worked",
+            salt.utils.data.traverse_dict_and_list(
+                {"foo": {1234: "it worked"}}, "foo:1234", "it didn't work",
+            ),
+        )
 
     def test_compare_dicts(self):
         ret = salt.utils.data.compare_dicts(old={"foo": "bar"}, new={"foo": "bar"})

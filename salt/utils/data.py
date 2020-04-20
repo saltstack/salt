@@ -768,7 +768,21 @@ def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DEL
         else:
             try:
                 ptr = ptr[each]
-            except (KeyError, TypeError):
+            except KeyError:
+                # Late import to avoid circular import
+                import salt.utils.args
+
+                # YAML-load the current key (catches integer dict keys)
+                try:
+                    loaded_key = salt.utils.args.yamlify_arg(each)
+                except Exception:  # pylint: disable=broad-except
+                    return default
+                if loaded_key != each:
+                    try:
+                        ptr = ptr[loaded_key]
+                    except (KeyError, TypeError):
+                        return default
+            except TypeError:
                 return default
     return ptr
 
