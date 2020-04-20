@@ -598,3 +598,16 @@ repos:
           - -e
           - lint-tests-pre-commit
           - --
+
+  - repo: https://github.com/saltstack/salt-nox-pre-commit
+    rev: master
+    hooks:
+      - id: nox-py2
+        alias: check-docs
+        name: Check Docs
+        files: ^(salt/.*\.py|doc/ref/.*\.rst)$
+        args:
+          - -e
+          - invoke-pre-commit
+          - --
+          - docs.check
