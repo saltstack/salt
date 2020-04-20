@@ -222,7 +222,7 @@ class NxosNxapiProxyTestCase(TestCase, LoaderModuleMockMixin):
         opts = {"id": "value"}
 
         with patch("salt.proxy.nxos.log", autospec=True):
-            nxos_proxy._shutdown_nxapi(opts)
+            nxos_proxy._shutdown_nxapi()
             # nothing to test
 
     def test__nxapi_request_ssh_return(self):

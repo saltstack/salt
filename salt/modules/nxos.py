@@ -99,6 +99,7 @@ import salt.utils.nxos
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, NxosError, SaltInvocationError
 from salt.ext import six
+from salt.utils.args import clean_kwargs
 from salt.utils.pycrypto import gen_hash
 
 __virtualname__ = "nxos"
@@ -128,7 +129,7 @@ def ping(**kwargs):
 
     .. code-block: bash
 
-        salt '*' nxos.cmd ping
+        salt '*' nxos.ping
     """
     if salt.utils.platform.is_proxy():
         return __proxy__["nxos.ping"]()
@@ -154,8 +155,8 @@ def check_password(username, password, encrypted=False, **kwargs):
 
     .. code-block: bash
 
-        salt '*' nxos.cmd check_password username=admin password=admin
-        salt '*' nxos.cmd check_password username=admin \\
+        salt '*' nxos.check_password username=admin password=admin
+        salt '*' nxos.check_password username=admin \\
             password='$5$2fWwO2vK$s7.Hr3YltMNHuhywQQ3nfOd.gAPHgs3SOBYYdGT3E.A' \\
             encrypted=True
     """
@@ -194,7 +195,7 @@ def check_role(username, role, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' nxos.cmd check_role username=admin role=network-admin
+        salt '*' nxos.check_role username=admin role=network-admin
     """
     return role in get_roles(username, **kwargs)
 
@@ -241,7 +242,7 @@ def find(pattern, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' nxos.cmd find '^snmp-server.*$'
+        salt '*' nxos.find '^snmp-server.*$'
 
     .. note::
         This uses the `re.MULTILINE` regex format for python, and runs the
@@ -257,7 +258,7 @@ def get_roles(username, **kwargs):
 
     .. code-block: bash
 
-        salt '*' nxos.cmd get_roles username=admin
+        salt '*' nxos.get_roles username=admin
     """
     user = get_user(username)
     if not user:
@@ -281,7 +282,7 @@ def get_user(username, **kwargs):
 
     .. code-block: bash
 
-        salt '*' nxos.cmd get_user username=admin
+        salt '*' nxos.get_user username=admin
     """
     command = 'show run | include "^username {0} password 5 "'.format(username)
     info = show(command, **kwargs)
@@ -296,7 +297,7 @@ def grains(**kwargs):
 
     .. code-block: bash
 
-        salt '*' nxos.cmd grains
+        salt '*' nxos.grains
     """
     if not DEVICE_DETAILS["grains_cache"]:
         ret = salt.utils.nxos.system_info(show_ver(**kwargs))
@@ -311,7 +312,7 @@ def grains_refresh(**kwargs):
 
     .. code-block: bash
 
-        salt '*' nxos.cmd grains_refresh
+        salt '*' nxos.grains_refresh
     """
     DEVICE_DETAILS["grains_cache"] = {}
     return grains(**kwargs)
@@ -319,7 +320,7 @@ def grains_refresh(**kwargs):
 
 def sendline(command, method="cli_show_ascii", **kwargs):
     """
-    Send arbitray commands to the NX-OS device.
+    Send arbitrary commands to the NX-OS device.
 
     command
         The command to be sent.
@@ -332,9 +333,15 @@ def sendline(command, method="cli_show_ascii", **kwargs):
         NOTE: method is ignored for SSH proxy minion.  All data is returned
         unstructured.
 
+    error_pattern
+        Use the option to pass in a regular expression to search for in the
+        returned output of the command that indicates an error has occurred.
+        This option is only used when proxy minion connection type is ssh and
+        otherwise ignored.
+
     .. code-block: bash
 
-        salt '*' nxos.cmd sendline 'show run | include "^username admin password"'
+        salt '*' nxos.sendline 'show run | include "^username admin password"'
     """
     smethods = ["cli_show_ascii", "cli_show", "cli_conf"]
     if method not in smethods:
@@ -409,7 +416,7 @@ def show_ver(**kwargs):
 
     .. code-block:: bash
 
-        salt '*' nxos.cmd show_ver
+        salt '*' nxos.show_ver
     """
     command = "show version"
     info = ""
@@ -425,7 +432,7 @@ def show_run(**kwargs):
 
     .. code-block:: bash
 
-        salt '*' nxos.cmd show_run
+        salt '*' nxos.show_run
     """
     command = "show running-config"
     info = ""
@@ -463,11 +470,12 @@ def add_config(lines, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' nxos.cmd add_config 'snmp-server community TESTSTRINGHERE group network-operator'
+        salt '*' nxos.add_config 'snmp-server community TESTSTRINGHERE group network-operator'
 
     .. note::
         For more than one config added per command, lines should be a list.
     """
+    kwargs = clean_kwargs(**kwargs)
     return config(lines, **kwargs)
 
 
@@ -541,6 +549,7 @@ def config(
         salt '*' nxos.config config_file=salt://config.txt
         salt '*' nxos.config config_file=https://bit.ly/2LGLcDy context="{'servers': ['1.2.3.4']}"
     """
+    kwargs = clean_kwargs(**kwargs)
     initial_config = show("show running-config", **kwargs)
     if isinstance(initial_config, list):
         initial_config = initial_config[0]
@@ -612,7 +621,7 @@ def delete_config(lines, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' nxos.cmd delete_config 'snmp-server community TESTSTRINGHERE group network-operator'
+        salt '*' nxos.delete_config 'snmp-server community TESTSTRINGHERE group network-operator'
 
     .. note::
         For more than one config deleted per command, lines should be a list.
@@ -623,6 +632,7 @@ def delete_config(lines, **kwargs):
         lines[i] = "no " + lines[i]
     result = None
     try:
+        kwargs = clean_kwargs(**kwargs)
         result = config(lines, **kwargs)
     except CommandExecutionError as e:
         # Some commands will generate error code 400 if they do not exist
@@ -646,9 +656,10 @@ def remove_user(username, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' nxos.cmd remove_user username=daniel
+        salt '*' nxos.remove_user username=daniel
     """
     user_line = "no username {0}".format(username)
+    kwargs = clean_kwargs(**kwargs)
     return config(user_line, **kwargs)
 
 
@@ -661,7 +672,7 @@ def replace(old_value, new_value, full_match=False, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' nxos.cmd replace 'TESTSTRINGHERE' 'NEWTESTSTRINGHERE'
+        salt '*' nxos.replace 'TESTSTRINGHERE' 'NEWTESTSTRINGHERE'
     """
     if full_match is False:
         matcher = re.compile("^.*{0}.*$".format(re.escape(old_value)), re.MULTILINE)
@@ -675,6 +686,7 @@ def replace(old_value, new_value, full_match=False, **kwargs):
         lines["old"].append(line.group(0))
         lines["new"].append(repl.sub(new_value, line.group(0)))
 
+    kwargs = clean_kwargs(**kwargs)
     if lines["old"]:
         delete_config(lines["old"], **kwargs)
     if lines["new"]:
@@ -735,8 +747,8 @@ def set_password(
 
     .. code-block:: bash
 
-        salt '*' nxos.cmd set_password admin TestPass
-        salt '*' nxos.cmd set_password admin \\
+        salt '*' nxos.set_password admin TestPass
+        salt '*' nxos.set_password admin \\
             password='$5$2fWwO2vK$s7.Hr3YltMNHuhywQQ3nfOd.gAPHgs3SOBYYdGT3E.A' \\
             encrypted=True
     """
@@ -752,6 +764,7 @@ def set_password(
     password_line = "username {0} password 5 {1}".format(username, hashed_pass)
     if role is not None:
         password_line += " role {0}".format(role)
+    kwargs = clean_kwargs(**kwargs)
     return config(password_line, **kwargs)
 
 
@@ -772,9 +785,10 @@ def set_role(username, role, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' nxos.cmd set_role username=daniel role=vdc-admin.
+        salt '*' nxos.set_role username=daniel role=vdc-admin.
     """
     role_line = "username {0} role {1}".format(username, role)
+    kwargs = clean_kwargs(**kwargs)
     return config(role_line, **kwargs)
 
 
@@ -795,9 +809,10 @@ def unset_role(username, role, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' nxos.cmd unset_role username=daniel role=vdc-admin
+        salt '*' nxos.unset_role username=daniel role=vdc-admin
     """
     role_line = "no username {0} role {1}".format(username, role)
+    kwargs = clean_kwargs(**kwargs)
     return config(role_line, **kwargs)
 
 
