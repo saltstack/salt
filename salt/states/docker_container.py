@@ -2018,11 +2018,14 @@ def running(
     #     because the named container did not exist or changes were detected
     # "cleanup_temp" means that the container already existed and no changes
     #     were detected, so the temp container was discarded
-    if not cleanup_temp and (not exists or (exists and start)) \
-            or (start and cleanup_temp and pre_state != 'running'):
-        if __opts__['test']:
-            ret['result'] = None
-            comments.append('Container would be started')
+    if (
+        not cleanup_temp
+        and (not exists or (exists and start))
+        or (start and cleanup_temp and pre_state != "running")
+    ):
+        if __opts__["test"]:
+            ret["result"] = None
+            comments.append("Container would be started")
             return _format_comments(ret, comments)
         else:
             try:
