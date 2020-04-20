@@ -59,11 +59,13 @@ append '--return_config alternative' to the salt command.
 from __future__ import absolute_import, print_function, unicode_literals
 
 import json
+
 # Import Python libs
 import logging
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six.moves.http_client
+
 # Import Salt Libs
 import salt.returners
 import salt.utils.http
