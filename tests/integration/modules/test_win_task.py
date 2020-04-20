@@ -66,7 +66,7 @@ class WinTasksTest(ModuleCase):
         </Task>
         """
         self.assertEquals(
-            self.run_function('task.create_task_from_xml', 'foo', xml_text=xml_text),
+            self.run_function("task.create_task_from_xml", "foo", xml_text=xml_text),
             True,
         )
         all_tasks = self.run_function("task.list_tasks")
@@ -79,4 +79,4 @@ class WinTasksTest(ModuleCase):
         """
         xml_text = r"""<Malformed"""
         with self.assertRaises(CommandExecutionError):
-            task.create_task_from_xml('foo', xml_text=xml_text)
+            task.create_task_from_xml("foo", xml_text=xml_text)
