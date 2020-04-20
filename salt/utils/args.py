@@ -290,6 +290,8 @@ def get_function_argspec(func, is_class_method=None):
                     varargs = param.name
                 elif param.kind == param.VAR_KEYWORD:
                     keywords = param.name
+            if is_class_method:
+                del args[0]
             aspec = _ArgSpec(args, varargs, keywords, tuple(defaults) or None)
 
     return aspec
