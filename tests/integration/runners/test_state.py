@@ -222,21 +222,22 @@ class StateRunnerTest(ShellCase):
             self.assertIn(result, ret)
 
     def test_orchestrate_retcode_async(self):
-        '''
+        """
         Test orchestration with nonzero retcode set in __context__ for async
-        '''
-        self.run_run('saltutil.sync_runners')
-        self.run_run('saltutil.sync_wheel')
-        ret = "\n".join(self.run_run('state.orchestrate orch.retcode_async'))
+        """
+        self.run_run("saltutil.sync_runners")
+        self.run_run("saltutil.sync_wheel")
+        ret = "\n".join(self.run_run("state.orchestrate orch.retcode_async"))
 
-        self.assertIn('Succeeded: 4 (changed=4)\n', ret)
+        self.assertIn("Succeeded: 4 (changed=4)\n", ret)
 
         # scrub ephemeral output
-        ret = re.sub(r'\d', 'x', ret)
-        ret = re.sub('Duration: .*', 'Duration: x', ret)
-        ret = re.sub('Started: .*', 'Started: x', ret)
+        ret = re.sub(r"\d", "x", ret)
+        ret = re.sub("Duration: .*", "Duration: x", ret)
+        ret = re.sub("Started: .*", "Started: x", ret)
 
-        result = textwrap.dedent('''
+        result = textwrap.dedent(
+            """
                   ID: test_runner_success
             Function: salt.runner
                 Name: runtests_helpers.success
@@ -293,7 +294,8 @@ class StateRunnerTest(ShellCase):
                           xxxxxxxxxxxxxxxxxxxx
                       minions:
                           - minion
-        ''')
+        """
+        )
 
         self.assertIn(result, ret)
 

@@ -13,17 +13,18 @@ def copy_func(func, globals=None):
     # The key to "moving" the function to another module (or stubbed module)
     # is to update __globals__.
 
-    copied_func = types.FunctionType(func.__code__, globals,
-                                     func.__name__, func.__defaults__, func.__closure__)
+    copied_func = types.FunctionType(
+        func.__code__, globals, func.__name__, func.__defaults__, func.__closure__
+    )
     copied_func.__module__ = func.__module__
     copied_func.__doc__ = func.__doc__
-    if hasattr(copied_func, '__kwdefaults__'):
+    if hasattr(copied_func, "__kwdefaults__"):
         copied_func.__kwdefaults__ = func.__kwdefaults__
     copied_func.__dict__.update(func.__dict__)
     return copied_func
 
 
-def mock_module(mod, exclude=['']):
+def mock_module(mod, exclude=[""]):
     mock = create_autospec(mod)
 
     # we need to provide a '__globals__' so functions being tested behave correctly.
@@ -50,14 +51,21 @@ def mock_module(mod, exclude=['']):
 
 class AzureTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
-        return {highstate_doc: {'__opts__': {}}}
+        return {highstate_doc: {"__opts__": {}}}
 
     def test_function_signatures_mock_mod(self):
-        mock_hdoc = mock_module(highstate_doc, exclude=['proccesser_markdown'])
+        mock_hdoc = mock_module(highstate_doc, exclude=["proccesser_markdown"])
         mock_hdoc.proccesser_markdown(MagicMock(), MagicMock())
 
     def test_function_signatures_patch_mod(self):
-        with patch.dict(globals(), {'highstate_doc': mock_module(highstate_doc, exclude=['proccesser_markdown'])}):
+        with patch.dict(
+            globals(),
+            {
+                "highstate_doc": mock_module(
+                    highstate_doc, exclude=["proccesser_markdown"]
+                )
+            },
+        ):
             highstate_doc.proccesser_markdown(MagicMock(), MagicMock())
             raise Exception(highstate_doc.mock_calls)
 
