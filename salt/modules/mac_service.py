@@ -449,7 +449,7 @@ def stop(name, runas=None):
 
 
 def _kickstart(name, runas=None):
-    '''
+    """
     Kickstart a launchd service.  Raises an error if the service fails to start
 
     .. note::
@@ -462,13 +462,13 @@ def _kickstart(name, runas=None):
 
     :return: ``True`` if successful or if the service is already running
     :rtype: bool
-    '''
+    """
     # Get the domain target.
     domain_target, path = _get_domain_target(name)
 
     # Kickstart the service: will raise an error if it fails
     # -k is "kill first if already running"
-    return launchctl('kickstart', '-k', domain_target, path, runas=runas)
+    return launchctl("kickstart", "-k", domain_target, path, runas=runas)
 
 
 def restart(name, runas=None):
