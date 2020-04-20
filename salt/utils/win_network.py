@@ -29,7 +29,6 @@ import platform
 # Import 3rd party libs
 # I don't understand why I need this import, but the linter fails without it
 from salt.ext.six.moves import range
-
 # Import Salt libs
 from salt.utils.versions import StrictVersion
 

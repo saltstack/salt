@@ -65,7 +65,6 @@ import salt.utils.platform
 import salt.utils.win_update
 import salt.utils.winapi
 from salt.exceptions import CommandExecutionError
-
 # Import 3rd-party libs
 from salt.ext import six
 

@@ -9,7 +9,6 @@ import textwrap
 # Import Salt libs
 import salt.utils.files
 import salt.utils.platform
-
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest

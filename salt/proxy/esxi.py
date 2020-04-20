@@ -277,7 +277,6 @@ import logging
 import os
 
 from salt.config.schemas.esxi import EsxiProxySchema
-
 # Import Salt Libs
 from salt.exceptions import InvalidConfigError, SaltSystemExit
 from salt.utils.dictupdate import merge

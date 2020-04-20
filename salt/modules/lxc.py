@@ -26,7 +26,6 @@ import textwrap
 import time
 
 import salt.config
-
 # Import salt libs
 import salt.utils.args
 import salt.utils.cloud
@@ -40,10 +39,8 @@ import salt.utils.odict
 import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
 # Import 3rd-party libs
 from salt.ext import six
-
 # pylint: disable=import-error,no-name-in-module
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse

@@ -54,10 +54,8 @@ import os
 import salt.utils.args
 import salt.utils.data
 import salt.utils.docker
-
 # Import Salt libs
 from salt.exceptions import CommandExecutionError
-
 # Import 3rd-party libs
 from salt.ext import six
 

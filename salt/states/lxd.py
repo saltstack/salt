@@ -34,7 +34,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os.path
 
 import salt.ext.six as six
-
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 

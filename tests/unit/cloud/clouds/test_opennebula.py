@@ -9,7 +9,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Libs
 from salt.cloud.clouds import opennebula
 from salt.exceptions import SaltCloudNotFound, SaltCloudSystemExit
-
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch

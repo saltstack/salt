@@ -38,7 +38,6 @@ import salt.crypt
 import salt.utils.crypt
 import salt.utils.files
 import salt.utils.platform
-
 # Import salt libs
 from salt.key import get_key
 from salt.utils.sanitizers import clean

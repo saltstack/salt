@@ -96,7 +96,6 @@ import datetime
 import logging
 
 import salt.exceptions
-
 # Import salt libs
 import salt.utils.platform
 

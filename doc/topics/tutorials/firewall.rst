@@ -207,7 +207,7 @@ Whitelist communication to Master
 =================================
 
 There are situations where you want to selectively allow Minion traffic
-from specific hosts or networks into your Salt Master. The first
+
 scenario which comes to mind is to prevent unwanted traffic to your
 Master out of security concerns, but another scenario is to handle
 Minion upgrades when there are backwards incompatible changes between
