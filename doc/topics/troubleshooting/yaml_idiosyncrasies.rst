@@ -379,8 +379,9 @@ string with quotes:
 Keys Limited to 1024 Characters
 ===============================
 
-Simple keys are limited to a single line and cannot be longer that 1024 characters.
-This is a limitation from PyYaml, as seen in a comment in `PyYAML's code`_, and
-applies to anything parsed by YAML in Salt.
+Simple keys are limited by the `YAML Spec`_ to a single line, and cannot be
+longer that 1024 characters. PyYAML enforces these limitations (see here__),
+and therefore anything parsed as YAML in Salt is subject to them.
 
-.. _PyYAML's code: http://pyyaml.org/browser/pyyaml/trunk/lib/yaml/scanner.py#L91
+.. _`YAML Spec`: https://yaml.org/spec/1.2/spec.html#id2792424
+.. __: https://github.com/yaml/pyyaml/blob/eb459f8/lib/yaml/scanner.py#L279-L293
