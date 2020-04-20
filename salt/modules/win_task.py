@@ -19,8 +19,8 @@ from datetime import datetime
 # Import Salt libs
 import salt.utils.platform
 import salt.utils.winapi
-from salt.ext.six.moves import range
 from salt.exceptions import ArgumentValueError, CommandExecutionError
+from salt.ext.six.moves import range
 
 # Import 3rd Party Libraries
 try:
@@ -681,37 +681,37 @@ def create_task_from_xml(
 
     except pythoncom.com_error as error:
         hr, msg, exc, arg = error.args  # pylint: disable=W0633
-        error_code = hex(exc[5] + 2**32)
+        error_code = hex(exc[5] + 2 ** 32)
         fc = {
             0x80041319: "Required element or attribute missing",
             0x80041318: "Value incorrectly formatted or out of range",
             0x80020005: "Access denied",
             0x80041309: "A task's trigger is not found",
             0x8004130a: "One or more of the properties required to run this "
-                        "task have not been set",
+            "task have not been set",
             0x8004130c: "The Task Scheduler service is not installed on this "
-                        "computer",
+            "computer",
             0x8004130d: "The task object could not be opened",
             0x8004130e: "The object is either an invalid task object or is not "
-                        "a task object",
+            "a task object",
             0x8004130f: "No account information could be found in the Task "
-                        "Scheduler security database for the task indicated",
+            "Scheduler security database for the task indicated",
             0x80041310: "Unable to establish existence of the account "
-                        "specified",
+            "specified",
             0x80041311: "Corruption was detected in the Task Scheduler "
-                        "security database; the database has been reset",
+            "security database; the database has been reset",
             0x80041313: "The task object version is either unsupported or "
-                        "invalid",
+            "invalid",
             0x80041314: "The task has been configured with an unsupported "
-                        "combination of account settings and run time options",
+            "combination of account settings and run time options",
             0x80041315: "The Task Scheduler Service is not running",
             0x80041316: "The task XML contains an unexpected node",
             0x80041317: "The task XML contains an element or attribute from an "
-                        "unexpected namespace",
+            "unexpected namespace",
             0x8004131a: "The task XML is malformed",
             0x0004131c: "The task is registered, but may fail to start. Batch "
-                        "logon privilege needs to be enabled for the task "
-                        "principal",
+            "logon privilege needs to be enabled for the task "
+            "principal",
             0x8004131d: "The task XML contains too many nodes of the same type",
         }
         try:
