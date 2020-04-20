@@ -14,6 +14,7 @@ import pytest
 import salt.utils.files
 import salt.utils.stringutils
 from tests.support.case import ModuleCase
+from tests.support.helpers import PYTEST_MIGRATION_SKIP_REASON
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -27,7 +28,7 @@ class SaltUtilModuleTest(ModuleCase):
 
     @classmethod
     def setUpClass(cls):
-        # Whell functions, on a minion, must run with the master running
+        # Wheel functions, on a minion, must run with the master running
         # along side the minion.
         # We copy the master config to the minion's configuration directory just
         # for this test since the test suite master and minion(s) do not share the
@@ -91,6 +92,7 @@ class SyncGrainsTest(ModuleCase):
 
 
 @pytest.mark.windows_whitelisted
+@pytest.mark.skip_on_windows(reason=PYTEST_MIGRATION_SKIP_REASON)
 class SaltUtilSyncModuleTest(ModuleCase):
     """
     Testcase for the saltutil sync execution module
