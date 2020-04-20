@@ -527,23 +527,27 @@ class CMDModuleTest(ModuleCase):
         self.assertIn("abc=123", out)
         self.assertIn("ABC=456", out)
 
-    @skipIf(not salt.utils.platform.is_windows(), 'minion is not windows')
+    @skipIf(not salt.utils.platform.is_windows(), "minion is not windows")
     def test_windows_cmd_powershell_list(self):
-        '''
+        """
         Ensure that cmd.run_all supports running shell='cmd' with cmd passed
         as a list
-        '''
-        out = self.run_function('cmd.run_all', cmd=['echo', 'salt'], python_shell=False, shell='powershell')
-        self.assertEqual(out['stdout'], 'salt')
+        """
+        out = self.run_function(
+            "cmd.run_all", cmd=["echo", "salt"], python_shell=False, shell="powershell"
+        )
+        self.assertEqual(out["stdout"], "salt")
 
-    @skipIf(not salt.utils.platform.is_windows(), 'minion is not windows')
+    @skipIf(not salt.utils.platform.is_windows(), "minion is not windows")
     def test_windows_cmd_powershell_string(self):
-        '''
+        """
         Ensure that cmd.run_all supports running shell='cmd' with cmd passed
         as a string
-        '''
-        out = self.run_function('cmd.run_all', cmd='echo salt', python_shell=False, shell='powershell')
-        self.assertEqual(out['stdout'], 'salt')
+        """
+        out = self.run_function(
+            "cmd.run_all", cmd="echo salt", python_shell=False, shell="powershell"
+        )
+        self.assertEqual(out["stdout"], "salt")
 
     @skipIf(not salt.utils.platform.is_windows(), "minion is not windows")
     def test_windows_powershell_script_args(self):
