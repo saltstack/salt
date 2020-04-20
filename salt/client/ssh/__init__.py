@@ -30,7 +30,6 @@ import salt.exceptions
 import salt.loader
 import salt.log
 import salt.minion
-
 # Import salt libs
 import salt.output
 import salt.roster
@@ -48,7 +47,6 @@ import salt.utils.stringutils
 import salt.utils.thin
 import salt.utils.url
 import salt.utils.verify
-
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
