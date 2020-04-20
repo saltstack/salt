@@ -2,13 +2,15 @@
 """
 Interface with Helm
 
-:depends: helm_ package installed on minion's system.
+:depends: pyhelm_ Python package
+
+.. _pyhelm: https://pypi.org/project/pyhelm/
 
 .. note::
     This module use the helm-cli. The helm-cli binary have to be present in your Salt-Minion path.
 
 Helm-CLI vs Salt-Modules
---------------
+------------------------
 
 This module is a wrapper of the helm binary.
 All helm v3.0 command are implemented.
