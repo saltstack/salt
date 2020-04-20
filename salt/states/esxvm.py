@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Salt state to create, update VMware ESXi Virtual Machines.
 
 Dependencies
@@ -181,12 +181,13 @@ ESXi Proxy Minion, please refer to the
 configuration examples, dependency installation instructions, how to run remote
 execution functions against ESXi hosts via a Salt Proxy Minion, and a larger state
 example.
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import sys
+
 import logging
+import sys
 
 # Import Salt libs
 import salt.exceptions
@@ -196,12 +197,14 @@ from salt.config.schemas.esxvm import ESXVirtualMachineConfigSchema
 # External libraries
 try:
     import jsonschema
+
     HAS_JSONSCHEMA = True
 except ImportError:
     HAS_JSONSCHEMA = False
 
 try:
     from pyVmomi import VmomiSupport
+
     HAS_PYVMOMI = True
 except ImportError:
     HAS_PYVMOMI = False
@@ -211,327 +214,427 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     if not HAS_JSONSCHEMA:
-        return False, 'State module did not load: jsonschema not found'
+        return False, "State module did not load: jsonschema not found"
     if not HAS_PYVMOMI:
-        return False, 'State module did not load: pyVmomi not found'
+        return False, "State module did not load: pyVmomi not found"
 
     # We check the supported vim versions to infer the pyVmomi version
-    if 'vim25/6.0' in VmomiSupport.versionMap and \
-        sys.version_info > (2, 7) and sys.version_info < (2, 7, 9):
+    if (
+        "vim25/6.0" in VmomiSupport.versionMap
+        and sys.version_info > (2, 7)
+        and sys.version_info < (2, 7, 9)
+    ):
 
-        return False, ('State module did not load: Incompatible versions '
-                       'of Python and pyVmomi present. See Issue #29537.')
+        return (
+            False,
+            (
+                "State module did not load: Incompatible versions "
+                "of Python and pyVmomi present. See Issue #29537."
+            ),
+        )
     return True
 
 
-def vm_configured(name, vm_name, cpu, memory, image, version, interfaces,
-                  disks, scsi_devices, serial_ports, datacenter, datastore,
-                  placement, cd_dvd_drives=None, sata_controllers=None,
-                  advanced_configs=None, template=None, tools=True,
-                  power_on=False, deploy=False):
-    '''
+def vm_configured(
+    name,
+    vm_name,
+    cpu,
+    memory,
+    image,
+    version,
+    interfaces,
+    disks,
+    scsi_devices,
+    serial_ports,
+    datacenter,
+    datastore,
+    placement,
+    cd_dvd_drives=None,
+    sata_controllers=None,
+    advanced_configs=None,
+    template=None,
+    tools=True,
+    power_on=False,
+    deploy=False,
+):
+    """
     Selects the correct operation to be executed on a virtual machine, non
     existing machines will be created, existing ones will be updated if the
     config differs.
-    '''
-    result = {'name': name,
-              'result': None,
-              'changes': {},
-              'comment': ''}
+    """
+    result = {"name": name, "result": None, "changes": {}, "comment": ""}
 
-    log.trace('Validating virtual machine configuration')
+    log.trace("Validating virtual machine configuration")
     schema = ESXVirtualMachineConfigSchema.serialize()
-    log.trace('schema = %s', schema)
+    log.trace("schema = %s", schema)
     try:
-        jsonschema.validate({'vm_name': vm_name,
-                             'cpu': cpu,
-                             'memory': memory,
-                             'image': image,
-                             'version': version,
-                             'interfaces': interfaces,
-                             'disks': disks,
-                             'scsi_devices': scsi_devices,
-                             'serial_ports': serial_ports,
-                             'cd_dvd_drives': cd_dvd_drives,
-                             'sata_controllers': sata_controllers,
-                             'datacenter': datacenter,
-                             'datastore': datastore,
-                             'placement': placement,
-                             'template': template,
-                             'tools': tools,
-                             'power_on': power_on,
-                             'deploy': deploy}, schema)
+        jsonschema.validate(
+            {
+                "vm_name": vm_name,
+                "cpu": cpu,
+                "memory": memory,
+                "image": image,
+                "version": version,
+                "interfaces": interfaces,
+                "disks": disks,
+                "scsi_devices": scsi_devices,
+                "serial_ports": serial_ports,
+                "cd_dvd_drives": cd_dvd_drives,
+                "sata_controllers": sata_controllers,
+                "datacenter": datacenter,
+                "datastore": datastore,
+                "placement": placement,
+                "template": template,
+                "tools": tools,
+                "power_on": power_on,
+                "deploy": deploy,
+            },
+            schema,
+        )
     except jsonschema.exceptions.ValidationError as exc:
         raise salt.exceptions.InvalidConfigError(exc)
 
-    service_instance = __salt__['vsphere.get_service_instance_via_proxy']()
+    service_instance = __salt__["vsphere.get_service_instance_via_proxy"]()
     try:
-        __salt__['vsphere.get_vm'](vm_name, vm_properties=['name'],
-                                   service_instance=service_instance)
+        __salt__["vsphere.get_vm"](
+            vm_name, vm_properties=["name"], service_instance=service_instance
+        )
     except salt.exceptions.VMwareObjectRetrievalError:
-        vm_file = __salt__['vsphere.get_vm_config_file'](
-            vm_name, datacenter,
-            placement, datastore,
-            service_instance=service_instance)
+        vm_file = __salt__["vsphere.get_vm_config_file"](
+            vm_name, datacenter, placement, datastore, service_instance=service_instance
+        )
         if vm_file:
-            if __opts__['test']:
-                result.update({'comment': 'The virtual machine {0}'
-                                          ' will be registered.'.format(vm_name)})
-                __salt__['vsphere.disconnect'](service_instance)
+            if __opts__["test"]:
+                result.update(
+                    {
+                        "comment": "The virtual machine {0}"
+                        " will be registered.".format(vm_name)
+                    }
+                )
+                __salt__["vsphere.disconnect"](service_instance)
                 return result
-            result = vm_registered(vm_name, datacenter, placement,
-                                   vm_file, power_on=power_on)
+            result = vm_registered(
+                vm_name, datacenter, placement, vm_file, power_on=power_on
+            )
             return result
         else:
-            if __opts__['test']:
-                result.update({'comment': 'The virtual machine {0}'
-                                          ' will be created.'.format(vm_name)})
-                __salt__['vsphere.disconnect'](service_instance)
+            if __opts__["test"]:
+                result.update(
+                    {
+                        "comment": "The virtual machine {0}"
+                        " will be created.".format(vm_name)
+                    }
+                )
+                __salt__["vsphere.disconnect"](service_instance)
                 return result
             if template:
                 result = vm_cloned(name)
             else:
-                result = vm_created(name, vm_name, cpu, memory, image, version,
-                                    interfaces, disks, scsi_devices,
-                                    serial_ports, datacenter, datastore,
-                                    placement, cd_dvd_drives=cd_dvd_drives,
-                                    advanced_configs=advanced_configs,
-                                    power_on=power_on)
+                result = vm_created(
+                    name,
+                    vm_name,
+                    cpu,
+                    memory,
+                    image,
+                    version,
+                    interfaces,
+                    disks,
+                    scsi_devices,
+                    serial_ports,
+                    datacenter,
+                    datastore,
+                    placement,
+                    cd_dvd_drives=cd_dvd_drives,
+                    advanced_configs=advanced_configs,
+                    power_on=power_on,
+                )
             return result
 
-    result = vm_updated(name, vm_name, cpu, memory, image, version,
-                        interfaces, disks, scsi_devices,
-                        serial_ports, datacenter, datastore,
-                        cd_dvd_drives=cd_dvd_drives,
-                        sata_controllers=sata_controllers,
-                        advanced_configs=advanced_configs,
-                        power_on=power_on)
-    __salt__['vsphere.disconnect'](service_instance)
+    result = vm_updated(
+        name,
+        vm_name,
+        cpu,
+        memory,
+        image,
+        version,
+        interfaces,
+        disks,
+        scsi_devices,
+        serial_ports,
+        datacenter,
+        datastore,
+        cd_dvd_drives=cd_dvd_drives,
+        sata_controllers=sata_controllers,
+        advanced_configs=advanced_configs,
+        power_on=power_on,
+    )
+    __salt__["vsphere.disconnect"](service_instance)
 
     log.trace(result)
     return result
 
 
 def vm_cloned(name):
-    '''
+    """
     Clones a virtual machine from a template virtual machine if it doesn't
     exist and a template is defined.
-    '''
-    result = {'name': name,
-              'result': True,
-              'changes': {},
-              'comment': ''}
+    """
+    result = {"name": name, "result": True, "changes": {}, "comment": ""}
 
     return result
 
 
-def vm_updated(name, vm_name, cpu, memory, image, version, interfaces,
-               disks, scsi_devices, serial_ports, datacenter, datastore,
-               cd_dvd_drives=None, sata_controllers=None,
-               advanced_configs=None, power_on=False):
-    '''
+def vm_updated(
+    name,
+    vm_name,
+    cpu,
+    memory,
+    image,
+    version,
+    interfaces,
+    disks,
+    scsi_devices,
+    serial_ports,
+    datacenter,
+    datastore,
+    cd_dvd_drives=None,
+    sata_controllers=None,
+    advanced_configs=None,
+    power_on=False,
+):
+    """
     Updates a virtual machine configuration if there is a difference between
     the given and deployed configuration.
-    '''
-    result = {'name': name,
-              'result': None,
-              'changes': {},
-              'comment': ''}
+    """
+    result = {"name": name, "result": None, "changes": {}, "comment": ""}
 
-    service_instance = __salt__['vsphere.get_service_instance_via_proxy']()
-    current_config = __salt__['vsphere.get_vm_config'](
-        vm_name,
-        datacenter=datacenter,
-        objects=False,
-        service_instance=service_instance)
+    service_instance = __salt__["vsphere.get_service_instance_via_proxy"]()
+    current_config = __salt__["vsphere.get_vm_config"](
+        vm_name, datacenter=datacenter, objects=False, service_instance=service_instance
+    )
 
-    diffs = __salt__['vsphere.compare_vm_configs'](
-        {'name': vm_name,
-         'cpu': cpu,
-         'memory': memory,
-         'image': image,
-         'version': version,
-         'interfaces': interfaces,
-         'disks': disks,
-         'scsi_devices': scsi_devices,
-         'serial_ports': serial_ports,
-         'datacenter': datacenter,
-         'datastore': datastore,
-         'cd_drives': cd_dvd_drives,
-         'sata_controllers': sata_controllers,
-         'advanced_configs': advanced_configs},
-        current_config)
+    diffs = __salt__["vsphere.compare_vm_configs"](
+        {
+            "name": vm_name,
+            "cpu": cpu,
+            "memory": memory,
+            "image": image,
+            "version": version,
+            "interfaces": interfaces,
+            "disks": disks,
+            "scsi_devices": scsi_devices,
+            "serial_ports": serial_ports,
+            "datacenter": datacenter,
+            "datastore": datastore,
+            "cd_drives": cd_dvd_drives,
+            "sata_controllers": sata_controllers,
+            "advanced_configs": advanced_configs,
+        },
+        current_config,
+    )
     if not diffs:
-        result.update({
-            'result': True,
-            'changes': {},
-            'comment': 'Virtual machine {0} is already up to date'.format(vm_name)})
+        result.update(
+            {
+                "result": True,
+                "changes": {},
+                "comment": "Virtual machine {0} is already up to date".format(vm_name),
+            }
+        )
         return result
 
-    if __opts__['test']:
-        comment = 'State vm_updated will update virtual machine \'{0}\' ' \
-                  'in datacenter \'{1}\':\n{2}'.format(vm_name,
-                                                       datacenter,
-                  '\n'.join([':\n'.join([key, difference.changes_str])
-                      for key, difference in six.iteritems(diffs)]))
-        result.update({'result': None,
-                       'comment': comment})
-        __salt__['vsphere.disconnect'](service_instance)
+    if __opts__["test"]:
+        comment = (
+            "State vm_updated will update virtual machine '{0}' "
+            "in datacenter '{1}':\n{2}".format(
+                vm_name,
+                datacenter,
+                "\n".join(
+                    [
+                        ":\n".join([key, difference.changes_str])
+                        for key, difference in six.iteritems(diffs)
+                    ]
+                ),
+            )
+        )
+        result.update({"result": None, "comment": comment})
+        __salt__["vsphere.disconnect"](service_instance)
         return result
 
     try:
-        changes = __salt__['vsphere.update_vm'](vm_name, cpu, memory, image,
-                                                version, interfaces, disks,
-                                                scsi_devices, serial_ports,
-                                                datacenter, datastore,
-                                                cd_dvd_drives=cd_dvd_drives,
-                                                sata_controllers=sata_controllers,
-                                                advanced_configs=advanced_configs,
-                                                service_instance=service_instance)
+        changes = __salt__["vsphere.update_vm"](
+            vm_name,
+            cpu,
+            memory,
+            image,
+            version,
+            interfaces,
+            disks,
+            scsi_devices,
+            serial_ports,
+            datacenter,
+            datastore,
+            cd_dvd_drives=cd_dvd_drives,
+            sata_controllers=sata_controllers,
+            advanced_configs=advanced_configs,
+            service_instance=service_instance,
+        )
     except salt.exceptions.CommandExecutionError as exc:
-        log.error('Error: %s', exc)
+        log.error("Error: %s", exc)
         if service_instance:
-            __salt__['vsphere.disconnect'](service_instance)
-        result.update({
-            'result': False,
-            'comment': six.text_type(exc)})
+            __salt__["vsphere.disconnect"](service_instance)
+        result.update({"result": False, "comment": six.text_type(exc)})
         return result
 
     if power_on:
         try:
-            __salt__['vsphere.power_on_vm'](vm_name, datacenter)
+            __salt__["vsphere.power_on_vm"](vm_name, datacenter)
         except salt.exceptions.VMwarePowerOnError as exc:
-            log.error('Error: %s', exc)
+            log.error("Error: %s", exc)
             if service_instance:
-                __salt__['vsphere.disconnect'](service_instance)
-            result.update({
-                'result': False,
-                'comment': six.text_type(exc)})
+                __salt__["vsphere.disconnect"](service_instance)
+            result.update({"result": False, "comment": six.text_type(exc)})
             return result
-        changes.update({'power_on': True})
+        changes.update({"power_on": True})
 
-    __salt__['vsphere.disconnect'](service_instance)
+    __salt__["vsphere.disconnect"](service_instance)
 
-    result = {'name': name,
-              'result': True,
-              'changes': changes,
-              'comment': 'Virtual machine '
-                         '{0} was updated successfully'.format(vm_name)}
+    result = {
+        "name": name,
+        "result": True,
+        "changes": changes,
+        "comment": "Virtual machine " "{0} was updated successfully".format(vm_name),
+    }
 
     return result
 
 
-def vm_created(name, vm_name, cpu, memory, image, version, interfaces,
-               disks, scsi_devices, serial_ports, datacenter, datastore,
-               placement, ide_controllers=None, sata_controllers=None,
-               cd_dvd_drives=None, advanced_configs=None, power_on=False):
-    '''
+def vm_created(
+    name,
+    vm_name,
+    cpu,
+    memory,
+    image,
+    version,
+    interfaces,
+    disks,
+    scsi_devices,
+    serial_ports,
+    datacenter,
+    datastore,
+    placement,
+    ide_controllers=None,
+    sata_controllers=None,
+    cd_dvd_drives=None,
+    advanced_configs=None,
+    power_on=False,
+):
+    """
     Creates a virtual machine with the given properties if it doesn't exist.
-    '''
-    result = {'name': name,
-              'result': None,
-              'changes': {},
-              'comment': ''}
+    """
+    result = {"name": name, "result": None, "changes": {}, "comment": ""}
 
-    if __opts__['test']:
-        result['comment'] = 'Virtual machine {0} will be created'.format(
-                vm_name)
+    if __opts__["test"]:
+        result["comment"] = "Virtual machine {0} will be created".format(vm_name)
         return result
 
-    service_instance = __salt__['vsphere.get_service_instance_via_proxy']()
+    service_instance = __salt__["vsphere.get_service_instance_via_proxy"]()
     try:
-        info = __salt__['vsphere.create_vm'](vm_name, cpu, memory, image,
-                                             version, datacenter, datastore,
-                                             placement, interfaces, disks,
-                                             scsi_devices,
-                                             serial_ports=serial_ports,
-                                             ide_controllers=ide_controllers,
-                                             sata_controllers=sata_controllers,
-                                             cd_drives=cd_dvd_drives,
-                                             advanced_configs=advanced_configs,
-                                             service_instance=service_instance)
+        info = __salt__["vsphere.create_vm"](
+            vm_name,
+            cpu,
+            memory,
+            image,
+            version,
+            datacenter,
+            datastore,
+            placement,
+            interfaces,
+            disks,
+            scsi_devices,
+            serial_ports=serial_ports,
+            ide_controllers=ide_controllers,
+            sata_controllers=sata_controllers,
+            cd_drives=cd_dvd_drives,
+            advanced_configs=advanced_configs,
+            service_instance=service_instance,
+        )
     except salt.exceptions.CommandExecutionError as exc:
-        log.error('Error: %s', exc)
+        log.error("Error: %s", exc)
         if service_instance:
-            __salt__['vsphere.disconnect'](service_instance)
-        result.update({
-            'result': False,
-            'comment': six.text_type(exc)})
+            __salt__["vsphere.disconnect"](service_instance)
+        result.update({"result": False, "comment": six.text_type(exc)})
         return result
 
     if power_on:
         try:
-            __salt__['vsphere.power_on_vm'](vm_name, datacenter,
-                                            service_instance=service_instance)
+            __salt__["vsphere.power_on_vm"](
+                vm_name, datacenter, service_instance=service_instance
+            )
         except salt.exceptions.VMwarePowerOnError as exc:
-            log.error('Error: %s', exc)
+            log.error("Error: %s", exc)
             if service_instance:
-                __salt__['vsphere.disconnect'](service_instance)
-            result.update({
-                'result': False,
-                'comment': six.text_type(exc)})
+                __salt__["vsphere.disconnect"](service_instance)
+            result.update({"result": False, "comment": six.text_type(exc)})
             return result
-        info['power_on'] = power_on
+        info["power_on"] = power_on
 
-    changes = {'name': vm_name, 'info': info}
-    __salt__['vsphere.disconnect'](service_instance)
-    result = {'name': name,
-              'result': True,
-              'changes': changes,
-              'comment': 'Virtual machine '
-                         '{0} created successfully'.format(vm_name)}
+    changes = {"name": vm_name, "info": info}
+    __salt__["vsphere.disconnect"](service_instance)
+    result = {
+        "name": name,
+        "result": True,
+        "changes": changes,
+        "comment": "Virtual machine " "{0} created successfully".format(vm_name),
+    }
 
     return result
 
 
 def vm_registered(vm_name, datacenter, placement, vm_file, power_on=False):
-    '''
+    """
     Registers a virtual machine if the machine files are available on
     the main datastore.
-    '''
-    result = {'name': vm_name,
-              'result': None,
-              'changes': {},
-              'comment': ''}
+    """
+    result = {"name": vm_name, "result": None, "changes": {}, "comment": ""}
 
-    vmx_path = '{0}{1}'.format(vm_file.folderPath, vm_file.file[0].path)
-    log.trace('Registering virtual machine with vmx file: {0}'.format(vmx_path))
-    service_instance = __salt__['vsphere.get_service_instance_via_proxy']()
+    vmx_path = "{0}{1}".format(vm_file.folderPath, vm_file.file[0].path)
+    log.trace("Registering virtual machine with vmx file: {0}".format(vmx_path))
+    service_instance = __salt__["vsphere.get_service_instance_via_proxy"]()
     try:
-        __salt__['vsphere.register_vm'](vm_name, datacenter,
-                                        placement, vmx_path,
-                                        service_instance=service_instance)
+        __salt__["vsphere.register_vm"](
+            vm_name, datacenter, placement, vmx_path, service_instance=service_instance
+        )
     except salt.exceptions.VMwareMultipleObjectsError as exc:
-        log.error('Error: %s', exc)
+        log.error("Error: %s", exc)
         if service_instance:
-            __salt__['vsphere.disconnect'](service_instance)
-        result.update({'result': False,
-                       'comment': six.text_type(exc)})
+            __salt__["vsphere.disconnect"](service_instance)
+        result.update({"result": False, "comment": six.text_type(exc)})
         return result
     except salt.exceptions.VMwareVmRegisterError as exc:
-        log.error('Error: %s', exc)
+        log.error("Error: %s", exc)
         if service_instance:
-            __salt__['vsphere.disconnect'](service_instance)
-        result.update({'result': False,
-                       'comment': six.text_type(exc)})
+            __salt__["vsphere.disconnect"](service_instance)
+        result.update({"result": False, "comment": six.text_type(exc)})
         return result
 
     if power_on:
         try:
-            __salt__['vsphere.power_on_vm'](vm_name, datacenter,
-                                            service_instance=service_instance)
+            __salt__["vsphere.power_on_vm"](
+                vm_name, datacenter, service_instance=service_instance
+            )
         except salt.exceptions.VMwarePowerOnError as exc:
-            log.error('Error: %s', exc)
+            log.error("Error: %s", exc)
             if service_instance:
-                __salt__['vsphere.disconnect'](service_instance)
-            result.update({
-                'result': False,
-                'comment': six.text_type(exc)})
+                __salt__["vsphere.disconnect"](service_instance)
+            result.update({"result": False, "comment": six.text_type(exc)})
             return result
-    __salt__['vsphere.disconnect'](service_instance)
-    result.update({'result': True,
-                   'changes': {'name': vm_name, 'power_on': power_on},
-                   'comment': 'Virtual machine '
-                              '{0} registered successfully'.format(vm_name)})
+    __salt__["vsphere.disconnect"](service_instance)
+    result.update(
+        {
+            "result": True,
+            "changes": {"name": vm_name, "power_on": power_on},
+            "comment": "Virtual machine " "{0} registered successfully".format(vm_name),
+        }
+    )
 
     return result
