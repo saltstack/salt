@@ -41,9 +41,9 @@ import sys
 import salt.utils.decorators.path
 import salt.utils.json
 import salt.utils.platform
+import salt.utils.stringutils
 import salt.utils.timed_subprocess
 import salt.utils.yaml
-import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, LoaderError
 from salt.ext import six
 from salt.utils.decorators import depends
