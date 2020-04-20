@@ -1118,8 +1118,14 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             }
         }
 
-        with patch.dict(zypper.__salt__, {"lowpkg.bin_pkg_info": MagicMock(return_value={"name": "test-package",
-                                                                                         "version": "1.0"})}):
+        with patch.dict(
+            zypper.__salt__,
+            {
+                "lowpkg.bin_pkg_info": MagicMock(
+                    return_value={"name": "test-package", "version": "1.0"}
+                )
+            },
+        ):
             list_downloaded = zypper.list_downloaded(kw1=True, kw2=False)
             self.assertEqual(len(list_downloaded), 1)
             self.assertDictEqual(list_downloaded, DOWNLOADED_RET)
