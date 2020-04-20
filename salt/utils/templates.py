@@ -18,6 +18,7 @@ from argparse import Namespace
 # Import 3rd-party libs
 import jinja2
 import jinja2.ext
+
 # Import Salt libs
 import salt.utils.data
 import salt.utils.dateutils
