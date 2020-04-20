@@ -696,12 +696,10 @@ def create_task_from_xml(
             "a task object",
             0x8004130F: "No account information could be found in the Task "
             "Scheduler security database for the task indicated",
-            0x80041310: "Unable to establish existence of the account "
-            "specified",
+            0x80041310: "Unable to establish existence of the account specified",
             0x80041311: "Corruption was detected in the Task Scheduler "
             "security database; the database has been reset",
-            0x80041313: "The task object version is either unsupported or "
-            "invalid",
+            0x80041313: "The task object version is either unsupported or invalid",
             0x80041314: "The task has been configured with an unsupported "
             "combination of account settings and run time options",
             0x80041315: "The Task Scheduler Service is not running",
@@ -710,8 +708,7 @@ def create_task_from_xml(
             "unexpected namespace",
             0x8004131A: "The task XML is malformed",
             0x0004131C: "The task is registered, but may fail to start. Batch "
-            "logon privilege needs to be enabled for the task "
-            "principal",
+            "logon privilege needs to be enabled for the task principal",
             0x8004131D: "The task XML contains too many nodes of the same type",
         }
         try:
