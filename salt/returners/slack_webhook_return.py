@@ -69,6 +69,7 @@ from salt.ext import six
 from salt.ext.six.moves import map
 from salt.ext.six.moves import range
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
+
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import Salt Libs
@@ -167,8 +168,7 @@ def _generate_payload(author_icon, title, report):
 
     text = "Function: {}\n".format(report.get("function"))
     if len(report.get("arguments", [])) > 0:
-        text += "Function Args: {}\n".format(
-            str(list(map(str, report["arguments"]))))
+        text += "Function Args: {}\n".format(str(list(map(str, report["arguments"]))))
 
     text += "JID: {}\n".format(report.get("jid"))
 
@@ -178,52 +178,58 @@ def _generate_payload(author_icon, title, report):
     if DURATION_KEY in report:
         text += "Duration: {:.2f} secs".format(float(report[DURATION_KEY]))
 
-    attachments = [{
-        "fallback": title,
-        "color": "#272727",
-        "author_name": _sprinkle("{id}"),
-        "author_link": _sprinkle("{localhost}"),
-        "author_icon": author_icon,
-        "title": "Success: {}".format(str(report["success"])),
-        "text": text
-    }]
+    attachments = [
+        {
+            "fallback": title,
+            "color": "#272727",
+            "author_name": _sprinkle("{id}"),
+            "author_link": _sprinkle("{localhost}"),
+            "author_icon": author_icon,
+            "title": "Success: {}".format(str(report["success"])),
+            "text": text,
+        }
+    ]
 
     if UNCHANGED_KEY in report:
         # Unchanged
-        attachments.append({
-            "color": "good",
-            "title": "Unchanged: {}".format(report[UNCHANGED_KEY].get(COUNTER_KEY, 0))
-        })
+        attachments.append(
+            {
+                "color": "good",
+                "title": "Unchanged: {}".format(
+                    report[UNCHANGED_KEY].get(COUNTER_KEY, 0)
+                ),
+            }
+        )
 
         # Changed
         changed = {
             "color": "warning",
-            "title": "Changed: {}".format(report[CHANGED_KEY].get(COUNTER_KEY, 0))
+            "title": "Changed: {}".format(report[CHANGED_KEY].get(COUNTER_KEY, 0)),
         }
 
         if len(report[CHANGED_KEY].get(TASKS_KEY, [])) > 0:
-            changed["fields"] = list(
-                map(_format_task, report[CHANGED_KEY][TASKS_KEY]))
+            changed["fields"] = list(map(_format_task, report[CHANGED_KEY][TASKS_KEY]))
 
         attachments.append(changed)
 
         # Failed
         failed = {
             "color": "danger",
-            "title": "Failed: {}".format(report[FAILED_KEY].get(COUNTER_KEY, None))
+            "title": "Failed: {}".format(report[FAILED_KEY].get(COUNTER_KEY, None)),
         }
 
         if len(report[FAILED_KEY].get(TASKS_KEY, [])) > 0:
-            failed["fields"] = list(
-                map(_format_task, report[FAILED_KEY][TASKS_KEY]))
+            failed["fields"] = list(map(_format_task, report[FAILED_KEY][TASKS_KEY]))
 
         attachments.append(failed)
 
     else:
-        attachments.append({
-            "color": "good" if report["success"] else "danger",
-            "title": "Return: {}".format(report.get("return", None))
-        })
+        attachments.append(
+            {
+                "color": "good" if report["success"] else "danger",
+                "title": "Return: {}".format(report.get("return", None)),
+            }
+        )
 
     payload = {"attachments": attachments}
 
@@ -237,10 +243,7 @@ def _process_state(returns):
     :return A dictionary with Unchanges, Changed and Failed tasks
     """
 
-    sorted_data = sorted(
-        returns.items(),
-        key=lambda s: s[1].get("__run_num__", 0)
-    )
+    sorted_data = sorted(returns.items(), key=lambda s: s[1].get("__run_num__", 0))
 
     n_total = 0
     n_failed = 0
@@ -255,7 +258,8 @@ def _process_state(returns):
         # state: module, stateid, name, function
         _, stateid, _, _ = state.split("_|-")
         task = "{filename}.sls | {taskname}".format(
-            filename=str(data.get("__sls__")), taskname=stateid)
+            filename=str(data.get("__sls__")), taskname=stateid
+        )
 
         if not data.get("result", True):
             n_failed += 1
@@ -275,18 +279,10 @@ def _process_state(returns):
 
     return {
         TOTAL_KEY: n_total,
-        UNCHANGED_KEY: {
-            COUNTER_KEY: n_unchanged
-        },
-        CHANGED_KEY: {
-            COUNTER_KEY: n_changed,
-            TASKS_KEY: changed_tasks
-        },
-        FAILED_KEY: {
-            COUNTER_KEY: n_failed,
-            TASKS_KEY: failed_tasks
-        },
-        DURATION_KEY: duration / 1000
+        UNCHANGED_KEY: {COUNTER_KEY: n_unchanged},
+        CHANGED_KEY: {COUNTER_KEY: n_changed, TASKS_KEY: changed_tasks},
+        FAILED_KEY: {COUNTER_KEY: n_failed, TASKS_KEY: failed_tasks},
+        DURATION_KEY: duration / 1000,
     }
 
 
@@ -315,7 +311,7 @@ def _generate_report(ret, show_tasks):
         "success": True if ret.get("retcode", 1) == 0 else False,
         "function": ret.get("fun"),
         "arguments": ret.get("fun_args", []),
-        "jid": ret.get("jid")
+        "jid": ret.get("jid"),
     }
 
     ret_return = ret.get("return")
@@ -325,8 +321,9 @@ def _generate_report(ret, show_tasks):
             del ret_return[CHANGED_KEY][TASKS_KEY]
             del ret_return[FAILED_KEY][TASKS_KEY]
     elif isinstance(ret_return, dict):
-        ret_return = {"return": "\n{}".format(
-            salt.utils.yaml.safe_dump(ret_return, indent=2))}
+        ret_return = {
+            "return": "\n{}".format(salt.utils.yaml.safe_dump(ret_return, indent=2))
+        }
     else:
         ret_return = {"return": ret_return}
 
@@ -353,14 +350,14 @@ def _post_message(webhook, author_icon, title, report):
     query_result = salt.utils.http.query(webhook_url, "POST", data=data)
 
     # Sometimes the status is not available, so status 200 is assumed when it is not present
-    if query_result.get("body", "failed") == "ok" and query_result.get("status", 200) == 200:
+    if (
+        query_result.get("body", "failed") == "ok"
+        and query_result.get("status", 200) == 200
+    ):
         return True
     else:
         log.error("Slack incoming webhook message post result: %s", query_result)
-        return {
-            "res": False,
-            "message": query_result.get("body", query_result)
-        }
+        return {"res": False, "message": query_result.get("body", query_result)}
 
 
 def returner(ret):
