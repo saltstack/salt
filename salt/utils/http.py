@@ -22,10 +22,12 @@ import zlib
 
 # Import salt libs
 import salt.config
+
 # pylint: disable=import-error,no-name-in-module
 import salt.ext.six.moves.http_client
 import salt.ext.six.moves.http_cookiejar
 import salt.ext.six.moves.urllib.request as urllib_request
+
 # Don't need a try/except block, since Salt depends on tornado
 import salt.ext.tornado.httputil
 import salt.ext.tornado.simple_httpclient
@@ -43,6 +45,7 @@ import salt.utils.xmlutil as xml
 import salt.utils.yaml
 import salt.version
 from salt._compat import ElementTree as ET
+
 # Import 3rd party libs
 from salt.ext import six
 from salt.ext.six.moves import StringIO
