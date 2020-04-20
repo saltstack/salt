@@ -96,16 +96,16 @@ Minion configuration:
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import datetime
-from datetime import tzinfo, timedelta
-import uuid
 import logging
+import uuid
+from datetime import timedelta, tzinfo
 
 # Import Salt libs
 import salt.returners
 import salt.utils.jid
 import salt.utils.json
-
 # Import 3rd-party libs
 from salt.ext import six
 
