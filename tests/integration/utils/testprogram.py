@@ -21,6 +21,7 @@ import tempfile
 import time
 from datetime import datetime, timedelta
 
+import pytest
 import salt.defaults.exitcodes as exitcodes
 import salt.utils.files
 import salt.utils.platform
@@ -45,6 +46,7 @@ if "TimeoutError" not in __builtins__:
     __builtins__["TimeoutError"] = TimeoutError
 
 
+@pytest.mark.windows_whitelisted
 class TestProgramMeta(type):
     """
     Stack all inherited config_attrs and dirtree dirs from the base classes.
@@ -73,6 +75,7 @@ class TestProgramMeta(type):
 
 
 # pylint: disable=too-many-instance-attributes
+@pytest.mark.windows_whitelisted
 class TestProgram(six.with_metaclass(TestProgramMeta, object)):
     """
     Set up an arbitrary executable to run.
@@ -572,6 +575,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
                 pass
 
 
+@pytest.mark.windows_whitelisted
 class TestSaltProgramMeta(TestProgramMeta):
     """
     A Meta-class to set self.script from the class name when it is
@@ -609,6 +613,7 @@ class TestSaltProgramMeta(TestProgramMeta):
         return super(TestSaltProgramMeta, mcs).__new__(mcs, name, bases, attrs)
 
 
+@pytest.mark.windows_whitelisted
 class TestSaltProgram(
     six.with_metaclass(TestSaltProgramMeta, TestProgram, ScriptPathMixin)
 ):
@@ -710,6 +715,7 @@ class TestSaltProgram(
         return super(TestSaltProgram, self).run(**kwargs)
 
 
+@pytest.mark.windows_whitelisted
 class TestProgramSalt(TestSaltProgram):
     """Class to manage salt"""
 
@@ -717,12 +723,14 @@ class TestProgramSalt(TestSaltProgram):
     script = "salt"
 
 
+@pytest.mark.windows_whitelisted
 class TestProgramSaltCall(TestSaltProgram):
     """Class to manage salt-call"""
 
     configs = {"minion": {"map": {"id": "{name}"}}}
 
 
+@pytest.mark.windows_whitelisted
 class TestProgramSaltRun(TestSaltProgram):
     """Class to manage salt-run"""
 
@@ -734,6 +742,7 @@ class TestProgramSaltRun(TestSaltProgram):
         super(TestProgramSaltRun, self).__init__(*args, **kwargs)
 
 
+@pytest.mark.windows_whitelisted
 class TestDaemon(TestProgram):
     """
     Run one of the standard daemons
@@ -895,6 +904,7 @@ class TestDaemon(TestProgram):
         super(TestDaemon, self).cleanup(*args, **kwargs)
 
 
+@pytest.mark.windows_whitelisted
 class TestSaltDaemon(
     six.with_metaclass(TestSaltProgramMeta, TestDaemon, TestSaltProgram)
 ):
@@ -903,6 +913,7 @@ class TestSaltDaemon(
     """
 
 
+@pytest.mark.windows_whitelisted
 class TestDaemonSaltMaster(TestSaltDaemon):
     """
     Manager for salt-master daemon.
@@ -916,6 +927,7 @@ class TestDaemonSaltMaster(TestSaltDaemon):
         super(TestDaemonSaltMaster, self).__init__(*args, **kwargs)
 
 
+@pytest.mark.windows_whitelisted
 class TestDaemonSaltMinion(TestSaltDaemon):
     """
     Manager for salt-minion daemon.
@@ -929,12 +941,14 @@ class TestDaemonSaltMinion(TestSaltDaemon):
         super(TestDaemonSaltMinion, self).__init__(*args, **kwargs)
 
 
+@pytest.mark.windows_whitelisted
 class TestDaemonSaltApi(TestSaltDaemon):
     """
     Manager for salt-api daemon.
     """
 
 
+@pytest.mark.windows_whitelisted
 class TestDaemonSaltSyndic(TestSaltDaemon):
     """
     Manager for salt-syndic daemon.
@@ -951,6 +965,7 @@ class TestDaemonSaltSyndic(TestSaltDaemon):
         super(TestDaemonSaltSyndic, self).__init__(*args, **kwargs)
 
 
+@pytest.mark.windows_whitelisted
 class TestDaemonSaltProxy(TestSaltDaemon):
     """
     Manager for salt-proxy daemon.
@@ -972,6 +987,7 @@ class TestDaemonSaltProxy(TestSaltDaemon):
         return super(TestDaemonSaltProxy, self).run(**kwargs)
 
 
+@pytest.mark.windows_whitelisted
 class TestProgramCase(TestCase):
     """
     Utilities for unit tests that use TestProgram()

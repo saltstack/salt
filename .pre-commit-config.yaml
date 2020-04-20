@@ -68,6 +68,15 @@ repos:
           - --platform=linux
 
       - id: pip-tools-compile
+        alias: compile-changelog-requirements
+        name: Changelog Py3.5 Requirements
+        files: ^requirements/static/changelog\.in$
+        args:
+          - -v
+          - --py-version=3.5
+          - --platform=linux
+
+      - id: pip-tools-compile
         alias: compile-linux-crypto-py3.5-requirements
         name: Linux Py3.5 Crypto Requirements
         files: ^requirements/(crypto\.txt|static/crypto\.in)$
@@ -105,7 +114,6 @@ repos:
           - -v
           - --py-version=3.5
           - --platform=linux
-
 
       - id: pip-tools-compile
         alias: compile-linux-py3.6-zmq-requirements
@@ -168,6 +176,15 @@ repos:
           - --platform=linux
 
       - id: pip-tools-compile
+        alias: compile-changelog-requirements
+        name: Changelog Py3.6 Requirements
+        files: ^requirements/static/changelog\.in$
+        args:
+          - -v
+          - --py-version=3.6
+          - --platform=linux
+
+      - id: pip-tools-compile
         alias: compile-linux-crypto-py3.6-requirements
         name: Linux Py3.6 Crypto Requirements
         files: ^requirements/(crypto\.txt|static/crypto\.in)$
@@ -205,7 +222,6 @@ repos:
           - -v
           - --py-version=3.6
           - --platform=linux
-
 
       - id: pip-tools-compile
         alias: compile-linux-py3.7-zmq-requirements
@@ -268,6 +284,15 @@ repos:
           - --platform=linux
 
       - id: pip-tools-compile
+        alias: compile-changelog-requirements
+        name: Changelog Py3.7 Requirements
+        files: ^requirements/static/changelog\.in$
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=linux
+
+      - id: pip-tools-compile
         alias: compile-linux-crypto-py3.7-requirements
         name: Linux Py3.7 Crypto Requirements
         files: ^requirements/(crypto\.txt|static/crypto\.in)$
@@ -307,7 +332,7 @@ repos:
           - --platform=linux
 
   - repo: https://github.com/timothycrosley/isort
-    rev: '1e78a9acf3110e1f9721feb591f89a451fc9876a'
+    rev: "1e78a9acf3110e1f9721feb591f89a451fc9876a"
     hooks:
       - id: isort
         additional_dependencies: ['toml']
@@ -321,7 +346,7 @@ repos:
             )$
 
   - repo: https://github.com/psf/black
-    rev: stable
+    rev: 19.10b0
     hooks:
       - id: black
         # This tells pre-commit not to pass files to black.

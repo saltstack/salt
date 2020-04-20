@@ -7,17 +7,15 @@
     Test Salt's reactor system
 """
 
-# Import Python libs
 from __future__ import absolute_import
 
-# Import Salt libs
+import pytest
 import salt.utils.event
-
-# Import Salt testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltMinionEventAssertsMixin
 
 
+@pytest.mark.windows_whitelisted
 class ReactorTest(SaltMinionEventAssertsMixin, ModuleCase):
     """
     Test Salt's reactor system

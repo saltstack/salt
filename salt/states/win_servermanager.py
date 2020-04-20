@@ -18,7 +18,9 @@ def __virtual__():
     """
     Load only if win_servermanager is loaded
     """
-    return "win_servermanager" if "win_servermanager.install" in __salt__ else False
+    if "win_servermanager.install" in __salt__:
+        return "win_servermanager"
+    return (False, "win_servermanager module could not be loaded")
 
 
 def installed(

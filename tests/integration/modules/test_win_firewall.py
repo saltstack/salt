@@ -1,18 +1,16 @@
 # -*- coding: utf-8 -*-
 
-# Import Python libs
 from __future__ import absolute_import
 
-# Import Salt Libs
+import pytest
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest
 from tests.support.unit import skipIf
 
 
 @skipIf(not salt.utils.platform.is_windows(), "Tests for only Windows")
+@pytest.mark.windows_whitelisted
 class FirewallTest(ModuleCase):
     """
     Validate windows firewall module

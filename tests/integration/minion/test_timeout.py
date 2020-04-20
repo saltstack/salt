@@ -3,18 +3,17 @@
 Tests for various minion timeouts
 """
 
-# Import Python libs
 from __future__ import absolute_import
 
 import os
 import sys
 
+import pytest
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ShellCase
 
 
+@pytest.mark.windows_whitelisted
 class MinionTimeoutTestCase(ShellCase):
     """
     Test minion timing functions

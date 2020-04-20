@@ -3,20 +3,18 @@
     :codeauthor: Justin Anderson <janderson@saltstack.com>
 """
 
-# Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Salt Libs
+import pytest
 from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
-
-# Salttesting libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
 
+@pytest.mark.windows_whitelisted
 class BeaconsAddDeleteTest(ModuleCase):
     """
     Tests the add and delete functions
@@ -87,6 +85,7 @@ class BeaconsAddDeleteTest(ModuleCase):
         self.run_function("beacons.save")
 
 
+@pytest.mark.windows_whitelisted
 class BeaconsTest(ModuleCase):
     """
     Tests the beacons execution module
