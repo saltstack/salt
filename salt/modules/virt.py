@@ -606,6 +606,7 @@ def _get_target(target, ssh):
 
 
 def _gen_xml(
+    conn,
     name,
     cpu,
     mem,
@@ -693,10 +694,46 @@ def _gen_xml(
             disk_context["source_file"] = disk["source_file"]
             disk_context["type"] = "file"
         elif disk.get("pool"):
-            # If we had no source_file, then we want a volume
-            disk_context["type"] = "volume"
-            disk_context["pool"] = disk["pool"]
             disk_context["volume"] = disk["filename"]
+            # If we had no source_file, then we want a volume
+            pool_xml = ElementTree.fromstring(
+                conn.storagePoolLookupByName(disk["pool"]).XMLDesc()
+            )
+            pool_type = pool_xml.get("type")
+            if pool_type in ["rbd", "gluster", "sheepdog"]:
+                # libvirt can't handle rbd, gluster and sheepdog as volumes
+                disk_context["type"] = "network"
+                disk_context["protocol"] = pool_type
+                # Copy the hosts from the pool definition
+                disk_context["hosts"] = [
+                    {"name": host.get("name"), "port": host.get("port")}
+                    for host in pool_xml.findall(".//host")
+                ]
+                dir_node = pool_xml.find("./source/dir")
+                # Gluster and RBD need pool/volume name
+                name_node = pool_xml.find("./source/name")
+                if name_node is not None:
+                    disk_context["volume"] = "{}/{}".format(
+                        name_node.text, disk_context["volume"]
+                    )
+                # Copy the authentication if any for RBD
+                auth_node = pool_xml.find("./source/auth")
+                if auth_node is not None:
+                    username = auth_node.get("username")
+                    secret_node = auth_node.find("./secret")
+                    usage = secret_node.get("usage")
+                    if not usage:
+                        # Get the usage from the UUID
+                        uuid = secret_node.get("uuid")
+                        usage = conn.secretLookupByUUIDString(uuid).usageID()
+                    disk_context["auth"] = {
+                        "type": "ceph",
+                        "username": username,
+                        "usage": usage,
+                    }
+            else:
+                disk_context["type"] = "volume"
+                disk_context["pool"] = disk["pool"]
 
         else:
             # No source and no pool is a removable device, use file type
@@ -1822,6 +1859,7 @@ def init(
             boot = _handle_remote_boot_params(boot)
 
         vm_xml = _gen_xml(
+            conn,
             name,
             cpu,
             mem,
@@ -2146,6 +2184,7 @@ def update(
 
     new_desc = ElementTree.fromstring(
         _gen_xml(
+            conn,
             name,
             cpu or 0,
             mem or 0,
@@ -3723,13 +3762,28 @@ def purge(vm_, dirs=False, removables=False, **kwargs):
             directories.add(os.path.dirname(disks[disk]["file"]))
         else:
             # We may have a volume to delete here
-            matcher = re.match("^([^/]+)/(.*)$", disks[disk]["file"])
+            matcher = re.match(
+                "^(?:(?P<protocol>[^:]*):)?(?P<pool>[^/]+)/(?P<volume>.*)$",
+                disks[disk]["file"],
+            )
             if matcher:
-                if matcher.group(1) in conn.listStoragePools():
-                    pool = conn.storagePoolLookupByName(matcher.group(1))
-                    if matcher.group(2) in pool.listVolumes():
-                        volume = pool.storageVolLookupByName(matcher.group(2))
-                        volume.delete()
+                pool_name = matcher.group("pool")
+                pool = None
+                if matcher.group("protocol") in ["rbd", "gluster"]:
+                    # The pool name is not the libvirt one... we need to loop over the pool to find it
+                    for pool_i in conn.listAllStoragePools():
+                        pool_i_xml = ElementTree.fromstring(pool_i.XMLDesc())
+                        if pool_i_xml.get("type") == matcher.group("protocol"):
+                            name_node = pool_i_xml.find("source/name")
+                            if name_node is not None and name_node.text == pool_name:
+                                pool = pool_i
+                                break
+                elif pool_name in conn.listStoragePools():
+                    pool = conn.storagePoolLookupByName(pool_name)
+
+                if pool and matcher.group("volume") in pool.listVolumes():
+                    volume = pool.storageVolLookupByName(matcher.group("volume"))
+                    volume.delete()
 
     if dirs:
         for dir_ in directories:
