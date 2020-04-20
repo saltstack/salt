@@ -1148,9 +1148,9 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertDictEqual(state.pkg(tar_file, 0, "md5"), {})
 
                 MockTarFile.path = ""
-                with patch("salt.utils.files.fopen", mock_open()), \
-                        patch.object(salt.utils.json, "loads", mock_json_loads_true), \
-                            patch.object(state, "_format_cached_grains", MagicMock()):
+                with patch("salt.utils.files.fopen", mock_open()), patch.object(
+                    salt.utils.json, "loads", mock_json_loads_true
+                ), patch.object(state, "_format_cached_grains", MagicMock()):
                     self.assertEqual(state.pkg(tar_file, 0, "md5"), True)
                     state._format_cached_grains.assert_called_once()
 
