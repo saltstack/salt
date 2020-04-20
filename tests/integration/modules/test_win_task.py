@@ -14,6 +14,7 @@ class WinTasksTest(ModuleCase):
     """
     Tests for salt.modules.win_task.
     """
+
     @destructiveTest
     def test_adding_task_with_xml(self):
         """
