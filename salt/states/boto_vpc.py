@@ -412,7 +412,7 @@ def dhcp_options_present(
 
     # boto provides no "update_dhcp_options()" functionality, and you can't delete it if
     # it's attached, and you can't detach it if it's the only one, so just check if it's
-    # there or not, and make no effort to validate it's actual settings... :(
+    # there or not, and make no effort to validate its actual settings... :(
     ### TODO - add support for multiple sets of DHCP options, and then for "swapping out"
     ###        sets by creating new, mapping, then deleting the old.
     r = __salt__["boto_vpc.dhcp_options_exists"](

@@ -393,7 +393,7 @@ class TestSignalHandlingProcess(TestCase):
         )
         proc2.start()
 
-        # Wait for the sub process to set it's pid
+        # Wait for the sub process to set its pid
         while not val.value:
             time.sleep(0.3)
 
@@ -410,7 +410,7 @@ class TestSignalHandlingProcess(TestCase):
             time.sleep(0.3)
 
         try:
-            # Allow some time for the signal handler to do it's thing
+            # Allow some time for the signal handler to do its thing
             assert proc.signal_handled()
             # Reap the signaled process
             proc.join(1)

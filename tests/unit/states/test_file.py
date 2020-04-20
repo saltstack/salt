@@ -2668,7 +2668,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     )
                     # if we generate less than the number of files expected,
                     # then the oldest file will also be retained
-                    # (correctly, since it's the first in it's category)
+                    # (correctly, since its the first in it's category)
                     if (
                         fake_retain[retainable] == "all"
                         or len(new_retains) < fake_retain[retainable]

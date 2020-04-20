@@ -238,7 +238,7 @@ def _get_date_value(date):
 
 def _reverse_lookup(dictionary, value):
     """
-    Lookup the key in a dictionary by it's value. Will return the first match.
+    Lookup the key in a dictionary by its value. Will return the first match.
 
     :param dict dictionary: The dictionary to search
 
