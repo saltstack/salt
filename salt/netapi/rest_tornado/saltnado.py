@@ -198,6 +198,7 @@ from copy import copy
 
 import salt.auth
 import salt.client
+
 # salt imports
 import salt.ext.six as six
 import salt.ext.tornado.escape
