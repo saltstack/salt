@@ -2,12 +2,11 @@
 """
 Tests for the salt-run command
 """
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt Testing libs
+import pytest
 from tests.support.case import ShellCase
 from tests.support.unit import skipIf
 
@@ -23,6 +22,7 @@ log = logging.getLogger(__name__)
 
 
 @skipIf(not HAS_LIBNACL, "skipping test_nacl, libnacl is unavailable")
+@pytest.mark.windows_whitelisted
 class NaclTest(ShellCase):
     """
     Test the nacl runner

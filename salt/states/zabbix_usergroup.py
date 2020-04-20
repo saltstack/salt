@@ -17,7 +17,9 @@ def __virtual__():
     """
     Only make these states available if Zabbix module is available.
     """
-    return "zabbix.usergroup_create" in __salt__
+    if "zabbix.usergroup_create" in __salt__:
+        return True
+    return (False, "zabbix module could not be loaded")
 
 
 def present(name, **kwargs):

@@ -3,16 +3,11 @@
 Integration tests for Ruby Gem module
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
+import pytest
 import salt.utils.path
-
-# Import 3rd-party libs
 from salt.ext.tornado.httpclient import HTTPClient
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest
 from tests.support.unit import skipIf
@@ -30,6 +25,7 @@ def check_status():
 
 @destructiveTest
 @skipIf(not salt.utils.path.which("gem"), "Gem is not available")
+@pytest.mark.windows_whitelisted
 class GemModuleTest(ModuleCase):
     """
     Validate gem module

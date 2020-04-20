@@ -3,13 +3,13 @@
 """
 Validate the config system
 """
-# Import Python libs
 from __future__ import absolute_import
 
-# Import Salt Testing libs
+import pytest
 from tests.support.case import ModuleCase
 
 
+@pytest.mark.windows_whitelisted
 class ConfigTest(ModuleCase):
     """
     Test config routines

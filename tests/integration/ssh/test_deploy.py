@@ -10,6 +10,7 @@ import shutil
 
 # Import salt testing libs
 from tests.support.case import SSHCase
+from tests.support.runtests import RUNTIME_VARS
 
 
 class SSHTest(SSHCase):
@@ -33,6 +34,18 @@ class SSHTest(SSHCase):
         os.path.isdir(thin_dir)
         os.path.exists(os.path.join(thin_dir, "salt-call"))
         os.path.exists(os.path.join(thin_dir, "running_data"))
+
+    def test_set_path(self):
+        """
+        test setting the path env variable
+        """
+        path = "/pathdoesnotexist/"
+        roster = os.path.join(RUNTIME_VARS.TMP, "roster-set-path")
+        self.custom_roster(
+            roster, data={"set_path": "$PATH:/usr/local/bin/:{0}".format(path)}
+        )
+        ret = self.run_function("environ.get", ["PATH"], roster_file=roster)
+        assert path in ret
 
     def tearDown(self):
         """
