@@ -12,11 +12,11 @@ import threading
 import time
 import warnings
 
-import psutil
 import salt.utils.platform
 import salt.utils.process
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.utils.process import psutil
 from salt.utils.versions import warn_until_date
 from tests.support.helpers import slowTest
 from tests.support.mock import patch
@@ -528,16 +528,41 @@ class TestProcessList(TestCase):
         plist = salt.utils.process.SubprocessList()
         event = multiprocessing.Event()
         proc = multiprocessing.Process(target=event_target, args=[event])
+        proc2 = multiprocessing.Process(target=event_target, args=[event])
         proc.start()
+        proc2.start()
         plist.add(proc)
+        plist.add(proc2)
         assert proc in plist.processes
+        assert proc2 in plist.processes
         plist.cleanup()
         event.set()
         assert proc in plist.processes
+        assert proc2 in plist.processes
         self.wait_for_proc(proc)
+        self.wait_for_proc(proc2)
         assert not proc.is_alive()
+        assert not proc2.is_alive()
         plist.cleanup()
         assert proc not in plist.processes
+        assert proc2 not in plist.processes
+
+    def test_process_list_terminate(self):
+        plist = salt.utils.process.SubprocessList()
+        event = multiprocessing.Event()
+        proc = multiprocessing.Process(target=event_target, args=[event])
+        proc2 = multiprocessing.Process(target=event_target, args=[event])
+        proc.start()
+        proc2.start()
+        plist.add(proc)
+        plist.add(proc2)
+        assert proc in plist.processes
+        assert proc2 in plist.processes
+        plist.terminate()
+        assert not proc.is_alive()
+        assert not proc2.is_alive()
+        assert proc not in plist.processes
+        assert proc2 not in plist.processes
 
 
 class TestDeprecatedClassNames(TestCase):

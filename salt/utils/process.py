@@ -40,13 +40,10 @@ from salt.log.mixins import NewStyleClassMixIn
 log = logging.getLogger(__name__)
 
 # pylint: disable=import-error
-HAS_PSUTIL = False
 try:
     import psutil
-
-    HAS_PSUTIL = True
 except ImportError:
-    pass
+    psutil = None
 
 try:
     import setproctitle
@@ -291,7 +288,7 @@ def os_is_running(pid):
     """
     if isinstance(pid, six.string_types):
         pid = int(pid)
-    if HAS_PSUTIL:
+    if psutil:
         return psutil.pid_exists(pid)
     else:
         try:
@@ -838,7 +835,7 @@ class SignalHandlingProcess(Process):
             msg += "SIGTERM"
         msg += ". Exiting"
         log.debug(msg)
-        if HAS_PSUTIL:
+        if psutil:
             try:
                 process = psutil.Process(os.getpid())
                 if hasattr(process, "children"):
@@ -926,9 +923,17 @@ class SubprocessList(object):
 
     def cleanup(self):
         with self.lock:
-            for proc in self.processes:
+            for proc in self.processes.copy():
                 if proc.is_alive():
                     continue
                 proc.join()
                 self.processes.remove(proc)
                 log.debug("Subprocess %s cleaned up", proc.name)
+
+    def terminate(self):
+        with self.lock:
+            for proc in self.processes:
+                proc.terminate()
+                proc.join()
+                log.debug("Subprocess %s terminated", proc.name)
+            self.processes.clear()
