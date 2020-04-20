@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
@@ -9,14 +8,10 @@ import tempfile
 import textwrap
 from contextlib import contextmanager
 
-# Import salt libs
+import pytest
 import salt.utils.path
 import salt.utils.platform
-
-# Import 3rd-party libs
 from salt.ext import six
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
@@ -31,6 +26,7 @@ AVAILABLE_PYTHON_EXECUTABLE = salt.utils.path.which_bin(
 )
 
 
+@pytest.mark.windows_whitelisted
 class CMDModuleTest(ModuleCase):
     """
     Validate the cmd module

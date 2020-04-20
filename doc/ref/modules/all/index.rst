@@ -186,6 +186,7 @@ execution modules
     haproxyconn
     hashutil
     heat
+    helm
     hg
     highstate_doc
     hosts

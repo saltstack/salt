@@ -3,18 +3,16 @@
     Test Salt's argument parser
 """
 
-# Import Python libs
 from __future__ import absolute_import
 
-# Import Salt libs
+import pytest
 import salt.utils.args
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import requires_salt_modules
 
 
 @requires_salt_modules("test.ping", "test.arg")
+@pytest.mark.windows_whitelisted
 class ArgumentTestCase(ModuleCase):
     def test_unsupported_kwarg(self):
         """

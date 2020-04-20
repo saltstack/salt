@@ -2,18 +2,18 @@
 """
 Tests for the spm install utility
 """
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
 
-# Import Salt Testing libs
+import pytest
 from tests.support.case import SPMCase
 from tests.support.helpers import destructiveTest
 
 
 @destructiveTest
+@pytest.mark.windows_whitelisted
 class SPMInstallTest(SPMCase):
     """
     Validate the spm install command

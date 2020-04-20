@@ -7,17 +7,14 @@ user present
 user present with custom homedir
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import sys
 from random import randint
 
-# Import Salt libs
+import pytest
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
@@ -51,6 +48,7 @@ else:
 
 @destructiveTest
 @skip_if_not_root
+@pytest.mark.windows_whitelisted
 class UserTest(ModuleCase, SaltReturnAssertsMixin):
     """
     test for user absent
@@ -314,6 +312,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
 @destructiveTest
 @skip_if_not_root
 @skipIf(not salt.utils.platform.is_windows(), "Windows only tests")
+@pytest.mark.windows_whitelisted
 class WinUserTest(ModuleCase, SaltReturnAssertsMixin):
     """
     test for user absent

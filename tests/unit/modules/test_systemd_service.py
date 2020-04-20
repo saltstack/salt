@@ -8,6 +8,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.systemd_service as systemd
 import salt.utils.systemd
@@ -664,3 +666,65 @@ class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_unmask_runtime(self):
         self._mask_unmask("unmask_", True)
+
+    def test_firstboot(self):
+        """
+        Test service.firstboot without parameters
+        """
+        result = {"retcode": 0, "stdout": "stdout"}
+        salt_mock = {
+            "cmd.run_all": MagicMock(return_value=result),
+        }
+        with patch.dict(systemd.__salt__, salt_mock):
+            assert systemd.firstboot()
+            salt_mock["cmd.run_all"].assert_called_with(["systemd-firstboot"])
+
+    def test_firstboot_params(self):
+        """
+        Test service.firstboot with parameters
+        """
+        result = {"retcode": 0, "stdout": "stdout"}
+        salt_mock = {
+            "cmd.run_all": MagicMock(return_value=result),
+        }
+        with patch.dict(systemd.__salt__, salt_mock):
+            assert systemd.firstboot(
+                locale="en_US.UTF-8",
+                locale_message="en_US.UTF-8",
+                keymap="jp",
+                timezone="Europe/Berlin",
+                hostname="node-001",
+                machine_id="1234567890abcdef",
+                root="/mnt",
+            )
+            salt_mock["cmd.run_all"].assert_called_with(
+                [
+                    "systemd-firstboot",
+                    "--locale",
+                    "en_US.UTF-8",
+                    "--locale-message",
+                    "en_US.UTF-8",
+                    "--keymap",
+                    "jp",
+                    "--timezone",
+                    "Europe/Berlin",
+                    "--hostname",
+                    "node-001",
+                    "--machine-ID",
+                    "1234567890abcdef",
+                    "--root",
+                    "/mnt",
+                ]
+            )
+
+    def test_firstboot_error(self):
+        """
+        Test service.firstboot error
+        """
+        result = {"retcode": 1, "stderr": "error"}
+        salt_mock = {
+            "cmd.run_all": MagicMock(return_value=result),
+        }
+        with patch.dict(systemd.__salt__, salt_mock):
+            with pytest.raises(CommandExecutionError):
+                assert systemd.firstboot()

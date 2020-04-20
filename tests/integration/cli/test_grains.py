@@ -12,19 +12,17 @@
     localhost:
         localhost
 """
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import Salt Libs
+import pytest
 import salt.utils.files
-
-# Import Salt Testing Libs
 from tests.support.case import ShellCase, SSHCase
 from tests.support.helpers import flaky
 
 
+@pytest.mark.windows_whitelisted
 class GrainsTargetingTest(ShellCase):
     """
     Integration tests for targeting with grains.
@@ -87,6 +85,7 @@ class GrainsTargetingTest(ShellCase):
             os.unlink(key_file)
 
 
+@pytest.mark.windows_whitelisted
 class SSHGrainsTest(SSHCase):
     """
     Test salt-ssh grains functionality

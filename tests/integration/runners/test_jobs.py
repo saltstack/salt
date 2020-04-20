@@ -2,14 +2,14 @@
 """
 Tests for the salt-run command
 """
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Testing libs
+import pytest
 from tests.support.case import ShellCase
 from tests.support.unit import skipIf
 
 
+@pytest.mark.windows_whitelisted
 class ManageTest(ShellCase):
     """
     Test the manage runner
@@ -48,6 +48,7 @@ class ManageTest(ShellCase):
         self.assertIsInstance(ret["return"], dict)
 
 
+@pytest.mark.windows_whitelisted
 class LocalCacheTargetTest(ShellCase):
     """
     Test that a job stored in the local_cache has target information

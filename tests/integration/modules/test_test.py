@@ -1,18 +1,15 @@
 # -*- coding: utf-8 -*-
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
 import salt.config
-
-# Import salt libs
 import salt.version
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 
 
+@pytest.mark.windows_whitelisted
 class TestModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
     """
     Validate the test module
