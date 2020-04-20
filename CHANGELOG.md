@@ -1,3 +1,4 @@
+# Changelog
 All notable changes to Salt will be documented in this file.
 
 This changelog follows [keepachangelog](https://keepachangelog.com/en/1.0.0/) format, and is intended for human consumption.
