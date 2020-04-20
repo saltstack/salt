@@ -327,7 +327,7 @@ def insert_runner(fun, args=None, kwargs=None, queue=None, backend=None):
     if "mode" in queue_kwargs:
         queue_kwargs.pop("mode")
     data = {"fun": fun, "args": args, "kwargs": kwargs}
-    queue_kwargs['items'] = data
+    queue_kwargs["items"] = data
     return insert(**queue_kwargs)
 
 
