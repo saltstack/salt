@@ -610,14 +610,14 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(list_downloaded, DOWNLOADED_RET)
 
     def test__skip_source(self):
-        '''
+        """
         Test __skip_source.
         :return:
-        '''
+        """
         # Valid source
-        source_type = 'deb'
-        source_uri = 'http://cdn-aws.deb.debian.org/debian'
-        source_line = 'deb http://cdn-aws.deb.debian.org/debian stretch main\n'
+        source_type = "deb"
+        source_uri = "http://cdn-aws.deb.debian.org/debian"
+        source_line = "deb http://cdn-aws.deb.debian.org/debian stretch main\n"
 
         mock_source = MockSourceEntry(source_uri, source_type, source_line, False)
 
@@ -625,9 +625,9 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         self.assertFalse(ret)
 
         # Invalid source type
-        source_type = 'ded'
-        source_uri = 'http://cdn-aws.deb.debian.org/debian'
-        source_line = 'deb http://cdn-aws.deb.debian.org/debian stretch main\n'
+        source_type = "ded"
+        source_uri = "http://cdn-aws.deb.debian.org/debian"
+        source_line = "deb http://cdn-aws.deb.debian.org/debian stretch main\n"
 
         mock_source = MockSourceEntry(source_uri, source_type, source_line, True)
 
@@ -635,9 +635,9 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(ret)
 
         # Invalid source type , not skipped
-        source_type = 'deb'
-        source_uri = 'http://cdn-aws.deb.debian.org/debian'
-        source_line = 'deb [http://cdn-aws.deb.debian.org/debian] stretch main\n'
+        source_type = "deb"
+        source_uri = "http://cdn-aws.deb.debian.org/debian"
+        source_line = "deb [http://cdn-aws.deb.debian.org/debian] stretch main\n"
 
         mock_source = MockSourceEntry(source_uri, source_type, source_line, True)
 
