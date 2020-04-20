@@ -2342,7 +2342,7 @@ def fqdns():
     """
     # Provides:
     # fqdns
-    return __salt__['network.fqdns']()
+    return __salt__["network.fqdns"]()
 
 
 def ip_fqdn():
