@@ -1265,11 +1265,11 @@ def refresh_db(force=None):
     # Remove rtag file to keep multiple refreshes from happening in pkg states
     salt.utils.pkg.clear_rtag(__opts__)
     ret = {}
-    refresh_opts = ['refresh']
+    refresh_opts = ["refresh"]
     if force is None:
-        force = __pillar__.get('zypper', {}).get('refreshdb_force', True)
+        force = __pillar__.get("zypper", {}).get("refreshdb_force", True)
     if force:
-        refresh_opts.append('--force')
+        refresh_opts.append("--force")
     out = __zypper__.refreshable.call(*refresh_opts)
 
     for line in out.splitlines():
