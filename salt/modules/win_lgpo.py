@@ -55,7 +55,7 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.win_lgpo_netsh
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext import six
+rom salt.ext import six
 from salt.ext.six.moves import range
 from salt.serializers.configparser import deserialize
 
