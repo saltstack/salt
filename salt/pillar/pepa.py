@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-'''
+"""
 Pepa
 ====
 
@@ -260,33 +260,36 @@ Links
 =====
 
 For more examples and information see <https://github.com/mickep76/pepa>.
-'''
+"""
 
 # Import futures
 from __future__ import absolute_import, print_function, unicode_literals
 
-__author__ = 'Michael Persson <michael.ake.persson@gmail.com>'
-__copyright__ = 'Copyright (c) 2013 Michael Persson'
-__license__ = 'Apache License, Version 2.0'
-__version__ = '0.6.6'
-
 # Import python libs
 import glob
-import jinja2
 import logging
 import os
 import re
 import sys
 
+import jinja2
+import salt.utils.files
+import salt.utils.yaml
+
 # Import Salt libs
 from salt.ext import six
 from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
-import salt.utils.files
-import salt.utils.yaml
+
+__author__ = "Michael Persson <michael.ake.persson@gmail.com>"
+__copyright__ = "Copyright (c) 2013 Michael Persson"
+__license__ = "Apache License, Version 2.0"
+__version__ = "0.6.6"
+
 
 # Import 3rd-party libs
 try:
     import requests
+
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
@@ -294,21 +297,30 @@ except ImportError:
 
 # Only used when called from a terminal
 log = None
-if __name__ == '__main__':
+if __name__ == "__main__":
     import argparse  # pylint: disable=minimum-python-version
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('hostname', help='Hostname')
-    parser.add_argument('-c', '--config', default='/etc/salt/master', help='Configuration file')
-    parser.add_argument('-d', '--debug', action='store_true', help='Print debug info')
-    parser.add_argument('-g', '--grains', help='Input Grains as YAML')
-    parser.add_argument('-p', '--pillar', help='Input Pillar as YAML')
-    parser.add_argument('-n', '--no-color', action='store_true', help='No color output')
-    parser.add_argument('-v', '--validate', action='store_true', help='Validate output')
-    parser.add_argument('-q', '--query-api', action='store_true', help='Query Saltstack REST API for Grains')
-    parser.add_argument('--url', default='https://salt:8000', help='URL for SaltStack REST API')
-    parser.add_argument('-u', '--username', help='Username for SaltStack REST API')
-    parser.add_argument('-P', '--password', help='Password for SaltStack REST API')
+    parser.add_argument("hostname", help="Hostname")
+    parser.add_argument(
+        "-c", "--config", default="/etc/salt/master", help="Configuration file"
+    )
+    parser.add_argument("-d", "--debug", action="store_true", help="Print debug info")
+    parser.add_argument("-g", "--grains", help="Input Grains as YAML")
+    parser.add_argument("-p", "--pillar", help="Input Pillar as YAML")
+    parser.add_argument("-n", "--no-color", action="store_true", help="No color output")
+    parser.add_argument("-v", "--validate", action="store_true", help="Validate output")
+    parser.add_argument(
+        "-q",
+        "--query-api",
+        action="store_true",
+        help="Query Saltstack REST API for Grains",
+    )
+    parser.add_argument(
+        "--url", default="https://salt:8000", help="URL for SaltStack REST API"
+    )
+    parser.add_argument("-u", "--username", help="Username for SaltStack REST API")
+    parser.add_argument("-P", "--password", help="Password for SaltStack REST API")
     args = parser.parse_args()
 
     LOG_LEVEL = logging.WARNING
@@ -319,7 +331,10 @@ if __name__ == '__main__':
     if not args.no_color:
         try:
             import colorlog  # pylint: disable=import-error
-            formatter = colorlog.ColoredFormatter("[%(log_color)s%(levelname)-8s%(reset)s] %(log_color)s%(message)s%(reset)s")
+
+            formatter = colorlog.ColoredFormatter(
+                "[%(log_color)s%(levelname)-8s%(reset)s] %(log_color)s%(message)s%(reset)s"
+            )
         except ImportError:
             formatter = logging.Formatter("[%(levelname)-8s] %(message)s")
     else:
@@ -329,7 +344,7 @@ if __name__ == '__main__':
     stream.setLevel(LOG_LEVEL)
     stream.setFormatter(formatter)
 
-    log = logging.getLogger('pythonConfig')
+    log = logging.getLogger("pythonConfig")
     log.setLevel(LOG_LEVEL)
     log.addHandler(stream)
 else:
@@ -338,18 +353,16 @@ else:
 
 # Options
 __opts__ = {
-    'pepa_roots': {
-        'base': '/srv/salt'
-    },
-    'pepa_delimiter': '..',
-    'pepa_validate': False
+    "pepa_roots": {"base": "/srv/salt"},
+    "pepa_delimiter": "..",
+    "pepa_validate": False,
 }
 
 
 def __virtual__():
-    '''
+    """
     Only return if all the modules are available
-    '''
+    """
     if not HAS_REQUESTS:
         return False
 
@@ -357,13 +370,13 @@ def __virtual__():
 
 
 def key_value_to_tree(data):
-    '''
+    """
     Convert key/value to tree
-    '''
+    """
     tree = {}
     for flatkey, value in six.iteritems(data):
         t = tree
-        keys = flatkey.split(__opts__['pepa_delimiter'])
+        keys = flatkey.split(__opts__["pepa_delimiter"])
         for i, key in enumerate(keys, 1):
             if i == len(keys):
                 t[key] = value
@@ -373,26 +386,26 @@ def key_value_to_tree(data):
 
 
 def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=False):
-    '''
+    """
     Evaluate Pepa templates
-    '''
-    roots = __opts__['pepa_roots']
+    """
+    roots = __opts__["pepa_roots"]
 
     # Default input
     inp = {}
-    inp['default'] = 'default'
-    inp['hostname'] = minion_id
+    inp["default"] = "default"
+    inp["hostname"] = minion_id
 
-    if 'environment' in pillar:
-        inp['environment'] = pillar['environment']
-    elif 'environment' in __grains__:
-        inp['environment'] = __grains__['environment']
+    if "environment" in pillar:
+        inp["environment"] = pillar["environment"]
+    elif "environment" in __grains__:
+        inp["environment"] = __grains__["environment"]
     else:
-        inp['environment'] = 'base'
+        inp["environment"] = "base"
 
     # Load templates
     output = inp
-    output['pepa_templates'] = []
+    output["pepa_templates"] = []
     immutable = {}
 
     for categ, info in [next(six.iteritems(s)) for s in sequence]:
@@ -401,16 +414,16 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
             continue
 
         alias = None
-        if isinstance(info, dict) and 'name' in info:
-            alias = info['name']
+        if isinstance(info, dict) and "name" in info:
+            alias = info["name"]
         else:
             alias = categ
 
         templdir = None
-        if info and 'base_only' in info and info['base_only']:
-            templdir = os.path.join(roots['base'], resource, alias)
+        if info and "base_only" in info and info["base_only"]:
+            templdir = os.path.join(roots["base"], resource, alias)
         else:
-            templdir = os.path.join(roots[inp['environment']], resource, alias)
+            templdir = os.path.join(roots[inp["environment"]], resource, alias)
 
         entries = []
         if isinstance(inp[categ], list):
@@ -424,70 +437,83 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
         for entry in entries:
             results_jinja = None
             results = None
-            fn = os.path.join(templdir, re.sub(r'\W', '_', entry.lower()) + '.yaml')
+            fn = os.path.join(templdir, re.sub(r"\W", "_", entry.lower()) + ".yaml")
             if os.path.isfile(fn):
                 log.info("Loading template: %s", fn)
                 with salt.utils.files.fopen(fn) as fhr:
                     template = jinja2.Template(fhr.read())
-                output['pepa_templates'].append(fn)
+                output["pepa_templates"].append(fn)
 
                 try:
                     data = key_value_to_tree(output)
-                    data['grains'] = __grains__.copy()
-                    data['pillar'] = pillar.copy()
+                    data["grains"] = __grains__.copy()
+                    data["pillar"] = pillar.copy()
                     results_jinja = template.render(data)
                     results = salt.utils.yaml.safe_load(results_jinja)
                 except jinja2.UndefinedError as err:
-                    log.error('Failed to parse JINJA template: %s\n%s', fn, err)
+                    log.error("Failed to parse JINJA template: %s\n%s", fn, err)
                 except salt.utils.yaml.YAMLError as err:
-                    log.error('Failed to parse YAML in template: %s\n%s', fn, err)
+                    log.error("Failed to parse YAML in template: %s\n%s", fn, err)
             else:
                 log.info("Template doesn't exist: %s", fn)
                 continue
 
             if results is not None:
                 for key in results:
-                    skey = key.rsplit(__opts__['pepa_delimiter'], 1)
+                    skey = key.rsplit(__opts__["pepa_delimiter"], 1)
                     rkey = None
                     operator = None
-                    if len(skey) > 1 and key.rfind('()') > 0:
-                        rkey = skey[0].rstrip(__opts__['pepa_delimiter'])
+                    if len(skey) > 1 and key.rfind("()") > 0:
+                        rkey = skey[0].rstrip(__opts__["pepa_delimiter"])
                         operator = skey[1]
 
                     if key in immutable:
-                        log.warning('Key %s is immutable, changes are not allowed', key)
+                        log.warning("Key %s is immutable, changes are not allowed", key)
                     elif rkey in immutable:
-                        log.warning("Key %s is immutable, changes are not allowed", rkey)
-                    elif operator == 'merge()' or operator == 'imerge()':
-                        if operator == 'merge()':
+                        log.warning(
+                            "Key %s is immutable, changes are not allowed", rkey
+                        )
+                    elif operator == "merge()" or operator == "imerge()":
+                        if operator == "merge()":
                             log.debug("Merge key %s: %s", rkey, results[key])
                         else:
-                            log.debug("Set immutable and merge key %s: %s", rkey, results[key])
+                            log.debug(
+                                "Set immutable and merge key %s: %s", rkey, results[key]
+                            )
                             immutable[rkey] = True
                         if rkey not in output:
-                            log.error('Cant\'t merge key %s doesn\'t exist', rkey)
+                            log.error("Cant't merge key %s doesn't exist", rkey)
                         elif not isinstance(results[key], type(output[rkey])):
-                            log.error('Can\'t merge different types for key %s', rkey)
+                            log.error("Can't merge different types for key %s", rkey)
                         elif isinstance(results[key], dict):
                             output[rkey].update(results[key])
                         elif isinstance(results[key], list):
                             output[rkey].extend(results[key])
                         else:
-                            log.error('Unsupported type need to be list or dict for key %s', rkey)
-                    elif operator == 'unset()' or operator == 'iunset()':
-                        if operator == 'unset()':
+                            log.error(
+                                "Unsupported type need to be list or dict for key %s",
+                                rkey,
+                            )
+                    elif operator == "unset()" or operator == "iunset()":
+                        if operator == "unset()":
                             log.debug("Unset key %s", rkey)
                         else:
                             log.debug("Set immutable and unset key %s", rkey)
                             immutable[rkey] = True
                         if rkey in output:
                             del output[rkey]
-                    elif operator == 'immutable()':
-                        log.debug("Set immutable and substitute key %s: %s", rkey, results[key])
+                    elif operator == "immutable()":
+                        log.debug(
+                            "Set immutable and substitute key %s: %s",
+                            rkey,
+                            results[key],
+                        )
                         immutable[rkey] = True
                         output[rkey] = results[key]
                     elif operator is not None:
-                        log.error('Unsupported operator %s, skipping key %s', operator, rkey)
+                        log.error(
+                            "Unsupported operator %s, skipping key %s", operator, rkey
+                        )
                     else:
                         log.debug("Substitute key %s: %s", key, results[key])
                         output[key] = results[key]
@@ -501,49 +527,49 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
         pillar_data[resource] = tree.copy()
     else:
         pillar_data = tree
-    if __opts__['pepa_validate']:
-        pillar_data['pepa_keys'] = output.copy()
+    if __opts__["pepa_validate"]:
+        pillar_data["pepa_keys"] = output.copy()
     return pillar_data
 
 
 def validate(output, resource):
-    '''
+    """
     Validate Pepa templates
-    '''
+    """
     try:
         import cerberus  # pylint: disable=import-error
     except ImportError:
-        log.critical('You need module cerberus in order to use validation')
+        log.critical("You need module cerberus in order to use validation")
         return
 
-    roots = __opts__['pepa_roots']
+    roots = __opts__["pepa_roots"]
 
-    valdir = os.path.join(roots['base'], resource, 'validate')
+    valdir = os.path.join(roots["base"], resource, "validate")
 
     all_schemas = {}
     pepa_schemas = []
-    for fn in glob.glob(valdir + '/*.yaml'):
+    for fn in glob.glob(valdir + "/*.yaml"):
         log.info("Loading schema: %s", fn)
         with salt.utils.files.fopen(fn) as fhr:
             template = jinja2.Template(fhr.read())
         data = output
-        data['grains'] = __grains__.copy()
-        data['pillar'] = __pillar__.copy()
+        data["grains"] = __grains__.copy()
+        data["pillar"] = __pillar__.copy()
         schema = salt.utils.yaml.safe_load(template.render(data))
         all_schemas.update(schema)
         pepa_schemas.append(fn)
 
     val = cerberus.Validator()
-    if not val.validate(output['pepa_keys'], all_schemas):
+    if not val.validate(output["pepa_keys"], all_schemas):
         for ekey, error in six.iteritems(val.errors):
-            log.warning('Validation failed for key %s: %s', ekey, error)
+            log.warning("Validation failed for key %s: %s", ekey, error)
 
-    output['pepa_schema_keys'] = all_schemas
-    output['pepa_schemas'] = pepa_schemas
+    output["pepa_schema_keys"] = all_schemas
+    output["pepa_schemas"] = pepa_schemas
 
 
 # Only used when called from a terminal
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Load configuration file
     if not os.path.isfile(args.config):
         log.critical("Configuration file doesn't exist: %s", args.config)
@@ -554,28 +580,28 @@ if __name__ == '__main__':
         __opts__.update(salt.utils.yaml.safe_load(fh_))
 
     loc = 0
-    for name in [next(iter(list(e.keys()))) for e in __opts__['ext_pillar']]:
-        if name == 'pepa':
+    for name in [next(iter(list(e.keys()))) for e in __opts__["ext_pillar"]]:
+        if name == "pepa":
             break
         loc += 1
 
     # Get grains
     __grains__ = {}
-    if 'pepa_grains' in __opts__:
-        __grains__ = __opts__['pepa_grains']
+    if "pepa_grains" in __opts__:
+        __grains__ = __opts__["pepa_grains"]
     if args.grains:
         __grains__.update(salt.utils.yaml.safe_load(args.grains))
 
     # Get pillars
     __pillar__ = {}
-    if 'pepa_pillar' in __opts__:
-        __pillar__ = __opts__['pepa_pillar']
+    if "pepa_pillar" in __opts__:
+        __pillar__ = __opts__["pepa_pillar"]
     if args.pillar:
         __pillar__.update(salt.utils.yaml.safe_load(args.pillar))
 
     # Validate or not
     if args.validate:
-        __opts__['pepa_validate'] = True
+        __opts__["pepa_validate"] = True
 
     if args.query_api:
         import requests
@@ -584,53 +610,58 @@ if __name__ == '__main__':
         username = args.username
         password = args.password
         if username is None:
-            username = input('Username: ')
+            username = input("Username: ")
         if password is None:
             password = getpass.getpass()
 
-        log.info('Authenticate REST API')
-        auth = {'username': username, 'password': password, 'eauth': 'pam'}
-        request = requests.post(args.url + '/login', auth)
+        log.info("Authenticate REST API")
+        auth = {"username": username, "password": password, "eauth": "pam"}
+        request = requests.post(args.url + "/login", auth)
 
         if not request.ok:
-            raise RuntimeError('Failed to authenticate to SaltStack REST API: {0}'.format(request.text))
+            raise RuntimeError(
+                "Failed to authenticate to SaltStack REST API: {0}".format(request.text)
+            )
 
         response = request.json()
-        token = response['return'][0]['token']
+        token = response["return"][0]["token"]
 
-        log.info('Request Grains from REST API')
-        headers = {'X-Auth-Token': token, 'Accept': 'application/json'}
-        request = requests.get(args.url + '/minions/' + args.hostname, headers=headers)
+        log.info("Request Grains from REST API")
+        headers = {"X-Auth-Token": token, "Accept": "application/json"}
+        request = requests.get(args.url + "/minions/" + args.hostname, headers=headers)
 
-        result = request.json().get('return', [{}])[0]
+        result = request.json().get("return", [{}])[0]
         if args.hostname not in result:
-            raise RuntimeError('Failed to get Grains from SaltStack REST API')
+            raise RuntimeError("Failed to get Grains from SaltStack REST API")
 
         __grains__ = result[args.hostname]
 
     # Print results
     ex_subkey = False
     ex_subkey_only = False
-    if 'subkey' in __opts__['ext_pillar'][loc]['pepa']:
-        ex_subkey = __opts__['ext_pillar'][loc]['pepa']['subkey']
-    if 'subkey_only' in __opts__['ext_pillar'][loc]['pepa']:
-        ex_subkey_only = __opts__['ext_pillar'][loc]['pepa']['subkey_only']
+    if "subkey" in __opts__["ext_pillar"][loc]["pepa"]:
+        ex_subkey = __opts__["ext_pillar"][loc]["pepa"]["subkey"]
+    if "subkey_only" in __opts__["ext_pillar"][loc]["pepa"]:
+        ex_subkey_only = __opts__["ext_pillar"][loc]["pepa"]["subkey_only"]
 
-    result = ext_pillar(args.hostname, __pillar__, __opts__['ext_pillar'][loc]['pepa']['resource'],
-                        __opts__['ext_pillar'][loc]['pepa']['sequence'], ex_subkey, ex_subkey_only)
+    result = ext_pillar(
+        args.hostname,
+        __pillar__,
+        __opts__["ext_pillar"][loc]["pepa"]["resource"],
+        __opts__["ext_pillar"][loc]["pepa"]["sequence"],
+        ex_subkey,
+        ex_subkey_only,
+    )
 
-    if __opts__['pepa_validate']:
-        validate(result, __opts__['ext_pillar'][loc]['pepa']['resource'])
+    if __opts__["pepa_validate"]:
+        validate(result, __opts__["ext_pillar"][loc]["pepa"]["resource"])
 
     try:
         orig_ignore = salt.utils.yaml.SafeOrderedDumper.ignore_aliases
         salt.utils.yaml.SafeOrderedDumper.ignore_aliases = lambda x, y: True
 
         def _print_result(result):
-            print(salt.utils.yaml.safe_dump(
-                result,
-                indent=4,
-                default_flow_style=False))
+            print(salt.utils.yaml.safe_dump(result, indent=4, default_flow_style=False))
 
         if not args.no_color:
             try:
@@ -638,11 +669,15 @@ if __name__ == '__main__':
                 import pygments
                 import pygments.lexers
                 import pygments.formatters
+
                 # pylint: disable=no-member
-                print(pygments.highlight(
-                    salt.utils.yaml.safe_dump(result),
-                    pygments.lexers.YamlLexer(),
-                    pygments.formatters.TerminalFormatter()))
+                print(
+                    pygments.highlight(
+                        salt.utils.yaml.safe_dump(result),
+                        pygments.lexers.YamlLexer(),
+                        pygments.formatters.TerminalFormatter(),
+                    )
+                )
                 # pylint: enable=no-member, import-error
             except ImportError:
                 _print_result(result)
