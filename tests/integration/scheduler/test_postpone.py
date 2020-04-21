@@ -15,6 +15,7 @@ from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 ROOT_DIR = os.path.join(RUNTIME_VARS.TMP, "schedule-unit-tests")
@@ -45,6 +46,7 @@ class SchedulerPostponeTest(ModuleCase, SaltReturnAssertsMixin):
     def tearDown(self):
         self.schedule.reset()
 
+    @skipIf(True, "SLOWTEST skip")
     def test_postpone(self):
         """
         verify that scheduled job is postponed until the specified time.
