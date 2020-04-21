@@ -43,16 +43,13 @@ from salt.utils.odict import OrderedDict
 # Import 3rd Party Libs
 try:
     import M2Crypto
-
-    HAS_M2 = True
 except ImportError:
-    HAS_M2 = False
+    M2Crypto = None
+
 try:
     import OpenSSL
-
-    HAS_OPENSSL = True
 except ImportError:
-    HAS_OPENSSL = False
+    OpenSSL = None
 
 __virtualname__ = "x509"
 
@@ -92,10 +89,10 @@ def __virtual__():
     """
     only load this module if m2crypto is available
     """
-    if HAS_M2:
-        return __virtualname__
-    else:
-        return (False, "Could not load x509 module, m2crypto unavailable")
+    return (
+        __virtualname__ if M2Crypto is not None else False,
+        "Could not load x509 module, m2crypto unavailable",
+    )
 
 
 class _Ctx(ctypes.Structure):
@@ -306,7 +303,7 @@ def _get_signing_policy(name):
         signing_policy = policies.get(name)
         if signing_policy:
             return signing_policy
-    return __salt__["config.get"]("x509_signing_policies", {}).get(name)
+    return __salt__["config.get"]("x509_signing_policies", {}).get(name) or {}
 
 
 def _pretty_hex(hex_str):
@@ -344,9 +341,11 @@ def _text_or_file(input_):
     """
     if _isfile(input_):
         with salt.utils.files.fopen(input_) as fp_:
-            return salt.utils.stringutils.to_str(fp_.read())
+            out = salt.utils.stringutils.to_str(fp_.read())
     else:
-        return salt.utils.stringutils.to_str(input_)
+        out = salt.utils.stringutils.to_str(input_)
+
+    return out
 
 
 def _parse_subject(subject):
@@ -364,7 +363,7 @@ def _parse_subject(subject):
                 ret[nid_name] = val
                 nids.append(nid_num)
         except TypeError as err:
-            log.trace("Missing attribute '%s'. Error: %s", nid_name, err)
+            log.debug("Missing attribute '%s'. Error: %s", nid_name, err)
 
     return ret
 
@@ -548,8 +547,8 @@ def get_pem_entries(glob_path):
         if os.path.isfile(path):
             try:
                 ret[path] = get_pem_entry(text=path)
-            except ValueError:
-                pass
+            except ValueError as err:
+                log.debug("Unable to get PEM entries from %s: %s", path, err)
 
     return ret
 
@@ -627,8 +626,8 @@ def read_certificates(glob_path):
         if os.path.isfile(path):
             try:
                 ret[path] = read_certificate(certificate=path)
-            except ValueError:
-                pass
+            except ValueError as err:
+                log.debug("Unable to read certificate %s: %s", path, err)
 
     return ret
 
@@ -658,9 +657,8 @@ def read_csr(csr):
         "Subject": _parse_subject(csr.get_subject()),
         "Subject Hash": _dec2hex(csr.get_subject().as_hash()),
         "Public Key Hash": hashlib.sha1(csr.get_pubkey().get_modulus()).hexdigest(),
+        "X509v3 Extensions": _get_csr_extensions(csr),
     }
-
-    ret["X509v3 Extensions"] = _get_csr_extensions(csr)
 
     return ret
 
@@ -970,7 +968,7 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
     # pyOpenSSL Note due to current limitations in pyOpenSSL it is impossible
     # to specify a digest For signing the CRL. This will hopefully be fixed
     # soon: https://github.com/pyca/pyopenssl/pull/161
-    if not HAS_OPENSSL:
+    if OpenSSL is None:
         raise salt.exceptions.SaltInvocationError(
             "Could not load OpenSSL module, OpenSSL unavailable"
         )
@@ -1044,7 +1042,9 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         crltext = crl.export(**export_kwargs)
     except (TypeError, ValueError):
         log.warning(
-            "Error signing crl with specified digest. Are you using pyopenssl 0.15 or newer? The default md5 digest will be used."
+            "Error signing crl with specified digest. "
+            "Are you using pyopenssl 0.15 or newer? "
+            "The default md5 digest will be used."
         )
         export_kwargs.pop("digest", None)
         crltext = crl.export(**export_kwargs)
@@ -1123,6 +1123,7 @@ def get_signing_policy(signing_policy_name):
     signing_policy = _get_signing_policy(signing_policy_name)
     if not signing_policy:
         return "Signing policy {0} does not exist.".format(signing_policy_name)
+
     if isinstance(signing_policy, list):
         dict_ = {}
         for item in signing_policy:
@@ -1139,7 +1140,7 @@ def get_signing_policy(signing_policy_name):
             signing_policy["signing_cert"], "CERTIFICATE"
         )
     except KeyError:
-        pass
+        log.debug('Unable to get "certificate" PEM entry')
 
     return signing_policy
 
@@ -1684,7 +1685,8 @@ def create_csr(path=None, text=False, **kwargs):
     if "private_key" not in kwargs and "public_key" in kwargs:
         kwargs["private_key"] = kwargs["public_key"]
         log.warning(
-            "OpenSSL no longer allows working with non-signed CSRs. A private_key must be specified. Attempting to use public_key as private_key"
+            "OpenSSL no longer allows working with non-signed CSRs. "
+            "A private_key must be specified. Attempting to use public_key as private_key"
         )
 
     if "private_key" not in kwargs:
@@ -1746,7 +1748,6 @@ def create_csr(path=None, text=False, **kwargs):
         extstack.push(ext)
 
     csr.add_extensions(extstack)
-
     csr.sign(
         _get_private_key_obj(
             kwargs["private_key"], passphrase=kwargs["private_key_passphrase"]
@@ -1754,10 +1755,11 @@ def create_csr(path=None, text=False, **kwargs):
         kwargs["algorithm"],
     )
 
-    if path:
-        return write_pem(text=csr.as_pem(), path=path, pem_type="CERTIFICATE REQUEST")
-    else:
-        return csr.as_pem()
+    return (
+        write_pem(text=csr.as_pem(), path=path, pem_type="CERTIFICATE REQUEST")
+        if path
+        else csr.as_pem()
+    )
 
 
 def verify_private_key(private_key, public_key, passphrase=None):
@@ -1838,7 +1840,10 @@ def verify_crl(crl, cert):
         salt '*' x509.verify_crl crl=/etc/pki/myca.crl cert=/etc/pki/myca.crt
     """
     if not salt.utils.path.which("openssl"):
-        raise salt.exceptions.SaltInvocationError("openssl binary not found in path")
+        raise salt.exceptions.SaltInvocationError(
+            'External command "openssl" not found'
+        )
+
     crltext = _text_or_file(crl)
     crltext = get_pem_entry(crltext, pem_type="X509 CRL")
     crltempfile = tempfile.NamedTemporaryFile()
@@ -1860,10 +1865,7 @@ def verify_crl(crl, cert):
     crltempfile.close()
     certtempfile.close()
 
-    if "verify OK" in output:
-        return True
-    else:
-        return False
+    return "verify OK" in output
 
 
 def expired(certificate):
@@ -1901,8 +1903,9 @@ def expired(certificate):
                 ret["expired"] = True
             else:
                 ret["expired"] = False
-        except ValueError:
-            pass
+        except ValueError as err:
+            log.debug("Failed to get data of expired certificate: %s", err)
+            log.trace(err, exc_info=True)
 
     return ret
 
@@ -1925,6 +1928,7 @@ def will_expire(certificate, days):
 
         salt '*' x509.will_expire "/etc/pki/mycert.crt" days=30
     """
+    ts_pt = "%Y-%m-%d %H:%M:%S"
     ret = {}
 
     if os.path.isfile(certificate):
@@ -1938,14 +1942,11 @@ def will_expire(certificate, days):
             _expiration_date = cert.get_not_after().get_datetime()
 
             ret["cn"] = _parse_subject(cert.get_subject())["CN"]
-
-            if _expiration_date.strftime("%Y-%m-%d %H:%M:%S") <= _check_time.strftime(
-                "%Y-%m-%d %H:%M:%S"
-            ):
-                ret["will_expire"] = True
-            else:
-                ret["will_expire"] = False
-        except ValueError:
-            pass
+            ret["will_expire"] = _expiration_date.strftime(
+                ts_pt
+            ) <= _check_time.strftime(ts_pt)
+        except ValueError as err:
+            log.debug("Unable to return details of a sertificate expiration: %s", err)
+            log.trace(err, exc_info=True)
 
     return ret

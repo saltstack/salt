@@ -70,9 +70,9 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
 
         subj = FakeSubject()
         x509._parse_subject(subj)
-        assert x509.log.trace.call_args[0][0] == "Missing attribute '%s'. Error: %s"
-        assert x509.log.trace.call_args[0][1] == list(subj.nid.keys())[0]
-        assert isinstance(x509.log.trace.call_args[0][2], TypeError)
+        assert x509.log.debug.call_args[0][0] == "Missing attribute '%s'. Error: %s"
+        assert x509.log.debug.call_args[0][1] == list(subj.nid.keys())[0]
+        assert isinstance(x509.log.debug.call_args[0][2], TypeError)
 
     @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailble")
     def test_get_pem_entry(self):

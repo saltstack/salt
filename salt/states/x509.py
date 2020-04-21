@@ -162,6 +162,7 @@ import re
 
 # Import Salt Libs
 import salt.exceptions
+import salt.utils.stringutils
 import salt.utils.versions
 
 # Import 3rd-party libs
@@ -180,7 +181,7 @@ def __virtual__():
     if "x509.get_pem_entry" in __salt__:
         return "x509"
     else:
-        return (False, "Could not load x509 state: m2crypto unavailable")
+        return False, "Could not load x509 state: the x509 is not available"
 
 
 def _revoked_to_list(revs):
@@ -799,6 +800,8 @@ def pem_managed(name, text, backup=False, **kwargs):
         Any arguments supported by :py:func:`file.managed <salt.states.file.managed>` are supported.
     """
     file_args, kwargs = _get_file_args(name, **kwargs)
-    file_args["contents"] = __salt__["x509.get_pem_entry"](text=text)
+    file_args["contents"] = salt.utils.stringutils.to_str(
+        __salt__["x509.get_pem_entry"](text=text)
+    )
 
     return __states__["file.managed"](**file_args)
