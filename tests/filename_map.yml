@@ -67,6 +67,7 @@ salt/(states|modules)/.*postgres.py:
   - unit.states.test_postgres_initdb
   - unit.states.test_postgres_language
   - unit.states.test_postgres_privileges
+  - unit.states.test_postgres_default_privileges
   - unit.states.test_postgres_schema
   - unit.states.test_postgres_user
 
