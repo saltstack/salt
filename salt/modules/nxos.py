@@ -851,9 +851,7 @@ def _nxapi_config(commands, **kwargs):
         commands = [commands]
     try:
         ret = _nxapi_request(commands, **kwargs)
-        if not api_kwargs.get("save_config"):
-            pass
-        else:
+        if api_kwargs.get("save_config"):
             _nxapi_request(COPY_RS, **kwargs)
         for each in ret:
             if "Failure" in each:

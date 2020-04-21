@@ -311,17 +311,13 @@ def proxy_config(commands, save_config=None):
             for cmd in commands:
                 prev_cmds.append(cmd)
                 ret = _sendline_ssh(cmd)
-            if not save_config:
-                pass
-            else:
+            if save_config:
                 _sendline_ssh(COPY_RS)
             if ret:
                 log.error(prev_cmds)
         elif CONNECTION == "nxapi":
             ret = _nxapi_request(commands)
-            if not save_config:
-                pass
-            else:
+            if save_config:
                 _nxapi_request(COPY_RS)
             for each in ret:
                 if "Failure" in each:
