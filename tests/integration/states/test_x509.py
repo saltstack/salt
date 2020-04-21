@@ -21,7 +21,6 @@ try:
 except ImportError:
     HAS_M2CRYPTO = False
 
-
 @skipIf(not HAS_M2CRYPTO, "Skip when no M2Crypto found")
 class x509Test(ModuleCase, SaltReturnAssertsMixin):
     @classmethod
@@ -139,7 +138,11 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function(
             "state.apply",
             ["issue-41858.gen_cert"],
-            pillar={"keyfile": keyfile, "crtfile": crtfile, "tmp_dir": RUNTIME_VARS.TMP})
+            pillar={
+                "keyfile": keyfile,
+                "crtfile": crtfile,
+                "tmp_dir": RUNTIME_VARS.TMP})
+        self.assertTrue(ret[ret_key]["result"])
         cert_sum = self.file_checksum(crtfile)
 
         ret = self.run_function(
