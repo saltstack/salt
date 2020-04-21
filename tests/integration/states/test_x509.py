@@ -478,3 +478,47 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         )
         key = "x509_|-{0}_|-{0}_|-certificate_managed".format(crtfile)
         self.assertEqual(True, ret[key]["result"])
+
+    @with_tempfile(suffix=".crt", create=False)
+    @with_tempfile(suffix=".key", create=False)
+    def test_file_properties_are_updated(self, keyfile, crtfile):
+        """
+        Self-signed certificate, no CA.
+        First create a cert, then run the state again with different
+        file mode. The cert should not be recreated, but the file
+        should be updated.
+        Finally, run once more with the same file mode as the second
+        run. Nothing should change.
+        """
+        first_run = self.run_function(
+            "state.apply",
+            ["x509.self_signed_different_properties"],
+            pillar={"keyfile": keyfile, "crtfile": crtfile, "fileMode": "0755"},
+        )
+        key = "x509_|-self_signed_cert_|-{0}_|-certificate_managed".format(crtfile)
+        self.assertEqual(
+            "Certificate is valid and up to date",
+            first_run[key]["changes"]["Status"]["New"],
+        )
+        self.assertTrue(os.path.exists(crtfile), "Certificate was not created.")
+        self.assertEqual("0755", oct(os.stat(crtfile).st_mode)[-4:])
+
+        second_run_pillar = {
+            "keyfile": keyfile,
+            "crtfile": crtfile,
+            "mode": "0600",
+        }
+        second_run = self.run_function(
+            "state.apply",
+            ["x509.self_signed_different_properties"],
+            pillar=second_run_pillar,
+        )
+        self.assertEqual("0600", oct(os.stat(crtfile).st_mode)[-4:])
+
+        third_run = self.run_function(
+            "state.apply",
+            ["x509.self_signed_different_properties"],
+            pillar=second_run_pillar,
+        )
+        self.assertEqual({}, third_run[key]["changes"])
+        self.assertEqual("0600", oct(os.stat(crtfile).st_mode)[-4:])
