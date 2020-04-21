@@ -19,7 +19,7 @@ from salt.ext.tornado.testing import AsyncTestCase, gen_test
 from salt.utils.context import ContextDict, NamespacedDictWrapper
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class ContextDictTests(AsyncTestCase):
@@ -32,6 +32,7 @@ class ContextDictTests(AsyncTestCase):
         # set a global value
         self.cd["foo"] = "global"
 
+    @skipIf(True, "SLOWTEST skip")
     def test_threads(self):
         """Verify that ContextDict overrides properly within threads
         """
@@ -65,6 +66,7 @@ class ContextDictTests(AsyncTestCase):
             self.assertEqual(r[2], r[3])
 
     @gen_test
+    @skipIf(True, "SLOWTEST skip")
     def test_coroutines(self):
         """Verify that ContextDict overrides properly within coroutines
         """
