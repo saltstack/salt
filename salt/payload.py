@@ -193,7 +193,7 @@ class Serial(object):
                 return tuple(obj)
             elif isinstance(obj, CaseInsensitiveDict):
                 return dict(obj)
-            # Nothing known exceptions found. Let msgpack raise it's own.
+            # Nothing known exceptions found. Let msgpack raise its own.
             return obj
 
         try:
