@@ -6,6 +6,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
+from salt.ext import six
+
 log = logging.getLogger(__name__)
 
 
@@ -37,22 +39,24 @@ def _analyse_status_type(line):
 
     if spaces is None:
         return None
-    elif spaces == 0:
-        return "RESOURCE"
-    elif spaces == 2:
-        if " disk:" in line:
-            return "LOCALDISK"
-        elif " role:" in line or " connection:" in line:
-            return "PEERNODE"
-        else:
-            return "UNKNOWN"
-    elif spaces == 4:
-        if " peer-disk:" in line:
-            return "PEERDISK"
-        else:
-            return "UNKNOWN"
-    else:
-        return "UNKNOWN"
+
+    switch = {
+        0: "RESOURCE",
+        2: {" disk:": "LOCALDISK", " role:": "PEERNODE", " connection:": "PEERNODE"},
+        4: {" peer-disk:": "PEERDISK"},
+    }
+
+    ret = switch.get(spaces, "UNKNOWN")
+
+    # isinstance(ret, str) only works when run directly, calling need unicode(six)
+    if isinstance(ret, six.text_type):
+        return ret
+
+    for x in ret:
+        if x in line:
+            return ret[x]
+
+    return "UNKNOWN"
 
 
 def overview():
@@ -129,11 +133,11 @@ def overview():
     return ret
 
 
-def status(name=""):
+def status(name="all"):
     """
     Using drbdadm to show status of the DRBD devices,
-        available in the latest drbd9.
-    Support multiple nodes and/or multiple volumes.
+    available in the latest drbd9.
+    Support multiple nodes, multiple volumes.
 
     :type name: str
     :param name:
@@ -151,8 +155,7 @@ def status(name=""):
     """
 
     cmd = ["drbdadm", "status"]
-    if len(name) != 0:
-        cmd.append(name)
+    cmd.append(name)
 
     ret = []
     resource = {}
@@ -171,7 +174,7 @@ def status(name=""):
         section = _analyse_status_type(line)
         fields = line.strip().split()
 
-        if section is None:
+        if not section:
             continue
 
         elif section == "RESOURCE":
@@ -184,12 +187,6 @@ def status(name=""):
             resource["local volumes"] = []
             resource["peer nodes"] = []
 
-        elif section == "LOCALDISK":
-            volume = {}
-            for field in fields:
-                volume[field.split(":")[0]] = field.split(":")[1]
-            resource["local volumes"].append(volume)
-
         elif section == "PEERNODE":
             peernode = {}
             peernode["peernode name"] = fields[0]
@@ -199,14 +196,17 @@ def status(name=""):
             lastpnodevolumes = peernode["peer volumes"]
             resource["peer nodes"].append(peernode)
 
-        elif section == "PEERDISK":
+        elif section in ("LOCALDISK", "PEERDISK"):
             volume = {}
             for field in fields:
                 volume[field.split(":")[0]] = field.split(":")[1]
-            lastpnodevolumes.append(volume)
+            if section == "LOCALDISK":
+                resource["local volumes"].append(volume)
+            else:
+                lastpnodevolumes.append(volume)
 
         else:
-            ret = {"UNKNOWN parser": line}
+            ret = {"UNKNOWN parser" + str(section): line}
             return ret
 
     if resource:
