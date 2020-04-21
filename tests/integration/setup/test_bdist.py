@@ -31,6 +31,7 @@ class BdistSetupTest(ModuleCase):
     Tests for building and installing bdist_wheel packages
     """
 
+    @skipIf(True, "SLOWTEST skip")
     def test_wheel_build(self):
         """
         test building a bdist_wheel package
