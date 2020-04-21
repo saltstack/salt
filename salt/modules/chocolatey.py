@@ -13,6 +13,7 @@ import os
 import re
 import tempfile
 
+# Import 3rd party libs
 from requests.structures import CaseInsensitiveDict
 
 # Import salt libs
