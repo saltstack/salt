@@ -88,6 +88,7 @@ salt/modules/win_file.py:
 salt/(states|modules)/.*postgres.py:
   - pytests.unit.states.postgresql.test_cluster
   - pytests.unit.states.postgresql.test_database
+  - pytests.unit.states.postgresql.test_default_privileges
   - pytests.unit.states.postgresql.test_extension
   - pytests.unit.states.postgresql.test_group
   - pytests.unit.states.postgresql.test_initdb
