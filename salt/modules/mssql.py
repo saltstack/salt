@@ -70,6 +70,68 @@ def _get_connection(**kwargs):
     return pymssql.connect(**connection_args)
 
 
+def _close_connection(cursor=None,connect=None):
+    '''
+    Close the database connection and cursor connection
+    Args:
+        cursor (cursor object):
+        connect  (Connection object):
+
+    '''
+    try:
+        if cursor:
+            cursor.close()
+    except Exception:
+        pass
+    try:
+        if connect:
+            connect.close()
+    except Exception:
+        pass
+
+
+def _to_rawstrings(text):
+    '''
+    Escape an argument string to be suitable to the appropriate caller.
+    Special characters will be escaped.
+    For example, if a Windows path is passed in, special characters need to be escaped
+
+    Args:
+        text (str): a string argument to escape
+
+    Returns:
+        str: an escaped string
+    '''
+    s = ''
+    if six.PY2:
+        if isinstance(text, str):
+            s = text.encode(encoding='string-escape')
+        elif isinstance(text, unicode):
+            s = text.encode(encoding='unicode-escape')
+    elif six.PY3:
+        if isinstance(text, str):
+            s = text.encode(encoding='unicode-escape')
+    return s
+
+
+def quote_identifier(identifier):
+    r'''
+    Return an identifier name (column, table, database, etc) escaped for MSSQL
+
+    This means surrounded by "[]" character and escaping this character inside.
+    It also means doubling the "'" character for pymssql internal usage.
+
+    :param identifier: the table, column or database identifier
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mssql.quote_identifier 'foo'bar'
+    '''
+    return '[' + identifier.replace('[', '').replace(']', '') + ']'
+
+
 class _MssqlEncoder(salt.utils.json.JSONEncoder):
     # E0202: 68:_MssqlEncoder.default: An attribute inherited from JSONEncoder hide this method
     def default(self, o):  # pylint: disable=E0202
@@ -86,8 +148,12 @@ def tsql_query(query, **kwargs):
 
         salt minion mssql.tsql_query 'SELECT @@version as version' as_dict=True
     """
+    cur = None
+    conn = None
     try:
-        cur = _get_connection(**kwargs).cursor()
+        query = _to_rawstrings(query)
+        conn = _get_connection(**kwargs)
+        cur = conn.cursor()
         cur.execute(query)
         # Making sure the result is JSON serializable
         return salt.utils.json.loads(
@@ -96,6 +162,8 @@ def tsql_query(query, **kwargs):
     except Exception as err:  # pylint: disable=broad-except
         # Trying to look like the output of cur.fetchall()
         return (("Could not run the query",), (six.text_type(err),))
+    finally:
+        _close_connection(cursor=cur, connect=conn)
 
 
 def version(**kwargs):
@@ -202,6 +270,7 @@ def db_remove(database_name, **kwargs):
             "msdb",
             "tempdb",
         ]:
+            database_name = quote_identifier(database_name)
             conn = _get_connection(**kwargs)
             conn.autocommit(True)
             cur = conn.cursor()
@@ -268,7 +337,7 @@ def role_create(role, owner=None, grants=None, **kwargs):
     if not grants:
         grants = []
 
-    sql = "CREATE ROLE {0}".format(role)
+    sql = "CREATE ROLE [{0}]".format(role)
     if owner:
         sql += " AUTHORIZATION {0}".format(owner)
     conn = None
@@ -300,6 +369,7 @@ def role_remove(role, **kwargs):
         salt minion mssql.role_create role=test_role01
     """
     try:
+        role = quote_identifier(role)
         conn = _get_connection(**kwargs)
         conn.autocommit(True)
         cur = conn.cursor()
@@ -553,6 +623,7 @@ def user_remove(username, **kwargs):
     if "database" not in kwargs:
         return False
     try:
+        username = quote_identifier(username)
         conn = _get_connection(**kwargs)
         conn.autocommit(True)
         cur = conn.cursor()
