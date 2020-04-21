@@ -242,7 +242,7 @@ def ping():
         return _ping_nxapi()
 
 
-def grains(**kwargs):
+def grains():
     """
     Helper function for nxos execution module functions that need to
     retrieve nxos grains using the proxy minion.
@@ -257,13 +257,13 @@ def grains(**kwargs):
     return {"nxos": DEVICE_DETAILS["grains_cache"]}
 
 
-def grains_refresh(**kwargs):
+def grains_refresh():
     """
     Helper function for nxos execution module functions that need to
     refresh nxos grains using the proxy minion.
     """
     DEVICE_DETAILS["grains_cache"] = {}
-    return grains(**kwargs)
+    return grains()
 
 
 def shutdown():

@@ -841,7 +841,7 @@ def _configure_device(commands, **kwargs):
         return _nxapi_config(commands, **kwargs)
 
 
-def _nxapi_config(commands, methods="cli_conf", bsb_arg=None, **kwargs):
+def _nxapi_config(commands, **kwargs):
     """
     Helper function to send configuration commands using NX-API.
     """
