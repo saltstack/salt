@@ -11,7 +11,7 @@ from salt.cloud.clouds import proxmox
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import ANY, MagicMock, Mock, patch
+from tests.support.mock import ANY, MagicMock, patch
 from tests.support.unit import TestCase
 
 
@@ -21,6 +21,7 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
             proxmox: {
                 "__utils__": {
                     "cloud.fire_event": MagicMock(),
+                    "cloud.filter_event": MagicMock(),
                     "cloud.bootstrap": MagicMock(),
                 },
                 "__opts__": {
@@ -113,11 +114,7 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
         Test that an integer value for clone_from
         """
         mock_query = MagicMock(return_value="")
-        mock_utils = {
-            "cloud.fire_event": Mock(),
-            "cloud.filter_event": Mock(),
-        }
-        with patch.dict("salt.cloud.clouds.proxmox.__utils__", mock_utils), patch(
+        with patch(
             "salt.cloud.clouds.proxmox._get_properties", MagicMock(return_value=[])
         ), patch("salt.cloud.clouds.proxmox.query", mock_query):
             vm_ = {
