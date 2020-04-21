@@ -11,7 +11,7 @@ from salt.cloud.clouds import proxmox
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import ANY, MagicMock, Mock, patch
 from tests.support.unit import TestCase
 
 
@@ -107,3 +107,39 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
             query.assert_any_call(
                 "post", "nodes/127.0.0.1/qemu/0/config", {"scsi0": "data"}
             )
+
+    def test_clone(self):
+        """
+        Test that an integer value for clone_from
+        """
+        mock_query = MagicMock(return_value="")
+        mock_utils = {
+            "cloud.fire_event": Mock(),
+            "cloud.filter_event": Mock(),
+        }
+        with patch.dict("salt.cloud.clouds.proxmox.__utils__", mock_utils), patch(
+            "salt.cloud.clouds.proxmox._get_properties", MagicMock(return_value=[])
+        ), patch("salt.cloud.clouds.proxmox.query", mock_query):
+            vm_ = {
+                "technology": "qemu",
+                "name": "new2",
+                "host": "myhost",
+                "clone": True,
+                "clone_from": 123,
+            }
+
+            # CASE 1: Numeric ID
+            result = proxmox.create_node(vm_, ANY)
+            mock_query.assert_called_once_with(
+                "post", "nodes/myhost/qemu/123/clone", {"newid": ANY},
+            )
+            assert result == {}
+
+            # CASE 2: host:ID notation
+            mock_query.reset_mock()
+            vm_["clone_from"] = "otherhost:123"
+            result = proxmox.create_node(vm_, ANY)
+            mock_query.assert_called_once_with(
+                "post", "nodes/otherhost/qemu/123/clone", {"newid": ANY},
+            )
+            assert result == {}
