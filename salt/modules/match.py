@@ -353,12 +353,15 @@ def filter_by(lookup, tgt_type="compound", minion_id=None, default="default"):
             if merge:
                 if not isinstance(merge, collections.Mapping):
                     raise SaltException(
-                        'filter_by merge argument must be a dictionary.')
+                        "filter_by merge argument must be a dictionary."
+                    )
 
                 if lookup[key] is None:
                     return merge
                 else:
-                    salt.utils.dictupdate.update(lookup[key], copy.deepcopy(merge), merge_lists=merge_lists)
+                    salt.utils.dictupdate.update(
+                        lookup[key], copy.deepcopy(merge), merge_lists=merge_lists
+                    )
 
             return lookup[key]
 
