@@ -14,6 +14,7 @@ import shutil
 import string
 
 import salt.client
+import salt.crypt
 import salt.ext.six.moves.BaseHTTPServer as BaseHTTPServer
 import salt.fileserver
 import salt.loader
@@ -39,12 +40,8 @@ from salt.exceptions import CommandExecutionError, MinionError
 from salt.ext import six
 from salt.ext.six.moves.urllib.error import HTTPError, URLError
 from salt.ext.six.moves.urllib.parse import urlparse, urlunparse
-from salt.ext.tornado.httputil import (
-    HTTPHeaders,
-    HTTPInputError,
-    parse_response_start_line,
-)
 from salt.utils.openstack.swift import SaltSwift
+from tornado.httputil import HTTPHeaders, HTTPInputError, parse_response_start_line
 
 # pylint: enable=no-name-in-module,import-error
 
@@ -344,6 +341,27 @@ class Client(object):
 
         return ""
 
+    def cache_dest(self, url, saltenv="base", cachedir=None):
+        """
+        Return the expected cache location for the specified URL and
+        environment.
+        """
+        proto = urlparse(url).scheme
+
+        if proto == "":
+            # Local file path
+            return url
+
+        if proto == "salt":
+            url, senv = salt.utils.url.parse(url)
+            if senv:
+                saltenv = senv
+            return salt.utils.path.join(
+                self.opts["cachedir"], "files", saltenv, url.lstrip("|/")
+            )
+
+        return self._extrn_path(url, saltenv, cachedir=cachedir)
+
     def list_states(self, saltenv):
         """
         Return a list of all available sls modules on the master for a given
@@ -551,24 +569,21 @@ class Client(object):
                     https_enable=s3_opt("https_enable", True),
                 )
                 return dest
-            except Exception as exc:  # pylint: disable=broad-except
+            except Exception as exc:
                 raise MinionError(
                     "Could not fetch from {0}. Exception: {1}".format(url, exc)
                 )
         if url_data.scheme == "ftp":
             try:
                 ftp = ftplib.FTP()
-                ftp_port = url_data.port
-                if not ftp_port:
-                    ftp_port = 21
-                ftp.connect(url_data.hostname, ftp_port)
+                ftp.connect(url_data.hostname, url_data.port)
                 ftp.login(url_data.username, url_data.password)
                 remote_file_path = url_data.path.lstrip("/")
                 with salt.utils.files.fopen(dest, "wb") as fp_:
                     ftp.retrbinary("RETR {0}".format(remote_file_path), fp_.write)
                 ftp.quit()
                 return dest
-            except Exception as exc:  # pylint: disable=broad-except
+            except Exception as exc:
                 raise MinionError(
                     "Could not retrieve {0} from FTP server. Exception: {1}".format(
                         url, exc
@@ -598,7 +613,7 @@ class Client(object):
 
                 swift_conn.get_object(url_data.netloc, url_data.path[1:], dest)
                 return dest
-            except Exception:  # pylint: disable=broad-except
+            except Exception:
                 raise MinionError("Could not fetch from {0}".format(url))
 
         get_kwargs = {}
@@ -1053,17 +1068,14 @@ class RemoteClient(Client):
         """
         Reset the channel, in the event of an interruption
         """
-        # Close the previous channel
-        self.channel.close()
-        # Instantiate a new one
         self.channel = salt.transport.client.ReqChannel.factory(self.opts)
         return self.channel
 
-    # pylint: disable=W1701
+    # pylint: disable=no-dunder-del
     def __del__(self):
         self.destroy()
 
-    # pylint: enable=W1701
+    # pylint: enable=no-dunder-del
 
     def destroy(self):
         if self._closing:

@@ -16,15 +16,19 @@ import salt.utils.files
 from salt import fileclient
 from salt.ext import six
 from salt.ext.six.moves import range
+from tests.integration import AdaptedConfigurationTestCaseMixin
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mock import (  # pylint: disable=no-name-in-module
+    NO_MOCK,
+    NO_MOCK_REASON,
+    MagicMock,
+    Mock,
+    patch,
+)
 
 # Import Salt Testing libs
-from tests.support.mixins import (
-    AdaptedConfigurationTestCaseMixin,
-    LoaderModuleMockMixin,
-)
-from tests.support.mock import MagicMock, Mock, patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -104,6 +108,7 @@ def _get_file_roots(fs_root):
     return dict([(x, [os.path.join(fs_root, x)]) for x in SALTENVS])
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class FileClientTest(
     TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin
 ):
@@ -150,6 +155,7 @@ class FileClientTest(
             self.assertEqual("remote_client", ret)
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class FileclientCacheTest(
     TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin
 ):
@@ -425,3 +431,43 @@ class FileclientCacheTest(
                 log.debug("cache_loc = %s", cache_loc)
                 log.debug("content = %s", content)
                 self.assertTrue(saltenv in content)
+
+    def test_cache_dest(self):
+        """
+        Tests functionality for cache_dest
+        """
+        patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
+        patched_opts.update(self.MOCKED_OPTS)
+
+        relpath = "foo.com/bar.txt"
+        cachedir = self.minion_opts["cachedir"]
+
+        def _external(saltenv="base"):
+            return salt.utils.path.join(
+                patched_opts["cachedir"], "extrn_files", saltenv, relpath
+            )
+
+        def _salt(saltenv="base"):
+            return salt.utils.path.join(
+                patched_opts["cachedir"], "files", saltenv, relpath
+            )
+
+        def _check(ret, expected):
+            assert ret == expected, "{0} != {1}".format(ret, expected)
+
+        with patch.dict(fileclient.__opts__, patched_opts):
+            client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
+
+            _check(client.cache_dest("https://" + relpath), _external())
+
+            _check(client.cache_dest("https://" + relpath, "dev"), _external("dev"))
+
+            _check(client.cache_dest("salt://" + relpath), _salt())
+
+            _check(client.cache_dest("salt://" + relpath, "dev"), _salt("dev"))
+
+            _check(
+                client.cache_dest("salt://" + relpath + "?saltenv=dev"), _salt("dev")
+            )
+
+            _check("/foo/bar", "/foo/bar")
