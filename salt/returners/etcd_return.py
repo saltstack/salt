@@ -303,7 +303,7 @@ def save_load(jid, load, minions=None):
     return
 
 
-def save_minions(jid, minions, syndic_id=None): # pylint: disable=unused-argument
+def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
     '''
     Save/update the minion list for a given jid. The syndic_id argument is
     included for API compatibility only.
