@@ -10,11 +10,14 @@ import copy
 import inspect
 import logging
 import sys
+import collections
+import copy
 
 # Import salt libs
 import salt.loader
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.ext import six
+from salt.exceptions import SaltException
 
 __func_alias__ = {"list_": "list"}
 
@@ -348,6 +351,16 @@ def filter_by(lookup, tgt_type="compound", minion_id=None, default="default"):
     for key in lookup:
         params = (key, minion_id) if minion_id else (key,)
         if expr_funcs[tgt_type](*params):
+            if merge:
+                if not isinstance(merge, collections.Mapping):
+                    raise SaltException(
+                        'filter_by merge argument must be a dictionary.')
+
+                if lookup[key] is None:
+                    return merge
+                else:
+                    salt.utils.dictupdate.update(lookup[key], copy.deepcopy(merge), merge_lists=merge_lists)
+
             return lookup[key]
 
     return lookup.get(default, None)
