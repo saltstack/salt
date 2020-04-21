@@ -7,6 +7,7 @@ from __future__ import absolute_import, unicode_literals
 
 import pytest
 from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
 
 
 @pytest.mark.windows_whitelisted
@@ -15,6 +16,7 @@ class TestGrainsCore(ModuleCase):
     Test the core grains grains
     """
 
+    @skipIf(True, "SLOWTEST skip")
     def test_grains_passed_to_custom_grain(self):
         """
         test if current grains are passed to grains module functions that have a grains argument
