@@ -686,14 +686,15 @@ def certificate_managed(
 
     ret = _certificate_file_managed(ret, file_args)
 
-    ret["changes"]["Certificate"] = {
-        "Old": current_cert_info,
-        "New": __salt__["x509.read_certificate"](certificate=name),
-    }
-    ret["changes"]["Status"] = {
-        "Old": invalid_reason,
-        "New": "Certificate is valid and up to date",
-    }
+    if ret["result"]:
+        ret["changes"]["Certificate"] = {
+            "Old": current_cert_info,
+            "New": __salt__["x509.read_certificate"](certificate=name),
+        }
+        ret["changes"]["Status"] = {
+            "Old": invalid_reason,
+            "New": "Certificate is valid and up to date",
+        }
 
     return ret
 
