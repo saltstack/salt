@@ -650,6 +650,19 @@ Function .onInit
             /SD IDOK IDOK uninst
         Abort
 
+    checkMsi:
+        # WIP Check for existing installation of msi salt
+        ReadRegStr $R0 HKLM \
+            "Software\Microsoft\Windows\CurrentVersion\Installer\UpgradeCodes\2A3BF6CFED569A14DA191DA004B26D14" \
+            ""
+        StrCmp $R0 "" skipUninstall
+        # Found existing installation, prompt to uninstall
+        MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION \
+            "${PRODUCT_NAME} is already installed.$\n$\n\
+            Click `OK` to remove the existing installation." \
+            /SD IDOK IDOK uninstMsi
+        Abort
+
     uninst:
 
         # Get current Silent status
