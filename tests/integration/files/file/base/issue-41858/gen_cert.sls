@@ -42,17 +42,20 @@ mine.send:
     - onchanges:
       - x509: {{ tmp_dir  }}/pki/ca.crt
 
+test_priv_key:
+  x509.private_key_managed:
+    - name: {{ pillar['keyfile'] }}
+    - bits: 4096
+
 test_crt:
   x509.certificate_managed:
     - name: {{ pillar['crtfile'] }}
+    - public_key: {{ pillar['keyfile'] }}
     - ca_server: minion
     - signing_policy: ca_policy
     - CN: minion
     - days_remaining: 30
     - backup: True
-    - managed_private_key:
-        name: {{ pillar['keyfile'] }}
-        bits: 4096
-        backup: True
     - require:
         - {{ tmp_dir  }}/pki/ca.crt
+        - test_priv_key
