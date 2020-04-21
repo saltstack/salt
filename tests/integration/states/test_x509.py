@@ -21,6 +21,7 @@ try:
 except ImportError:
     HAS_M2CRYPTO = False
 
+
 @skipIf(not HAS_M2CRYPTO, "Skip when no M2Crypto found")
 class x509Test(ModuleCase, SaltReturnAssertsMixin):
     @classmethod
