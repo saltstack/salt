@@ -428,8 +428,6 @@ def list_values(hive, key=None, use_32bit_registry=False):
             vname, vdata, vtype = win32api.RegEnumValue(handle, i)
 
             if not vname:
-                if not include_default:
-                    continue
                 vname = "(Default)"
 
             value = {
