@@ -406,8 +406,6 @@ def get_url(path, dest="", saltenv="base", makedirs=False, source_hash=None):
             salt.utils.url.redact_http_basic_auth(path),
             saltenv,
         )
-    if result:
-        return salt.utils.stringutils.to_unicode(result)
     return result
 
 
@@ -428,7 +426,7 @@ def get_file_str(path, saltenv="base"):
     if isinstance(fn_, six.string_types):
         try:
             with salt.utils.files.fopen(fn_, "r") as fp_:
-                return salt.utils.stringutils.to_unicode(fp_.read())
+                return fp_.read()
         except IOError:
             return False
     return fn_
@@ -475,7 +473,7 @@ def cache_file(path, saltenv="base", source_hash=None):
 
     contextkey = "{0}_|-{1}_|-{2}".format("cp.cache_file", path, saltenv)
 
-    path_is_remote = _urlparse(path).scheme in salt.utils.files.REMOTE_PROTOS
+    path_is_remote = _urlparse(path).scheme in ("http", "https", "ftp")
     try:
         if path_is_remote and contextkey in __context__:
             # Prevent multiple caches in the same salt run. Affects remote URLs
@@ -505,6 +503,29 @@ def cache_file(path, saltenv="base", source_hash=None):
         # multiple caches (see above).
         __context__[contextkey] = result
     return result
+
+
+def cache_dest(url, saltenv="base"):
+    """
+    .. versionadded:: Neon
+
+    Returns the expected cache path for the file, if cached using
+    :py:func:`cp.cache_file <salt.modules.cp.cache_file>`.
+
+    .. note::
+        This only returns the _expected_ path, it does not tell you if the URL
+        is really cached. To check if the URL is cached, use
+        :py:func:`cp.is_cached <salt.modules.cp.is_cached>` instead.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' cp.cache_dest https://foo.com/bar.rpm
+        salt '*' cp.cache_dest salt://my/file
+        salt '*' cp.cache_dest salt://my/file saltenv=dev
+    """
+    return _client().cache_dest(url, saltenv)
 
 
 def cache_files(paths, saltenv="base"):
@@ -690,8 +711,8 @@ def list_minion(saltenv="base"):
 
 def is_cached(path, saltenv="base"):
     """
-    Returns the full path to a file if it is cached locally on the minion
-    otherwise returns a blank string
+    Return a boolean if the given path on the master has been cached on the
+    minion
 
     CLI Example:
 
@@ -812,8 +833,8 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
         "size": os.path.getsize(path),
         "tok": auth.gen_token(b"salt"),
     }
-
-    with salt.transport.client.ReqChannel.factory(__opts__) as channel:
+    channel = salt.transport.client.ReqChannel.factory(__opts__)
+    try:
         with salt.utils.files.fopen(path, "rb") as fp_:
             init_send = False
             while True:
@@ -838,6 +859,8 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
                     )
                     return ret
                 init_send = True
+    finally:
+        channel.close()
 
 
 def push_dir(path, glob=None, upload_path=None):
