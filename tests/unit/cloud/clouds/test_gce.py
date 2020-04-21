@@ -160,9 +160,7 @@ class GCETestCase(TestCase, LoaderModuleMockMixin):
         Test requesting an instance with GCE accelerators
         """
 
-        self.vm_.update(
-            {"ex_accelerator_type": "foo", "ex_accelerator_count": 42}
-        )
+        self.vm_.update({"ex_accelerator_type": "foo", "ex_accelerator_count": 42})
         call_kwargs = {
             "ex_disk_type": "pd-standard",
             "ex_metadata": {"items": [{"value": None, "key": "salt-cloud-profile"}]},
