@@ -43,7 +43,9 @@ def __virtual__():
 
     :return:
     """
-    return salt.utils.path.which("rsync") and "rsync" or False
+    if salt.utils.path.which("rsync"):
+        return True
+    return (False, "Command not found: rsync")
 
 
 def _get_summary(rsync_out):
