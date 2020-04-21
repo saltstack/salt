@@ -267,7 +267,6 @@ def get_roles(username, **kwargs):
     if not user:
         return []
     command = "show user-account {0}".format(username)
-    info = ""
     info = show(command, **kwargs)
     if isinstance(info, list):
         info = info[0]
@@ -427,7 +426,6 @@ def show_ver(**kwargs):
         salt '*' nxos.show_ver
     """
     command = "show version"
-    info = ""
     info = show(command, **kwargs)
     if isinstance(info, list):
         info = info[0]
@@ -443,7 +441,6 @@ def show_run(**kwargs):
         salt '*' nxos.show_run
     """
     command = "show running-config"
-    info = ""
     info = show(command, **kwargs)
     if isinstance(info, list):
         info = info[0]
