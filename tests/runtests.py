@@ -14,6 +14,13 @@ import sys
 import time
 import warnings
 
+import salt.utils.platform
+from tests.integration import TestDaemon
+
+# Import Salt Testing libs
+from tests.support.parser import PNUM, print_header
+from tests.support.parser.cover import SaltCoverageTestingParser
+
 TESTS_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
 if os.name == "nt":
     TESTS_DIR = TESTS_DIR.replace("\\", "\\\\")
@@ -45,8 +52,6 @@ except ImportError:
     pass
 
 # Import salt libs
-from salt.ext import six  # isort:skip
-
 try:
     from tests.support.paths import TMP, SYS_TMP_DIR, INTEGRATION_TEST_DIR
     from tests.support.paths import CODE_DIR as SALT_ROOT
@@ -62,18 +67,12 @@ except ImportError as exc:
     import pprint
 
     pprint.pprint(sys.path)
-    six.reraise(*sys.exc_info())
+    raise exc
 
-from tests.integration import TestDaemon, TestDaemonStartFailed  # isort:skip
-from tests.multimaster import MultimasterTestDaemon  # isort:skip
-import salt.utils.platform  # isort:skip
 
 if not salt.utils.platform.is_windows():
     import resource
 
-# Import Salt Testing libs
-from tests.support.parser import PNUM, print_header  # isort:skip
-from tests.support.parser.cover import SaltCoverageTestingParser  # isort:skip
 
 XML_OUTPUT_DIR = os.environ.get(
     "SALT_XML_TEST_REPORTS_DIR", os.path.join(TMP, "xml-test-reports")
@@ -100,7 +99,6 @@ MAX_OPEN_FILES = {
 TEST_SUITES_UNORDERED = {
     "unit": {"display_name": "Unit", "path": "unit"},
     "kitchen": {"display_name": "Kitchen", "path": "kitchen"},
-    "multimaster": {"display_name": "Multimaster", "path": "multimaster"},
     "module": {"display_name": "Module", "path": "integration/modules"},
     "state": {"display_name": "State", "path": "integration/states"},
     "cli": {"display_name": "CLI", "path": "integration/cli"},
@@ -112,7 +110,6 @@ TEST_SUITES_UNORDERED = {
     "runners": {"display_name": "Runners", "path": "integration/runners"},
     "renderers": {"display_name": "Renderers", "path": "integration/renderers"},
     "returners": {"display_name": "Returners", "path": "integration/returners"},
-    "setup": {"display_name": "Setup", "path": "integration/setup"},
     "ssh-int": {"display_name": "SSH Integration", "path": "integration/ssh"},
     "spm": {"display_name": "SPM", "path": "integration/spm"},
     "loader": {"display_name": "Loader", "path": "integration/loader"},
@@ -130,8 +127,6 @@ TEST_SUITES_UNORDERED = {
     "external_api": {"display_name": "ExternalAPIs", "path": "integration/externalapi"},
     "daemons": {"display_name": "Daemon", "path": "integration/daemons"},
     "scheduler": {"display_name": "Scheduler", "path": "integration/scheduler"},
-    "sdb": {"display_name": "Sdb", "path": "integration/sdb"},
-    "logging": {"display_name": "Logging", "path": "integration/logging"},
 }
 
 TEST_SUITES = collections.OrderedDict(
@@ -142,6 +137,7 @@ TEST_SUITES = collections.OrderedDict(
 class SaltTestsuiteParser(SaltCoverageTestingParser):
     support_docker_execution = True
     support_destructive_tests_selection = True
+    support_expensive_tests_selection = True
     source_code_basedir = SALT_ROOT
 
     def _get_suites(
@@ -150,7 +146,6 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         include_cloud_provider=False,
         include_proxy=False,
         include_kitchen=False,
-        include_multimaster=False,
     ):
         """
         Return a set of all test suites except unit and cloud provider tests
@@ -165,8 +160,6 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             suites -= set(["proxy"])
         if not include_kitchen:
             suites -= set(["kitchen"])
-        if not include_multimaster:
-            suites -= set(["multimaster"])
 
         return suites
 
@@ -176,7 +169,6 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         include_cloud_provider=False,
         include_proxy=False,
         include_kitchen=False,
-        include_multimaster=False,
     ):
         """
         Query whether test suites have been enabled
@@ -186,7 +178,6 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             include_cloud_provider=include_cloud_provider,
             include_proxy=include_proxy,
             include_kitchen=include_kitchen,
-            include_multimaster=include_multimaster,
         )
 
         return any([getattr(self.options, suite) for suite in suites])
@@ -197,7 +188,6 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         include_cloud_provider=False,
         include_proxy=False,
         include_kitchen=False,
-        include_multimaster=False,
     ):
         """
         Enable test suites for current test run
@@ -207,7 +197,6 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             include_cloud_provider=include_cloud_provider,
             include_proxy=include_proxy,
             include_kitchen=include_kitchen,
-            include_multimaster=include_multimaster,
         )
 
         for suite in suites:
@@ -223,10 +212,10 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         self.add_option(
             "--transport",
             default="zeromq",
-            choices=("zeromq", "tcp"),
+            choices=("zeromq", "raet", "tcp"),
             help=(
                 "Select which transport to run the integration tests with, "
-                "zeromq or tcp. Default: %default"
+                "zeromq, raet, or tcp. Default: %default"
             ),
         )
         self.add_option(
@@ -363,13 +352,6 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             help="Run spm integration tests",
         )
         self.test_selection_group.add_option(
-            "--setup",
-            dest="setup",
-            default=False,
-            action="store_true",
-            help="Run setup integration tests",
-        )
-        self.test_selection_group.add_option(
             "-l",
             "--loader",
             "--loader-tests",
@@ -462,14 +444,6 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             help="Run salt-api tests",
         )
         self.test_selection_group.add_option(
-            "--sdb",
-            "--sdb-tests",
-            dest="sdb",
-            action="store_true",
-            default=False,
-            help="Run sdb tests",
-        )
-        self.test_selection_group.add_option(
             "-P",
             "--proxy",
             "--proxy-tests",
@@ -501,20 +475,6 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             action="store_true",
             default=False,
             help="Run scheduler integration tests",
-        )
-        self.test_selection_group.add_option(
-            "--logging",
-            dest="logging",
-            action="store_true",
-            default=False,
-            help="Run logging integration tests",
-        )
-        self.test_selection_group.add_option(
-            "--multimaster",
-            dest="multimaster",
-            action="store_true",
-            default=False,
-            help="Start multimaster daemons and run multimaster integration tests",
         )
 
     def validate_options(self):
@@ -566,9 +526,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             include_cloud_provider=True,
             include_proxy=True,
             include_kitchen=True,
-            include_multimaster=True,
         ):
-            self._enable_suites(include_unit=True, include_multimaster=True)
+            self._enable_suites(include_unit=True)
 
         self.start_coverage(
             branch=True, source=[os.path.join(SALT_ROOT, "salt")],
@@ -579,7 +538,6 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
         # Transplant configuration
         TestDaemon.transplant_configs(transport=self.options.transport)
-        MultimasterTestDaemon.transplant_configs(transport=self.options.transport)
 
     def post_execution_cleanup(self):
         SaltCoverageTestingParser.post_execution_cleanup(self)
@@ -591,9 +549,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         Run an integration test suite
         """
         full_path = os.path.join(TEST_DIR, path)
-        return self.run_suite(
-            full_path, display_name, suffix="test_*.py", failfast=self.options.failfast,
-        )
+        return self.run_suite(full_path, display_name, suffix="test_*.py")
 
     def start_daemons_only(self):
         if not salt.utils.platform.is_windows():
@@ -607,140 +563,73 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         except TypeError:
             print_header(" * Setting up Salt daemons for interactive use", top=False)
 
-        try:
-            with TestDaemon(self):
-                print_header(" * Salt daemons started")
-                master_conf = TestDaemon.config("master")
-                minion_conf = TestDaemon.config("minion")
-                proxy_conf = TestDaemon.config("proxy")
-                sub_minion_conf = TestDaemon.config("sub_minion")
-                syndic_conf = TestDaemon.config("syndic")
-                syndic_master_conf = TestDaemon.config("syndic_master")
+        with TestDaemon(self):
+            print_header(" * Salt daemons started")
+            master_conf = TestDaemon.config("master")
+            minion_conf = TestDaemon.config("minion")
+            proxy_conf = TestDaemon.config("proxy")
+            sub_minion_conf = TestDaemon.config("sub_minion")
+            syndic_conf = TestDaemon.config("syndic")
+            syndic_master_conf = TestDaemon.config("syndic_master")
 
-                print_header(" * Syndic master configuration values (MoM)", top=False)
-                print("interface: {0}".format(syndic_master_conf["interface"]))
-                print("publish port: {0}".format(syndic_master_conf["publish_port"]))
-                print("return port: {0}".format(syndic_master_conf["ret_port"]))
-                print("\n")
+            print_header(" * Syndic master configuration values (MoM)", top=False)
+            print("interface: {0}".format(syndic_master_conf["interface"]))
+            print("publish port: {0}".format(syndic_master_conf["publish_port"]))
+            print("return port: {0}".format(syndic_master_conf["ret_port"]))
+            print("\n")
 
-                print_header(" * Syndic configuration values", top=True)
-                print("interface: {0}".format(syndic_conf["interface"]))
-                print("syndic master: {0}".format(syndic_conf["syndic_master"]))
-                print(
-                    "syndic master port: {0}".format(syndic_conf["syndic_master_port"])
-                )
-                print("\n")
+            print_header(" * Syndic configuration values", top=True)
+            print("interface: {0}".format(syndic_conf["interface"]))
+            print("syndic master: {0}".format(syndic_conf["syndic_master"]))
+            print("syndic master port: {0}".format(syndic_conf["syndic_master_port"]))
+            print("\n")
 
-                print_header(" * Master configuration values", top=True)
-                print("interface: {0}".format(master_conf["interface"]))
-                print("publish port: {0}".format(master_conf["publish_port"]))
-                print("return port: {0}".format(master_conf["ret_port"]))
-                print("\n")
+            print_header(" * Master configuration values", top=True)
+            print("interface: {0}".format(master_conf["interface"]))
+            print("publish port: {0}".format(master_conf["publish_port"]))
+            print("return port: {0}".format(master_conf["ret_port"]))
+            print("\n")
 
-                print_header(" * Minion configuration values", top=True)
-                print("interface: {0}".format(minion_conf["interface"]))
-                print("master: {0}".format(minion_conf["master"]))
-                print("master port: {0}".format(minion_conf["master_port"]))
-                if minion_conf["ipc_mode"] == "tcp":
-                    print("tcp pub port: {0}".format(minion_conf["tcp_pub_port"]))
-                    print("tcp pull port: {0}".format(minion_conf["tcp_pull_port"]))
-                print("\n")
+            print_header(" * Minion configuration values", top=True)
+            print("interface: {0}".format(minion_conf["interface"]))
+            print("master: {0}".format(minion_conf["master"]))
+            print("master port: {0}".format(minion_conf["master_port"]))
+            if minion_conf["ipc_mode"] == "tcp":
+                print("tcp pub port: {0}".format(minion_conf["tcp_pub_port"]))
+                print("tcp pull port: {0}".format(minion_conf["tcp_pull_port"]))
+            print("\n")
 
-                print_header(" * Sub Minion configuration values", top=True)
-                print("interface: {0}".format(sub_minion_conf["interface"]))
-                print("master: {0}".format(sub_minion_conf["master"]))
-                print("master port: {0}".format(sub_minion_conf["master_port"]))
-                if sub_minion_conf["ipc_mode"] == "tcp":
-                    print("tcp pub port: {0}".format(sub_minion_conf["tcp_pub_port"]))
-                    print("tcp pull port: {0}".format(sub_minion_conf["tcp_pull_port"]))
-                print("\n")
+            print_header(" * Sub Minion configuration values", top=True)
+            print("interface: {0}".format(sub_minion_conf["interface"]))
+            print("master: {0}".format(sub_minion_conf["master"]))
+            print("master port: {0}".format(sub_minion_conf["master_port"]))
+            if sub_minion_conf["ipc_mode"] == "tcp":
+                print("tcp pub port: {0}".format(sub_minion_conf["tcp_pub_port"]))
+                print("tcp pull port: {0}".format(sub_minion_conf["tcp_pull_port"]))
+            print("\n")
 
-                print_header(" * Proxy Minion configuration values", top=True)
-                print("interface: {0}".format(proxy_conf["interface"]))
-                print("master: {0}".format(proxy_conf["master"]))
-                print("master port: {0}".format(proxy_conf["master_port"]))
-                if minion_conf["ipc_mode"] == "tcp":
-                    print("tcp pub port: {0}".format(proxy_conf["tcp_pub_port"]))
-                    print("tcp pull port: {0}".format(proxy_conf["tcp_pull_port"]))
-                print("\n")
+            print_header(" * Proxy Minion configuration values", top=True)
+            print("interface: {0}".format(proxy_conf["interface"]))
+            print("master: {0}".format(proxy_conf["master"]))
+            print("master port: {0}".format(proxy_conf["master_port"]))
+            if minion_conf["ipc_mode"] == "tcp":
+                print("tcp pub port: {0}".format(proxy_conf["tcp_pub_port"]))
+                print("tcp pull port: {0}".format(proxy_conf["tcp_pull_port"]))
+            print("\n")
 
-                print_header(
-                    " Your client configuration is at {0}".format(
-                        TestDaemon.config_location()
-                    )
-                )
-                print(
-                    "To access the minion: salt -c {0} minion test.ping".format(
-                        TestDaemon.config_location()
-                    )
-                )
-
-                while True:
-                    time.sleep(1)
-        except TestDaemonStartFailed:
-            self.exit(status=2)
-
-    def start_multimaster_daemons_only(self):
-        if not salt.utils.platform.is_windows():
-            self.set_filehandle_limits("integration")
-        try:
             print_header(
-                " * Setting up Salt daemons for interactive use",
-                top=False,
-                width=getattr(self.options, "output_columns", PNUM),
-            )
-        except TypeError:
-            print_header(" * Setting up Salt daemons for interactive use", top=False)
-
-        try:
-            with MultimasterTestDaemon(self):
-                print_header(" * Salt daemons started")
-                master_conf = MultimasterTestDaemon.config("mm_master")
-                sub_master_conf = MultimasterTestDaemon.config("mm_sub_master")
-                minion_conf = MultimasterTestDaemon.config("mm_minion")
-                sub_minion_conf = MultimasterTestDaemon.config("mm_sub_minion")
-
-                print_header(" * Master configuration values", top=True)
-                print("interface: {0}".format(master_conf["interface"]))
-                print("publish port: {0}".format(master_conf["publish_port"]))
-                print("return port: {0}".format(master_conf["ret_port"]))
-                print("\n")
-
-                print_header(" * Second master configuration values", top=True)
-                print("interface: {0}".format(sub_master_conf["interface"]))
-                print("publish port: {0}".format(sub_master_conf["publish_port"]))
-                print("return port: {0}".format(sub_master_conf["ret_port"]))
-                print("\n")
-
-                print_header(" * Minion configuration values", top=True)
-                print("interface: {0}".format(minion_conf["interface"]))
-                print("masters: {0}".format(", ".join(minion_conf["master"])))
-                if minion_conf["ipc_mode"] == "tcp":
-                    print("tcp pub port: {0}".format(minion_conf["tcp_pub_port"]))
-                    print("tcp pull port: {0}".format(minion_conf["tcp_pull_port"]))
-                print("\n")
-
-                print_header(" * Sub Minion configuration values", top=True)
-                print("interface: {0}".format(sub_minion_conf["interface"]))
-                print("masters: {0}".format(", ".join(sub_minion_conf["master"])))
-                if sub_minion_conf["ipc_mode"] == "tcp":
-                    print("tcp pub port: {0}".format(sub_minion_conf["tcp_pub_port"]))
-                    print("tcp pull port: {0}".format(sub_minion_conf["tcp_pull_port"]))
-                print("\n")
-
-                print_header(
-                    " Your client configurations are at {0}".format(
-                        ", ".join(MultimasterTestDaemon.config_location())
-                    )
+                " Your client configuration is at {0}".format(
+                    TestDaemon.config_location()
                 )
-                print("To access minions from different masters use:")
-                for location in MultimasterTestDaemon.config_location():
-                    print("    salt -c {0} minion test.ping".format(location))
+            )
+            print(
+                "To access the minion: salt -c {0} minion test.ping".format(
+                    TestDaemon.config_location()
+                )
+            )
 
-                while True:
-                    time.sleep(1)
-        except TestDaemonStartFailed:
-            self.exit(status=2)
+            while True:
+                time.sleep(1)
 
     def set_filehandle_limits(self, limits="integration"):
         """
@@ -811,26 +700,14 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         if self.options.name:
             for test in self.options.name:
                 if test.startswith(
-                    (
-                        "tests.unit.",
-                        "unit.",
-                        "test.kitchen.",
-                        "kitchen.",
-                        "test.multimaster.",
-                        "multimaster.",
-                    )
+                    ("tests.unit.", "unit.", "test.kitchen.", "kitchen.")
                 ):
                     named_unit_test.append(test)
                     continue
                 named_tests.append(test)
 
         if (
-            (
-                self.options.unit
-                or self.options.kitchen
-                or self.options.multimaster
-                or named_unit_test
-            )
+            (self.options.unit or self.options.kitchen or named_unit_test)
             and not named_tests
             and (
                 self.options.from_filenames
@@ -865,127 +742,36 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         ):
             return status
 
-        try:
-            with TestDaemon(self):
-                if self.options.name:
-                    for name in self.options.name:
-                        name = name.strip()
-                        if not name:
+        with TestDaemon(self):
+            if self.options.name:
+                for name in self.options.name:
+                    name = name.strip()
+                    if not name:
+                        continue
+                    if os.path.isfile(name):
+                        if not name.endswith(".py"):
                             continue
-                        if os.path.isfile(name):
-                            if not name.endswith(".py"):
-                                continue
-                            if name.startswith(
-                                (
-                                    os.path.join("tests", "unit"),
-                                    os.path.join("tests", "multimaster"),
-                                )
-                            ):
-                                continue
-                            results = self.run_suite(
-                                os.path.dirname(name),
-                                name,
-                                suffix=os.path.basename(name),
-                                failfast=self.options.failfast,
-                                load_from_name=False,
-                            )
-                            status.append(results)
-                            continue
-                        if name.startswith(
-                            (
-                                "tests.unit.",
-                                "unit.",
-                                "tests.multimaster.",
-                                "multimaster.",
-                            )
-                        ):
+                        if name.startswith(os.path.join("tests", "unit")):
                             continue
                         results = self.run_suite(
-                            "",
+                            os.path.dirname(name),
                             name,
-                            suffix="test_*.py",
-                            load_from_name=True,
-                            failfast=self.options.failfast,
+                            suffix=os.path.basename(name),
+                            load_from_name=False,
                         )
                         status.append(results)
-                    return status
-                for suite in TEST_SUITES:
-                    if (
-                        suite != "unit"
-                        and suite != "multimaster"
-                        and getattr(self.options, suite)
-                    ):
-                        status.append(self.run_integration_suite(**TEST_SUITES[suite]))
-            return status
-        except TestDaemonStartFailed:
-            self.exit(status=2)
-
-    def run_multimaster_tests(self):
-        """
-        Execute the multimaster tests suite
-        """
-        named_tests = []
-        named_unit_test = []
-
-        if self.options.name:
-            for test in self.options.name:
-                if test.startswith(("tests.multimaster.", "multimaster.")):
-                    named_tests.append(test)
-
-        # TODO: check 'from_filenames'
-        if not self.options.multimaster and not named_tests:
-            # We're not running any multimaster test suites.
-            return [True]
-
-        if not salt.utils.platform.is_windows():
-            self.set_filehandle_limits("integration")
-
-        try:
-            print_header(
-                " * Setting up multimaster Salt daemons to execute tests",
-                top=False,
-                width=getattr(self.options, "output_columns", PNUM),
-            )
-        except TypeError:
-            print_header(
-                " * Setting up multimaster Salt daemons to execute tests", top=False
-            )
-
-        status = []
-
-        try:
-            with MultimasterTestDaemon(self):
-                if self.options.name:
-                    for name in self.options.name:
-                        name = name.strip()
-                        if not name:
-                            continue
-                        if os.path.isfile(name):
-                            if not name.endswith(".py"):
-                                continue
-                            if not name.startswith(
-                                os.path.join("tests", "multimaster")
-                            ):
-                                continue
-                            results = self.run_suite(
-                                os.path.dirname(name),
-                                name,
-                                suffix=os.path.basename(name),
-                                load_from_name=False,
-                            )
-                            status.append(results)
-                            continue
-                        if not name.startswith(("tests.multimaster.", "multimaster.")):
-                            continue
-                        results = self.run_suite(
-                            "", name, suffix="test_*.py", load_from_name=True
-                        )
-                        status.append(results)
-                    return status
-                status.append(self.run_integration_suite(**TEST_SUITES["multimaster"]))
-            return status
-        except TestDaemonStartFailed:
-            self.exit(status=2)
+                        continue
+                    if name.startswith(("tests.unit.", "unit.")):
+                        continue
+                    results = self.run_suite(
+                        "", name, suffix="test_*.py", load_from_name=True
+                    )
+                    status.append(results)
+                return status
+            for suite in TEST_SUITES:
+                if suite != "unit" and getattr(self.options, suite):
+                    status.append(self.run_integration_suite(**TEST_SUITES[suite]))
+        return status
 
     def run_unit_tests(self):
         """
@@ -1012,10 +798,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             self.set_filehandle_limits("unit")
 
             results = self.run_suite(
-                os.path.join(TEST_DIR, "unit"),
-                "Unit",
-                suffix="test_*.py",
-                failfast=self.options.failfast,
+                os.path.join(TEST_DIR, "unit"), "Unit", suffix="test_*.py"
             )
             status.append(results)
             # We executed ALL unittests, we can skip running unittests by name
@@ -1028,7 +811,6 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 name,
                 suffix="test_*.py",
                 load_from_name=True,
-                failfast=self.options.failfast,
             )
             status.append(results)
         return status
@@ -1090,13 +872,8 @@ def main(**kwargs):
 
         overall_status = []
         if parser.options.interactive:
-            if parser.options.multimaster:
-                parser.start_multimaster_daemons_only()
-            else:
-                parser.start_daemons_only()
+            parser.start_daemons_only()
         status = parser.run_integration_tests()
-        overall_status.extend(status)
-        status = parser.run_multimaster_tests()
         overall_status.extend(status)
         status = parser.run_unit_tests()
         overall_status.extend(status)
