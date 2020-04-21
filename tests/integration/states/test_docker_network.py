@@ -109,6 +109,7 @@ def container_name(func):
     return wrapper
 
 
+@skipIf(True, "SLOWTEST skip")
 @destructiveTest
 @skipIf(not salt.utils.path.which("dockerd"), "Docker not installed")
 class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
