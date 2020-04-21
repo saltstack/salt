@@ -6,6 +6,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import pytest
 from tests.support.case import ShellCase
+from tests.support.unit import skipIf
 
 
 @pytest.mark.windows_whitelisted
@@ -14,6 +15,7 @@ class ManageTest(ShellCase):
     Test the manage runner
     """
 
+    @skipIf(True, "SLOWTEST skip")
     def test_up(self):
         """
         manage.up
@@ -24,6 +26,7 @@ class ManageTest(ShellCase):
         self.assertTrue(any("- minion" in out for out in ret["out"]))
         self.assertTrue(any("- sub_minion" in out for out in ret["out"]))
 
+    @skipIf(True, "SLOWTEST skip")
     def test_down(self):
         """
         manage.down

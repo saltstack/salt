@@ -58,6 +58,7 @@ class GemModuleTest(ModuleCase):
 
         self.addCleanup(uninstall_gem)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_install_uninstall(self):
         """
         gem.install
@@ -70,6 +71,7 @@ class GemModuleTest(ModuleCase):
         self.run_function("gem.uninstall", [self.GEM])
         self.assertFalse(self.run_function("gem.list", [self.GEM]))
 
+    @skipIf(True, "SLOWTEST skip")
     def test_install_version(self):
         """
         gem.install rake version=11.1.2
@@ -82,6 +84,7 @@ class GemModuleTest(ModuleCase):
         self.run_function("gem.uninstall", [self.GEM])
         self.assertFalse(self.run_function("gem.list", [self.GEM]))
 
+    @skipIf(True, "SLOWTEST skip")
     def test_list(self):
         """
         gem.list
@@ -97,6 +100,7 @@ class GemModuleTest(ModuleCase):
 
         self.run_function("gem.uninstall", [" ".join(self.GEM_LIST)])
 
+    @skipIf(True, "SLOWTEST skip")
     def test_list_upgrades(self):
         """
         gem.list_upgrades
@@ -109,6 +113,7 @@ class GemModuleTest(ModuleCase):
 
         self.run_function("gem.uninstall", [self.OLD_GEM])
 
+    @skipIf(True, "SLOWTEST skip")
     def test_sources_add_remove(self):
         """
         gem.sources_add
@@ -124,6 +129,7 @@ class GemModuleTest(ModuleCase):
         sources_list = self.run_function("gem.sources_list")
         self.assertNotIn(source, sources_list)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_update(self):
         """
         gem.update
@@ -139,6 +145,7 @@ class GemModuleTest(ModuleCase):
         self.run_function("gem.uninstall", [self.OLD_GEM])
         self.assertFalse(self.run_function("gem.list", [self.OLD_GEM]))
 
+    @skipIf(True, "SLOWTEST skip")
     def test_update_system(self):
         """
         gem.update_system

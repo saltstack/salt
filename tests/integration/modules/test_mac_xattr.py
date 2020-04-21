@@ -15,6 +15,7 @@ from tests.support.case import ModuleCase
 
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf
 
 
 class MacXattrModuleTest(ModuleCase):
@@ -46,6 +47,7 @@ class MacXattrModuleTest(ModuleCase):
         if os.path.exists(self.test_file):
             os.remove(self.test_file)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_list_no_xattr(self):
         """
         Make sure there are no attributes
@@ -62,6 +64,7 @@ class MacXattrModuleTest(ModuleCase):
             "ERROR: File not found: {0}".format(self.no_file),
         )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_write(self):
         """
         Write an attribute
@@ -94,6 +97,7 @@ class MacXattrModuleTest(ModuleCase):
             "ERROR: File not found: {0}".format(self.no_file),
         )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_read(self):
         """
         Test xattr.read
@@ -126,6 +130,7 @@ class MacXattrModuleTest(ModuleCase):
             "ERROR: Attribute not found: patrick",
         )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_delete(self):
         """
         Test xattr.delete
@@ -169,6 +174,7 @@ class MacXattrModuleTest(ModuleCase):
             "ERROR: Attribute not found: patrick",
         )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_clear(self):
         """
         Test xattr.clear

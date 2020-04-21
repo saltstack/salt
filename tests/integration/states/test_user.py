@@ -61,14 +61,17 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         else os.path.join("tmp", user_name)
     )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_user_absent(self):
         ret = self.run_state("user.absent", name="unpossible")
         self.assertSaltTrueReturn(ret)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_user_if_present(self):
         ret = self.run_state("user.present", name=USER)
         self.assertSaltTrueReturn(ret)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_user_if_present_with_gid(self):
         if self.run_function("group.info", [USER]):
             ret = self.run_state("user.present", name=USER, gid=GID)
@@ -78,6 +81,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
             self.skipTest("Neither 'nobody' nor 'nogroup' are valid groups")
         self.assertSaltTrueReturn(ret)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_user_not_present(self):
         """
         This is a DESTRUCTIVE TEST it creates a new user on the minion.
@@ -87,6 +91,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state("user.present", name=self.user_name)
         self.assertSaltTrueReturn(ret)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_user_present_when_home_dir_does_not_18843(self):
         """
         This is a DESTRUCTIVE TEST it creates a new user on the minion.
@@ -105,6 +110,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @requires_system_grains
+    @skipIf(True, "SLOWTEST skip")
     def test_user_present_nondefault(self, grains=None):
         """
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
@@ -134,6 +140,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         "windows minion does not support gid_from_name",
     )
     @requires_system_grains
+    @skipIf(True, "SLOWTEST skip")
     def test_user_present_gid_from_name_default(self, grains=None):
         """
         This is a DESTRUCTIVE TEST. It creates a new user on the on the minion.
@@ -175,6 +182,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         salt.utils.platform.is_windows(),
         "windows minion does not support gid_from_name",
     )
+    @skipIf(True, "SLOWTEST skip")
     def test_user_present_gid_from_name(self):
         """
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
@@ -206,6 +214,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
             sys.getfilesystemencoding()
         ),
     )
+    @skipIf(True, "SLOWTEST skip")
     def test_user_present_unicode(self):
         """
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
@@ -237,6 +246,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         salt.utils.platform.is_windows(),
         "windows minon does not support roomnumber or phone",
     )
+    @skipIf(True, "SLOWTEST skip")
     def test_user_present_gecos(self):
         """
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
@@ -260,6 +270,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         salt.utils.platform.is_windows(),
         "windows minon does not support roomnumber or phone",
     )
+    @skipIf(True, "SLOWTEST skip")
     def test_user_present_gecos_none_fields(self):
         """
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
@@ -289,6 +300,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
     @skipIf(
         salt.utils.platform.is_windows(), "windows minon does not support createhome"
     )
+    @skipIf(True, "SLOWTEST skip")
     def test_user_present_home_directory_created(self):
         """
         This is a DESTRUCTIVE TEST it creates a new user on the minion.
@@ -321,6 +333,7 @@ class WinUserTest(ModuleCase, SaltReturnAssertsMixin):
     def tearDown(self):
         self.assertSaltTrueReturn(self.run_state("user.absent", name=USER))
 
+    @skipIf(True, "SLOWTEST skip")
     def test_user_present_existing(self):
         ret = self.run_state(
             "user.present",
