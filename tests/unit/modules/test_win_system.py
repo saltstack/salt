@@ -346,6 +346,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         cmd_run_mock.assert_called_once_with(cmd="hostname")
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @skipIf(True, "SLOWTEST skip")
     def test_get_system_info(self):
         fields = [
             "bios_caption",

@@ -13,7 +13,7 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 ETHERNET_CONFIG = (
     'Configuration for interface "Ethernet"\n'
@@ -197,6 +197,7 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_static_ip' function tests: 1
 
+    @skipIf(True, "SLOWTEST skip")
     def test_set_static_ip(self):
         """
         Test if it set static IP configuration on a Windows NIC.
