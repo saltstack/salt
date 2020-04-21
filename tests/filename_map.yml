@@ -109,6 +109,7 @@ salt/cli/salt.py:
 salt/client/*:
   - integration.client.test_kwarg
   - integration.client.test_runner
+  - integration.client.test_saltcli
   - integration.client.test_standard
 
 salt/cloud/*:

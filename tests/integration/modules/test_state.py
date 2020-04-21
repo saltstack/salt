@@ -23,40 +23,13 @@ from tests.support.case import ModuleCase
 from tests.support.helpers import with_tempdir
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.sminion import create_sminion
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
 
 DEFAULT_ENDING = salt.utils.stringutils.to_bytes(os.linesep)
-
-
-def trim_line_end(line):
-    """
-    Remove CRLF or LF from the end of line.
-    """
-    if line[-2:] == salt.utils.stringutils.to_bytes("\r\n"):
-        return line[:-2]
-    elif line[-1:] == salt.utils.stringutils.to_bytes("\n"):
-        return line[:-1]
-    raise Exception("Invalid line ending")
-
-
-def reline(source, dest, force=False, ending=DEFAULT_ENDING):
-    """
-    Normalize the line endings of a file.
-    """
-    fp, tmp = tempfile.mkstemp()
-    os.close(fp)
-    with salt.utils.files.fopen(tmp, "wb") as tmp_fd:
-        with salt.utils.files.fopen(source, "rb") as fd:
-            lines = fd.readlines()
-            for line in lines:
-                line_noend = trim_line_end(line)
-                tmp_fd.write(line_noend + ending)
-    if os.path.exists(dest) and force:
-        os.remove(dest)
-    os.rename(tmp, dest)
 
 
 @pytest.mark.windows_whitelisted
@@ -80,9 +53,16 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                     fhw.write(line + ending)
 
         destpath = os.path.join(RUNTIME_VARS.BASE_FILES, "testappend", "firstif")
+        _reline(destpath)
         destpath = os.path.join(RUNTIME_VARS.BASE_FILES, "testappend", "secondif")
         _reline(destpath)
-        cls.TIMEOUT = 600 if salt.utils.platform.is_windows() else 10
+        if salt.utils.platform.is_windows():
+            cls.TIMEOUT = 600
+            # Be sure to have everything sync'ed
+            sminion = create_sminion()
+            sminion.functions.saltutil.sync_all()
+        else:
+            cls.TIMEOUT = 10
 
     @skipIf(True, "SLOWTEST skip")
     def test_show_highstate(self):
