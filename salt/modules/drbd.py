@@ -38,7 +38,7 @@ def _analyse_status_type(line):
     spaces = _count_spaces_startswith(line)
 
     if spaces is None:
-        return None
+        return ""
 
     switch = {
         0: "RESOURCE",
@@ -57,6 +57,75 @@ def _analyse_status_type(line):
             return ret[x]
 
     return "UNKNOWN"
+
+
+def _add_res(line):
+    global resource
+    fields = line.strip().split()
+
+    if resource:
+        ret.append(resource)
+        resource = {}
+
+    resource["resource name"] = fields[0]
+    resource["local role"] = fields[1].split(":")[1]
+    resource["local volumes"] = []
+    resource["peer nodes"] = []
+
+
+def _add_volume(line):
+    section = _analyse_status_type(line)
+    fields = line.strip().split()
+
+    volume = {}
+    for field in fields:
+        volume[field.split(":")[0]] = field.split(":")[1]
+
+    if section == "LOCALDISK":
+        resource["local volumes"].append(volume)
+    else:
+        # 'PEERDISK'
+        lastpnodevolumes.append(volume)
+
+
+def _add_peernode(line):
+    global lastpnodevolumes
+
+    fields = line.strip().split()
+
+    peernode = {}
+    peernode["peernode name"] = fields[0]
+    # Could be role or connection:
+    peernode[fields[1].split(":")[0]] = fields[1].split(":")[1]
+    peernode["peer volumes"] = []
+    resource["peer nodes"].append(peernode)
+    lastpnodevolumes = peernode["peer volumes"]
+
+
+def _empty(dummy):
+    pass
+
+
+def _unknown_parser(line):
+    global ret
+    ret = {"Unknown parser": line}
+
+
+def _line_parser(line):
+    section = _analyse_status_type(line)
+    fields = line.strip().split()
+
+    switch = {
+        "": _empty,
+        "RESOURCE": _add_res,
+        "PEERNODE": _add_peernode,
+        "LOCALDISK": _add_volume,
+        "PEERDISK": _add_volume,
+    }
+
+    func = switch.get(section, _unknown_parser)
+
+    func(line)
 
 
 def overview():
@@ -133,6 +202,12 @@ def overview():
     return ret
 
 
+# Global para for func status
+ret = []
+resource = {}
+lastpnodevolumes = None
+
+
 def status(name="all"):
     """
     Using drbdadm to show status of the DRBD devices,
@@ -154,11 +229,14 @@ def status(name="all"):
         salt '*' drbd.status name=<resource name>
     """
 
-    cmd = ["drbdadm", "status"]
-    cmd.append(name)
-
+    # Initialize for multiple times test cases
+    global ret
+    global resource
     ret = []
     resource = {}
+
+    cmd = ["drbdadm", "status"]
+    cmd.append(name)
 
     # One possible output: (number of resource/node/vol are flexible)
     # resource role:Secondary
@@ -171,43 +249,7 @@ def status(name="all"):
     #    volume:0 peer-disk:Inconsistent resync-suspended:peer
     #    volume:1 peer-disk:Inconsistent resync-suspended:peer
     for line in __salt__["cmd.run"](cmd).splitlines():
-        section = _analyse_status_type(line)
-        fields = line.strip().split()
-
-        if not section:
-            continue
-
-        elif section == "RESOURCE":
-            if resource:
-                ret.append(resource)
-                resource = {}
-
-            resource["resource name"] = fields[0]
-            resource["local role"] = fields[1].split(":")[1]
-            resource["local volumes"] = []
-            resource["peer nodes"] = []
-
-        elif section == "PEERNODE":
-            peernode = {}
-            peernode["peernode name"] = fields[0]
-            # Could be "role:" or "connection:", depends on connect state
-            peernode[fields[1].split(":")[0]] = fields[1].split(":")[1]
-            peernode["peer volumes"] = []
-            lastpnodevolumes = peernode["peer volumes"]
-            resource["peer nodes"].append(peernode)
-
-        elif section in ("LOCALDISK", "PEERDISK"):
-            volume = {}
-            for field in fields:
-                volume[field.split(":")[0]] = field.split(":")[1]
-            if section == "LOCALDISK":
-                resource["local volumes"].append(volume)
-            else:
-                lastpnodevolumes.append(volume)
-
-        else:
-            ret = {"UNKNOWN parser" + str(section): line}
-            return ret
+        _line_parser(line)
 
     if resource:
         ret.append(resource)
