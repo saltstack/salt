@@ -3,7 +3,6 @@ from __future__ import absolute_import, unicode_literals
 
 import datetime
 import os
-import logging
 import hashlib
 import textwrap
 
@@ -86,7 +85,6 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
 
     def run_function(self, *args, **kwargs):  # pylint: disable=arguments-differ
         ret = super(x509Test, self).run_function(*args, **kwargs)
-        log.debug("ret = %s", ret)
         return ret
 
     @staticmethod
@@ -379,4 +377,3 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         )
         key = "x509_|-{0}_|-{0}_|-certificate_managed".format(crtfile)
         self.assertEqual(True, ret[key]["result"])
-
