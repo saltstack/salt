@@ -144,7 +144,7 @@ Fork a Repo Guide_>`_ and is well worth reading.
 
     GOOD
 
-    .. code-block:: none
+    .. code-block:: bash
 
         Fix broken things in file1 and file2
 
@@ -162,7 +162,7 @@ Fork a Repo Guide_>`_ and is well worth reading.
 
     BAD
 
-    .. code-block:: none
+    .. code-block:: bash
 
         Fixes broken things
 
@@ -416,7 +416,7 @@ root of the Salt repository.
 Bootstrap Script Changes
 ------------------------
 
-Salt's Bootstrap Script, known as `bootstrap-salt.sh`_ in the Salt repo, has it's own
+Salt's Bootstrap Script, known as `bootstrap-salt.sh`_ in the Salt repo, has its own
 repository, contributing guidelines, and release cadence.
 
 All changes to the Bootstrap Script should be made to `salt-bootstrap repo`_. Any

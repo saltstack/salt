@@ -17,6 +17,7 @@ class SSHGrainsTest(SSHCase):
     testing grains with salt-ssh
     """
 
+    @skipIf(True, "SLOWTEST skip")
     def test_grains_items(self):
         """
         test grains.items with salt-ssh

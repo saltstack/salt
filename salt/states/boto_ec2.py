@@ -74,8 +74,7 @@ def __virtual__():
     """
     if "boto_ec2.get_key" in __salt__:
         return "boto_ec2"
-    else:
-        return False
+    return (False, "boto_ec2 module could not be loaded")
 
 
 def key_present(

@@ -5,20 +5,18 @@
     tests.integration.modules.pw_user
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import random
 import string
 
-# Import 3rd-party libs
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-
-# Import Salt Testing libs
+import pytest
+from salt.ext.six.moves import range
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest, skip_if_not_root
 
 
+@pytest.mark.skip_unless_on_freebsd
 class PwUserModuleTest(ModuleCase):
     def setUp(self):
         super(PwUserModuleTest, self).setUp()

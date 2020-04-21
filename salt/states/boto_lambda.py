@@ -83,7 +83,9 @@ def __virtual__():
     """
     Only load if boto is available.
     """
-    return "boto_lambda" if "boto_lambda.function_exists" in __salt__ else False
+    if "boto_lambda.function_exists" in __salt__:
+        return "boto_lambda"
+    return (False, "boto_lambda module could not be loaded")
 
 
 def function_present(

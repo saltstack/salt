@@ -3343,7 +3343,7 @@ def managed(
                     salt.utils.files.remove(sfn)
 
 
-_RECURSE_TYPES = ["user", "group", "mode", "ignore_files", "ignore_dirs"]
+_RECURSE_TYPES = ["user", "group", "mode", "ignore_files", "ignore_dirs", "silent"]
 
 
 def _get_recurse_set(recurse):
@@ -3431,6 +3431,9 @@ def directory(
         ``mode`` is defined, will recurse on both ``file_mode`` and ``dir_mode`` if
         they are defined.  If ``ignore_files`` or ``ignore_dirs`` is included, files or
         directories will be left unchanged respectively.
+        directories will be left unchanged respectively. If ``silent`` is defined,
+        individual file/directory change notifications will be suppressed.
+
         Example:
 
         .. code-block:: yaml
@@ -3867,6 +3870,9 @@ def directory(
         if "mode" not in recurse_set:
             file_mode = None
             dir_mode = None
+
+        if "silent" in recurse_set:
+            ret["changes"] = {"recursion": "Changes silenced"}
 
         check_files = "ignore_files" not in recurse_set
         check_dirs = "ignore_dirs" not in recurse_set
@@ -6999,8 +7005,8 @@ def serialize(
         .. versionadded:: 2015.8.0
 
     formatter
-        Write the data as this format. See the list of :py:mod:`serializer
-        modules <salt.serializers>` for supported output formats.
+        Write the data as this format. See the list of
+        :ref:`all-salt.serializers` for supported output formats.
 
     encoding
         If specified, then the specified encoding will be used. Otherwise, the

@@ -3,24 +3,19 @@
 """
 tests for pkg state
 """
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import time
 
-# Import Salt libs
+import pytest
 import salt.utils.files
 import salt.utils.path
 import salt.utils.pkg.rpm
 import salt.utils.platform
-
-# Import 3rd-party libs
 from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-
-# Import Salt Testing libs
+from salt.ext.six.moves import range
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
@@ -37,6 +32,7 @@ log = logging.getLogger(__name__)
 
 
 @destructiveTest
+@pytest.mark.windows_whitelisted
 class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     _PKG_EPOCH_TARGETS = []
     _PKG_32_TARGETS = []
@@ -126,6 +122,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
     @requires_salt_modules("pkg.version")
     @requires_salt_states("pkg.installed", "pkg.removed")
+    @skipIf(True, "SLOWTEST skip")
     def test_pkg_001_installed(self):
         """
         This is a destructive test as it installs and then removes a package
@@ -145,6 +142,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
     @skipIf(not _VERSION_SPEC_SUPPORTED, "Version specification not supported")
     @requires_salt_states("pkg.installed", "pkg.removed")
+    @skipIf(True, "SLOWTEST skip")
     def test_pkg_002_installed_with_version(self):
         """
         This is a destructive test as it installs and then removes a package
@@ -165,6 +163,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @requires_salt_states("pkg.installed", "pkg.removed")
+    @skipIf(True, "SLOWTEST skip")
     def test_pkg_003_installed_multipkg(self):
         """
         This is a destructive test as it installs and then removes two packages
@@ -190,6 +189,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
     @skipIf(not _VERSION_SPEC_SUPPORTED, "Version specification not supported")
     @requires_salt_states("pkg.installed", "pkg.removed")
+    @skipIf(True, "SLOWTEST skip")
     def test_pkg_004_installed_multipkg_with_version(self):
         """
         This is a destructive test as it installs and then removes two packages
@@ -317,6 +317,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     @requires_salt_states("pkg.installed", "pkg.removed")
     @runs_on(kernel="linux")
     @not_runs_on(os="Amazon")
+    @skipIf(True, "SLOWTEST skip")
     def test_pkg_009_latest_with_epoch(self):
         """
         This tests for the following issue:
@@ -334,6 +335,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(pkgquery in six.text_type(ret))
 
     @requires_salt_states("pkg.latest", "pkg.removed")
+    @skipIf(True, "SLOWTEST skip")
     def test_pkg_010_latest(self):
         """
         This tests pkg.latest with a package that has no epoch (or a zero
@@ -355,6 +357,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     @requires_salt_modules("pkg.list_pkgs", "pkg.list_upgrades", "pkg.version")
     @requires_salt_states("pkg.latest")
     @runs_on(kernel="linux", os_family="Debian")
+    @skipIf(True, "SLOWTEST skip")
     def test_pkg_011_latest_only_upgrade(self):
         """
         WARNING: This test will pick a package with an available upgrade (if
@@ -448,6 +451,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     @requires_salt_modules("pkg.version", "pkg.latest_version")
     @requires_salt_states("pkg.installed", "pkg.removed")
     @runs_on(kernel="linux", os_family=["Debian", "RedHat"])
+    @skipIf(True, "SLOWTEST skip")
     def test_pkg_013_installed_with_comparison_operator(self):
         """
         This is a destructive test as it installs and then removes a package
@@ -509,6 +513,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     @requires_salt_modules("pkg.hold", "pkg.unhold", "pkg.version", "pkg.list_pkgs")
     @requires_salt_states("pkg.installed", "pkg.removed")
     @requires_system_grains
+    @skipIf(True, "SLOWTEST skip")
     def test_pkg_015_installed_held(self, grains=None):
         """
         Tests that a package can be held even when the package is already installed.
