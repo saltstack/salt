@@ -244,7 +244,7 @@ def ext_pillar(
 
     # If the Minion's region is available, use it instead
     if use_grain:
-        region = __grains__.get('ec2', {}).get('region', region)
+        region = __grains__.get("ec2", {}).get("region", region)
 
     try:
         conn = boto.ec2.connect_to_region(region)
