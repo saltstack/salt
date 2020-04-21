@@ -72,18 +72,16 @@ salt-call from the GuestShell environment as follows.
 
 .. note::
 
-    The functions in this module can be executed using either of the
-    following syntactic forms.
-
-    salt '*' nxos.cmd <function>
-    salt '*' nxos.cmd get_user username=admin
-
-    or
+    The functions in this module should be executed like so:
 
     salt '*' nxos.<function>
     salt '*' nxos.get_user username=admin
 
-    The nxos.cmd <function> syntax is preserved for backwards compatibility.
+    For backwards compatibility, the following syntax will be supported
+    until the Sodium release.
+
+    salt '*' nxos.cmd <function>
+    salt '*' nxos.cmd get_user username=admin
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
