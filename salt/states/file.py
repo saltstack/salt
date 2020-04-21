@@ -4960,24 +4960,25 @@ def replace(
 
 
 def keyvalue(
-        name,
-        key=None,
-        value=None,
-        key_values=None,
-        separator="=",
-        append_if_not_found=False,
-        prepend_if_not_found=False,
-        search_only=False,
-        show_changes=True,
-        ignore_if_missing=False,
-        count=1,
-        uncomment=None,
-        key_ignore_case=False,
-        value_ignore_case=False):
-    '''
+    name,
+    key=None,
+    value=None,
+    key_values=None,
+    separator="=",
+    append_if_not_found=False,
+    prepend_if_not_found=False,
+    search_only=False,
+    show_changes=True,
+    ignore_if_missing=False,
+    count=1,
+    uncomment=None,
+    key_ignore_case=False,
+    value_ignore_case=False,
+):
+    """
     Key/Value based editing of a file.
 
-    .. versionadded:: Neon
+    .. versionadded:: Sodium
 
     This function differs from ``file.replace`` in that it is able to search for
     keys, followed by a customizable separator, and replace the value with the
@@ -5084,38 +5085,40 @@ def keyvalue(
         Notice how the key is not matched case-sensitively, this way it will
         correctly identify both 'PermitRootLogin' as well as 'permitrootlogin'.
 
-    '''
+    """
     name = os.path.expanduser(name)
 
     # default return values
     ret = {
-        'name': name,
-        'changes': {},
-        'pchanges': {},
-        'result': None,
-        'comment': '',
-        }
+        "name": name,
+        "changes": {},
+        "pchanges": {},
+        "result": None,
+        "comment": "",
+    }
 
     if not name:
-        return _error(ret, 'Must provide name to file.keyvalue')
+        return _error(ret, "Must provide name to file.keyvalue")
     if key is not None and value is not None:
         if type(key_values) is dict:
-            return _error(ret,
-                    'file.keyvalue can not combine key_values with key and value')
+            return _error(
+                ret, "file.keyvalue can not combine key_values with key and value"
+            )
         key_values = {str(key): value}
     elif type(key_values) is not dict:
-        return _error(ret,
-                'file.keyvalue key and value not supplied and key_values empty')
+        return _error(
+            ret, "file.keyvalue key and value not supplied and key_values empty"
+        )
 
     # try to open the file and only return a comment if ignore_if_missing is
     # enabled, also mark as an error if not
     file_contents = []
     try:
-        with salt.utils.files.fopen(name, 'r') as fd:
+        with salt.utils.files.fopen(name, "r") as fd:
             file_contents = fd.readlines()
     except (OSError, IOError):
-        ret['comment'] = 'unable to open {n}'.format(n=name)
-        ret['result'] = True if ignore_if_missing else False
+        ret["comment"] = "unable to open {n}".format(n=name)
+        ret["result"] = True if ignore_if_missing else False
         return ret
 
     # used to store diff combinations and check if anything has changed
@@ -5123,7 +5126,7 @@ def keyvalue(
     # store the final content of the file in case it needs to be rewritten
     content = []
     # target format is templated like this
-    tmpl = '{key}{sep}{value}'+os.linesep
+    tmpl = "{key}{sep}{value}" + os.linesep
     # number of lines changed
     changes = 0
     # keep track of number of times a key was updated
@@ -5203,7 +5206,7 @@ def keyvalue(
                         # the old line always needs to go, so that will be
                         # reflected in the diff (this is the original line from
                         # the file being read)
-                        diff.append('- {0}'.format(line))
+                        diff.append("- {0}".format(line))
                         line = line[:0]
 
                         # any non-zero value means something needs to go back in
@@ -5213,19 +5216,20 @@ def keyvalue(
                         if diff_count[key] != 0:
                             # rebuild the line using the key and separator found
                             # and insert the correct value.
-                            line = str(tmpl.format(key=line_key,
-                                                   sep=line_sep,
-                                                   value=value))
+                            line = str(
+                                tmpl.format(key=line_key, sep=line_sep, value=value)
+                            )
 
                             # display a comment in case a value got converted
                             # into a string
                             if not isinstance(value, str):
-                                diff.append('+ {0} (from {1} type){2}'.format(
-                                    line.rstrip(),
-                                    type(value).__name__,
-                                    os.linesep))
+                                diff.append(
+                                    "+ {0} (from {1} type){2}".format(
+                                        line.rstrip(), type(value).__name__, os.linesep
+                                    )
+                                )
                             else:
-                                diff.append('+ {0}'.format(line))
+                                diff.append("+ {0}".format(line))
                         changes += 1
                     # subtract one from the count if it was larger than 0, so
                     # next lines are removed. if it is less than 0 then count is
@@ -5234,7 +5238,7 @@ def keyvalue(
                         diff_count[key] -= 1
                     # at this point a continue saves going through the rest of
                     # the keys to see if they match since this line already
-                    #matched the current key
+                    # matched the current key
                     continue
         # with the line having been checked for all keys (or matched before all
         # keys needed searching), the line can be added to the content to be
@@ -5250,12 +5254,12 @@ def keyvalue(
         for key, value in key_values.items():
             if diff_count[key] > 0:
                 line = tmpl.format(key=key, sep=separator, value=value)
-                tmpdiff.append('+ {0}'.format(line))
+                tmpdiff.append("+ {0}".format(line))
                 content.append(line)
                 changes += 1
-        if len(tmpdiff):
-            tmpdiff.insert(0, '- <EOF>'+os.linesep)
-            tmpdiff.append('+ <EOF>'+os.linesep)
+        if tmpdiff:
+            tmpdiff.insert(0, "- <EOF>" + os.linesep)
+            tmpdiff.append("+ <EOF>" + os.linesep)
             diff.extend(tmpdiff)
     # only if append_if_not_found was not set should prepend_if_not_found be
     # considered, benefit of this is that the number of counts left does not
@@ -5266,55 +5270,55 @@ def keyvalue(
             if diff_count[key] > 0:
                 line = tmpl.format(key=key, sep=separator, value=value)
                 if not did_diff:
-                    diff.insert(0, '  <SOF>'+os.linesep)
+                    diff.insert(0, "  <SOF>" + os.linesep)
                     did_diff = True
-                diff.insert(1, '+ {0}'.format(line))
+                diff.insert(1, "+ {0}".format(line))
                 content.insert(0, line)
                 changes += 1
 
     # if a diff was made
     if changes > 0:
         # return comment of changes if test
-        if __opts__['test']:
-            ret['comment'] = 'File {n} is set to be changed ({c} lines)'.format(
-                n=name,
-                c=changes)
+        if __opts__["test"]:
+            ret["comment"] = "File {n} is set to be changed ({c} lines)".format(
+                n=name, c=changes
+            )
             if show_changes:
                 # For some reason, giving an actual diff even in test=True mode
                 # will be seen as both a 'changed' and 'unchanged'. this seems to
                 # match the other modules behaviour though
-                ret['pchanges']['diff'] = ''.join(diff)
+                ret["pchanges"]["diff"] = "".join(diff)
 
                 # add changes to comments for now as well because of how
                 # stateoutputter seems to handle pchanges etc.
                 # See: https://github.com/saltstack/salt/issues/40208
-                ret['comment'] += '\nPredicted diff:\n\r\t\t'
-                ret['comment'] += '\r\t\t'.join(diff)
-                ret['result'] = None
+                ret["comment"] += "\nPredicted diff:\n\r\t\t"
+                ret["comment"] += "\r\t\t".join(diff)
+                ret["result"] = None
 
         # otherwise return the actual diff lines
         else:
-            ret['comment'] = 'Changed {c} lines'.format(c=changes)
+            ret["comment"] = "Changed {c} lines".format(c=changes)
             if show_changes:
-                ret['changes']['diff'] = ''.join(diff)
+                ret["changes"]["diff"] = "".join(diff)
     else:
-        ret['result'] = True
+        ret["result"] = True
         return ret
 
     # if not test=true, try and write the file
-    if not __opts__['test']:
+    if not __opts__["test"]:
         try:
-            with salt.utils.files.fopen(name, 'w') as fd:
+            with salt.utils.files.fopen(name, "w") as fd:
                 # write all lines to the file which was just truncated
                 fd.writelines(content)
                 fd.close()
         except (OSError, IOError):
             # return an error if the file was not writable
-            ret['comment'] = '{n} not writable'.format(n=name)
-            ret['result'] = False
+            ret["comment"] = "{n} not writable".format(n=name)
+            ret["result"] = False
             return ret
         # if all went well, then set result to true
-        ret['result'] = True
+        ret["result"] = True
 
     return ret
 
