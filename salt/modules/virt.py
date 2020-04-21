@@ -480,14 +480,6 @@ def _get_disks(dom):
             elif qemu_target.startswith("/dev/zvol/"):
                 disks[target.get("dev")] = {"file": qemu_target, "zfs": True}
                 continue
-            if (
-                not qemu_target
-                and "protocol" in source.attrib
-                and "name" in source.attrib
-            ):  # for rbd network
-                qemu_target = "{0}:{1}".format(
-                    source.get("protocol"), source.get("name")
-                )
             if not qemu_target:
                 continue
 
@@ -574,8 +566,8 @@ def _gen_xml(
     os_type,
     arch,
     graphics=None,
-    boot=None,
     loader=None,
+    boot=None,
     **kwargs
 ):
     """
@@ -1663,6 +1655,7 @@ def init(
         os_type,
         arch,
         graphics,
+        loader,
         boot,
         **kwargs
     )

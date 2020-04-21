@@ -1962,29 +1962,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual("/foo/bar", loader["path"])
         self.assertEqual("yes", loader["readonly"])
 
-    def test_get_nics(self):
-        """
-        Test virt.get_nics()
-        """
-        xml = """<domain type='kvm' id='7'>
-              <name>test-vm</name>
-              <devices>
-                <interface type='bridge'>
-                  <mac address='ac:de:48:b6:8b:59'/>
-                  <source bridge='br0'/>
-                  <model type='virtio'/>
-                  <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
-                </interface>
-              </devices>
-            </domain>
-        """
-        self.set_mock_vm("test-vm", xml)
-
-        nics = virt.get_nics("test-vm")
-        nic = nics[list(nics)[0]]
-        self.assertEqual("bridge", nic["type"])
-        self.assertEqual("ac:de:48:b6:8b:59", nic["mac"])
-
     def test_parse_qemu_img_info(self):
         """
         Make sure that qemu-img info output is properly parsed
