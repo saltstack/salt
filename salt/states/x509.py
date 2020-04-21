@@ -520,6 +520,25 @@ def _certificate_is_valid(name, days_remaining, append_certs, **cert_spec):
         return False, "{0} is not a valid certificate: {1}".format(name, str(e)), {}
 
 
+def _certificate_file_managed(ret, file_args):
+    """
+    Run file.managed and merge the result with an existing return dict.
+    The overall True/False result will be the result of the file.managed call.
+"""
+    file_ret = __states__["file.managed"](**file_args)
+
+    ret["result"] = file_ret["result"]
+    if ret["result"]:
+        ret["comment"] = "Certificate {0} is valid and up to date".format(ret["name"])
+    else:
+        ret["comment"] = file_ret["comment"]
+
+    if file_ret["changes"]:
+        ret["changes"] = {"File": file_ret["changes"]}
+
+    return ret
+
+
 def certificate_managed(
     name, days_remaining=90, append_certs=None, managed_private_key=None, **kwargs
 ):
@@ -619,9 +638,9 @@ def certificate_managed(
     )
 
     if is_valid:
-        ret["result"] = True
-        ret["comment"] = "Certificate {0} is valid and up to date".format(name)
-        return ret
+        file_args, extra_args = _get_file_args(name, **kwargs)
+
+        return _certificate_file_managed(ret, file_args)
 
     if __opts__["test"]:
         ret["result"] = None
@@ -664,10 +683,8 @@ def certificate_managed(
 
     file_args, extra_args = _get_file_args(name, **kwargs)
     file_args["contents"] = contents
-    file_ret = __states__["file.managed"](**file_args)
 
-    if file_ret["changes"]:
-        ret["changes"] = {"File": file_ret["changes"]}
+    ret = _certificate_file_managed(ret, file_args)
 
     ret["changes"]["Certificate"] = {
         "Old": current_cert_info,
@@ -677,8 +694,6 @@ def certificate_managed(
         "Old": invalid_reason,
         "New": "Certificate is valid and up to date",
     }
-    ret["comment"] = "Certificate {0} is valid and up to date".format(name)
-    ret["result"] = True
 
     return ret
 
