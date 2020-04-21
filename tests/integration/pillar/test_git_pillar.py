@@ -130,6 +130,12 @@ class GitPythonMixin(object):
     options, so all of the tests for GitPython can be re-used via this mixin.
     """
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_single_source(self):
         """
         Test using a single ext_pillar repo
@@ -159,6 +165,12 @@ class GitPythonMixin(object):
             },
         )
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_multiple_sources_master_dev_no_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -195,6 +207,12 @@ class GitPythonMixin(object):
             },
         )
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_multiple_sources_dev_master_no_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -231,6 +249,12 @@ class GitPythonMixin(object):
             },
         )
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_multiple_sources_master_dev_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -267,6 +291,12 @@ class GitPythonMixin(object):
             },
         )
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_multiple_sources_dev_master_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -303,6 +333,12 @@ class GitPythonMixin(object):
             },
         )
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_multiple_sources_with_pillarenv(self):
         """
         Test using pillarenv to restrict results to those from a single branch
@@ -334,6 +370,12 @@ class GitPythonMixin(object):
             },
         )
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_includes_enabled(self):
         """
         Test with git_pillar_includes enabled. The top_only branch references
@@ -368,6 +410,12 @@ class GitPythonMixin(object):
             },
         )
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_includes_disabled(self):
         """
         Test with git_pillar_includes enabled. The top_only branch references
@@ -408,6 +456,12 @@ class GitPythonMixin(object):
             },
         )
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_includes_enabled_solves___env___with_mountpoint(self):
         """
         Test with git_pillar_includes enabled and using "__env__" as the branch
@@ -446,6 +500,12 @@ class GitPythonMixin(object):
             },
         )
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_root_parameter(self):
         """
         Test root parameter
@@ -469,6 +529,12 @@ class GitPythonMixin(object):
         )
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_mountpoint_parameter(self):
         """
         Test mountpoint parameter
@@ -492,6 +558,12 @@ class GitPythonMixin(object):
         )
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_root_and_mountpoint_parameters(self):
         """
         Test root and mountpoint parameters
@@ -516,6 +588,12 @@ class GitPythonMixin(object):
         )
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_all_saltenvs(self):
         """
         Test all_saltenvs parameter.
@@ -550,6 +628,12 @@ class GitPythonMixin(object):
             },
         )
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_all_saltenvs_base(self):
         """
         Test all_saltenvs parameter with base pillarenv.
@@ -701,6 +785,12 @@ class TestPygit2SSH(GitPillarSSHTestBase):
     passphrase = PASSWORD
 
     @requires_system_grains
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_single_source(self, grains):
         """
         Test using a single ext_pillar repo
@@ -790,6 +880,12 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         self.assertEqual(ret, expected)
 
     @requires_system_grains
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_multiple_sources_master_dev_no_merge_lists(self, grains):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -897,6 +993,12 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         self.assertEqual(ret, expected)
 
     @requires_system_grains
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_multiple_sources_dev_master_no_merge_lists(self, grains):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -1004,6 +1106,12 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         self.assertEqual(ret, expected)
 
     @requires_system_grains
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_multiple_sources_master_dev_merge_lists(self, grains):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -1111,6 +1219,12 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         self.assertEqual(ret, expected)
 
     @requires_system_grains
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_multiple_sources_dev_master_merge_lists(self, grains):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -1218,6 +1332,12 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         self.assertEqual(ret, expected)
 
     @requires_system_grains
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_multiple_sources_with_pillarenv(self, grains):
         """
         Test using pillarenv to restrict results to those from a single branch
@@ -1320,6 +1440,12 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         self.assertEqual(ret, expected)
 
     @requires_system_grains
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_includes_enabled(self, grains):
         """
         Test with git_pillar_includes enabled. The top_only branch references
@@ -1425,6 +1551,12 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         self.assertEqual(ret, expected)
 
     @requires_system_grains
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_includes_disabled(self, grains):
         """
         Test with git_pillar_includes enabled. The top_only branch references
@@ -1538,6 +1670,12 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_includes_enabled_solves___env___with_mountpoint(self):
         """
         Test with git_pillar_includes enabled and using "__env__" as the branch
@@ -1579,6 +1717,12 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
 
     @requires_system_grains
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_root_parameter(self, grains):
         """
         Test root parameter
@@ -1677,6 +1821,12 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         self.assertEqual(ret, expected)
 
     @requires_system_grains
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_mountpoint_parameter(self, grains):
         """
         Test mountpoint parameter
@@ -1775,6 +1925,12 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         self.assertEqual(ret, expected)
 
     @requires_system_grains
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_root_and_mountpoint_parameters(self, grains):
         """
         Test root and mountpoint parameters
@@ -1877,6 +2033,12 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         self.assertEqual(ret, expected)
 
     @requires_system_grains
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_all_saltenvs(self, grains):
         """
         Test all_saltenvs parameter.
@@ -1988,6 +2150,12 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         self.assertEqual(ret, expected)
 
     @requires_system_grains
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_all_saltenvs_base(self, grains):
         """
         Test all_saltenvs parameter.
@@ -2223,6 +2391,12 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
     Test git_pillar with pygit2 using SSH authentication
     """
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_single_source(self):
         """
         Test using a single ext_pillar repo
@@ -2251,6 +2425,12 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_multiple_sources_master_dev_no_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -2286,6 +2466,12 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_multiple_sources_dev_master_no_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -2321,6 +2507,12 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_multiple_sources_master_dev_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -2356,6 +2548,12 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_multiple_sources_dev_master_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -2391,6 +2589,12 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_multiple_sources_with_pillarenv(self):
         """
         Test using pillarenv to restrict results to those from a single branch
@@ -2421,6 +2625,12 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_includes_enabled(self):
         """
         Test with git_pillar_includes enabled. The top_only branch references
@@ -2454,6 +2664,12 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_includes_disabled(self):
         """
         Test with git_pillar_includes enabled. The top_only branch references
@@ -2493,6 +2709,12 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_includes_enabled_solves___env___with_mountpoint(self):
         """
         Test with git_pillar_includes enabled and using "__env__" as the branch
@@ -2531,6 +2753,12 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
             },
         )
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_root_parameter(self):
         """
         Test root parameter
@@ -2554,6 +2782,12 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_mountpoint_parameter(self):
         """
         Test mountpoint parameter
@@ -2577,6 +2811,12 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_root_and_mountpoint_parameters(self):
         """
         Test root and mountpoint parameters
@@ -2601,6 +2841,12 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_all_saltenvs(self):
         """
         Test all_saltenvs parameter.
@@ -2635,6 +2881,12 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
             },
         )
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_all_saltenvs_base(self):
         """
         Test all_saltenvs parameter with base pillarenv.
@@ -2723,6 +2975,12 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
     user = USERNAME
     password = PASSWORD
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_single_source(self):
         """
         Test using a single ext_pillar repo
@@ -2773,6 +3031,12 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_multiple_sources_master_dev_no_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -2835,6 +3099,12 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_multiple_sources_dev_master_no_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -2897,6 +3167,12 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_multiple_sources_master_dev_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -2959,6 +3235,12 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_multiple_sources_dev_master_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -3021,6 +3303,12 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_multiple_sources_with_pillarenv(self):
         """
         Test using pillarenv to restrict results to those from a single branch
@@ -3078,6 +3366,12 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_includes_enabled(self):
         """
         Test with git_pillar_includes enabled. The top_only branch references
@@ -3115,6 +3409,12 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_mountpoint_parameter(self):
         """
         Test mountpoint parameter
@@ -3141,6 +3441,12 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_root_parameter(self):
         """
         Test root parameter
@@ -3191,6 +3497,12 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_includes_disabled(self):
         """
         Test with git_pillar_includes enabled. The top_only branch references
@@ -3258,6 +3570,12 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_includes_enabled_solves___env___with_mountpoint(self):
         """
         Test with git_pillar_includes enabled and using "__env__" as the branch
@@ -3305,6 +3623,12 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             },
         )
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_root_and_mountpoint_parameters(self):
         """
         Test root and mountpoint parameters
@@ -3332,6 +3656,12 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_all_saltenvs(self):
         """
         Test all_saltenvs parameter.
@@ -3369,6 +3699,12 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             },
         )
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_all_saltenvs_base(self):
         """
         Test all_saltenvs parameter with base pillarenv.
