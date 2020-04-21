@@ -522,3 +522,27 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertEqual({}, third_run[key]["changes"])
         self.assertEqual("0600", oct(os.stat(crtfile).st_mode)[-4:])
+
+    @with_tempfile(suffix=".crt", create=False)
+    @with_tempfile(suffix=".key", create=False)
+    def test_file_managed_failure(self, keyfile, crtfile):
+        """
+        Test that a failure in the file.managed call marks the state
+        call as failed.
+        """
+        crtfile_pieces = os.path.split(crtfile)
+        bad_crtfile = os.path.join(
+            crtfile_pieces[0], "deeply/nested", crtfile_pieces[1]
+        )
+        ret = self.run_function(
+            "state.apply",
+            ["x509.self_signed_file_error"],
+            pillar={"keyfile": keyfile, "crtfile": bad_crtfile},
+        )
+
+        key = "x509_|-self_signed_cert_|-{0}_|-certificate_managed".format(bad_crtfile)
+        self.assertFalse(ret[key]["result"], "State should have failed.")
+        self.assertEqual({}, ret[key]["changes"])
+        self.assertFalse(
+            os.path.exists(crtfile), "Certificate should not have been created."
+        )
