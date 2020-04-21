@@ -1,4 +1,4 @@
-@Library('salt@master-1.7') _
+@Library('salt@master-1.7-staged') _
 
 // Pre-nox pipeline
 runTestSuite(
@@ -15,6 +15,7 @@ runTestSuite(
     python_version: 'py3',
     //splits: ['unit', 'integration', 'multimaster'],
     testrun_timeout: 6,
-    use_spot_instances: false)
+    use_spot_instances: false,
+    fast_slow_staged_testrun: true)
 
 // vim: ft=groovy
