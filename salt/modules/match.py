@@ -4,20 +4,19 @@ The match module allows for match routines to be run and determine target specs
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
+import collections
 import copy
 
 # Import python libs
 import inspect
 import logging
 import sys
-import collections
-import copy
 
 # Import salt libs
 import salt.loader
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt.ext import six
 from salt.exceptions import SaltException
+from salt.ext import six
 
 __func_alias__ = {"list_": "list"}
 
