@@ -452,8 +452,6 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         else:
             raise RuntimeError
 
-    @skipIf(salt.utils.platform.is_windows(), "Do not run on Windows")
-    @skipIf(salt.utils.platform.is_darwin(), "Do not run on MacOS")
     def test_run_cwd_in_combination_with_runas(self):
         """
         cmd.run executes command in the cwd directory
@@ -461,9 +459,11 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         """
         cmd = "pwd"
         cwd = "/tmp"
-        runas = os.getlogin()
+        runas = "foobar"
 
-        with patch.dict(cmdmod.__grains__, {"os": "Darwin", "os_family": "Solaris"}):
+        with patch("pwd.getpwnam") as getpwnam_mock, patch.dict(
+            cmdmod.__grains__, {"os": "Darwin", "os_family": "Solaris"}
+        ):
             stdout = cmdmod._run(cmd, cwd=cwd, runas=runas).get("stdout")
         self.assertEqual(stdout, cwd)
 
@@ -626,11 +626,13 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test run_chroot when a runas parameter is provided
         """
-        with patch.dict(
+        expected_shell = "/bin/sh"
+        patch_salt = patch.dict(
             cmdmod.__salt__, {"mount.mount": MagicMock(), "mount.umount": MagicMock()}
-        ):
-            with patch("salt.modules.cmdmod.run_all") as run_all_mock:
-                cmdmod.run_chroot("/mnt", "ls", runas="foobar")
+        )
+        patch_run_all = patch("salt.modules.cmdmod.run_all")
+        with patch_salt, patch_run_all as run_all_mock:
+            cmdmod.run_chroot("/mnt", "ls", shell=expected_shell, runas="foobar")
         run_all_mock.assert_called_with(
             "chroot --userspec foobar: /mnt /bin/sh -c ls",
             bg=False,
@@ -647,7 +649,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
             reset_system_locale=True,
             rstrip=True,
             saltenv="base",
-            shell="/bin/bash",
+            shell=expected_shell,
             stdin=None,
             success_retcodes=None,
             template=None,
