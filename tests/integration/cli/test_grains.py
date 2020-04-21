@@ -21,6 +21,7 @@ import pytest
 import salt.utils.files
 from tests.support.case import ShellCase, SSHCase
 from tests.support.helpers import flaky
+from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
@@ -31,6 +32,7 @@ class GrainsTargetingTest(ShellCase):
     Integration tests for targeting with grains.
     """
 
+    @skipIf(True, "SLOWTEST skip")
     def test_grains_targeting_os_running(self):
         """
         Tests running "salt -G 'os:<system-os>' test.ping and minions both return True
@@ -45,6 +47,7 @@ class GrainsTargetingTest(ShellCase):
         ret = self.run_salt('-G "os:{0}" test.ping'.format(os_grain))
         self.assertEqual(sorted(ret), sorted(test_ret))
 
+    @skipIf(True, "SLOWTEST skip")
     def test_grains_targeting_minion_id_running(self):
         """
         Tests return of each running test minion targeting with minion id grain
@@ -56,6 +59,7 @@ class GrainsTargetingTest(ShellCase):
         self.assertEqual(sorted(sub_minion), sorted(["sub_minion:", "    True"]))
 
     @flaky
+    @skipIf(True, "SLOWTEST skip")
     def test_grains_targeting_disconnected(self):
         """
         Tests return of minion using grains targeting on a disconnected minion.
@@ -89,6 +93,7 @@ class SSHGrainsTest(SSHCase):
     Depend on proper environment set by SSHCase class
     """
 
+    @skipIf(True, "SLOWTEST skip")
     def test_grains_id(self):
         """
         Test salt-ssh grains id work for localhost.
