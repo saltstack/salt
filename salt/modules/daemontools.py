@@ -48,7 +48,7 @@ def __virtual__():
     BINS = frozenset(("svc", "supervise", "svok"))
     if all(salt.utils.path.which(b) for b in BINS) and SERVICE_DIR:
         return __virtualname__
-    return False
+    return (False, "Missing dependency: {0}".format(BINS))
 
 
 def _service_path(name):

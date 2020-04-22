@@ -222,6 +222,7 @@ from salt.exceptions import (
     VMwareObjectRetrievalError,
     VMwareSaltError,
 )
+
 # Import Salt Libs
 from salt.ext import six
 from salt.ext.six.moves import range, zip
@@ -2369,7 +2370,7 @@ def system_info(host, username, password, protocol=None, port=None):
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
 def list_datacenters(host, username, password, protocol=None, port=None):
-    '''
+    """
     Returns a list of datacenters for the specified host.
 
     host
@@ -2405,7 +2406,7 @@ def list_datacenters(host, username, password, protocol=None, port=None):
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
 def list_clusters(host, username, password, protocol=None, port=None):
-    '''
+    """
     Returns a list of clusters for the specified host.
 
     host
@@ -2441,7 +2442,7 @@ def list_clusters(host, username, password, protocol=None, port=None):
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
 def list_datastore_clusters(host, username, password, protocol=None, port=None):
-    '''
+    """
     Returns a list of datastore clusters for the specified host.
 
     host
@@ -2476,7 +2477,7 @@ def list_datastore_clusters(host, username, password, protocol=None, port=None):
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
 def list_datastores(host, username, password, protocol=None, port=None):
-    '''
+    """
     Returns a list of datastores for the specified host.
 
     host
@@ -2511,7 +2512,7 @@ def list_datastores(host, username, password, protocol=None, port=None):
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
 def list_hosts(host, username, password, protocol=None, port=None):
-    '''
+    """
     Returns a list of hosts for the specified VMware environment.
 
     host
@@ -2546,7 +2547,7 @@ def list_hosts(host, username, password, protocol=None, port=None):
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
 def list_resourcepools(host, username, password, protocol=None, port=None):
-    '''
+    """
     Returns a list of resource pools for the specified host.
 
     host
@@ -2581,7 +2582,7 @@ def list_resourcepools(host, username, password, protocol=None, port=None):
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
 def list_networks(host, username, password, protocol=None, port=None):
-    '''
+    """
     Returns a list of networks for the specified host.
 
     host
@@ -2616,7 +2617,7 @@ def list_networks(host, username, password, protocol=None, port=None):
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
 def list_vms(host, username, password, protocol=None, port=None):
-    '''
+    """
     Returns a list of VMs for the specified host.
 
     host
@@ -2651,7 +2652,7 @@ def list_vms(host, username, password, protocol=None, port=None):
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
 def list_folders(host, username, password, protocol=None, port=None):
-    '''
+    """
     Returns a list of folders for the specified host.
 
     host
@@ -2686,7 +2687,7 @@ def list_folders(host, username, password, protocol=None, port=None):
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
 def list_dvs(host, username, password, protocol=None, port=None):
-    '''
+    """
     Returns a list of distributed virtual switches for the specified host.
 
     host
@@ -2721,7 +2722,7 @@ def list_dvs(host, username, password, protocol=None, port=None):
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
 def list_vapps(host, username, password, protocol=None, port=None):
-    '''
+    """
     Returns a list of vApps for the specified host.
 
     host
@@ -5403,7 +5404,7 @@ def update_storage_policy(policy, policy_dict, service_instance=None):
 @supports_proxies("esxcluster", "esxdatacenter", "vcenter")
 @gets_service_instance_via_proxy
 def list_default_storage_policy_of_datastore(datastore, service_instance=None):
-    '''
+    """
     Returns a list of datastores assign the storage policies.
 
     datastore
@@ -6498,9 +6499,10 @@ def assign_license(
 @depends(HAS_PYVMOMI)
 @supports_proxies("esxi", "esxcluster", "esxdatacenter", "vcenter")
 @gets_service_instance_via_proxy
-def list_hosts_via_proxy(hostnames=None, datacenter=None,
-                         cluster=None, service_instance=None):
-    '''
+def list_hosts_via_proxy(
+    hostnames=None, datacenter=None, cluster=None, service_instance=None
+):
+    """
     Returns a list of hosts for the specified VMware environment. The list
     of hosts can be filtered by datacenter name and/or cluster name
 
@@ -10946,7 +10948,7 @@ def register_vm(name, datacenter, placement, vmx_path, service_instance=None):
 @gets_service_instance_via_proxy
 def power_on_vm(name, datacenter=None, service_instance=None):
     """
-    Powers on a virtual machine specified by it's name.
+    Powers on a virtual machine specified by its name.
 
     name
         Name of the virtual machine
@@ -10987,7 +10989,7 @@ def power_on_vm(name, datacenter=None, service_instance=None):
 @gets_service_instance_via_proxy
 def power_off_vm(name, datacenter=None, service_instance=None):
     """
-    Powers off a virtual machine specified by it's name.
+    Powers off a virtual machine specified by its name.
 
     name
         Name of the virtual machine

@@ -34,6 +34,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os.path
 
 import salt.ext.six as six
+
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -48,7 +49,9 @@ def __virtual__():
     """
     Only load if the lxd module is available in __salt__
     """
-    return __virtualname__ if "lxd.version" in __salt__ else False
+    if "lxd.version" in __salt__:
+        return __virtualname__
+    return (False, "lxd module could not be loaded")
 
 
 def init(

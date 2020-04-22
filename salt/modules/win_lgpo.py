@@ -2615,12 +2615,18 @@ class _policy_info(object):
                         "lgpo_section": self.account_lockout_policy_gpedit_path,
                         "Settings": {
                             "Function": "_in_range_inclusive",
-                            "Args": {"min": 0, "max": 6000000},
+                            "Args": {
+                                "min": 0,
+                                "max": 6000000,
+                                "zero_value": 0xFFFFFFFF,
+                            },
                         },
                         "NetUserModal": {"Modal": 3, "Option": "lockout_duration"},
                         "Transform": {
                             "Get": "_seconds_to_minutes",
                             "Put": "_minutes_to_seconds",
+                            "GetArgs": {"zero_value": 0xFFFFFFFF},
+                            "PutArgs": {"zero_value": 0xFFFFFFFF},
                         },
                     },
                     "LockoutThreshold": {
@@ -2651,7 +2657,7 @@ class _policy_info(object):
                     ########## LEGACY AUDIT POLICIES ##########
                     # To use these set the following policy to DISABLED
                     # "Audit: Force audit policy subcategory settings (Windows Vista or later) to override audit policy category settings"
-                    # or it's alias...
+                    # or its alias...
                     # SceNoApplyLegacyAuditPolicy
                     "AuditAccountLogon": {
                         "Policy": "Audit account logon events",
@@ -2750,7 +2756,7 @@ class _policy_info(object):
                     # "Audit: Force audit policy subcategory settings (Windows
                     # Vista or later) to override audit policy category
                     # settings"
-                    # or it's alias...
+                    # or its alias...
                     # SceNoApplyLegacyAuditPolicy
                     # Account Logon Section
                     "AuditCredentialValidation": {
@@ -4252,7 +4258,10 @@ class _policy_info(object):
         """
         converts a number of seconds to minutes
         """
+        zero_value = kwargs.get("zero_value", 0)
         if val is not None:
+            if val == zero_value:
+                return 0
             return val / 60
         else:
             return "Not Defined"
@@ -4262,7 +4271,10 @@ class _policy_info(object):
         """
         converts number of minutes to seconds
         """
+        zero_value = kwargs.get("zero_value", 0)
         if val is not None:
+            if val == 0:
+                return zero_value
             return val * 60
         else:
             return "Not Defined"
@@ -6908,7 +6920,7 @@ def _checkAllAdmxPolicies(
                 # Make sure the we're passing the full policy name
                 # This issue was found when setting the `Allow Telemetry` setting
                 # All following states would show a change in this setting
-                # When the state does it's first `lgpo.get` it would return `AllowTelemetry`
+                # When the state does its first `lgpo.get` it would return `AllowTelemetry`
                 # On the second run, it would return `Allow Telemetry`
                 # This makes sure we're always returning the full_name when required
                 if (
@@ -9221,7 +9233,7 @@ def _get_policy_adm_setting(
         # Make sure the we're passing the full policy name
         # This issue was found when setting the `Allow Telemetry` setting
         # All following states would show a change in this setting
-        # When the state does it's first `lgpo.get` it would return `AllowTelemetry`
+        # When the state does its first `lgpo.get` it would return `AllowTelemetry`
         # On the second run, it would return `Allow Telemetry`
         # This makes sure we're always returning the full_name when required
         if this_policy_name in policy_vals[this_policy_namespace][this_policy_name]:

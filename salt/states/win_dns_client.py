@@ -9,7 +9,9 @@ def __virtual__():
     """
     Load if the module win_dns_client is loaded
     """
-    return "win_dns_client" if "win_dns_client.add_dns" in __salt__ else False
+    if "win_dns_client.add_dns" in __salt__:
+        return "win_dns_client"
+    return (False, "win_dns_client module could not be loaded")
 
 
 def dns_exists(name, servers=None, interface="Local Area Connection", replace=False):

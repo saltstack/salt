@@ -134,11 +134,9 @@ def __virtual__():
     """
     Only make this state available if the azurearm_dns module is available.
     """
-    return (
-        __virtualname__
-        if "azurearm_dns.zones_list_by_resource_group" in __salt__
-        else False
-    )
+    if "azurearm_dns.zones_list_by_resource_group" in __salt__:
+        return __virtualname__
+    return (False, "azurearm_dns module could not be loaded")
 
 
 def zone_present(
