@@ -147,6 +147,7 @@ class Base(TestCase, LoaderModuleMockMixin):
 )
 class BuildoutTestCase(Base):
     @requires_network()
+    @skipIf(True, "SLOWTEST skip")
     def test_onlyif_unless(self):
         b_dir = os.path.join(self.tdir, "b")
         ret = buildout.buildout(b_dir, onlyif=RUNTIME_VARS.SHELL_FALSE_PATH)
@@ -157,6 +158,7 @@ class BuildoutTestCase(Base):
         self.assertTrue(ret["status"] is True)
 
     @requires_network()
+    @skipIf(True, "SLOWTEST skip")
     def test_salt_callback(self):
         @buildout._salt_callback
         def callback1(a, b=1):
@@ -214,6 +216,7 @@ class BuildoutTestCase(Base):
         # pylint: enable=invalid-sequence-index
 
     @requires_network()
+    @skipIf(True, "SLOWTEST skip")
     def test_get_bootstrap_url(self):
         for path in [
             os.path.join(self.tdir, "var/ver/1/dumppicked"),
@@ -238,6 +241,7 @@ class BuildoutTestCase(Base):
             )
 
     @requires_network()
+    @skipIf(True, "SLOWTEST skip")
     def test_get_buildout_ver(self):
         for path in [
             os.path.join(self.tdir, "var/ver/1/dumppicked"),
@@ -258,6 +262,7 @@ class BuildoutTestCase(Base):
             )
 
     @requires_network()
+    @skipIf(True, "SLOWTEST skip")
     def test_get_bootstrap_content(self):
         self.assertEqual(
             "",
@@ -273,6 +278,7 @@ class BuildoutTestCase(Base):
         )
 
     @requires_network()
+    @skipIf(True, "SLOWTEST skip")
     def test_logger_clean(self):
         buildout.LOG.clear()
         # nothing in there
@@ -291,6 +297,7 @@ class BuildoutTestCase(Base):
         )
 
     @requires_network()
+    @skipIf(True, "SLOWTEST skip")
     def test_logger_loggers(self):
         buildout.LOG.clear()
         # nothing in there
@@ -303,6 +310,7 @@ class BuildoutTestCase(Base):
             self.assertEqual(buildout.LOG.by_level[i][-1], "moo")
 
     @requires_network()
+    @skipIf(True, "SLOWTEST skip")
     def test__find_cfgs(self):
         result = sorted(
             [a.replace(self.root, "") for a in buildout._find_cfgs(self.root)]
@@ -470,6 +478,7 @@ class BuildoutOnlineTestCase(Base):
         )
 
     @requires_network()
+    @skipIf(True, "SLOWTEST skip")
     def test_run_buildout(self):
         if salt.modules.virtualenv_mod.virtualenv_ver(self.ppy_st) >= (20, 0, 0):
             self.skipTest(
@@ -485,6 +494,7 @@ class BuildoutOnlineTestCase(Base):
         self.assertTrue("Installing b" in out)
 
     @requires_network()
+    @skipIf(True, "SLOWTEST skip")
     def test_buildout(self):
         if salt.modules.virtualenv_mod.virtualenv_ver(self.ppy_st) >= (20, 0, 0):
             self.skipTest(
