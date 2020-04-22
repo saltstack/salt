@@ -242,6 +242,10 @@ def ext_pillar(
     # Get the Master's instance info, primarily the region
     (_, region) = _get_instance_info()
 
+    # If the Minion's region is available, use it instead
+    if use_grain:
+        region = __grains__.get("ec2", {}).get("region", region)
+
     try:
         conn = boto.ec2.connect_to_region(region)
     except boto.exception.AWSConnectionError as exc:

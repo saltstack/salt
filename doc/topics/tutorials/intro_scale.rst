@@ -272,7 +272,7 @@ system, such as a database.
   data using a returner (instead of the local job cache on disk).
 
 If a master has many accepted keys, it may take a long time to publish a job
-because the master much first determine the matching minions and deliver
+because the master must first determine the matching minions and deliver
 that information back to the waiting client before the job can be published.
 
 To mitigate this, a key cache may be enabled. This will reduce the load
