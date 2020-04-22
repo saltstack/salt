@@ -9,7 +9,7 @@ import pytest
 import salt.utils.platform
 import salt.utils.win_dacl as win_dacl
 import salt.utils.win_reg as win_reg
-from tests.support.helpers import patch, random_string
+from tests.support.helpers import random_string
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
