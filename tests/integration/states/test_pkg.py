@@ -26,6 +26,7 @@ from tests.support.helpers import (
     runs_on,
 )
 from tests.support.mixins import SaltReturnAssertsMixin
+from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
