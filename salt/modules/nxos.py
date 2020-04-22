@@ -323,7 +323,8 @@ def sendline(command, method="cli_show_ascii", **kwargs):
     Send arbitrary commands to the NX-OS device.
 
     command
-        The command to be sent.
+        The command or list of commands to be sent.
+        ['cmd1', 'cmd2'] is converted to 'cmd1 ; cmd2'.
 
     method:
         ``cli_show_ascii``: Return raw test or unstructured output.

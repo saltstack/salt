@@ -277,16 +277,16 @@ def shutdown():
         return _shutdown_nxapi()
 
 
-def sendline(command, method="cli_show_ascii", **kwargs):
+def sendline(commands, method="cli_show_ascii", **kwargs):
     """
     Helper function for nxos execution module functions that need to
     send commands to an nxos device using the proxy minion.
     """
     try:
         if CONNECTION == "ssh":
-            result = _sendline_ssh(command, **kwargs)
+            result = _sendline_ssh(commands, **kwargs)
         elif CONNECTION == "nxapi":
-            result = _nxapi_request(command, method, **kwargs)
+            result = _nxapi_request(commands, method, **kwargs)
     except (TerminalException, NxosCliError) as e:
         log.error(e)
         raise
@@ -392,7 +392,10 @@ def _shutdown_ssh():
     return "Shutdown of ssh proxy minion is not supported"
 
 
-def _sendline_ssh(command, **kwargs):
+def _sendline_ssh(commands, **kwargs):
+    if isinstance(commands, str):
+        commands = [commands]
+    command = "; ".join(commands)
     if _ping_ssh() is False:
         _init_ssh()
     out, err = DEVICE_DETAILS[_worker_name()].sendline(command)
