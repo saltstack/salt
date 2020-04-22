@@ -433,7 +433,19 @@ class ReactWrap(object):
             # and kwargs['kwarg'] contain the positional and keyword arguments
             # that will be passed to the client interface to execute the
             # desired runner/wheel/remote-exec/etc. function.
-            l_fun(*args, **kwargs)
+            ret = l_fun(*args, **kwargs)
+
+            if ret is False:
+                log.error(
+                    "Reactor '%s' failed  to execute %s '%s': "
+                    "TaskPool queue is full!"
+                    "Consider tuning reactor_worker_threads and/or"
+                    " reactor_worker_hwm",
+                    low["__id__"],
+                    low["state"],
+                    low["fun"],
+                )
+
         except SystemExit:
             log.warning("Reactor '%s' attempted to exit. Ignored.", low["__id__"])
         except Exception:  # pylint: disable=broad-except
@@ -449,13 +461,13 @@ class ReactWrap(object):
         """
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
         """
-        self.pool.fire_async(self.client_cache["runner"].low, args=(fun, kwargs))
+        return self.pool.fire_async(self.client_cache["runner"].low, args=(fun, kwargs))
 
     def wheel(self, fun, **kwargs):
         """
         Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
         """
-        self.pool.fire_async(self.client_cache["wheel"].low, args=(fun, kwargs))
+        return self.pool.fire_async(self.client_cache["wheel"].low, args=(fun, kwargs))
 
     def local(self, fun, tgt, **kwargs):
         """
