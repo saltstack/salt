@@ -21,6 +21,7 @@ Versions are `MAJOR.PATCH`.
 
 ### Added
 - [#56627](https://github.com/saltstack/salt/pull/56627) - Add new salt-ssh set_path option
+- [#51379](https://github.com/saltstack/salt/pull/56792) - Backport 51379 : Adds .set_domain_workgroup to win_system
 
 ## 3000.1
 

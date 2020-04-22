@@ -110,6 +110,7 @@ class VaultTestCase(ModuleCase, ShellCase):
             self.run_state("docker_image.absent", name="vault", force=True)
 
     @flaky
+    @skipIf(True, "SLOWTEST skip")
     def test_sdb(self):
         set_output = self.run_function(
             "sdb.set", uri="sdb://sdbvault/secret/test/test_sdb/foo", value="bar"
@@ -121,6 +122,7 @@ class VaultTestCase(ModuleCase, ShellCase):
         self.assertEqual(get_output, "bar")
 
     @flaky
+    @skipIf(True, "SLOWTEST skip")
     def test_sdb_runner(self):
         set_output = self.run_run(
             "sdb.set sdb://sdbvault/secret/test/test_sdb_runner/foo bar"
@@ -132,6 +134,7 @@ class VaultTestCase(ModuleCase, ShellCase):
         self.assertEqual(get_output, ["bar"])
 
     @flaky
+    @skipIf(True, "SLOWTEST skip")
     def test_config(self):
         set_output = self.run_function(
             "sdb.set", uri="sdb://sdbvault/secret/test/test_pillar_sdb/foo", value="bar"
@@ -230,6 +233,7 @@ class VaultTestCaseCurrent(ModuleCase, ShellCase):
             self.run_state("docker_image.absent", name="vault", force=True)
 
     @flaky
+    @skipIf(True, "SLOWTEST skip")
     def test_sdb_kv2(self):
         set_output = self.run_function(
             "sdb.set", uri="sdb://sdbvault/secret/test/test_sdb/foo", value="bar"
@@ -241,6 +245,7 @@ class VaultTestCaseCurrent(ModuleCase, ShellCase):
         self.assertEqual(get_output, "bar")
 
     @flaky
+    @skipIf(True, "SLOWTEST skip")
     def test_sdb_runner_kv2(self):
         set_output = self.run_run(
             "sdb.set sdb://sdbvault/secret/test/test_sdb_runner/foo bar"
@@ -252,6 +257,7 @@ class VaultTestCaseCurrent(ModuleCase, ShellCase):
         self.assertEqual(get_output, ["bar"])
 
     @flaky
+    @skipIf(True, "SLOWTEST skip")
     def test_config_kv2(self):
         set_output = self.run_function(
             "sdb.set", uri="sdb://sdbvault/secret/test/test_pillar_sdb/foo", value="bar"

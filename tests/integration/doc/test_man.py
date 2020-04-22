@@ -76,6 +76,7 @@ class ManTest(ModuleCase):
                     )
                 )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_man(self):
         """
         Make sure that man pages are installed
