@@ -616,6 +616,9 @@ def requires_network(only_local_network=False):
                     cls.skipTest("No local network was detected")
                 return func(cls)
 
+            if os.environ.get("NO_INTERNET"):
+                cls.skipTest("Environment variable NO_INTERNET is set.")
+
             # We are using the google.com DNS records as numerical IPs to avoid
             # DNS lookups which could greatly slow down this check
             for addr in (
