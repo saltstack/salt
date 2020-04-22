@@ -15,7 +15,6 @@ import salt.utils.platform
 from salt.ext.six.moves import range
 from salt.utils.pycrypto import gen_hash
 from tests.support.case import ModuleCase, ShellCase
-from tests.support.helpers import requires_salt_states
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 
@@ -41,12 +40,12 @@ def gen_password():
     return password, hashed_pwd
 
 
-@requires_salt_states("user.absent", "user.present")
 @skipIf(pwd is None or grp is None, "No pwd or grp module available")
 @pytest.mark.skip_if_not_root
 @pytest.mark.destructive_test
 @pytest.mark.windows_whitelisted
 @pytest.mark.requires_salt_modules("shadow.set_password")
+@pytest.mark.requires_salt_states("user.absent", "user.present")
 class UserAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
     """
     Test user auth mechanisms
@@ -94,11 +93,13 @@ class UserAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
         self.assertIn("Authentication error occurred", "".join(resp))
 
 
-@requires_salt_states("group.absent", "group.present", "user.absent", "user.present")
 @skipIf(pwd is None or grp is None, "No pwd or grp module available")
 @pytest.mark.skip_if_not_root
 @pytest.mark.destructive_test
 @pytest.mark.requires_salt_modules("shadow.set_password", "user.chgroups")
+@pytest.mark.requires_salt_states(
+    "group.absent", "group.present", "user.absent", "user.present"
+)
 class GroupAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
     """
     Test group auth mechanisms

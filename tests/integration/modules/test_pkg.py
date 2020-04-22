@@ -10,7 +10,7 @@ import salt.utils.path
 import salt.utils.pkg
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import requires_salt_states, requires_system_grains
+from tests.support.helpers import requires_system_grains
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 
@@ -233,7 +233,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             test_remove()
 
     @pytest.mark.destructive_test
-    @requires_salt_states("pkg.installed")
+    @pytest.mark.requires_salt_states("pkg.installed")
     @pytest.mark.requires_salt_modules(
         "pkg.hold",
         "pkg.unhold",
@@ -432,7 +432,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         "The jenkins user is equivalent to root on mac, causing the test to be unrunnable",
     )
     @pytest.mark.destructive_test
-    @requires_salt_states("pkg.removed")
+    @pytest.mark.requires_salt_states("pkg.removed")
     @pytest.mark.requires_salt_modules("pkg.remove", "pkg.latest_version")
     @requires_system_grains
     def test_pkg_latest_version(self, grains):

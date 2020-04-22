@@ -12,7 +12,7 @@ import salt.utils.files
 import salt.utils.platform
 from salt.ext import six
 from tests.support.case import ModuleCase
-from tests.support.helpers import requires_salt_states, requires_system_grains
+from tests.support.helpers import requires_system_grains
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 
@@ -69,7 +69,7 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
         for state_id, state_result in six.iteritems(ret):
             self.assertSaltTrueReturn(dict([(state_id, state_result)]))
 
-    @requires_salt_states("pkgrepo.absent", "pkgrepo.managed")
+    @pytest.mark.requires_salt_states("pkgrepo.absent", "pkgrepo.managed")
     @requires_system_grains
     def test_pkgrepo_03_with_comments(self, grains):
         """
@@ -121,7 +121,7 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
             # Clean up
             self.run_state("pkgrepo.absent", name=kwargs["name"])
 
-    @requires_salt_states("pkgrepo.managed")
+    @pytest.mark.requires_salt_states("pkgrepo.managed")
     @requires_system_grains
     def test_pkgrepo_04_apt_with_architectures(self, grains):
         """
