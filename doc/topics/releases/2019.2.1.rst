@@ -2620,7 +2620,7 @@ Changelog for v2019.2.0..v2019.2.1
 
   * 0372718 Fix lint issues on salt
 
-  * 9eab9f4 Add nox session/env/target to run lint against Salt and it's test suite
+  * 9eab9f4 Add nox session/env/target to run lint against Salt and its test suite
 
   * 123f771 Lock lint requirements
 

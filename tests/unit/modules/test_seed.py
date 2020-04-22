@@ -18,7 +18,7 @@ import salt.utils.odict
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class SeedTestCase(TestCase, LoaderModuleMockMixin):
@@ -29,6 +29,7 @@ class SeedTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {seed: {}}
 
+    @skipIf(True, "SLOWTEST skip")
     def test_mkconfig_odict(self):
         with patch.dict(seed.__opts__, {"master": "foo"}):
             ddd = salt.utils.odict.OrderedDict()

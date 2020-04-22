@@ -8,6 +8,7 @@ Define some generic socket functions for network modules
 from __future__ import absolute_import, print_function, unicode_literals
 
 import collections
+import fnmatch
 import itertools
 import logging
 import os
@@ -860,7 +861,7 @@ def _interfaces_ifconfig(out):
         if iface in ret:
             # SunOS optimization, where interfaces occur twice in 'ifconfig -a'
             # output with the same name: for ipv4 and then for ipv6 addr family.
-            # Every instance has it's own 'UP' status and we assume that ipv4
+            # Every instance has its own 'UP' status and we assume that ipv4
             # status determines global interface status.
             #
             # merge items with higher priority for older values
@@ -1078,7 +1079,7 @@ def get_net_start(ipaddr, netmask):
 
 def get_net_size(mask):
     """
-    Turns an IPv4 netmask into it's corresponding prefix length
+    Turns an IPv4 netmask into its corresponding prefix length
     (255.255.255.0 -> 24 as in 192.168.1.10/24).
     """
     binary_str = ""
@@ -1272,6 +1273,39 @@ def in_subnet(cidr, addr=None):
     return any(ipaddress.ip_address(item) in cidr for item in addr)
 
 
+def _get_ips(ifaces, proto="inet"):
+    """
+    Accepts a dict of interface data and returns a list of dictionaries
+    """
+    ret = []
+    for ip_info in six.itervalues(ifaces):
+        ret.extend(ip_info.get(proto, []))
+        ret.extend(
+            [addr for addr in ip_info.get("secondary", []) if addr.get("type") == proto]
+        )
+    return ret
+
+
+def _filter_interfaces(interface=None, interface_data=None):
+    """
+    Gather interface data if not passed in, and optionally filter by the
+    specified interface name.
+    """
+    ifaces = interface_data if isinstance(interface_data, dict) else interfaces()
+    if interface is None:
+        ret = ifaces
+    else:
+        interface = salt.utils.args.split_input(interface)
+        # pylint: disable=not-an-iterable
+        ret = {
+            k: v
+            for k, v in six.iteritems(ifaces)
+            if any((fnmatch.fnmatch(k, pat) for pat in interface))
+        }
+        # pylint: enable=not-an-iterable
+    return ret
+
+
 def _ip_addrs(
     interface=None, include_loopback=False, interface_data=None, proto="inet"
 ):
@@ -1280,27 +1314,14 @@ def _ip_addrs(
 
     proto = inet|inet6
     """
+    addrs = _get_ips(_filter_interfaces(interface, interface_data), proto=proto)
+
     ret = set()
+    for addr in addrs:
+        addr = ipaddress.ip_address(addr.get("address"))
+        if not addr.is_loopback or include_loopback:
+            ret.add(addr)
 
-    ifaces = interface_data if isinstance(interface_data, dict) else interfaces()
-    if interface is None:
-        target_ifaces = ifaces
-    else:
-        target_ifaces = dict(
-            [(k, v) for k, v in six.iteritems(ifaces) if k == interface]
-        )
-        if not target_ifaces:
-            log.error("Interface {0} not found.".format(interface))
-    for ip_info in six.itervalues(target_ifaces):
-        addrs = ip_info.get(proto, [])
-        addrs.extend(
-            [addr for addr in ip_info.get("secondary", []) if addr.get("type") == proto]
-        )
-
-        for addr in addrs:
-            addr = ipaddress.ip_address(addr.get("address"))
-            if not addr.is_loopback or include_loopback:
-                ret.add(addr)
     return [six.text_type(addr) for addr in sorted(ret)]
 
 
@@ -1320,6 +1341,82 @@ def ip_addrs6(interface=None, include_loopback=False, interface_data=None):
     then only IP addresses from that interface will be returned.
     """
     return _ip_addrs(interface, include_loopback, interface_data, "inet6")
+
+
+def _ip_networks(
+    interface=None,
+    include_loopback=False,
+    verbose=False,
+    interface_data=None,
+    proto="inet",
+):
+    """
+    Returns a list of networks to which the minion belongs. The results can be
+    restricted to a single interface using the ``interface`` argument.
+    """
+    addrs = _get_ips(_filter_interfaces(interface, interface_data), proto=proto)
+
+    ret = set()
+    for addr in addrs:
+        _ip = addr.get("address")
+        _net = addr.get("netmask" if proto == "inet" else "prefixlen")
+        if _ip and _net:
+            try:
+                ip_net = ipaddress.ip_network("{0}/{1}".format(_ip, _net), strict=False)
+            except Exception:  # pylint: disable=broad-except
+                continue
+            if not ip_net.is_loopback or include_loopback:
+                ret.add(ip_net)
+
+    if not verbose:
+        return [six.text_type(addr) for addr in sorted(ret)]
+
+    verbose_ret = {
+        six.text_type(x): {
+            "address": six.text_type(x.network_address),
+            "netmask": six.text_type(x.netmask),
+            "num_addresses": x.num_addresses,
+            "prefixlen": x.prefixlen,
+        }
+        for x in ret
+    }
+    return verbose_ret
+
+
+def ip_networks(
+    interface=None, include_loopback=False, verbose=False, interface_data=None
+):
+    """
+    Returns the IPv4 networks to which the minion belongs. Networks will be
+    returned as a list of network/prefixlen. To get more information about a
+    each network, use verbose=True and a dictionary with more information will
+    be returned.
+    """
+    return _ip_networks(
+        interface=interface,
+        include_loopback=include_loopback,
+        verbose=verbose,
+        interface_data=interface_data,
+        proto="inet",
+    )
+
+
+def ip_networks6(
+    interface=None, include_loopback=False, verbose=False, interface_data=None
+):
+    """
+    Returns the IPv6 networks to which the minion belongs. Networks will be
+    returned as a list of network/prefixlen. To get more information about a
+    each network, use verbose=True and a dictionary with more information will
+    be returned.
+    """
+    return _ip_networks(
+        interface=interface,
+        include_loopback=include_loopback,
+        verbose=verbose,
+        interface_data=interface_data,
+        proto="inet6",
+    )
 
 
 def hex2ip(hex_ip, invert=False):

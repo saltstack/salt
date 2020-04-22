@@ -264,6 +264,7 @@ def create_function(
     .. code-block:: bash
 
         salt myminion boto_lamba.create_function my_function python2.7 my_role my_file.my_function my_function.zip
+        salt myminion boto_lamba.create_function my_function python2.7 my_role my_file.my_function salt://files/my_function.zip
 
     """
 
@@ -276,6 +277,13 @@ def create_function(
                     "Either ZipFile must be specified, or "
                     "S3Bucket and S3Key must be provided."
                 )
+            if "://" in ZipFile:  # Looks like a remote URL to me...
+                dlZipFile = __salt__["cp.cache_file"](path=ZipFile)
+                if dlZipFile is False:
+                    ret["result"] = False
+                    ret["comment"] = "Failed to cache ZipFile `{0}`.".format(ZipFile)
+                    return ret
+                ZipFile = dlZipFile
             code = {
                 "ZipFile": _filedata(ZipFile),
             }
