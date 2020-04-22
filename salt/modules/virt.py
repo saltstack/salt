@@ -1361,7 +1361,7 @@ def init(
         .. versionadded:: 2019.2.0
     :param loader:
         Dictionary providing details on the BIOS firmware loader. (Default: ``None``)
-        See :ref:`init-loader-def` for more details on the possible values.
+        See init-loader-def_ for more details on the possible values.
 
         .. versionadded:: Sodium
     :param arch:
@@ -1517,7 +1517,9 @@ def init(
         By default, not setting the ``listen`` part of the dictionary will default to
         listen on all addresses.
 
-    .. rubric:: Loader Definition
+    .. _init-loader-def:
+
+    **Loader Definition**
 
     The loader dictionary must have the following property:
 

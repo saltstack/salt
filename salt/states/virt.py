@@ -525,7 +525,8 @@ def running(
         .. versionadded:: 2019.2.0
     :param loader:
         Firmware loader for the new virtual machine.
-        See :ref:`init-loader-def` for more details on this dictionary
+        See the **Loader Definition** section of the :py:func:`virt.init
+        <salt.modules.virt.init>` function for more details on this dictionary.
 
         .. versionadded:: Sodium
     :param saltenv:
