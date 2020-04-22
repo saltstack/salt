@@ -90,6 +90,7 @@ class MacTimezoneModuleTest(ModuleCase):
             "Invalid Date/Time Format: 13/12/2014",
         )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_get_time(self):
         """
         Test timezone.get_time
@@ -180,6 +181,7 @@ class MacTimezoneModuleTest(ModuleCase):
         )
         self.assertEqual(self.run_function("timezone.get_zonecode"), "WAKT")
 
+    @skipIf(True, "SLOWTEST skip")
     def test_list_zones(self):
         """
         Test timezone.list_zones

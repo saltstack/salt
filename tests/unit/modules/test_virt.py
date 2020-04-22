@@ -1336,6 +1336,40 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         define_mock = MagicMock(return_value=True)
         self.mock_conn.defineXML = define_mock
 
+        # No parameter passed case
+        self.assertEqual(
+            {
+                "definition": False,
+                "disk": {"attached": [], "detached": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm"),
+        )
+
+        # Same parameters passed than in default virt.defined state case
+        self.assertEqual(
+            {
+                "definition": False,
+                "disk": {"attached": [], "detached": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update(
+                "my_vm",
+                cpu=None,
+                mem=None,
+                disk_profile=None,
+                disks=None,
+                nic_profile=None,
+                interfaces=None,
+                graphics=None,
+                live=True,
+                connection=None,
+                username=None,
+                password=None,
+                boot=None,
+            ),
+        )
+
         # Update vcpus case
         setvcpus_mock = MagicMock(return_value=0)
         domain_mock.setVcpusFlags = setvcpus_mock

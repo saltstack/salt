@@ -723,7 +723,7 @@ Changelog for v2015.5.10..v2015.5.11
 
   * f49cc75049 Set correct type for master_tops config value
 
-* **ISSUE** `#31614`_: (`frizzby`_) salt.utils.http.query() implementation contradicts it's documentation. decode arg (refs: `#31622`_)
+* **ISSUE** `#31614`_: (`frizzby`_) salt.utils.http.query() implementation contradicts its documentation. decode arg (refs: `#31622`_)
 
 * **PR** `#31622`_: (`jfindlay`_) doc/topics/tutorials/http: update query decoding docs
   @ *2016-03-02 18:23:44 UTC*

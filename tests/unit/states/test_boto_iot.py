@@ -268,6 +268,7 @@ class BotoIoTThingTypeTestCase(BotoIoTStateTestCaseBase, BotoIoTTestCaseMixin):
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"], {})
 
+    @skipIf(True, "SLOWTEST skip")
     def test_absent_when_thing_type_exists(self):
         """
         Tests absent on a thing type
