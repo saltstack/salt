@@ -225,8 +225,8 @@ import salt.client.ssh.state
 import salt.exceptions
 import salt.fileclient
 import salt.pillar
-import salt.utils.docker.translate.container
-import salt.utils.docker.translate.network
+import salt.utils.dockermod.translate.container
+import salt.utils.dockermod.translate.network
 import salt.utils.functools
 import salt.utils.json
 import salt.utils.path
@@ -903,7 +903,7 @@ def _get_create_kwargs(
         networks = {}
 
     kwargs = __utils__["docker.translate_input"](
-        salt.utils.docker.translate.container,
+        salt.utils.dockermod.translate.container,
         skip_translate=skip_translate,
         ignore_collisions=ignore_collisions,
         validate_ip_addrs=validate_ip_addrs,
@@ -2486,7 +2486,7 @@ def create(
     skip_translate=None,
     ignore_collisions=False,
     validate_ip_addrs=True,
-    client_timeout=salt.utils.docker.CLIENT_TIMEOUT,
+    client_timeout=salt.utils.dockermod.CLIENT_TIMEOUT,
     **kwargs
 ):
     """
@@ -3259,7 +3259,7 @@ def run_container(
     skip_translate=None,
     ignore_collisions=False,
     validate_ip_addrs=True,
-    client_timeout=salt.utils.docker.CLIENT_TIMEOUT,
+    client_timeout=salt.utils.dockermod.CLIENT_TIMEOUT,
     bg=False,
     replace=False,
     force=False,
@@ -4483,7 +4483,7 @@ def pull(
     image,
     insecure_registry=False,
     api_response=False,
-    client_timeout=salt.utils.docker.CLIENT_TIMEOUT,
+    client_timeout=salt.utils.dockermod.CLIENT_TIMEOUT,
 ):
     """
     .. versionchanged:: 2018.3.0
@@ -4582,7 +4582,7 @@ def push(
     image,
     insecure_registry=False,
     api_response=False,
-    client_timeout=salt.utils.docker.CLIENT_TIMEOUT,
+    client_timeout=salt.utils.dockermod.CLIENT_TIMEOUT,
 ):
     """
     .. versionchanged:: 2015.8.4
@@ -5049,7 +5049,7 @@ def create_network(
     skip_translate=None,
     ignore_collisions=False,
     validate_ip_addrs=True,
-    client_timeout=salt.utils.docker.CLIENT_TIMEOUT,
+    client_timeout=salt.utils.dockermod.CLIENT_TIMEOUT,
     **kwargs
 ):
     """
@@ -5287,7 +5287,7 @@ def create_network(
         salt myminion docker.create_network mynet ipam_pools='[{"subnet": "10.0.0.0/24", "gateway": "10.0.0.1"}, {"subnet": "fe3f:2180:26:1::60/123", "gateway": "fe3f:2180:26:1::61"}]'
     """
     kwargs = __utils__["docker.translate_input"](
-        salt.utils.docker.translate.network,
+        salt.utils.dockermod.translate.network,
         skip_translate=skip_translate,
         ignore_collisions=ignore_collisions,
         validate_ip_addrs=validate_ip_addrs,
@@ -5777,8 +5777,8 @@ def stop(name, timeout=None, **kwargs):
             # Get timeout from container config
             timeout = inspect_container(name)["Config"]["StopTimeout"]
         except KeyError:
-            # Fall back to a global default defined in salt.utils.docker
-            timeout = salt.utils.docker.SHUTDOWN_TIMEOUT
+            # Fall back to a global default defined in salt.utils.dockermod
+            timeout = salt.utils.dockermod.SHUTDOWN_TIMEOUT
 
     orig_state = state(name)
     if orig_state == "paused":
