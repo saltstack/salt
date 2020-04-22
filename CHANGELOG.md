@@ -1,11 +1,10 @@
+# Changelog
 All notable changes to Salt will be documented in this file.
 
 This changelog follows [keepachangelog](https://keepachangelog.com/en/1.0.0/) format, and is intended for human consumption.
 
 This project versioning is _similar_ to [Semantic Versioning](https://semver.org), and is documented in [SEP 14](https://github.com/saltstack/salt-enhancement-proposals/pull/20/files).
 Versions are `MAJOR.PATCH`.
-
-# Changelog
 
 ## 3001 - Sodium
 
@@ -14,7 +13,9 @@ Versions are `MAJOR.PATCH`.
 ### Deprecated
 
 ### Changed
+
 - [#56731](https://github.com/saltstack/salt/pull/56731) - Backport #53994
+- [#56753](https://github.com/saltstack/salt/pull/56753) - Backport 51095
 
 ### Fixed
 - [#56237](https://github.com/saltstack/salt/pull/56237) - Fix alphabetical ordering and remove duplicates across all documentation indexes - [@myii](https://github.com/myii)
@@ -22,6 +23,7 @@ Versions are `MAJOR.PATCH`.
 
 ### Added
 - [#56627](https://github.com/saltstack/salt/pull/56627) - Add new salt-ssh set_path option
+- [#51379](https://github.com/saltstack/salt/pull/56792) - Backport 51379 : Adds .set_domain_workgroup to win_system
 
 ## 3000.1
 
