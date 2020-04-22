@@ -17,8 +17,8 @@ from tests.support.runtests import RUNTIME_VARS
 # Acl package should be installed to test linux_acl module
 @skip_if_binaries_missing(["getfacl"])
 # Doesn't work. Why?
-# @requires_salt_modules('acl')
-# @requires_salt_modules('linux_acl')
+# @pytest.mark.requires_salt_modules('acl')
+# @pytest.mark.requires_salt_modules('linux_acl')
 @pytest.mark.windows_whitelisted
 class LinuxAclModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
     """

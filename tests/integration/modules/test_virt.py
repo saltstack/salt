@@ -3,15 +3,13 @@
 Validate the virt module
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Testing libs
+import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import requires_salt_modules
 
 
-@requires_salt_modules("virt.get_profiles")
+@pytest.mark.requires_salt_modules("virt.get_profiles")
 class VirtTest(ModuleCase):
     """
     Test virt routines

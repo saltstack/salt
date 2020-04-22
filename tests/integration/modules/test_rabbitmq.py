@@ -4,12 +4,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import requires_salt_modules
 
 
 @pytest.mark.skip_if_not_root
-@requires_salt_modules("rabbitmq")
 @pytest.mark.windows_whitelisted
+@pytest.mark.requires_salt_modules("rabbitmq")
 class RabbitModuleTest(ModuleCase):
     """
     Validates the rabbitmqctl functions.
