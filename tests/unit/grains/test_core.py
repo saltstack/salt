@@ -673,7 +673,8 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         )
         with patch("salt.grains.core.hostname"):
             with patch("socket.getaddrinfo", raise_unicode_mock):
-                salt.grains.core.ip_fqdn()
+                ret = salt.grains.core.ip_fqdn()
+                assert ret["fqdn_ip4"] == ret["fqdn_ip6"] == []
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     def test_ubuntu_xenial_os_grains(self):
