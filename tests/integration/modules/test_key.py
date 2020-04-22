@@ -6,10 +6,12 @@ import re
 
 import pytest
 from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
 
 
 @pytest.mark.windows_whitelisted
 class KeyModuleTest(ModuleCase):
+    @skipIf(True, "SLOWTEST skip")
     def test_key_finger(self):
         """
         test key.finger to ensure we receive a valid fingerprint
@@ -18,6 +20,7 @@ class KeyModuleTest(ModuleCase):
         match = re.match("([0-9a-z]{2}:){15,}[0-9a-z]{2}$", out)
         self.assertTrue(match)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_key_finger_master(self):
         """
         test key.finger_master to ensure we receive a valid fingerprint

@@ -12,6 +12,7 @@ import salt.utils.platform
 import salt.utils.stringutils
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest
+from tests.support.unit import skipIf
 
 
 @pytest.mark.windows_whitelisted
@@ -29,6 +30,7 @@ class PyDSLRendererIncludeTestCase(ModuleCase):
                 shutil.rmtree("\\tmp")
 
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_rendering_includes(self):
         """
         This test is currently hard-coded to /tmp to work-around a seeming
