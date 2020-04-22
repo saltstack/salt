@@ -31,7 +31,9 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
                 solution = alternatives.display("better-world")
                 self.assertEqual("salt", solution)
                 mock.assert_called_once_with(
-                    ["alternatives", "--display", "better-world"], python_shell=False
+                    ["alternatives", "--display", "better-world"],
+                    ignore_retcode=True,
+                    python_shell=False,
                 )
 
         with patch.dict(alternatives.__grains__, {"os_family": "Suse"}):
@@ -41,6 +43,7 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual("undoubtedly-salt", solution)
                 mock.assert_called_once_with(
                     ["update-alternatives", "--display", "better-world"],
+                    ignore_retcode=True,
                     python_shell=False,
                 )
 
@@ -52,7 +55,9 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
                 solution = alternatives.display("better-world")
                 self.assertEqual("salt-err", solution)
                 mock.assert_called_once_with(
-                    ["alternatives", "--display", "better-world"], python_shell=False
+                    ["alternatives", "--display", "better-world"],
+                    ignore_retcode=True,
+                    python_shell=False,
                 )
 
     def test_show_current(self):

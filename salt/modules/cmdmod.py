@@ -1029,7 +1029,7 @@ def run(
         redirection.
 
     :param bool bg: If ``True``, run command in background and do not await or
-        deliver it's results
+        deliver its results
 
         .. versionadded:: 2016.3.0
 
@@ -2460,7 +2460,7 @@ def script(
         redirection.
 
     :param bool bg: If True, run script in background and do not await or
-        deliver it's results
+        deliver its results
 
     :param dict env: Environment variables to be set prior to execution.
 
@@ -3132,14 +3132,20 @@ def run_chroot(
 
     if isinstance(cmd, (list, tuple)):
         cmd = " ".join([six.text_type(i) for i in cmd])
-    cmd = "chroot {0} {1} -c {2}".format(root, sh_, _cmd_quote(cmd))
+
+    # If runas and group are provided, we expect that the user lives
+    # inside the chroot, not outside.
+    if runas:
+        userspec = "--userspec {}:{}".format(runas, group if group else "")
+    else:
+        userspec = ""
+
+    cmd = "chroot {} {} {} -c {}".format(userspec, root, sh_, _cmd_quote(cmd))
 
     run_func = __context__.pop("cmd.run_chroot.func", run_all)
 
     ret = run_func(
         cmd,
-        runas=runas,
-        group=group,
         cwd=cwd,
         stdin=stdin,
         shell=shell,
@@ -4087,7 +4093,7 @@ def run_bg(
     r"""
     .. versionadded: 2016.3.0
 
-    Execute the passed command in the background and return it's PID
+    Execute the passed command in the background and return its PID
 
     .. note::
 

@@ -131,7 +131,7 @@ def add(
             directory. Must be the Drive Letter followed by a colon. ie: U:
 
         profile (str, optional): An explicit path to a profile. Can be a UNC or
-            a folder on the system. If left blank, windows uses it's default
+            a folder on the system. If left blank, windows uses its default
             profile directory.
 
         logonscript (str, optional): Path to a login script to run when the user

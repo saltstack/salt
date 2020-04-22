@@ -727,6 +727,98 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    def test_get_entry(self):
+        """
+        test get_entry function
+        """
+        list_tab_output = {
+            "crons": [
+                {
+                    "cmd": "my_cmd_1",
+                    "comment": "cron_1",
+                    "daymonth": "*",
+                    "dayweek": "*",
+                    "hour": "*",
+                    "identifier": "cron_1",
+                    "minute": "0",
+                    "month": "*",
+                    "commented": True,
+                },
+                {
+                    "cmd": "my_cmd_2",
+                    "comment": "cron_2",
+                    "daymonth": "*",
+                    "dayweek": "*",
+                    "hour": "*",
+                    "identifier": "cron_2",
+                    "minute": "*",
+                    "month": "*",
+                    "commented": True,
+                },
+                {
+                    "cmd": "line#DISABLED#0 * * * * my_cmd_3",
+                    "comment": "cron_3",
+                    "daymonth": "is",
+                    "dayweek": "comment",
+                    "hour": "it",
+                    "identifier": "cron_3",
+                    "minute": "but",
+                    "month": "a",
+                    "commented": True,
+                },
+                {
+                    "cmd": "my_cmd_4",
+                    "comment": "cron_4",
+                    "daymonth": "*",
+                    "dayweek": "*",
+                    "hour": "*",
+                    "identifier": "cron_4",
+                    "minute": "0",
+                    "month": "*",
+                    "commented": False,
+                },
+            ],
+            "env": [],
+            "pre": ["# An unmanaged commented cron job", "#0 * * * * /bin/true"],
+            "special": [],
+        }
+        get_entry_2 = {
+            "comment": "cron_2",
+            "cmd": "my_cmd_2",
+            "identifier": "cron_2",
+            "dayweek": "*",
+            "daymonth": "*",
+            "hour": "*",
+            "minute": "*",
+            "month": "*",
+            "commented": True,
+        }
+        get_entry_3 = {
+            "comment": "cron_3",
+            "identifier": "cron_3",
+            "dayweek": "comment",
+            "hour": "it",
+            "cmd": "line#DISABLED#0 * * * * my_cmd_3",
+            "daymonth": "is",
+            "commented": True,
+            "minute": "but",
+            "month": "a",
+        }
+        with patch(
+            "salt.modules.cron.list_tab", new=MagicMock(return_value=list_tab_output)
+        ):
+            # Test get_entry identifier
+            get_entry_output = cron.get_entry("root", identifier="cron_3")
+            self.assertDictEqual(get_entry_output, get_entry_3)
+            # Test get_entry cmd
+            get_entry_output = cron.get_entry("root", cmd="my_cmd_2")
+            self.assertDictEqual(get_entry_output, get_entry_2)
+            # Test identifier wins when both specified
+            get_entry_output = cron.get_entry(
+                "root", identifier="cron_3", cmd="my_cmd_2"
+            )
+            self.assertDictEqual(get_entry_output, get_entry_3)
+
     def test_cron_extra_spaces(self):
         """
         Issue #38449

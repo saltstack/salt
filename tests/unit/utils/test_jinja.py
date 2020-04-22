@@ -2,7 +2,6 @@
 """
 Tests for salt.utils.jinja
 """
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import ast
@@ -13,7 +12,6 @@ import pprint
 import re
 import tempfile
 
-# Import Salt libs
 import salt.config
 import salt.loader
 
@@ -39,12 +37,9 @@ from salt.utils.templates import JINJA, render_jinja_tmpl
 from tests.support.case import ModuleCase
 from tests.support.helpers import flaky
 from tests.support.mock import MagicMock, Mock, patch
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
-# Import 3rd party libs
 try:
     import timelib  # pylint: disable=W0611
 
@@ -127,6 +122,7 @@ class TestSaltCacheLoader(TestCase):
 
     def tearDown(self):
         salt.utils.files.rm_rf(self.tempdir)
+        self.tempdir = self.template_dir = self.opts
 
     def test_searchpath(self):
         """
@@ -284,6 +280,7 @@ class TestGetTemplate(TestCase):
 
     def tearDown(self):
         salt.utils.files.rm_rf(self.tempdir)
+        self.tempdir = self.template_dir = self.local_opts = self.local_salt = None
 
     def test_fallback(self):
         """
@@ -559,19 +556,6 @@ class TestGetTemplate(TestCase):
             dict(opts=self.local_opts, saltenv="test", salt=self.local_salt),
         )
 
-    @skipIf(six.PY3, "Not applicable to Python 3")
-    def test_render_with_unicode_syntax_error(self):
-        with patch.object(builtins, "__salt_system_encoding__", "utf-8"):
-            template = "hello\n\n{{ bad\n\nfoo한"
-            expected = r".*---\nhello\n\n{{ bad\n\nfoo\xed\x95\x9c    <======================\n---"
-            self.assertRaisesRegex(
-                SaltRenderError,
-                expected,
-                render_jinja_tmpl,
-                template,
-                dict(opts=self.local_opts, saltenv="test", salt=self.local_salt),
-            )
-
     def test_render_with_utf8_syntax_error(self):
         with patch.object(builtins, "__salt_system_encoding__", "utf-8"):
             template = "hello\n\n{{ bad\n\nfoo한"
@@ -621,9 +605,9 @@ class TestGetTemplate(TestCase):
 
 
 class TestJinjaDefaultOptions(TestCase):
-    def __init__(self, *args, **kws):
-        TestCase.__init__(self, *args, **kws)
-        self.local_opts = {
+    @classmethod
+    def setUpClass(cls):
+        cls.local_opts = {
             "cachedir": os.path.join(RUNTIME_VARS.TMP, "jinja-template-cache"),
             "file_buffer_size": 1048576,
             "file_client": "local",
@@ -642,10 +626,14 @@ class TestJinjaDefaultOptions(TestCase):
             ),
             "jinja_env": {"line_comment_prefix": "##", "line_statement_prefix": "%"},
         }
-        self.local_salt = {
+        cls.local_salt = {
             "myvar": "zero",
             "mylist": [0, 1, 2, 3],
         }
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.local_opts = cls.local_salt = None
 
     def test_comment_prefix(self):
 
@@ -681,9 +669,9 @@ class TestJinjaDefaultOptions(TestCase):
 
 
 class TestCustomExtensions(TestCase):
-    def __init__(self, *args, **kws):
-        super(TestCustomExtensions, self).__init__(*args, **kws)
-        self.local_opts = {
+    @classmethod
+    def setUpClass(cls):
+        cls.local_opts = {
             "cachedir": os.path.join(RUNTIME_VARS.TMP, "jinja-template-cache"),
             "file_buffer_size": 1048576,
             "file_client": "local",
@@ -701,13 +689,17 @@ class TestCustomExtensions(TestCase):
                 os.path.dirname(os.path.abspath(__file__)), "extmods"
             ),
         }
-        self.local_salt = {
+        cls.local_salt = {
             # 'dns.A': dnsutil.A,
             # 'dns.AAAA': dnsutil.AAAA,
             # 'file.exists': filemod.file_exists,
             # 'file.basename': filemod.basename,
             # 'file.dirname': filemod.dirname
         }
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.local_opts = cls.local_salt = None
 
     def test_regex_escape(self):
         dataset = "foo?:.*/\\bar"
@@ -721,51 +713,39 @@ class TestCustomExtensions(TestCase):
         unique = set(dataset)
         env = Environment(extensions=[SerializerExtension])
         env.filters.update(JinjaFilter.salt_jinja_filters)
-        if six.PY3:
-            rendered = (
-                env.from_string("{{ dataset|unique }}")
-                .render(dataset=dataset)
-                .strip("'{}")
-                .split("', '")
-            )
-            self.assertEqual(sorted(rendered), sorted(list(unique)))
-        else:
-            rendered = env.from_string("{{ dataset|unique }}").render(dataset=dataset)
-            self.assertEqual(rendered, "{0}".format(unique))
+        rendered = (
+            env.from_string("{{ dataset|unique }}")
+            .render(dataset=dataset)
+            .strip("'{}")
+            .split("', '")
+        )
+        self.assertEqual(sorted(rendered), sorted(list(unique)))
 
     def test_unique_tuple(self):
         dataset = ("foo", "foo", "bar")
         unique = set(dataset)
         env = Environment(extensions=[SerializerExtension])
         env.filters.update(JinjaFilter.salt_jinja_filters)
-        if six.PY3:
-            rendered = (
-                env.from_string("{{ dataset|unique }}")
-                .render(dataset=dataset)
-                .strip("'{}")
-                .split("', '")
-            )
-            self.assertEqual(sorted(rendered), sorted(list(unique)))
-        else:
-            rendered = env.from_string("{{ dataset|unique }}").render(dataset=dataset)
-            self.assertEqual(rendered, "{0}".format(unique))
+        rendered = (
+            env.from_string("{{ dataset|unique }}")
+            .render(dataset=dataset)
+            .strip("'{}")
+            .split("', '")
+        )
+        self.assertEqual(sorted(rendered), sorted(list(unique)))
 
     def test_unique_list(self):
         dataset = ["foo", "foo", "bar"]
         unique = ["foo", "bar"]
         env = Environment(extensions=[SerializerExtension])
         env.filters.update(JinjaFilter.salt_jinja_filters)
-        if six.PY3:
-            rendered = (
-                env.from_string("{{ dataset|unique }}")
-                .render(dataset=dataset)
-                .strip("'[]")
-                .split("', '")
-            )
-            self.assertEqual(rendered, unique)
-        else:
-            rendered = env.from_string("{{ dataset|unique }}").render(dataset=dataset)
-            self.assertEqual(rendered, "{0}".format(unique))
+        rendered = (
+            env.from_string("{{ dataset|unique }}")
+            .render(dataset=dataset)
+            .strip("'[]")
+            .split("', '")
+        )
+        self.assertEqual(rendered, unique)
 
     def test_serialize_json(self):
         dataset = {"foo": True, "bar": 42, "baz": [1, 2, 3], "qux": 2.0}
@@ -795,17 +775,7 @@ class TestCustomExtensions(TestCase):
         dataset = "str value"
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string("{{ dataset|yaml }}").render(dataset=dataset)
-        if six.PY3:
-            self.assertEqual("str value", rendered)
-        else:
-            # Due to a bug in the equality handler, this check needs to be split
-            # up into several different assertions. We need to check that the various
-            # string segments are present in the rendered value, as well as the
-            # type of the rendered variable (should be unicode, which is the same as
-            # six.text_type). This should cover all use cases but also allow the test
-            # to pass on CentOS 6 running Python 2.7.
-            self.assertIn("str value", rendered)
-            self.assertIsInstance(rendered, six.text_type)
+        self.assertEqual("str value", rendered)
 
     def test_serialize_python(self):
         dataset = {"foo": True, "bar": 42, "baz": [1, 2, 3], "qux": 2.0}
@@ -976,20 +946,14 @@ class TestCustomExtensions(TestCase):
 
         rendered = env.from_string("{{ data }}").render(data=data)
         self.assertEqual(
-            rendered,
-            "{u'foo': {u'bar': u'baz', u'qux': 42}}"
-            if six.PY2
-            else "{'foo': {'bar': 'baz', 'qux': 42}}",
+            rendered, "{'foo': {'bar': 'baz', 'qux': 42}}",
         )
 
         rendered = env.from_string("{{ data }}").render(
             data=[OrderedDict(foo="bar",), OrderedDict(baz=42,)]
         )
         self.assertEqual(
-            rendered,
-            "[{'foo': u'bar'}, {'baz': 42}]"
-            if six.PY2
-            else "[{'foo': 'bar'}, {'baz': 42}]",
+            rendered, "[{'foo': 'bar'}, {'baz': 42}]",
         )
 
     def test_set_dict_key_value(self):
@@ -1031,10 +995,7 @@ class TestCustomExtensions(TestCase):
             ),
         )
         self.assertEqual(
-            rendered,
-            "{u'bar': {u'baz': {u'qux': 1, u'quux': 3}}}"
-            if six.PY2
-            else "{'bar': {'baz': {'qux': 1, 'quux': 3}}}",
+            rendered, "{'bar': {'baz': {'qux': 1, 'quux': 3}}}",
         )
 
         # Test incorrect usage
@@ -1076,10 +1037,7 @@ class TestCustomExtensions(TestCase):
             ),
         )
         self.assertEqual(
-            rendered,
-            "{u'bar': {u'baz': [1, 2, 42]}}"
-            if six.PY2
-            else "{'bar': {'baz': [1, 2, 42]}}",
+            rendered, "{'bar': {'baz': [1, 2, 42]}}",
         )
 
     def test_extend_dict_key_value(self):
@@ -1102,10 +1060,7 @@ class TestCustomExtensions(TestCase):
             ),
         )
         self.assertEqual(
-            rendered,
-            "{u'bar': {u'baz': [1, 2, 42, 43]}}"
-            if six.PY2
-            else "{'bar': {'baz': [1, 2, 42, 43]}}",
+            rendered, "{'bar': {'baz': [1, 2, 42, 43]}}",
         )
         # Edge cases
         rendered = render_jinja_tmpl(
@@ -1576,6 +1531,45 @@ class TestCustomExtensions(TestCase):
         )
         self.assertEqual(rendered, "1, 4")
 
+    def test_method_call(self):
+        """
+        Test the `method_call` Jinja filter.
+        """
+        rendered = render_jinja_tmpl(
+            "{{ 6|method_call('bit_length') }}",
+            dict(opts=self.local_opts, saltenv="test", salt=self.local_salt),
+        )
+        self.assertEqual(rendered, "3")
+        rendered = render_jinja_tmpl(
+            "{{ 6.7|method_call('is_integer') }}",
+            dict(opts=self.local_opts, saltenv="test", salt=self.local_salt),
+        )
+        self.assertEqual(rendered, "False")
+        rendered = render_jinja_tmpl(
+            "{{ 'absaltba'|method_call('strip', 'ab') }}",
+            dict(opts=self.local_opts, saltenv="test", salt=self.local_salt),
+        )
+        self.assertEqual(rendered, "salt")
+        rendered = render_jinja_tmpl(
+            "{{ [1, 2, 1, 3, 4]|method_call('index', 1, 1, 3) }}",
+            dict(opts=self.local_opts, saltenv="test", salt=self.local_salt),
+        )
+        self.assertEqual(rendered, "2")
+
+        # have to use `dictsort` to keep test result deterministic
+        rendered = render_jinja_tmpl(
+            "{{ {}|method_call('fromkeys', ['a', 'b', 'c'], 0)|dictsort }}",
+            dict(opts=self.local_opts, saltenv="test", salt=self.local_salt),
+        )
+        self.assertEqual(rendered, "[('a', 0), ('b', 0), ('c', 0)]")
+
+        # missing object method test
+        rendered = render_jinja_tmpl(
+            "{{ 6|method_call('bit_width') }}",
+            dict(opts=self.local_opts, saltenv="test", salt=self.local_salt),
+        )
+        self.assertEqual(rendered, "None")
+
     def test_md5(self):
         """
         Test the `md5` Jinja filter.
@@ -1697,7 +1691,7 @@ class TestDotNotationLookup(ModuleCase):
         del self.jinja
 
     def render(self, tmpl_str, context=None):
-        return self.jinja(tmpl_str, context=context or {}, from_str=True).read()
+        return self.jinja(tmpl_str, context=context or {}, argline="-s").read()
 
     def test_normlookup(self):
         """

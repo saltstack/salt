@@ -51,6 +51,7 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         }
         salt.state.format_log(ret)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_render_error_on_invalid_requisite(self):
         """
         Test that the state compiler correctly deliver a rendering
@@ -230,6 +231,48 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             state_obj = salt.state.State(minion_opts)
             return_result = state_obj._run_check_unless(low_data, "")
             self.assertEqual(expected_result, return_result)
+
+    def test_verify_retry_parsing(self):
+        low_data = {
+            "state": "file",
+            "name": "/tmp/saltstack.README.rst",
+            "__sls__": "demo.download",
+            "__env__": "base",
+            "__id__": "download sample data",
+            "retry": {"attempts": 5, "interval": 5},
+            "unless": ["test -f /tmp/saltstack.README.rst"],
+            "source": [
+                "https://raw.githubusercontent.com/saltstack/salt/develop/README.rst"
+            ],
+            "source_hash": "f2bc8c0aa2ae4f5bb5c2051686016b48",
+            "order": 10000,
+            "fun": "managed",
+        }
+        expected_result = {
+            "__id__": "download sample data",
+            "__run_num__": 0,
+            "__sls__": "demo.download",
+            "changes": {},
+            "comment": "['unless condition is true']  The state would be retried every 5 "
+            "seconds (with a splay of up to 0 seconds) a maximum of 5 times or "
+            "until a result of True is returned",
+            "name": "/tmp/saltstack.README.rst",
+            "result": True,
+            "skip_watch": True,
+        }
+
+        with patch("salt.state.State._gather_pillar") as state_patch:
+            minion_opts = self.get_temp_config("minion")
+            minion_opts["test"] = True
+            minion_opts["file_client"] = "local"
+            state_obj = salt.state.State(minion_opts)
+            mock = {
+                "result": True,
+                "comment": ["unless condition is true"],
+                "skip_watch": True,
+            }
+            with patch.object(state_obj, "_run_check", return_value=mock):
+                self.assertDictContainsSubset(expected_result, state_obj.call(low_data))
 
 
 class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
@@ -443,6 +486,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.state_obj.format_slots(cdata)
         self.assertEqual(cdata, {"args": ["arg"], "kwargs": {"key": "val"}})
 
+    @skipIf(True, "SLOWTEST skip")
     def test_format_slots_arg(self):
         """
         Test the format slots is calling a slot specified in args with corresponding arguments.
@@ -457,6 +501,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         mock.assert_called_once_with("fun_arg", fun_key="fun_val")
         self.assertEqual(cdata, {"args": ["fun_return"], "kwargs": {"key": "val"}})
 
+    @skipIf(True, "SLOWTEST skip")
     def test_format_slots_dict_arg(self):
         """
         Test the format slots is calling a slot specified in dict arg.
@@ -473,6 +518,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             cdata, {"args": [{"subarg": "fun_return"}], "kwargs": {"key": "val"}}
         )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_format_slots_listdict_arg(self):
         """
         Test the format slots is calling a slot specified in list containing a dict.
@@ -489,6 +535,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             cdata, {"args": [[{"subarg": "fun_return"}]], "kwargs": {"key": "val"}}
         )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_format_slots_liststr_arg(self):
         """
         Test the format slots is calling a slot specified in list containing a dict.
@@ -503,6 +550,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         mock.assert_called_once_with("fun_arg", fun_key="fun_val")
         self.assertEqual(cdata, {"args": [["fun_return"]], "kwargs": {"key": "val"}})
 
+    @skipIf(True, "SLOWTEST skip")
     def test_format_slots_kwarg(self):
         """
         Test the format slots is calling a slot specified in kwargs with corresponding arguments.
@@ -517,6 +565,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         mock.assert_called_once_with("fun_arg", fun_key="fun_val")
         self.assertEqual(cdata, {"args": ["arg"], "kwargs": {"key": "fun_return"}})
 
+    @skipIf(True, "SLOWTEST skip")
     def test_format_slots_multi(self):
         """
         Test the format slots is calling all slots with corresponding arguments when multiple slots
@@ -558,6 +607,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             },
         )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_format_slots_malformed(self):
         """
         Test the format slots keeps malformed slots untouched.
@@ -587,6 +637,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         mock.assert_not_called()
         self.assertEqual(cdata, sls_data)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_slot_traverse_dict(self):
         """
         Test the slot parsing of dict response.
@@ -602,6 +653,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         mock.assert_called_once_with("fun_arg", fun_key="fun_val")
         self.assertEqual(cdata, {"args": ["arg"], "kwargs": {"key": "value1"}})
 
+    @skipIf(True, "SLOWTEST skip")
     def test_slot_append(self):
         """
         Test the slot parsing of dict response.
@@ -618,3 +670,31 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             self.state_obj.format_slots(cdata)
         mock.assert_called_once_with("fun_arg", fun_key="fun_val")
         self.assertEqual(cdata, {"args": ["arg"], "kwargs": {"key": "value1thing~"}})
+
+    # Skip on windows like integration.modules.test_state.StateModuleTest.test_parallel_state_with_long_tag
+    @skipIf(
+        salt.utils.platform.is_windows(),
+        "Skipped until parallel states can be fixed on Windows",
+    )
+    def test_format_slots_parallel(self):
+        """
+        Test if slots work with "parallel: true".
+        """
+        high_data = {
+            "always-changes-and-succeeds": {
+                "test": [
+                    {"changes": True},
+                    {"comment": "__slot__:salt:test.echo(fun_return)"},
+                    {"parallel": True},
+                    "configurable_test_state",
+                    {"order": 10000},
+                ],
+                "__env__": "base",
+                "__sls__": "parallel_slots",
+            }
+        }
+        self.state_obj.jid = "123"
+        res = self.state_obj.call_high(high_data)
+        self.state_obj.jid = None
+        [(_, data)] = res.items()
+        self.assertEqual(data["comment"], "fun_return")

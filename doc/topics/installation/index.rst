@@ -121,7 +121,7 @@ Salt should run on any Unix-like platform so long as the dependencies are met.
 
 
 Salt defaults to the `ZeroMQ`_ transport. The ``--salt-transport`` installation
-option is available, but currently only supports the ``szeromq`` option. This
+option is available, but currently only supports the ``zeromq`` option. This
 may be expanded in the future.
 
 .. code-block:: bash

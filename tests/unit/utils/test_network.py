@@ -6,6 +6,7 @@ import logging
 import socket
 import textwrap
 
+import pytest
 import salt.exceptions
 
 # Import salt libs
@@ -14,7 +15,7 @@ from salt._compat import ipaddress
 from tests.support.mock import MagicMock, create_autospec, mock_open, patch
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -893,6 +894,7 @@ class NetworkTestCase(TestCase):
             b"\xf8\xe7\xd6\xc5\xb4\xa3", network.mac_str_to_bytes("f8e7d6c5b4a3")
         )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_generate_minion_id_with_long_hostname(self):
         """
         Validate the fix for:
@@ -904,3 +906,51 @@ class NetworkTestCase(TestCase):
             # An exception is raised if unicode is passed to socket.getfqdn
             minion_id = network.generate_minion_id()
         assert minion_id != "", minion_id
+
+    def test_filter_by_networks_with_no_filter(self):
+        ips = ["10.0.123.200", "10.10.10.10"]
+        with pytest.raises(TypeError):
+            network.filter_by_networks(ips)  # pylint: disable=no-value-for-parameter
+
+    def test_filter_by_networks_empty_filter(self):
+        ips = ["10.0.123.200", "10.10.10.10"]
+        assert network.filter_by_networks(ips, []) == []
+
+    def test_filter_by_networks_ips_list(self):
+        ips = [
+            "10.0.123.200",
+            "10.10.10.10",
+            "193.124.233.5",
+            "fe80::d210:cf3f:64e7:5423",
+        ]
+        networks = ["10.0.0.0/8", "fe80::/64"]
+        assert network.filter_by_networks(ips, networks) == [
+            "10.0.123.200",
+            "10.10.10.10",
+            "fe80::d210:cf3f:64e7:5423",
+        ]
+
+    def test_filter_by_networks_interfaces_dict(self):
+        interfaces = {
+            "wlan0": ["192.168.1.100", "217.5.140.67", "2001:db8::ff00:42:8329"],
+            "eth0": [
+                "2001:0DB8:0:CD30:123:4567:89AB:CDEF",
+                "192.168.1.101",
+                "10.0.123.201",
+            ],
+        }
+        assert network.filter_by_networks(
+            interfaces, ["192.168.1.0/24", "2001:db8::/48"]
+        ) == {
+            "wlan0": ["192.168.1.100", "2001:db8::ff00:42:8329"],
+            "eth0": ["2001:0DB8:0:CD30:123:4567:89AB:CDEF", "192.168.1.101"],
+        }
+
+    def test_filter_by_networks_catch_all(self):
+        ips = [
+            "10.0.123.200",
+            "10.10.10.10",
+            "193.124.233.5",
+            "fe80::d210:cf3f:64e7:5423",
+        ]
+        assert ips == network.filter_by_networks(ips, ["0.0.0.0/0", "::/0"])
