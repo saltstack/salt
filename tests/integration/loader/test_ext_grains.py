@@ -50,7 +50,7 @@ class LoaderGrainsTest(ModuleCase):
         while not os.path.exists(module):
             tries += 1
             if tries > 60:
-                self.fail(
+                pytest.fail(
                     "Failed to found custom grains module in cache path {}".format(
                         module
                     )
