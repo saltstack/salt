@@ -17,8 +17,8 @@ from salt.exceptions import SaltException
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.mock import MagicMock, patch
+from tests.support.unit import TestCase
 
 MATCHERS_DICT = {
     "compound_match.match": compound_match.match,
@@ -30,7 +30,6 @@ MATCHERS_DICT = {
 MINION_ID = "bar03"
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch("salt.loader.matchers", MagicMock(return_value=MATCHERS_DICT))
 class MatchTestCase(TestCase, LoaderModuleMockMixin):
     """

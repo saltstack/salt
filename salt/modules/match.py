@@ -318,7 +318,14 @@ def glob(tgt, minion_id=None):
         return False
 
 
-def filter_by(lookup, tgt_type="compound", minion_id=None, default="default"):
+def filter_by(
+    lookup,
+    tgt_type="compound",
+    minion_id=None,
+    merge=None,
+    merge_lists=False,
+    default="default",
+):
     """
     Return the first match in a dictionary of target patterns
 
