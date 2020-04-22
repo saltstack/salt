@@ -35,7 +35,7 @@ __virtualname__ = "zookeeper"
 def __virtual__():
     if "zookeeper.create" in __salt__:
         return __virtualname__
-    return False
+    return (False, "zookeeper module could not be loaded")
 
 
 def _check_acls(left, right):

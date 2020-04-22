@@ -16,7 +16,9 @@ def __virtual__():
     """
     Only make these states available if Zabbix module is available.
     """
-    return "zabbix.usermacro_create" in __salt__
+    if "zabbix.usermacro_create" in __salt__:
+        return True
+    return (False, "zabbix module could not be loaded")
 
 
 def present(name, value, hostid=None, **kwargs):

@@ -15,7 +15,7 @@ from tests.support.mixins import SaltClientTestCaseMixin
 from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -252,6 +252,7 @@ class DaemonsStarterTestCase(TestCase, SaltClientTestCaseMixin):
         self.assertTrue(m_parent.recv())
         p_.join()
 
+    @skipIf(True, "SLOWTEST skip")
     def test_master_daemon_hash_type_verified(self):
         """
         Verify if Master is verifying hash_type config option.
@@ -260,6 +261,7 @@ class DaemonsStarterTestCase(TestCase, SaltClientTestCaseMixin):
         """
         self._multiproc_exec_test(_master_exec_test)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_minion_daemon_hash_type_verified(self):
         """
         Verify if Minion is verifying hash_type config option.
@@ -268,6 +270,7 @@ class DaemonsStarterTestCase(TestCase, SaltClientTestCaseMixin):
         """
         self._multiproc_exec_test(_minion_exec_test)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_proxy_minion_daemon_hash_type_verified(self):
         """
         Verify if ProxyMinion is verifying hash_type config option.
@@ -276,6 +279,7 @@ class DaemonsStarterTestCase(TestCase, SaltClientTestCaseMixin):
         """
         self._multiproc_exec_test(_proxy_exec_test)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_syndic_daemon_hash_type_verified(self):
         """
         Verify if Syndic is verifying hash_type config option.
