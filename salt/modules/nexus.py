@@ -102,7 +102,7 @@ def get_latest_snapshot(
     headers = {}
     if username and password:
         headers["Authorization"] = "Basic {0}".format(
-            base64.encodestring("{0}:{1}".format(username, password)).replace("\n", "")
+            str(base64.b64encode(bytes(('{0}:{1}'.format(username, password)).replace('\n', ''), encoding='utf8')), "utf-8")
         )
     artifact_metadata = _get_artifact_metadata(
         nexus_url=nexus_url,
@@ -181,7 +181,7 @@ def get_snapshot(
     headers = {}
     if username and password:
         headers["Authorization"] = "Basic {0}".format(
-            base64.encodestring("{0}:{1}".format(username, password)).replace("\n", "")
+            str(base64.b64encode(bytes(('{0}:{1}'.format(username, password)).replace('\n', ''), encoding='utf8')), "utf-8")
         )
     snapshot_url, file_name = _get_snapshot_url(
         nexus_url=nexus_url,
@@ -245,7 +245,7 @@ def get_snapshot_version_string(
     headers = {}
     if username and password:
         headers["Authorization"] = "Basic {0}".format(
-            base64.encodestring("{0}:{1}".format(username, password)).replace("\n", "")
+            str(base64.b64encode(bytes(('{0}:{1}'.format(username, password)).replace('\n', ''), encoding='utf8')), "utf-8")
         )
     return _get_snapshot_url(
         nexus_url=nexus_url,
@@ -308,7 +308,7 @@ def get_latest_release(
     headers = {}
     if username and password:
         headers["Authorization"] = "Basic {0}".format(
-            base64.encodestring("{0}:{1}".format(username, password)).replace("\n", "")
+            str(base64.b64encode(bytes(('{0}:{1}'.format(username, password)).replace('\n', ''), encoding='utf8')), "utf-8")
         )
     artifact_metadata = _get_artifact_metadata(
         nexus_url=nexus_url,
@@ -379,7 +379,7 @@ def get_release(
     headers = {}
     if username and password:
         headers["Authorization"] = "Basic {0}".format(
-            base64.encodestring("{0}:{1}".format(username, password)).replace("\n", "")
+            str(base64.b64encode(bytes(('{0}:{1}'.format(username, password)).replace('\n', ''), encoding='utf8')), "utf-8")
         )
     release_url, file_name = _get_release_url(
         repository, group_id, artifact_id, packaging, version, nexus_url, classifier
