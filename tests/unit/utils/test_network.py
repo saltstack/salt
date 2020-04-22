@@ -1247,3 +1247,22 @@ class NetworkTestCase(TestCase):
             MagicMock(return_value=[(2, 3, 0, "hostname", ("127.0.1.1", 0))]),
         ):
             self.assertEqual(network.get_fqhostname(), "hostname")
+
+    def test_get_fqhostname_return_empty_hostname(self):
+        """
+        Test if proper hostname is used when hostname returns empty string
+        """
+        host = "hostname"
+        with patch("socket.gethostname", MagicMock(return_value=host)), patch(
+            "socket.getfqdn",
+            MagicMock(return_value="very.long.and.complex.domain.name"),
+        ), patch(
+            "socket.getaddrinfo",
+            MagicMock(
+                return_value=[
+                    (2, 3, 0, host, ("127.0.1.1", 0)),
+                    (2, 3, 0, "", ("127.0.1.1", 0)),
+                ]
+            ),
+        ):
+            self.assertEqual(network.get_fqhostname(), host)
