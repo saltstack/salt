@@ -294,8 +294,10 @@ def present(
         False, a group with the same name as the user will not be created. The
         default is distribution-specific. See the USERGROUPS_ENAB section of
         the login.defs(5) man page.
+
         .. note::
             Only supported on GNU/Linux distributions
+
         .. versionadded:: Sodium
 
     groups
