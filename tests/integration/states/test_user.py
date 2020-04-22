@@ -192,11 +192,16 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
 
         if not salt.utils.platform.is_darwin():
             self.assertTrue(os.path.isdir(self.user_home))
-        self.assertEqual(group_name, self.user_name)
+        if salt.utils.platform.is_darwin():
+            group_name = "staff"
+        else:
+            group_name = self.user_name
+        self.assertEqual(group_name, group_name)
         ret = self.run_state("user.absent", name=self.user_name)
         self.assertSaltTrueReturn(ret)
-        ret = self.run_state("group.absent", name=self.user_name)
-        self.assertSaltTrueReturn(ret)
+        if not salt.utils.platform.is_darwin():
+            ret = self.run_state("group.absent", name=self.user_name)
+            self.assertSaltTrueReturn(ret)
 
     @skipIf(
         sys.getfilesystemencoding().startswith("ANSI"),
