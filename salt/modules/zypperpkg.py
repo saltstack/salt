@@ -2244,7 +2244,7 @@ def list_products(all=False, refresh=False):
     OEM_PATH = "/var/lib/suseRegister/OEM"
     cmd = list()
     if not all:
-        cmd.append("--disable-repos")
+        cmd.append("--disable-repositories")
     cmd.append("products")
     if not all:
         cmd.append("-i")

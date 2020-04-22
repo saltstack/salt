@@ -556,6 +556,27 @@ class WinLgpoTest(ModuleCase):
         )
 
     @destructiveTest
+    def test_set_computer_policy_LockoutDuration(self):
+        """
+        Test setting LockoutDuration
+        """
+        # For LockoutDuration to be meaningful, first configure
+        # LockoutThreshold
+        self._testSeceditPolicy("LockoutThreshold", 3, [r"^LockoutBadCount = 3"])
+
+        # Next set the LockoutDuration non-zero value, as this is required
+        # before setting LockoutWindow
+        self._testSeceditPolicy("LockoutDuration", 60, [r"^LockoutDuration = 60"])
+
+        # Now set LockoutWindow to a valid value <= LockoutDuration. If this
+        # is not set, then the LockoutDuration zero value is ignored by the
+        # Windows API (leading to a false sense of accomplishment)
+        self._testSeceditPolicy("LockoutWindow", 60, [r"^ResetLockoutCount = 60"])
+
+        # set LockoutDuration zero value, the secedit zero value is -1
+        self._testSeceditPolicy("LockoutDuration", 0, [r"^LockoutDuration = -1"])
+
+    @destructiveTest
     def test_set_computer_policy_GuestAccountStatus(self):
         """
         Test setting/unsetting/changing GuestAccountStatus
