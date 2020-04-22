@@ -30,7 +30,7 @@ def salt_proxy(request, salt_factories, salt_master):
         log.warning("The proxy minion key was not found at %s", proxy_key_file)
 
 
-def pytest_saltfactories_generate_default_proxy_minion_configuration(
+def pytest_saltfactories_proxy_minion_configuration_defaults(
     request, factories_manager, root_dir, proxy_minion_id, master_port
 ):
     """
@@ -55,14 +55,3 @@ def pytest_saltfactories_generate_default_proxy_minion_configuration(
     RUNTIME_VARS.TMP_PROXY_CONF_DIR = root_dir.join("conf").strpath
 
     return opts
-
-
-def pytest_saltfactories_proxy_minion_configuration_overrides(
-    request, factories_manager, root_dir, proxy_minion_id, default_options
-):
-    """
-    Hook which should return a dictionary tailored for the provided proxy_minion_id.
-    This dictionary will override the default_options dictionary.
-
-    Stops at the first non None result
-    """
