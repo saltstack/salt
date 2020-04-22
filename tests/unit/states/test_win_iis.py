@@ -26,9 +26,10 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {win_iis: {}}
 
-    def __base_webconfiguration_ret(
-        self, comment="", changes=None, name="", result=None
-    ):
+    def __base_webconfiguration_ret(self, comment="",
+                                    changes=None,
+                                    name="",
+                                    result=None):
         return {
             "name": name,
             "changes": changes if changes else {},
@@ -161,8 +162,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                                                     '',
                                                     '*',
                                                     80,
-                                                    'http',
-                                                    '')
+                                                    'http')
 
                 self.assertDictEqual(ret, {'changes': {'new': 'test0',
                                                        'old': None},
