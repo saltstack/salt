@@ -176,7 +176,7 @@ def create_binding(
                 - protocol: https
                 - sslflags: 0
     """
-    ret = {"name": name, "changes": {}, "comment": str(), "result": None}
+    ret = {"name": name, "changes": {}, "comment": '', "result": None}
 
     binding_info = _get_binding_info(hostheader, ipaddress, port)
     current_bindings = __salt__["win_iis.list_bindings"](site)
@@ -224,7 +224,7 @@ def remove_binding(name, site, hostheader="", ipaddress="*", port=80):
                 - ipaddress: '*'
                 - port: 443
     """
-    ret = {"name": name, "changes": {}, "comment": str(), "result": None}
+    ret = {"name": name, "changes": {}, "comment": '', "result": None}
 
     binding_info = _get_binding_info(hostheader, ipaddress, port)
     current_bindings = __salt__["win_iis.list_bindings"](site)
@@ -283,7 +283,7 @@ def create_cert_binding(name, site, hostheader="", ipaddress="*", port=443, sslf
 
     .. versionadded:: 2016.11.0
     """
-    ret = {"name": name, "changes": {}, "comment": str(), "result": None}
+    ret = {"name": name, "changes": {}, "comment": '', "result": None}
 
     binding_info = _get_binding_info(hostheader, ipaddress, port)
     current_cert_bindings = __salt__["win_iis.list_cert_bindings"](site)
@@ -350,7 +350,7 @@ def remove_cert_binding(name, site, hostheader="", ipaddress="*", port=443):
 
     .. versionadded:: 2016.11.0
     """
-    ret = {"name": name, "changes": {}, "comment": str(), "result": None}
+    ret = {"name": name, "changes": {}, "comment": '', "result": None}
 
     binding_info = _get_binding_info(hostheader, ipaddress, port)
     current_cert_bindings = __salt__["win_iis.list_cert_bindings"](site)
@@ -453,7 +453,7 @@ def container_setting(name, container, settings=None):
     :param str name: The name of the IIS container.
     :param str container: The type of IIS container. The container types are:
         AppPools, Sites, SslBindings
-    :param str settings: A dictionary of the setting names and their values.
+    :param dict settings: A dictionary of the setting names and their values.
         Example of usage for the ``AppPools`` container:
 
     .. code-block:: yaml
@@ -490,7 +490,7 @@ def container_setting(name, container, settings=None):
         3: "SpecificUser",
         4: "ApplicationPoolIdentity",
     }
-    ret = {"name": name, "changes": {}, "comment": str(), "result": None}
+    ret = {"name": name, "changes": {}, "comment": '', "result": None}
 
     if not settings:
         ret["comment"] = "No settings to change provided."
@@ -590,7 +590,7 @@ def create_app(name, site, sourcepath, apppool=None):
                 - sourcepath: C:\\inetpub\\site0\\v1
                 - apppool: site0
     """
-    ret = {"name": name, "changes": {}, "comment": str(), "result": None}
+    ret = {"name": name, "changes": {}, "comment": '', "result": None}
 
     current_apps = __salt__["win_iis.list_apps"](site)
 
@@ -623,7 +623,7 @@ def remove_app(name, site):
                 - name: v1
                 - site: site0
     """
-    ret = {"name": name, "changes": {}, "comment": str(), "result": None}
+    ret = {"name": name, "changes": {}, "comment": '', "result": None}
 
     current_apps = __salt__["win_iis.list_apps"](site)
 
@@ -676,7 +676,7 @@ def create_vdir(name, site, sourcepath, app="/"):
                 - sourcepath: C:\\inetpub\\vdirs\\foo
                 - app: v1
     """
-    ret = {"name": name, "changes": {}, "comment": str(), "result": None}
+    ret = {"name": name, "changes": {}, "comment": '', "result": None}
 
     current_vdirs = __salt__["win_iis.list_vdirs"](site, app)
 
@@ -721,7 +721,7 @@ def remove_vdir(name, site, app="/"):
                 - site: site0
                 - app: v1
     """
-    ret = {"name": name, "changes": {}, "comment": str(), "result": None}
+    ret = {"name": name, "changes": {}, "comment": '', "result": None}
 
     current_vdirs = __salt__["win_iis.list_vdirs"](site, app)
 
@@ -751,7 +751,7 @@ def set_app(name, site, settings=None):
 
     :param str name: The IIS application.
     :param str site: The IIS site name.
-    :param str settings: A dictionary of the setting names and their values.
+    :param dict settings: A dictionary of the setting names and their values.
 
     Available settings:
 
@@ -777,7 +777,7 @@ def set_app(name, site, settings=None):
                     applicationPool: appPool0
     """
     # pylint: enable=anomalous-backslash-in-string
-    ret = {"name": name, "changes": {}, "comment": str(), "result": None}
+    ret = {"name": name, "changes": {}, "comment": '', "result": None}
 
     if not settings:
         ret["comment"] = "No settings to change provided."
@@ -888,7 +888,7 @@ def webconfiguration_settings(name, settings=None):
 
     """
 
-    ret = {"name": name, "changes": {}, "comment": str(), "result": None}
+    ret = {"name": name, "changes": {}, "comment": '', "result": None}
 
     if not settings:
         ret["comment"] = "No settings to change provided."
@@ -900,7 +900,7 @@ def webconfiguration_settings(name, settings=None):
         "failures": {},
     }
 
-    settings_list = list()
+    settings_list = []
 
     for filter, filter_settings in settings.items():
         for setting_name, value in filter_settings.items():
