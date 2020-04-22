@@ -2,24 +2,23 @@
 """
 Tests for the service state
 """
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import re
 
-# Import salt libs
+import pytest
 import salt.utils.path
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
+from tests.support.unit import skipIf
 
 INIT_DELAY = 5
 
 
 @destructiveTest
+@pytest.mark.windows_whitelisted
 class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
     """
     Validate the service state
@@ -76,6 +75,7 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
             if check_status is not exp_return:
                 self.fail("status of service is not returning correctly")
 
+    @skipIf(True, "SLOWTEST skip")
     def test_service_running(self):
         """
         test service.running state module
@@ -93,6 +93,7 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(start_service)
         self.check_service_status(self.running)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_service_dead(self):
         """
         test service.dead state module
@@ -105,6 +106,7 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.check_service_status(self.stopped)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_service_dead_init_delay(self):
         """
         test service.dead state module with init_delay arg

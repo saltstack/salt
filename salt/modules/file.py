@@ -2383,6 +2383,16 @@ def replace(
                     # Identity check the potential change
                     has_changes = True if pattern != repl else has_changes
 
+                orig_file = (
+                    r_data.read(filesize).splitlines(True)
+                    if isinstance(r_data, mmap.mmap)
+                    else r_data.splitlines(True)
+                )
+                new_file = result.splitlines(True)
+
+                if orig_file == new_file:
+                    has_changes = False
+
                 if prepend_if_not_found or append_if_not_found:
                     # Search for content, to avoid pre/appending the
                     # content if it was pre/appended in a previous run.
@@ -2395,13 +2405,6 @@ def replace(
                     ):
                         # Content was found, so set found.
                         found = True
-
-                orig_file = (
-                    r_data.read(filesize).splitlines(True)
-                    if isinstance(r_data, mmap.mmap)
-                    else r_data.splitlines(True)
-                )
-                new_file = result.splitlines(True)
 
     except (OSError, IOError) as exc:
         raise CommandExecutionError(
@@ -3929,11 +3932,11 @@ def get_selinux_context(path):
 
         salt '*' file.get_selinux_context /etc/hosts
     """
-    out = __salt__["cmd.run"](["ls", "-Z", path], python_shell=False)
+    cmd_ret = __salt__["cmd.run_all"](["stat", "-c", "%C", path], python_shell=False)
 
-    try:
-        ret = re.search(r"\w+:\w+:\w+:\w+", out).group(0)
-    except AttributeError:
+    if cmd_ret["retcode"] == 0:
+        ret = cmd_ret["stdout"]
+    else:
         ret = "No selinux context information is available for {0}".format(path)
 
     return ret
@@ -4423,7 +4426,7 @@ def extract_hash(
     else:
         hash_len_expr = six.text_type(hash_len)
 
-    filename_separators = string.whitespace + r"\/"
+    filename_separators = string.whitespace + r"\/*"
 
     if source_hash_name:
         if not isinstance(source_hash_name, six.string_types):

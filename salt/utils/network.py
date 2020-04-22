@@ -7,6 +7,7 @@ Define some generic socket functions for network modules
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import collections
 import itertools
 import logging
 import os
@@ -859,7 +860,7 @@ def _interfaces_ifconfig(out):
         if iface in ret:
             # SunOS optimization, where interfaces occur twice in 'ifconfig -a'
             # output with the same name: for ipv4 and then for ipv6 addr family.
-            # Every instance has it's own 'UP' status and we assume that ipv4
+            # Every instance has its own 'UP' status and we assume that ipv4
             # status determines global interface status.
             #
             # merge items with higher priority for older values
@@ -1077,7 +1078,7 @@ def get_net_start(ipaddr, netmask):
 
 def get_net_size(mask):
     """
-    Turns an IPv4 netmask into it's corresponding prefix length
+    Turns an IPv4 netmask into its corresponding prefix length
     (255.255.255.0 -> 24 as in 192.168.1.10/24).
     """
     binary_str = ""
@@ -2063,3 +2064,34 @@ def parse_host_port(host_port):
             raise ValueError('bad hostname: "{}"'.format(host))
 
     return host, port
+
+
+@jinja_filter("filter_by_networks")
+def filter_by_networks(values, networks):
+    """
+    Returns the list of IPs filtered by the network list.
+    If the network list is an empty sequence, no IPs are returned.
+    If the network list is None, all IPs are returned.
+
+    {% set networks = ['192.168.0.0/24', 'fe80::/64'] %}
+    {{ grains['ip_interfaces'] | filter_by_networks(networks) }}
+    {{ grains['ipv6'] | filter_by_networks(networks) }}
+    {{ grains['ipv4'] | filter_by_networks(networks) }}
+    """
+
+    _filter = lambda ips, networks: [
+        ip for ip in ips for net in networks if ipaddress.ip_address(ip) in net
+    ]
+
+    if networks is not None:
+        networks = [ipaddress.ip_network(network) for network in networks]
+        if isinstance(values, collections.Mapping):
+            return {
+                interface: _filter(values[interface], networks) for interface in values
+            }
+        elif isinstance(values, collections.Sequence):
+            return _filter(values, networks)
+        else:
+            raise ValueError("Do not know how to filter a {}".format(type(values)))
+    else:
+        return values

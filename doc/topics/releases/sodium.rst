@@ -17,8 +17,22 @@ The old syntax for the mine_function - as a dict, or as a list with dicts that
 contain more than exactly one key - is still supported but discouraged in favor
 of the more uniform syntax of module.run.
 
+
+New Grains
+==========
+
+systempath
+----------
+
+This grain provides the same information as the ``path`` grain, only formatted
+as a list of directories.
+
+
 Salt-SSH updates
 ================
+
+ssh_pre_flight
+--------------
 
 A new Salt-SSH roster option `ssh_pre_flight` has been added. This enables you to run a
 script before Salt-SSH tries to run any commands. You can set this option in the roster
@@ -48,3 +62,18 @@ minion. If you want to force the script to run you have the following options:
 * Wipe the thin dir on the targeted minion using the -w arg.
 * Set ssh_run_pre_flight to True in the config.
 * Run salt-ssh with the --pre-flight arg.
+
+set_path
+--------
+
+A new salt-ssh roster option `set_path` has been added. This allows you to set
+the path environment variable used to run the salt-ssh command on the target minion.
+You can set this setting in your roster file like so:
+
+.. code-block:: yaml
+
+  minion1:
+    host: localhost
+    user: root
+    passwd: P@ssword
+    set_path: '$PATH:/usr/local/bin/'

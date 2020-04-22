@@ -1906,6 +1906,7 @@ class State(object):
         # correctly calculate further down the chain
         utc_start_time = datetime.datetime.utcnow()
 
+        self.format_slots(cdata)
         tag = _gen_tag(low)
         try:
             ret = self.states[cdata["full"]](*cdata["args"], **cdata["kwargs"])
@@ -2215,7 +2216,7 @@ class State(object):
             else:
                 ret["comment"] = "  ".join(
                     [
-                        "" if not ret["comment"] else ret["comment"],
+                        "" if not ret["comment"] else six.text_type(ret["comment"]),
                         (
                             "The state would be retried every {1} seconds "
                             "(with a splay of up to {3} seconds) "
