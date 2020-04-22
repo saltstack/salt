@@ -26,16 +26,14 @@ import salt.utils.locales
 import salt.utils.platform
 import salt.utils.winapi
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party Libs
 from salt.ext import six
 
 try:
-    import wmi
-    import win32net
+    import pywintypes
     import win32api
     import win32con
-    import pywintypes
+    import win32net
+    import wmi
     from ctypes import windll
 
     HAS_WIN32NET_MODS = True
@@ -555,29 +553,6 @@ def get_system_info():
 
     # Lookup dicts for Win32_OperatingSystem
     os_type = {1: "Work Station", 2: "Domain Controller", 3: "Server"}
-    # Connect to WMI
-    with salt.utils.winapi.Com():
-        conn = wmi.WMI()
-    system = conn.Win32_OperatingSystem()[0]
-    ret = {
-        "name": get_computer_name(),
-        "description": system.Description,
-        "install_date": system.InstallDate,
-        "last_boot": system.LastBootUpTime,
-        "os_manufacturer": system.Manufacturer,
-        "os_name": system.Caption,
-        "users": system.NumberOfUsers,
-        "organization": system.Organization,
-        "os_architecture": system.OSArchitecture,
-        "primary": system.Primary,
-        "os_type": os_type[system.ProductType],
-        "registered_user": system.RegisteredUser,
-        "system_directory": system.SystemDirectory,
-        "system_drive": system.SystemDrive,
-        "os_version": system.Version,
-        "windows_directory": system.WindowsDirectory,
-    }
-
     # lookup dicts for Win32_ComputerSystem
     domain_role = {
         0: "Standalone Workstation",
@@ -606,75 +581,92 @@ def get_system_info():
         7: "Performance Server",
         8: "Maximum",
     }
-    # Must get chassis_sku_number this way for backwards compatibility
-    # system.ChassisSKUNumber is only available on Windows 10/2016 and newer
-    product = conn.Win32_ComputerSystemProduct()[0]
-    ret.update({"chassis_sku_number": product.SKUNumber})
-    system = conn.Win32_ComputerSystem()[0]
-    # Get pc_system_type depending on Windows version
-    if platform.release() in ["Vista", "7", "8"]:
-        # Types for Vista, 7, and 8
-        pc_system_type = pc_system_types[system.PCSystemType]
-    else:
-        # New types were added with 8.1 and newer
-        pc_system_types.update({8: "Slate", 9: "Maximum"})
-        pc_system_type = pc_system_types[system.PCSystemType]
-    ret.update(
-        {
-            "bootup_state": system.BootupState,
-            "caption": system.Caption,
-            "chassis_bootup_state": warning_states[system.ChassisBootupState],
-            "dns_hostname": system.DNSHostname,
-            "domain": system.Domain,
-            "domain_role": domain_role[system.DomainRole],
-            "hardware_manufacturer": system.Manufacturer,
-            "hardware_model": system.Model,
-            "network_server_mode_enabled": system.NetworkServerModeEnabled,
-            "part_of_domain": system.PartOfDomain,
-            "pc_system_type": pc_system_type,
-            "power_state": system.PowerState,
-            "status": system.Status,
-            "system_type": system.SystemType,
-            "total_physical_memory": byte_calc(system.TotalPhysicalMemory),
-            "total_physical_memory_raw": system.TotalPhysicalMemory,
-            "thermal_state": warning_states[system.ThermalState],
-            "workgroup": system.Workgroup,
-        }
-    )
-    # Get processor information
-    processors = conn.Win32_Processor()
-    ret["processors"] = 0
-    ret["processors_logical"] = 0
-    ret["processor_cores"] = 0
-    ret["processor_cores_enabled"] = 0
-    ret["processor_manufacturer"] = processors[0].Manufacturer
-    ret["processor_max_clock_speed"] = (
-        six.text_type(processors[0].MaxClockSpeed) + "MHz"
-    )
-    for system in processors:
-        ret["processors"] += 1
-        ret["processors_logical"] += system.NumberOfLogicalProcessors
-        ret["processor_cores"] += system.NumberOfCores
-        try:
-            ret["processor_cores_enabled"] += system.NumberOfEnabledCore
-        except (AttributeError, TypeError):
-            pass
-    if ret["processor_cores_enabled"] == 0:
-        ret.pop("processor_cores_enabled", False)
 
-    system = conn.Win32_BIOS()[0]
-    ret.update(
-        {
-            "hardware_serial": system.SerialNumber,
-            "bios_manufacturer": system.Manufacturer,
-            "bios_version": system.Version,
-            "bios_details": system.BIOSVersion,
-            "bios_caption": system.Caption,
-            "bios_description": system.Description,
+    # Connect to WMI
+    with salt.utils.winapi.Com():
+        conn = wmi.WMI()
+
+        system = conn.Win32_OperatingSystem()[0]
+        ret = {
+            "name": get_computer_name(),
+            "description": system.Description,
+            "install_date": system.InstallDate,
+            "last_boot": system.LastBootUpTime,
+            "os_manufacturer": system.Manufacturer,
+            "os_name": system.Caption,
+            "users": system.NumberOfUsers,
+            "organization": system.Organization,
+            "os_architecture": system.OSArchitecture,
+            "primary": system.Primary,
+            "os_type": os_type[system.ProductType],
+            "registered_user": system.RegisteredUser,
+            "system_directory": system.SystemDirectory,
+            "system_drive": system.SystemDrive,
+            "os_version": system.Version,
+            "windows_directory": system.WindowsDirectory,
         }
-    )
-    ret["install_date"] = _convert_date_time_string(ret["install_date"])
-    ret["last_boot"] = _convert_date_time_string(ret["last_boot"])
+
+        system = conn.Win32_ComputerSystem()[0]
+        # Get pc_system_type depending on Windows version
+        if platform.release() in ["Vista", "7", "8"]:
+            # Types for Vista, 7, and 8
+            pc_system_type = pc_system_types[system.PCSystemType]
+        else:
+            # New types were added with 8.1 and newer
+            pc_system_types.update({8: "Slate", 9: "Maximum"})
+            pc_system_type = pc_system_types[system.PCSystemType]
+        ret.update(
+            {
+                "bootup_state": system.BootupState,
+                "caption": system.Caption,
+                "chassis_bootup_state": warning_states[system.ChassisBootupState],
+                "chassis_sku_number": system.ChassisSKUNumber,
+                "dns_hostname": system.DNSHostname,
+                "domain": system.Domain,
+                "domain_role": domain_role[system.DomainRole],
+                "hardware_manufacturer": system.Manufacturer,
+                "hardware_model": system.Model,
+                "network_server_mode_enabled": system.NetworkServerModeEnabled,
+                "part_of_domain": system.PartOfDomain,
+                "pc_system_type": pc_system_type,
+                "power_state": system.PowerState,
+                "status": system.Status,
+                "system_type": system.SystemType,
+                "total_physical_memory": byte_calc(system.TotalPhysicalMemory),
+                "total_physical_memory_raw": system.TotalPhysicalMemory,
+                "thermal_state": warning_states[system.ThermalState],
+                "workgroup": system.Workgroup,
+            }
+        )
+        # Get processor information
+        processors = conn.Win32_Processor()
+        ret["processors"] = 0
+        ret["processors_logical"] = 0
+        ret["processor_cores"] = 0
+        ret["processor_cores_enabled"] = 0
+        ret["processor_manufacturer"] = processors[0].Manufacturer
+        ret["processor_max_clock_speed"] = (
+            six.text_type(processors[0].MaxClockSpeed) + "MHz"
+        )
+        for processor in processors:
+            ret["processors"] += 1
+            ret["processors_logical"] += processor.NumberOfLogicalProcessors
+            ret["processor_cores"] += processor.NumberOfCores
+            ret["processor_cores_enabled"] += processor.NumberOfEnabledCore
+
+        bios = conn.Win32_BIOS()[0]
+        ret.update(
+            {
+                "hardware_serial": bios.SerialNumber,
+                "bios_manufacturer": bios.Manufacturer,
+                "bios_version": bios.Version,
+                "bios_details": bios.BIOSVersion,
+                "bios_caption": bios.Caption,
+                "bios_description": bios.Description,
+            }
+        )
+        ret["install_date"] = _convert_date_time_string(ret["install_date"])
+        ret["last_boot"] = _convert_date_time_string(ret["last_boot"])
     return ret
 
 
@@ -742,13 +734,10 @@ def set_hostname(hostname):
 
         salt 'minion-id' system.set_hostname newhostname
     """
-    curr_hostname = get_hostname()
-    cmd = "wmic computersystem where name='{0}' call rename name='{1}'".format(
-        curr_hostname, hostname
-    )
-    ret = __salt__["cmd.run"](cmd=cmd)
-
-    return "successful" in ret
+    with salt.utils.winapi.Com():
+        conn = wmi.WMI()
+        comp = conn.Win32_ComputerSystem()[0]
+    return comp.Rename(Name=hostname)
 
 
 def join_domain(
@@ -1034,11 +1023,41 @@ def get_domain_workgroup():
     """
     with salt.utils.winapi.Com():
         conn = wmi.WMI()
-    for computer in conn.Win32_ComputerSystem():
-        if computer.PartOfDomain:
-            return {"Domain": computer.Domain}
-        else:
-            return {"Workgroup": computer.Domain}
+        for computer in conn.Win32_ComputerSystem():
+            if computer.PartOfDomain:
+                return {"Domain": computer.Domain}
+            else:
+                return {"Workgroup": computer.Domain}
+
+
+def set_domain_workgroup(workgroup):
+    """
+    Set the domain or workgroup the computer belongs to.
+
+    .. versionadded:: Sodium
+
+    Returns:
+        bool: ``True`` if successful, otherwise ``False``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' system.set_domain_workgroup LOCAL
+    """
+    if six.PY2:
+        workgroup = _to_unicode(workgroup)
+
+    # Initialize COM
+    with salt.utils.winapi.Com():
+        # Grab the first Win32_ComputerSystem object from wmi
+        conn = wmi.WMI()
+        comp = conn.Win32_ComputerSystem()[0]
+
+        # Now we can join the new workgroup
+        res = comp.JoinDomainOrWorkgroup(Name=workgroup.upper())
+
+    return True if not res[0] else False
 
 
 def _try_parse_datetime(time_str, fmts):
