@@ -92,7 +92,9 @@ def __virtual__():
     """
     Only load if boto is available.
     """
-    return "boto_iot" if "boto_iot.policy_exists" in __salt__ else False
+    if "boto_iot.policy_exists" in __salt__:
+        return "boto_iot"
+    return (False, "boto_iot module could not be loaded")
 
 
 def thing_type_present(

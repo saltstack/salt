@@ -2216,7 +2216,7 @@ class State(object):
             else:
                 ret["comment"] = "  ".join(
                     [
-                        "" if not ret["comment"] else ret["comment"],
+                        "" if not ret["comment"] else six.text_type(ret["comment"]),
                         (
                             "The state would be retried every {1} seconds "
                             "(with a splay of up to {3} seconds) "

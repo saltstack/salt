@@ -17,6 +17,7 @@ class NetworkTest(ModuleCase):
     Validate network module
     """
 
+    @skipIf(True, "SLOWTEST skip")
     def test_network_ping(self):
         """
         network.ping
@@ -27,6 +28,7 @@ class NetworkTest(ModuleCase):
             self.assertIn(out, ret.lower())
 
     @skipIf(salt.utils.platform.is_darwin(), "not supported on macosx")
+    @skipIf(True, "SLOWTEST skip")
     def test_network_netstat(self):
         """
         network.netstat
@@ -37,6 +39,7 @@ class NetworkTest(ModuleCase):
             for out in exp_out:
                 self.assertIn(out, val)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_network_traceroute(self):
         """
         network.traceroute
@@ -52,6 +55,7 @@ class NetworkTest(ModuleCase):
             self.assertIn(out, exp_out)
 
     @skipIf(not salt.utils.platform.is_windows(), "windows only test")
+    @skipIf(True, "SLOWTEST skip")
     def test_network_nslookup(self):
         """
         network.nslookup

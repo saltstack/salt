@@ -37,7 +37,9 @@ def __virtual__():
     """
     Only load if svn is available
     """
-    return __salt__["cmd.has_exec"]("svn")
+    if __salt__["cmd.has_exec"]("svn"):
+        return True
+    return (False, "Command not found: svn")
 
 
 def latest(
@@ -298,6 +300,7 @@ def export(
     out = __salt__[svn_cmd](cwd, name, basename, user, username, password, rev, *opts)
     ret["changes"]["new"] = name
     ret["changes"]["comment"] = name + " was Exported to " + target
+    ret["comment"] = out
 
     return ret
 

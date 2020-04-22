@@ -1626,7 +1626,12 @@ class LocalClient(object):
                             yield {
                                 id_: {
                                     "out": "no_return",
-                                    "ret": "Minion did not return. [No response]",
+                                    "ret": "Minion did not return. [No response]"
+                                    "\nThe minions may not have all finished running and any "
+                                    "remaining minions will return upon completion. To look "
+                                    "up the return data for this job later, run the following "
+                                    "command:\n\n"
+                                    "salt-run jobs.lookup_jid {0}".format(jid),
                                     "retcode": salt.defaults.exitcodes.EX_GENERIC,
                                 }
                             }
@@ -1679,18 +1684,42 @@ class LocalClient(object):
             yield ret
             time.sleep(0.02)
 
+    def _resolve_nodegroup(self, ng):
+        """
+        Resolve a nodegroup into its configured components
+        """
+        if ng not in self.opts["nodegroups"]:
+            conf_file = self.opts.get("conf_file", "the master config file")
+            raise SaltInvocationError(
+                "Node group {0} unavailable in {1}".format(ng, conf_file)
+            )
+        return salt.utils.minions.nodegroup_comp(ng, self.opts["nodegroups"])
+
     def _prep_pub(self, tgt, fun, arg, tgt_type, ret, jid, timeout, **kwargs):
         """
         Set up the payload_kwargs to be sent down to the master
         """
         if tgt_type == "nodegroup":
-            if tgt not in self.opts["nodegroups"]:
-                conf_file = self.opts.get("conf_file", "the master config file")
-                raise SaltInvocationError(
-                    "Node group {0} unavailable in {1}".format(tgt, conf_file)
-                )
-            tgt = salt.utils.minions.nodegroup_comp(tgt, self.opts["nodegroups"])
+            tgt = self._resolve_nodegroup(tgt)
             tgt_type = "compound"
+
+        if tgt_type == "compound":
+            #  Resolve all nodegroups, so that the minions don't have to.
+            new_tgt = list()
+            log.debug("compound resolution: original tgt: %s", tgt)
+
+            if isinstance(tgt, six.string_types):
+                tgt = tgt.split()
+
+            for word in tgt:
+                if word.startswith("N@") and len(word) > 2:
+                    resolved = self._resolve_nodegroup(word[2:])
+                    new_tgt.extend(resolved)
+                else:
+                    new_tgt.append(word)
+
+            log.debug("compound resolution: new_tgt: %s", new_tgt)
+            tgt = " ".join(new_tgt)
 
         # Convert a range expression to a list of nodes and change expression
         # form to list
