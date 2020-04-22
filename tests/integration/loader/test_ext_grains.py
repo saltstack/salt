@@ -39,18 +39,21 @@ class LoaderGrainsTest(ModuleCase):
         # before trying to get the grains. This test may execute before the
         # minion has finished syncing down the files it needs.
         module = os.path.join(
-            RUNTIME_VARS.TMP,
-            "rootdir",
-            "cache",
+            RUNTIME_VARS.RUNTIME_CONFIGS["minion"]["cachedir"],
             "files",
             "base",
             "_grains",
-            "test_custom_grain2.py",
+            "custom_grain2.py",
         )
         tries = 0
         while not os.path.exists(module):
             tries += 1
             if tries > 60:
+                self.fail(
+                    "Failed to found custom grains module in cache path {}".format(
+                        module
+                    )
+                )
                 break
             time.sleep(1)
         grains = self.run_function("grains.items")
