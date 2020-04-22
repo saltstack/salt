@@ -17,6 +17,7 @@ class SSHSaltcheckTest(SSHCase):
     testing saltcheck with salt-ssh
     """
 
+    @skipIf(True, "SLOWTEST skip")
     def test_saltcheck_run_test(self):
         """
         test saltcheck.run_test with salt-ssh
@@ -30,6 +31,7 @@ class SSHSaltcheckTest(SSHCase):
         ret = self.run_function("saltcheck.run_test", test=saltcheck_test)
         self.assertDictContainsSubset({"status": "Pass"}, ret)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_saltcheck_state(self):
         """
         saltcheck.run_state_tests

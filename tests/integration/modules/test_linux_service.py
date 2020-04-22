@@ -77,6 +77,7 @@ class ServiceModuleTest(ModuleCase):
         del self.service_name
 
     @flaky
+    @skipIf(True, "SLOWTEST skip")
     def test_service_status_running(self):
         """
         test service.status execution module
@@ -86,6 +87,7 @@ class ServiceModuleTest(ModuleCase):
         check_service = self.run_function("service.status", [self.service_name])
         self.assertTrue(check_service)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_service_status_dead(self):
         """
         test service.status execution module
@@ -95,12 +97,14 @@ class ServiceModuleTest(ModuleCase):
         check_service = self.run_function("service.status", [self.service_name])
         self.assertFalse(check_service)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_service_restart(self):
         """
         test service.restart
         """
         self.assertTrue(self.run_function("service.restart", [self.service_name]))
 
+    @skipIf(True, "SLOWTEST skip")
     def test_service_enable(self):
         """
         test service.get_enabled and service.enable module
@@ -111,6 +115,7 @@ class ServiceModuleTest(ModuleCase):
         self.assertTrue(self.run_function("service.enable", [self.service_name]))
         self.assertIn(self.service_name, self.run_function("service.get_enabled"))
 
+    @skipIf(True, "SLOWTEST skip")
     def test_service_disable(self):
         """
         test service.get_disabled and service.disable module
@@ -124,6 +129,7 @@ class ServiceModuleTest(ModuleCase):
         else:
             self.assertIn(self.service_name, self.run_function("service.get_disabled"))
 
+    @skipIf(True, "SLOWTEST skip")
     def test_service_disable_doesnot_exist(self):
         """
         test service.get_disabled and service.disable module
@@ -172,6 +178,7 @@ class ServiceModuleTest(ModuleCase):
             self.assertNotIn(srv_name, self.run_function("service.get_disabled"))
 
     @skipIf(not salt.utils.platform.is_windows(), "Windows Only Test")
+    @skipIf(True, "SLOWTEST skip")
     def test_service_get_service_name(self):
         """
         test service.get_service_name

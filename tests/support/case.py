@@ -919,6 +919,14 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         if "f_timeout" in kwargs:
             kwargs["timeout"] = kwargs.pop("f_timeout")
         client = self.client if master_tgt is None else self.clients[master_tgt]
+        log.debug(
+            "Running client.cmd(minion_tgt=%r, function=%r, arg=%r, timeout=%r, kwarg=%r)",
+            minion_tgt,
+            function,
+            arg,
+            timeout,
+            kwargs,
+        )
         orig = client.cmd(minion_tgt, function, arg, timeout=timeout, kwarg=kwargs)
 
         if RUNTIME_VARS.PYTEST_SESSION:
