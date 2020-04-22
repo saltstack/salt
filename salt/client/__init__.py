@@ -340,7 +340,7 @@ class LocalClient(object):
             >>> local.run_job('*', 'test.sleep', [300])
             {'jid': '20131219215650131543', 'minions': ['jerry']}
         """
-        arg = salt.utils.args.condition_input(arg, kwarg)
+        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
 
         try:
             pub_data = self.pub(
@@ -404,7 +404,7 @@ class LocalClient(object):
             >>> local.run_job_async('*', 'test.sleep', [300])
             {'jid': '20131219215650131543', 'minions': ['jerry']}
         """
-        arg = salt.utils.args.condition_input(arg, kwarg)
+        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
 
         try:
             pub_data = yield self.pub_async(
@@ -450,7 +450,7 @@ class LocalClient(object):
             >>> local.cmd_async('*', 'test.sleep', [300])
             '20131219215921857715'
         """
-        arg = salt.utils.args.condition_input(arg, kwarg)
+        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
         pub_data = self.run_job(
             tgt, fun, arg, tgt_type, ret, jid=jid, listen=False, **kwargs
         )
@@ -551,7 +551,7 @@ class LocalClient(object):
         # Late import - not used anywhere else in this file
         import salt.cli.batch
 
-        arg = salt.utils.args.condition_input(arg, kwarg)
+        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
         opts = {
             "tgt": tgt,
             "fun": fun,
@@ -583,6 +583,7 @@ class LocalClient(object):
         for key, val in six.iteritems(self.opts):
             if key not in opts:
                 opts[key] = val
+
         batch = salt.cli.batch.Batch(opts, eauth=eauth, quiet=True)
         for ret in batch.run():
             yield ret
@@ -703,7 +704,7 @@ class LocalClient(object):
             minion ID. A compound command will return a sub-dictionary keyed by
             function name.
         """
-        arg = salt.utils.args.condition_input(arg, kwarg)
+        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
         was_listening = self.event.cpub
 
         try:
@@ -758,7 +759,7 @@ class LocalClient(object):
         :param verbose: Print extra information about the running command
         :returns: A generator
         """
-        arg = salt.utils.args.condition_input(arg, kwarg)
+        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
         was_listening = self.event.cpub
 
         try:
@@ -832,7 +833,7 @@ class LocalClient(object):
             {'dave': {'ret': True}}
             {'stewart': {'ret': True}}
         """
-        arg = salt.utils.args.condition_input(arg, kwarg)
+        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
         was_listening = self.event.cpub
 
         try:
@@ -896,7 +897,7 @@ class LocalClient(object):
             None
             {'stewart': {'ret': True}}
         """
-        arg = salt.utils.args.condition_input(arg, kwarg)
+        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
         was_listening = self.event.cpub
 
         try:
@@ -941,7 +942,7 @@ class LocalClient(object):
         """
         Execute a salt command and return
         """
-        arg = salt.utils.args.condition_input(arg, kwarg)
+        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
         was_listening = self.event.cpub
 
         try:
@@ -2105,7 +2106,7 @@ class Caller(object):
         """
         func = self.sminion.functions[fun]
         args, kwargs = salt.minion.load_args_and_kwargs(
-            func, salt.utils.args.parse_input(args), kwargs
+            func, salt.utils.args.parse_input(args, kwargs=kwargs),
         )
         return func(*args, **kwargs)
 
