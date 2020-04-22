@@ -15,11 +15,7 @@ import salt.utils.job as job
 from salt.ext import six
 
 # Import Salt Testing Libs
-from tests.support.mock import (  # pylint: disable=no-name-in-module
-    NO_MOCK,
-    NO_MOCK_REASON,
-    patch,
-)
+from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
 
 
@@ -40,7 +36,6 @@ class MockMasterMinion(object):
         pass
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class JobTest(TestCase):
     """
     Validate salt.utils.job
