@@ -14,6 +14,7 @@ from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 ROOT_DIR = os.path.join(RUNTIME_VARS.TMP, "schedule-unit-tests")
@@ -44,6 +45,7 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
     def tearDown(self):
         self.schedule.reset()
 
+    @skipIf(True, "SLOWTEST skip")
     def test_skip(self):
         """
         verify that scheduled job is skipped at the specified time
@@ -83,6 +85,7 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_skip_during_range(self):
         """
         verify that scheduled job is skipped during the specified range
@@ -184,6 +187,7 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         ).format(job_name2)
         self.assertEqual(ret["_error"], _expected)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_skip_during_range_global(self):
         """
         verify that scheduled job is skipped during the specified range
@@ -221,6 +225,7 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_run_after_skip_range(self):
         """
         verify that scheduled job is skipped during the specified range
@@ -257,6 +262,7 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_run_seconds_skip(self):
         """
         verify that scheduled job is skipped during the specified range

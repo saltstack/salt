@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
@@ -14,8 +13,6 @@ import salt.serializers.json as jsonserializer
 import salt.serializers.python as pythonserializer
 import salt.serializers.yaml as yamlserializer
 import salt.states.file as filestate
-
-# Import salt libs
 import salt.utils.files
 import salt.utils.json
 import salt.utils.platform
@@ -24,8 +21,6 @@ import salt.utils.yaml
 from salt.exceptions import CommandExecutionError
 from salt.ext.six.moves import range
 from tests.support.helpers import destructiveTest
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, call, mock_open, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -2522,6 +2517,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             self.assertTrue(filestate.mod_run_check_cmd(cmd, filename))
 
     @skipIf(not HAS_DATEUTIL, NO_DATEUTIL_REASON)
+    @skipIf(True, "SLOWTEST skip")
     def test_retention_schedule(self):
         """
         Test to execute the retention_schedule logic.
