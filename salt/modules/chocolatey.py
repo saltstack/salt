@@ -13,12 +13,12 @@ import os
 import re
 import tempfile
 
-# Import 3rd party libs
-from requests.structures import CaseInsensitiveDict
-
 # Import salt libs
 import salt.utils.data
 import salt.utils.platform
+
+# Import 3rd party libs
+from requests.structures import CaseInsensitiveDict
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
