@@ -15,15 +15,10 @@ import salt.modules.systemd_service as systemd
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import (  # pylint: disable=no-name-in-module
-    NO_MOCK,
-    NO_MOCK_REASON,
-    MagicMock,
-    patch,
-)
+from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 _SYSTEMCTL_STATUS = {
     "sshd.service": {
@@ -65,7 +60,6 @@ timer2.timer                               disabled
 timer3.timer                               static"""
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SystemdTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test case for salt.modules.systemd
@@ -251,7 +245,6 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertDictEqual(systemd.execs(), {"a": "c", "b": "c"})
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
     """
         Test case for salt.modules.systemd, for functions which use systemd
