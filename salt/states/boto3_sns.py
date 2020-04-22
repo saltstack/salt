@@ -233,7 +233,9 @@ def topic_present(
             subscribe += [sub]
     for sub in current_subs:
         minimal = {"Protocol": sub["Protocol"], "Endpoint": sub["Endpoint"]}
-        if minimal not in obfuscated_subs:
+        if minimal not in obfuscated_subs and sub["SubscriptionArn"].startswith(
+            "arn:aws:sns:"
+        ):
             unsubscribe += [sub["SubscriptionArn"]]
     for sub in subscribe:
         prot = sub["Protocol"]
