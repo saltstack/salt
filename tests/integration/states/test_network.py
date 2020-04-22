@@ -12,6 +12,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
+from tests.support.unit import skipIf
 
 
 @destructiveTest
@@ -27,6 +28,7 @@ class NetworkTest(ModuleCase, SaltReturnAssertsMixin):
                 "Network state only supported on RedHat and Debian based systems"
             )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_managed(self):
         """
         network.managed
@@ -38,6 +40,7 @@ class NetworkTest(ModuleCase, SaltReturnAssertsMixin):
             "Interface dummy0 is set to be added.", ret[state_key]["comment"]
         )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_routes(self):
         """
         network.routes
@@ -51,6 +54,7 @@ class NetworkTest(ModuleCase, SaltReturnAssertsMixin):
             ret[state_key]["comment"], "Interface dummy0 routes are set to be added."
         )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_system(self):
         """
         network.system
