@@ -30,6 +30,7 @@ class BeaconsAddDeleteTest(ModuleCase):
         self.beacons_config_file_path = os.path.join(
             self.minion_conf_d_dir, "beacons.conf"
         )
+        self.run_function("beacons.reset", f_timeout=300)
 
     def tearDown(self):
         if os.path.isfile(self.beacons_config_file_path):
@@ -113,6 +114,7 @@ class BeaconsTest(ModuleCase):
         self.__class__.beacons_config_file_path = os.path.join(
             self.minion_conf_d_dir, "beacons.conf"
         )
+        self.run_function("beacons.reset", f_timeout=300)
         try:
             # Add beacon to disable
             self.run_function(
@@ -247,6 +249,7 @@ class BeaconsWithBeaconTypeTest(ModuleCase):
         self.__class__.beacons_config_file_path = os.path.join(
             self.minion_conf_d_dir, "beacons.conf"
         )
+        self.run_function("beacons.reset", f_timeout=300)
         try:
             # Add beacon to disable
             self.run_function(
@@ -271,6 +274,8 @@ class BeaconsWithBeaconTypeTest(ModuleCase):
         """
         Test disabling beacons
         """
+        ret = self.run_function("beacons.enable", f_timeout=300)
+        self.assertTrue(ret["result"])
         # assert beacon exists
         _list = self.run_function("beacons.list", return_yaml=False)
         self.assertIn("watch_apache", _list)
