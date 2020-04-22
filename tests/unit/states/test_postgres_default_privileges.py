@@ -7,11 +7,10 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.states.postgres_default_privileges as postgres_default_privileges
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class PostgresDefaultPrivilegesTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.states.postgres_default_privileges
