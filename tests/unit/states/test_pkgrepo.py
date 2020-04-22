@@ -10,16 +10,10 @@ import salt.states.pkgrepo as pkgrepo
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import (  # pylint: disable=no-name-in-module
-    NO_MOCK,
-    NO_MOCK_REASON,
-    MagicMock,
-    patch,
-)
-from tests.support.unit import TestCase, skipIf
+from tests.support.mock import MagicMock, patch
+from tests.support.unit import TestCase
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class PkgrepoTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.states.pkgrepo
