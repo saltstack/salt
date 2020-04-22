@@ -17,7 +17,6 @@ from cryptography.x509.oid import NameOID
 from salt.ext.six import text_type
 from salt.ext.six.moves import range
 from tests.support.case import ShellCase
-from tests.support.helpers import expensiveTest
 
 
 def _random_name(prefix=""):
@@ -41,7 +40,7 @@ def with_random_name(func):
 
 
 @pytest.mark.destructive_test
-@expensiveTest
+@pytest.mark.expensive_test
 class VenafiTest(ShellCase):
     """
     Test the venafi runner

@@ -10,12 +10,12 @@ import os
 import shutil
 from time import sleep
 
+import pytest
 from salt.config import cloud_config, cloud_providers_config
 from salt.ext.six.moves import range
 from salt.utils.yaml import safe_load
 from tests.support.case import ShellCase
-from tests.support.helpers import expensiveTest, random_string
-from tests.support.paths import FILES
+from tests.support.helpers import random_string
 from tests.support.runtests import RUNTIME_VARS
 
 TIMEOUT = 500
@@ -23,7 +23,7 @@ TIMEOUT = 500
 log = logging.getLogger(__name__)
 
 
-@expensiveTest
+@pytest.mark.expensive_test
 class CloudTest(ShellCase):
     PROVIDER = ""
     REQUIRED_PROVIDER_CONFIG_ITEMS = tuple()
@@ -337,7 +337,8 @@ class CloudTest(ShellCase):
         provider_file = cls.PROVIDER + ".conf"
         shutil.copyfile(
             os.path.join(
-                os.path.join(FILES, "conf", "cloud.providers.d"), provider_file
+                os.path.join(RUNTIME_VARS.FILES, "conf", "cloud.providers.d"),
+                provider_file,
             ),
             os.path.join(os.path.join(cls.tmp_provider_dir, provider_file)),
         )
