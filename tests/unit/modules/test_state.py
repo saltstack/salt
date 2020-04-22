@@ -432,6 +432,23 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(state, "highstate", mock):
             self.assertTrue(state.apply_(None))
 
+    def test_test(self):
+        """
+            Test to apply states in test mode
+        """
+        with patch.dict(state.__opts__, {"test": False}):
+            mock = MagicMock(return_value=True)
+            with patch.object(state, "sls", mock):
+                self.assertTrue(state.test(True))
+                mock.assert_called_once_with(True, test=True)
+                self.assertEqual(state.__opts__["test"], False)
+
+            mock = MagicMock(return_value=True)
+            with patch.object(state, "highstate", mock):
+                self.assertTrue(state.test(None))
+                mock.assert_called_once_with(test=True)
+                self.assertEqual(state.__opts__["test"], False)
+
     def test_list_disabled(self):
         """
             Test to list disabled states
@@ -1193,6 +1210,14 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
             # Test apply_ with Highstate
             with self.assertRaisesRegex(CommandExecutionError, lock_msg):
                 state.apply_(saltenv="base")
+
+            # Test "test" with SLS
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.test("foo", saltenv="base")
+
+            # Test "test" with Highstate
+            with self.assertRaisesRegex(CommandExecutionError, lock_msg):
+                state.test(saltenv="base")
 
             # Test highstate
             with self.assertRaisesRegex(CommandExecutionError, lock_msg):
