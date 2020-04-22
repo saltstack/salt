@@ -103,7 +103,7 @@ def _mods_with_args(module_py, names_only):
     Start ast parsing of modules
     """
     ret = {}
-    with salt.utils.files.fopen(module_py, "r", encoding='utf8') as cur_file:
+    with salt.utils.files.fopen(module_py, "r", encoding="utf8") as cur_file:
         tree = ast.parse(cur_file.read())
         module_name = _get_module_name(tree, module_py)
         fun_aliases = _get_func_aliases(tree)
