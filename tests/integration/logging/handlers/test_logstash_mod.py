@@ -10,7 +10,7 @@ import salt.utils.stringutils
 import zmq
 from salt.log.handlers.logstash_mod import DatagramLogstashHandler, ZMQLogstashHander
 from tests.support.helpers import get_unused_localhost_port
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -30,6 +30,7 @@ class DatagramLogstashHandlerTest(TestCase):
     def tearDown(self):
         self.test_server.close()
 
+    @skipIf(True, "SLOWTEST skip")
     def test_log_pickling(self):
         # given
         the_log = "test message"
@@ -67,6 +68,7 @@ class ZMQLogstashHanderTest(TestCase):
         self.zmq_server.close()
         self.context.term()
 
+    @skipIf(True, "SLOWTEST skip")
     def test_log_pickling(self):
         # given
         the_log = "test message"
