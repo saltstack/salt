@@ -42,14 +42,6 @@ try:
 except ImportError:
     WIN_NETWORK_LOADED = False
 
-
-if salt.utils.platform.is_windows():
-    # inet_pton does not exist in Windows, this is a workaround
-    from salt.ext import win_inet_pton  # pylint: disable=unused-import
-
-    # Attempt to import win_network
-    import salt.utils.win_network
-
 log = logging.getLogger(__name__)
 
 try:
