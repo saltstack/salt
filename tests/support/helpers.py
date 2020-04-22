@@ -52,6 +52,11 @@ from tests.support.sminion import create_sminion
 # Import Salt Tests Support libs
 from tests.support.unit import SkipTest, _id, skip
 
+if salt.utils.platform.is_windows():
+    import salt.utils.win_functions
+else:
+    import pwd
+
 log = logging.getLogger(__name__)
 
 HAS_SYMLINKS = None
@@ -1696,3 +1701,13 @@ class VirtualEnv(object):
         sminion.functions.virtualenv.create(
             self.venv_dir, python=self._get_real_python()
         )
+
+
+def this_user():
+    '''
+    Get the user associated with the current process.
+    '''
+    if salt.utils.platform.is_windows():
+        return salt.utils.win_functions.get_current_user(with_domain=False)
+    return pwd.getpwuid(os.getuid())[0]
+
