@@ -38,6 +38,7 @@ class SPMBuildTest(SPMCase, ModuleCase):
         self.assertTrue(os.path.isdir(self.config["formula_path"]))
 
     @skipIf(salt.utils.path.which("fallocate") is None, "fallocate not installed")
+    @skipIf(True, "SLOWTEST skip")
     def test_spm_build_big_file(self):
         """
         test spm build with a big file
@@ -66,6 +67,7 @@ class SPMBuildTest(SPMCase, ModuleCase):
         for sls in files:
             self.assertIn(sls, " ".join(get_files))
 
+    @skipIf(True, "SLOWTEST skip")
     def test_spm_build_exclude(self):
         """
         test spm build while excluding directory
