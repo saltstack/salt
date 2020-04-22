@@ -81,7 +81,6 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
         expected_vdata = 1
         expected = {
             "comment": "Added {0} to {1}".format(vname, self.name),
-            "pchanges": {},
             "changes": {
                 "reg": {
                     "Added": {
@@ -112,7 +111,6 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
         reg.present(self.name, vname=vname, vdata=vdata, vtype=vtype)
         expected = {
             "comment": "{0} in {1} is already present".format(vname, self.name),
-            "pchanges": {},
             "changes": {},
             "name": self.name,
             "result": True,
