@@ -1620,7 +1620,12 @@ class LocalClient(object):
                             yield {
                                 id_: {
                                     "out": "no_return",
-                                    "ret": "Minion did not return. [No response]",
+                                    "ret": "Minion did not return. [No response]"
+                                    "\nThe minions may not have all finished running and any "
+                                    "remaining minions will return upon completion. To look "
+                                    "up the return data for this job later, run the following "
+                                    "command:\n\n"
+                                    "salt-run jobs.lookup_jid {0}".format(jid),
                                     "retcode": salt.defaults.exitcodes.EX_GENERIC,
                                 }
                             }

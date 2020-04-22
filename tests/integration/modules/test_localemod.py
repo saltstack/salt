@@ -25,6 +25,7 @@ class LocaleModuleTest(ModuleCase):
         self.assertNotIn("Unsupported platform!", locale)
 
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_gen_locale(self):
         # Make sure charmaps are available on test system before attempting
         # call gen_locale. We log this error to the user in the function, but
@@ -46,6 +47,7 @@ class LocaleModuleTest(ModuleCase):
         self.assertTrue(ret)
 
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_set_locale(self):
         original_locale = self.run_function("locale.get_locale")
         locale_to_set = _find_new_locale(original_locale)

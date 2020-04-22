@@ -33,7 +33,7 @@ from tests.support.mock import MagicMock, Mock, mock_open, patch
 
 # Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class MockState(object):
@@ -1426,6 +1426,7 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
             )
         time.sleep(1)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_merge_strategy_merge(self):
         """
         Base overrides everything
@@ -1438,6 +1439,7 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
             "baz": ["base_baz"],
         }, ret
 
+    @skipIf(True, "SLOWTEST skip")
     def test_merge_strategy_merge_limited_base(self):
         """
         Test with a "base" top file containing only a "base" section. The "baz"
@@ -1476,6 +1478,7 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
             "baz": ["base_baz"],
         }, ret
 
+    @skipIf(True, "SLOWTEST skip")
     def test_merge_strategy_merge_state_top_saltenv_base(self):
         """
         This tests with state_top_saltenv=base, which should pull states *only*
@@ -1489,6 +1492,7 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
             "baz": ["base_baz"],
         }, ret
 
+    @skipIf(True, "SLOWTEST skip")
     def test_merge_strategy_merge_state_top_saltenv_foo(self):
         """
         This tests with state_top_saltenv=foo, which should pull states *only*
@@ -1499,6 +1503,7 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
         ret = self.show_top(top_file_merging_strategy="merge", state_top_saltenv="foo")
         assert ret == {"foo": ["foo_foo"]}, ret
 
+    @skipIf(True, "SLOWTEST skip")
     def test_merge_strategy_merge_all(self):
         """
         Include everything in every top file
@@ -1511,6 +1516,7 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
             "baz": ["base_baz", "foo_baz", "bar_baz"],
         }, ret
 
+    @skipIf(True, "SLOWTEST skip")
     def test_merge_strategy_merge_all_alternate_env_order(self):
         """
         Use an alternate env_order. This should change the order in which the
@@ -1526,6 +1532,7 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
             "baz": ["bar_baz", "foo_baz", "base_baz"],
         }, ret
 
+    @skipIf(True, "SLOWTEST skip")
     def test_merge_strategy_merge_all_state_top_saltenv_base(self):
         """
         This tests with state_top_saltenv=base, which should pull states *only*
@@ -1542,6 +1549,7 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
             "baz": ["base_baz"],
         }, ret
 
+    @skipIf(True, "SLOWTEST skip")
     def test_merge_strategy_merge_all_state_top_saltenv_foo(self):
         """
         This tests with state_top_saltenv=foo, which should pull states *only*
@@ -1558,6 +1566,7 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
             "baz": ["foo_baz"],
         }, ret
 
+    @skipIf(True, "SLOWTEST skip")
     def test_merge_strategy_same(self):
         """
         Each env should get its SLS targets from its own top file, with the
@@ -1572,6 +1581,7 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
             "baz": ["base_baz"],
         }, ret
 
+    @skipIf(True, "SLOWTEST skip")
     def test_merge_strategy_same_limited_base(self):
         """
         Each env should get its SLS targets from its own top file, with the
@@ -1586,6 +1596,7 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
             "bar": ["bar_bar"],
         }, ret
 
+    @skipIf(True, "SLOWTEST skip")
     def test_merge_strategy_same_default_top_foo(self):
         """
         Each env should get its SLS targets from its own top file, with the
@@ -1600,6 +1611,7 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
             "baz": ["foo_baz"],
         }, ret
 
+    @skipIf(True, "SLOWTEST skip")
     def test_merge_strategy_same_state_top_saltenv_base(self):
         """
         Test the state_top_saltenv parameter to load states exclusively from
@@ -1610,6 +1622,7 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
         ret = self.show_top(top_file_merging_strategy="same", state_top_saltenv="base")
         assert ret == {"base": ["base_base"]}, ret
 
+    @skipIf(True, "SLOWTEST skip")
     def test_merge_strategy_same_state_top_saltenv_foo(self):
         """
         Test the state_top_saltenv parameter to load states exclusively from
@@ -1620,6 +1633,7 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
         ret = self.show_top(top_file_merging_strategy="same", state_top_saltenv="foo")
         assert ret == {"foo": ["foo_foo"]}, ret
 
+    @skipIf(True, "SLOWTEST skip")
     def test_merge_strategy_same_state_top_saltenv_baz(self):
         """
         Test the state_top_saltenv parameter to load states exclusively from
