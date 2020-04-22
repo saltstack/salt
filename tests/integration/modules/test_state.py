@@ -1070,6 +1070,80 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(expected_result, result)
 
     @skipIf(True, "SLOWTEST skip")
+    def test_requisites_onfail_all(self):
+        """
+        Call sls file containing several onfail-all
+
+        Ensure that some of them are failing and that the order is right.
+        """
+        expected_result = {
+            "cmd_|-a_|-exit 0_|-run": {
+                "__run_num__": 0,
+                "changes": True,
+                "comment": 'Command "exit 0" run',
+                "result": True,
+            },
+            "cmd_|-b_|-exit 0_|-run": {
+                "__run_num__": 1,
+                "changes": True,
+                "comment": 'Command "exit 0" run',
+                "result": True,
+            },
+            "cmd_|-c_|-exit 0_|-run": {
+                "__run_num__": 2,
+                "changes": True,
+                "comment": 'Command "exit 0" run',
+                "result": True,
+            },
+            "cmd_|-d_|-exit 1_|-run": {
+                "__run_num__": 3,
+                "changes": True,
+                "comment": 'Command "exit 1" run',
+                "result": False,
+            },
+            "cmd_|-e_|-exit 1_|-run": {
+                "__run_num__": 4,
+                "changes": True,
+                "comment": 'Command "exit 1" run',
+                "result": False,
+            },
+            "cmd_|-f_|-exit 1_|-run": {
+                "__run_num__": 5,
+                "changes": True,
+                "comment": 'Command "exit 1" run',
+                "result": False,
+            },
+            "cmd_|-reqs also met_|-echo itonfailed_|-run": {
+                "__run_num__": 9,
+                "changes": True,
+                "comment": 'Command "echo itonfailed" run',
+                "result": True,
+            },
+            "cmd_|-reqs also not met_|-echo italsodidnonfail_|-run": {
+                "__run_num__": 7,
+                "changes": False,
+                "comment": "State was not run because onfail req did not change",
+                "result": True,
+            },
+            "cmd_|-reqs met_|-echo itonfailed_|-run": {
+                "__run_num__": 8,
+                "changes": True,
+                "comment": 'Command "echo itonfailed" run',
+                "result": True,
+            },
+            "cmd_|-reqs not met_|-echo itdidntonfail_|-run": {
+                "__run_num__": 6,
+                "changes": False,
+                "comment": "State was not run because onfail req did not change",
+                "result": True,
+            },
+        }
+        ret = self.run_function("state.sls", mods="requisites.onfail_all")
+        result = self.normalize_ret(ret)
+        self.assertReturnNonEmptySaltType(ret)
+        self.assertEqual(expected_result, result)
+
+    @skipIf(True, "SLOWTEST skip")
     def test_requisites_full_sls(self):
         """
         Teste the sls special command in requisites
@@ -1813,6 +1887,12 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         stdout = state_run["cmd_|-d_|-echo d_|-run"]["changes"]["stdout"]
         self.assertEqual(stdout, "d")
+
+        comment = state_run["cmd_|-e_|-echo e_|-run"]["comment"]
+        self.assertEqual(comment, "State was not run because onfail req did not change")
+
+        stdout = state_run["cmd_|-f_|-echo f_|-run"]["changes"]["stdout"]
+        self.assertEqual(stdout, "f")
 
     @skipIf(True, "SLOWTEST skip")
     def test_multiple_onfail_requisite_with_required_no_run(self):
