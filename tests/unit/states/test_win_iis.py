@@ -15,13 +15,9 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     call,
     MagicMock,
-    patch,
-    NO_MOCK,
-    NO_MOCK_REASON,
-)
+    patch)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class WinIisTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.win_iis
@@ -29,7 +25,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         return {win_iis: {}}
-    
+
     def __base_webconfiguration_ret(
         self, comment="", changes=None, name="", result=None
     ):
