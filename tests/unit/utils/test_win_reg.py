@@ -1,16 +1,12 @@
 # -*- coding: utf-8 -*-
 
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.utils.stringutils
 import salt.utils.win_reg as win_reg
 from salt.exceptions import CommandExecutionError
 from salt.ext import six
-
-# Import Salt Testing Libs
-from tests.support.helpers import destructiveTest, generate_random_name
+from tests.support.helpers import destructiveTest, random_string
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
@@ -25,7 +21,7 @@ UNICODE_KEY = "Unicode Key \N{TRADE MARK SIGN}"
 UNICODE_VALUE = (
     "Unicode Value " "\N{COPYRIGHT SIGN},\N{TRADE MARK SIGN},\N{REGISTERED SIGN}"
 )
-FAKE_KEY = "\\".join(["SOFTWARE", generate_random_name("SaltTesting-")])
+FAKE_KEY = "SOFTWARE\\{0}".format(random_string("SaltTesting-", lowercase=False))
 
 
 @skipIf(not HAS_WIN32, "Tests require win32 libraries")
