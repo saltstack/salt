@@ -420,6 +420,7 @@ class PipStateUtilsTest(TestCase):
     salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, "virtualenv not installed"
 )
 class PipStateInstallationErrorTest(TestCase):
+    @skipIf(True, "SLOWTEST skip")
     def test_importable_installation_error(self):
         extra_requirements = []
         for name, version in salt.version.dependency_information():
