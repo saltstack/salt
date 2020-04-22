@@ -49,6 +49,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
+import sys
 import time
 
 # Import salt libs
@@ -56,6 +57,7 @@ import salt.utils.compat
 import salt.utils.odict as odict
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -311,6 +313,7 @@ def zone_exists(
                 error_retries -= 1
                 continue
             six.reraise(*sys.exc_info())
+    return False
 
 
 def create_zone(
@@ -576,6 +579,8 @@ def get_record(
         if rate_limit_retries is not None:
             error_retries = rate_limit_retries
 
+    _record = None
+    ret = odict.OrderedDict()
     while error_retries > 0:
         try:
             if split_dns:
@@ -587,7 +592,6 @@ def get_record(
                 log.error(msg)
                 return None
             _type = record_type.upper()
-            ret = odict.OrderedDict()
 
             name = _encode_name(name)
 
@@ -733,6 +737,7 @@ def add_record(
                 error_retries -= 1
                 continue
             six.reraise(*sys.exc_info())
+    return False
 
 
 def update_record(
@@ -820,6 +825,7 @@ def update_record(
                 error_retries -= 1
                 continue
             six.reraise(*sys.exc_info())
+    return False
 
 
 def delete_record(
