@@ -14,11 +14,12 @@ from tests.support.unit import skipIf
 log = logging.getLogger(__name__)
 
 
-@skipIf(True, "SLOWTEST skip")
 class CacheTest(ShellCase):
-    '''
+    """
     Test the cache runner
-    '''
+    """
+
+    @skipIf(True, "SLOWTEST skip")
     def test_cache(self):
         """
         Store, list, fetch, then flush data
