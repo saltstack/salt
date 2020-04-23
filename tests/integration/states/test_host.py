@@ -3,25 +3,24 @@
 tests for host state
 """
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import shutil
 
-# Import salt libs
+import pytest
 import salt.utils.files
 import salt.utils.stringutils
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.windows_whitelisted
 class HostTest(ModuleCase, SaltReturnAssertsMixin):
     """
     Validate the host state
@@ -43,6 +42,7 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         self.addCleanup(self.__clear_hosts)
         super(HostTest, self).setUp()
 
+    @skipIf(True, "SLOWTEST skip")
     def test_present(self):
         """
         host.present

@@ -1379,7 +1379,10 @@ def umount(name, device=None, user=None, util="mount"):
 
         salt '*' mount.umount /mnt/foo /dev/xvdc1
     """
-    if util != "mount":
+    if util == "guestfs":
+        __salt__["guestfs.umount"](name, disk=device)
+        return
+    elif util == "qemu_nbd":
         # This functionality used to live in img.umount_image
         if "qemu_nbd.clear" in __salt__:
             if "img.mnt_{0}".format(name) in __context__:

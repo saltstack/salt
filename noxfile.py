@@ -45,7 +45,7 @@ SITECUSTOMIZE_DIR = os.path.join(REPO_ROOT, "tests", "support", "coverage")
 IS_DARWIN = sys.platform.lower().startswith("darwin")
 IS_WINDOWS = sys.platform.lower().startswith("win")
 # Python versions to run against
-_PYTHON_VERSIONS = ("2", "2.7", "3", "3.4", "3.5", "3.6", "3.7")
+_PYTHON_VERSIONS = ("2", "2.7", "3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9")
 
 # Nox options
 #  Reuse existing virtualenvs
@@ -889,9 +889,11 @@ def _pytest(session, coverage, cmd_args):
 
     try:
         if coverage is True:
-            _run_with_coverage(session, "coverage", "run", "-m", "py.test", *cmd_args)
+            _run_with_coverage(
+                session, "python", "-m", "coverage", "run", "-m", "pytest", *cmd_args
+            )
         else:
-            session.run("py.test", *cmd_args, env=env)
+            session.run("python", "-m", "pytest", *cmd_args, env=env)
     except CommandFailed:  # pylint: disable=try-except-raise
         # Not rerunning failed tests for now
         raise
@@ -905,9 +907,11 @@ def _pytest(session, coverage, cmd_args):
                 cmd_args[idx] = parg.replace(".xml", "-rerun-failed.xml")
         cmd_args.append("--lf")
         if coverage is True:
-            _run_with_coverage(session, "coverage", "run", "-m", "py.test", *cmd_args)
+            _run_with_coverage(
+                session, "python", "-m", "coverage", "run", "-m", "pytest", *cmd_args
+            )
         else:
-            session.run("py.test", *cmd_args, env=env)
+            session.run("python", "-m", "pytest", *cmd_args, env=env)
         # pylint: enable=unreachable
 
 

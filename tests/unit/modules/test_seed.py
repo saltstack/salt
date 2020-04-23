@@ -18,7 +18,7 @@ import salt.utils.odict
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class SeedTestCase(TestCase, LoaderModuleMockMixin):
@@ -29,6 +29,7 @@ class SeedTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {seed: {}}
 
+    @skipIf(True, "SLOWTEST skip")
     def test_mkconfig_odict(self):
         with patch.dict(seed.__opts__, {"master": "foo"}):
             ddd = salt.utils.odict.OrderedDict()
@@ -90,7 +91,7 @@ class SeedTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(seed, "_mount", return_value=False):
                 self.assertEqual(seed.apply_("path"), "target could not be mounted")
 
-            with patch.object(seed, "_mount", return_value=True):
+            with patch.object(seed, "_mount", return_value="/mountpoint"):
                 with patch.object(os.path, "join", return_value="A"):
                     with patch.object(
                         os, "makedirs", MagicMock(side_effect=OSError("f"))
@@ -103,5 +104,10 @@ class SeedTestCase(TestCase, LoaderModuleMockMixin):
                             with patch.object(
                                 seed, "_check_install", return_value=False
                             ):
-                                with patch.object(seed, "_umount", return_value=None):
+                                with patch.object(
+                                    seed, "_umount", return_value=None
+                                ) as umount_mock:
                                     self.assertFalse(seed.apply_("path", install=False))
+                                    umount_mock.assert_called_once_with(
+                                        "/mountpoint", "target", "type"
+                                    )

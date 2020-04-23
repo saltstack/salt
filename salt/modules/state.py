@@ -61,6 +61,7 @@ __outputter__ = {
     "template": "highstate",
     "template_str": "highstate",
     "apply_": "highstate",
+    "test": "highstate",
     "request": "highstate",
     "check_request": "highstate",
     "run_request": "highstate",
@@ -798,6 +799,21 @@ def apply_(mods=None, **kwargs):
     if mods:
         return sls(mods, **kwargs)
     return highstate(**kwargs)
+
+
+def test(*args, **kwargs):
+    """
+    .. versionadded:: Sodium
+
+    Alias for `state.apply` with the kwarg `test` forced to `True`.
+
+    This is a nicety to avoid the need to type out `test=True` and the possibility of
+    a typo causing changes you do not intend.
+    """
+    kwargs["test"] = True
+    ret = apply_(*args, **kwargs)
+
+    return ret
 
 
 def request(mods=None, **kwargs):

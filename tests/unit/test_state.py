@@ -51,6 +51,7 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         }
         salt.state.format_log(ret)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_render_error_on_invalid_requisite(self):
         """
         Test that the state compiler correctly deliver a rendering
@@ -231,6 +232,131 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             return_result = state_obj._run_check_unless(low_data, "")
             self.assertEqual(expected_result, return_result)
 
+    def test_verify_retry_parsing(self):
+        low_data = {
+            "state": "file",
+            "name": "/tmp/saltstack.README.rst",
+            "__sls__": "demo.download",
+            "__env__": "base",
+            "__id__": "download sample data",
+            "retry": {"attempts": 5, "interval": 5},
+            "unless": ["test -f /tmp/saltstack.README.rst"],
+            "source": [
+                "https://raw.githubusercontent.com/saltstack/salt/develop/README.rst"
+            ],
+            "source_hash": "f2bc8c0aa2ae4f5bb5c2051686016b48",
+            "order": 10000,
+            "fun": "managed",
+        }
+        expected_result = {
+            "__id__": "download sample data",
+            "__run_num__": 0,
+            "__sls__": "demo.download",
+            "changes": {},
+            "comment": "['unless condition is true']  The state would be retried every 5 "
+            "seconds (with a splay of up to 0 seconds) a maximum of 5 times or "
+            "until a result of True is returned",
+            "name": "/tmp/saltstack.README.rst",
+            "result": True,
+            "skip_watch": True,
+        }
+
+        with patch("salt.state.State._gather_pillar") as state_patch:
+            minion_opts = self.get_temp_config("minion")
+            minion_opts["test"] = True
+            minion_opts["file_client"] = "local"
+            state_obj = salt.state.State(minion_opts)
+            mock = {
+                "result": True,
+                "comment": ["unless condition is true"],
+                "skip_watch": True,
+            }
+            with patch.object(state_obj, "_run_check", return_value=mock):
+                self.assertDictContainsSubset(expected_result, state_obj.call(low_data))
+
+    def test_render_requisite_require_disabled(self):
+        """
+        Test that the state compiler correctly deliver a rendering
+        exception when a requisite cannot be resolved
+        """
+        with patch("salt.state.State._gather_pillar") as state_patch:
+            high_data = {
+                "step_one": OrderedDict(
+                    [
+                        (
+                            "test",
+                            [
+                                OrderedDict(
+                                    [("require", [OrderedDict([("test", "step_two")])])]
+                                ),
+                                "succeed_with_changes",
+                                {"order": 10000},
+                            ],
+                        ),
+                        ("__sls__", "test.disable_require"),
+                        ("__env__", "base"),
+                    ]
+                ),
+                "step_two": {
+                    "test": ["succeed_with_changes", {"order": 10001}],
+                    "__env__": "base",
+                    "__sls__": "test.disable_require",
+                },
+            }
+
+            minion_opts = self.get_temp_config("minion")
+            minion_opts["disabled_requisites"] = ["require"]
+            state_obj = salt.state.State(minion_opts)
+            ret = state_obj.call_high(high_data)
+            run_num = ret["test_|-step_one_|-step_one_|-succeed_with_changes"][
+                "__run_num__"
+            ]
+            self.assertEqual(run_num, 0)
+
+    def test_render_requisite_require_in_disabled(self):
+        """
+        Test that the state compiler correctly deliver a rendering
+        exception when a requisite cannot be resolved
+        """
+        with patch("salt.state.State._gather_pillar") as state_patch:
+            high_data = {
+                "step_one": {
+                    "test": ["succeed_with_changes", {"order": 10000}],
+                    "__env__": "base",
+                    "__sls__": "test.disable_require_in",
+                },
+                "step_two": OrderedDict(
+                    [
+                        (
+                            "test",
+                            [
+                                OrderedDict(
+                                    [
+                                        (
+                                            "require_in",
+                                            [OrderedDict([("test", "step_one")])],
+                                        )
+                                    ]
+                                ),
+                                "succeed_with_changes",
+                                {"order": 10001},
+                            ],
+                        ),
+                        ("__sls__", "test.disable_require_in"),
+                        ("__env__", "base"),
+                    ]
+                ),
+            }
+
+            minion_opts = self.get_temp_config("minion")
+            minion_opts["disabled_requisites"] = ["require_in"]
+            state_obj = salt.state.State(minion_opts)
+            ret = state_obj.call_high(high_data)
+            run_num = ret["test_|-step_one_|-step_one_|-succeed_with_changes"][
+                "__run_num__"
+            ]
+            self.assertEqual(run_num, 0)
+
 
 class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     def setUp(self):
@@ -324,6 +450,82 @@ class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         high, _ = self.highstate.render_highstate(matches)
         ret = salt.state.find_sls_ids("issue-47182.stateA.newer", high)
         self.assertEqual(ret, [("somestuff", "cmd")])
+
+
+class MultiEnvHighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
+    def setUp(self):
+        root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        self.base_state_tree_dir = os.path.join(root_dir, "base")
+        self.other_state_tree_dir = os.path.join(root_dir, "other")
+        cache_dir = os.path.join(root_dir, "cachedir")
+        for dpath in (
+            root_dir,
+            self.base_state_tree_dir,
+            self.other_state_tree_dir,
+            cache_dir,
+        ):
+            if not os.path.isdir(dpath):
+                os.makedirs(dpath)
+        shutil.copy(
+            os.path.join(RUNTIME_VARS.BASE_FILES, "top.sls"), self.base_state_tree_dir
+        )
+        shutil.copy(
+            os.path.join(RUNTIME_VARS.BASE_FILES, "core.sls"), self.base_state_tree_dir
+        )
+        shutil.copy(
+            os.path.join(RUNTIME_VARS.BASE_FILES, "test.sls"), self.other_state_tree_dir
+        )
+        overrides = {}
+        overrides["root_dir"] = root_dir
+        overrides["state_events"] = False
+        overrides["id"] = "match"
+        overrides["file_client"] = "local"
+        overrides["file_roots"] = dict(
+            base=[self.base_state_tree_dir], other=[self.other_state_tree_dir]
+        )
+        overrides["cachedir"] = cache_dir
+        overrides["test"] = False
+        self.config = self.get_temp_config("minion", **overrides)
+        self.addCleanup(delattr, self, "config")
+        self.highstate = salt.state.HighState(self.config)
+        self.addCleanup(delattr, self, "highstate")
+        self.highstate.push_active()
+
+    def tearDown(self):
+        self.highstate.pop_active()
+
+    def test_lazy_avail_states_base(self):
+        # list_states not called yet
+        self.assertEqual(self.highstate.avail._filled, False)
+        self.assertEqual(self.highstate.avail._avail, {"base": None})
+        # After getting 'base' env available states
+        self.highstate.avail["base"]  # pylint: disable=pointless-statement
+        self.assertEqual(self.highstate.avail._filled, False)
+        self.assertEqual(self.highstate.avail._avail, {"base": ["core", "top"]})
+
+    def test_lazy_avail_states_other(self):
+        # list_states not called yet
+        self.assertEqual(self.highstate.avail._filled, False)
+        self.assertEqual(self.highstate.avail._avail, {"base": None})
+        # After getting 'other' env available states
+        self.highstate.avail["other"]  # pylint: disable=pointless-statement
+        self.assertEqual(self.highstate.avail._filled, True)
+        self.assertEqual(self.highstate.avail._avail, {"base": None, "other": ["test"]})
+
+    def test_lazy_avail_states_multi(self):
+        # list_states not called yet
+        self.assertEqual(self.highstate.avail._filled, False)
+        self.assertEqual(self.highstate.avail._avail, {"base": None})
+        # After getting 'base' env available states
+        self.highstate.avail["base"]  # pylint: disable=pointless-statement
+        self.assertEqual(self.highstate.avail._filled, False)
+        self.assertEqual(self.highstate.avail._avail, {"base": ["core", "top"]})
+        # After getting 'other' env available states
+        self.highstate.avail["other"]  # pylint: disable=pointless-statement
+        self.assertEqual(self.highstate.avail._filled, True)
+        self.assertEqual(
+            self.highstate.avail._avail, {"base": ["core", "top"], "other": ["test"]}
+        )
 
 
 @skipIf(pytest is None, "PyTest is missing")
@@ -443,6 +645,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.state_obj.format_slots(cdata)
         self.assertEqual(cdata, {"args": ["arg"], "kwargs": {"key": "val"}})
 
+    @skipIf(True, "SLOWTEST skip")
     def test_format_slots_arg(self):
         """
         Test the format slots is calling a slot specified in args with corresponding arguments.
@@ -457,6 +660,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         mock.assert_called_once_with("fun_arg", fun_key="fun_val")
         self.assertEqual(cdata, {"args": ["fun_return"], "kwargs": {"key": "val"}})
 
+    @skipIf(True, "SLOWTEST skip")
     def test_format_slots_dict_arg(self):
         """
         Test the format slots is calling a slot specified in dict arg.
@@ -473,6 +677,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             cdata, {"args": [{"subarg": "fun_return"}], "kwargs": {"key": "val"}}
         )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_format_slots_listdict_arg(self):
         """
         Test the format slots is calling a slot specified in list containing a dict.
@@ -489,6 +694,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             cdata, {"args": [[{"subarg": "fun_return"}]], "kwargs": {"key": "val"}}
         )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_format_slots_liststr_arg(self):
         """
         Test the format slots is calling a slot specified in list containing a dict.
@@ -503,6 +709,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         mock.assert_called_once_with("fun_arg", fun_key="fun_val")
         self.assertEqual(cdata, {"args": [["fun_return"]], "kwargs": {"key": "val"}})
 
+    @skipIf(True, "SLOWTEST skip")
     def test_format_slots_kwarg(self):
         """
         Test the format slots is calling a slot specified in kwargs with corresponding arguments.
@@ -517,6 +724,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         mock.assert_called_once_with("fun_arg", fun_key="fun_val")
         self.assertEqual(cdata, {"args": ["arg"], "kwargs": {"key": "fun_return"}})
 
+    @skipIf(True, "SLOWTEST skip")
     def test_format_slots_multi(self):
         """
         Test the format slots is calling all slots with corresponding arguments when multiple slots
@@ -558,6 +766,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             },
         )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_format_slots_malformed(self):
         """
         Test the format slots keeps malformed slots untouched.
@@ -587,6 +796,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         mock.assert_not_called()
         self.assertEqual(cdata, sls_data)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_slot_traverse_dict(self):
         """
         Test the slot parsing of dict response.
@@ -602,6 +812,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         mock.assert_called_once_with("fun_arg", fun_key="fun_val")
         self.assertEqual(cdata, {"args": ["arg"], "kwargs": {"key": "value1"}})
 
+    @skipIf(True, "SLOWTEST skip")
     def test_slot_append(self):
         """
         Test the slot parsing of dict response.
@@ -618,3 +829,31 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             self.state_obj.format_slots(cdata)
         mock.assert_called_once_with("fun_arg", fun_key="fun_val")
         self.assertEqual(cdata, {"args": ["arg"], "kwargs": {"key": "value1thing~"}})
+
+    # Skip on windows like integration.modules.test_state.StateModuleTest.test_parallel_state_with_long_tag
+    @skipIf(
+        salt.utils.platform.is_windows(),
+        "Skipped until parallel states can be fixed on Windows",
+    )
+    def test_format_slots_parallel(self):
+        """
+        Test if slots work with "parallel: true".
+        """
+        high_data = {
+            "always-changes-and-succeeds": {
+                "test": [
+                    {"changes": True},
+                    {"comment": "__slot__:salt:test.echo(fun_return)"},
+                    {"parallel": True},
+                    "configurable_test_state",
+                    {"order": 10000},
+                ],
+                "__env__": "base",
+                "__sls__": "parallel_slots",
+            }
+        }
+        self.state_obj.jid = "123"
+        res = self.state_obj.call_high(high_data)
+        self.state_obj.jid = None
+        [(_, data)] = res.items()
+        self.assertEqual(data["comment"], "fun_return")

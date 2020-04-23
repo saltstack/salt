@@ -1,19 +1,16 @@
 # -*- coding: utf-8 -*-
 
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import tempfile
 
-# Import Salt Libs
 import salt.utils.platform
 import salt.utils.win_dacl as win_dacl
 import salt.utils.win_reg as win_reg
-
-# Import Salt Testing Libs
-from tests.support.helpers import destructiveTest, generate_random_name, patch
+from tests.support.helpers import destructiveTest, random_string
 from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
 
 try:
@@ -24,7 +21,7 @@ try:
 except ImportError:
     HAS_WIN32 = False
 
-FAKE_KEY = "SOFTWARE\\{0}".format(generate_random_name("SaltTesting-"))
+FAKE_KEY = "SOFTWARE\\{0}".format(random_string("SaltTesting-", lowercase=False))
 
 
 @skipIf(not HAS_WIN32, "Requires pywin32")
