@@ -36,6 +36,7 @@ except ImportError:
 
 try:
     import pyiface
+    from pyiface.ifreqioctls import IFF_LOOPBACK, IFF_RUNNING
 except ImportError:
     pyiface = None
 
@@ -54,8 +55,6 @@ INTERFACES_CONFIG = "/var/lib/connman/interfaces.config"
 NIRTCFG_PATH = "/usr/local/natinst/bin/nirtcfg"
 INI_FILE = "/etc/natinst/share/ni-rt.ini"
 _CONFIG_TRUE = ["yes", "on", "true", "1", True]
-IFF_LOOPBACK = 0x8
-IFF_RUNNING = 0x40
 NIRTCFG_ETHERCAT = "EtherCAT"
 
 
@@ -559,7 +558,7 @@ def _change_state(interface, new_state):
     """
     if __grains__["lsb_distrib_id"] == "nilrt":
         initial_mode = _get_adapter_mode_info(interface)
-        _save_config(interface, "Mode", "TCPIP")
+        _save_config(interface, "Mode", "TCPIP" if new_state == "up" else "Disabled")
         if initial_mode == "ethercat":
             __salt__["system.set_reboot_required_witnessed"]()
         else:
