@@ -24,7 +24,6 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
             "__env__": "base",
             "__opts__": {"test": False},
             "__salt__": {"environ.setenv": envmodule.setenv},
-            "__utils__": {"reg.read_value": salt.modules.reg.read_value},
         }
         return {envstate: loader_globals, envmodule: loader_globals}
 
