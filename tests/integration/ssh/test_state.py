@@ -17,6 +17,7 @@ from tests.support.case import SSHCase
 from tests.support.helpers import flaky
 # Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf
 
 SSH_SLS = "ssh_state_tests"
 SSH_SLS_FILE = "/tmp/salt_test_file"
@@ -49,6 +50,7 @@ class SSHStateTest(SSHCase):
                 exp_ret=SSH_SLS,
             )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_state_apply(self):
         """
         test state.apply with salt-ssh
@@ -59,6 +61,7 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function("file.file_exists", [SSH_SLS_FILE])
         self.assertTrue(check_file)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_state_sls_id(self):
         """
         test state.sls_id with salt-ssh
@@ -85,6 +88,7 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function("file.file_exists", [SSH_SLS_FILE])
         self.assertTrue(check_file)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_state_sls_wrong_id(self):
         """
         test state.sls_id when id does not exist
@@ -93,6 +97,7 @@ class SSHStateTest(SSHCase):
         ret = self.run_function("state.sls_id", ["doesnotexist", SSH_SLS])
         assert "No matches for ID" in ret
 
+    @skipIf(True, "SLOWTEST skip")
     def test_state_sls_id_with_pillar(self):
         """
         test state.sls_id with pillar data
@@ -106,6 +111,7 @@ class SSHStateTest(SSHCase):
         )
         self.assertTrue(check_file)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_state_show_sls(self):
         """
         test state.show_sls with salt-ssh
@@ -116,6 +122,7 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function("file.file_exists", [SSH_SLS_FILE], wipe=False)
         self.assertFalse(check_file)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_state_show_top(self):
         """
         test state.show_top with salt-ssh
@@ -123,6 +130,7 @@ class SSHStateTest(SSHCase):
         ret = self.run_function("state.show_top")
         self.assertEqual(ret, {"base": ["core", "master_tops_test"]})
 
+    @skipIf(True, "SLOWTEST skip")
     def test_state_single(self):
         """
         state.single with salt-ssh
@@ -140,6 +148,7 @@ class SSHStateTest(SSHCase):
             self.assertEqual(value["result"], ret_out["result"])
             self.assertEqual(value["comment"], ret_out["comment"])
 
+    @skipIf(True, "SLOWTEST skip")
     def test_show_highstate(self):
         """
         state.show_highstate with salt-ssh
@@ -150,6 +159,7 @@ class SSHStateTest(SSHCase):
         self.assertIn(destpath, high)
         self.assertEqual(high[destpath]["__env__"], "base")
 
+    @skipIf(True, "SLOWTEST skip")
     def test_state_high(self):
         """
         state.high with salt-ssh
@@ -167,6 +177,7 @@ class SSHStateTest(SSHCase):
             self.assertEqual(value["result"], ret_out["result"])
             self.assertEqual(value["comment"], ret_out["comment"])
 
+    @skipIf(True, "SLOWTEST skip")
     def test_show_lowstate(self):
         """
         state.show_lowstate with salt-ssh
@@ -175,6 +186,7 @@ class SSHStateTest(SSHCase):
         self.assertIsInstance(low, list)
         self.assertIsInstance(low[0], dict)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_state_low(self):
         """
         state.low with salt-ssh
@@ -193,6 +205,7 @@ class SSHStateTest(SSHCase):
             self.assertEqual(value["result"], ret_out["result"])
             self.assertEqual(value["comment"], ret_out["comment"])
 
+    @skipIf(True, "SLOWTEST skip")
     def test_state_request_check_clear(self):
         """
         test state.request system with salt-ssh
@@ -206,6 +219,7 @@ class SSHStateTest(SSHCase):
         clear = self.run_function("state.clear_request", wipe=False)
         self._check_request(empty=True)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_state_run_request(self):
         """
         test state.request system with salt-ssh
@@ -220,6 +234,7 @@ class SSHStateTest(SSHCase):
         self.assertTrue(check_file)
 
     @flaky
+    @skipIf(True, "SLOWTEST skip")
     def test_state_running(self):
         """
         test state.running with salt-ssh

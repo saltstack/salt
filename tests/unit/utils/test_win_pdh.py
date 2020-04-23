@@ -13,6 +13,7 @@ from tests.support.unit import TestCase, skipIf
 
 @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
 class WinPdhTestCase(TestCase):
+    @skipIf(True, "SLOWTEST skip")
     def test_list_objects(self):
         known_objects = ["Cache", "Memory", "Process", "Processor", "System"]
         objects = win_pdh.list_objects()
@@ -58,6 +59,7 @@ class WinPdhTestCase(TestCase):
         ]
         self.assertEqual(resulting_paths, expected_paths)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_get_all_counters(self):
         results = win_pdh.get_all_counters("Processor")
         known_counters = [
@@ -72,6 +74,7 @@ class WinPdhTestCase(TestCase):
         for item in known_counters:
             self.assertTrue(item in results)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_get_counters(self):
         counter_list = [
             ("Memory", None, "Available Bytes"),

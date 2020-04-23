@@ -11,6 +11,7 @@ import salt.version
 # Import Salt Testing libs
 from tests.support.case import MultimasterModuleCase
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
+from tests.support.unit import skipIf
 
 
 class TestModuleTest(MultimasterModuleCase, AdaptedConfigurationTestCaseMixin):
@@ -70,6 +71,7 @@ class TestModuleTest(MultimasterModuleCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(ret[0][0], 6765)
         self.assertEqual(ret[1][0], 6765)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_collatz(self):
         """
         test.collatz

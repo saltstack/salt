@@ -78,7 +78,7 @@ class BaseRestCherryPyTest(BaseCherryPyTestCase):
         cherrypy.server.unsubscribe()
         cherrypy.engine.start()
 
-        # Make sure cherrypy does not memleak on it's bus since it keeps
+        # Make sure cherrypy does not memleak on its bus since it keeps
         # adding handlers without cleaning the old ones each time we setup
         # a new application
         for value in cherrypy.engine.listeners.values():
@@ -125,7 +125,7 @@ if HAS_CHERRYPY:
             patcher.start()
             self.addCleanup(patcher.stop)
 
-            # Make sure cherrypy does not memleak on it's bus since it keeps
+            # Make sure cherrypy does not memleak on its bus since it keeps
             # adding handlers without cleaning the old ones each time we setup
             # a new application
             for value in cherrypy.engine.listeners.values():

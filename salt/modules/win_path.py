@@ -85,7 +85,7 @@ def get_path():
         salt '*' win_path.get_path
     """
     ret = salt.utils.stringutils.to_unicode(
-        __salt__["reg.read_value"](
+        __utils__["reg.read_value"](
             "HKEY_LOCAL_MACHINE",
             "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment",
             "PATH",
@@ -274,7 +274,7 @@ def add(path, index=None, **kwargs):
         return True
 
     # Move forward with registry update
-    result = __salt__["reg.set_value"](
+    result = __utils__["reg.set_value"](
         HIVE, KEY, VNAME, ";".join(salt.utils.data.decode(system_path)), VTYPE
     )
 
@@ -345,7 +345,7 @@ def remove(path, **kwargs):
         # No changes necessary
         return True
 
-    result = __salt__["reg.set_value"](
+    result = __utils__["reg.set_value"](
         HIVE, KEY, VNAME, ";".join(salt.utils.data.decode(system_path)), VTYPE
     )
 

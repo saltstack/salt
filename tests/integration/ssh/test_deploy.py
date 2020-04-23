@@ -11,6 +11,7 @@ import shutil
 # Import salt testing libs
 from tests.support.case import SSHCase
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf
 
 
 class SSHTest(SSHCase):
@@ -18,6 +19,7 @@ class SSHTest(SSHCase):
     Test general salt-ssh functionality
     """
 
+    @skipIf(True, "SLOWTEST skip")
     def test_ping(self):
         """
         Test a simple ping
@@ -25,6 +27,7 @@ class SSHTest(SSHCase):
         ret = self.run_function("test.ping")
         self.assertTrue(ret, "Ping did not return true")
 
+    @skipIf(True, "SLOWTEST skip")
     def test_thin_dir(self):
         """
         test to make sure thin_dir is created
