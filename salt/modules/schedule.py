@@ -161,7 +161,7 @@ def is_enabled(name=None):
     """
     List a Job only if its enabled
 
-    If not job is specified, indicate
+    If job is not specified, indicate
     if the scheduler is enabled or disabled.
 
     .. versionadded:: 2015.5.3
