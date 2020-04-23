@@ -444,7 +444,9 @@ def run_state_tests(state, saltenv=None, check_all=False):
         salt '*' saltcheck.run_state_tests postfix,common
 
     Tests will be run in parallel by adding "saltcheck_parallel: True" in minion config.
-    Setting this value to an integer will set the maximum parallel processes.
+    When enabled, saltcheck will use up to the number of cores detected. This can be limited
+    by setting the "saltcheck_processes" value to an integer to set the maximum number
+    of parallel processes.
     """
     if not saltenv:
         if "saltenv" in __opts__ and __opts__["saltenv"]:
@@ -457,6 +459,7 @@ def run_state_tests(state, saltenv=None, check_all=False):
     global_scheck = SaltCheck(saltenv)
 
     parallel = __salt__["config.get"]("saltcheck_parallel")
+    num_proc = __salt__["config.get"]("saltcheck_processes")
 
     stl = StateTestLoader(saltenv)
     results = OrderedDict()
@@ -468,13 +471,16 @@ def run_state_tests(state, saltenv=None, check_all=False):
 
         # Check for situations to disable parallization
         if parallel:
+            if type(num_proc) == float:
+                num_proc = int(num_proc)
+
             if multiprocessing.cpu_count() < 2:
                 parallel = False
-                log.debug("saltcheck_parallel set to 1. Disabling parallization.")
-            elif (type(parallel) in (float, int)) and (parallel == 1):
+                log.debug("Only 1 CPU. Disabling parallization.")
+            elif num_proc == 1:
                 # Don't bother with multiprocessing overhead
                 parallel = False
-                log.debug("Only 1 CPU. Disabling parallization.")
+                log.debug("Configuration limited to 1 CPU. Disabling parallization.")
             else:
                 for items in stl.test_dict.values():
                     if "state.apply" in items.get("module_and_function", []):
@@ -486,8 +492,8 @@ def run_state_tests(state, saltenv=None, check_all=False):
                         )
 
         if parallel:
-            if type(parallel) in (float, int):
-                pool_size = parallel
+            if num_proc:
+                pool_size = num_proc
             else:
                 pool_size = min(len(stl.test_dict), multiprocessing.cpu_count())
             log.debug("Running tests in parallel with %s processes", pool_size)
