@@ -365,6 +365,8 @@ Json
 jsonify
 junos
 Junos
+kamatera
+Kamatera
 keycontent
 keyfile
 keyid

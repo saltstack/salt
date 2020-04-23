@@ -54,6 +54,11 @@
 #    password: saltybacon
 #    private_key: /root/joyent.pem
 
+#my-kamatera-config:
+#  driver: kamatera
+#  api_client_id: KAMATERA_CLIENT_ID
+#  api_secret: KAMATERA_SECERET
+
 #my-linode-config:
 #  driver: linode
 #  apikey: asldkgfakl;sdfjsjaslfjaklsdjf;askldjfaaklsjdfhasldsadfghdkf

@@ -19,6 +19,7 @@ cloud modules
     gce
     gogrid
     joyent
+    kamatera
     linode
     lxc
     msazure
