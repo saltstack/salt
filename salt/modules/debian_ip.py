@@ -180,8 +180,9 @@ def _error_msg_routes(iface, option, expected):
 
 
 def _log_default_iface(iface, opt, value):
-    msg = "Using default option -- Interface: {0} Option: {1} Value: {2}"
-    log.info(msg.format(iface, opt, value))
+    log.info(
+        "Using default option -- Interface: %s Option: %s Value: %s", iface, opt, value
+    )
 
 
 def _error_msg_network(option, expected):
@@ -194,8 +195,7 @@ def _error_msg_network(option, expected):
 
 
 def _log_default_network(opt, value):
-    msg = "Using existing setting -- Setting: {0} Value: {1}"
-    log.info(msg.format(opt, value))
+    log.info("Using existing setting -- Setting: %s Value: %s", opt, value)
 
 
 def _raise_error_iface(iface, option, expected):
@@ -829,30 +829,27 @@ def _parse_settings_bond(opts, iface):
     }
 
     if opts["mode"] in ["balance-rr", "0"]:
-        log.info("Device: {0} Bonding Mode: load balancing (round-robin)".format(iface))
+        log.info("Device: %s Bonding Mode: load balancing (round-robin)", iface)
         return _parse_settings_bond_0(opts, iface, bond_def)
     elif opts["mode"] in ["active-backup", "1"]:
-        log.info(
-            "Device: {0} Bonding Mode: fault-tolerance (active-backup)".format(iface)
-        )
+        log.info("Device: %s Bonding Mode: fault-tolerance (active-backup)", iface)
         return _parse_settings_bond_1(opts, iface, bond_def)
     elif opts["mode"] in ["balance-xor", "2"]:
-        log.info("Device: {0} Bonding Mode: load balancing (xor)".format(iface))
+        log.info("Device: %s Bonding Mode: load balancing (xor)", iface)
         return _parse_settings_bond_2(opts, iface, bond_def)
     elif opts["mode"] in ["broadcast", "3"]:
-        log.info("Device: {0} Bonding Mode: fault-tolerance (broadcast)".format(iface))
+        log.info("Device: %s Bonding Mode: fault-tolerance (broadcast)", iface)
         return _parse_settings_bond_3(opts, iface, bond_def)
     elif opts["mode"] in ["802.3ad", "4"]:
         log.info(
-            "Device: {0} Bonding Mode: IEEE 802.3ad Dynamic link "
-            "aggregation".format(iface)
+            "Device: %s Bonding Mode: IEEE 802.3ad Dynamic link " "aggregation", iface
         )
         return _parse_settings_bond_4(opts, iface, bond_def)
     elif opts["mode"] in ["balance-tlb", "5"]:
-        log.info("Device: {0} Bonding Mode: transmit load balancing".format(iface))
+        log.info("Device: %s Bonding Mode: transmit load balancing", iface)
         return _parse_settings_bond_5(opts, iface, bond_def)
     elif opts["mode"] in ["balance-alb", "6"]:
-        log.info("Device: {0} Bonding Mode: adaptive load balancing".format(iface))
+        log.info("Device: %s Bonding Mode: adaptive load balancing", iface)
         return _parse_settings_bond_6(opts, iface, bond_def)
     else:
         valid = [

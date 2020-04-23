@@ -66,6 +66,7 @@ state modules
     boto_sqs
     boto_vpc
     bower
+    btrfs
     cabal
     ceph
     chef

@@ -330,9 +330,7 @@ def pylxd_client_get(remote_addr=None, cert=None, key=None, verify_cert=True):
     )
 
     if pool_key in _connection_pool:
-        log.debug(
-            ('Returning the client "{0}" from our connection pool').format(remote_addr)
-        )
+        log.debug('Returning the client "%s" from our connection pool', remote_addr)
         return _connection_pool[pool_key]
 
     try:
@@ -371,13 +369,12 @@ def pylxd_client_get(remote_addr=None, cert=None, key=None, verify_cert=True):
                     )
 
                 log.debug(
-                    (
-                        'Trying to connecto to "{0}" '
-                        'with cert "{1}", key "{2}" and '
-                        'verify_cert "{3!s}"'.format(
-                            remote_addr, cert, key, verify_cert
-                        )
-                    )
+                    'Trying to connect to "%s" with cert "%s", key "%s" and '
+                    'verify_cert "%s"',
+                    remote_addr,
+                    cert,
+                    key,
+                    verify_cert,
                 )
                 client = pylxd.Client(
                     endpoint=remote_addr, cert=(cert, key,), verify=verify_cert
@@ -2986,9 +2983,10 @@ def image_copy_lxd(
         aliases = []
 
     log.debug(
-        'Trying to copy the image "{0}" from "{1}" to "{2}"'.format(
-            source, src_remote_addr, remote_addr
-        )
+        'Trying to copy the image "%s" from "%s" to "%s"',
+        source,
+        src_remote_addr,
+        remote_addr,
     )
 
     # This will fail with a SaltInvocationError if

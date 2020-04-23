@@ -14,7 +14,7 @@ import salt.utils.http as http
 from tests.support.helpers import MirrorPostHandler, Webserver
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class HTTPTestCase(TestCase):
@@ -112,6 +112,7 @@ class HTTPTestCase(TestCase):
         ret = http._sanitize_url_components(mock_component_list, "foo")
         self.assertEqual(ret, mock_ret)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_query_null_response(self):
         """
         This tests that we get a null response when raise_error=False and the

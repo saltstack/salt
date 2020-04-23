@@ -12,6 +12,7 @@ from salt.ext import six
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.unit import skipIf
 
 
 @destructiveTest
@@ -36,6 +37,7 @@ class MacDesktopTestCase(ModuleCase):
         ret = self.run_function("desktop.get_output_volume")
         self.assertIsNotNone(ret)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_set_output_volume(self):
         """
         Tests the return of set_output_volume.
@@ -65,6 +67,7 @@ class MacDesktopTestCase(ModuleCase):
         """
         self.assertTrue(self.run_function("desktop.lock"))
 
+    @skipIf(True, "SLOWTEST skip")
     def test_say(self):
         """
         Tests the return of the say function.

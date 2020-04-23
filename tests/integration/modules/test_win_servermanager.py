@@ -15,6 +15,7 @@ class WinServermanagerTest(ModuleCase):
     Test for salt.modules.win_servermanager
     """
 
+    @skipIf(True, "SLOWTEST skip")
     def test_list_available(self):
         """
         Test list available features to install
