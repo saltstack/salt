@@ -1048,6 +1048,9 @@ def installed(
         the documentation for your platform's ``pkg`` module, then look at the
         documentation for the ``install`` function.
 
+        Any argument that is passed through to the ``install`` function, which
+        is not defined for that function, will be silently ignored.
+
     :param str name:
         The name of the package to be installed. This parameter is ignored if
         either "pkgs" or "sources" is used. Additionally, please note that this
@@ -2152,6 +2155,9 @@ def downloaded(
         the documentation for your platform's ``pkg`` module, then look at the
         documentation for the ``install`` function.
 
+        Any argument that is passed through to the ``install`` function, which
+        is not defined for that function, will be silently ignored.
+
     Currently supported for the following pkg providers:
     :mod:`yumpkg <salt.modules.yumpkg>`, :mod:`zypper <salt.modules.zypper>` and :mod:`zypper <salt.modules.aptpkg>`
 
@@ -2312,6 +2318,9 @@ def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
         the documentation for your platform's ``pkg`` module, then look at the
         documentation for the ``install`` function.
 
+        Any argument that is passed through to the ``install`` function, which
+        is not defined for that function, will be silently ignored.
+
     Currently supported for the following pkg providers:
     :mod:`yumpkg <salt.modules.yumpkg>` and :mod:`zypper <salt.modules.zypper>`
 
@@ -2461,6 +2470,9 @@ def latest(
         To see what is supported, check :ref:`this page <virtual-pkg>` to find
         the documentation for your platform's ``pkg`` module, then look at the
         documentation for the ``install`` function.
+
+        Any argument that is passed through to the ``install`` function, which
+        is not defined for that function, will be silently ignored.
 
     name
         The name of the package to maintain at the latest available version.
