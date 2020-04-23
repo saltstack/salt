@@ -177,3 +177,5 @@ command:
             EU:6000C2904fc6d8295d2b6d9687ed955e:
                 Ubuntu Server version 18.04 LTS (bionic) 64-bit,
     ...SNIP...
+
+See also :mod:`salt.cloud.clouds.libvirt`

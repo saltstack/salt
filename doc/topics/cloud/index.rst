@@ -116,6 +116,7 @@ Cloud Provider Specifics
         Getting Started With Google Compute Engine <gce>
         Getting Started With HP Cloud <hpcloud>
         Getting Started With Joyent <joyent>
+        Getting Started With Kamatera <kamatera>
         Getting Started With Libvirt <libvirt>
         Getting Started With Linode <linode>
         Getting Started With LXC <lxc>
