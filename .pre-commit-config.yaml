@@ -505,6 +505,48 @@ repos:
           - --py-version=3.9
           - --platform=linux
 
+  # ----- Invoke ---------------------------------------------------------------------------------------------------->
+      - id: pip-tools-compile
+        alias: compile-py3.5-invoke-requirements
+        name: Linux Py3.5 Invoke Requirements
+        files: ^requirements/static/invoke\.in$
+        args:
+          - -v
+          - --py-version=3.5
+
+      - id: pip-tools-compile
+        alias: compile-py3.6-invoke-requirements
+        name: Linux Py3.6 Invoke Requirements
+        files: ^requirements/static/invoke\.in$
+        args:
+          - -v
+          - --py-version=3.6
+
+      - id: pip-tools-compile
+        alias: compile-py3.7-invoke-requirements
+        name: Linux Py3.7 Invoke Requirements
+        files: ^requirements/static/invoke\.in$
+        args:
+          - -v
+          - --py-version=3.7
+
+      - id: pip-tools-compile
+        alias: compile-py3.8-invoke-requirements
+        name: Linux Py3.8 Invoke Requirements
+        files: ^requirements/static/invoke\.in$
+        args:
+          - -v
+          - --py-version=3.8
+
+      - id: pip-tools-compile
+        alias: compile-py3.9-invoke-requirements
+        name: Linux Py3.9 Invoke Requirements
+        files: ^requirements/static/invoke\.in$
+        args:
+          - -v
+          - --py-version=3.9
+  # <---- Invoke -----------------------------------------------------------------------------------------------------
+
   - repo: https://github.com/timothycrosley/isort
     rev: "1e78a9acf3110e1f9721feb591f89a451fc9876a"
     hooks:
@@ -539,7 +581,7 @@ repos:
       - id: nox-py2
         alias: lint-salt
         name: Lint Salt
-        files: ^((setup|noxfile)|salt/.*)\.py$
+        files: ^((setup|noxfile)|(salt|tasks)/.*)\.py$
         args:
           - -e
           - lint-salt-pre-commit
