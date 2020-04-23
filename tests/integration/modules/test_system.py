@@ -411,18 +411,6 @@ class WinSystemModuleTest(ModuleCase):
     Validate the date/time functions in the win_system module
     """
 
-    @classmethod
-    def setUpClass(cls):
-        if subprocess.call("net stop w32time", shell=True) != 0:
-            log.error("Failed to stop w32time service")
-
-    @classmethod
-    def tearDownClass(cls):
-        if subprocess.call("net start w32time", shell=True) != 0:
-            log.error("Failed to start w32time service")
-        if subprocess.call("w32tm /resync", shell=True) != 0:
-            log.error("Re-syncing time failed")
-
     @skipIf(True, "SLOWTEST skip")
     def test_get_computer_name(self):
         """
@@ -437,7 +425,6 @@ class WinSystemModuleTest(ModuleCase):
         self.assertEqual(name, ret)
 
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
     @skipIf(True, "SLOWTEST skip")
     def test_set_computer_desc(self):
         """
@@ -478,30 +465,6 @@ class WinSystemModuleTest(ModuleCase):
         # Timeouts are set to 300 seconds. We're adding a 30 second buffer
         self.assertTrue(diff.seconds < 330)
 
-    @skipIf(True, "WAR ROOM 7/18/2019, unit test?")
-    @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
-    def test_set_system_time(self):
-        """
-        Test setting the system time
-
-        .. note::
-
-            In order for this test to pass, time sync must be disabled for the
-            VM in the hypervisor
-        """
-        self.run_function("service.stop", ["w32time"])
-        try:
-            current_time = datetime.datetime.now().strftime("%H:%M:%S")
-            test_time = "10:55"
-            self.run_function("system.set_system_time", [test_time + " AM"])
-            time.sleep(0.25)
-            new_time = datetime.datetime.now().strftime("%H:%M")
-            self.assertEqual(new_time, test_time)
-        finally:
-            self.run_function("system.set_system_time", [current_time])
-            self.run_function("service.start", ["w32time"])
-
     @skipIf(True, "SLOWTEST skip")
     def test_get_system_date(self):
         """
@@ -511,26 +474,57 @@ class WinSystemModuleTest(ModuleCase):
         date = datetime.datetime.now().strftime("%m/%d/%Y")
         self.assertEqual(date, ret)
 
+
+@skipIf(not salt.utils.platform.is_windows(), "These tests can only be run on windows")
+@pytest.mark.windows_whitelisted
+class WinSystemModuleTimeSettingTest(ModuleCase):
+    """
+    Validate the date/time functions in the win_system module
+
+    .. note::
+
+        In order for these tests to pass, time sync must be disabled for the VM
+        in the hyper-visor
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        if subprocess.call("sc config w32time start= disabled > nul", shell=True) != 0:
+            log.error("Failed to disable w32time service")
+        if subprocess.call("sc stop w32time", shell=True) != 0:
+            log.error("Failed to stop w32time service")
+
+    @classmethod
+    def tearDownClass(cls):
+        if subprocess.call("sc config w32time start= auto > nul", shell=True) != 0:
+            log.error("Failed to enable w32time service")
+        if subprocess.call("sc start w32time", shell=True) != 0:
+            log.error("Failed to start w32time service")
+        if subprocess.call("w32tm /resync", shell=True) != 0:
+            log.error("Re-syncing time failed")
+
+    @skipIf(True, "WAR ROOM 7/18/2019, unit test?")
+    @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
+    def test_set_system_time(self):
+        """
+        Test setting the system time
+        """
+        # If the test fails, the hypervisor may be maintaining time sync
+        test_time = "10:55"
+        self.run_function("system.set_system_time", [test_time + " AM"])
+        time.sleep(0.25)
+        new_time = datetime.datetime.now().strftime("%H:%M")
+        self.assertEqual(new_time, test_time)
+
     @skipIf(True, "WAR ROOM 7/18/2019, unit test?")
     @destructiveTest
     @skipIf(True, "SLOWTEST skip")
     def test_set_system_date(self):
         """
         Test setting system date
-
-        .. note::
-
-            In order for this test to pass, time sync must be disabled for the
-            VM in the hypervisor
         """
-        self.run_function("service.stop", ["w32time"])
-        try:
-            # If the test still fails, the hypervisor may be maintaining time
-            # sync
-            current_date = datetime.datetime.now().strftime("%Y/%m/%d")
-            self.run_function("system.set_system_date", ["03/25/2018"])
-            new_date = datetime.datetime.now().strftime("%Y/%m/%d")
-            self.assertEqual(new_date, "2018/03/25")
-        finally:
-            self.run_function("system.set_system_date", [current_date])
-            self.run_function("service.start", ["w32time"])
+        # If the test fails, the hypervisor may be maintaining time sync
+        self.run_function("system.set_system_date", ["03/25/2018"])
+        new_date = datetime.datetime.now().strftime("%Y/%m/%d")
+        self.assertEqual(new_date, "2018/03/25")
