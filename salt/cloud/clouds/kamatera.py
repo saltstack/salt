@@ -340,8 +340,6 @@ def list_nodes(call=None, full=False, name_regex=None):
         )
     ret = {}
     for server_res in _list_servers(name_regex=name_regex):
-        print(server_res
-              )
         public_ips, private_ips, networks = [], [], []
         for network in server_res.pop("networks"):
             networks.append(network["network"])
