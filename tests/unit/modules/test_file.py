@@ -1359,10 +1359,9 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 self.assertFalse(
                     filemod.line("/dummy/path", content="foo", match="bar", mode=mode)
                 )
-            self.assertIn(
-                "Cannot find text to {0}".format(mode),
-                _log.warning.call_args_list[0][0][0],
-            )
+            warning_call = _log.warning.call_args_list[0][0]
+            warning_log_msg = warning_call[0] % warning_call[1:]
+            self.assertIn("Cannot find text to {0}".format(mode), warning_log_msg)
 
     @patch("os.path.realpath", MagicMock())
     @patch("os.path.isfile", MagicMock(return_value=True))
