@@ -415,6 +415,25 @@ in the following docs:
     in a poor and fragile unit test.
 
 
+Add a python module dependency to the test run
+----------------------------------------------
+
+The test dependencies for python modules are managed under the ``requirements/static``
+directory. You will need to add your module to the appropriate file under ``requirements/static``.
+When ``pre-commit`` is run it will create all of the needed requirement files
+under ``requirements/static/py3{5,6,7}``. Nox will then use these files to install
+the requirements for the tests.
+
+Add a system dependency to the test run
+---------------------------------------
+
+If you need to add a system dependency for the test run, this will need to be added in
+the `salt jenkins`_ repo. This repo uses salt states to install system dependencies.
+You need to update the ``git/minimal.sls`` file with your dependency to ensure
+it is installed. Once your PR is merged the core team will need to promote the new images
+with your new dependency installed.
+
+
 Checking for Log Messages
 =========================
 
@@ -464,3 +483,4 @@ Python testing documentation. Please see the follow references for more informat
 .. _MagicMock: http://www.voidspace.org.uk/python/mock/index.html
 .. _Python Unittest: https://docs.python.org/2/library/unittest.html
 .. _Python's Assert Functions: https://docs.python.org/2/library/unittest.html#assert-methods
+.. _salt jenkins: https://github.com/saltstack/salt-jenkins
