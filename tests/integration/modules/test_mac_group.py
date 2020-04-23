@@ -3,40 +3,20 @@
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-import random
-import string
-
-# Import Salt Libs
 from salt.exceptions import CommandExecutionError
 from salt.ext import six
-
-# Import 3rd-party libs
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-
-# Import Salt Testing Libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import destructiveTest, random_string, skip_if_not_root
 from tests.support.unit import skipIf
 
-
-def __random_string(size=6):
-    """
-    Generates a random username
-    """
-    return "RS-" + "".join(
-        random.choice(string.ascii_uppercase + string.digits) for x in range(size)
-    )
-
-
 # Create group name strings for tests
-ADD_GROUP = __random_string()
-DEL_GROUP = __random_string()
-CHANGE_GROUP = __random_string()
-ADD_USER = __random_string()
-REP_USER_GROUP = __random_string()
+ADD_GROUP = random_string("RS-", lowercase=False)
+DEL_GROUP = random_string("RS-", lowercase=False)
+CHANGE_GROUP = random_string("RS-", lowercase=False)
+ADD_USER = random_string("RS-", lowercase=False)
+REP_USER_GROUP = random_string("RS-", lowercase=False)
 
 
 @destructiveTest

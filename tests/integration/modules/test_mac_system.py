@@ -3,37 +3,26 @@
 integration tests for mac_system
 """
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-import random
-import string
 
-# Import salt libs
 import salt.utils.path
 import salt.utils.platform
-from salt.ext.six.moves import range
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, flaky, skip_if_not_root
+from tests.support.helpers import (
+    destructiveTest,
+    flaky,
+    random_string,
+    skip_if_not_root,
+)
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
 
-def __random_string(size=6):
-    """
-    Generates a random username
-    """
-    return "RS-" + "".join(
-        random.choice(string.ascii_uppercase + string.digits) for x in range(size)
-    )
-
-
-SET_COMPUTER_NAME = __random_string()
-SET_SUBNET_NAME = __random_string()
+SET_COMPUTER_NAME = random_string("RS-", lowercase=False)
+SET_SUBNET_NAME = random_string("RS-", lowercase=False)
 
 
 @skip_if_not_root

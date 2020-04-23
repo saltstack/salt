@@ -1506,6 +1506,86 @@ def login(*registries):
     return ret
 
 
+def logout(*registries):
+    """
+    .. versionadded:: 3001
+
+    Performs a ``docker logout`` to remove the saved authentication details for
+    one or more configured repositories.
+
+    Multiple registry URLs (matching those configured in Pillar) can be passed,
+    and Salt will attempt to logout of *just* those registries. If no registry
+    URLs are provided, Salt will attempt to logout of *all* configured
+    registries.
+
+    **RETURN DATA**
+
+    A dictionary containing the following keys:
+
+    - ``Results`` - A dictionary mapping registry URLs to the authentication
+      result. ``True`` means a successful logout, ``False`` means a failed
+      logout.
+    - ``Errors`` - A list of errors encountered during the course of this
+      function.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion docker.logout
+        salt myminion docker.logout hub
+        salt myminion docker.logout hub https://mydomain.tld/registry/
+    """
+    # NOTE: This function uses the "docker logout" CLI command to remove
+    # authentication information from config.json. docker-py does not support
+    # this usecase (see https://github.com/docker/docker-py/issues/1091)
+
+    # To logout of all known (to Salt) docker registries, they have to be collected first
+    registry_auth = __salt__["config.get"]("docker-registries", {})
+    ret = {"retcode": 0}
+    errors = ret.setdefault("Errors", [])
+    if not isinstance(registry_auth, dict):
+        errors.append("'docker-registries' Pillar value must be a dictionary")
+        registry_auth = {}
+    for reg_name, reg_conf in six.iteritems(
+        __salt__["config.option"]("*-docker-registries", wildcard=True)
+    ):
+        try:
+            registry_auth.update(reg_conf)
+        except TypeError:
+            errors.append(
+                "Docker registry '{0}' was not specified as a "
+                "dictionary".format(reg_name)
+            )
+
+    # If no registries passed, we will logout of all known registries
+    if not registries:
+        registries = list(registry_auth)
+
+    results = ret.setdefault("Results", {})
+    for registry in registries:
+        if registry not in registry_auth:
+            errors.append("No match found for registry '{0}'".format(registry))
+            continue
+        else:
+            cmd = ["docker", "logout"]
+            if registry.lower() != "hub":
+                cmd.append(registry)
+            log.debug("Attempting to logout of docker registry '%s'", registry)
+            logout_cmd = __salt__["cmd.run_all"](
+                cmd, python_shell=False, output_loglevel="quiet",
+            )
+            results[registry] = logout_cmd["retcode"] == 0
+            if not results[registry]:
+                if logout_cmd["stderr"]:
+                    errors.append(logout_cmd["stderr"])
+                elif logout_cmd["stdout"]:
+                    errors.append(logout_cmd["stdout"])
+    if errors:
+        ret["retcode"] = 1
+    return ret
+
+
 # Functions for information gathering
 def depends(name):
     """
