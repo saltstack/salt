@@ -75,6 +75,7 @@ STATE_REQUISITE_KEYWORDS = frozenset(
         "onchanges_any",
         "onfail",
         "onfail_any",
+        "onfail_all",
         "onfail_stop",
         "prereq",
         "prerequired",
@@ -1906,6 +1907,7 @@ class State(object):
         # correctly calculate further down the chain
         utc_start_time = datetime.datetime.utcnow()
 
+        self.format_slots(cdata)
         tag = _gen_tag(low)
         try:
             ret = self.states[cdata["full"]](*cdata["args"], **cdata["kwargs"])
@@ -2215,7 +2217,7 @@ class State(object):
             else:
                 ret["comment"] = "  ".join(
                     [
-                        "" if not ret["comment"] else ret["comment"],
+                        "" if not ret["comment"] else six.text_type(ret["comment"]),
                         (
                             "The state would be retried every {1} seconds "
                             "(with a splay of up to {3} seconds) "
@@ -2571,6 +2573,8 @@ class State(object):
             present = True
         if "onfail_any" in low:
             present = True
+        if "onfail_all" in low:
+            present = True
         if "onchanges" in low:
             present = True
         if "onchanges_any" in low:
@@ -2586,6 +2590,7 @@ class State(object):
             "prereq": [],
             "onfail": [],
             "onfail_any": [],
+            "onfail_all": [],
             "onchanges": [],
             "onchanges_any": [],
         }
@@ -2680,7 +2685,7 @@ class State(object):
                 else:
                     if run_dict[tag].get("__state_ran__", True):
                         req_stats.add("met")
-            if r_state.endswith("_any"):
+            if r_state.endswith("_any") or r_state == "onfail":
                 if "met" in req_stats or "change" in req_stats:
                     if "fail" in req_stats:
                         req_stats.remove("fail")
@@ -2690,8 +2695,14 @@ class State(object):
                     if "fail" in req_stats:
                         req_stats.remove("fail")
                 if "onfail" in req_stats:
-                    if "fail" in req_stats:
+                    # a met requisite in this case implies a success
+                    if "met" in req_stats:
                         req_stats.remove("onfail")
+            if r_state.endswith("_all"):
+                if "onfail" in req_stats:
+                    # a met requisite in this case implies a failure
+                    if "met" in req_stats:
+                        req_stats.remove("met")
             fun_stats.update(req_stats)
 
         if "unmet" in fun_stats:
@@ -2703,8 +2714,8 @@ class State(object):
                 status = "met"
             else:
                 status = "pre"
-        elif "onfail" in fun_stats and "met" not in fun_stats:
-            status = "onfail"  # all onfail states are OK
+        elif "onfail" in fun_stats and "onchangesmet" not in fun_stats:
+            status = "onfail"
         elif "onchanges" in fun_stats and "onchangesmet" not in fun_stats:
             status = "onchanges"
         elif "change" in fun_stats:
@@ -3275,6 +3286,49 @@ class State(object):
         return self.call_high(high)
 
 
+class LazyAvailStates(object):
+    """
+    The LazyAvailStates lazily loads the list of states of available
+    environments.
+
+    This is particularly usefull when top_file_merging_strategy=same and there
+    are many environments.
+    """
+
+    def __init__(self, hs):
+        self._hs = hs
+        self._avail = {"base": None}
+        self._filled = False
+
+    def _fill(self):
+        if self._filled:
+            return
+        for saltenv in self._hs._get_envs():
+            if saltenv not in self._avail:
+                self._avail[saltenv] = None
+        self._filled = True
+
+    def __contains__(self, saltenv):
+        if saltenv == "base":
+            return True
+        self._fill()
+        return saltenv in self._avail
+
+    def __getitem__(self, saltenv):
+        if saltenv != "base":
+            self._fill()
+        if self._avail[saltenv] is None:
+            self._avail[saltenv] = self._hs.client.list_states(saltenv)
+        return self._avail[saltenv]
+
+    def items(self):
+        self._fill()
+        ret = []
+        for saltenv, states in self._avail:
+            ret.append((saltenv, self.__getitem__(saltenv)))
+        return ret
+
+
 class BaseHighState(object):
     """
     The BaseHighState is an abstract base class that is the foundation of
@@ -3293,12 +3347,9 @@ class BaseHighState(object):
 
     def __gather_avail(self):
         """
-        Gather the lists of available sls data from the master
+        Lazily gather the lists of available sls data from the master
         """
-        avail = {}
-        for saltenv in self._get_envs():
-            avail[saltenv] = self.client.list_states(saltenv)
-        return avail
+        return LazyAvailStates(self)
 
     def __gen_opts(self, opts):
         """

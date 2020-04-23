@@ -2,30 +2,25 @@
 """
 Tests for the archive state
 """
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
 import textwrap
 
-# Import salt libs
+import pytest
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
-
-# Import 3rd party libs
 from salt.ext import six
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
 try:
-    import zipfile  # pylint: disable=W0611
+    import zipfile  # pylint: disable=unused-import
 
     HAS_ZIPFILE = True
 except ImportError:
@@ -33,13 +28,20 @@ except ImportError:
 
 
 @destructiveTest
+@pytest.mark.windows_whitelisted
 class ArchiveTest(ModuleCase):
     """
     Validate the archive module
     """
 
-    # Base path used for test artifacts
-    base_path = os.path.join(RUNTIME_VARS.TMP, "modules", "archive")
+    @classmethod
+    def setUpClass(cls):
+        # Base path used for test artifacts
+        cls.base_path = os.path.join(RUNTIME_VARS.TMP, "modules", "archive")
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.base_path = None
 
     def _set_artifact_paths(self, arch_fmt):
         """
@@ -156,6 +158,7 @@ class ArchiveTest(ModuleCase):
         self.assertTrue(file_in_ret)
 
     @skipIf(not salt.utils.path.which("tar"), "Cannot find tar executable")
+    @skipIf(True, "SLOWTEST skip")
     def test_tar_pack(self):
         """
         Validate using the tar function to create archives
@@ -170,6 +173,7 @@ class ArchiveTest(ModuleCase):
         self._tear_down()
 
     @skipIf(not salt.utils.path.which("tar"), "Cannot find tar executable")
+    @skipIf(True, "SLOWTEST skip")
     def test_tar_unpack(self):
         """
         Validate using the tar function to extract archives
@@ -185,6 +189,7 @@ class ArchiveTest(ModuleCase):
         self._tear_down()
 
     @skipIf(not salt.utils.path.which("tar"), "Cannot find tar executable")
+    @skipIf(True, "SLOWTEST skip")
     def test_tar_pack_unicode(self):
         """
         Validate using the tar function to create archives
@@ -199,6 +204,7 @@ class ArchiveTest(ModuleCase):
         self._tear_down()
 
     @skipIf(not salt.utils.path.which("tar"), "Cannot find tar executable")
+    @skipIf(True, "SLOWTEST skip")
     def test_tar_unpack_unicode(self):
         """
         Validate using the tar function to extract archives
@@ -214,6 +220,7 @@ class ArchiveTest(ModuleCase):
         self._tear_down()
 
     @skipIf(not salt.utils.path.which("tar"), "Cannot find tar executable")
+    @skipIf(True, "SLOWTEST skip")
     def test_tar_list_unicode(self):
         """
         Validate using the tar function to extract archives
@@ -289,6 +296,7 @@ class ArchiveTest(ModuleCase):
         self._tear_down()
 
     @skipIf(not HAS_ZIPFILE, "Cannot find zipfile python module")
+    @skipIf(True, "SLOWTEST skip")
     def test_zip(self):
         """
         Validate using the zip function
@@ -303,6 +311,7 @@ class ArchiveTest(ModuleCase):
         self._tear_down()
 
     @skipIf(not HAS_ZIPFILE, "Cannot find zipfile python module")
+    @skipIf(True, "SLOWTEST skip")
     def test_unzip(self):
         """
         Validate using the unzip function

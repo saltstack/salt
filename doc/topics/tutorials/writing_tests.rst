@@ -482,7 +482,7 @@ Automated Test Runs
 ===================
 
 SaltStack maintains a Jenkins server which can be viewed at
-https://jenkins.saltstack.com. The tests executed from this Jenkins server
+https://jenkinsci.saltstack.com. The tests executed from this Jenkins server
 create fresh virtual machines for each test run, then execute the destructive
 tests on the new, clean virtual machine. This allows for the execution of tests
 across supported platforms.

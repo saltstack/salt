@@ -20,7 +20,7 @@ import salt.utils.zfs
 from salt.utils.odict import OrderedDict
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 # Import Salt Testing Libs
 from tests.support.zfs import ZFSMockData
@@ -100,6 +100,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.dict(zpool.__utils__, self.utils_patch):
             self.assertEqual(zpool.absent("myzpool", export=True), ret)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_absent_busy(self):
         """
         Test zpool absent on a busy pool
@@ -160,6 +161,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.dict(zpool.__utils__, self.utils_patch):
             self.assertEqual(zpool.present("myzpool", config=config), ret)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_present_import_fail(self):
         """
         Test zpool present with import allowed and no unimported pool or layout
@@ -259,6 +261,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(zpool.present("myzpool", config=config), ret)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_present_create_passthrough_fail(self):
         """
         Test zpool present with non existing pool (without a layout)
@@ -481,6 +484,26 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(zpool.__salt__, {"zpool.exists": mock_exists}), patch.dict(
             zpool.__salt__, {"zpool.get": mock_get}
         ), patch.dict(zpool.__utils__, self.utils_patch):
+            self.assertEqual(
+                zpool.present(
+                    "myzpool", config=config, layout=layout, properties=properties,
+                ),
+                ret,
+            )
+
+        # Run state with test=true
+        ret = {
+            "name": "myzpool",
+            "result": True,
+            "comment": "storage pool myzpool is uptodate",
+            "changes": {},
+        }
+
+        with patch.dict(zpool.__salt__, {"zpool.exists": mock_exists}), patch.dict(
+            zpool.__salt__, {"zpool.get": mock_get}
+        ), patch.dict(zpool.__utils__, self.utils_patch), patch.dict(
+            zpool.__opts__, {"test": True}
+        ):
             self.assertEqual(
                 zpool.present(
                     "myzpool", config=config, layout=layout, properties=properties,

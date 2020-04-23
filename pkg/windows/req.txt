@@ -1,6 +1,6 @@
 -r req_win.txt
 backports-abc==0.5; python_version < '3.0'
-backports.ssl-match-hostname==3.7.0.1
+backports.ssl-match-hostname==3.7.0.1; python_version < '3.7'
 certifi
 cffi==1.12.2
 CherryPy==17.4.1
@@ -11,16 +11,16 @@ idna==2.8
 ioloop==0.1a0
 ipaddress==1.0.22
 jinja2==2.10.1
-libnacl==1.6.1
+libnacl==1.7.1
 lxml==4.3.0
 Mako==1.0.7
 markupsafe==1.1.1
 msgpack-python==0.5.6
-psutil==5.6.1
+psutil==5.6.6
 pyasn1==0.4.5
 pycparser==2.19
 pycryptodomex==3.8.1
-pycurl==7.43.0.2
+pycurl==7.43.0.5
 pymssql==2.1.4
 PyMySQL==0.9.3
 pyopenssl==19.0.0

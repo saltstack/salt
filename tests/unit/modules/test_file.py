@@ -118,6 +118,14 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
         with salt.utils.files.fopen(self.tfile.name, "r") as fp:
             self.assertIn("Salticus", salt.utils.stringutils.to_unicode(fp.read()))
 
+    def test_replace_idempotency(self):
+        os.utime(self.tfile.name, (1552661253, 1552661253))
+        mtime = os.stat(self.tfile.name).st_mtime
+        filemod.replace(self.tfile.name, r"Etia.", "Etiam", backup=False)
+        nmtime = os.stat(self.tfile.name).st_mtime
+
+        self.assertEqual(mtime, nmtime)
+
     def test_replace_append_if_not_found(self):
         """
         Check that file.replace append_if_not_found works
@@ -952,9 +960,9 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             tfile.write(
                 salt.utils.stringutils.to_bytes(
                     "rc.conf ef6e82e4006dee563d98ada2a2a80a27\n"
-                    "ead48423703509d37c4a90e6a0d53e143b6fc268 example.tar.gz\n"
+                    "ead48423703509d37c4a90e6a0d53e143b6fc268  example.tar.gz\n"
                     "fe05bcdcdc4928012781a5f1a2a77cbb5398e106 ./subdir/example.tar.gz\n"
-                    "ad782ecdac770fc6eb9a62e44f90873fb97fb26b foo.tar.bz2\n"
+                    "ad782ecdac770fc6eb9a62e44f90873fb97fb26b *foo.tar.bz2\n"
                 )
             )
             tfile.flush()
@@ -1351,10 +1359,9 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 self.assertFalse(
                     filemod.line("/dummy/path", content="foo", match="bar", mode=mode)
                 )
-            self.assertIn(
-                "Cannot find text to {0}".format(mode),
-                _log.warning.call_args_list[0][0][0],
-            )
+            warning_call = _log.warning.call_args_list[0][0]
+            warning_log_msg = warning_call[0] % warning_call[1:]
+            self.assertIn("Cannot find text to {0}".format(mode), warning_log_msg)
 
     @patch("os.path.realpath", MagicMock())
     @patch("os.path.isfile", MagicMock(return_value=True))

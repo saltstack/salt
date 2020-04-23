@@ -49,7 +49,7 @@ except ImportError:
 
 def purge_pip():
     """
-    Purge pip and it's sub-modules
+    Purge pip and its sub-modules
     """
     # Remove references to the loaded pip module above so reloading works
     if "pip" not in sys.modules:

@@ -68,6 +68,7 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 "__context__": {"yum_bin": "yum"},
                 "__grains__": {
                     "osarch": "x86_64",
+                    "os": "CentOS",
                     "os_family": "RedHat",
                     "osmajorrelease": 7,
                 },
@@ -1166,12 +1167,198 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 for info in pkg_info_list:
                     self.assertTrue(info["arch"] in ("x86_64", "i686"))
 
+    def test_pkg_hold_yum(self):
+        """
+        Tests that we properly identify versionlock plugin when using yum
+        for RHEL/CentOS 7 and Fedora < 22
+        """
+
+        # Test RHEL/CentOS 7
+        list_pkgs_mock = {
+            "yum-plugin-versionlock": "0:1.0.0-0.n.el7",
+            "yum-versionlock": "0:1.0.0-0.n.el7",
+        }
+
+        cmd = MagicMock(return_value={"retcode": 0})
+        with patch.object(
+            yumpkg, "list_pkgs", MagicMock(return_value=list_pkgs_mock)
+        ), patch.object(yumpkg, "list_holds", MagicMock(return_value=[])), patch.dict(
+            yumpkg.__salt__, {"cmd.run_all": cmd}
+        ), patch(
+            "salt.utils.systemd.has_scope", MagicMock(return_value=False)
+        ):
+            yumpkg.hold("foo")
+            cmd.assert_called_once_with(
+                ["yum", "versionlock", "foo"],
+                env={},
+                output_loglevel="trace",
+                python_shell=False,
+            )
+
+        # Test Fedora 20
+        cmd = MagicMock(return_value={"retcode": 0})
+        with patch.dict(
+            yumpkg.__grains__, {"os": "Fedora", "osrelease": 20}
+        ), patch.object(
+            yumpkg, "list_pkgs", MagicMock(return_value=list_pkgs_mock)
+        ), patch.object(
+            yumpkg, "list_holds", MagicMock(return_value=[])
+        ), patch.dict(
+            yumpkg.__salt__, {"cmd.run_all": cmd}
+        ), patch(
+            "salt.utils.systemd.has_scope", MagicMock(return_value=False)
+        ):
+            yumpkg.hold("foo")
+            cmd.assert_called_once_with(
+                ["yum", "versionlock", "foo"],
+                env={},
+                output_loglevel="trace",
+                python_shell=False,
+            )
+
+    def test_pkg_hold_dnf(self):
+        """
+        Tests that we properly identify versionlock plugin when using dnf
+        for RHEL/CentOS 8 and Fedora >= 22
+        """
+
+        # Test RHEL/CentOS 8
+        list_pkgs_mock = {
+            "python2-dnf-plugin-versionlock": "0:1.0.0-0.n.el8",
+            "python3-dnf-plugin-versionlock": "0:1.0.0-0.n.el8",
+        }
+
+        yumpkg.__context__.pop("yum_bin")
+        cmd = MagicMock(return_value={"retcode": 0})
+        with patch.dict(yumpkg.__grains__, {"osmajorrelease": 8}), patch.object(
+            yumpkg, "list_pkgs", MagicMock(return_value=list_pkgs_mock)
+        ), patch.object(yumpkg, "list_holds", MagicMock(return_value=[])), patch.dict(
+            yumpkg.__salt__, {"cmd.run_all": cmd}
+        ), patch(
+            "salt.utils.systemd.has_scope", MagicMock(return_value=False)
+        ):
+            yumpkg.hold("foo")
+            cmd.assert_called_once_with(
+                ["dnf", "versionlock", "foo"],
+                env={},
+                output_loglevel="trace",
+                python_shell=False,
+            )
+
+        # Test Fedora 26+
+        yumpkg.__context__.pop("yum_bin")
+        cmd = MagicMock(return_value={"retcode": 0})
+        with patch.dict(
+            yumpkg.__grains__, {"os": "Fedora", "osrelease": 26}
+        ), patch.object(
+            yumpkg, "list_pkgs", MagicMock(return_value=list_pkgs_mock)
+        ), patch.object(
+            yumpkg, "list_holds", MagicMock(return_value=[])
+        ), patch.dict(
+            yumpkg.__salt__, {"cmd.run_all": cmd}
+        ), patch(
+            "salt.utils.systemd.has_scope", MagicMock(return_value=False)
+        ):
+            yumpkg.hold("foo")
+            cmd.assert_called_once_with(
+                ["dnf", "versionlock", "foo"],
+                env={},
+                output_loglevel="trace",
+                python_shell=False,
+            )
+
+        # Test Fedora 22-25
+        list_pkgs_mock = {
+            "python-dnf-plugins-extras-versionlock": "0:1.0.0-0.n.el8",
+            "python3-dnf-plugins-extras-versionlock": "0:1.0.0-0.n.el8",
+        }
+
+        yumpkg.__context__.pop("yum_bin")
+        cmd = MagicMock(return_value={"retcode": 0})
+        with patch.dict(
+            yumpkg.__grains__, {"os": "Fedora", "osrelease": 25}
+        ), patch.object(
+            yumpkg, "list_pkgs", MagicMock(return_value=list_pkgs_mock)
+        ), patch.object(
+            yumpkg, "list_holds", MagicMock(return_value=[])
+        ), patch.dict(
+            yumpkg.__salt__, {"cmd.run_all": cmd}
+        ), patch(
+            "salt.utils.systemd.has_scope", MagicMock(return_value=False)
+        ):
+            yumpkg.hold("foo")
+            cmd.assert_called_once_with(
+                ["dnf", "versionlock", "foo"],
+                env={},
+                output_loglevel="trace",
+                python_shell=False,
+            )
+
     @skipIf(not yumpkg.HAS_YUM, "Could not import yum")
     def test_yum_base_error(self):
         with patch("yum.YumBase") as mock_yum_yumbase:
             mock_yum_yumbase.side_effect = CommandExecutionError
             with pytest.raises(CommandExecutionError):
                 yumpkg._get_yum_config()
+
+    def test_group_install(self):
+        """
+        Test group_install uses the correct keys from group_info and installs
+        default and mandatory packages.
+        """
+        groupinfo_output = """
+        Group: Printing Client
+         Group-Id: print-client
+         Description: Tools for printing to a local printer or a remote print server.
+         Mandatory Packages:
+           +cups
+           +cups-pk-helper
+           +enscript
+           +ghostscript-cups
+         Default Packages:
+           +colord
+           +gutenprint
+           +gutenprint-cups
+           +hpijs
+           +paps
+           +pnm2ppa
+           +python-smbc
+           +system-config-printer
+           +system-config-printer-udev
+         Optional Packages:
+           hplip
+           hplip-gui
+           samba-krb5-printing
+        """
+        install = MagicMock()
+        with patch.dict(
+            yumpkg.__salt__,
+            {"cmd.run_stdout": MagicMock(return_value=groupinfo_output)},
+        ):
+            with patch.dict(yumpkg.__salt__, {"cmd.run": MagicMock(return_value="")}):
+                with patch.dict(
+                    yumpkg.__salt__,
+                    {"pkg_resource.format_pkg_list": MagicMock(return_value={})},
+                ):
+                    with patch.object(yumpkg, "install", install):
+                        yumpkg.group_install("Printing Client")
+                        install.assert_called_once_with(
+                            pkgs=[
+                                "cups",
+                                "cups-pk-helper",
+                                "enscript",
+                                "ghostscript-cups",
+                                "colord",
+                                "gutenprint",
+                                "gutenprint-cups",
+                                "hpijs",
+                                "paps",
+                                "pnm2ppa",
+                                "python-smbc",
+                                "system-config-printer",
+                                "system-config-printer-udev",
+                            ]
+                        )
 
 
 @skipIf(pytest is None, "PyTest is missing")

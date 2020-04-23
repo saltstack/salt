@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Manage S3 Resources
-=================
+===================
 
 .. versionadded:: 2018.3.0
 
@@ -68,7 +68,7 @@ def __virtual__():
     Only load if boto is available.
     """
     if "boto_s3.get_object_metadata" not in __salt__:
-        return False
+        return (False, "boto_s3 module could not be loaded")
     return "boto_s3"
 
 
