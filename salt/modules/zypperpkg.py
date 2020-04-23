@@ -1238,9 +1238,14 @@ def mod_repo(repo, **kwargs):
     return repo
 
 
-def refresh_db():
+def refresh_db(force=None):
     """
-    Force a repository refresh by calling ``zypper refresh --force``, return a dict::
+    Trigger a repository refresh by calling ``zypper refresh``. Refresh will run
+    with ``--force`` if the "force=True" flag is passed on the CLI or
+    ``refreshdb_force`` is set to ``true`` in the pillar. The CLI option
+    overrides the pillar setting.
+
+    It will return a dict::
 
         {'<database name>': Bool}
 
@@ -1248,12 +1253,24 @@ def refresh_db():
 
     .. code-block:: bash
 
-        salt '*' pkg.refresh_db
+        salt '*' pkg.refresh_db [force=true|false]
+
+    Pillar Example:
+
+    .. code-block:: yaml
+
+       zypper:
+         refreshdb_force: false
     """
     # Remove rtag file to keep multiple refreshes from happening in pkg states
     salt.utils.pkg.clear_rtag(__opts__)
     ret = {}
-    out = __zypper__.refreshable.call("refresh", "--force")
+    refresh_opts = ["refresh"]
+    if force is None:
+        force = __pillar__.get("zypper", {}).get("refreshdb_force", True)
+    if force:
+        refresh_opts.append("--force")
+    out = __zypper__.refreshable.call(*refresh_opts)
 
     for line in out.splitlines():
         if not line:
