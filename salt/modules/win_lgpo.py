@@ -10045,7 +10045,7 @@ def set_(
                             _regedits[regedit]["value"] is not None
                             and _regedits[regedit]["value"] != "(value not set)"
                         ):
-                            _ret = __salt__["reg.set_value"](
+                            _ret = __utils__["reg.set_value"](
                                 _regedits[regedit]["policy"]["Registry"]["Hive"],
                                 _regedits[regedit]["policy"]["Registry"]["Path"],
                                 _regedits[regedit]["policy"]["Registry"]["Value"],
@@ -10053,13 +10053,13 @@ def set_(
                                 _regedits[regedit]["policy"]["Registry"]["Type"],
                             )
                         else:
-                            _ret = __salt__["reg.read_value"](
+                            _ret = __utils__["reg.read_value"](
                                 _regedits[regedit]["policy"]["Registry"]["Hive"],
                                 _regedits[regedit]["policy"]["Registry"]["Path"],
                                 _regedits[regedit]["policy"]["Registry"]["Value"],
                             )
                             if _ret["success"] and _ret["vdata"] != "(value not set)":
-                                _ret = __salt__["reg.delete_value"](
+                                _ret = __utils__["reg.delete_value"](
                                     _regedits[regedit]["policy"]["Registry"]["Hive"],
                                     _regedits[regedit]["policy"]["Registry"]["Path"],
                                     _regedits[regedit]["policy"]["Registry"]["Value"],
