@@ -406,6 +406,8 @@ def get_url(path, dest="", saltenv="base", makedirs=False, source_hash=None):
             salt.utils.url.redact_http_basic_auth(path),
             saltenv,
         )
+    if result:
+        return salt.utils.stringutils.to_unicode(result)
     return result
 
 
@@ -426,7 +428,7 @@ def get_file_str(path, saltenv="base"):
     if isinstance(fn_, six.string_types):
         try:
             with salt.utils.files.fopen(fn_, "r") as fp_:
-                return fp_.read()
+                return salt.utils.stringutils.to_unicode(fp_.read())
         except IOError:
             return False
     return fn_
@@ -473,7 +475,7 @@ def cache_file(path, saltenv="base", source_hash=None):
 
     contextkey = "{0}_|-{1}_|-{2}".format("cp.cache_file", path, saltenv)
 
-    path_is_remote = _urlparse(path).scheme in ("http", "https", "ftp")
+    path_is_remote = _urlparse(path).scheme in salt.utils.files.REMOTE_PROTOS
     try:
         if path_is_remote and contextkey in __context__:
             # Prevent multiple caches in the same salt run. Affects remote URLs
@@ -711,8 +713,8 @@ def list_minion(saltenv="base"):
 
 def is_cached(path, saltenv="base"):
     """
-    Return a boolean if the given path on the master has been cached on the
-    minion
+    Returns the full path to a file if it is cached locally on the minion
+    otherwise returns a blank string
 
     CLI Example:
 
@@ -833,8 +835,8 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
         "size": os.path.getsize(path),
         "tok": auth.gen_token(b"salt"),
     }
-    channel = salt.transport.client.ReqChannel.factory(__opts__)
-    try:
+
+    with salt.transport.client.ReqChannel.factory(__opts__) as channel:
         with salt.utils.files.fopen(path, "rb") as fp_:
             init_send = False
             while True:
@@ -859,8 +861,6 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
                     )
                     return ret
                 init_send = True
-    finally:
-        channel.close()
 
 
 def push_dir(path, glob=None, upload_path=None):
