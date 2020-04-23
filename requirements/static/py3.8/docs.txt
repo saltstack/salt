@@ -20,7 +20,7 @@ pytz==2019.1              # via babel
 requests==2.22.0          # via sphinx
 six==1.12.0               # via packaging
 snowballstemmer==1.2.1    # via sphinx
-sphinx==2.0.1
+sphinx==3.0.2
 sphinxcontrib-applehelp==1.0.1  # via sphinx
 sphinxcontrib-devhelp==1.0.1  # via sphinx
 sphinxcontrib-htmlhelp==1.0.2  # via sphinx

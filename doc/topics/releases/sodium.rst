@@ -87,3 +87,9 @@ You can set this setting in your roster file like so:
     user: root
     passwd: P@ssword
     set_path: '$PATH:/usr/local/bin/'
+
+
+State Changes
+=============
+- Adding a new option for the State compiler, ``disabled_requisites`` will allow
+  requisites to be disabled during State runs.

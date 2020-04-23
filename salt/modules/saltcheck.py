@@ -303,14 +303,14 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import logging
+import multiprocessing
 import os
 import time
 
+# Import Salt libs
 import salt.client
 import salt.exceptions
 import salt.utils.data
-
-# Import Salt libs
 import salt.utils.files
 import salt.utils.functools
 import salt.utils.path
@@ -322,6 +322,8 @@ from salt.utils.json import dumps, loads
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
+
+global_scheck = None
 
 __virtualname__ = "saltcheck"
 
@@ -440,13 +442,25 @@ def run_state_tests(state, saltenv=None, check_all=False):
     .. code-block:: bash
 
         salt '*' saltcheck.run_state_tests postfix,common
+
+    Tests will be run in parallel by adding "saltcheck_parallel: True" in minion config.
+    When enabled, saltcheck will use up to the number of cores detected. This can be limited
+    by setting the "saltcheck_processes" value to an integer to set the maximum number
+    of parallel processes.
     """
     if not saltenv:
         if "saltenv" in __opts__ and __opts__["saltenv"]:
             saltenv = __opts__["saltenv"]
         else:
             saltenv = "base"
-    scheck = SaltCheck(saltenv)
+
+    # Use global scheck variable for reuse in each multiprocess
+    global global_scheck
+    global_scheck = SaltCheck(saltenv)
+
+    parallel = __salt__["config.get"]("saltcheck_parallel")
+    num_proc = __salt__["config.get"]("saltcheck_processes")
+
     stl = StateTestLoader(saltenv)
     results = OrderedDict()
     sls_list = salt.utils.args.split_input(state)
@@ -454,13 +468,60 @@ def run_state_tests(state, saltenv=None, check_all=False):
         stl.add_test_files_for_sls(state_name, check_all)
         stl.load_test_suite()
         results_dict = OrderedDict()
-        for key, value in stl.test_dict.items():
-            result = scheck.run_test(value)
-            results_dict[key] = result
+
+        # Check for situations to disable parallization
+        if parallel:
+            if type(num_proc) == float:
+                num_proc = int(num_proc)
+
+            if multiprocessing.cpu_count() < 2:
+                parallel = False
+                log.debug("Only 1 CPU. Disabling parallization.")
+            elif num_proc == 1:
+                # Don't bother with multiprocessing overhead
+                parallel = False
+                log.debug("Configuration limited to 1 CPU. Disabling parallization.")
+            else:
+                for items in stl.test_dict.values():
+                    if "state.apply" in items.get("module_and_function", []):
+                        # Multiprocessing doesn't ensure ordering, which state.apply
+                        # might require
+                        parallel = False
+                        log.warning(
+                            "Tests include state.apply. Disabling parallization."
+                        )
+
+        if parallel:
+            if num_proc:
+                pool_size = num_proc
+            else:
+                pool_size = min(len(stl.test_dict), multiprocessing.cpu_count())
+            log.debug("Running tests in parallel with %s processes", pool_size)
+            presults = multiprocessing.Pool(pool_size).map(
+                func=parallel_scheck, iterable=stl.test_dict.items()
+            )
+            # Remove list and form expected data structure
+            for item in presults:
+                for key, value in item.items():
+                    results_dict[key] = value
+        else:
+            for key, value in stl.test_dict.items():
+                result = global_scheck.run_test(value)
+                results_dict[key] = result
+
+        # If passed a duplicate state, don't overwrite with empty res
         if not results.get(state_name):
-            # If passed a duplicate state, don't overwrite with empty res
             results[state_name] = results_dict
     return _generate_out_list(results)
+
+
+def parallel_scheck(data):
+    """triggers salt-call in parallel"""
+    key = data[0]
+    value = data[1]
+    results = {}
+    results[key] = global_scheck.run_test(value)
+    return results
 
 
 run_state_tests_ssh = salt.utils.functools.alias_function(
