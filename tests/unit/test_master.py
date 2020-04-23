@@ -17,9 +17,14 @@ class ClearFuncsTestCase(TestCase):
     TestCase for salt.master.ClearFuncs class
     """
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         opts = salt.config.master_config(None)
-        self.clear_funcs = salt.master.ClearFuncs(opts, {})
+        cls.clear_funcs = salt.master.ClearFuncs(opts, {})
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.clear_funcs
 
     # runner tests
 

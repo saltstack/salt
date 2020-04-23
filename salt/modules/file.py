@@ -2004,7 +2004,7 @@ def line(
     match = _regex_to_static(body, match)
 
     if os.stat(path).st_size == 0 and mode in ("delete", "replace"):
-        log.warning("Cannot find text to {0}. File '{1}' is empty.".format(mode, path))
+        log.warning("Cannot find text to %s. File '%s' is empty.", mode, path)
         body = []
     elif mode == "delete" and match:
         body = [line for line in body if line != match[0]]
@@ -4444,7 +4444,7 @@ def extract_hash(
     else:
         hash_len_expr = six.text_type(hash_len)
 
-    filename_separators = string.whitespace + r"\/"
+    filename_separators = string.whitespace + r"\/*"
 
     if source_hash_name:
         if not isinstance(source_hash_name, six.string_types):
@@ -5265,7 +5265,7 @@ def check_file_meta(
         try:
             differences = get_diff(name, tmp, show_filenames=False)
         except CommandExecutionError as exc:
-            log.error("Failed to diff files: {0}".format(exc))
+            log.error("Failed to diff files: %s", exc)
             differences = exc.strerror
         __clean_tmp(tmp)
         if differences:
@@ -6161,9 +6161,11 @@ def mknod_chrdev(name, major, minor, user=None, group=None, mode="0660"):
 
     ret = {"name": name, "changes": {}, "comment": "", "result": False}
     log.debug(
-        "Creating character device name:{0} major:{1} minor:{2} mode:{3}".format(
-            name, major, minor, mode
-        )
+        "Creating character device name:%s major:%s minor:%s mode:%s",
+        name,
+        major,
+        minor,
+        mode,
     )
     try:
         if __opts__["test"]:
@@ -6232,9 +6234,11 @@ def mknod_blkdev(name, major, minor, user=None, group=None, mode="0660"):
 
     ret = {"name": name, "changes": {}, "comment": "", "result": False}
     log.debug(
-        "Creating block device name:{0} major:{1} minor:{2} mode:{3}".format(
-            name, major, minor, mode
-        )
+        "Creating block device name:%s major:%s minor:%s mode:%s",
+        name,
+        major,
+        minor,
+        mode,
     )
     try:
         if __opts__["test"]:
@@ -6302,7 +6306,7 @@ def mknod_fifo(name, user=None, group=None, mode="0660"):
     name = os.path.expanduser(name)
 
     ret = {"name": name, "changes": {}, "comment": "", "result": False}
-    log.debug("Creating FIFO name: {0}".format(name))
+    log.debug("Creating FIFO name: %s", name)
     try:
         if __opts__["test"]:
             ret["changes"] = {"new": "Fifo pipe {0} created.".format(name)}

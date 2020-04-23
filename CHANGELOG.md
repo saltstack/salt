@@ -13,6 +13,10 @@ Versions are `MAJOR.PATCH`.
 ### Deprecated
 
 ### Changed
+- [#56751](https://github.com/saltstack/salt/pull/56751) - Backport 49981
+
+- [#56731](https://github.com/saltstack/salt/pull/56731) - Backport #53994
+- [#56753](https://github.com/saltstack/salt/pull/56753) - Backport 51095
 
 ### Fixed
 - [#56237](https://github.com/saltstack/salt/pull/56237) - Fix alphabetical ordering and remove duplicates across all documentation indexes - [@myii](https://github.com/myii)
@@ -20,6 +24,7 @@ Versions are `MAJOR.PATCH`.
 
 ### Added
 - [#56627](https://github.com/saltstack/salt/pull/56627) - Add new salt-ssh set_path option
+- [#51379](https://github.com/saltstack/salt/pull/56792) - Backport 51379 : Adds .set_domain_workgroup to win_system
 
 ## 3000.1
 
@@ -28,6 +33,7 @@ Versions are `MAJOR.PATCH`.
 ### Deprecated
 
 ### Changed
+- [#56730](https://github.com/saltstack/salt/pull/56730) - Backport #52992
 
 ### Fixed
 
