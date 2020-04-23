@@ -95,9 +95,7 @@ class CassandraCQLReturnerTestCase(TestCase, LoaderModuleMockMixin):
                 cassandra_cql._get_ssl_opts(), None  # pylint: disable=protected-access
             )
 
-    @patch("cassandra.query")
-    def test_valid_asynchronous_args(self, cassandra_query_mock):
-        cassandra_query_mock.dict_factory = MagicMock(return_value={})
+    def test_valid_asynchronous_args(self):
         mock_execute = MagicMock(return_value={})
         mock_execute_async = MagicMock(return_value={})
         mock_context = {
@@ -119,9 +117,7 @@ class CassandraCQLReturnerTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assert_called_once(mock_execute_async)
 
-    @patch("cassandra.query")
-    def test_valid_async_args(self, cassandra_query_mock):
-        cassandra_query_mock.dict_factory = MagicMock(return_value={})
+    def test_valid_async_args(self):
         mock_execute = MagicMock(return_value={})
         mock_execute_async = MagicMock(return_value={})
         mock_context = {
