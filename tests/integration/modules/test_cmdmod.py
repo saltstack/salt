@@ -13,7 +13,6 @@ import salt.utils.path
 import salt.utils.platform
 from salt.ext import six
 from tests.support.case import ModuleCase
-from tests.support.helpers import skip_if_binaries_missing
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -233,7 +232,7 @@ class CMDModuleTest(ModuleCase):
                 ret = self.run_function("cmd.tty", [tty, "apply salt liberally"])
                 self.assertTrue("Success" in ret)
 
-    @skip_if_binaries_missing(["which"])
+    @pytest.mark.skip_if_binaries_missing("which")
     def test_which(self):
         """
         cmd.which
@@ -243,7 +242,7 @@ class CMDModuleTest(ModuleCase):
             self.run_function("cmd.run", ["which cat"]).rstrip(),
         )
 
-    @skip_if_binaries_missing(["which"])
+    @pytest.mark.skip_if_binaries_missing("which")
     def test_which_bin(self):
         """
         cmd.which_bin

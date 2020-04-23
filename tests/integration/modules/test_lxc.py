@@ -8,7 +8,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import pytest
 from salt.ext import six
 from tests.support.case import ModuleCase
-from tests.support.helpers import skip_if_binaries_missing
 from tests.support.unit import skipIf
 
 
@@ -18,7 +17,7 @@ from tests.support.unit import skipIf
     "function destroys ALL containers on the box, which is BAD.",
 )
 @pytest.mark.skip_if_not_root
-@skip_if_binaries_missing(
+@pytest.mark.skip_if_binaries_missing(
     "lxc-start", message="LXC is not installed or minimal version not met"
 )
 @pytest.mark.windows_whitelisted

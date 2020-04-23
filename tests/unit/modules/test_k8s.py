@@ -3,7 +3,6 @@
 Unit Tests for the k8s execution module.
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import base64
@@ -11,22 +10,16 @@ import hashlib
 import time
 from subprocess import PIPE, Popen
 
+import pytest
 import salt.modules.k8s as k8s
-
-# Import Salt libs
 import salt.utils.files
 import salt.utils.json
 from salt.ext import six
-
-# Import 3rd-party libs
-from salt.ext.six.moves import range  # pylint: disable=import-error
-from tests.support.helpers import skip_if_binaries_missing
-
-# Import Salt Testing libs
+from salt.ext.six.moves import range
 from tests.support.unit import TestCase
 
 
-@skip_if_binaries_missing(["kubectl"])
+@pytest.mark.skip_if_binaries_missing("kubectl")
 class TestK8SNamespace(TestCase):
 
     maxDiff = None
@@ -62,7 +55,7 @@ class TestK8SNamespace(TestCase):
         self.assertTrue(isinstance(kubectl_out, dict))
 
 
-@skip_if_binaries_missing(["kubectl"])
+@pytest.mark.skip_if_binaries_missing("kubectl")
 class TestK8SSecrets(TestCase):
 
     maxDiff = None
@@ -215,7 +208,7 @@ class TestK8SSecrets(TestCase):
         )
 
 
-@skip_if_binaries_missing(["kubectl"])
+@pytest.mark.skip_if_binaries_missing("kubectl")
 class TestK8SResourceQuotas(TestCase):
 
     maxDiff = None
@@ -417,7 +410,7 @@ spec:
         self.assertEqual("2Gi", limit)
 
 
-@skip_if_binaries_missing(["kubectl"])
+@pytest.mark.skip_if_binaries_missing("kubectl")
 class TestK8SLimitRange(TestCase):
 
     maxDiff = None

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
@@ -9,31 +8,20 @@ import shutil
 import subprocess
 import tempfile
 
+import pytest
 import salt.modules.cmdmod as cmd
 import salt.modules.virtualenv_mod
 import salt.modules.zcbuildout as buildout
-
-# Import Salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
-
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves.urllib.error import URLError
 from salt.ext.six.moves.urllib.request import urlopen
-
-# Import Salt Testing libs
 from tests.support.helpers import patched_environ, requires_network
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
-
-# Import 3rd-party libs
-
-
-# pylint: enable=import-error,no-name-in-module,redefined-builtin
-
 
 KNOWN_VIRTUALENV_BINARY_NAMES = (
     "virtualenv",
@@ -146,6 +134,7 @@ class Base(TestCase, LoaderModuleMockMixin):
     "The 'virtualenv' packaged needs to be installed",
 )
 @requires_network()
+@pytest.mark.skip_if_binaries_missing("tar")
 class BuildoutTestCase(Base):
     def test_onlyif_unless(self):
         b_dir = os.path.join(self.tdir, "b")

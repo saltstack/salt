@@ -9,13 +9,12 @@ import pytest
 import salt.utils.files
 import salt.utils.user
 from tests.support.case import ModuleCase
-from tests.support.helpers import skip_if_binaries_missing
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.runtests import RUNTIME_VARS
 
 
 # Acl package should be installed to test linux_acl module
-@skip_if_binaries_missing(["getfacl"])
+@pytest.mark.skip_if_binaries_missing("getfacl")
 # Doesn't work. Why?
 # @pytest.mark.requires_salt_modules('acl')
 # @pytest.mark.requires_salt_modules('linux_acl')
