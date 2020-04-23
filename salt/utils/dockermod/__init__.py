@@ -25,10 +25,8 @@ from salt.utils.dockermod.translate.helpers import split as _split
 
 try:
     import docker
-
-    HAS_DOCKER_PY = True
 except ImportError:
-    HAS_DOCKER_PY = False
+    docker = None
 
 # These next two imports are only necessary to have access to the needed
 # functions so that we can get argspecs for the container config, host config,
@@ -44,6 +42,8 @@ except ImportError:
 
 NOTSET = object()
 
+__virtualname__ = "docker"
+
 # Default timeout as of docker-py 1.0.0
 CLIENT_TIMEOUT = 60
 # Timeout for stopping the container, before a kill is invoked
@@ -52,8 +52,14 @@ SHUTDOWN_TIMEOUT = 10
 log = logging.getLogger(__name__)
 
 
+def __virtual__():
+    if docker is None:
+        return False
+    return __virtualname__
+
+
 def get_client_args(limit=None):
-    if not HAS_DOCKER_PY:
+    if docker is None:
         raise CommandExecutionError("docker Python module not imported")
 
     limit = salt.utils.args.split_input(limit or [])
