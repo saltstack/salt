@@ -75,6 +75,7 @@ class FileModuleTest(ModuleCase):
 
     @skipIf(salt.utils.platform.is_windows(), "No security context on Windows")
     @requires_system_grains
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_get_selinux_context(self, grains):
         if grains.get("selinux", {}).get("enabled", False):
             NEW_CONTEXT = "system_u:object_r:system_conf_t:s0"
@@ -103,6 +104,7 @@ class FileModuleTest(ModuleCase):
 
     @skipIf(salt.utils.platform.is_windows(), "No security context on Windows")
     @requires_system_grains
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_set_selinux_context(self, grains):
         if not grains.get("selinux", {}).get("enabled", False):
             self.skipTest("selinux not available")
@@ -120,6 +122,7 @@ class FileModuleTest(ModuleCase):
         self.assertEqual(ret_dir, DIR_CONTEXT)
 
     @skipIf(salt.utils.platform.is_windows(), "No chgrp on Windows")
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_chown(self):
         user = getpass.getuser()
         if sys.platform == "darwin":
@@ -133,6 +136,7 @@ class FileModuleTest(ModuleCase):
         self.assertEqual(fstat.st_gid, grp.getgrnam(group).gr_gid)
 
     @skipIf(salt.utils.platform.is_windows(), "No chgrp on Windows")
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_chown_no_user(self):
         user = "notanyuseriknow"
         group = grp.getgrgid(pwd.getpwuid(os.getuid()).pw_gid).gr_name
@@ -140,6 +144,7 @@ class FileModuleTest(ModuleCase):
         self.assertIn("not exist", ret)
 
     @skipIf(salt.utils.platform.is_windows(), "No chgrp on Windows")
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_chown_no_user_no_group(self):
         user = "notanyuseriknow"
         group = "notanygroupyoushoulduse"
@@ -148,6 +153,7 @@ class FileModuleTest(ModuleCase):
         self.assertIn("User does not exist", ret)
 
     @skipIf(salt.utils.platform.is_windows(), "No chgrp on Windows")
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_chown_no_path(self):
         user = getpass.getuser()
         if sys.platform == "darwin":
@@ -158,6 +164,7 @@ class FileModuleTest(ModuleCase):
         self.assertIn("File not found", ret)
 
     @skipIf(salt.utils.platform.is_windows(), "No chgrp on Windows")
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_chown_noop(self):
         user = ""
         group = ""
@@ -168,6 +175,7 @@ class FileModuleTest(ModuleCase):
         self.assertEqual(fstat.st_gid, os.getgid())
 
     @skipIf(salt.utils.platform.is_windows(), "No chgrp on Windows")
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_chgrp(self):
         if sys.platform == "darwin":
             group = "everyone"
@@ -179,11 +187,13 @@ class FileModuleTest(ModuleCase):
         self.assertEqual(fstat.st_gid, grp.getgrnam(group).gr_gid)
 
     @skipIf(salt.utils.platform.is_windows(), "No chgrp on Windows")
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_chgrp_failure(self):
         group = "thisgroupdoesntexist"
         ret = self.run_function("file.chgrp", arg=[self.myfile, group])
         self.assertIn("not exist", ret)
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_patch(self):
         if not self.run_function("cmd.has_exec", ["patch"]):
             self.skipTest("patch is not installed")
@@ -206,44 +216,53 @@ class FileModuleTest(ModuleCase):
                 salt.utils.stringutils.to_unicode(fp.read()), "Hello world\n"
             )
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_remove_file(self):
         ret = self.run_function("file.remove", arg=[self.myfile])
         self.assertTrue(ret)
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_remove_dir(self):
         ret = self.run_function("file.remove", arg=[self.mydir])
         self.assertTrue(ret)
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_remove_symlink(self):
         ret = self.run_function("file.remove", arg=[self.mysymlink])
         self.assertTrue(ret)
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_remove_broken_symlink(self):
         ret = self.run_function("file.remove", arg=[self.mybadsymlink])
         self.assertTrue(ret)
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_cannot_remove(self):
         ret = self.run_function("file.remove", arg=["tty"])
         self.assertEqual(
             "ERROR executing 'file.remove': File path must be absolute: tty", ret
         )
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_source_list_for_single_file_returns_unchanged(self):
         ret = self.run_function(
             "file.source_list", ["salt://http/httpd.conf", "filehash", "base"]
         )
         self.assertEqual(list(ret), ["salt://http/httpd.conf", "filehash"])
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_source_list_for_single_local_file_slash_returns_unchanged(self):
         ret = self.run_function("file.source_list", [self.myfile, "filehash", "base"])
         self.assertEqual(list(ret), [self.myfile, "filehash"])
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_source_list_for_single_local_file_proto_returns_unchanged(self):
         ret = self.run_function(
             "file.source_list", ["file://" + self.myfile, "filehash", "base"]
         )
         self.assertEqual(list(ret), ["file://" + self.myfile, "filehash"])
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_file_line_changes_format(self):
         """
         Test file.line changes output formatting.
@@ -255,6 +274,7 @@ class FileModuleTest(ModuleCase):
         )
         self.assertIn("Hello" + os.linesep + "+Goodbye", ret)
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_file_line_changes_entire_line(self):
         """
         Test file.line entire line matching
@@ -282,6 +302,7 @@ class FileModuleTest(ModuleCase):
             == content
         )
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_file_line_content(self):
         self.minion_run(
             "file.line", self.myfile, "Goodbye", mode="insert", after="Hello"
@@ -290,6 +311,7 @@ class FileModuleTest(ModuleCase):
             content = fp.read()
         self.assertEqual(content, "Hello" + os.linesep + "Goodbye" + os.linesep)
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_file_line_duplicate_insert_after(self):
         """
         Test file.line duplicates line.
@@ -305,6 +327,7 @@ class FileModuleTest(ModuleCase):
             content = fp.read()
         self.assertEqual(content, "Hello" + os.linesep + "Goodbye" + os.linesep)
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_file_line_duplicate_insert_before(self):
         """
         Test file.line duplicates line.
@@ -320,6 +343,7 @@ class FileModuleTest(ModuleCase):
             content = fp.read()
         self.assertEqual(content, "Hello" + os.linesep + "Goodbye" + os.linesep)
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_file_line_duplicate_ensure_after(self):
         """
         Test file.line duplicates line.
@@ -335,6 +359,7 @@ class FileModuleTest(ModuleCase):
             content = fp.read()
         self.assertEqual(content, "Hello" + os.linesep + "Goodbye" + os.linesep)
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_file_line_duplicate_ensure_before(self):
         """
         Test file.line duplicates line.

@@ -6,6 +6,7 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
 import salt.modules.win_network as win_network
 
 # Import Salt Libs
@@ -118,6 +119,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'traceroute' function tests: 1
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_traceroute(self):
         """
         Test if it performs a traceroute to a 3rd party host

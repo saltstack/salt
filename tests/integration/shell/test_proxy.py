@@ -41,6 +41,7 @@ class TestProxyMinion:
     Various integration tests for the salt-proxy executable.
     """
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_exit_status_no_proxyid(
         self, request, salt_factories, shell_tests_salt_proxy_minion_config
     ):
@@ -60,6 +61,7 @@ class TestProxyMinion:
         assert "error: salt-proxy requires --proxyid" in exc.value.stderr, exc.value
 
     @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_exit_status_unknown_user(
         self, request, salt_factories, shell_tests_salt_proxy_minion_config
     ):
@@ -78,6 +80,7 @@ class TestProxyMinion:
         assert exc.value.exitcode == salt.defaults.exitcodes.EX_NOUSER, exc.value
         assert "The user is not available." in exc.value.stderr, exc.value
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_exit_status_unknown_argument(
         self, request, salt_factories, shell_tests_salt_proxy_minion_config, tempdir
     ):
@@ -101,6 +104,7 @@ class TestProxyMinion:
         assert "no such option: --unknown-argument" in exc.value.stderr, exc.value
 
     @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_exit_status_correct_usage(
         self, request, salt_factories, shell_tests_salt_master
     ):

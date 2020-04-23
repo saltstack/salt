@@ -6,6 +6,8 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.purefb as purefb
 
@@ -58,6 +60,7 @@ class PureFBTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(purefb, "snap_create", return_value=True):
             self.assertEqual(purefb.snap_create("test", suffix="suffix"), True)
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_snap_delete(self):
         """
         Test for deletion of a filesystem snapshot

@@ -6,6 +6,7 @@
 # Import Python Libs
 from __future__ import absolute_import, unicode_literals
 
+import pytest
 import salt.states.zabbix_template as zabbix_template
 
 # Import Salt Testing Libs
@@ -216,6 +217,7 @@ class ZabbixTemplateTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertDictEqual(zabbix_template.present(name, {}), ret)
 
     @patch("salt.states.zabbix_template.CHANGE_STACK", [])
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_present_update(self):
         """
         Test to ensure that named template is present but must be updated

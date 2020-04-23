@@ -6,6 +6,8 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.deb_apache as deb_apache
 from salt.ext import six
@@ -390,6 +392,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
                     {"Name": "Apache2 Disable Conf", "Conf": "security", "Status": 2},
                 )
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_a2disconf_exception(self):
         """
         Test if it runs a2disconf for the given conf.

@@ -14,6 +14,7 @@ import stat
 import tempfile
 import textwrap
 
+import pytest
 import salt.ext.six
 import salt.ext.tornado.ioloop
 
@@ -628,6 +629,7 @@ class GitFSTestBase(object):
 
 
 @skipIf(not HAS_GITPYTHON, "GitPython >= {0} required".format(GITPYTHON_MINVER))
+@pytest.mark.slow_test(seconds=30)  # Inheritance used. Skip the whole class
 class GitPythonTest(GitFSTestBase, GitFSTestFuncs, TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         opts = {
@@ -677,6 +679,7 @@ class GitPythonTest(GitFSTestBase, GitFSTestFuncs, TestCase, LoaderModuleMockMix
     salt.utils.platform.is_windows(),
     "Skip Pygit2 on windows, due to pygit2 access error on windows",
 )
+@pytest.mark.slow_test(seconds=5)  # Inheritance used. Skip the whole class
 class Pygit2Test(GitFSTestBase, GitFSTestFuncs, TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         opts = {

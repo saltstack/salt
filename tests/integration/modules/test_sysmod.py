@@ -13,6 +13,7 @@ class SysModuleTest(ModuleCase):
     Validate the sys module
     """
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_valid_docs(self):
         """
         Make sure no functions are exposed that don't have valid docstrings

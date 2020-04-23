@@ -7,6 +7,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 
+import pytest
+
 # Import Salt Libs
 import salt.states.boto_elb as boto_elb
 
@@ -175,6 +177,7 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'absent' function tests: 1
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_absent(self):
         """
         Test to ensure the IAM role is deleted.

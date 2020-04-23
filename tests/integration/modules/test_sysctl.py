@@ -5,6 +5,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import sys
 
+import pytest
+
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
@@ -17,12 +19,14 @@ class SysctlModuleTest(ModuleCase):
         if not ret:
             self.skipTest("sysctl not found")
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_show(self):
         ret = self.run_function("sysctl.show")
         self.assertIsInstance(ret, dict, "sysctl.show return wrong type")
         self.assertGreater(len(ret), 10, "sysctl.show return few data")
 
     @skipIf(not sys.platform.startswith("linux"), "Linux specific")
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_show_linux(self):
         ret = self.run_function("sysctl.show")
         self.assertIn("kernel.ostype", ret, "kernel.ostype absent")
@@ -44,6 +48,7 @@ class SysctlModuleTest(ModuleCase):
         self.assertEqual(ret.get("kern.ostype"), "OpenBSD", "Incorrect kern.ostype")
 
     @skipIf(not sys.platform.startswith("darwin"), "Darwin (macOS) specific")
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_show_darwin(self):
         ret = self.run_function("sysctl.show")
         self.assertIn("kern.ostype", ret, "kern.ostype absent")

@@ -24,6 +24,7 @@ class LoaderOverridesTest(ModuleCase):
     def setUp(self):
         self.run_function("saltutil.sync_modules")
 
+    @pytest.mark.slow_test(seconds=120)  # Test takes >60 and <=120 seconds
     def test_overridden_internal(self):
         # To avoid a race condition on Windows, we need to make sure the
         # `override_test.py` file is present in the _modules directory before

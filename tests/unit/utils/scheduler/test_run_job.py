@@ -4,6 +4,7 @@ from __future__ import absolute_import
 
 import logging
 
+import pytest
 from tests.unit.utils.scheduler.base import SchedulerTestsBase
 
 log = logging.getLogger(__name__)
@@ -18,6 +19,7 @@ class SchedulerRunJobTest(SchedulerTestsBase):
         super(SchedulerRunJobTest, self).setUp()
         self.schedule.opts["loop_interval"] = 1
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_run_job(self):
         """
         verify that scheduled job runs

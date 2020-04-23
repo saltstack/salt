@@ -27,6 +27,7 @@ class EnabledTest(ModuleCase):
     )
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_shell_default_enabled(self):
         """
         ensure that python_shell defaults to True for cmd.run
@@ -36,6 +37,7 @@ class EnabledTest(ModuleCase):
         self.assertEqual(ret.strip(), enabled_ret)
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_shell_disabled(self):
         """
         test shell disabled output for cmd.run
@@ -48,6 +50,7 @@ class EnabledTest(ModuleCase):
         self.assertEqual(ret, disabled_ret)
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_template_shell(self):
         """
         Test cmd.shell works correctly when using a template.
@@ -87,6 +90,7 @@ class EnabledTest(ModuleCase):
             os.remove(state_file)
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_template_default_disabled(self):
         """
         test shell disabled output for templates (python_shell=False is the default

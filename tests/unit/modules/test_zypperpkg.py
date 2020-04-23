@@ -9,6 +9,7 @@ from __future__ import absolute_import
 import os
 from xml.dom import minidom
 
+import pytest
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.zypperpkg as zypper
 
@@ -462,6 +463,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
             installed = zypper.info_installed()
             self.assertEqual(installed["vīrgô"]["description"], "vīrgô d€šçripţiǫñ")
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_info_installed_with_all_versions(self):
         """
         Test the return information of all versions for the named package(s), installed on the system.
@@ -550,6 +552,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                 for info in pkg_info_list:
                     self.assertTrue(info["arch"] in ("x86_64", "i686"))
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_info_available(self):
         """
         Test return the information of the named package available for the system.

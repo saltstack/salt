@@ -57,6 +57,7 @@ class LinuxShadowTest(TestCase, LoaderModuleMockMixin):
                 hash_info["pw_hash"],
             )
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_set_password(self):
         """
         Test the corner case in which shadow.set_password is called for a user

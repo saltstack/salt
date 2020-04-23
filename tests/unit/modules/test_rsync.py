@@ -5,6 +5,8 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.rsync as rsync
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -23,6 +25,7 @@ class RsyncTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {rsync: {}}
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_rsync(self):
         """
         Test for rsync files from src to dst

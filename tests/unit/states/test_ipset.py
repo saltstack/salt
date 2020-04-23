@@ -5,6 +5,8 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.states.ipset as ipset
 
@@ -52,6 +54,7 @@ class IpsetSetPresentTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(mock_new_set.call_count == 0)
         self.assertDictEqual(actual_ret, expected_ret)
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_already_exists(self):
         """
         Test to verify the chain exists when it already exists.

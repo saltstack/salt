@@ -6,6 +6,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 
+import pytest
 import salt.utils.ssdp as ssdp
 import salt.utils.stringutils
 from salt.ext import six
@@ -187,6 +188,7 @@ class SSDPFactoryTestCase(TestCase, Mocks):
             assert factory.log.debug.called
             assert factory.log.debug.mock_calls[0][1][0] == "Sent successfully"
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_transport_sendto_retry(self):
         """
         Test transport send_to.
@@ -603,6 +605,7 @@ class SSDPClientTestCase(TestCase, Mocks):
             assert clnt.log.error.call_args[1] == {}
             assert clnt.log.error.call_args[0][2] == error
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_discover_timestamp_error(self):
         """
         Test discover available master on the network (outdated timestamp)

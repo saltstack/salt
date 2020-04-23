@@ -8,6 +8,7 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
 import salt.modules.freezer as freezer
 from salt.exceptions import CommandExecutionError
 
@@ -132,6 +133,7 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.modules.freezer.fopen")
     @patch("salt.modules.freezer.status")
     @patch("os.makedirs")
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_freeze_success_force(self, makedirs, status, fopen, dump):
         """
         Test to freeze a current installation
@@ -283,6 +285,7 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.utils.json.load")
     @patch("salt.modules.freezer.fopen")
     @patch("salt.modules.freezer.status")
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_restore_clean_yml(self, status, fopen, load, remove):
         """
         Test to restore an old state

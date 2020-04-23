@@ -6,6 +6,8 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.bower as bower
 from salt.exceptions import CommandExecutionError
@@ -24,6 +26,7 @@ class BowerTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {bower: {"_check_valid_version": MagicMock(return_value=True)}}
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_install_with_error(self):
         """
         Test if it raises an exception when install package fails

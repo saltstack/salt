@@ -6,6 +6,8 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.monit as monit
 
@@ -101,6 +103,7 @@ class MonitTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(monit.__salt__, {"cmd.run": mock}):
             self.assertEqual(monit.id_(), "d3b1aba48527dd599db0e86f5ad97120")
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_reset_id(self):
         """
         Test for Regenerate a unique id

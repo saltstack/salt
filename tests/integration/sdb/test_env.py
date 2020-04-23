@@ -47,6 +47,7 @@ class EnvTestCase(ModuleCase, SaltReturnAssertsMixin):
     def tearDown(self):
         os.remove(self.state_file_set_var)
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_env_module_sets_key(self):
         state_key = "test_|-always-changes-and-succeeds_|-foo_|-succeed_with_changes"
         ret = self.run_function("state.sls", [self.state_name])

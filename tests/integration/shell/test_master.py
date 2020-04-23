@@ -44,6 +44,7 @@ class TestSaltMasterCLI(object):
         assert exc.value.exitcode == salt.defaults.exitcodes.EX_NOUSER, exc.value
         assert "The user is not available." in exc.value.stderr, exc.value
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_exit_status_unknown_argument(
         self, request, salt_factories, shell_tests_salt_master_config, tempdir
     ):

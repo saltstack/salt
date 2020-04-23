@@ -24,6 +24,7 @@ if not os.path.exists("/etc/alternatives"):
 @skipIf(NO_ALTERNATIVES, "/etc/alternatives does not exist on the system")
 class AlterantivesStateTest(ModuleCase, SaltReturnAssertsMixin):
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_install_set_and_remove(self):
         ret = self.run_state(
             "alternatives.set", name="alt-test", path=RUNTIME_VARS.SHELL_TRUE_PATH

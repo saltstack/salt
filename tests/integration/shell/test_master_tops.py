@@ -10,6 +10,7 @@ import pytest
 
 
 @pytest.mark.windows_whitelisted
+@pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
 def test_custom_tops_gets_utilized(salt_call_cli):
     ret = salt_call_cli.run("state.show_top")
     assert ret.exitcode == 0

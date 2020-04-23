@@ -24,6 +24,7 @@ class StateMatchTest(ModuleCase):
     """
 
     @pytest.mark.skip_if_not_root
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_issue_2167_ipcidr_no_AttributeError(self):
         subnets = self.run_function("network.subnets")
         self.assertTrue(len(subnets) > 0)

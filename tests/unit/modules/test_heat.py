@@ -5,6 +5,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
+import pytest
 import salt.modules.file as file_
 import salt.modules.heat as heat
 import salt.modules.win_file as win_file
@@ -199,6 +200,7 @@ class HeatTestCase(TestCase, LoaderModuleMockMixin):
             )
         assert ret == {"result": True, "comment": ("Updated stack 'mystack'.",)}
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_heat_update_stack_env(self):
         """
         Test salt.modules.heat.update_method method

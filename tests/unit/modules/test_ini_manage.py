@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import tempfile
 
+import pytest
 import salt.modules.ini_manage as ini
 
 # Import Salt libs
@@ -168,6 +169,7 @@ class IniManageTestCase(TestCase):
         expected = "{0}{1}{0}".format(os.linesep, "empty_option = ")
         self.assertIn(expected, file_content, "empty_option was not preserved")
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_empty_lines(self):
         """
         Test empty lines preserved after edit

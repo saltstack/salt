@@ -10,6 +10,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import re
 
+import pytest
+
 # Import salt libs
 import salt.modules.portage_config as portage_config
 import salt.utils.files
@@ -72,6 +74,7 @@ class PortageConfigTestCase(TestCase, LoaderModuleMockMixin):
         for (atom, expected) in pairs:
             self.assertEqual(portage_config._get_config_file("mask", atom), expected)
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_enforce_nice_config(self):
         atoms = [
             ("*/*::repo", "repo"),

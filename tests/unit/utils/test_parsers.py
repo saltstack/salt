@@ -890,6 +890,7 @@ class SaltKeyOptionParserTestCase(ParserBase, TestCase):
         # Check log file logger log level
         self.assertEqual(self.log_setup.log_level_logfile, log_level)
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_get_log_level_default(self):
         """
         Tests that log level default value is ignored
@@ -1028,6 +1029,7 @@ class SaltSSHOptionParserTestCase(ParserBase, TestCase):
             os.unlink(self.ssh_log_file)
 
 
+@pytest.mark.slow_test(seconds=1)  # Inheritance used. Skip the whole class
 class SaltCloudParserTestCase(ParserBase, TestCase):
     """
     Tests parsing Salt Cloud options
@@ -1105,6 +1107,7 @@ class SPMParserTestCase(ParserBase, TestCase):
             os.unlink(self.spm_logfile)
 
 
+@pytest.mark.slow_test(seconds=1)  # Inheritance used. Skip the whole class
 class SaltAPIParserTestCase(ParserBase, TestCase):
     """
     Tests parsing Salt Cloud options

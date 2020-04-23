@@ -15,6 +15,7 @@ from tests.support.unit import skipIf
 @skipIf(salt.utils.path.which("bower") is None, "bower not installed")
 class BowerStateTest(ModuleCase, SaltReturnAssertsMixin):
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_bower_installed_removed(self):
         """
         Basic test to determine if Bower package was successfully installed and
@@ -34,6 +35,7 @@ class BowerStateTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_bower_installed_pkgs(self):
         """
         Basic test to determine if Bower package successfully installs multiple
@@ -52,6 +54,7 @@ class BowerStateTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_bower_installed_from_file(self):
         ret = self.run_state("file.directory", name="/salt_test_bower_3", makedirs=True)
         self.assertSaltTrueReturn(ret)

@@ -28,6 +28,7 @@ class PyDSLRendererIncludeTestCase(ModuleCase):
                 shutil.rmtree("\\tmp")
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_rendering_includes(self):
         """
         This test is currently hard-coded to /tmp to work-around a seeming

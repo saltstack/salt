@@ -3,6 +3,8 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.states.win_dism as dism
 
@@ -520,6 +522,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
                     mock_remove.assert_called_once_with("Pack2", None, False)
                     self.assertEqual(out, expected)
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_package_removed_removed(self):
         """
             Test removing a package already removed

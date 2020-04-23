@@ -5,6 +5,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
+import pytest
+
 # Import Salt Libs
 import salt.pillar.s3 as s3_pillar
 from salt.ext.six.moves import range
@@ -26,6 +28,7 @@ class S3PillarTestCase(TestCase, LoaderModuleMockMixin):
         s3_pillar_globals = {"__utils__": {}}
         return {s3_pillar: s3_pillar_globals}
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_refresh_buckets_cache_file(self):
         """
         Test pagination with refresh_buckets_cache_file

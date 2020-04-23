@@ -7,6 +7,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.solr as solr
 
@@ -235,6 +237,7 @@ class SolrTestCase(TestCase, LoaderModuleMockMixin):
                     ):
                         self.assertDictEqual(solr.replication_details(), tempdict1)
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_backup(self):
         """
         Test to tell solr make a backup.

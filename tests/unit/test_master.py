@@ -3,6 +3,8 @@
 # Import Python libs
 from __future__ import absolute_import
 
+import pytest
+
 # Import Salt libs
 import salt.config
 import salt.master
@@ -218,6 +220,7 @@ class ClearFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_wheel_eauth_not_authenticated(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user can't authenticate.
@@ -305,6 +308,7 @@ class ClearFuncsTestCase(TestCase):
                 mock_ret, self.clear_funcs.publish({"user": "foo", "fun": "test.arg"})
             )
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_publish_cmd_blacklisted(self):
         """
         Asserts that an AuthorizationError is returned when the command has been blacklisted.
@@ -347,6 +351,7 @@ class ClearFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.clear_funcs.publish(load))
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_publish_token_authorization_error(self):
         """
         Asserts that an AuthorizationError is returned when the token authenticates, but is not
@@ -379,6 +384,7 @@ class ClearFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.clear_funcs.publish(load))
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_publish_eauth_not_authenticated(self):
         """
         Asserts that an AuthenticationError is returned when the user can't authenticate.
@@ -402,6 +408,7 @@ class ClearFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.clear_funcs.publish(load))
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_publish_eauth_authorization_error(self):
         """
         Asserts that an AuthorizationError is returned when the user authenticates, but is not

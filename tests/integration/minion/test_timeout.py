@@ -19,6 +19,7 @@ class MinionTimeoutTestCase(ShellCase):
     Test minion timing functions
     """
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_long_running_job(self):
         """
         Test that we will wait longer than the job timeout for a minion to

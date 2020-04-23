@@ -269,6 +269,7 @@ class BasePillarTest(_CommonBase):
     def tearDownClass(cls):
         shutil.rmtree(cls.pillar_base)
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_pillar_top_compound_match(self, grains=None):
         """
         Test that a compound match topfile that refers to a nodegroup via N@ works
@@ -380,6 +381,7 @@ class DecryptGPGPillarTest(_CommonBase):
         shutil.rmtree(cls.pillar_base)
 
     @requires_system_grains
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_decrypt_pillar_default_renderer(self, grains=None):
         """
         Test recursive decryption of secrets:vault as well as the fallback to
@@ -399,6 +401,7 @@ class DecryptGPGPillarTest(_CommonBase):
         self.assertEqual(ret, GPG_PILLAR_DECRYPTED)
 
     @requires_system_grains
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_decrypt_pillar_alternate_delimiter(self, grains=None):
         """
         Test recursive decryption of secrets:vault using a pipe instead of a
@@ -419,6 +422,7 @@ class DecryptGPGPillarTest(_CommonBase):
         self.assertEqual(ret, GPG_PILLAR_DECRYPTED)
 
     @requires_system_grains
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_decrypt_pillar_deeper_nesting(self, grains=None):
         """
         Test recursive decryption, only with a more deeply-nested target. This
@@ -442,6 +446,7 @@ class DecryptGPGPillarTest(_CommonBase):
         self.assertEqual(ret, expected)
 
     @requires_system_grains
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_decrypt_pillar_explicit_renderer(self, grains=None):
         """
         Test recursive decryption of secrets:vault, with the renderer
@@ -466,6 +471,7 @@ class DecryptGPGPillarTest(_CommonBase):
         self.assertEqual(ret, GPG_PILLAR_DECRYPTED)
 
     @requires_system_grains
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_decrypt_pillar_missing_renderer(self, grains=None):
         """
         Test decryption using a missing renderer. It should fail, leaving the
@@ -505,6 +511,7 @@ class DecryptGPGPillarTest(_CommonBase):
         )
 
     @requires_system_grains
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_decrypt_pillar_invalid_renderer(self, grains=None):
         """
         Test decryption using a renderer which is not permitted. It should
@@ -593,6 +600,7 @@ class RefreshPillarTest(ModuleCase):
             )
         self.addCleanup(self.cleanup_pillars, top_path, pillar_path)
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_pillar_refresh_pillar_raw(self):
         """
         Validate the minion's pillar.raw call behavior for new pillars
@@ -616,6 +624,7 @@ class RefreshPillarTest(ModuleCase):
         val = self.run_function("pillar.raw", arg=(key,))
         assert val is True, repr(val)
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_pillar_refresh_pillar_get(self):
         """
         Validate the minion's pillar.get call behavior for new pillars
@@ -643,6 +652,7 @@ class RefreshPillarTest(ModuleCase):
         val = self.run_function("pillar.get", arg=(key,))
         assert val is True, repr(val)
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_pillar_refresh_pillar_item(self):
         """
         Validate the minion's pillar.item call behavior for new pillars
@@ -671,6 +681,7 @@ class RefreshPillarTest(ModuleCase):
         assert key in val
         assert val[key] is True
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_pillar_refresh_pillar_items(self):
         """
         Validate the minion's pillar.item call behavior for new pillars
@@ -689,6 +700,7 @@ class RefreshPillarTest(ModuleCase):
         assert key in val
         assert val[key] is True
 
+    @pytest.mark.slow_test(seconds=120)  # Test takes >60 and <=120 seconds
     def test_pillar_refresh_pillar_ping(self):
         """
         Validate the minion's test.ping does not update pillars

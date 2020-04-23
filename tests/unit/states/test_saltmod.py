@@ -9,6 +9,8 @@ import os
 import tempfile
 import time
 
+import pytest
+
 # Import Salt Libs
 import salt.config
 import salt.loader
@@ -49,6 +51,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'state' function tests: 1
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_state(self):
         """
         Test to invoke a state run on a given target
@@ -195,6 +198,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'function' function tests: 1
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_function(self):
         """
         Test to execute a single module function on a remote
@@ -319,6 +323,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(saltmod.__salt__, {"saltutil.wheel": wheel_mock}):
             self.assertDictEqual(saltmod.wheel(name), ret)
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_state_ssh(self):
         """
         Test saltmod passes roster to saltutil.cmd

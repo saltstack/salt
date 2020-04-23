@@ -10,6 +10,8 @@ from collections import namedtuple
 
 import pkg_resources
 
+import pytest
+
 # Import Salt Libs
 import salt.config
 import salt.loader
@@ -208,6 +210,7 @@ class BotoRoute53RetryTestCase(TestCase, LoaderModuleMockMixin):
     def tearDown(self):
         delattr(boto_route53, "_get_conn")
 
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_zone_exists(self):
         """
         Tests retry behavior for zone_exists
@@ -238,6 +241,7 @@ class BotoRoute53RetryTestCase(TestCase, LoaderModuleMockMixin):
                 raise Exception("DNSServerError not raised")
 
     @patch.object(boto, "route53", MagicMock())
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_create_healthcheck(self):
         """
         Tests retry behavior for create_healthcheck
@@ -265,6 +269,7 @@ class BotoRoute53RetryTestCase(TestCase, LoaderModuleMockMixin):
             assert conn.create_health_check.call_count == 1
             assert result == {"error": "There was an error"}, result
 
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_get_record(self):
         """
         Tests retry behavior for get_record
@@ -300,6 +305,7 @@ class BotoRoute53RetryTestCase(TestCase, LoaderModuleMockMixin):
                 raise Exception("DNSServerError not raised")
 
     @patch.object(boto_route53, "_wait_for_sync", MagicMock(return_value=True))
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_add_record(self):
         """
         Tests retry behavior for add_record
@@ -336,6 +342,7 @@ class BotoRoute53RetryTestCase(TestCase, LoaderModuleMockMixin):
                 raise Exception("DNSServerError not raised")
 
     @patch.object(boto_route53, "_wait_for_sync", MagicMock(return_value=True))
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_update_record(self):
         """
         Tests retry behavior for update_record
@@ -372,6 +379,7 @@ class BotoRoute53RetryTestCase(TestCase, LoaderModuleMockMixin):
                 raise Exception("DNSServerError not raised")
 
     @patch.object(boto_route53, "_wait_for_sync", MagicMock(return_value=True))
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_delete_record(self):
         """
         Tests retry behavior for delete_record

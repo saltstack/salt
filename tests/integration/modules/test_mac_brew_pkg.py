@@ -25,6 +25,7 @@ class BrewModuleTest(ModuleCase):
     Integration tests for the brew module
     """
 
+    @pytest.mark.slow_test(seconds=240)  # Test takes >120 and <=240 seconds
     def test_brew_install(self):
         """
         Tests the installation of packages
@@ -41,6 +42,7 @@ class BrewModuleTest(ModuleCase):
             self.run_function("pkg.remove", [ADD_PKG])
             raise
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_remove(self):
         """
         Tests the removal of packages
@@ -61,6 +63,7 @@ class BrewModuleTest(ModuleCase):
             self.run_function("pkg.remove", [DEL_PKG])
             raise
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_version(self):
         """
         Test pkg.version for mac. Installs a package and then checks we can get
@@ -108,6 +111,7 @@ class BrewModuleTest(ModuleCase):
             self.run_function("pkg.remove", [ADD_PKG])
             raise
 
+    @pytest.mark.slow_test(seconds=120)  # Test takes >60 and <=120 seconds
     def test_latest_version(self):
         """
         Test pkg.latest_version:
@@ -133,6 +137,7 @@ class BrewModuleTest(ModuleCase):
             self.run_function("pkg.remove", [ADD_PKG])
             raise
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_refresh_db(self):
         """
         Integration test to ensure pkg.refresh_db works with brew
@@ -140,6 +145,7 @@ class BrewModuleTest(ModuleCase):
         refresh_brew = self.run_function("pkg.refresh_db")
         self.assertTrue(refresh_brew)
 
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_list_upgrades(self):
         """
         Test pkg.list_upgrades: data is in the form {'name1': 'version1',
@@ -160,6 +166,7 @@ class BrewModuleTest(ModuleCase):
             self.run_function("pkg.remove", [ADD_PKG])
             raise
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_info_installed(self):
         """
         Test pkg.info_installed: info returned has certain fields used by

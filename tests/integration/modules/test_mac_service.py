@@ -37,6 +37,7 @@ class MacServiceModuleTest(ModuleCase):
             self.run_function("service.stop", [self.SERVICE_NAME])
             self.run_function("service.disable", [self.SERVICE_NAME])
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_show(self):
         """
         Test service.show
@@ -51,6 +52,7 @@ class MacServiceModuleTest(ModuleCase):
             "Service not found", self.run_function("service.show", ["spongebob"])
         )
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_launchctl(self):
         """
         Test service.launchctl
@@ -72,6 +74,7 @@ class MacServiceModuleTest(ModuleCase):
             self.run_function("service.launchctl", ["error", "bootstrap"]),
         )
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_list(self):
         """
         Test service.list
@@ -88,6 +91,7 @@ class MacServiceModuleTest(ModuleCase):
         )
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_enable(self):
         """
         Test service.enable
@@ -99,6 +103,7 @@ class MacServiceModuleTest(ModuleCase):
         )
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_disable(self):
         """
         Test service.disable
@@ -110,6 +115,7 @@ class MacServiceModuleTest(ModuleCase):
         )
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_start(self):
         """
         Test service.start
@@ -123,6 +129,7 @@ class MacServiceModuleTest(ModuleCase):
         )
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_stop(self):
         """
         Test service.stop
@@ -134,6 +141,7 @@ class MacServiceModuleTest(ModuleCase):
         )
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_status(self):
         """
         Test service.status
@@ -151,6 +159,7 @@ class MacServiceModuleTest(ModuleCase):
         # Service not found
         self.assertEqual("", self.run_function("service.status", ["spongebob"]))
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_available(self):
         """
         Test service.available
@@ -158,6 +167,7 @@ class MacServiceModuleTest(ModuleCase):
         self.assertTrue(self.run_function("service.available", [self.SERVICE_NAME]))
         self.assertFalse(self.run_function("service.available", ["spongebob"]))
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_missing(self):
         """
         Test service.missing
@@ -166,6 +176,7 @@ class MacServiceModuleTest(ModuleCase):
         self.assertTrue(self.run_function("service.missing", ["spongebob"]))
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_enabled(self):
         """
         Test service.enabled
@@ -179,6 +190,7 @@ class MacServiceModuleTest(ModuleCase):
         self.assertFalse(self.run_function("service.enabled", ["spongebob"]))
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_disabled(self):
         """
         Test service.disabled
@@ -193,6 +205,7 @@ class MacServiceModuleTest(ModuleCase):
 
         self.assertFalse(self.run_function("service.disabled", ["spongebob"]))
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_get_all(self):
         """
         Test service.get_all
@@ -201,6 +214,7 @@ class MacServiceModuleTest(ModuleCase):
         self.assertIsInstance(services, list)
         self.assertIn(self.SERVICE_NAME, services)
 
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_get_enabled(self):
         """
         Test service.get_enabled

@@ -7,6 +7,8 @@ import logging
 import os.path
 import socket
 
+import pytest
+
 # Import Salt Libs
 import salt.config
 import salt.modules.network as network
@@ -66,6 +68,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         with patch("socket.socket", MockSocket):
             self.assertTrue(network.wol(mac, bcast))
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_ping(self):
         """
         Test for Performs a ping to a host
@@ -98,6 +101,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(network.__grains__, {"kernel": "A"}):
             self.assertRaises(CommandExecutionError, network.netstat)
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_active_tcp(self):
         """
         Test for return a dict containing information on all
@@ -109,6 +113,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(network.__grains__, {"kernel": "Linux"}):
                 self.assertEqual(network.active_tcp(), "A")
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_traceroute(self):
         """
         Test for Performs a traceroute to a 3rd party host
@@ -126,6 +131,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
                 ):
                     self.assertListEqual(network.traceroute("gentoo.org"), [])
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_dig(self):
         """
         Test for Performs a DNS lookup with dig
@@ -144,6 +150,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         ), patch("salt.utils.path.which", MagicMock(return_value="")):
             self.assertDictEqual(network.arp(), {})
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_interfaces(self):
         """
         Test for return a dictionary of information about
@@ -154,6 +161,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertDictEqual(network.interfaces(), {})
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_hw_addr(self):
         """
         Test for return the hardware address (a.k.a. MAC address)
@@ -164,6 +172,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertDictEqual(network.hw_addr("iface"), {})
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_interface(self):
         """
         Test for return the inet address for a given interface
@@ -173,6 +182,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertDictEqual(network.interface("iface"), {})
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_interface_ip(self):
         """
         Test for return the inet address for a given interface
@@ -182,6 +192,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertDictEqual(network.interface_ip("iface"), {})
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_subnets(self):
         """
         Test for returns a list of subnets to which the host belongs
@@ -191,6 +202,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertDictEqual(network.subnets(), {})
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_in_subnet(self):
         """
         Test for returns True if host is within specified
@@ -201,6 +213,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertDictEqual(network.in_subnet("iface"), {})
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_ip_addrs(self):
         """
         Test for returns a list of IPv4 addresses assigned to the host.
@@ -219,6 +232,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
                 network.ip_addrs("interface", "include_loopback"), ["0.0.0.0"]
             )
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_ip_addrs6(self):
         """
         Test for returns a list of IPv6 addresses assigned to the host.
@@ -235,6 +249,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(socket, "gethostname", return_value="A"):
             self.assertEqual(network.get_hostname(), "A")
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_mod_hostname(self):
         """
         Test for Modify hostname
@@ -255,6 +270,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(network.mod_hostname("hostname"))
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_connect(self):
         """
         Test for Test connectivity to a host using a particular

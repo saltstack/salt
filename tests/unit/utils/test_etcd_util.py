@@ -6,6 +6,8 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.utils.etcd_util as etcd_util
 from tests.support.mock import MagicMock, patch
@@ -300,6 +302,7 @@ class EtcdUtilTestCase(TestCase):
                 client._flatten.assert_called_with(some_data, "/test")
                 self.assertEqual(write_mock.call_count, 5)
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_rm(self):
         with patch("etcd.Client", autospec=True) as mock:
             etcd_client = mock.return_value

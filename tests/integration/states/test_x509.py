@@ -5,6 +5,7 @@ import datetime
 import os
 import textwrap
 
+import pytest
 import salt.utils.files
 from salt.ext import six
 from tests.support.case import ModuleCase
@@ -77,6 +78,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         self.run_function("saltutil.refresh_pillar")
 
     @with_tempfile(suffix=".pem", create=False)
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_issue_49027(self, pemfile):
         ret = self.run_state("x509.pem_managed", name=pemfile, text=self.x509_cert_text)
         assert isinstance(ret, dict), ret
@@ -88,6 +90,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
 
     @with_tempfile(suffix=".crt", create=False)
     @with_tempfile(suffix=".key", create=False)
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_issue_49008(self, keyfile, crtfile):
         ret = self.run_function(
             "state.apply",
@@ -100,6 +103,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         assert os.path.exists(keyfile)
         assert os.path.exists(crtfile)
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_cert_signing(self):
         ret = self.run_function(
             "state.apply", ["x509.cert_signing"], pillar={"tmp_dir": RUNTIME_VARS.TMP}
@@ -114,6 +118,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
 
     @with_tempfile(suffix=".crt", create=False)
     @with_tempfile(suffix=".key", create=False)
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_self_signed_cert(self, keyfile, crtfile):
         """
         Self-signed certificate, no CA.
@@ -151,6 +156,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
 
     @with_tempfile(suffix=".crt", create=False)
     @with_tempfile(suffix=".key", create=False)
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_old_self_signed_cert_is_recreated(self, keyfile, crtfile):
         """
         Self-signed certificate, no CA.
@@ -211,6 +217,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
 
     @with_tempfile(suffix=".crt", create=False)
     @with_tempfile(suffix=".key", create=False)
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_mismatched_self_signed_cert_is_recreated(self, keyfile, crtfile):
         """
         Self-signed certificate, no CA.
@@ -283,6 +290,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
 
     @with_tempfile(suffix=".crt", create=False)
     @with_tempfile(suffix=".key", create=False)
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_certificate_managed_with_managed_private_key_does_not_error(
         self, keyfile, crtfile
     ):

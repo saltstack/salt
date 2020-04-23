@@ -7,6 +7,8 @@ import logging
 import random
 import string
 
+import pytest
+
 # Import Salt libs
 import salt.config
 import salt.loader
@@ -176,6 +178,7 @@ class BotoCloudTrailTestCase(
     TestCase for salt.modules.boto_cloudtrail state.module
     """
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_present_when_trail_does_not_exist(self):
         """
         Tests present on a trail that does not exist.
@@ -195,6 +198,7 @@ class BotoCloudTrailTestCase(
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"]["new"]["trail"]["Name"], trail_ret["Name"])
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_present_when_trail_exists(self):
         self.conn.get_trail_status.return_value = status_ret
         self.conn.create_trail.return_value = trail_ret
@@ -211,6 +215,7 @@ class BotoCloudTrailTestCase(
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"], {})
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_present_with_failure(self):
         self.conn.get_trail_status.side_effect = [not_found_error, status_ret]
         self.conn.create_trail.side_effect = ClientError(error_content, "create_trail")
@@ -226,6 +231,7 @@ class BotoCloudTrailTestCase(
         self.assertFalse(result["result"])
         self.assertTrue("An error occurred" in result["comment"])
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_absent_when_trail_does_not_exist(self):
         """
         Tests absent on a trail that does not exist.
@@ -235,12 +241,14 @@ class BotoCloudTrailTestCase(
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"], {})
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_absent_when_trail_exists(self):
         self.conn.get_trail_status.return_value = status_ret
         result = self.salt_states["boto_cloudtrail.absent"]("test", trail_ret["Name"])
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"]["new"]["trail"], None)
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_absent_with_failure(self):
         self.conn.get_trail_status.return_value = status_ret
         self.conn.delete_trail.side_effect = ClientError(error_content, "delete_trail")

@@ -7,6 +7,8 @@ import logging
 import random
 import string
 
+import pytest
+
 # Import Salt libs
 import salt.config
 import salt.loader
@@ -182,6 +184,7 @@ class BotoIoTThingTypeTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertTrue(result["exists"])
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_that_when_checking_if_a_thing_type_exists_and_a_thing_type_does_not_exist_the_thing_type_exists_method_returns_false(
         self,
     ):
@@ -304,6 +307,7 @@ class BotoIoTThingTypeTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         self.assertTrue(result.get("deprecated"))
         self.assertEqual(result.get("error"), None)
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_that_when_deprecating_a_thing_type_fails_the_deprecate_thing_type_method_returns_error(
         self,
     ):
@@ -565,6 +569,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
             error_message.format("create_policy_version"),
         )
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_that_when_deleting_a_policy_version_succeeds_the_delete_policy_version_method_returns_true(
         self,
     ):
@@ -605,6 +610,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertTrue(result["policy"])
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_that_when_describing_policy_version_it_returns_the_dict_of_properties_returns_false(
         self,
     ):
@@ -641,6 +647,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertTrue(result["policies"])
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_that_when_listing_policy_fails_the_list_policy_method_returns_false(self):
         """
         tests False no policy listed.
@@ -704,6 +711,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
             error_message.format("list_policy_versions"),
         )
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_that_when_setting_default_policy_version_succeeds_the_set_default_policy_version_method_returns_true(
         self,
     ):
@@ -746,6 +754,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertTrue(result["policies"])
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_that_when_list_principal_policies_fails_the_list_principal_policies_method_returns_error(
         self,
     ):

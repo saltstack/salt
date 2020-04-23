@@ -30,6 +30,7 @@ class SchedulerSkipTest(SchedulerTestsBase):
         super(SchedulerSkipTest, self).setUp()
         self.schedule.opts["loop_interval"] = 1
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_skip(self):
         """
         verify that scheduled job is skipped at the specified time
@@ -69,6 +70,7 @@ class SchedulerSkipTest(SchedulerTestsBase):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_skip_during_range(self):
         """
         verify that scheduled job is skipped during the specified range
@@ -109,6 +111,7 @@ class SchedulerSkipTest(SchedulerTestsBase):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
 
+    @pytest.mark.slow_test(seconds=120)  # Test takes >60 and <=120 seconds
     def test_skip_during_range_invalid_datestring(self):
         """
         verify that scheduled job is not not and returns the right error string
@@ -170,6 +173,7 @@ class SchedulerSkipTest(SchedulerTestsBase):
         ).format(job_name2)
         self.assertEqual(ret["_error"], _expected)
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_skip_during_range_global(self):
         """
         verify that scheduled job is skipped during the specified range
@@ -207,6 +211,7 @@ class SchedulerSkipTest(SchedulerTestsBase):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_run_after_skip_range(self):
         """
         verify that scheduled job is skipped during the specified range
@@ -243,6 +248,7 @@ class SchedulerSkipTest(SchedulerTestsBase):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_run_seconds_skip(self):
         """
         verify that scheduled job is skipped during the specified range

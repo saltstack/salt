@@ -5,6 +5,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
+import pytest
 import salt.utils.boto3mod as boto3mod
 
 # Import Salt libs
@@ -198,11 +199,13 @@ class BotoUtilsCacheIdTestCase(BotoUtilsTestCaseBase):
 )
 class BotoUtilsGetConnTestCase(BotoUtilsTestCaseBase):
     @mock_ec2
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_conn_is_cached(self):
         conn = botomod.get_connection(service, **conn_parameters)
         self.assertTrue(conn in botomod.__context__.values())
 
     @mock_ec2
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_conn_is_cache_with_profile(self):
         conn = botomod.get_connection(service, profile=conn_parameters)
         self.assertTrue(conn in botomod.__context__.values())
@@ -217,6 +220,7 @@ class BotoUtilsGetConnTestCase(BotoUtilsTestCaseBase):
                 botomod.get_connection(service)
 
     @mock_ec2
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_get_conn_error_raises_command_execution_error(self):
         with patch(
             "boto.{0}.connect_to_region".format(service),
@@ -285,6 +289,7 @@ class BotoUtilsGetErrorTestCase(BotoUtilsTestCaseBase):
     " or equal to version {0}".format(required_boto3_version),
 )
 class BotoBoto3CacheContextCollisionTest(BotoUtilsTestCaseBase):
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_context_conflict_between_boto_and_boto3_utils(self):
         botomod.assign_funcs(__name__, "ec2")
         boto3mod.assign_funcs(__name__, "ec2", get_conn_funcname="_get_conn3")

@@ -3,6 +3,8 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.pillar.sqlite3 as sqlite3
 
@@ -550,6 +552,7 @@ class SQLite3PillarTestCase(TestCase):
         return_data.process_results([[1, 2, 3, 4], [1, 2, 3, 8]])
         self.assertEqual({1: {2: {3: 8}}}, return_data.result)
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_134_process_results_deepmerge_depth_0(self):
         return_data = sqlite3.SQLite3ExtPillar()
         return_data.process_fields(["a", "b", "c", "d"], 0)

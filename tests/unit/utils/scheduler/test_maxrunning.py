@@ -5,6 +5,7 @@ from __future__ import absolute_import
 import logging
 
 import dateutil.parser as dateutil_parser
+import pytest
 from tests.support.mock import MagicMock, patch
 from tests.unit.utils.scheduler.base import SchedulerTestsBase
 
@@ -73,6 +74,7 @@ class SchedulerMaxRunningTest(SchedulerTestsBase):
         self.assertEqual("maxrunning", ret["_skip_reason"])
         self.assertEqual(False, ret["run"])
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_maxrunning_master(self):
         """
         verify that scheduled job runs

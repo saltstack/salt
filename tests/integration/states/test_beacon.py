@@ -4,6 +4,8 @@ Integration tests for the beacon states
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
@@ -23,6 +25,7 @@ class BeaconStateTestCase(ModuleCase, SaltReturnAssertsMixin):
     def tearDown(self):
         self.run_function("beacons.reset", f_timeout=300)
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_present_absent(self):
         kwargs = {"/": "38%", "interval": 5}
         ret = self.run_state(

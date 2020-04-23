@@ -5,6 +5,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import random
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.cmdmod
 import salt.utils.platform
@@ -39,6 +41,7 @@ class WinLgpoAuditpolTestCase(TestCase, LoaderModuleMockMixin):
             KeyError, win_lgpo_auditpol.get_settings, category="Fake Category"
         )
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_get_setting(self):
         names = win_lgpo_auditpol._get_valid_names()
         for name in names:

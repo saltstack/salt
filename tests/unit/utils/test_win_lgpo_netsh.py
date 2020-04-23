@@ -75,6 +75,7 @@ class WinLgpoNetshTestCase(TestCase):
         )
         self.assertIn("State", ret)
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_get_all_settings_local(self):
         ret = win_lgpo_netsh.get_all_settings(profile="domain", store="local")
 
@@ -91,6 +92,7 @@ class WinLgpoNetshTestCase(TestCase):
         self.assertIn("UnicastResponseToMulticast", ret)
         self.assertIn("State", ret)
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_get_all_settings_lgpo(self):
         ret = win_lgpo_netsh.get_all_settings(profile="domain", store="local")
 
@@ -107,12 +109,14 @@ class WinLgpoNetshTestCase(TestCase):
         self.assertIn("UnicastResponseToMulticast", ret)
         self.assertIn("State", ret)
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_get_all_profiles_local(self):
         ret = win_lgpo_netsh.get_all_profiles(store="local")
         self.assertIn("Domain Profile", ret)
         self.assertIn("Private Profile", ret)
         self.assertIn("Public Profile", ret)
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_get_all_profiles_lgpo(self):
         ret = win_lgpo_netsh.get_all_profiles(store="lgpo")
         self.assertIn("Domain Profile", ret)
@@ -120,6 +124,7 @@ class WinLgpoNetshTestCase(TestCase):
         self.assertIn("Public Profile", ret)
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_set_firewall_settings_inbound_local(self):
         current = win_lgpo_netsh.get_settings(
             profile="domain", section="firewallpolicy", store="local"
@@ -140,6 +145,7 @@ class WinLgpoNetshTestCase(TestCase):
             self.assertTrue(ret)
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_set_firewall_settings_inbound_local_notconfigured(self):
         current = win_lgpo_netsh.get_settings(
             profile="domain", section="firewallpolicy", store="local"
@@ -159,6 +165,7 @@ class WinLgpoNetshTestCase(TestCase):
             self.assertTrue(ret)
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_set_firewall_settings_inbound_lgpo_notconfigured(self):
         current = win_lgpo_netsh.get_settings(
             profile="domain", section="firewallpolicy", store="lgpo"
@@ -179,6 +186,7 @@ class WinLgpoNetshTestCase(TestCase):
             self.assertTrue(ret)
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_set_firewall_settings_outbound_local(self):
         current = win_lgpo_netsh.get_settings(
             profile="domain", section="firewallpolicy", store="local"
@@ -199,6 +207,7 @@ class WinLgpoNetshTestCase(TestCase):
             self.assertTrue(ret)
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_set_firewall_logging_allowed_local_enable(self):
         current = win_lgpo_netsh.get_settings(
             profile="domain", section="logging", store="local"
@@ -225,6 +234,7 @@ class WinLgpoNetshTestCase(TestCase):
             self.assertTrue(ret)
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_set_firewall_logging_allowed_local_notconfigured(self):
         current = win_lgpo_netsh.get_settings(
             profile="domain", section="logging", store="local"
@@ -248,6 +258,7 @@ class WinLgpoNetshTestCase(TestCase):
             self.assertTrue(ret)
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_set_firewall_logging_allowed_lgpo_notconfigured(self):
         current = win_lgpo_netsh.get_settings(
             profile="domain", section="logging", store="lgpo"
@@ -273,6 +284,7 @@ class WinLgpoNetshTestCase(TestCase):
             )
             self.assertTrue(ret)
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_set_firewall_logging_dropped_local_enable(self):
         current = win_lgpo_netsh.get_settings(
             profile="domain", section="logging", store="local"
@@ -298,6 +310,7 @@ class WinLgpoNetshTestCase(TestCase):
             )
             self.assertTrue(ret)
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_set_firewall_logging_filename_local(self):
         current = win_lgpo_netsh.get_settings(
             profile="domain", section="logging", store="local"
@@ -320,6 +333,7 @@ class WinLgpoNetshTestCase(TestCase):
             )
             self.assertTrue(ret)
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_set_firewall_logging_maxfilesize_local(self):
         current = win_lgpo_netsh.get_settings(
             profile="domain", section="logging", store="local"
@@ -351,6 +365,7 @@ class WinLgpoNetshTestCase(TestCase):
         )
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_set_firewall_settings_fwrules_lgpo_notconfigured(self):
         current = win_lgpo_netsh.get_settings(
             profile="domain", section="settings", store="lgpo"
@@ -387,6 +402,7 @@ class WinLgpoNetshTestCase(TestCase):
             store="local",
         )
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_set_firewall_settings_notification_local_enable(self):
         current = win_lgpo_netsh.get_settings(
             profile="domain", section="settings", store="local"
@@ -413,6 +429,7 @@ class WinLgpoNetshTestCase(TestCase):
             self.assertTrue(ret)
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_set_firewall_settings_notification_local_notconfigured(self):
         current = win_lgpo_netsh.get_settings(
             profile="domain", section="settings", store="local"
@@ -435,6 +452,7 @@ class WinLgpoNetshTestCase(TestCase):
             )
             self.assertTrue(ret)
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_set_firewall_settings_notification_lgpo_notconfigured(self):
         current = win_lgpo_netsh.get_settings(
             profile="domain", section="settings", store="lgpo"
@@ -460,6 +478,7 @@ class WinLgpoNetshTestCase(TestCase):
             )
             self.assertTrue(ret)
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_set_firewall_settings_remotemgmt_local_enable(self):
         current = win_lgpo_netsh.get_settings(
             profile="domain", section="settings", store="local"
@@ -485,6 +504,7 @@ class WinLgpoNetshTestCase(TestCase):
             )
             self.assertTrue(ret)
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_set_firewall_settings_unicast_local_disable(self):
         current = win_lgpo_netsh.get_settings(
             profile="domain", section="settings", store="local"
@@ -511,6 +531,7 @@ class WinLgpoNetshTestCase(TestCase):
             self.assertTrue(ret)
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_set_firewall_state_local_on(self):
         current = win_lgpo_netsh.get_settings(
             profile="domain", section="state", store="local"
@@ -529,6 +550,7 @@ class WinLgpoNetshTestCase(TestCase):
             self.assertTrue(ret)
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_set_firewall_state_local_notconfigured(self):
         current = win_lgpo_netsh.get_settings(
             profile="domain", section="state", store="local"
@@ -548,6 +570,7 @@ class WinLgpoNetshTestCase(TestCase):
             self.assertTrue(ret)
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_set_firewall_state_lgpo_notconfigured(self):
         current = win_lgpo_netsh.get_settings(
             profile="domain", section="state", store="local"

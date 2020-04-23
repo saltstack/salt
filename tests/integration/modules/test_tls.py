@@ -9,6 +9,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import tempfile
 
+import pytest
+
 # Salt Libs
 import salt.modules.cmdmod as cmd
 import salt.modules.file as file
@@ -60,6 +62,7 @@ class TLSModuleTest(ModuleCase, LoaderModuleMockMixin):
     def test_ca_exists_should_be_False_before_ca_is_created(self):
         self.assertFalse(tls.ca_exists(self.ca_name))
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_ca_exists_should_be_True_after_ca_is_created(self):
         tls.create_ca(self.ca_name)
         self.assertTrue(tls.ca_exists(self.ca_name))
@@ -71,6 +74,7 @@ class TLSModuleTest(ModuleCase, LoaderModuleMockMixin):
         )
         self.assertEqual(tls.create_csr(ca_name="bad_ca"), expected_message)
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_with_existing_ca_signing_csr_should_produce_valid_cert(self):
         print("Revoked should not be here")
         empty_crl_filename = os.path.join(self.tempdir, "empty.crl")
@@ -94,6 +98,7 @@ class TLSModuleTest(ModuleCase, LoaderModuleMockMixin):
         print("not there")
         self.assertTrue(ret["valid"], ret.get("error"))
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_revoked_cert_should_return_False_from_validate(self):
         revoked_crl_filename = os.path.join(self.tempdir, "revoked.crl")
         tls.create_ca(self.ca_name)

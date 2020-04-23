@@ -18,6 +18,7 @@ class FileserverTest(ShellCase):
     Test the fileserver runner
     """
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_dir_list(self):
         """
         fileserver.dir_list
@@ -36,6 +37,7 @@ class FileserverTest(ShellCase):
         self.assertIsInstance(ret["return"], list)
         self.assertTrue("_modules" in ret["return"])
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_empty_dir_list(self):
         """
         fileserver.empty_dir_list
@@ -54,6 +56,7 @@ class FileserverTest(ShellCase):
         self.assertIsInstance(ret["return"], list)
         self.assertEqual(ret["return"], [])
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_envs(self):
         """
         fileserver.envs
@@ -69,6 +72,7 @@ class FileserverTest(ShellCase):
         ret = self.run_run_plus(fun="fileserver.envs", backend=["roots"])
         self.assertIsInstance(ret["return"], list)
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_clear_file_list_cache(self):
         """
         fileserver.clear_file_list_cache
@@ -145,6 +149,7 @@ class FileserverTest(ShellCase):
             )
             self.assertEqual(ret["return"], {"roots": ["base"]})
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_file_list(self):
         """
         fileserver.file_list
@@ -169,6 +174,7 @@ class FileserverTest(ShellCase):
         salt.utils.platform.is_windows(),
         "Git for Windows does not preserve symbolic links when cloning",
     )
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_symlink_list(self):
         """
         fileserver.symlink_list
@@ -187,6 +193,7 @@ class FileserverTest(ShellCase):
         self.assertIsInstance(ret["return"], dict)
         self.assertTrue("dest_sym" in ret["return"])
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_update(self):
         """
         fileserver.update

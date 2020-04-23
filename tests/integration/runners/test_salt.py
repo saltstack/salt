@@ -16,6 +16,7 @@ class SaltRunnerTest(ShellCase):
     Test the salt runner
     """
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_salt_cmd(self):
         """
         test return values of salt.cmd
@@ -27,6 +28,7 @@ class SaltRunnerTest(ShellCase):
         self.assertEqual(out_ret, "True")
         self.assertTrue(return_ret)
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_salt_cmd_invalid(self):
         """
         test return values of salt.cmd invalid parameters

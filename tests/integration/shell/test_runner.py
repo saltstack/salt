@@ -49,6 +49,7 @@ class TestSaltRun(object):
     Test the salt-run command
     """
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_in_docs(self, salt_run_cli):
         """
         test the salt-run docs system
@@ -62,6 +63,7 @@ class TestSaltRun(object):
         assert "network.wol:" in ret.stdout
         assert "network.wollist:" in ret.stdout
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_not_in_docs(self, salt_run_cli):
         """
         test the salt-run docs system
@@ -69,6 +71,7 @@ class TestSaltRun(object):
         ret = salt_run_cli.run("-d")
         assert "jobs.SaltException:" not in ret.stdout
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_salt_documentation_too_many_arguments(self, salt_run_cli):
         """
         Test to see if passing additional arguments shows an error
@@ -77,6 +80,7 @@ class TestSaltRun(object):
         assert ret.exitcode != 0
         assert "You can only get documentation for one method at one time" in ret.stderr
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_exit_status_unknown_argument(self, salt_run_cli):
         """
         Ensure correct exit status when an unknown argument is passed to salt-run.
@@ -86,6 +90,7 @@ class TestSaltRun(object):
         assert "Usage" in ret.stderr
         assert "no such option: --unknown-argument" in ret.stderr
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_exit_status_correct_usage(self, salt_run_cli):
         """
         Ensure correct exit status when salt-run starts correctly.
@@ -96,6 +101,7 @@ class TestSaltRun(object):
     @pytest.mark.skip_if_not_root
     @pytest.mark.parametrize("flag", ["--auth", "--eauth", "--external-auth", "-a"])
     @pytest.mark.skip_on_windows(reason="PAM is not supported on Windows")
+    @pytest.mark.slow_test(seconds=120)  # Test takes >60 and <=120 seconds
     def test_salt_run_with_eauth_all_args(
         self, salt_run_cli, saltdev_account, flag, grains
     ):
@@ -127,6 +133,7 @@ class TestSaltRun(object):
 
     @pytest.mark.skip_if_not_root
     @pytest.mark.skip_on_windows(reason="PAM is not supported on Windows")
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_salt_run_with_eauth_bad_passwd(self, salt_run_cli, saltdev_account):
         """
         test salt-run with eauth and bad password
@@ -149,6 +156,7 @@ class TestSaltRun(object):
             )
         )
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_salt_run_with_wrong_eauth(self, salt_run_cli):
         """
         test salt-run with wrong eauth parameter

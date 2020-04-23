@@ -73,6 +73,7 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
             if check_status is not exp_return:
                 self.fail("status of service is not returning correctly")
 
+    @pytest.mark.slow_test(seconds=120)  # Test takes >60 and <=120 seconds
     def test_service_running(self):
         """
         test service.running state module
@@ -90,6 +91,7 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(start_service)
         self.check_service_status(self.running)
 
+    @pytest.mark.slow_test(seconds=120)  # Test takes >60 and <=120 seconds
     def test_service_dead(self):
         """
         test service.dead state module
@@ -102,6 +104,7 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.check_service_status(self.stopped)
 
+    @pytest.mark.slow_test(seconds=120)  # Test takes >60 and <=120 seconds
     def test_service_dead_init_delay(self):
         """
         test service.dead state module with init_delay arg

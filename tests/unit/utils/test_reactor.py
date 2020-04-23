@@ -8,6 +8,7 @@ import logging
 import os
 import textwrap
 
+import pytest
 import salt.loader
 import salt.utils.data
 import salt.utils.files
@@ -410,6 +411,7 @@ class TestReactor(TestCase, AdaptedConfigurationTestCaseMixin):
         del cls.reactor
         del cls.render_pipe
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_list_reactors(self):
         """
         Ensure that list_reactors() returns the correct list of reactor SLS
@@ -422,6 +424,7 @@ class TestReactor(TestCase, AdaptedConfigurationTestCaseMixin):
                     self.reactor.list_reactors(tag), self.reaction_map[tag]
                 )
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_reactions(self):
         """
         Ensure that the correct reactions are built from the configured SLS
@@ -476,6 +479,7 @@ class TestReactWrap(TestCase, AdaptedConfigurationTestCaseMixin):
     def tearDownClass(cls):
         del cls.wrap
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_runner(self):
         """
         Test runner reactions using both the old and new config schema
@@ -521,6 +525,7 @@ class TestReactWrap(TestCase, AdaptedConfigurationTestCaseMixin):
                 *WRAPPER_CALLS[tag]["args"], **WRAPPER_CALLS[tag]["kwargs"]
             )
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_cmd(self):
         """
         Test cmd reactions (alias for 'local') using both the old and new
@@ -537,6 +542,7 @@ class TestReactWrap(TestCase, AdaptedConfigurationTestCaseMixin):
                 *WRAPPER_CALLS[tag]["args"], **WRAPPER_CALLS[tag]["kwargs"]
             )
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_caller(self):
         """
         Test caller reactions using both the old and new config schema

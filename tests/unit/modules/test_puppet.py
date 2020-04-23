@@ -9,6 +9,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import os
 
+import pytest
 import salt.modules.puppet as puppet
 
 # Import Salt Libs
@@ -51,6 +52,7 @@ class PuppetTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(puppet, "run", mock):
             self.assertDictEqual(puppet.noop(), {"stderr": "A", "stdout": "B"})
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_enable(self):
         """
         Test to enable the puppet agent
@@ -87,6 +89,7 @@ class PuppetTestCase(TestCase, LoaderModuleMockMixin):
                 except StopIteration:
                     pass
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_status(self):
         """
         Test to display puppet agent status

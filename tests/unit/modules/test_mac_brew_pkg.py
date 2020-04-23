@@ -6,6 +6,8 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.mac_brew_pkg as mac_brew
 import salt.utils.pkg
@@ -95,6 +97,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
 
     # '_homebrew_bin' function tests: 1
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_homebrew_bin(self):
         """
         Tests the path to the homebrew binary

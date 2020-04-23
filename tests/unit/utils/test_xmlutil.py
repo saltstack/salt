@@ -5,6 +5,7 @@
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
 import salt.utils.xmlutil as xml
 
 # Import Salt libs
@@ -142,6 +143,7 @@ class XMLUtilTestCase(TestCase):
         defaultdict = xml.to_dict(xmldata, True)
         self.assertEqual(defaultdict, self.cases["d"]["full"])
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_xml_case_e(self):
         xmldata = ET.fromstring(self.cases["e"]["xml"])
         defaultdict = xml.to_dict(xmldata)

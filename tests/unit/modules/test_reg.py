@@ -450,6 +450,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
             reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_set_value_unicode_key(self):
         """
         Test the set_value function on a unicode key

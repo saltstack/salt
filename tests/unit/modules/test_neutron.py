@@ -6,6 +6,8 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.neutron as neutron
 
@@ -1002,6 +1004,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_ipsec_site_connections' function tests: 1
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_list_ipsec_site(self):
         """
         Test if it fetches all configured IPsec Site Connections for a tenant

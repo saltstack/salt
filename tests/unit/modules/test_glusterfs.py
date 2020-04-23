@@ -7,6 +7,8 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.glusterfs as glusterfs
 from salt.exceptions import SaltInvocationError
@@ -794,6 +796,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_op_version' function tests: 1
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_get_op_version(self):
         """
         Test retrieving the glusterfs op-version

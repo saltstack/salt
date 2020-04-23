@@ -6,6 +6,8 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.bridge as bridge
 
@@ -82,6 +84,7 @@ class BridgeTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(bridge, "_os_dispatch", mock):
             self.assertEqual(bridge.delete(), "A")
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_addif(self):
         """
         Test for Adds an interface to a bridge

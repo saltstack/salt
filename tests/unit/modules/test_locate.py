@@ -6,6 +6,8 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.locate as locate
 
@@ -68,6 +70,7 @@ class LocateTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'locate' function tests: 1
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_locate(self):
         """
         Test if it performs a file lookup.

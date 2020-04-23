@@ -9,6 +9,7 @@ import os
 import shutil
 import uuid
 
+import pytest
 import salt.modules.seed as seed
 
 # Import Salt Libs
@@ -29,6 +30,7 @@ class SeedTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {seed: {}}
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_mkconfig_odict(self):
         with patch.dict(seed.__opts__, {"master": "foo"}):
             ddd = salt.utils.odict.OrderedDict()

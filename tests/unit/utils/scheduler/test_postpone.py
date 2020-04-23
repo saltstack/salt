@@ -31,6 +31,7 @@ class SchedulerPostponeTest(SchedulerTestsBase):
         super(SchedulerPostponeTest, self).setUp()
         self.schedule.opts["loop_interval"] = 1
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_postpone(self):
         """
         verify that scheduled job is postponed until the specified time.

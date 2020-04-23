@@ -11,6 +11,8 @@
 # Import Python libs
 from __future__ import absolute_import, print_function
 
+import pytest
+
 # Import 3rd-party libs
 # pylint: disable=import-error
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
@@ -32,22 +34,26 @@ except ImportError:
 
 
 @skipIf(HAS_LIBCLOUD is False, "salt-cloud requires >= libcloud 0.11.4")
+@pytest.mark.slow_test(seconds=5)  # Inheritance used. Skip the whole class
 class SaltCloudCliTest(ShellCase, ShellCaseCommonTestsMixin):
 
     _call_binary_ = "salt-cloud"
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_function_arguments(self):
         self.assertIn(
             "error: --function expects two arguments: " "<function-name> <provider>",
             "\n".join(self.run_cloud("--function show_image -h", catch_stderr=True)[1]),
         )
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_list_providers_accepts_no_arguments(self):
         self.assertIn(
             "error: '--list-providers' does not accept any " "arguments",
             "\n".join(self.run_cloud("--list-providers ec2", catch_stderr=True)[1]),
         )
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_mutually_exclusive_query_options(self):
         test_options = ["--query", "--full-query", "--select-query", "--list-providers"]
         while True:
@@ -70,6 +76,7 @@ class SaltCloudCliTest(ShellCase, ShellCaseCommonTestsMixin):
                 # Only one left? Stop iterating
                 break
 
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_mutually_exclusive_list_options(self):
         test_options = ["--list-locations", "--list-images", "--list-sizes"]
         while True:

@@ -7,6 +7,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 from datetime import datetime
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.redismod as redismod
 
@@ -380,6 +382,7 @@ class RedismodTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertEqual(redismod.key_type("key"), "A")
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_lastsave(self):
         """
         Test to get the UNIX time in seconds of the last successful

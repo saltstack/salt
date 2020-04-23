@@ -3,6 +3,8 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 from salt.pillar import extra_minion_data_in_pillar
 
@@ -39,6 +41,7 @@ class ExtraMinionDataInPillarTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(ret, {})
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_include_all(self):
         for include_all in ["*", "<all>"]:
             ret = extra_minion_data_in_pillar.ext_pillar(

@@ -23,6 +23,7 @@ class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
         """
         self.runner = salt.runner.RunnerClient(self.get_config("client_config"))
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_eauth(self):
         """
         Test executing master_call with lowdata
@@ -38,6 +39,7 @@ class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
 
         self.runner.master_call(**low)
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_token(self):
         """
         Test executing master_call with lowdata
@@ -54,6 +56,7 @@ class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
             **{"client": "runner", "fun": "error.error", "token": token["token"]}
         )
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_cmd_sync(self):
         low = {
             "client": "runner",
@@ -63,6 +66,7 @@ class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
 
         self.runner.cmd_sync(low)
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_cmd_async(self):
         low = {
             "client": "runner",
@@ -72,6 +76,7 @@ class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
 
         self.runner.cmd_async(low)
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_cmd_sync_w_arg(self):
         low = {
             "fun": "test.arg",
@@ -84,6 +89,7 @@ class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(ret["kwargs"]["foo"], "Foo!")
         self.assertEqual(ret["kwargs"]["bar"], "Bar!")
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_wildcard_auth(self):
         low = {
             "username": "the_s0und_of_t3ch",
@@ -95,12 +101,14 @@ class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
         }
         self.runner.cmd_sync(low)
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_full_return_kwarg(self):
         low = {"fun": "test.arg"}
         low.update(self.eauth_creds)
         ret = self.runner.cmd_sync(low, full_return=True)
         self.assertIn("success", ret["data"])
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_cmd_sync_arg_kwarg_parsing(self):
         low = {
             "client": "runner",
@@ -125,6 +133,7 @@ class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
             },
         )
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_invalid_kwargs_are_ignored(self):
         low = {
             "client": "runner",

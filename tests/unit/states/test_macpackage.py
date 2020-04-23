@@ -5,6 +5,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import sys
 
+import pytest
+
 # Import Salt Libs
 import salt.states.macpackage as macpackage
 
@@ -339,6 +341,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(out, expected)
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_installed_app_dmg_exists(self):
         """
             Test installing an APP file contained in a DMG file where the file exists

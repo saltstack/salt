@@ -5,6 +5,8 @@ from __future__ import absolute_import
 
 from collections import namedtuple
 
+import pytest
+
 # Salt libs
 import salt.beacons.diskusage as diskusage
 from tests.support.mixins import LoaderModuleMockMixin
@@ -65,6 +67,7 @@ class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(ret, (True, "Valid beacon configuration"))
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_diskusage_match(self):
         disk_usage_mock = Mock(side_effect=STUB_DISK_USAGE)
         with patch(

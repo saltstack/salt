@@ -8,6 +8,8 @@ import os
 import shutil
 import tempfile
 
+import pytest
+
 # Salt libs
 import salt.utils.files
 from salt.beacons import inotify
@@ -67,6 +69,7 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(ret, _expected)
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_files_list_config(self):
         config = [{"files": [{u"/importantfile": {u"mask": [u"modify"]}}]}]
         ret = inotify.validate(config)
@@ -92,6 +95,7 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret[0]["path"], path)
         self.assertEqual(ret[0]["change"], "IN_OPEN")
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_dir_no_auto_add(self):
         config = [{"files": {self.tmpdir: {"mask": ["create"]}}}]
         ret = inotify.validate(config)

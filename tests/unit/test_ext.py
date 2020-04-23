@@ -8,6 +8,8 @@ import subprocess
 import sys
 import tempfile
 
+import pytest
+
 # Import Salt libs
 import salt
 import salt.ext.six
@@ -29,6 +31,7 @@ class VendorTornadoTest(TestCase):
     Ensure we are not using any non vendor'ed tornado
     """
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_import_override(self):
         tmp = tempfile.mkdtemp()
         test_source = tests.support.helpers.dedent(
@@ -69,6 +72,7 @@ class VendorTornadoTest(TestCase):
         pout = p.stdout.read().strip().decode()
         assert pout == "salt.ext.tornado", pout
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_vendored_tornado_import(self):
         grep_call = salt.modules.cmdmod.run_stdout(
             cmd="bash -c 'grep -r \"import tornado\" ./salt/*'",
@@ -87,6 +91,7 @@ class VendorTornadoTest(TestCase):
             valid_lines.append(line)
         assert valid_lines == [], len(valid_lines)
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_vendored_tornado_import_from(self):
         grep_call = salt.modules.cmdmod.run_stdout(
             cmd="bash -c 'grep -r \"from tornado\" ./salt/*'",

@@ -13,6 +13,7 @@ class PillarModuleTest(ModuleCase):
     Validate the pillar module
     """
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_data(self):
         """
         pillar.data
@@ -26,6 +27,7 @@ class PillarModuleTest(ModuleCase):
         else:
             self.assertEqual(pillar["class"], "other")
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_issue_5449_report_actual_file_roots_in_pillar(self):
         """
         pillar['master']['file_roots'] is overwritten by the master
@@ -38,18 +40,21 @@ class PillarModuleTest(ModuleCase):
             self.run_function("pillar.data")["master"]["file_roots"]["base"],
         )
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_ext_cmd_yaml(self):
         """
         pillar.data for ext_pillar cmd.yaml
         """
         self.assertEqual(self.run_function("pillar.data")["ext_spam"], "eggs")
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_issue_5951_actual_file_roots_in_opts(self):
         self.assertIn(
             RUNTIME_VARS.TMP_STATE_TREE,
             self.run_function("pillar.data")["ext_pillar_opts"]["file_roots"]["base"],
         )
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_pillar_items(self):
         """
         Test to ensure we get expected output
@@ -61,6 +66,7 @@ class PillarModuleTest(ModuleCase):
             {"knights": ["Lancelot", "Galahad", "Bedevere", "Robin"]}, get_items
         )
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_pillar_command_line(self):
         """
         Test to ensure when using pillar override

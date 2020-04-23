@@ -16,6 +16,8 @@ import os
 import shutil
 import tempfile
 
+import pytest
+
 # Import salt libs
 import salt.utils.cloud as cloud
 import salt.utils.platform
@@ -105,6 +107,7 @@ class CloudUtilsTestCase(TestCase):
                 cloud.SSH_PASSWORD_PROMP_RE.match(pattern.lower().strip()), None
             )
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test__save_password_in_keyring(self):
         """
         Test storing password in the keyring

@@ -6,6 +6,8 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.pw_user as pw_user
 from salt.exceptions import CommandExecutionError
@@ -161,6 +163,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(pw_user, "list_groups", mock):
                 self.assertTrue(pw_user.chgroups("name", "a, b, c"))
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_chfullname(self):
         """
         Change the user's Full Name

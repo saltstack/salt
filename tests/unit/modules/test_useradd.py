@@ -6,6 +6,8 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.useradd as useradd
 from salt.exceptions import CommandExecutionError
@@ -70,6 +72,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
     # 'getent' function tests: 2
 
     @skipIf(HAS_PWD is False, "The pwd module is not available")
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_getent(self):
         """
         Test if user.getent already have a value

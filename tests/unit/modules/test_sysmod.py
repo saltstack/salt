@@ -6,6 +6,8 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.sysmod as sysmod
 
@@ -309,6 +311,7 @@ class SysmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'runner_argspec' function tests: 1
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_runner_argspec(self):
         """
         Test if it return the argument specification of functions in Salt runner

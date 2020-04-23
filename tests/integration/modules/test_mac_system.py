@@ -62,6 +62,7 @@ class MacSystemModuleTest(ModuleCase):
         )
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=120)  # Test takes >60 and <=120 seconds
     def test_get_set_remote_login(self):
         """
         Test system.get_remote_login
@@ -90,6 +91,7 @@ class MacSystemModuleTest(ModuleCase):
         )
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=120)  # Test takes >60 and <=120 seconds
     def test_get_set_remote_events(self):
         """
         Test system.get_remote_events
@@ -118,6 +120,7 @@ class MacSystemModuleTest(ModuleCase):
         )
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_get_set_subnet_name(self):
         """
         Test system.get_subnet_name
@@ -126,6 +129,7 @@ class MacSystemModuleTest(ModuleCase):
         self.assertTrue(self.run_function("system.set_subnet_name", [SET_SUBNET_NAME]))
         self.assertEqual(self.run_function("system.get_subnet_name"), SET_SUBNET_NAME)
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_get_list_startup_disk(self):
         """
         Test system.get_startup_disk
@@ -162,6 +166,7 @@ class MacSystemModuleTest(ModuleCase):
             self.run_function("system.set_restart_delay", [70]),
         )
 
+    @pytest.mark.slow_test(seconds=120)  # Test takes >60 and <=120 seconds
     def test_get_set_disable_keyboard_on_lock(self):
         """
         Test system.get_disable_keyboard_on_lock
@@ -243,6 +248,7 @@ class MacSystemComputerNameTest(ModuleCase):
     # investigate
     # @skipIf(salt.utils.platform.is_darwin() and six.PY3, 'This test hangs on OS X on Py3.  Skipping until #53566 is merged.')
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_get_set_computer_name(self):
         """
         Test system.get_computer_name

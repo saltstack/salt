@@ -617,6 +617,7 @@ class GitPythonMixin(object):
 @pytest.mark.destructive_test
 @skipIf(not HAS_GITPYTHON, "GitPython >= {0} required".format(GITPYTHON_MINVER))
 @skipIf(not HAS_SSHD, "sshd not present")
+@pytest.mark.slow_test(seconds=30)  # The whole test class needs to run.
 class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
     """
     Test git_pillar with GitPython using SSH authentication
@@ -633,6 +634,7 @@ class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
 @skipIf(not HAS_GITPYTHON, "GitPython >= {0} required".format(GITPYTHON_MINVER))
 @skipIf(not HAS_NGINX, "nginx not present")
 @skipIf(not HAS_VIRTUALENV, "virtualenv not present")
+@pytest.mark.slow_test(seconds=60)  # The whole test class needs to run.
 class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
     """
     Test git_pillar with GitPython using unauthenticated HTTP
@@ -644,6 +646,7 @@ class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
 @skipIf(not HAS_GITPYTHON, "GitPython >= {0} required".format(GITPYTHON_MINVER))
 @skipIf(not HAS_NGINX, "nginx not present")
 @skipIf(not HAS_VIRTUALENV, "virtualenv not present")
+@pytest.mark.slow_test(seconds=60)  # The whole test class needs to run.
 class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
     """
     Test git_pillar with GitPython using authenticated HTTP
@@ -680,6 +683,7 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
     "pygit2 >= {0} and libgit2 >= {1} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
 )
 @skipIf(not HAS_SSHD, "sshd not present")
+@pytest.mark.slow_test(seconds=30)  # The whole test class needs to run.
 class TestPygit2SSH(GitPillarSSHTestBase):
     """
     Test git_pillar with pygit2 using SSH authentication
@@ -2211,6 +2215,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 )
 @skipIf(not HAS_NGINX, "nginx not present")
 @skipIf(not HAS_VIRTUALENV, "virtualenv not present")
+@pytest.mark.slow_test(seconds=60)  # The whole test class needs to run.
 class TestPygit2HTTP(GitPillarHTTPTestBase):
     """
     Test git_pillar with pygit2 using SSH authentication
@@ -2705,6 +2710,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
 )
 @skipIf(not HAS_NGINX, "nginx not present")
 @skipIf(not HAS_VIRTUALENV, "virtualenv not present")
+@pytest.mark.slow_test(seconds=60)  # The whole test class needs to run.
 class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
     """
     Test git_pillar with pygit2 using SSH authentication

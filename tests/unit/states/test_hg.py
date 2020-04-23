@@ -7,6 +7,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
+import pytest
+
 # Import Salt Libs
 import salt.states.hg as hg
 
@@ -50,6 +52,7 @@ class HgTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(hg, "_clone_repo", mock):
                     self.assertDictEqual(hg.latest("salt", target="c:\\salt"), ret)
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_latest_update_changes(self):
         """
             Test to make sure we don't update even if we have changes

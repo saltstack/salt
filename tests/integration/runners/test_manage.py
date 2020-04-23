@@ -15,6 +15,7 @@ class ManageTest(ShellCase):
     Test the manage runner
     """
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_up(self):
         """
         manage.up
@@ -25,6 +26,7 @@ class ManageTest(ShellCase):
         self.assertTrue(any("- minion" in out for out in ret["out"]))
         self.assertTrue(any("- sub_minion" in out for out in ret["out"]))
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_down(self):
         """
         manage.down

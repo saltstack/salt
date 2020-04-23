@@ -30,6 +30,7 @@ class TimezoneLinuxModuleTest(ModuleCase):
             self.skipTest("For Linux only")
         super(TimezoneLinuxModuleTest, self).setUp()
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_get_hwclock(self):
         timescale = ["UTC", "localtime"]
         ret = self.run_function("timezone.get_hwclock")

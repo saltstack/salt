@@ -62,6 +62,7 @@ class TestGrainsReg(ModuleCase, LoaderModuleMockMixin):
         return {salt.modules.reg: {"__opts__": opts, "__utils__": utils}}
 
     @skipIf(not salt.utils.platform.is_windows(), "Only run on Windows")
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_win_cpu_model(self):
         """
         test grains['cpu_model']

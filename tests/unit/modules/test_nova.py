@@ -6,6 +6,8 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.nova as nova
 
@@ -115,6 +117,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(self.mock_auth, "delete", MagicMock(return_value="A")):
             self.assertTrue(nova.delete("instance_id"))
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_flavor_list(self):
         """
         Test for Return a list of available flavors (nova flavor-list)

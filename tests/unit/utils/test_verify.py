@@ -130,6 +130,7 @@ class TestVerify(TestCase):
                 # not support IPv6.
                 pass
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_max_open_files(self):
         with TstSuiteLoggingHandler() as handler:
             logmsg_dbg = "DEBUG:This salt-master instance has accepted {0} minion keys."

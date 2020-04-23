@@ -13,6 +13,7 @@ import logging
 import ssl
 import sys
 
+import pytest
 import salt.utils.vmware
 
 # Import Salt libraries
@@ -583,6 +584,7 @@ class WaitForTaskTestCase(TestCase):
             )
         self.assertEqual(excinfo.exception.strerror, "SystemError msg")
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_info_error_invalid_argument_no_fault_message(self):
         exc = vmodl.fault.InvalidArgument()
         exc.faultMessage = None
@@ -1128,6 +1130,7 @@ class GetContentTestCase(TestCase):
         )
 
     # Also checks destroy is called
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_local_traversal_spec(self):
         with patch("salt.utils.vmware.get_root_folder", self.get_root_folder_mock):
             with patch(self.traversal_spec_method_name, self.traversal_spec_mock):
@@ -1213,6 +1216,7 @@ class GetContentTestCase(TestCase):
                 salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_destroy_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -1269,6 +1273,7 @@ class GetContentTestCase(TestCase):
         self.retrieve_contents_mock.assert_called_once_with([self.filter_spec_ret_mock])
         self.assertEqual(ret, self.result_mock)
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_retrieve_contents_raise_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -1302,6 +1307,7 @@ class GetContentTestCase(TestCase):
             salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_local_properties_set(self):
         container_ref_mock = MagicMock()
         with patch(self.traversal_spec_method_name, self.traversal_spec_mock):
@@ -1570,6 +1576,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                 mechanism="userpass",
             )
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_userpass_mech_domain_unused(self):
         mock_sc = MagicMock()
         with patch("salt.utils.vmware.SmartConnect", mock_sc):
@@ -1994,6 +2001,7 @@ class GetServiceInstanceTestCase(TestCase):
                 "fake_host", None, None, "https", 443, "userpass", None, None
             )
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_no_cached_service_instance_same_host_on_proxy(self):
         with patch("salt.utils.platform.is_proxy", MagicMock(return_value=True)):
             # Service instance is uncached when using class default mock objs
@@ -2133,6 +2141,7 @@ class GetServiceInstanceTestCase(TestCase):
                 )
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_current_time_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -2170,6 +2179,7 @@ class DisconnectTestCase(TestCase):
             salt.utils.vmware.disconnect(service_instance=self.mock_si)
             mock_disconnect.assert_called_once_with(self.mock_si)
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_disconnect_raise_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -2580,6 +2590,7 @@ class CreateDatacenterTestCase(TestCase):
             salt.utils.vmware.create_datacenter(self.mock_si, "fake_dc")
         self.mock_create_datacenter.assert_called_once_with("fake_dc")
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_create_datacenter_raise_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -2978,6 +2989,7 @@ class UpdateDvsTestCase(TestCase):
             self.mock_dvs_spec
         )
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_reconfigure_dvs_task_raises_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -3413,6 +3425,7 @@ class UpdateDvportgroupTestCase(TestCase):
             self.mock_pg_spec
         )
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_reconfigure_dvporgroup_task_raises_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -3566,6 +3579,7 @@ class GetHostsTestCase(TestCase):
             "Must specify the datacenter when specifying the " "cluster",
         )
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_get_si_no_datacenter_no_cluster(self):
         mock_get_mors = MagicMock()
         mock_get_root_folder = MagicMock(return_value=self.mock_root_folder)
@@ -3580,6 +3594,7 @@ class GetHostsTestCase(TestCase):
             property_list=["name"],
         )
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_get_si_datacenter_name_no_cluster_name(self):
         mock_dc = MagicMock()
         mock_get_dc = MagicMock(return_value=mock_dc)
@@ -3637,6 +3652,7 @@ class GetHostsTestCase(TestCase):
             )
         self.assertEqual(res, [self.mock_host1, self.mock_host2])
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_get_all_host_flag_not_set_and_no_host_names(self):
         with patch(
             "salt.utils.vmware.get_mors_with_properties",
@@ -3771,6 +3787,7 @@ class GetLicenseAssignmentManagerTestCase(TestCase):
             salt.utils.vmware.get_license_assignment_manager(self.mock_si)
         self.assertEqual(excinfo.exception.strerror, "VimFault msg")
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = "RuntimeFault msg"
@@ -3828,6 +3845,7 @@ class GetLicensesTestCase(TestCase):
             salt.utils.vmware.get_licenses(self.mock_si)
         mock_get_license_manager.assert_called_once_with(self.mock_si)
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_license_manager_passed_in(self):
         mock_licenses = PropertyMock()
         mock_lic_mgr = MagicMock()
@@ -3939,6 +3957,7 @@ class AddLicenseTestCase(TestCase):
             "fake_license_key", [self.mock_label]
         )
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_add_license_raises_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -4255,6 +4274,7 @@ class AssignLicenseTestCase(TestCase):
         self.assertEqual(mock_get_license_assign_manager.call_count, 0)
         self.assertEqual(self.mock_update_assigned_license.call_count, 1)
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_entity_name(self):
         mock_trace = MagicMock()
         with patch("salt._logging.impl.SaltLoggingClass.trace", mock_trace):
@@ -4336,6 +4356,7 @@ class AssignLicenseTestCase(TestCase):
             self.mock_ent_id, self.mock_lic_key, "fake_license_name"
         )
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_update_assigned_licenses_call_with_entity(self):
         salt.utils.vmware.assign_license(
             self.mock_si,
@@ -4605,6 +4626,7 @@ class GetDatastoresTestCase(TestCase):
             )
         self.assertEqual(res, [])
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_host_traversal_spec(self):
         # Reference is of type vim.HostSystem
         mock_traversal_spec_init = MagicMock()
@@ -4791,6 +4813,7 @@ class RenameDatastoreTestCase(TestCase):
         salt.utils.vmware.rename_datastore(self.mock_ds_ref, "fake_new_name")
         self.mock_get_managed_object_name.assert_called_once_with(self.mock_ds_ref)
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_rename_datastore_raise_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -4905,6 +4928,7 @@ class CreateVirtualMachineTestCase(TestCase):
             exc.exception.strerror, "Not enough permissions. Required privilege: "
         )
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_create_vm_raise_vim_fault(self):
         exception = vim.fault.VimFault()
         exception.msg = "vim.fault.VimFault msg"
@@ -4972,6 +4996,7 @@ class RegisterVirtualMachineTestCase(TestCase):
         )
         self.assert_called_once(self.mock_vm_register_task)
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_register_vm_host_task_call(self):
         salt.utils.vmware.register_vm(
             self.datacenter,
@@ -5062,6 +5087,7 @@ class UpdateVirtualMachineTestCase(TestCase):
             salt.utils.vmware.update_vm(self.mock_vm_ref, self.mock_config_spec)
         self.assertEqual(exc.exception.strerror, "vim.fault.VimFault")
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_update_vm_raise_runtime_fault(self):
         exception = vmodl.RuntimeFault()
         exception.msg = "vmodl.RuntimeFault"
@@ -5070,6 +5096,7 @@ class UpdateVirtualMachineTestCase(TestCase):
             salt.utils.vmware.update_vm(self.mock_vm_ref, self.mock_config_spec)
         self.assertEqual(exc.exception.strerror, "vmodl.RuntimeFault")
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_update_vm_wait_for_task(self):
         mock_wait_for_task = MagicMock()
         with patch(

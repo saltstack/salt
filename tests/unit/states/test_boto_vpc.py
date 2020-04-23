@@ -8,6 +8,8 @@ import random
 import string
 import sys
 
+import pytest
+
 # Import Salt libs
 import salt.config
 import salt.states.boto_vpc as boto_vpc
@@ -169,6 +171,7 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_present_when_vpc_does_not_exist(self):
         """
         Tests present on a VPC that does not exist.
@@ -188,6 +191,7 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_present_when_vpc_exists(self):
         vpc = self._create_vpc(name="test")
         vpc_present_result = self.salt_states["boto_vpc.present"]("test", cidr_block)
@@ -212,6 +216,7 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_absent_when_vpc_does_not_exist(self):
         """
         Tests absent on a VPC that does not exist.
@@ -226,6 +231,7 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_absent_when_vpc_exists(self):
         vpc = self._create_vpc(name="test")
         with patch.dict(botomod.__salt__, self.funcs):
@@ -370,6 +376,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
     "The boto module must be greater than"
     " or equal to version {0}".format(required_boto_version),
 )
+@pytest.mark.slow_test(seconds=60)  # Inheritance used. Skip the whole class
 class BotoVpcSubnetsTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCaseMixin):
     resource_type = "subnet"
     backend_create = "SubnetBackend.create_subnet"
@@ -384,6 +391,7 @@ class BotoVpcSubnetsTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCaseMi
     "The boto module must be greater than"
     " or equal to version {0}".format(required_boto_version),
 )
+@pytest.mark.slow_test(seconds=60)  # Inheritance used. Skip the whole class
 class BotoVpcInternetGatewayTestCase(
     BotoVpcStateTestCaseBase, BotoVpcResourceTestCaseMixin
 ):

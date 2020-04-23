@@ -15,6 +15,7 @@ class WinServermanagerTest(ModuleCase):
     Test for salt.modules.win_servermanager
     """
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_list_available(self):
         """
         Test list available features to install

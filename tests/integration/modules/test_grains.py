@@ -24,6 +24,7 @@ class TestModulesGrains(ModuleCase):
     Test the grains module
     """
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_items(self):
         """
         grains.items
@@ -34,6 +35,7 @@ class TestModulesGrains(ModuleCase):
             opts["grains"]["test_grain"],
         )
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_item(self):
         """
         grains.item
@@ -44,6 +46,7 @@ class TestModulesGrains(ModuleCase):
             opts["grains"]["test_grain"],
         )
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_ls(self):
         """
         grains.ls
@@ -88,6 +91,7 @@ class TestModulesGrains(ModuleCase):
         os.environ.get("TRAVIS_PYTHON_VERSION", None) is not None,
         "Travis environment can't keep up with salt refresh",
     )
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_set_val(self):
         """
         test grains.set_val
@@ -104,12 +108,14 @@ class TestModulesGrains(ModuleCase):
             ret = self.run_function("grains.item", ["setgrain"])
         self.assertTrue(ret)
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_get(self):
         """
         test grains.get
         """
         self.assertEqual(self.run_function("grains.get", ["level1:level2"]), "foo")
 
+    @pytest.mark.slow_test(seconds=120)  # Test takes >60 and <=120 seconds
     def test_get_core_grains(self):
         """
         test to ensure some core grains are returned
@@ -129,6 +135,7 @@ class TestModulesGrains(ModuleCase):
 
             self.assertTrue(get_grain)
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_get_grains_int(self):
         """
         test to ensure int grains
@@ -167,6 +174,7 @@ class GrainsAppendTestCase(ModuleCase):
         if not self.wait_for_grain(self.GRAIN_KEY, []):
             raise Exception("Failed to set grain")
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_grains_append(self):
         """
         Tests the return of a simple grains.append call.
@@ -174,6 +182,7 @@ class GrainsAppendTestCase(ModuleCase):
         ret = self.run_function("grains.append", [self.GRAIN_KEY, self.GRAIN_VAL])
         self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL])
 
+    @pytest.mark.slow_test(seconds=120)  # Test takes >60 and <=120 seconds
     def test_grains_append_val_already_present(self):
         """
         Tests the return of a grains.append call when the value is already
@@ -198,6 +207,7 @@ class GrainsAppendTestCase(ModuleCase):
         assert msg == ret
 
     @pytest.mark.flaky(max_runs=4)
+    @pytest.mark.slow_test(seconds=120)  # Test takes >60 and <=120 seconds
     def test_grains_append_val_is_list(self):
         """
         Tests the return of a grains.append call when val is passed in as a list.
@@ -210,6 +220,7 @@ class GrainsAppendTestCase(ModuleCase):
         )
         self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL, second_grain])
 
+    @pytest.mark.slow_test(seconds=120)  # Test takes >60 and <=120 seconds
     def test_grains_append_call_twice(self):
         """
         Tests the return of a grains.append call when the value is already present
@@ -250,6 +261,7 @@ class GrainsAppendTestCase(ModuleCase):
             time.sleep(sleep)
         return False
 
+    @pytest.mark.slow_test(seconds=480)  # Test takes >= 480 seconds
     def test_grains_remove_add(self):
         second_grain = self.GRAIN_VAL + "-2"
         ret = self.run_function("grains.get", [self.GRAIN_KEY])

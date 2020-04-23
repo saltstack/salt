@@ -46,6 +46,7 @@ class EggSetupTest(ModuleCase):
             if os.path.exists(_dir):
                 shutil.rmtree(_dir)
 
+    @pytest.mark.slow_test(seconds=240)  # Test takes >120 and <=240 seconds
     def test_egg_install(self):
         """
         test installing an egg package

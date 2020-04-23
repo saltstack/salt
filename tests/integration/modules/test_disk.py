@@ -29,6 +29,7 @@ class DiskModuleVirtualizationTest(ModuleCase):
         if os.path.isfile("/etc/mtab"):
             shutil.move("/etc/mtab", "/tmp/mtab")
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_no_mtab(self):
         ret = self.run_function("disk.usage")
         self.assertDictEqual(ret, {})
@@ -44,6 +45,7 @@ class DiskModuleTest(ModuleCase):
     Validate the disk module
     """
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_usage(self):
         """
         disk.usage
@@ -71,6 +73,7 @@ class DiskModuleTest(ModuleCase):
                 self.assertTrue("capacity" in val)
 
     @skipIf(salt.utils.platform.is_windows(), "inode info not available on Windows")
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_inodeusage(self):
         """
         disk.inodeusage

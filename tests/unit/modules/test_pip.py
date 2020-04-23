@@ -6,6 +6,7 @@ from __future__ import absolute_import
 import os
 import sys
 
+import pytest
 import salt.modules.pip as pip
 
 # Import salt libs
@@ -1040,6 +1041,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False,
                 )
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_uninstall_log_argument_in_resulting_command(self):
         pkg = "pep8"
         log_path = "/tmp/pip-install.log"

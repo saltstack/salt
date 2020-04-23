@@ -7,6 +7,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
+import pytest
+
 # Import Salt Libs
 import salt.states.mount as mount
 
@@ -1021,6 +1023,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 not_change=False,
             )
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_fstab_present_change(self):
         """
         Test fstab_present

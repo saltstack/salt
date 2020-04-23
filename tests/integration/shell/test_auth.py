@@ -76,6 +76,7 @@ class TestUserAuth(object):
     Test user auth mechanisms
     """
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_pam_auth_valid_user(self, salt_cli, saltdev_account):
         """
         test that pam auth mechanism works with a valid user
@@ -94,6 +95,7 @@ class TestUserAuth(object):
         assert ret.exitcode == 0
         assert ret.json is True
 
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_pam_auth_invalid_user(self, salt_cli, saltdev_account):
         """
         test pam auth mechanism errors for an invalid user
@@ -118,6 +120,7 @@ class TestGroupAuth(object):
     Test group auth mechanisms
     """
 
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_pam_auth_valid_group(self, salt_cli, saltadm_account):
         """
         test that pam auth mechanism works for a valid group

@@ -19,6 +19,7 @@ from tests.support.runtests import RUNTIME_VARS
 @pytest.mark.skip_if_binaries_missing(
     *KNOWN_BINARY_NAMES, check_all=False, message="virtualenv not installed"
 )
+@pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
 def test_man_pages():
     """
     Make sure that man pages are installed

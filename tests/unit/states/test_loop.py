@@ -5,6 +5,8 @@ Tests for loop state(s)
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.states.loop
 from salt.ext.six.moves import range
@@ -119,6 +121,7 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_immediate_success(self):
         """
         Test for an immediate success.
@@ -317,6 +320,7 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
                 },
             )
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_retried_failure(self):
         """
         Test if the function fails after the designated timeout.

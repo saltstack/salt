@@ -1264,6 +1264,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 ret = filemod.get_diff("binary1", "text1")
                 self.assertEqual(ret, "Replace binary file with text file")
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_stats(self):
         with patch(
             "os.path.expanduser", MagicMock(side_effect=lambda path: path)
@@ -2439,6 +2440,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
     @patch("os.path.realpath", MagicMock(wraps=lambda x: x))
     @patch("os.path.isfile", MagicMock(return_value=True))
     @patch("os.stat", MagicMock())
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_line_assert_exception_pattern(self):
         """
         Test for file.line for exception on insert with too general pattern.
@@ -3199,6 +3201,7 @@ class LsattrTests(TestCase, LoaderModuleMockMixin):
         with patch_exists, self.assertRaises(SaltInvocationError):
             filemod.lsattr("foo")
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_if_chattr_version_is_less_than_required_flags_should_ignore_extended(self):
         fname = "/path/to/fnord"
         with_extended = (

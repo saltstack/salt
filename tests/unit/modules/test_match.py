@@ -6,6 +6,7 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
 import salt.loader
 import salt.matchers.compound_match as compound_match
 import salt.matchers.glob_match as glob_match
@@ -44,6 +45,7 @@ class MatchTestCase(TestCase, LoaderModuleMockMixin):
             list_match: {"__opts__": {"id": MINION_ID}},
         }
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_compound_with_minion_id(self):
         """
         Make sure that when a minion_id IS past, that it is contained in opts

@@ -6,6 +6,7 @@ Unit tests for salt/modules/salt_version.py
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
 import salt.modules.salt_version as salt_version
 import salt.version
 
@@ -62,6 +63,7 @@ class SaltVersionTestCase(TestCase):
         mock_str = "No version assigned."
         assert salt_version.get_release_number("foo") == mock_str
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_get_release_number_success(self):
         """
         Test that a version is returned for a released codename

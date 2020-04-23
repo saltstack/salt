@@ -75,6 +75,7 @@ def pillar_items(salt_cli, create_pillar_tree):
 
 
 class TestPillarIncludeTest(object):
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_pillar_include(self, pillar_items):
         """
         Test pillar include
@@ -84,6 +85,7 @@ class TestPillarIncludeTest(object):
         assert "b" in pillar_items["element"]
         assert pillar_items["element"]["b"] == {"b": ["Entry B"]}
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_pillar_glob_include(self, pillar_items):
         """
         Test pillar include via glob pattern

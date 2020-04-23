@@ -14,6 +14,8 @@ import shutil
 import tempfile
 import time
 
+import pytest
+
 # Import salt libs
 import salt.config
 import salt.loader
@@ -41,6 +43,7 @@ class CacheDictTestCase(TestCase):
         del cd["foo"]
         self.assertNotIn("foo", cd)
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_ttl(self):
         cd = cache.CacheDict(0.1)
         cd["foo"] = "bar"
@@ -170,6 +173,7 @@ class ContextCacheTest(TestCase):
 
 
 class CacheDiskTestCase(TestCase):
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_everything(self):
         """
         Make sure you can instantiate, add, update, remove, expire

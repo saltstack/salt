@@ -172,6 +172,7 @@ class SystemModuleTest(ModuleCase):
         else:
             self.run_function("file.remove", ["/etc/machine-info"])
 
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_get_system_date_time(self):
         """
         Test we are able to get the correct time
@@ -182,6 +183,7 @@ class SystemModuleTest(ModuleCase):
         msg = "Difference in times is too large. Now: {0} Fake: {1}".format(t1, t2)
         self.assertTrue(self._same_times(t1, t2, seconds_diff=2), msg=msg)
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_get_system_date_time_utc(self):
         """
         Test we are able to get the correct time with utc
@@ -194,6 +196,7 @@ class SystemModuleTest(ModuleCase):
 
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_set_system_date_time(self):
         """
         Test changing the system clock. We are only able to set it up to a
@@ -212,6 +215,7 @@ class SystemModuleTest(ModuleCase):
 
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_set_system_date_time_utc(self):
         """
         Test changing the system clock. We are only able to set it up to a
@@ -231,6 +235,7 @@ class SystemModuleTest(ModuleCase):
 
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_set_system_date_time_utcoffset_east(self):
         """
         Test changing the system clock. We are only able to set it up to a
@@ -252,6 +257,7 @@ class SystemModuleTest(ModuleCase):
 
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_set_system_date_time_utcoffset_west(self):
         """
         Test changing the system clock. We are only able to set it up to a
@@ -274,6 +280,7 @@ class SystemModuleTest(ModuleCase):
     @pytest.mark.flaky(max_runs=4)
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_set_system_time(self):
         """
         Test setting the system time without adjusting the date.
@@ -294,6 +301,7 @@ class SystemModuleTest(ModuleCase):
 
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_set_system_date(self):
         """
         Test setting the system date without adjusting the time.
@@ -315,6 +323,7 @@ class SystemModuleTest(ModuleCase):
         self._test_hwclock_sync()
 
     @pytest.mark.skip_if_not_root
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_get_computer_desc(self):
         """
         Test getting the system hostname
@@ -335,6 +344,7 @@ class SystemModuleTest(ModuleCase):
 
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_set_computer_desc(self):
         """
         Test setting the computer description
@@ -349,6 +359,7 @@ class SystemModuleTest(ModuleCase):
 
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_set_computer_desc_multiline(self):
         """
         Test setting the computer description with a multiline string with tabs
@@ -372,6 +383,7 @@ class SystemModuleTest(ModuleCase):
         self.assertIn(desc, computer_desc)
 
     @pytest.mark.skip_if_not_root
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_has_hwclock(self):
         """
         Verify platform has a settable hardware clock, if possible.
@@ -388,6 +400,7 @@ class WinSystemModuleTest(ModuleCase):
     Validate the date/time functions in the win_system module
     """
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_get_computer_name(self):
         """
         Test getting the computer name
@@ -401,6 +414,7 @@ class WinSystemModuleTest(ModuleCase):
         self.assertEqual(name, ret)
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_set_computer_desc(self):
         """
         Test setting the computer description
@@ -440,6 +454,7 @@ class WinSystemModuleTest(ModuleCase):
         # Timeouts are set to 300 seconds. We're adding a 30 second buffer
         self.assertTrue(diff.seconds < 330)
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_get_system_date(self):
         """
         Test getting system date

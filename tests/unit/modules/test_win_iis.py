@@ -9,6 +9,7 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
 import salt.modules.win_iis as win_iis
 import salt.utils.json
 
@@ -164,6 +165,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(win_iis.restart_apppool("MyTestPool"))
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_create_site(self):
         """
         Test - Create a basic website in IIS.
@@ -357,6 +359,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         ), patch("salt.modules.win_iis.list_vdirs", MagicMock(return_value=VDIR_LIST)):
             self.assertTrue(win_iis.remove_vdir(**kwargs))
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_create_cert_binding(self):
         """
         Test - Assign a certificate to an IIS binding.

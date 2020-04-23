@@ -13,6 +13,7 @@ from tests.support.case import ModuleCase
 @pytest.mark.windows_whitelisted
 @pytest.mark.requires_salt_modules("test.ping", "test.arg")
 class ArgumentTestCase(ModuleCase):
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_unsupported_kwarg(self):
         """
         Test passing a non-supported keyword argument. The relevant code that
@@ -24,6 +25,7 @@ class ArgumentTestCase(ModuleCase):
             self.run_function("test.ping", foo="bar"),
         )
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_kwarg_name_containing_dashes(self):
         """
         Tests the arg parser to ensure that kwargs with dashes in the arg name
@@ -40,6 +42,7 @@ class ArgumentTestCase(ModuleCase):
             "baz",
         )
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_argument_containing_pound_sign(self):
         """
         Tests the argument parsing to ensure that a CLI argument with a pound

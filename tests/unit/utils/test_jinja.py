@@ -243,6 +243,7 @@ class TestSaltCacheLoader(TestCase):
             loader_b = SaltCacheLoader(self.opts)
         assert loader_a._file_client is loader_b._file_client
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_file_client_kwarg(self):
         """
         A file client can be passed to SaltCacheLoader overriding the any
@@ -603,6 +604,7 @@ class TestGetTemplate(TestCase):
             dict(opts=self.local_opts, saltenv="test", salt=self.local_salt),
         )
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_render_with_undefined_variable_unicode(self):
         template = "hello한\n\n{{ foo }}\n\nfoo"
         expected = r"Jinja variable \'foo\' is undefined"
@@ -1371,6 +1373,7 @@ class TestCustomExtensions(TestCase):
 
     @pytest.mark.flaky(max_runs=4)
     @pytest.mark.requires_network
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_http_query(self):
         """
         Test the `http_query` Jinja filter.

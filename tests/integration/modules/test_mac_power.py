@@ -36,6 +36,7 @@ class MacPowerModuleTest(ModuleCase):
         self.run_function("power.set_harddisk_sleep", [self.HARD_DISK_SLEEP])
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_computer_sleep(self):
         """
         Test power.get_computer_sleep
@@ -69,6 +70,7 @@ class MacPowerModuleTest(ModuleCase):
         )
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_display_sleep(self):
         """
         Test power.get_display_sleep
@@ -102,6 +104,7 @@ class MacPowerModuleTest(ModuleCase):
         )
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_harddisk_sleep(self):
         """
         Test power.get_harddisk_sleep
@@ -134,6 +137,7 @@ class MacPowerModuleTest(ModuleCase):
             self.run_function("power.set_harddisk_sleep", [True]),
         )
 
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_restart_freeze(self):
         """
         Test power.get_restart_freeze
@@ -178,6 +182,7 @@ class MacPowerModuleTestSleepOnPowerButton(ModuleCase):
         if self.SLEEP_ON_BUTTON is not None:
             self.run_function("power.set_sleep_on_power_button", [self.SLEEP_ON_BUTTON])
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_sleep_on_power_button(self):
         """
         Test power.get_sleep_on_power_button
@@ -228,6 +233,7 @@ class MacPowerModuleTestRestartPowerFailure(ModuleCase):
         if self.RESTART_POWER is not None:
             self.run_function("power.set_sleep_on_power_button", [self.SLEEP_ON_BUTTON])
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_restart_power_failure(self):
         """
         Test power.get_restart_power_failure
@@ -278,6 +284,7 @@ class MacPowerModuleTestWakeOnNet(ModuleCase):
         if self.WAKE_ON_NET is not None:
             self.run_function("power.set_wake_on_network", [self.WAKE_ON_NET])
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_wake_on_network(self):
         """
         Test power.get_wake_on_network
@@ -324,6 +331,7 @@ class MacPowerModuleTestWakeOnModem(ModuleCase):
         if self.WAKE_ON_MODEM is not None:
             self.run_function("power.set_wake_on_modem", [self.WAKE_ON_MODEM])
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_wake_on_modem(self):
         """
         Test power.get_wake_on_modem

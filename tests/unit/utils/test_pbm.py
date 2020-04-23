@@ -10,6 +10,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
+import pytest
 import salt.utils.pbm
 
 # Import Salt libraries
@@ -265,6 +266,7 @@ class GetCapabilityDefinitionsTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_fetch_capabilities_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"
@@ -381,6 +383,7 @@ class GetStoragePoliciesTestCase(TestCase):
         ):
             delattr(self, attr)
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_get_res_type(self):
         mock_get_res_type = MagicMock()
         with patch("salt.utils.pbm.pbm.profile.ResourceType", mock_get_res_type):
@@ -395,6 +398,7 @@ class GetStoragePoliciesTestCase(TestCase):
         salt.utils.pbm.get_storage_policies(self.mock_prof_mgr)
         mock_retrieve_policy_ids.assert_called_once_with(self.mock_res_type)
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_retrieve_policy_ids_raises_no_permissions(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = "Fake privilege"
@@ -406,6 +410,7 @@ class GetStoragePoliciesTestCase(TestCase):
             "Not enough permissions. Required privilege: " "Fake privilege",
         )
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_retrieve_policy_ids_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault msg"

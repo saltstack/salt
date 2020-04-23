@@ -8,6 +8,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
+import pytest
+
 # Import Salt libs
 import salt.utils.data
 import salt.utils.stringutils
@@ -822,6 +824,7 @@ class FilterFalseyTestCase(TestCase):
         self.assertEqual(expect_list, new_list)
         self.assertIs(type(expect_list), type(new_list))
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_filter_set_no_recurse(self):
         """
         Test filtering a set without recursing.

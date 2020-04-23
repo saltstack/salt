@@ -11,6 +11,7 @@ import textwrap
 import uuid
 
 import jinja2
+import pytest
 
 # Import Salt libs
 import salt.config
@@ -324,6 +325,7 @@ class RendererMixin(object):
         )
 
 
+@pytest.mark.slow_test(seconds=240)  # The whole test class needs to run.
 class RendererTests(RendererMixin, StateTests, MapBuilder):
     def test_basic(self):
         ret = self.render(basic_template)
@@ -462,6 +464,7 @@ class RendererTests(RendererMixin, StateTests, MapBuilder):
         )
 
 
+@pytest.mark.slow_test(seconds=480)  # The whole test class needs to run.
 class MapTests(RendererMixin, TestCase, MapBuilder):
     maxDiff = None
 

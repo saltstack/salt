@@ -108,6 +108,7 @@ def container_name(func):
 
 @pytest.mark.destructive_test
 @skipIf(not salt.utils.path.which("dockerd"), "Docker not installed")
+@pytest.mark.slow_test(seconds=10)  # The whole test class needs to run.
 class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
     """
     Test docker_network states

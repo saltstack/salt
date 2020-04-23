@@ -110,6 +110,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
 
     @with_tempdir()
     @container_name
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_running_with_no_predefined_volume(self, name, bind_dir_host):
         """
         This tests that a container created using the docker_container.running
@@ -130,6 +131,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue("/foo" in ret["Config"]["Volumes"])
 
     @container_name
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_running_with_no_predefined_ports(self, name):
         """
         This tests that a container created using the docker_container.running
@@ -151,6 +153,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(x in ret["NetworkSettings"]["Ports"] for x in expected_ports)
 
     @container_name
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_running_updated_image_id(self, name):
         """
         This tests the case of an image being changed after the container is
@@ -189,6 +192,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue("Container has a new image" in ret["comment"])
 
     @container_name
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_running_start_false_without_replace(self, name):
         """
         Test that we do not start a container which is stopped, when it is not
@@ -221,6 +225,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
 
     @with_network(subnet="10.247.197.96/27", create=True)
     @container_name
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_running_no_changes_hostname_network(self, container_name, net):
         """
         Test that changes are not detected when a hostname is specified for a container
@@ -247,6 +252,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(ret["changes"])
 
     @container_name
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_running_start_false_with_replace(self, name):
         """
         Test that we do start a container which was previously stopped, even
@@ -280,6 +286,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue("state" not in ret["changes"])
 
     @container_name
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_running_start_true(self, name):
         """
         This tests that we *do* start a container that is stopped, when the
@@ -314,6 +321,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue("State changed from 'stopped' to 'running'" in ret["comment"])
 
     @container_name
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_running_with_invalid_input(self, name):
         """
         This tests that the input tranlation code identifies invalid input and
@@ -341,6 +349,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         )
 
     @container_name
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_running_with_argument_collision(self, name):
         """
         this tests that the input tranlation code identifies an argument
@@ -367,6 +376,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue("'ulimit' is an alias for 'ulimits'" in ret["comment"])
 
     @container_name
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_running_with_ignore_collisions(self, name):
         """
         This tests that the input tranlation code identifies an argument
@@ -397,6 +407,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(actual, expected)
 
     @container_name
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_running_with_removed_argument(self, name):
         """
         This tests that removing an argument from a created container will
@@ -432,6 +443,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         )
 
     @container_name
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_running_with_port_bindings(self, name):
         """
         This tests that the ports which are being bound are also exposed, even
@@ -463,6 +475,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(sorted(cinfo["Config"]["ExposedPorts"]), ports + ["9999/tcp"])
 
     @container_name
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_absent_with_stopped_container(self, name):
         """
         This tests the docker_container.absent state on a stopped container
@@ -490,6 +503,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["comment"], "Container '{0}' does not exist".format(name))
 
     @container_name
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_absent_with_running_container(self, name):
         """
         This tests the docker_container.absent state and
@@ -533,6 +547,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         )
 
     @container_name
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_running_image_name(self, name):
         """
         Ensure that we create the container using the image name instead of ID
@@ -545,6 +560,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["Config"]["Image"], self.image)
 
     @container_name
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_env_with_running_container(self, name):
         """
         docker_container.running environnment part. Testing issue 39838.
@@ -576,6 +592,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
 
     @with_network(subnet="10.247.197.96/27", create=True)
     @container_name
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_static_ip_one_network(self, container_name, net):
         """
         Ensure that if a network is created and specified as network_mode, that is the only network, and
@@ -760,18 +777,21 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
 
     @with_network(subnet="10.247.197.96/27", create=True)
     @container_name
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_running_ipv4(self, container_name, *nets):
         self._test_running(container_name, *nets)
 
     @with_network(subnet="10.247.197.128/27", create=True)
     @with_network(subnet="10.247.197.96/27", create=True)
     @container_name
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_running_dual_ipv4(self, container_name, *nets):
         self._test_running(container_name, *nets)
 
     @with_network(subnet="fe3f:2180:26:1::/123", create=True)
     @container_name
     @skipIf(not IPV6_ENABLED, "IPv6 not enabled")
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_running_ipv6(self, container_name, *nets):
         self._test_running(container_name, *nets)
 
@@ -779,6 +799,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
     @with_network(subnet="fe3f:2180:26:1::/123", create=True)
     @container_name
     @skipIf(not IPV6_ENABLED, "IPv6 not enabled")
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_running_dual_ipv6(self, container_name, *nets):
         self._test_running(container_name, *nets)
 
@@ -786,11 +807,13 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
     @with_network(subnet="10.247.197.96/27", create=True)
     @container_name
     @skipIf(not IPV6_ENABLED, "IPv6 not enabled")
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_running_mixed_ipv4_and_ipv6(self, container_name, *nets):
         self._test_running(container_name, *nets)
 
     @with_network(subnet="10.247.197.96/27", create=True)
     @container_name
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_running_explicit_networks(self, container_name, net):
         """
         Ensure that if we use an explicit network configuration, we remove any
@@ -847,6 +870,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertIn("Connected to network '{0}'.".format(net.name), ret["comment"])
 
     @container_name
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_run_with_onlyif(self, name):
         """
         Test docker_container.run with onlyif. The container should not run
@@ -891,6 +915,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             self.run_function("docker.rm", [name], force=True)
 
     @container_name
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_run_with_unless(self, name):
         """
         Test docker_container.run with unless. The container should not run
@@ -933,6 +958,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             self.run_function("docker.rm", [name], force=True)
 
     @container_name
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_run_with_creates(self, name):
         """
         Test docker_container.run with creates. The container should not run
@@ -990,6 +1016,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             self.run_function("docker.rm", [name], force=True)
 
     @container_name
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_run_replace(self, name):
         """
         Test the replace and force arguments to make sure they work properly
@@ -1041,6 +1068,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         )
 
     @container_name
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_run_force(self, name):
         """
         Test the replace and force arguments to make sure they work properly
@@ -1089,6 +1117,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         )
 
     @container_name
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_run_failhard(self, name):
         """
         Test to make sure that we fail a state when the container exits with
@@ -1132,6 +1161,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.run_function("docker.rm", [name], force=True)
 
     @container_name
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_run_bg(self, name):
         """
         Test to make sure that if the container is run in the background, we do

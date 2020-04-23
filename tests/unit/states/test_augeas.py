@@ -8,6 +8,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
+import pytest
+
 # Import Salt Libs
 import salt.states.augeas as augeas
 
@@ -110,6 +112,7 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
                     augeas.change(self.name, changes=self.changes), self.ret
                 )
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_change_no_context_with_full_path_fail(self):
         """
         Test handling of no context with full path with execute fail

@@ -47,6 +47,7 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
             }
         }
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_install_requirements_parsing(self):
         log.debug("Real pip version is %s", pip.__version__)
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
@@ -416,6 +417,7 @@ class PipStateUtilsTest(TestCase):
 )
 @pytest.mark.requires_network
 class PipStateInstallationErrorTest(TestCase):
+    @pytest.mark.slow_test(seconds=120)  # Test takes >60 and <=120 seconds
     def test_importable_installation_error(self):
         extra_requirements = []
         for name, version in salt.version.dependency_information():

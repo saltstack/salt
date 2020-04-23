@@ -22,6 +22,7 @@ class SPMInstallTest(SPMCase):
         self.config = self._spm_config()
         self._spm_build_files(self.config)
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_spm_install_local_dir(self):
         """
         test spm install from local directory
@@ -35,6 +36,7 @@ class SPMInstallTest(SPMCase):
 
         self.assertTrue(os.path.exists(sls))
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_spm_install_from_repo(self):
         """
         test spm install from repo

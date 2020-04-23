@@ -16,6 +16,8 @@ import os
 import sys
 import warnings
 
+import pytest
+
 # Import Salt libs
 import salt.modules.cmdmod
 import salt.utils.platform
@@ -104,6 +106,7 @@ class VersionTestCase(TestCase):
             )
 
     @skipIf(not salt.utils.platform.is_linux(), "only need to run on linux")
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_spelling_version_name(self):
         """
         check the spelling of the version name for the release

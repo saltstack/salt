@@ -9,6 +9,8 @@ import os
 import random
 import string
 
+import pytest
+
 # Import Salt libs
 import salt.config
 import salt.loader
@@ -560,6 +562,7 @@ class BotoApiGatewayTestCase(
     TestCase for salt.modules.boto_apigateway state.module
     """
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_present_when_swagger_file_is_invalid(self):
         """
         Tests present when the swagger file is invalid.
@@ -578,6 +581,7 @@ class BotoApiGatewayTestCase(
 
         self.assertFalse(result.get("result", True))
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_present_when_stage_is_already_at_desired_deployment(self):
         """
         Tests scenario where no action will be taken since we're already
@@ -605,6 +609,7 @@ class BotoApiGatewayTestCase(
         self.assertIs(result.get("result"), True)
         self.assertNotIn("update_stage should not be called", result.get("comment", ""))
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_present_when_stage_is_already_at_desired_deployment_and_needs_stage_variables_update(
         self,
     ):
@@ -633,6 +638,7 @@ class BotoApiGatewayTestCase(
         self.assertTrue(result.get("current"))
         self.assertIs(result.get("result"), True)
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_present_when_stage_exists_and_is_to_associate_to_existing_deployment(self):
         """
         Tests scenario where we merely reassociate a stage to a pre-existing
@@ -667,6 +673,7 @@ class BotoApiGatewayTestCase(
         self.assertFalse(result.get("abort"))
         self.assertTrue(result.get("changes", {}).get("new", [{}])[0])
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_present_when_stage_is_to_associate_to_new_deployment(self):
         """
         Tests creation of a new api/model/resource given nothing has been created previously
@@ -720,6 +727,7 @@ class BotoApiGatewayTestCase(
         self.assertIs(result.get("result"), True)
         self.assertIs(result.get("abort"), None)
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_present_when_stage_associating_to_new_deployment_errored_on_api_creation(
         self,
     ):
@@ -750,6 +758,7 @@ class BotoApiGatewayTestCase(
         self.assertIs(result.get("result"), False)
         self.assertIn("create_rest_api", result.get("comment", ""))
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_present_when_stage_associating_to_new_deployment_errored_on_model_creation(
         self,
     ):
@@ -782,6 +791,7 @@ class BotoApiGatewayTestCase(
         self.assertIs(result.get("result"), False)
         self.assertIn("create_model", result.get("comment", ""))
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_present_when_stage_associating_to_new_deployment_errored_on_resource_creation(
         self,
     ):
@@ -819,6 +829,7 @@ class BotoApiGatewayTestCase(
         self.assertIs(result.get("result"), False)
         self.assertIn("create_resource", result.get("comment", ""))
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_present_when_stage_associating_to_new_deployment_errored_on_put_method(
         self,
     ):
@@ -869,6 +880,7 @@ class BotoApiGatewayTestCase(
         self.assertIs(result.get("result"), False)
         self.assertIn("put_method", result.get("comment", ""))
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_present_when_stage_associating_to_new_deployment_errored_on_lambda_function_lookup(
         self,
     ):
@@ -924,6 +936,7 @@ class BotoApiGatewayTestCase(
         )
         self.assertIn("not find lambda function", result.get("comment", ""))
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_present_when_stage_associating_to_new_deployment_errored_on_put_integration(
         self,
     ):
@@ -978,6 +991,7 @@ class BotoApiGatewayTestCase(
         self.assertIs(result.get("result"), False)
         self.assertIn("put_integration", result.get("comment", ""))
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_present_when_stage_associating_to_new_deployment_errored_on_put_method_response(
         self,
     ):
@@ -1034,6 +1048,7 @@ class BotoApiGatewayTestCase(
         self.assertIs(result.get("result"), False)
         self.assertIn("put_method_response", result.get("comment", ""))
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_present_when_stage_associating_to_new_deployment_errored_on_put_integration_response(
         self,
     ):
@@ -1092,6 +1107,7 @@ class BotoApiGatewayTestCase(
         self.assertIs(result.get("result"), False)
         self.assertIn("put_integration_response", result.get("comment", ""))
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_absent_when_rest_api_does_not_exist(self):
         """
         Tests scenario where the given api_name does not exist, absent state should return True
@@ -1114,6 +1130,7 @@ class BotoApiGatewayTestCase(
         self.assertNotIn("get_stage should not be called", result.get("comment", ""))
         self.assertEqual(result.get("changes"), {})
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_absent_when_stage_is_invalid(self):
         """
         Tests scenario where the stagename doesn't exist
@@ -1132,6 +1149,7 @@ class BotoApiGatewayTestCase(
 
         self.assertTrue(result.get("abort", False))
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_absent_when_stage_is_valid_and_only_one_stage_is_associated_to_deployment(
         self,
     ):
@@ -1160,6 +1178,7 @@ class BotoApiGatewayTestCase(
 
         self.assertTrue(result.get("result", False))
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_absent_when_stage_is_valid_and_two_stages_are_associated_to_deployment(
         self,
     ):
@@ -1182,6 +1201,7 @@ class BotoApiGatewayTestCase(
 
         self.assertTrue(result.get("result", False))
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_absent_when_failing_to_delete_a_deployment_no_longer_associated_with_any_stages(
         self,
     ):
@@ -1208,6 +1228,7 @@ class BotoApiGatewayTestCase(
 
         self.assertTrue(result.get("abort", False))
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_absent_when_nuke_api_and_no_more_stages_deployments_remain(self):
         """
         Tests scenario where the stagename exists and there are no stages associated with same deployment,
@@ -1244,6 +1265,7 @@ class BotoApiGatewayTestCase(
             True,
         )
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_absent_when_nuke_api_and_other_stages_deployments_exist(self):
         """
         Tests scenario where the stagename exists and there are two stages associated with same deployment,
@@ -1289,6 +1311,7 @@ class BotoApiGatewayUsagePlanTestCase(
     TestCase for salt.modules.boto_apigateway state.module, usage_plans portion
     """
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_present_if_describe_fails(self, *args):
         """
         Tests correct error processing for describe_usage_plan failure
@@ -1314,6 +1337,7 @@ class BotoApiGatewayUsagePlanTestCase(
             self.assertIn("changes", result)
             self.assertEqual(result["changes"], {})
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_present_if_there_is_no_such_plan_and_test_option_is_set(
         self, *args
     ):
@@ -1340,6 +1364,7 @@ class BotoApiGatewayUsagePlanTestCase(
                 self.assertIn("result", result)
                 self.assertEqual(result["result"], None)
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_present_if_create_usage_plan_fails(self, *args):
         """
         Tests behavior for the case when creating a new usage plan fails
@@ -1369,6 +1394,7 @@ class BotoApiGatewayUsagePlanTestCase(
                 self.assertIn("changes", result)
                 self.assertEqual(result["changes"], {})
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_present_if_plan_is_there_and_needs_no_updates(self, *args):
         """
         Tests behavior for the case when plan is present and needs no updates
@@ -1404,6 +1430,7 @@ class BotoApiGatewayUsagePlanTestCase(
                     == 0
                 )
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_present_if_plan_is_there_and_needs_updates_but_test_is_set(
         self, *args
     ):
@@ -1445,6 +1472,7 @@ class BotoApiGatewayUsagePlanTestCase(
                     == 0
                 )
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_present_if_plan_is_there_and_needs_updates_but_update_fails(
         self, *args
     ):
@@ -1482,6 +1510,7 @@ class BotoApiGatewayUsagePlanTestCase(
                     result["comment"], "Failed to update a usage plan plan_name, error"
                 )
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_present_if_plan_has_been_created(self, *args):
         """
         Tests successful case for creating a new usage plan
@@ -1511,6 +1540,7 @@ class BotoApiGatewayUsagePlanTestCase(
                 self.assertEqual(result["changes"]["old"], {"plan": None})
                 self.assertEqual(result["changes"]["new"], {"plan": {"id": "id"}})
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_present_if_plan_has_been_updated(self, *args):
         """
         Tests successful case for updating a usage plan
@@ -1561,6 +1591,7 @@ class BotoApiGatewayUsagePlanTestCase(
                     },
                 )
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_present_if_ValueError_is_raised(self, *args):
         """
         Tests error processing for the case when ValueError is raised when creating a usage plan
@@ -1585,6 +1616,7 @@ class BotoApiGatewayUsagePlanTestCase(
             self.assertIn("comment", result)
             self.assertEqual(result["comment"], repr(("error",)))
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_present_if_IOError_is_raised(self, *args):
         """
         Tests error processing for the case when IOError is raised when creating a usage plan
@@ -1609,6 +1641,7 @@ class BotoApiGatewayUsagePlanTestCase(
             self.assertIn("comment", result)
             self.assertEqual(result["comment"], repr(("error",)))
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_absent_if_describe_fails(self, *args):
         """
         Tests correct error processing for describe_usage_plan failure
@@ -1636,6 +1669,7 @@ class BotoApiGatewayUsagePlanTestCase(
             self.assertIn("changes", result)
             self.assertEqual(result["changes"], {})
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_absent_if_plan_is_not_present(self, *args):
         """
         Tests behavior for the case when the plan that needs to be absent does not exist
@@ -1663,6 +1697,7 @@ class BotoApiGatewayUsagePlanTestCase(
             self.assertIn("changes", result)
             self.assertEqual(result["changes"], {})
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_absent_if_plan_is_present_but_test_option_is_set(self, *args):
         """
         Tests behavior for the case when usage plan needs to be deleted by tests option is set
@@ -1692,6 +1727,7 @@ class BotoApiGatewayUsagePlanTestCase(
                 self.assertIn("changes", result)
                 self.assertEqual(result["changes"], {})
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_absent_if_plan_is_present_but_delete_fails(self, *args):
         """
         Tests correct error processing when deleting a usage plan fails
@@ -1723,6 +1759,7 @@ class BotoApiGatewayUsagePlanTestCase(
                 self.assertIn("changes", result)
                 self.assertEqual(result["changes"], {})
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_absent_if_plan_has_been_deleted(self, *args):
         """
         Tests successful case for deleting a usage plan
@@ -1755,6 +1792,7 @@ class BotoApiGatewayUsagePlanTestCase(
                     {"new": {"plan": None}, "old": {"plan": {"id": "id"}}},
                 )
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_absent_if_ValueError_is_raised(self, *args):
         """
         Tests correct error processing for the case when ValueError is raised when deleting a usage plan
@@ -1776,6 +1814,7 @@ class BotoApiGatewayUsagePlanTestCase(
             self.assertIn("comment", result)
             self.assertEqual(result["comment"], repr(("error",)))
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_absent_if_IOError_is_raised(self, *args):
         """
         Tests correct error processing for the case when IOError is raised when deleting a usage plan
@@ -1816,6 +1855,7 @@ class BotoApiGatewayUsagePlanAssociationTestCase(
     TestCase for salt.modules.boto_apigateway state.module, usage_plans_association portion
     """
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_association_present_if_describe_fails(self, *args):
         """
         Tests correct error processing for describe_usage_plan failure
@@ -1841,6 +1881,7 @@ class BotoApiGatewayUsagePlanAssociationTestCase(
             self.assertIn("changes", result)
             self.assertEqual(result["changes"], {})
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_association_present_if_plan_is_not_present(self, *args):
         """
         Tests correct error processing if a plan for which association has been requested is not present
@@ -1864,6 +1905,7 @@ class BotoApiGatewayUsagePlanAssociationTestCase(
             self.assertIn("changes", result)
             self.assertEqual(result["changes"], {})
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_association_present_if_multiple_plans_with_the_same_name_exist(
         self, *args
     ):
@@ -1892,6 +1934,7 @@ class BotoApiGatewayUsagePlanAssociationTestCase(
             self.assertIn("changes", result)
             self.assertEqual(result["changes"], {})
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_association_present_if_association_already_exists(self, *args):
         """
         Tests the behavior for the case when requested association is already present
@@ -1919,6 +1962,7 @@ class BotoApiGatewayUsagePlanAssociationTestCase(
             self.assertIn("changes", result)
             self.assertEqual(result["changes"], {})
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_association_present_if_update_fails(self, *args):
         """
         Tests correct error processing for the case when adding associations fails
@@ -1949,6 +1993,7 @@ class BotoApiGatewayUsagePlanAssociationTestCase(
             self.assertIn("changes", result)
             self.assertEqual(result["changes"], {})
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_association_present_success(self, *args):
         """
         Tests successful case for adding usage plan associations to a given api stage
@@ -1989,6 +2034,7 @@ class BotoApiGatewayUsagePlanAssociationTestCase(
                 },
             )
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_association_present_if_value_error_is_thrown(self, *args):
         """
         Tests correct error processing for the case when IOError is raised while trying to set usage plan associations
@@ -2012,6 +2058,7 @@ class BotoApiGatewayUsagePlanAssociationTestCase(
             self.assertIn("changes", result)
             self.assertEqual(result["changes"], {})
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_association_present_if_io_error_is_thrown(self, *args):
         """
         Tests correct error processing for the case when IOError is raised while trying to set usage plan associations
@@ -2035,6 +2082,7 @@ class BotoApiGatewayUsagePlanAssociationTestCase(
             self.assertIn("changes", result)
             self.assertEqual(result["changes"], {})
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_association_absent_if_describe_fails(self, *args):
         """
         Tests correct error processing for describe_usage_plan failure
@@ -2059,6 +2107,7 @@ class BotoApiGatewayUsagePlanAssociationTestCase(
             self.assertIn("changes", result)
             self.assertEqual(result["changes"], {})
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_association_absent_if_plan_is_not_present(self, *args):
         """
         Tests error processing for the case when plan for which associations need to be modified is not present
@@ -2082,6 +2131,7 @@ class BotoApiGatewayUsagePlanAssociationTestCase(
             self.assertIn("changes", result)
             self.assertEqual(result["changes"], {})
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_association_absent_if_multiple_plans_with_the_same_name_exist(
         self, *args
     ):
@@ -2110,6 +2160,7 @@ class BotoApiGatewayUsagePlanAssociationTestCase(
             self.assertIn("changes", result)
             self.assertEqual(result["changes"], {})
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_association_absent_if_plan_has_no_associations(self, *args):
         """
         Tests the case when the plan has no associations at all
@@ -2136,6 +2187,7 @@ class BotoApiGatewayUsagePlanAssociationTestCase(
             self.assertIn("changes", result)
             self.assertEqual(result["changes"], {})
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_association_absent_if_plan_has_no_specific_association(
         self, *args
     ):
@@ -2166,6 +2218,7 @@ class BotoApiGatewayUsagePlanAssociationTestCase(
             self.assertIn("changes", result)
             self.assertEqual(result["changes"], {})
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_association_absent_if_detaching_association_fails(self, *args):
         """
         Tests correct error processing when detaching the usage plan from the api function is called
@@ -2203,6 +2256,7 @@ class BotoApiGatewayUsagePlanAssociationTestCase(
             self.assertIn("changes", result)
             self.assertEqual(result["changes"], {})
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_association_absent_success(self, *args):
         """
         Tests successful case of disaccosiation the usage plan from api stages
@@ -2244,6 +2298,7 @@ class BotoApiGatewayUsagePlanAssociationTestCase(
                 },
             )
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_association_absent_if_ValueError_is_raised(self, *args):
         """
         Tests correct error processing for the case where ValueError is raised while trying to remove plan associations
@@ -2267,6 +2322,7 @@ class BotoApiGatewayUsagePlanAssociationTestCase(
             self.assertIn("changes", result)
             self.assertEqual(result["changes"], {})
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_usage_plan_association_absent_if_IOError_is_raised(self, *args):
         """
         Tests correct error processing for the case where IOError exception is raised while trying to remove plan associations

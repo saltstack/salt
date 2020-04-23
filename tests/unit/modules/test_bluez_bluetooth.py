@@ -6,6 +6,8 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.bluez_bluetooth as bluez
 import salt.utils.validate.net
@@ -157,6 +159,7 @@ class BluezTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(bluez.__salt__, {"cmd.run": mock}):
                 self.assertIsNone(bluez.unblock("DE:AD:BE:EF:CA:FE"))
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_pair(self):
         """
             Test to pair bluetooth adapter with a device

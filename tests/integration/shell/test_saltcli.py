@@ -28,6 +28,7 @@ class TestRetcode(object):
     Tests to ensure that we set non-zero retcodes when execution fails
     """
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_zero_exit_code_salt(self, salt_cli):
         """
         Test that a zero exit code is set when there are no errors and there is
@@ -36,6 +37,7 @@ class TestRetcode(object):
         ret = salt_cli.run("test.ping", minion_tgt="minion")
         assert ret.exitcode == 0, ret
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_zero_exit_code_salt_call(self, salt_call_cli):
         """
         Test that a zero exit code is set when there are no errors and there is
@@ -44,6 +46,7 @@ class TestRetcode(object):
         ret = salt_call_cli.run("test.ping")
         assert ret.exitcode == 0, ret
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_context_retcode_salt(self, salt_cli):
         """
         Test that a nonzero retcode set in the context dunder will cause the
@@ -55,6 +58,7 @@ class TestRetcode(object):
         ret = salt_cli.run("test.retcode", "42", minion_tgt="minion")
         assert ret.exitcode == salt.defaults.exitcodes.EX_GENERIC, ret
 
+    @pytest.mark.slow_test(seconds=120)  # Test takes >60 and <=120 seconds
     def test_context_retcode_salt_call(self, salt_call_cli):
         """
         Test that a nonzero retcode set in the context dunder will cause the
@@ -85,6 +89,7 @@ class TestRetcode(object):
         )
         assert ret.exitcode == salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR, ret
 
+    @pytest.mark.slow_test(seconds=120)  # Test takes >60 and <=120 seconds
     def test_salt_error(self, salt_cli):
         """
         Test that we return the expected retcode when a minion function raises
@@ -133,6 +138,7 @@ class TestRetcode(object):
         )
         assert ret.exitcode == salt.defaults.exitcodes.EX_GENERIC, ret
 
+    @pytest.mark.slow_test(seconds=120)  # Test takes >60 and <=120 seconds
     def test_salt_call_error(self, salt_call_cli):
         """
         Test that we return the expected retcode when a minion function raises
@@ -171,6 +177,7 @@ class TestRetcode(object):
         ret = salt_call_cli.run("test.echo", "{foo: bar, success: False}")
         assert ret.exitcode == salt.defaults.exitcodes.EX_GENERIC, ret
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_missing_minion(self, salt_cli, salt_master):
         """
         Test that a minion which doesn't respond results in a nonzeo exit code
@@ -194,6 +201,7 @@ class TestRetcode(object):
                         "Failed to remove %s, this may affect other tests: %s", bad, exc
                     )
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_exit_status_unknown_argument(self, salt_cli):
         """
         Ensure correct exit status when an unknown argument is passed to salt CLI.
@@ -203,6 +211,7 @@ class TestRetcode(object):
         assert "Usage" in ret.stderr
         assert "no such option: --unknown-argument" in ret.stderr
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_exit_status_correct_usage(self, salt_cli):
         """
         Ensure correct exit status when salt CLI starts correctly.

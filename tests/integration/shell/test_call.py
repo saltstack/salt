@@ -28,11 +28,13 @@ log = logging.getLogger(__name__)
 
 @pytest.mark.windows_whitelisted
 class TestSaltCallCLI(object):
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_fib(self, salt_call_cli):
         ret = salt_call_cli.run("test.fib", "3")
         assert ret.exitcode == 0
         assert ret.json[0] == 2
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_fib_txt_output(self, salt_call_cli):
         ret = salt_call_cli.run("--output=txt", "test.fib", "3")
         assert ret.exitcode == 0
@@ -43,6 +45,7 @@ class TestSaltCallCLI(object):
         )
 
     @pytest.mark.parametrize("indent", [-1, 0, 1])
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_json_out_indent(self, salt_call_cli, indent):
         ret = salt_call_cli.run(
             "--out=json", "--out-indent={}".format(indent), "test.ping"
@@ -60,6 +63,7 @@ class TestSaltCallCLI(object):
             expected_output = expected_output.replace("\n", os.linesep)
         assert ret.stdout == expected_output
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_local_sls_call(self, salt_call_cli):
         fileroot = os.path.join(RUNTIME_VARS.FILES, "file", "base")
         ret = salt_call_cli.run(
@@ -71,6 +75,7 @@ class TestSaltCallCLI(object):
         assert state_run_dict["result"] is True
         assert state_run_dict["changes"]["ret"] == "hello"
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_local_salt_call(self, salt_call_cli):
         """
         This tests to make sure that salt-call does not execute the
@@ -92,6 +97,7 @@ class TestSaltCallCLI(object):
             assert contents.count("foo") == 1, contents
 
     @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_user_delete_kw_output(self, salt_call_cli):
         ret = salt_call_cli.run("-d", "user.delete", _timeout=120)
         assert ret.exitcode == 0
@@ -100,6 +106,7 @@ class TestSaltCallCLI(object):
             expected_output += " remove=True force=True"
         assert expected_output in ret.stdout
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_salt_documentation_too_many_arguments(self, salt_call_cli):
         """
         Test to see if passing additional arguments shows an error
@@ -108,6 +115,7 @@ class TestSaltCallCLI(object):
         assert ret.exitcode != 0
         assert "You can only get documentation for one method at one time" in ret.stderr
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_issue_6973_state_highstate_exit_code(self, salt_call_cli):
         """
         If there is no tops/master_tops or state file matches
@@ -192,6 +200,7 @@ class TestSaltCallCLI(object):
                 assert stat1.st_mode != stat3.st_mode
 
     @pytest.mark.skip_on_windows(reason="This test does not apply on Win")
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_42116_cli_pillar_override(self, salt_call_cli):
         ret = salt_call_cli.run(
             "state.apply",
@@ -206,6 +215,7 @@ class TestSaltCallCLI(object):
             pprint.pformat(state_run_dict)
         )
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_pillar_items_masterless(self, salt_call_cli):
         """
         Test to ensure we get expected output
@@ -220,6 +230,7 @@ class TestSaltCallCLI(object):
         assert "monty" in ret.json
         assert ret.json["monty"] == "python"
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_masterless_highstate(self, salt_call_cli):
         """
         test state.highstate in masterless mode
@@ -232,6 +243,7 @@ class TestSaltCallCLI(object):
         assert state_run_dict["__id__"] == destpath
 
     @pytest.mark.skip_on_windows
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_syslog_file_not_found(self, salt_call_cli):
         """
         test when log_file is set to a syslog file that does not exist
@@ -294,6 +306,7 @@ class TestSaltCallCLI(object):
         assert target in ret.json
         assert ret.json[target] == "returnTOmaster"
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_exit_status_unknown_argument(self, salt_call_cli):
         """
         Ensure correct exit status when an unknown argument is passed to salt CLI.
@@ -303,6 +316,7 @@ class TestSaltCallCLI(object):
         assert "Usage" in ret.stderr
         assert "no such option: --unknown-argument" in ret.stderr
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_exit_status_correct_usage(self, salt_call_cli):
         """
         Ensure correct exit status when salt CLI starts correctly.

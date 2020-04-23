@@ -3,6 +3,7 @@
 # Import Python libs
 from __future__ import absolute_import
 
+import pytest
 import salt.modules.pillar as pillarmod
 
 # Import Salt libs
@@ -51,6 +52,7 @@ class PillarModuleTestCase(TestCase, LoaderModuleMockMixin):
             else:
                 self.assertEqual(ls, ["a", "b"])
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_pillar_get_default_merge(self):
         defaults = {
             "int": 1,

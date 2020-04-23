@@ -10,6 +10,8 @@ from copy import deepcopy
 
 import pkg_resources
 
+import pytest
+
 # Import Salt Libs
 import salt.config
 import salt.loader
@@ -147,6 +149,7 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
         sys.version_info > (3, 6),
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_register_instances_valid_id_result_true(self):
         """
         tests that given a valid instance id and valid ELB that
@@ -169,6 +172,7 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
         sys.version_info > (3, 6),
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_register_instances_valid_id_string(self):
         """
         tests that given a string containing a instance id and valid ELB that
@@ -197,6 +201,7 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
         sys.version_info > (3, 6),
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_deregister_instances_valid_id_result_true(self):
         """
         tests that given an valid id the boto_elb deregister_instances method
@@ -222,6 +227,7 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
         sys.version_info > (3, 6),
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_deregister_instances_valid_id_string(self):
         """
         tests that given an valid id the boto_elb deregister_instances method
@@ -254,6 +260,7 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
         sys.version_info > (3, 6),
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_deregister_instances_valid_id_list(self):
         """
         tests that given an valid ids in the form of a list that the boto_elb

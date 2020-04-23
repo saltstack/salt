@@ -64,6 +64,7 @@ class SSHModuleTest(ModuleCase):
         super(SSHModuleTest, self).tearDown()
         del self.key
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_auth_keys(self):
         """
         test ssh.auth_keys
@@ -90,6 +91,7 @@ class SSHModuleTest(ModuleCase):
                 "AssertionError: {0}. Function returned: {1}".format(exc, ret)
             )
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_bad_enctype(self):
         """
         test to make sure that bad key encoding types don't generate an
@@ -108,6 +110,7 @@ class SSHModuleTest(ModuleCase):
         # user will get an indicator of what went wrong.
         self.assertEqual(len(list(ret.items())), 0)  # Zero keys found
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_get_known_host_entries(self):
         """
         Check that known host information is returned from ~/.ssh/config
@@ -127,6 +130,7 @@ class SSHModuleTest(ModuleCase):
                 "AssertionError: {0}. Function returned: {1}".format(exc, ret)
             )
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_recv_known_host_entries(self):
         """
         Check that known host information is returned from remote host
@@ -142,6 +146,7 @@ class SSHModuleTest(ModuleCase):
                 "AssertionError: {0}. Function returned: {1}".format(exc, ret)
             )
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_check_known_host_add(self):
         """
         Check known hosts by its fingerprint. File needs to be updated
@@ -151,6 +156,7 @@ class SSHModuleTest(ModuleCase):
         ret = self.run_function("ssh.check_known_host", arg, **kwargs)
         self.assertEqual(ret, "add")
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_check_known_host_update(self):
         """
         ssh.check_known_host update verification
@@ -169,6 +175,7 @@ class SSHModuleTest(ModuleCase):
         ret = self.run_function("ssh.check_known_host", arg, **dict(kwargs, key="YQ=="))
         self.assertEqual(ret, "update")
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_check_known_host_exists(self):
         """
         Verify check_known_host_exists
@@ -189,6 +196,7 @@ class SSHModuleTest(ModuleCase):
         )
         self.assertEqual(ret, "exists")
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_rm_known_host(self):
         """
         ssh.rm_known_host
@@ -207,6 +215,7 @@ class SSHModuleTest(ModuleCase):
         ret = self.run_function("ssh.check_known_host", arg, **kwargs)
         self.assertEqual(ret, "add")
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_set_known_host(self):
         """
         ssh.set_known_host

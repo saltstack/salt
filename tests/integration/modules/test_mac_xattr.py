@@ -37,6 +37,7 @@ class MacXattrModuleTest(ModuleCase):
         if os.path.exists(self.test_file):
             os.remove(self.test_file)
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_list_no_xattr(self):
         """
         Make sure there are no attributes
@@ -53,6 +54,7 @@ class MacXattrModuleTest(ModuleCase):
             "ERROR: File not found: {0}".format(self.no_file),
         )
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_write(self):
         """
         Write an attribute
@@ -85,6 +87,7 @@ class MacXattrModuleTest(ModuleCase):
             "ERROR: File not found: {0}".format(self.no_file),
         )
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_read(self):
         """
         Test xattr.read
@@ -117,6 +120,7 @@ class MacXattrModuleTest(ModuleCase):
             "ERROR: Attribute not found: patrick",
         )
 
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_delete(self):
         """
         Test xattr.delete
@@ -160,6 +164,7 @@ class MacXattrModuleTest(ModuleCase):
             "ERROR: Attribute not found: patrick",
         )
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_clear(self):
         """
         Test xattr.clear

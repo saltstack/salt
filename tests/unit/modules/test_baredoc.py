@@ -5,6 +5,8 @@ from __future__ import absolute_import
 
 import os
 
+import pytest
+
 # Import module
 import salt.modules.baredoc as baredoc
 from tests.support.mixins import LoaderModuleMockMixin
@@ -29,6 +31,7 @@ class BaredocTest(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_baredoc_list_states(self):
         """
         Test baredoc state module listing
@@ -36,6 +39,7 @@ class BaredocTest(TestCase, LoaderModuleMockMixin):
         ret = baredoc.list_states(names_only=True)
         assert "value_present" in ret["xml"][0]
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_baredoc_list_states_args(self):
         """
         Test baredoc state listing with args
@@ -52,6 +56,7 @@ class BaredocTest(TestCase, LoaderModuleMockMixin):
         assert "value_present" in ret["xml"][0]
         assert "xpath" in ret["xml"][0]["value_present"]
 
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_baredoc_list_modules(self):
         """
         test baredoc executiion module listing
@@ -59,6 +64,7 @@ class BaredocTest(TestCase, LoaderModuleMockMixin):
         ret = baredoc.list_modules(names_only=True)
         assert "get_value" in ret["xml"][0]
 
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_baredoc_list_modules_args(self):
         """
         test baredoc execution module listing with args

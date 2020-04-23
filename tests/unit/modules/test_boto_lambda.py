@@ -8,6 +8,7 @@ import random
 import string
 from tempfile import NamedTemporaryFile
 
+import pytest
 import salt.config
 import salt.loader
 import salt.modules.boto_lambda as boto_lambda
@@ -705,6 +706,7 @@ class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
             result.get("error", {}).get("message"), error_message.format("list_aliases")
         )
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_that_when_describing_alias_it_returns_the_dict_of_properties_returns_true(
         self,
     ):
@@ -732,6 +734,7 @@ class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
 
         self.assertFalse(result["alias"])
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_that_when_describing_lambda_on_client_error_it_returns_error(self):
         """
         Tests describing parameters failure

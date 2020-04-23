@@ -9,6 +9,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import tempfile
 
+import pytest
 import salt.modules.file
 
 # Import Salt Libs
@@ -147,6 +148,7 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_ssh_port' function tests: 1
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_set_ssh_port(self):
         """
         Test if it enable SSH on a user defined port

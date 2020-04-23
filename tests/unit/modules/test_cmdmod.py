@@ -10,6 +10,7 @@ import os
 import sys
 import tempfile
 
+import pytest
 import salt.modules.cmdmod as cmdmod
 
 # Import Salt Libs
@@ -454,6 +455,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
 
     @skipIf(salt.utils.platform.is_windows(), "Do not run on Windows")
     @skipIf(salt.utils.platform.is_darwin(), "Do not run on MacOS")
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_run_cwd_in_combination_with_runas(self):
         """
         cmd.run executes command in the cwd directory
@@ -522,6 +524,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret["stdout"], "")
         self.assertEqual(ret["stderr"], "")
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_run_all_unicode(self):
         """
         Ensure that unicode stdout and stderr are decoded properly

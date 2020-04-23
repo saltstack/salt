@@ -5,6 +5,8 @@ unit tests for the libvirt_events engine
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.engines.libvirt_events as libvirt_events
 
@@ -80,6 +82,7 @@ class EngineLibvirtEventTestCase(TestCase, LoaderModuleMockMixin):
         assert libvirt_events._get_domain_event_detail(4, 2) == ("unknown", "unknown")
 
     @patch("salt.engines.libvirt_events.libvirt", VIR_NETWORK_EVENT_ID_LIFECYCLE=1000)
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_event_register(self, mock_libvirt):
         """
         Test that the libvirt_events engine actually registers events catch them and cleans
@@ -159,6 +162,7 @@ class EngineLibvirtEventTestCase(TestCase, LoaderModuleMockMixin):
         # Network events should have been skipped
         mock_cnx.networkEventRegisterAny.assert_not_called()
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_event_filtered(self):
         """
         Test that events are skipped if their ID isn't defined in the libvirt

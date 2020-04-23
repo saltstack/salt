@@ -20,6 +20,8 @@ import subprocess
 import sys
 import time
 
+import pytest
+
 # Import Salt libs
 import salt.utils
 import salt.utils.files
@@ -274,6 +276,7 @@ class VTTestCase(TestCase):
         salt.utils.platform.is_windows(), "Skip VT tests on windows, due to issue 54290"
     )
     @fixStdOutErrFileNoIfNeeded
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_split_multibyte_characters_unicode(self):
         """
             Tests that the vt correctly handles multibyte characters that are
@@ -341,6 +344,7 @@ class VTTestCase(TestCase):
         salt.utils.platform.is_windows(), "Skip VT tests on windows, due to issue 54290"
     )
     @fixStdOutErrFileNoIfNeeded
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_split_multibyte_characters_shiftjis(self):
         """
             Tests that the vt correctly handles multibyte characters that are

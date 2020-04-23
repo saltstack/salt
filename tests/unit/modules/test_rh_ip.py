@@ -9,6 +9,7 @@ import os
 
 # Import 3rd-party libs
 import jinja2.exceptions
+import pytest
 import salt.modules.rh_ip as rh_ip
 from salt.ext import six
 
@@ -64,6 +65,7 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
                         with patch.object(rh_ip, "_read_file", return_value="A"):
                             self.assertEqual(rh_ip.build_bond("iface", test=None), "A")
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_build_interface(self):
         """
         Test to build an interface script for a network interface.

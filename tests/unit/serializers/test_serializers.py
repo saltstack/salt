@@ -328,6 +328,7 @@ class TestSerializers(TestCase):
         }, sls_obj3
 
     @skipIf(not msgpack.available, SKIP_MESSAGE % "msgpack")
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_msgpack(self):
         data = OrderedDict([("foo", 1), ("bar", 2), ("baz", True)])
         serialized = msgpack.serialize(data)

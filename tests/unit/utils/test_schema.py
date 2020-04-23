@@ -8,6 +8,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 
+import pytest
+
 # Import Salt Libs
 import salt.utils.json
 import salt.utils.schema as schema
@@ -1429,6 +1431,7 @@ class ConfigTestCase(TestCase):
         )
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_array_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.ArrayItem(

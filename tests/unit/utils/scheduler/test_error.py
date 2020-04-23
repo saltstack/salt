@@ -37,6 +37,7 @@ class SchedulerErrorTest(SchedulerTestsBase):
         self.schedule.opts["grains"]["whens"] = {"tea time": "11/29/2017 12:00pm"}
 
     @pytest.mark.skipif(not HAS_CRONITER, reason="Cannot find croniter python module")
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_eval_cron_invalid(self):
         """
         verify that scheduled job runs

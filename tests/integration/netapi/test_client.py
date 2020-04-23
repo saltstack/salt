@@ -44,6 +44,7 @@ class NetapiClientTest(TestCase):
     def tearDown(self):
         del self.netapi
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_local(self):
         low = {"client": "local", "tgt": "*", "fun": "test.ping", "timeout": 300}
         low.update(self.eauth_creds)
@@ -56,6 +57,7 @@ class NetapiClientTest(TestCase):
         ret.pop("proxytest", None)
         self.assertEqual(ret, {"minion": True, "sub_minion": True})
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_local_batch(self):
         low = {"client": "local_batch", "tgt": "*", "fun": "test.ping", "timeout": 300}
         low.update(self.eauth_creds)
@@ -67,6 +69,7 @@ class NetapiClientTest(TestCase):
         self.assertIn({"sub_minion": True}, rets)
         self.assertIn({"minion": True}, rets)
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_local_async(self):
         low = {"client": "local_async", "tgt": "*", "fun": "test.ping"}
         low.update(self.eauth_creds)
@@ -87,12 +90,14 @@ class NetapiClientTest(TestCase):
             pass
         self.assertEqual(ret, {"minions": sorted(["minion", "sub_minion"])})
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_local_unauthenticated(self):
         low = {"client": "local", "tgt": "*", "fun": "test.ping"}
 
         with self.assertRaises(EauthAuthenticationError) as excinfo:
             ret = self.netapi.run(low)
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_wheel(self):
         low = {"client": "wheel", "fun": "key.list_all"}
         low.update(self.eauth_creds)
@@ -120,6 +125,7 @@ class NetapiClientTest(TestCase):
             )
         )
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_wheel_async(self):
         # Give this test a little breathing room
         time.sleep(3)
@@ -130,6 +136,7 @@ class NetapiClientTest(TestCase):
         self.assertIn("jid", ret)
         self.assertIn("tag", ret)
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_wheel_unauthenticated(self):
         low = {"client": "wheel", "tgt": "*", "fun": "test.ping"}
 
@@ -155,6 +162,7 @@ class NetapiClientTest(TestCase):
 
         ret = self.netapi.run(low)
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_runner_unauthenticated(self):
         low = {"client": "runner", "tgt": "*", "fun": "test.ping"}
 

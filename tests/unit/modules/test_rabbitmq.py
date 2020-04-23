@@ -6,6 +6,8 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.rabbitmq as rabbitmq
 from salt.exceptions import CommandExecutionError
@@ -225,6 +227,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete_user' function tests: 1
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_delete_user(self):
         """
         Test if it deletes a user via rabbitmqctl delete_user.
@@ -598,6 +601,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'policy_exists' function tests: 1
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_policy_exists(self):
         """
         Test if it return whether the policy exists

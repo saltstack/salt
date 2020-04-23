@@ -8,6 +8,8 @@ from __future__ import absolute_import
 
 import os
 
+import pytest
+
 # Import Salt libs
 import salt.cloud
 import salt.config
@@ -103,6 +105,7 @@ class MapConfTest(TestCase):
     Validate evaluation of salt-cloud map configuration
     """
 
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_cloud_map_merge_conf(self):
         """
         Ensure that nested values can be selectivly overridden in a map file

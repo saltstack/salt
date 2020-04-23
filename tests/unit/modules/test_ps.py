@@ -9,6 +9,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import time
 from collections import namedtuple
 
+import pytest
 import salt.modules.ps as ps
 
 # Import Salt libs
@@ -169,6 +170,7 @@ class PsTestCase(TestCase):
                 ps.pgrep(_get_proc_name(self.mocked_proc)),
             )
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_cpu_percent(self):
         with patch("salt.utils.psutil_compat.cpu_percent", MagicMock(return_value=1)):
             self.assertEqual(ps.cpu_percent(), 1)

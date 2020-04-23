@@ -6,6 +6,8 @@
 # Import Salt Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 from salt.cloud.clouds import proxmox
 
@@ -51,6 +53,7 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
     def tearDown(self):
         del self.vm_
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test__stringlist_to_dictionary(self):
         result = proxmox._stringlist_to_dictionary("")
         self.assertEqual(result, {})

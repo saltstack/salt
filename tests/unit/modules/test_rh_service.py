@@ -8,6 +8,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import textwrap
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.rh_service as rh_service
 
@@ -184,6 +186,7 @@ class RhServiceTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'missing' function tests: 1
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_missing(self):
         """
         Test if it return True if the named service is not available.

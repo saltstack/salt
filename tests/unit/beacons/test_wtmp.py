@@ -6,6 +6,8 @@ from __future__ import absolute_import
 import datetime
 import logging
 
+import pytest
+
 # Salt libs
 import salt.beacons.wtmp as wtmp
 from salt.ext import six
@@ -220,6 +222,7 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
                     ret = wtmp.beacon(config)
                     self.assertEqual(ret, _expected)
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_match_group(self):
 
         for groupadd in (

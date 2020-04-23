@@ -278,6 +278,7 @@ class NetworkTestCase(TestCase):
                 )
                 raise _e_
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_dns_check(self):
         hosts = [
             {
@@ -894,6 +895,7 @@ class NetworkTestCase(TestCase):
             b"\xf8\xe7\xd6\xc5\xb4\xa3", network.mac_str_to_bytes("f8e7d6c5b4a3")
         )
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_generate_minion_id_with_long_hostname(self):
         """
         Validate the fix for:

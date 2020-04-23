@@ -12,12 +12,14 @@ class TestSyndic(SyndicCase):
     Validate the syndic interface by testing the test module
     """
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_ping(self):
         """
         test.ping
         """
         self.assertTrue(self.run_function("test.ping"))
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_fib(self):
         """
         test.fib

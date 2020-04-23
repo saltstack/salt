@@ -16,6 +16,7 @@ class DataModuleTest(ModuleCase):
         self.run_function("data.clear")
         self.addCleanup(self.run_function, "data.clear")
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_load_dump(self):
         """
         data.load
@@ -24,6 +25,7 @@ class DataModuleTest(ModuleCase):
         self.assertTrue(self.run_function("data.dump", ['{"foo": "bar"}']))
         self.assertEqual(self.run_function("data.load"), {"foo": "bar"})
 
+    @pytest.mark.slow_test(seconds=120)  # Test takes >60 and <=120 seconds
     def test_get_update(self):
         """
         data.get
@@ -37,6 +39,7 @@ class DataModuleTest(ModuleCase):
             self.run_function("data.get", [["spam", "unladen"]]), ["eggs", "swallow"]
         )
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_cas_update(self):
         """
         data.update

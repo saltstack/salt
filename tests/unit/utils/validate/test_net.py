@@ -3,6 +3,8 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 from salt.utils.validate import net
 
@@ -15,6 +17,7 @@ class ValidateNetTestCase(TestCase):
     TestCase for salt.utils.validate.net module
     """
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_ipv4_addr(self):
         """
         Test IPv4 address validation
@@ -43,6 +46,7 @@ class ValidateNetTestCase(TestCase):
         for addr in false_addrs:
             self.assertFalse(net.ipv4_addr(addr))
 
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_ipv6_addr(self):
         """
         Test IPv6 address validation

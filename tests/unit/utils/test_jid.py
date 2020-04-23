@@ -9,6 +9,8 @@ from __future__ import absolute_import, unicode_literals
 import datetime
 import os
 
+import pytest
+
 # Import Salt libs
 import salt.utils.jid
 from tests.support.mock import patch
@@ -25,6 +27,7 @@ class JidTestCase(TestCase):
         incorrect_jid_length = 2012
         self.assertEqual(salt.utils.jid.jid_to_time(incorrect_jid_length), "")
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_is_jid(self):
         self.assertTrue(salt.utils.jid.is_jid("20131219110700123489"))  # Valid JID
         self.assertFalse(salt.utils.jid.is_jid(20131219110700123489))  # int

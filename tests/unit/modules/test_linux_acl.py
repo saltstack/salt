@@ -3,6 +3,8 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import salt libs
 import salt.modules.linux_acl as linux_acl
 from salt.exceptions import CommandExecutionError
@@ -363,6 +365,7 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
             python_shell=False,
         )
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_delfacl__default_user_w_multiple_args(self):
         linux_acl.delfacl(*(self.default_user_acl[:-1] + self.files))
         self.cmdrun.assert_called_once_with(

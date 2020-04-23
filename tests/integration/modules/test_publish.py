@@ -13,6 +13,7 @@ class PublishModuleTest(ModuleCase, SaltReturnAssertsMixin):
     Validate the publish module
     """
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_publish(self):
         """
         publish.publish
@@ -50,6 +51,7 @@ class PublishModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["__pub_id"], "minion")
         self.assertEqual(ret["__pub_fun"], "test.kwarg")
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_publish_yaml_args(self):
         """
         test publish.publish yaml args formatting
@@ -86,6 +88,7 @@ class PublishModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["kwargs"]["__pub_id"], "minion")
         self.assertEqual(ret["kwargs"]["__pub_fun"], "test.arg")
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_full_data(self):
         """
         publish.full_data
@@ -96,6 +99,7 @@ class PublishModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(ret)
         self.assertEqual(ret["minion"]["ret"][0], 6765)
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_kwarg(self):
         """
         Verify that the pub data is making it to the minion functions
@@ -133,6 +137,7 @@ class PublishModuleTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertIn("The following keyword arguments are not valid", ret)
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_reject_minion(self):
         """
         Test bad authentication

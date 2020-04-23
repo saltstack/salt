@@ -7,6 +7,8 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt libs
 import salt.utils.decorators as decorators
 from salt.exceptions import CommandExecutionError, SaltConfigurationError
@@ -88,6 +90,7 @@ class DecoratorsTest(TestCase):
             self.messages, ['The lifetime of the function "old_function" expired.']
         )
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_is_deprecated_with_successor_eol(self):
         """
         Use of is_deprecated will result to the exception,
@@ -277,6 +280,7 @@ class DecoratorsTest(TestCase):
             ],
         )
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_with_deprecated_no_conf(self):
         """
         Test with_deprecated should not raise an exception, if a same name
@@ -423,6 +427,7 @@ class DecoratorsTest(TestCase):
         wrapped = decorators.ensure_unicode_args(self.old_function)
         assert wrapped.__module__ == self.old_function.__module__
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_ignores_kwargs_should_wrap_function(self):
         wrapped = decorators.ignores_kwargs("foo", "bar")(self.old_function)
         assert wrapped.__module__ == self.old_function.__module__

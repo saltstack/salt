@@ -11,6 +11,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import textwrap
 
+import pytest
 import salt.modules.aptpkg as aptpkg
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext import six
@@ -514,6 +515,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             self.assert_called_once(refresh_mock)
             refresh_mock.reset_mock()
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_mod_repo_enabled(self):
         """
         Checks if a repo is enabled or disabled depending on the passed kwargs.

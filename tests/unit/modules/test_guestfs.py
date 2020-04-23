@@ -6,6 +6,8 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.guestfs as guestfs
 
@@ -85,6 +87,7 @@ class GuestfsTestCase(TestCase, LoaderModuleMockMixin):
             )
             makedirs_mock.assert_called_once()
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_umount(self):
         """
         Test the guestfs.unmount function

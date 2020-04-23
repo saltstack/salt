@@ -14,6 +14,7 @@ import shutil
 import tempfile
 import time
 
+import pytest
 import salt.returners.local_cache as local_cache
 import salt.utils.files
 import salt.utils.jid
@@ -65,6 +66,7 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         with patch("os.path.exists", MagicMock(return_value=False)):
             self.assertEqual(local_cache.clean_old_jobs(), None)
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_clean_old_jobs_empty_jid_dir_removed(self):
         """
         Tests that an empty JID dir is removed when it is old enough to be deleted.
@@ -141,6 +143,7 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         # while the 'jid' dir inside it should be gone
         self.assertEqual(False, os.path.exists(jid_dir_name))
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_clean_old_jobs_jid_file_is_cleaned(self):
         """
         Test that the entire JID dir is removed when a job is old enough to be removed.
@@ -304,6 +307,7 @@ class Local_CacheTest(
             "Dir/file does not exist: ", self.JOB_CACHE_DIR_FILES, status="present"
         )
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_clean_old_jobs(self):
         """
         test to ensure jobs are removed from job cache
@@ -317,6 +321,7 @@ class Local_CacheTest(
             "job cache was not removed: ", self.JOB_CACHE_DIR_FILES, status="removed"
         )
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_not_clean_new_jobs(self):
         """
         test to ensure jobs are not removed when
@@ -331,6 +336,7 @@ class Local_CacheTest(
                 "job cache was removed: ", self.JOB_CACHE_DIR_FILES, status="present"
             )
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_empty_jid_dir(self):
         """
         test to ensure removal of empty jid dir

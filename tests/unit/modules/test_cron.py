@@ -6,6 +6,8 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt libs
 import salt.modules.cron as cron
 from salt.ext.six.moves import StringIO, builtins, range
@@ -1130,6 +1132,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 "crontab -l", ignore_retcode=True, rstrip=False, python_shell=False
             )
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_raw_cron_foo_redhat(self):
         """
         Assert that raw_cron() is called with the correct cron command and user: RedHat
@@ -1388,6 +1391,7 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual("absent", ret)
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_rm_job_is_absent(self):
         with patch.dict(cron.__grains__, {"os": None}), patch(
             "salt.modules.cron._write_cron_lines",

@@ -6,6 +6,8 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.win_ip as win_ip
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -197,6 +199,7 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_static_ip' function tests: 1
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_set_static_ip(self):
         """
         Test if it set static IP configuration on a Windows NIC.

@@ -18,6 +18,7 @@ class MacDesktopTestCase(ModuleCase):
     Integration tests for the mac_desktop module.
     """
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_get_output_volume(self):
         """
         Tests the return of get_output_volume.
@@ -25,6 +26,7 @@ class MacDesktopTestCase(ModuleCase):
         ret = self.run_function("desktop.get_output_volume")
         self.assertIsNotNone(ret)
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_set_output_volume(self):
         """
         Tests the return of set_output_volume.
@@ -42,18 +44,21 @@ class MacDesktopTestCase(ModuleCase):
         # Set volume back to what it was before
         self.run_function("desktop.set_output_volume", [current_vol])
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_screensaver(self):
         """
         Tests the return of the screensaver function.
         """
         self.assertTrue(self.run_function("desktop.screensaver"))
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_lock(self):
         """
         Tests the return of the lock function.
         """
         self.assertTrue(self.run_function("desktop.lock"))
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_say(self):
         """
         Tests the return of the say function.

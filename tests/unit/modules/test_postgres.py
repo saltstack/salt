@@ -7,6 +7,8 @@ import datetime
 import logging
 import re
 
+import pytest
+
 # Import salt libs
 import salt.modules.postgres as postgres
 from salt.exceptions import SaltInvocationError
@@ -889,6 +891,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
             exts = postgres.available_extensions()
             self.assertEqual(exts, {"foo": {"default_version": "1", "name": "foo"}})
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_drop_extension2(self):
         with patch(
             "salt.modules.postgres.installed_extensions", Mock(side_effect=[{}, {}])

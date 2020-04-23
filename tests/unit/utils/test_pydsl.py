@@ -10,6 +10,7 @@ import sys
 import tempfile
 import textwrap
 
+import pytest
 import salt.config
 
 # Import Salt libs
@@ -100,6 +101,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
             StringIO(content), saltenv=saltenv, sls=sls, **kws
         )
 
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_state_declarations(self):
         result = self.render_sls(
             textwrap.dedent(
@@ -145,6 +147,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         self.assertEqual(s[1]["name"], "myfile.txt")
         self.assertEqual(s[2]["source"], "salt://path/to/file")
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_requisite_declarations(self):
         result = self.render_sls(
             textwrap.dedent(
@@ -175,6 +178,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         self.assertEqual(result["G"]["service"][2]["watch_in"][0]["cmd"], "A")
         self.assertEqual(result["H"]["cmd"][1]["require_in"][0]["cmd"], "echo hello")
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_include_extend(self):
         result = self.render_sls(
             textwrap.dedent(
@@ -216,6 +220,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         self.assertTrue("A" not in result)
         self.assertEqual(extend["A"]["cmd"][0], "run")
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_cmd_call(self):
         result = self.HIGHSTATE.state.call_template_str(
             textwrap.dedent(
@@ -244,6 +249,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         ret = next(result[k] for k in six.iterkeys(result) if "-G_" in k)
         self.assertEqual(ret["changes"]["stdout"], "this is state G")
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_multiple_state_func_in_state_mod(self):
         with self.assertRaisesRegex(PyDslError, "Multiple state functions"):
             self.render_sls(
@@ -255,6 +261,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
                 )
             )
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_no_state_func_in_state_mod(self):
         with self.assertRaisesRegex(PyDslError, "No state function specified"):
             self.render_sls(
@@ -265,6 +272,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
                 )
             )
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_load_highstate(self):
         result = self.render_sls(
             textwrap.dedent(
@@ -305,6 +313,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         self.assertIn({"watch": [{"cmd": "A"}]}, result["B"]["service"])
         self.assertEqual(len(result["B"]["service"]), 3)
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_ordered_states(self):
         result = self.render_sls(
             textwrap.dedent(
@@ -325,6 +334,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         self.assertEqual(result["B"]["file"][1]["require"][0]["cmd"], "C")
 
     @with_tempdir()
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_pipe_through_stateconf(self, dirpath):
         output = os.path.join(dirpath, "output")
         write_to(
@@ -394,6 +404,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
             self.assertEqual("".join(f.read().split()), "XYZABCDEF")
 
     @with_tempdir()
+    @pytest.mark.slow_test(seconds=240)  # Test takes >120 and <=240 seconds
     def test_compile_time_state_execution(self, dirpath):
         if not sys.stdin.isatty():
             self.skipTest("Not attached to a TTY")
@@ -429,6 +440,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
             self.assertEqual(f.read(), "hehe" + os.linesep)
 
     @with_tempdir()
+    @pytest.mark.slow_test(seconds=120)  # Test takes >60 and <=120 seconds
     def test_nested_high_state_execution(self, dirpath):
         output = os.path.join(dirpath, "output")
         write_to(
@@ -465,6 +477,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         self.state_highstate({"base": ["aaa"]}, dirpath)
 
     @with_tempdir()
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_repeat_includes(self, dirpath):
         output = os.path.join(dirpath, "output")
         write_to(

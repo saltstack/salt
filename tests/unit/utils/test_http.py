@@ -9,6 +9,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 import socket
 from contextlib import closing
 
+import pytest
+
 # Import Salt Libs
 import salt.utils.http as http
 from tests.support.helpers import MirrorPostHandler, Webserver
@@ -85,6 +87,7 @@ class HTTPTestCase(TestCase):
 
     # _sanitize_components tests
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_sanitize_components_no_elements(self):
         """
         Tests when zero elements need to be sanitized.
@@ -103,6 +106,7 @@ class HTTPTestCase(TestCase):
         ret = http._sanitize_url_components(mock_component_list, "api_key")
         self.assertEqual(ret, mock_ret)
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_sanitize_components_multiple_elements(self):
         """
         Tests two componenets to be sanitized.
@@ -112,6 +116,7 @@ class HTTPTestCase(TestCase):
         ret = http._sanitize_url_components(mock_component_list, "foo")
         self.assertEqual(ret, mock_ret)
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_query_null_response(self):
         """
         This tests that we get a null response when raise_error=False and the
@@ -136,6 +141,7 @@ class HTTPTestCase(TestCase):
         self.assertTrue(isinstance(ret, dict))
         self.assertTrue(isinstance(ret.get("error", None), str))
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_requests_multipart_formdata_post(self):
         """
         Test handling of a multipart/form-data POST using the requests backend

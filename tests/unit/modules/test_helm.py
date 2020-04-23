@@ -3,6 +3,8 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.helm as helm
 
@@ -196,6 +198,7 @@ class HelmTestCase(TestCase, LoaderModuleMockMixin):
                 magic_mock.mock_calls,
             )
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_env(self):
         magic_mock = MagicMock(return_value="the_return")
         with patch("salt.modules.helm._exec_string_return", magic_mock):
@@ -506,6 +509,7 @@ class HelmTestCase(TestCase, LoaderModuleMockMixin):
             with patch("salt.modules.helm.repo_remove", MagicMock(return_value=True)):
                 self.assertEqual(helm.repo_manage(prune=True), result_wanted)
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_repo_manage_absent(self):
         result_wanted = {
             "present": [],

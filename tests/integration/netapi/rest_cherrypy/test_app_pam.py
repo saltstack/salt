@@ -49,6 +49,7 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
             self.run_function("user.delete", [USERA], remove=True)
             self.skipTest("Could not add user or password, skipping test")
 
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_bad_pwd_pam_chsh_service(self):
         """
         Test login while specifying chsh service with bad passwd
@@ -67,6 +68,7 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
         )
         self.assertEqual(response.status, "401 Unauthorized")
 
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_bad_pwd_pam_login_service(self):
         """
         Test login while specifying login service with bad passwd
@@ -85,6 +87,7 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
         )
         self.assertEqual(response.status, "401 Unauthorized")
 
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_good_pwd_pam_chsh_service(self):
         """
         Test login while specifying chsh service with good passwd
@@ -102,6 +105,7 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
         )
         self.assertEqual(response.status, "200 OK")
 
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_good_pwd_pam_login_service(self):
         """
         Test login while specifying login service with good passwd

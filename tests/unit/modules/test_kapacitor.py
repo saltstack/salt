@@ -3,6 +3,7 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
 import salt.modules.kapacitor as kapacitor
 
 # Import Salt libs
@@ -46,6 +47,7 @@ class KapacitorTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual("test", task["script"])
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_get_task_not_found(self):
         query_ret = {"body": '{"Error":"unknown task taskname"}', "status": 404}
         with patch("salt.utils.http.query", return_value=query_ret) as http_mock:

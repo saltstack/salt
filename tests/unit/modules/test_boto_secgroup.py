@@ -9,6 +9,8 @@ import string
 import sys
 from copy import deepcopy
 
+import pytest
+
 # Import Salt libs
 import salt.config
 import salt.loader
@@ -173,6 +175,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_create_ec2_classic(self):
         """
         Test of creation of an EC2-Classic security group. The test ensures
@@ -197,6 +200,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_create_ec2_vpc(self):
         """
         test of creation of an EC2-VPC security group. The test ensures that a
@@ -225,6 +229,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_get_group_id_ec2_classic(self):
         """
         tests that given a name of a group in EC2-Classic that the correct
@@ -276,6 +281,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_get_config_single_rule_group_name(self):
         """
         tests return of 'config' when given group name. get_config returns an OrderedDict.
@@ -334,6 +340,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_exists_true_name_classic(self):
         """
         tests 'true' existence of a group in EC2-Classic when given name
@@ -353,6 +360,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_exists_false_name_classic(self):
         pass
 
@@ -361,6 +369,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_exists_true_name_vpc(self):
         """
         tests 'true' existence of a group in EC2-VPC when given name and vpc_id
@@ -379,6 +388,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_exists_false_name_vpc(self):
         """
         tests 'false' existence of a group in vpc when given name and vpc_id
@@ -394,6 +404,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_exists_true_group_id(self):
         """
         tests 'true' existence of a group when given group_id
@@ -410,6 +421,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_exists_false_group_id(self):
         """
         tests 'false' existence of a group when given group_id
@@ -423,6 +435,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_delete_group_ec2_classic(self):
         """
         test deletion of a group in EC2-Classic. Test does the following:
@@ -457,6 +470,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_delete_group_name_ec2_vpc(self):
         pass
 
@@ -465,6 +479,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test__get_conn_true(self):
         """
         tests ensures that _get_conn returns an boto.ec2.connection.EC2Connection object.

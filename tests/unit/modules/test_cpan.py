@@ -5,6 +5,8 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.cpan as cpan
 
@@ -24,6 +26,7 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {cpan: {}}
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_install(self):
         """
         Test if it install a module from cpan

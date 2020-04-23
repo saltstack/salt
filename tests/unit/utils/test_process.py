@@ -15,6 +15,7 @@ import time
 import warnings
 
 import psutil
+import pytest
 
 # Import salt libs
 import salt.utils.platform
@@ -188,6 +189,7 @@ class TestProcessManager(TestCase):
 
 
 class TestThreadPool(TestCase):
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_basic(self):
         """
         Make sure the threadpool can do things
@@ -205,6 +207,7 @@ class TestThreadPool(TestCase):
         self.assertEqual(counter.value, 1)
         self.assertEqual(pool._job_queue.qsize(), 0)
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_full_queue(self):
         """
         Make sure that a full threadpool acts as we expect
@@ -301,6 +304,7 @@ class TestSignalHandlingProcess(TestCase):
     def children(cls, *args, **kwargs):
         raise psutil.NoSuchProcess(1)
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_process_does_not_exist(self):
         try:
             with patch("psutil.Process", self.Process):
@@ -309,6 +313,7 @@ class TestSignalHandlingProcess(TestCase):
         except psutil.NoSuchProcess:
             assert False, "psutil.NoSuchProcess raised"
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_process_children_do_not_exist(self):
         try:
             with patch("psutil.Process.children", self.children):
@@ -345,6 +350,7 @@ class TestSignalHandlingProcess(TestCase):
             pass
 
     @skipIf(sys.platform.startswith("win"), "No os.fork on Windows")
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_signal_processing_regression_test(self):
         evt = multiprocessing.Event()
         sh_proc = salt.utils.process.SignalHandlingProcess(
@@ -374,6 +380,7 @@ class TestSignalHandlingProcess(TestCase):
         p.join()
 
     @skipIf(sys.platform.startswith("win"), "Required signals not supported on windows")
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_signal_processing_handle_signals_called(self):
         "Validate SignalHandlingProcess handles signals"
         # Gloobal event to stop all processes we're creating
@@ -502,6 +509,7 @@ class TestProcessList(TestCase):
                 raise Exception("Process did not finishe before timeout")
             time.sleep(0.3)
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_process_list_process(self):
         plist = salt.utils.process.SubprocessList()
         proc = multiprocessing.Process(target=null_target)
@@ -524,6 +532,7 @@ class TestProcessList(TestCase):
         plist.cleanup()
         assert thread not in plist.processes
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_process_list_cleanup(self):
         plist = salt.utils.process.SubprocessList()
         event = multiprocessing.Event()
@@ -598,6 +607,7 @@ class TestDeprecatedClassNames(TestCase):
             if proc is not None:
                 del proc
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_multiprocessing_process_runtime_error(self):
         fake_utcnow = datetime.date(2022, 1, 1)
 

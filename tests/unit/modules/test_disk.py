@@ -6,6 +6,8 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt libs
 import salt.modules.disk as disk
 import salt.utils.path
@@ -298,6 +300,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
     @skipIf(not salt.utils.path.which("mkfs"), "mkfs not found")
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_format__fat(self):
         """
         unit tests for disk.format_ with FAT parameter

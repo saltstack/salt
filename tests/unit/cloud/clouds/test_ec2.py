@@ -6,6 +6,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import tempfile
 
+import pytest
 import salt.utils.files
 
 # Import Salt Libs
@@ -80,6 +81,7 @@ class EC2TestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.cloud.clouds.ec2.get_location")
     @patch("salt.cloud.clouds.ec2.get_provider")
     @patch("salt.utils.aws.query")
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_get_password_data(self, query, get_provider, get_location, _get_node):
         query.return_value = [{"passwordData": PASS_DATA}]
         _get_node.return_value = {"instanceId": "i-abcdef"}

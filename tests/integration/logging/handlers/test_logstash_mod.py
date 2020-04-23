@@ -6,6 +6,7 @@ import logging
 import socket
 import time
 
+import pytest
 import salt.utils.stringutils
 import zmq
 from salt.log.handlers.logstash_mod import DatagramLogstashHandler, ZMQLogstashHander
@@ -67,6 +68,7 @@ class ZMQLogstashHanderTest(TestCase):
         self.zmq_server.close()
         self.context.term()
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_log_pickling(self):
         # given
         the_log = "test message"

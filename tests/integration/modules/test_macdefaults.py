@@ -21,6 +21,7 @@ class MacDefaultsModuleTest(ModuleCase):
     Integration tests for the mac_default module
     """
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_macdefaults_write_read(self):
         """
         Tests that writes and reads macdefaults

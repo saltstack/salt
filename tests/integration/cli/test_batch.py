@@ -21,6 +21,7 @@ class BatchTest(ShellCase):
     else:
         run_timeout = 30
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_batch_run(self):
         """
         Tests executing a simple batch command to help catch regressions
@@ -31,6 +32,7 @@ class BatchTest(ShellCase):
         )
         self.assertIn(ret, cmd)
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_batch_run_number(self):
         """
         Tests executing a simple batch command using a number division instead of
@@ -42,6 +44,7 @@ class BatchTest(ShellCase):
         )
         self.assertIn(ret, cmd)
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_batch_run_grains_targeting(self):
         """
         Tests executing a batch command using a percentage divisor as well as grains
@@ -63,6 +66,7 @@ class BatchTest(ShellCase):
         self.assertIn(sub_min_ret, cmd)
         self.assertIn(min_ret, cmd)
 
+    @pytest.mark.slow_test(seconds=480)  # Test takes >240 and <=480 seconds
     def test_batch_exit_code(self):
         """
         Test that a failed state returns a non-zero exit code in batch mode
@@ -78,6 +82,7 @@ class BatchTest(ShellCase):
     # assertRaises(StopIteration)
     # But it's impossible due to nature of the tests execution via fork()
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_batch_module_stopping_after_error(self):
         """
         Test that a failed command stops the batch run
@@ -106,6 +111,7 @@ class BatchTest(ShellCase):
         # We expect retcode to be non-zero
         self.assertNotEqual(0, retcode)
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_batch_state_stopping_after_error(self):
         """
         Test that a failed state stops the batch run

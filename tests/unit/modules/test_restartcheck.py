@@ -6,6 +6,8 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libsrestartcheck
 import salt.modules.restartcheck as restartcheck
 
@@ -111,6 +113,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
             restartcheck._valid_deleted_file("/var/run/test (path inode=1)")
         )
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_valid_deleted_file_var_local_run(self):
         """
         Test /var/local/run/

@@ -5,6 +5,8 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import salt modules
 import salt.modules.junos as junos
 
@@ -431,6 +433,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             junos.set_hostname("test-name", **args)
             mock_commit.assert_called_with(comment="Committed via salt")
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_set_hostname_more_than_one_args_parsed_correctly(self):
         with patch("jnpr.junos.utils.config.Config.load") as mock_load, patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -535,6 +538,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ] = 'Commit check succeeded but actual commit failed with "Test exception"'
             self.assertEqual(junos.commit(), ret)
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_commit_with_single_argument(self):
         with patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -1259,6 +1263,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 path="test/path/config", format="xml", overwrite=True
             )
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_install_config_overwrite_false(self):
         with patch("jnpr.junos.utils.config.Config.commit") as mock_commit, patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -1460,6 +1465,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             self.assertEqual(junos.install_config("actual/path/config", **args), ret)
             mock_commit.assert_called_with(comment="comitted via salt", confirm=3)
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_install_config_commit_check_fails(self):
         with patch(
             "jnpr.junos.utils.config.Config.commit_check"
@@ -1735,6 +1741,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             mck.return_value = True
             self.assertEqual(junos.file_copy("/home/user/config.set"), ret)
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_file_copy(self):
         with patch("salt.modules.junos.SCP") as mock_scp, patch(
             "os.path.isfile"
@@ -1888,6 +1895,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 writes = m_open.write_calls()
                 assert writes == ["json rpc reply"], writes
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_rpc_write_file(self):
         with patch("salt.modules.junos.jxmlease.parse") as mock_parse, patch(
             "salt.modules.junos.etree.tostring"

@@ -23,6 +23,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import io
 
+import pytest
 from salt.ext import six
 from salt.ext.six.moves import StringIO
 from salt.modules.inspectlib.entities import CsvDBEntity
@@ -275,6 +276,7 @@ class InspectorFSDBTestCase(TestCase):
             assert csvdb._remained[1].bar == "another"
             assert csvdb._remained[1].spam == 0.456
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_get_object(self):
         """
         Getting an object from the store.
@@ -340,6 +342,7 @@ class InspectorFSDBTestCase(TestCase):
             assert entities[0].bar == "test"
             assert entities[0].spam == 0.123
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_get_obj_more_than(self):
         """
         Getting an object from the store with conditions

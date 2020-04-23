@@ -28,6 +28,7 @@ def shell_tests_salt_master(request, salt_factories):
 @pytest.mark.windows_whitelisted
 class TestSaltSyndicCLI(object):
     @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_exit_status_unknown_user(
         self, request, salt_factories, shell_tests_salt_master
     ):
@@ -47,6 +48,7 @@ class TestSaltSyndicCLI(object):
         assert "The user is not available." in exc.value.stderr, exc.value
 
     @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
+    @pytest.mark.slow_test(seconds=120)  # Test takes >60 and <=120 seconds
     def test_exit_status_unknown_argument(
         self, request, salt_factories, shell_tests_salt_master, tempdir
     ):
@@ -69,6 +71,7 @@ class TestSaltSyndicCLI(object):
         assert "no such option: --unknown-argument" in exc.value.stderr, exc.value
 
     @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
+    @pytest.mark.slow_test(seconds=120)  # Test takes >60 and <=120 seconds
     def test_exit_status_correct_usage(
         self, request, salt_factories, shell_tests_salt_master
     ):

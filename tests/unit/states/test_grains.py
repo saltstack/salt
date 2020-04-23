@@ -10,6 +10,7 @@ import contextlib
 # Import Python libs
 import os
 
+import pytest
 import salt.modules.grains as grainsmod
 import salt.states.grains as grains
 
@@ -730,6 +731,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(ret["changes"], {})
             self.assertEqual(grains.__grains__, {"a": "aval", "foo": {"bar": "val"}})
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_append_convert_to_list(self):
         # Append to an existing grain, converting to a list
         with self.setGrains({"a": "aval", "foo": {"bar": "val"}}):

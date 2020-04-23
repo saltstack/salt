@@ -7,6 +7,8 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.mine as mine
 import salt.utils.mine
@@ -169,6 +171,7 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
             ret_single = mine.get("*", "ip_addr")
         self.assertEqual(ret_single, {"webserver": self.ip_ret})
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_send_master(self):
         """
         Tests sending an item to the mine stored on the master.

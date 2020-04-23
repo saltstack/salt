@@ -9,6 +9,7 @@ from __future__ import absolute_import
 import copy
 import logging
 
+import pytest
 import salt.ext.tornado
 import salt.ext.tornado.testing
 
@@ -25,6 +26,7 @@ __opts__ = {}
 
 
 class ProxyMinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_post_master_init_metaproxy_called(self):
         """
         Tests that when the _post_master_ini function is called, _metaproxy_call is also called.
@@ -42,6 +44,7 @@ class ProxyMinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         finally:
             proxy_minion.destroy()
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_handle_decoded_payload_metaproxy_called(self):
         """
         Tests that when the _handle_decoded_payload function is called, _metaproxy_call is also called.
@@ -62,6 +65,7 @@ class ProxyMinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         finally:
             proxy_minion.destroy()
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_handle_payload_metaproxy_called(self):
         """
         Tests that when the _handle_payload function is called, _metaproxy_call is also called.

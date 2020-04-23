@@ -6,6 +6,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import os
 
+import pytest
 import salt.modules.grains as grainsmod
 import salt.utils.dictupdate as dictupdate
 
@@ -382,6 +383,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(grainsmod.__grains__, {"a": "aval", "b": "l1", "c": 8})
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_set_simple_value(self):
         with patch.dict(grainsmod.__grains__, {"a": ["b", "c"], "c": 8}):
             res = grainsmod.set("b", "bval")

@@ -32,6 +32,7 @@ class LoaderGrainsTest(ModuleCase):
     #    self.opts['grains'] = grains(self.opts)
 
     @pytest.mark.skip_on_windows(reason=PYTEST_MIGRATION_SKIP_REASON)
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_grains_overwrite(self):
         # Force a grains sync
         self.run_function("saltutil.sync_grains")

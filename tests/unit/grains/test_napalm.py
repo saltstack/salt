@@ -6,6 +6,7 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
 import tests.support.napalm as napalm_test_support
 
 # Import Salt Testing Libs
@@ -47,6 +48,7 @@ class NapalmGrainsTestCase(TestCase, LoaderModuleMockMixin):
 
         return {napalm_grains: module_globals}
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_os(self):
         ret = napalm_grains.getos(proxy=napalm_proxy)
         assert ret["os"] == "cisco"

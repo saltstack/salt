@@ -9,6 +9,7 @@ from __future__ import absolute_import
 import fnmatch
 import os
 
+import pytest
 import salt.utils.path
 import salt.utils.stringutils
 from tests.support.paths import list_test_mods
@@ -103,6 +104,7 @@ class BadTestModuleNamesTestCase(TestCase):
         not os.path.isdir(os.path.join(RUNTIME_VARS.CODE_DIR, "salt")),
         "Failed to find salt directory in '{}'.".format(RUNTIME_VARS.CODE_DIR),
     )
+    @pytest.mark.slow_test(seconds=0.0001)  # Force test to be part of the slow tests
     def test_module_name_source_match(self):
         """
         Check all the test mods and check if they correspond to actual files in

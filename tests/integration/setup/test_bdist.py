@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import re
 
+import pytest
 import salt.utils.path
 import salt.utils.platform
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
@@ -25,6 +26,7 @@ class BdistSetupTest(ModuleCase):
     Tests for building and installing bdist_wheel packages
     """
 
+    @pytest.mark.slow_test(seconds=120)  # Test takes >60 and <=120 seconds
     def test_wheel_build(self):
         """
         test building a bdist_wheel package

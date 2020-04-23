@@ -20,6 +20,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import tempfile
 
+import pytest
 import salt.utils.files
 import salt.utils.stringutils
 from salt.modules import x509
@@ -120,6 +121,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
         self.assertEqual(ret, 1024)
 
     @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailble")
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_create_key(self):
         """
         Test that x509.create_key returns a private key

@@ -3,6 +3,8 @@
 # Import Python libs
 from __future__ import absolute_import
 
+import pytest
+
 # Import Salt libs
 import salt.utils.json
 import salt.utils.yaml
@@ -32,6 +34,7 @@ class TestOutFormats(BaseToolsTest):
         )
         self.assertEqual(response.status, "406 Not Acceptable")
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_json_out(self):
         request, response = self.request("/", headers=(("Accept", "application/json"),))
         self.assertEqual(response.headers["Content-type"], "application/json")

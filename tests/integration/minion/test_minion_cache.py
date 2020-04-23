@@ -3,6 +3,7 @@ from __future__ import absolute_import, unicode_literals
 
 import os
 
+import pytest
 import salt.loader
 import salt.minion
 import salt.utils.yaml
@@ -14,6 +15,7 @@ from tests.support.mock import patch
 
 class BasePillarTest(ModuleCase):
     @with_tempdir()
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_minion_cache_should_cache_files(self, tempdir):
         pillar = {"this": {"is": {"some": "pillar data"}}}
         opts = {

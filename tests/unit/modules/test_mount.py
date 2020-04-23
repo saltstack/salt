@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import textwrap
 
+import pytest
 import salt.modules.mount as mount
 
 # Import Salt Libs
@@ -567,6 +568,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
             mount.umount("/mountpoint", device="/path/to/my.qcow", util="guestfs")
             mock.assert_called_once_with("/mountpoint", disk="/path/to/my.qcow")
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_is_fuse_exec(self):
         """
         Returns true if the command passed is a fuse mountable application

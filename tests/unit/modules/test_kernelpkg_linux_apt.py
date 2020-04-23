@@ -12,6 +12,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import re
 
+import pytest
+
 try:
     # Import Salt Testing Libs
     from tests.support.mixins import LoaderModuleMockMixin
@@ -29,6 +31,7 @@ except ImportError:
 
 
 @skipIf(not HAS_MODULES, "Salt modules could not be loaded")
+@pytest.mark.slow_test(seconds=1)  # Inheritance used. Skip the whole class
 class AptKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.modules.kernelpkg_linux_apt

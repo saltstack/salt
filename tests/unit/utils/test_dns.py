@@ -308,6 +308,7 @@ class DNSlookupsCase(TestCase):
 
     @skipIf(not salt.utils.dns.HAS_NSLOOKUP, "nslookup is not available")
     @pytest.mark.requires_network
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_lookup_with_servers(self):
         rights = {
             "A": [
@@ -348,6 +349,7 @@ class DNSlookupsCase(TestCase):
                     )
 
     @skipIf(not salt.utils.dns.HAS_DIG, "dig is not available")
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_dig_options(self):
         cmd = "dig {0} -v".format(salt.utils.dns.DIG_OPTIONS)
         cmd = salt.modules.cmdmod.retcode(

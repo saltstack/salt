@@ -55,6 +55,7 @@ class TestEventReturn(AdaptedConfigurationTestCaseMixin, ScriptPathMixin, TestCa
         shutil.rmtree(cls.root_dir)
         cls.root_dir = cls.config_dir = None
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_master_startup(self):
         proc = NonBlockingPopen(
             [

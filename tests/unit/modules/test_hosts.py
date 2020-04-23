@@ -6,6 +6,8 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.hosts as hosts
 import salt.utils.data
@@ -56,6 +58,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertEqual("", hosts.get_ip("Salt3"))
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_get_ip_none(self):
         """
         Tests return ip associated with the named host
@@ -101,6 +104,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_host' function tests: 3
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_set_host(self):
         """
         Tests true if the alias is set
@@ -230,6 +234,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'rm_host' function tests: 2
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_rm_host(self):
         """
         Tests if specified host entry gets removed from the hosts file

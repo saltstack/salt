@@ -6,6 +6,8 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.publish as publish
 from salt.exceptions import SaltReqTimeoutError
@@ -110,6 +112,7 @@ class PublishTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'runner' function tests: 1
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_runner(self):
         """
         Test if it execute a runner on the master and return the data

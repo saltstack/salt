@@ -15,6 +15,7 @@ class ConfigTest(ModuleCase):
     Test config routines
     """
 
+    @pytest.mark.slow_test(seconds=120)  # Test takes >60 and <=120 seconds
     def test_valid_file_proto(self):
         """
         test config.valid_file_proto
@@ -28,12 +29,14 @@ class ConfigTest(ModuleCase):
         self.assertTrue(self.run_function("config.valid_fileproto", ["swift://"]))
         self.assertFalse(self.run_function("config.valid_fileproto", ["cheese://"]))
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_backup_mode(self):
         """
         test config.backup_mode
         """
         self.assertEqual(self.run_function("config.backup_mode", ["minion"]), "minion")
 
+    @pytest.mark.slow_test(seconds=120)  # Test takes >60 and <=120 seconds
     def test_manage_mode(self):
         """
         test config.manage_mode
@@ -50,6 +53,7 @@ class ConfigTest(ModuleCase):
         self.assertEqual(self.run_function("config.manage_mode", ["1775"]), "1775")
         self.assertEqual(self.run_function("config.manage_mode", ["0"]), "0000")
 
+    @pytest.mark.slow_test(seconds=30)  # Test takes >10 and <=30 seconds
     def test_option(self):
         """
         test config.option
@@ -62,6 +66,7 @@ class ConfigTest(ModuleCase):
         # pillar conf opt
         self.assertEqual(self.run_function("config.option", ["ext_spam"]), "eggs")
 
+    @pytest.mark.slow_test(seconds=60)  # Test takes >30 and <=60 seconds
     def test_get(self):
         """
         Test option.get

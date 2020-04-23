@@ -8,6 +8,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import os.path
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.linux_lvm as linux_lvm
 from salt.exceptions import CommandExecutionError
@@ -218,6 +220,7 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(linux_lvm.__salt__, {"cmd.run_all": mock}):
                     self.assertEqual(linux_lvm.pvcreate("A", metadatasize=1000), True)
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_pvcreate_existing_pvs(self):
         """
         Test a scenario when all the submitted devices are already LVM PVs.

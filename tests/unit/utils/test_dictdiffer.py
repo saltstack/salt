@@ -3,6 +3,8 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt libs
 import salt.utils.dictdiffer as dictdiffer
 
@@ -42,6 +44,7 @@ class RecursiveDictDifferTestCase(TestCase):
     def test_removed(self):
         self.assertEqual(self.recursive_diff.removed(), ["a.f"])
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_changed_with_ignore_unset_values(self):
         self.recursive_diff.ignore_unset_values = True
         self.assertEqual(self.recursive_diff.changed(), ["a.c", "a.e"])

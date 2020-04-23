@@ -10,6 +10,7 @@ import re
 import shutil
 import tempfile
 
+import pytest
 import salt.config
 import salt.roster
 import salt.utils.files
@@ -34,6 +35,7 @@ self:
 
 @skipIf(not salt.utils.path.which("ssh"), "No ssh binary found in path")
 class SSHPasswordTests(ShellCase):
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_password_failure(self):
         """
         Check password failures when trying to deploy keys
@@ -74,6 +76,7 @@ class SSHPasswordTests(ShellCase):
 
 
 class SSHRosterDefaults(TestCase):
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_roster_defaults_flat(self):
         """
         Test Roster Defaults on the flat roster
@@ -391,6 +394,7 @@ class SSHSingleTests(TestCase):
             ] == mock_cmd.call_args_list
 
     @skipIf(salt.utils.platform.is_windows(), "SSH_PY_SHIM not set on windows")
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_cmd_run_set_path(self):
         """
         test when set_path is set
@@ -412,6 +416,7 @@ class SSHSingleTests(TestCase):
         assert re.search("\\" + target["set_path"], ret)
 
     @skipIf(salt.utils.platform.is_windows(), "SSH_PY_SHIM not set on windows")
+    @pytest.mark.slow_test(seconds=10)  # Test takes >5 and <=10 seconds
     def test_cmd_run_not_set_path(self):
         """
         test when set_path is not set

@@ -31,6 +31,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import sys
 
+import pytest
 import salt.modules.chroot as chroot
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
@@ -116,6 +117,7 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch("salt.modules.chroot.exist")
     @patch("tempfile.mkdtemp")
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_call_fails_salt_thin(self, mkdtemp, exist):
         """
         Test execution of Salt functions in chroot.
@@ -213,6 +215,7 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch("salt.modules.chroot.exist")
     @patch("tempfile.mkdtemp")
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_call_success_parameters(self, mkdtemp, exist):
         """
         Test execution of Salt functions in chroot with parameters.

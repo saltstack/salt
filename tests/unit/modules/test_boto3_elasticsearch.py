@@ -11,6 +11,8 @@ import random
 import string
 import textwrap
 
+import pytest
+
 # Import Salt libs
 import salt.loader
 import salt.modules.boto3_elasticsearch as boto3_elasticsearch
@@ -194,6 +196,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 {"result": True, "response": DOMAIN_RET},
             )
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_describe_elasticsearch_domain_error(self):
         """
         Test that when describing a domain when the domain does not exist,
@@ -707,6 +710,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 ),
             )
 
+    @pytest.mark.slow_test(seconds=1)  # Test takes >0.5 and <=1 seconds
     def test_describe_reserved_elasticsearch_instance_offerings_positive(self):
         """
         Test that when calling describe_reserved_elasticsearch_instance_offerings

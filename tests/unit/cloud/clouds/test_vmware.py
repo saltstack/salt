@@ -11,6 +11,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 from copy import deepcopy
 
+import pytest
+
 # Import Salt Libs
 from salt import config
 from salt.cloud.clouds import vmware
@@ -157,6 +159,7 @@ class VMwareTestCase(ExtendedTestCase):
         """
         self.assertRaises(SaltCloudSystemExit, vmware.list_hosts, call="action")
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_list_resourcepools_call(self):
         """
         Tests that a SaltCloudSystemExit is raised when trying to call list_resourcepools
@@ -533,6 +536,7 @@ class VMwareTestCase(ExtendedTestCase):
             SaltCloudSystemExit, vmware.create_datacenter, kwargs=None, call="function"
         )
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_create_datacenter_no_name_in_kwargs(self):
         """
         Tests that a SaltCloudSystemExit is raised when name is not present in
@@ -827,6 +831,7 @@ class VMwareTestCase(ExtendedTestCase):
                 call="function",
             )
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_add_host_both_cluster_and_datacenter_in_kwargs(self):
         """
         Tests that a SaltCloudSystemExit is raised when both cluster and datacenter

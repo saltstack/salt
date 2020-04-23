@@ -49,6 +49,7 @@ class MacPkgutilModuleTest(ModuleCase):
         self.run_function("pkgutil.forget", [TEST_PKG_NAME])
         self.run_function("file.remove", ["/opt/local"])
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_list(self):
         """
         Test pkgutil.list
@@ -56,6 +57,7 @@ class MacPkgutilModuleTest(ModuleCase):
         self.assertIsInstance(self.run_function("pkgutil.list"), list)
         self.assertIn(self.pkg_name, self.run_function("pkgutil.list"))
 
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_is_installed(self):
         """
         Test pkgutil.is_installed
@@ -67,6 +69,7 @@ class MacPkgutilModuleTest(ModuleCase):
         self.assertFalse(self.run_function("pkgutil.is_installed", ["spongebob"]))
 
     @pytest.mark.destructive_test
+    @pytest.mark.slow_test(seconds=5)  # Test takes >1 and <=5 seconds
     def test_install_forget(self):
         """
         Test pkgutil.install

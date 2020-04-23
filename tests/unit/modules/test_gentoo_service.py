@@ -3,6 +3,8 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Libs
 import salt.modules.gentoo_service as gentoo_service
 
@@ -493,6 +495,7 @@ class GentooServicesTestCase(TestCase, LoaderModuleMockMixin):
         )
         rc_update_mock.reset_mock()
 
+    @pytest.mark.slow_test(seconds=0.5)  # Test takes >0.1 and <=0.5 seconds
     def test_enabled(self):
         """
         Test for Return True if the named service is enabled, false otherwise
