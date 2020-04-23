@@ -38,7 +38,7 @@ import random
 import string
 
 # Import Salt libs
-import salt.utils.docker.translate.network
+import salt.utils.dockermod.translate.network
 from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError
 
@@ -579,7 +579,7 @@ def present(
 
     try:
         kwargs = __utils__["docker.translate_input"](
-            salt.utils.docker.translate.network,
+            salt.utils.dockermod.translate.network,
             skip_translate=skip_translate,
             ignore_collisions=ignore_collisions,
             validate_ip_addrs=validate_ip_addrs,
