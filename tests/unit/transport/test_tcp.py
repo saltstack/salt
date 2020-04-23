@@ -158,6 +158,7 @@ class AESReqTestCases(BaseTCPReqCase, ReqChannelMixin):
     # TODO: make failed returns have a specific framing so we can raise the same exception
     # on encrypted channels
     @flaky
+    @skipIf(True, "SLOWTEST skip")
     def test_badload(self):
         """
         Test a variety of bad requests, make sure that we get some sort of error
@@ -261,6 +262,7 @@ class BaseTCPPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
 
 
 class AsyncTCPPubChannelTest(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
+    @skipIf(True, "SLOWTEST skip")
     def test_connect_publish_port(self):
         """
         test when publish_port is not 4506

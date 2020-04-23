@@ -104,6 +104,7 @@ class VersionTestCase(TestCase):
             )
 
     @skipIf(not salt.utils.platform.is_linux(), "only need to run on linux")
+    @skipIf(True, "SLOWTEST skip")
     def test_spelling_version_name(self):
         """
         check the spelling of the version name for the release

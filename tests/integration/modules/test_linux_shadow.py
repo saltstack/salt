@@ -3,23 +3,20 @@
 integration tests for shadow linux
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
-import random
-import string
 
-import salt.modules.linux_shadow as shadow
-
-# Import Salt libs
+import salt.modules.linux_shadow
 import salt.utils.files
 import salt.utils.platform
-from salt.ext.six.moves import range
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, flaky, skip_if_not_root
+from tests.support.helpers import (
+    destructiveTest,
+    flaky,
+    random_string,
+    skip_if_not_root,
+)
 from tests.support.unit import skipIf
 
 
@@ -38,22 +35,12 @@ class ShadowModuleTest(ModuleCase):
         if "ERROR" in self._password:
             self.fail("Failed to generate password: {0}".format(self._password))
         super(ShadowModuleTest, self).setUp()
-        os_grain = self.run_function("grains.item", ["kernel"])
-        if os_grain["kernel"] not in "Linux":
-            self.skipTest("Test not applicable to '{kernel}' kernel".format(**os_grain))
-        self._test_user = self.__random_string()
-        self._no_user = self.__random_string()
-        self._password = shadow.gen_password("Password1234")
-
-    def __random_string(self, size=6):
-        """
-        Generates a random username
-        """
-        return "tu-" + "".join(
-            random.choice(string.ascii_lowercase + string.digits) for x in range(size)
-        )
+        self._no_user = random_string("tu-", uppercase=False)
+        self._test_user = random_string("tu-", uppercase=False)
+        self._password = salt.modules.linux_shadow.gen_password("Password1234")
 
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_info(self):
         """
         Test shadow.info
@@ -70,6 +57,7 @@ class ShadowModuleTest(ModuleCase):
         self.assertEqual(ret["name"], "")
 
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_del_password(self):
         """
         Test shadow.del_password
@@ -87,6 +75,7 @@ class ShadowModuleTest(ModuleCase):
         self.assertFalse(self.run_function("shadow.del_password", [self._no_user]))
 
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_set_password(self):
         """
         Test shadow.set_password
@@ -105,6 +94,7 @@ class ShadowModuleTest(ModuleCase):
         )
 
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_set_inactdays(self):
         """
         Test shadow.set_inactdays
@@ -121,6 +111,7 @@ class ShadowModuleTest(ModuleCase):
         self.assertFalse(self.run_function("shadow.set_inactdays", [self._no_user, 12]))
 
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_set_maxdays(self):
         """
         Test shadow.set_maxdays
@@ -135,6 +126,7 @@ class ShadowModuleTest(ModuleCase):
         self.assertFalse(self.run_function("shadow.set_maxdays", [self._no_user, 12]))
 
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_set_mindays(self):
         """
         Test shadow.set_mindays
@@ -150,6 +142,7 @@ class ShadowModuleTest(ModuleCase):
 
     @flaky
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_lock_password(self):
         """
         Test shadow.lock_password
@@ -165,6 +158,7 @@ class ShadowModuleTest(ModuleCase):
         self.assertFalse(self.run_function("shadow.lock_password", [self._no_user]))
 
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_unlock_password(self):
         """
         Test shadow.lock_password
@@ -180,6 +174,7 @@ class ShadowModuleTest(ModuleCase):
         self.assertFalse(self.run_function("shadow.unlock_password", [self._no_user]))
 
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_set_warndays(self):
         """
         Test shadow.set_warndays
@@ -194,6 +189,7 @@ class ShadowModuleTest(ModuleCase):
         self.assertFalse(self.run_function("shadow.set_warndays", [self._no_user, 12]))
 
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_set_date(self):
         """
         Test shadow.set_date
@@ -212,6 +208,7 @@ class ShadowModuleTest(ModuleCase):
         )
 
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_set_expire(self):
         """
         Test shadow.set_exipre
@@ -230,6 +227,7 @@ class ShadowModuleTest(ModuleCase):
         )
 
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_set_del_root_password(self):
         """
         Test set/del password for root

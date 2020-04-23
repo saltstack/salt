@@ -16,7 +16,7 @@ import salt.modules.qemu_nbd as qemu_nbd
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class QemuNbdTestCase(TestCase, LoaderModuleMockMixin):
@@ -66,6 +66,7 @@ class QemuNbdTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'init' function tests: 1
 
+    @skipIf(True, "SLOWTEST skip")
     def test_init(self):
         """
         Test if it mount the named image via qemu-nbd
