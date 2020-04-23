@@ -33,6 +33,7 @@ Versions are `MAJOR.PATCH`.
 ### Deprecated
 
 ### Changed
+- [#56730](https://github.com/saltstack/salt/pull/56730) - Backport #52992
 
 ### Fixed
 

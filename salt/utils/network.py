@@ -36,12 +36,12 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-b
 from salt.utils.decorators.jinja import jinja_filter
 from salt.utils.versions import LooseVersion
 
-if salt.utils.platform.is_windows():
-    # inet_pton does not exist in Windows, this is a workaround
-    from salt.ext import win_inet_pton  # pylint: disable=unused-import
-
-    # Attempt to import win_network
+try:
     import salt.utils.win_network
+
+    WIN_NETWORK_LOADED = True
+except ImportError:
+    WIN_NETWORK_LOADED = False
 
 log = logging.getLogger(__name__)
 
@@ -247,8 +247,8 @@ def get_fqhostname():
         )
         for info in addrinfo:
             # info struct [family, socktype, proto, canonname, sockaddr]
-            if len(info) >= 4:
-                l.append(info[3])
+            if len(info) >= 4 and info[3]:
+                l = [info[3]]
     except socket.gaierror:
         pass
 
@@ -1054,6 +1054,9 @@ def win_interfaces():
     """
     Obtain interface information for Windows systems
     """
+    if WIN_NETWORK_LOADED is False:
+        # Let's throw the ImportException again
+        import salt.utils.win_network as _
     return salt.utils.win_network.get_interface_info()
 
 

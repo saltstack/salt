@@ -1188,9 +1188,8 @@ def describe_event_source_mapping(
         salt myminion boto_lambda.describe_event_source_mapping uuid
 
     """
-
     ids = _get_ids(UUID, EventSourceArn=EventSourceArn, FunctionName=FunctionName)
-    if len(ids) < 1:
+    if not ids:
         return {"event_source_mapping": None}
 
     UUID = ids[0]

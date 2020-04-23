@@ -588,7 +588,7 @@ def add_volume_bricks(name, bricks):
         else:
             new_bricks.append(brick)
 
-    if len(new_bricks) > 0:
+    if new_bricks:
         for brick in new_bricks:
             cmd += " {0}".format(brick)
         return _gluster(cmd)
