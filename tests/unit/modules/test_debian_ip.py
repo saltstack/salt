@@ -1051,6 +1051,7 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'apply_network_settings' function tests: 1
 
+    @skipIf(True, "SLOWTEST skip")
     def test_apply_network_settings(self):
         """
         Test if it apply global network configuration.

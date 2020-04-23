@@ -515,7 +515,7 @@ def proccess_lowstates(**kwargs):
             "ERROR: to see details run: [salt-call state.show_lowstate] <-----***-SEE-***"
         )
     else:
-        if len(ls) > 0:
+        if ls:
             if not isinstance(ls[0], dict):
                 raise Exception(
                     "ERROR: to see details run: [salt-call state.show_lowstate] <-----***-SEE-***"
@@ -557,7 +557,7 @@ def _state_data_to_yaml_string(data, whitelist=None, blacklist=None):
         kset &= set(whitelist)
     for k in kset:
         y[k] = data[k]
-    if len(y) == 0:
+    if not y:
         return None
     return salt.utils.yaml.safe_dump(y, default_flow_style=False)
 
@@ -724,7 +724,7 @@ def proccesser_markdown(lowstate_item, config, **kwargs):
         details += _format_markdown_system_file(s["name"], config)
 
     # if no state doc is created use default state as yaml
-    if len(details) == 0:
+    if not details:
         y = _state_data_to_yaml_string(s)
         if y:
             details += "```\n{0}```\n".format(y)

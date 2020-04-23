@@ -3,21 +3,17 @@
     :codeauthor: Li Kexian <doyenli@tencent.com>
 """
 
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import Salt Libs
 from salt.config import cloud_providers_config
-
-# Import Salt Testing Libs
 from tests.support.case import ShellCase
-from tests.support.helpers import expensiveTest, generate_random_name
+from tests.support.helpers import expensiveTest, random_string
 from tests.support.runtests import RUNTIME_VARS
 
 # Create the cloud instance name to be used throughout the tests
-INSTANCE_NAME = generate_random_name("CLOUD-TEST-")
+INSTANCE_NAME = random_string("CLOUD-TEST-", lowercase=False)
 PROVIDER_NAME = "tencentcloud"
 
 
