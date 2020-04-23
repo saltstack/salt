@@ -6,6 +6,7 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import logging
 import os
 
 # Import Salt Libs
@@ -17,6 +18,8 @@ from tests.support.mock import MagicMock, patch
 # Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
+
+log = logging.getLogger(__name__)
 
 JOB1 = {
     "function": "test.ping",
@@ -536,3 +539,32 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(SaltEvent, "get_event", return_value=_ret_value):
                     ret = schedule.modify("job2", function="test.version", test=True)
                     self.assertDictEqual(ret, expected5)
+
+    # 'is_enabled' function tests: 1
+
+    def test_is_enabled(self):
+        """
+        Test is_enabled
+        """
+        job1 = {"function": "salt", "seconds": 3600}
+
+        comm1 = "Modified job: job1 in schedule."
+
+        mock_schedule = {"enabled": True, "job1": job1}
+
+        mock_lst = MagicMock(return_value=mock_schedule)
+
+        with patch.dict(
+            schedule.__opts__, {"schedule": {"job1": job1}, "sock_dir": self.sock_dir}
+        ):
+            mock = MagicMock(return_value=True)
+            with patch.dict(
+                schedule.__salt__, {"event.fire": mock, "schedule.list": mock_lst}
+            ):
+                _ret_value = {"complete": True, "schedule": {"job1": job1}}
+                with patch.object(SaltEvent, "get_event", return_value=_ret_value):
+                    ret = schedule.is_enabled("job1")
+                    self.assertDictEqual(ret, job1)
+
+                    ret = schedule.is_enabled()
+                    self.assertEqual(ret, True)

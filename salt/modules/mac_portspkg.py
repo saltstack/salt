@@ -323,7 +323,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
         pkg_params = {name: spec}
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     formulas_array = []
