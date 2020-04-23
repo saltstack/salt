@@ -203,9 +203,7 @@ def check_db(*names, **kwargs):
     ret = {}
     for name in names:
         if name in ret:
-            log.warning(
-                "pkg.check_db: Duplicate package name '{0}' " "submitted".format(name)
-            )
+            log.warning("pkg.check_db: Duplicate package name '%s' submitted", name)
             continue
         if "/" not in name:
             ret.setdefault(name, {})["found"] = False
@@ -265,7 +263,7 @@ def latest_version(*names, **kwargs):
     """
     refresh = salt.utils.data.is_true(kwargs.pop("refresh", True))
 
-    if len(names) == 0:
+    if not names:
         return ""
 
     # Refresh before looking for the latest version available
@@ -499,7 +497,8 @@ def refresh_db():
         if now - timestamp < day:
             log.info(
                 "Did not sync package tree since last sync was done at"
-                " {0}, less than 1 day ago".format(timestamp)
+                " %s, less than 1 day ago",
+                timestamp,
             )
             return False
 
@@ -654,16 +653,15 @@ def install(
                        'new': '<new-version>'}}
     """
     log.debug(
-        "Called modules.pkg.install: {0}".format(
-            {
-                "name": name,
-                "refresh": refresh,
-                "pkgs": pkgs,
-                "sources": sources,
-                "kwargs": kwargs,
-                "binhost": binhost,
-            }
-        )
+        "Called modules.pkg.install: %s",
+        {
+            "name": name,
+            "refresh": refresh,
+            "pkgs": pkgs,
+            "sources": sources,
+            "kwargs": kwargs,
+            "binhost": binhost,
+        },
     )
     if salt.utils.data.is_true(refresh):
         refresh_db()
@@ -688,7 +686,7 @@ def install(
                 version_num += "[{0}]".format(",".join(uses))
             pkg_params = {name: version_num}
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
     elif pkg_type == "file":
         emerge_opts = ["tbz2file"]
@@ -1256,7 +1254,7 @@ def check_extra_requirements(pkgname, pkgver):
     try:
         cpv = _porttree().dbapi.xmatch("bestmatch-visible", atom)
     except portage.exception.InvalidAtom as iae:
-        log.error("Unable to find a matching package for {0}: ({1})".format(atom, iae))
+        log.error("Unable to find a matching package for %s: (%s)", atom, iae)
         return False
 
     if cpv == "":
