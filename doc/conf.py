@@ -161,6 +161,8 @@ MOCK_MODULES = [
     "jnpr.junos.utils.config",
     "jnpr.junos.utils.sw",
     "keyring",
+    "kubernetes",
+    "kubernetes.config",
     "libvirt",
     "lxml",
     "lxml.etree",

@@ -3723,7 +3723,7 @@ def convert_to_kb(unit, size):
 
 def power_cycle_vm(virtual_machine, action="on"):
     """
-    Powers on/off a virtual machine specified by it's name.
+    Powers on/off a virtual machine specified by its name.
 
     virtual_machine
         vim.VirtualMachine object to power on/off virtual machine
