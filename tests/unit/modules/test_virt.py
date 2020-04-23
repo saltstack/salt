@@ -441,8 +441,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         mock = MagicMock(return_value={})
         with patch.dict(
-            virt.__salt__, {"config.get": mock}
-        ):  # pylint: disable=no-member
+            virt.__salt__, {"config.get": mock}  # pylint: disable=no-member
+        ):
             ret = virt._disk_profile("nonexistent", "vmware")
             self.assertTrue(len(ret) == 1)
             found = [disk for disk in ret if disk["name"] == "system"]
@@ -458,8 +458,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         mock = MagicMock(return_value={})
         with patch.dict(
-            virt.__salt__, {"config.get": mock}
-        ):  # pylint: disable=no-member
+            virt.__salt__, {"config.get": mock}  # pylint: disable=no-member
+        ):
             ret = virt._disk_profile("nonexistent", "kvm")
             self.assertTrue(len(ret) == 1)
             found = [disk for disk in ret if disk["name"] == "system"]
@@ -475,8 +475,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         mock = MagicMock(return_value={})
         with patch.dict(
-            virt.__salt__, {"config.get": mock}
-        ):  # pylint: disable=no-member
+            virt.__salt__, {"config.get": mock}  # pylint: disable=no-member
+        ):
             ret = virt._disk_profile("nonexistent", "xen")
             self.assertTrue(len(ret) == 1)
             found = [disk for disk in ret if disk["name"] == "system"]
@@ -492,8 +492,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         mock = MagicMock(return_value={})
         with patch.dict(
-            virt.__salt__, {"config.get": mock}
-        ):  # pylint: disable=no-member
+            virt.__salt__, {"config.get": mock}  # pylint: disable=no-member
+        ):
             ret = virt._nic_profile("nonexistent", "vmware")
             self.assertTrue(len(ret) == 1)
             eth0 = ret[0]
@@ -508,8 +508,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         mock = MagicMock(return_value={})
         with patch.dict(
-            virt.__salt__, {"config.get": mock}
-        ):  # pylint: disable=no-member
+            virt.__salt__, {"config.get": mock}  # pylint: disable=no-member
+        ):
             ret = virt._nic_profile("nonexistent", "kvm")
             self.assertTrue(len(ret) == 1)
             eth0 = ret[0]
@@ -524,8 +524,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         mock = MagicMock(return_value={})
         with patch.dict(
-            virt.__salt__, {"config.get": mock}
-        ):  # pylint: disable=no-member
+            virt.__salt__, {"config.get": mock}  # pylint: disable=no-member
+        ):
             ret = virt._nic_profile("nonexistent", "xen")
             self.assertTrue(len(ret) == 1)
             eth0 = ret[0]
@@ -621,7 +621,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         diskp = virt._disk_profile("default", "xen", [], "hello")
         nicp = virt._nic_profile("default", "xen")
-        with patch.dict(virt.__grains__, {"os_family": "Suse"}):
+        with patch.dict(
+            virt.__grains__, {"os_family": "Suse"}  # pylint: disable=no-member
+        ):
             xml_data = virt._gen_xml(
                 "hello", 1, 512, diskp, nicp, "xen", "xen", "x86_64", boot=None
             )
@@ -702,12 +704,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             ]
         }
         with patch.dict(
-            virt.__salt__,
-            {
-                "config.get": MagicMock(
-                    side_effect=[disks, nics]  # pylint: disable=no-member
-                )
-            },
+            virt.__salt__,  # pylint: disable=no-member
+            {"config.get": MagicMock(side_effect=[disks, nics])},
         ):
             diskp = virt._disk_profile("noeffect", "kvm", [], "hello")
             nicp = virt._nic_profile("noeffect", "kvm")
@@ -789,12 +787,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         disks = {"noeffect": [{"first": {"size": 8192, "pool": "default"}}]}
         with patch.dict(
-            virt.__salt__,
-            {
-                "config.get": MagicMock(
-                    side_effect=[disks, "/default/path/"]  # pylint: disable=no-member
-                )
-            },
+            virt.__salt__,  # pylint: disable=no-member
+            {"config.get": MagicMock(side_effect=[disks, "/default/path/"])},
         ):
             with self.assertRaises(CommandExecutionError):
                 virt._disk_profile("noeffect", "kvm", [], "hello")
@@ -808,12 +802,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         disks = {"noeffect": [{"first": {"size": 8192, "pool": "default"}}]}
         with patch.dict(
-            virt.__salt__,
-            {
-                "config.get": MagicMock(
-                    side_effect=[disks, "/default/path/"]  # pylint: disable=no-member
-                )
-            },
+            virt.__salt__,  # pylint: disable=no-member
+            {"config.get": MagicMock(side_effect=[disks, "/default/path/"])},
         ):
             with self.assertRaises(CommandExecutionError):
                 virt._disk_profile("noeffect", "kvm", [], "hello")
@@ -1543,8 +1533,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         devattach_mock.reset_mock()
         devdetach_mock.reset_mock()
         with patch.dict(
-            salt.modules.config.__opts__, mock_config
-        ):  # pylint: disable=no-member
+            salt.modules.config.__opts__, mock_config  # pylint: disable=no-member
+        ):
             ret = virt.update(
                 "my_vm",
                 nic_profile="myprofile",
@@ -1857,8 +1847,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         mock_config = salt.utils.yaml.safe_load(yaml_config)
         with patch.dict(
-            salt.modules.config.__opts__, mock_config
-        ):  # pylint: disable=no-member
+            salt.modules.config.__opts__, mock_config  # pylint: disable=no-member
+        ):
 
             for name in six.iterkeys(mock_config["virt"]["nic"]):
                 profile = salt.modules.virt._nic_profile(name, "kvm")
