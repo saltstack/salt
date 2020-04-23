@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Use composer to install PHP dependencies for a directory
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
@@ -14,35 +14,33 @@ import salt.utils.path
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
-    SaltInvocationError
+    SaltInvocationError,
 )
 
 log = logging.getLogger(__name__)
 
 # Function alias to make sure not to shadow built-in's
-__func_alias__ = {
-    'list_': 'list'
-}
+__func_alias__ = {"list_": "list"}
 
 
 def __virtual__():
-    '''
+    """
     Always load
-    '''
+    """
     return True
 
 
 def _valid_composer(composer):
-    '''
+    """
     Validate the composer file is indeed there.
-    '''
+    """
     if salt.utils.path.which(composer):
         return True
     return False
 
 
 def did_composer_install(dir):
-    '''
+    """
     Test to see if the vendor directory exists in this directory
 
     dir
@@ -53,29 +51,31 @@ def did_composer_install(dir):
     .. code-block:: bash
 
         salt '*' composer.did_composer_install /var/www/application
-    '''
+    """
     lockFile = "{0}/vendor".format(dir)
     if os.path.exists(lockFile):
         return True
     return False
 
 
-def _run_composer(action,
-                  directory=None,
-                  composer=None,
-                  php=None,
-                  runas=None,
-                  prefer_source=None,
-                  prefer_dist=None,
-                  no_scripts=None,
-                  no_plugins=None,
-                  optimize=None,
-                  no_dev=None,
-                  quiet=False,
-                  composer_home='/root',
-                  extra_flags=None,
-                  env=None):
-    '''
+def _run_composer(
+    action,
+    directory=None,
+    composer=None,
+    php=None,
+    runas=None,
+    prefer_source=None,
+    prefer_dist=None,
+    no_scripts=None,
+    no_plugins=None,
+    optimize=None,
+    no_dev=None,
+    quiet=False,
+    composer_home="/root",
+    extra_flags=None,
+    env=None,
+):
+    """
     Run PHP's composer with a specific action.
 
     If composer has not been installed globally making it available in the
@@ -130,31 +130,32 @@ def _run_composer(action,
 
     env
         A list of environment variables to be set prior to execution.
-    '''
+    """
     if composer is not None:
         if php is None:
-            php = 'php'
+            php = "php"
     else:
-        composer = 'composer'
+        composer = "composer"
 
     # Validate Composer is there
     if not _valid_composer(composer):
         raise CommandNotFoundError(
-            '\'composer.{0}\' is not available. Couldn\'t find \'{1}\'.'
-            .format(action, composer)
+            "'composer.{0}' is not available. Couldn't find '{1}'.".format(
+                action, composer
+            )
         )
 
     if action is None:
-        raise SaltInvocationError('The \'action\' argument is required')
+        raise SaltInvocationError("The 'action' argument is required")
 
     # Don't need a dir for the 'selfupdate' action; all other actions do need a dir
-    if directory is None and action != 'selfupdate':
+    if directory is None and action != "selfupdate":
         raise SaltInvocationError(
-            'The \'directory\' argument is required for composer.{0}'.format(action)
+            "The 'directory' argument is required for composer.{0}".format(action)
         )
 
     # Base Settings
-    cmd = [composer, action, '--no-interaction', '--no-ansi']
+    cmd = [composer, action, "--no-interaction", "--no-ansi"]
 
     if extra_flags is not None:
         cmd.extend(salt.utils.args.shlex_split(extra_flags))
@@ -165,43 +166,40 @@ def _run_composer(action,
 
     # Add Working Dir
     if directory is not None:
-        cmd.extend(['--working-dir', directory])
+        cmd.extend(["--working-dir", directory])
 
     # Other Settings
     if quiet is True:
-        cmd.append('--quiet')
+        cmd.append("--quiet")
 
     if no_dev is True:
-        cmd.append('--no-dev')
+        cmd.append("--no-dev")
 
     if prefer_source is True:
-        cmd.append('--prefer-source')
+        cmd.append("--prefer-source")
 
     if prefer_dist is True:
-        cmd.append('--prefer-dist')
+        cmd.append("--prefer-dist")
 
     if no_scripts is True:
-        cmd.append('--no-scripts')
+        cmd.append("--no-scripts")
 
     if no_plugins is True:
-        cmd.append('--no-plugins')
+        cmd.append("--no-plugins")
 
     if optimize is True:
-        cmd.append('--optimize-autoloader')
+        cmd.append("--optimize-autoloader")
 
     if env is not None:
         env = salt.utils.data.repack_dictlist(env)
-        env['COMPOSER_HOME'] = composer_home
+        env["COMPOSER_HOME"] = composer_home
     else:
-        env = {'COMPOSER_HOME': composer_home}
+        env = {"COMPOSER_HOME": composer_home}
 
-    result = __salt__['cmd.run_all'](cmd,
-                                     runas=runas,
-                                     env=env,
-                                     python_shell=False)
+    result = __salt__["cmd.run_all"](cmd, runas=runas, env=env, python_shell=False)
 
-    if result['retcode'] != 0:
-        raise CommandExecutionError(result['stderr'])
+    if result["retcode"] != 0:
+        raise CommandExecutionError(result["stderr"])
 
     if quiet is True:
         return True
@@ -209,20 +207,22 @@ def _run_composer(action,
     return result
 
 
-def install(directory,
-            composer=None,
-            php=None,
-            runas=None,
-            prefer_source=None,
-            prefer_dist=None,
-            no_scripts=None,
-            no_plugins=None,
-            optimize=None,
-            no_dev=None,
-            quiet=False,
-            composer_home='/root',
-            env=None):
-    '''
+def install(
+    directory,
+    composer=None,
+    php=None,
+    runas=None,
+    prefer_source=None,
+    prefer_dist=None,
+    no_scripts=None,
+    no_plugins=None,
+    optimize=None,
+    no_dev=None,
+    quiet=False,
+    composer_home="/root",
+    env=None,
+):
+    """
     Install composer dependencies for a directory.
 
     If composer has not been installed globally making it available in the
@@ -279,38 +279,42 @@ def install(directory,
 
         salt '*' composer.install /var/www/application \
             no_dev=True optimize=True
-    '''
-    result = _run_composer('install',
-                           directory=directory,
-                           composer=composer,
-                           php=php,
-                           runas=runas,
-                           prefer_source=prefer_source,
-                           prefer_dist=prefer_dist,
-                           no_scripts=no_scripts,
-                           no_plugins=no_plugins,
-                           optimize=optimize,
-                           no_dev=no_dev,
-                           quiet=quiet,
-                           composer_home=composer_home,
-                           env=env)
+    """
+    result = _run_composer(
+        "install",
+        directory=directory,
+        composer=composer,
+        php=php,
+        runas=runas,
+        prefer_source=prefer_source,
+        prefer_dist=prefer_dist,
+        no_scripts=no_scripts,
+        no_plugins=no_plugins,
+        optimize=optimize,
+        no_dev=no_dev,
+        quiet=quiet,
+        composer_home=composer_home,
+        env=env,
+    )
     return result
 
 
-def update(directory,
-           composer=None,
-           php=None,
-           runas=None,
-           prefer_source=None,
-           prefer_dist=None,
-           no_scripts=None,
-           no_plugins=None,
-           optimize=None,
-           no_dev=None,
-           quiet=False,
-           composer_home='/root',
-           env=None):
-    '''
+def update(
+    directory,
+    composer=None,
+    php=None,
+    runas=None,
+    prefer_source=None,
+    prefer_dist=None,
+    no_scripts=None,
+    no_plugins=None,
+    optimize=None,
+    no_dev=None,
+    quiet=False,
+    composer_home="/root",
+    env=None,
+):
+    """
     Update composer dependencies for a directory.
 
     If `composer install` has not yet been run, this runs `composer install`
@@ -370,31 +374,29 @@ def update(directory,
 
         salt '*' composer.update /var/www/application \
             no_dev=True optimize=True
-    '''
-    result = _run_composer('update',
-                           directory=directory,
-                           extra_flags='--no-progress',
-                           composer=composer,
-                           php=php,
-                           runas=runas,
-                           prefer_source=prefer_source,
-                           prefer_dist=prefer_dist,
-                           no_scripts=no_scripts,
-                           no_plugins=no_plugins,
-                           optimize=optimize,
-                           no_dev=no_dev,
-                           quiet=quiet,
-                           composer_home=composer_home,
-                           env=env)
+    """
+    result = _run_composer(
+        "update",
+        directory=directory,
+        extra_flags="--no-progress",
+        composer=composer,
+        php=php,
+        runas=runas,
+        prefer_source=prefer_source,
+        prefer_dist=prefer_dist,
+        no_scripts=no_scripts,
+        no_plugins=no_plugins,
+        optimize=optimize,
+        no_dev=no_dev,
+        quiet=quiet,
+        composer_home=composer_home,
+        env=env,
+    )
     return result
 
 
-def selfupdate(composer=None,
-            php=None,
-            runas=None,
-            quiet=False,
-            composer_home='/root'):
-    '''
+def selfupdate(composer=None, php=None, runas=None, quiet=False, composer_home="/root"):
+    """
     Update composer itself.
 
     If composer has not been installed globally making it available in the
@@ -424,12 +426,14 @@ def selfupdate(composer=None,
     .. code-block:: bash
 
         salt '*' composer.selfupdate
-    '''
-    result = _run_composer('selfupdate',
-                           extra_flags='--no-progress',
-                           composer=composer,
-                           php=php,
-                           runas=runas,
-                           quiet=quiet,
-                           composer_home=composer_home)
+    """
+    result = _run_composer(
+        "selfupdate",
+        extra_flags="--no-progress",
+        composer=composer,
+        php=php,
+        runas=runas,
+        quiet=quiet,
+        composer_home=composer_home,
+    )
     return result
