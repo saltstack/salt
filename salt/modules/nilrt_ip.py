@@ -391,9 +391,16 @@ def _get_static_info(interface):
         if information["IPv4"] != "":
             ipv4_information = information["IPv4"].split("/")
             data["ipv4"]["address"] = ipv4_information[0]
-            data["ipv4"]["dns"] = information["Nameservers"].split(",")
+            data["ipv4"]["dns"] = (
+                ""
+                if information["Nameservers"] == "''"
+                else information["Nameservers"].split(",")
+            )
             data["ipv4"]["netmask"] = ipv4_information[1]
             data["ipv4"]["gateway"] = ipv4_information[2]
+        elif information["IPv4"] == "off":
+            data["ipv4"]["requestmode"] = "disabled"
+
     return data
 
 
@@ -545,6 +552,46 @@ def get_interfaces_details():
     return {"interfaces": list(map(_get_info, _interfaces))}
 
 
+def _change_dhcp_config(interface, enable_dhcp=True, filename=INTERFACES_CONFIG):
+    """
+    Enable or disable dhcp for an interface which isn't a service (in a config file)
+
+    :param interface: interface label
+    :param enable_dhcp: True to enable dhcp and False to disable dhcp. Default is True
+    :param filename: Config file name. Default is INTERFACES_CONFIG.
+    """
+    parser = configparser.ConfigParser()
+    parser.optionxform = str
+    if os.path.exists(filename):
+        try:
+            with salt.utils.files.fopen(filename, "r") as config_file:
+                parser.readfp(config_file)
+        except configparser.MissingSectionHeaderError:
+            pass
+    interface = pyiface.Interface(name=interface)
+    hwaddr = interface.hwaddr[:-1]
+    hwaddr_section_number = "".join(hwaddr.split(":"))
+    if parser.has_section("service_{0}".format(hwaddr_section_number)):
+        parser.remove_section("service_{0}".format(hwaddr_section_number))
+    parser.add_section("service_{0}".format(hwaddr_section_number))
+    parser.set("service_{0}".format(hwaddr_section_number), "MAC", hwaddr)
+    parser.set(
+        "service_{0}".format(hwaddr_section_number),
+        "Name",
+        "ethernet_cable_{0}".format(hwaddr_section_number),
+    )
+    parser.set("service_{0}".format(hwaddr_section_number), "Type", "ethernet")
+    if enable_dhcp:
+        parser.set("service_{0}".format(hwaddr_section_number), "IPv4.Method", "dhcp")
+        parser.set("service_{0}".format(hwaddr_section_number), "AutoConnect", "true")
+        parser.set("service_{0}".format(hwaddr_section_number), "Nameservers", "''")
+    else:
+        parser.set("service_{0}".format(hwaddr_section_number), "IPv4", "off")
+    with salt.utils.files.fopen(filename, "w") as config_file:
+        parser.write(config_file)
+    return True
+
+
 def _change_state(interface, new_state):
     """
     Enable or disable an interface
@@ -573,24 +620,15 @@ def _change_state(interface, new_state):
                 )
                 raise salt.exceptions.CommandExecutionError(msg)
         return True
-    service = _interface_to_service(interface)
-    if not service:
-        raise salt.exceptions.CommandExecutionError(
-            "Invalid interface name: {0}".format(interface)
+    if interface in [x.name for x in pyiface.getIfaces()]:
+        return (
+            _change_dhcp_config(interface)
+            if new_state == "up"
+            else _change_dhcp_config(interface, False)
         )
-    connected = _connected(service)
-    if (not connected and new_state == "up") or (connected and new_state == "down"):
-        service = pyconnman.ConnService(os.path.join(SERVICE_PATH, service))
-        try:
-            state = service.connect() if new_state == "up" else service.disconnect()
-            return state is None
-        except Exception:  # pylint: disable=broad-except
-            raise salt.exceptions.CommandExecutionError(
-                "Couldn't {0} service: {1}\n".format(
-                    "enable" if new_state == "up" else "disable", service
-                )
-            )
-    return True
+    raise salt.exceptions.CommandExecutionError(
+        "Invalid interface name: {0}".format(interface)
+    )
 
 
 def up(interface, iface_type=None):  # pylint: disable=invalid-name,unused-argument
@@ -739,28 +777,11 @@ def set_dhcp_linklocal_all(interface):
         else:
             _restart(interface)
         return True
-    service = _interface_to_service(interface)
-    if not service:
-        raise salt.exceptions.CommandExecutionError(
-            "Invalid interface name: {0}".format(interface)
-        )
-    service = pyconnman.ConnService(os.path.join(SERVICE_PATH, service))
-    ipv4 = service.get_property("IPv4.Configuration")
-    ipv4["Method"] = dbus.String("dhcp", variant_level=1)
-    ipv4["Address"] = dbus.String("", variant_level=1)
-    ipv4["Netmask"] = dbus.String("", variant_level=1)
-    ipv4["Gateway"] = dbus.String("", variant_level=1)
-    try:
-        service.set_property("IPv4.Configuration", ipv4)
-        service.set_property(
-            "Nameservers.Configuration", [""]
-        )  # reset nameservers list
-    except Exception as exc:  # pylint: disable=broad-except
-        exc_msg = "Couldn't set dhcp linklocal for service: {0}\nError: {1}\n".format(
-            service, exc
-        )
-        raise salt.exceptions.CommandExecutionError(exc_msg)
-    return True
+    if interface in [x.name for x in pyiface.getIfaces()]:
+        return _change_dhcp_config(interface)
+    raise salt.exceptions.CommandExecutionError(
+        "Invalid interface name: {0}".format(interface)
+    )
 
 
 def set_dhcp_only_all(interface):
@@ -850,7 +871,7 @@ def _configure_static_interface(interface, **settings):
     ip_address = settings.get("ip", "0.0.0.0")
     netmask = settings.get("netmask", "0.0.0.0")
     gateway = settings.get("gateway", "0.0.0.0")
-    dns_servers = settings.get("dns", "")
+    dns_servers = settings.get("dns", "''")
     name = settings.get("name", "ethernet_cable_{0}".format(hwaddr_section_number))
     parser.set(
         "interface_{0}".format(hwaddr_section_number),
@@ -913,12 +934,12 @@ def set_static_all(interface, address, netmask, gateway, nameservers):
         return True
     service = _interface_to_service(interface)
     if not service:
-        if interface in pyiface.getIfaces():
+        if interface in [x.name for x in pyiface.getIfaces()]:
             return _configure_static_interface(
                 interface,
                 **{
                     "ip": address,
-                    "dns": ",".join(nameservers),
+                    "dns": ",".join(nameservers) if nameservers else "''",
                     "netmask": netmask,
                     "gateway": gateway,
                 }
