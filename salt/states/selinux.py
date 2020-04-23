@@ -35,7 +35,9 @@ def __virtual__():
     """
     Only make this state available if the selinux module is available.
     """
-    return "selinux" if "selinux.getenforce" in __salt__ else False
+    if "selinux.getenforce" in __salt__:
+        return "selinux"
+    return (False, "selinux module could not be loaded")
 
 
 def _refine_mode(mode):

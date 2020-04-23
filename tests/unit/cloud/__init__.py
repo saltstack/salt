@@ -6,10 +6,11 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.cloud
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class CloudTest(TestCase):
+    @skipIf(True, "SLOWTEST skip")
     def test_vm_config_merger(self):
         """
         Validate the vm's config is generated correctly.

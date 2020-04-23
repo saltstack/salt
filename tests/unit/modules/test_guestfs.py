@@ -12,7 +12,7 @@ import salt.modules.guestfs as guestfs
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class GuestfsTestCase(TestCase, LoaderModuleMockMixin):
@@ -85,6 +85,7 @@ class GuestfsTestCase(TestCase, LoaderModuleMockMixin):
             )
             makedirs_mock.assert_called_once()
 
+    @skipIf(True, "SLOWTEST skip")
     def test_umount(self):
         """
         Test the guestfs.unmount function

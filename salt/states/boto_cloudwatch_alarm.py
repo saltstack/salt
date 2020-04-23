@@ -67,7 +67,9 @@ def __virtual__():
     """
     Only load if boto is available.
     """
-    return "boto_cloudwatch_alarm" if "boto_cloudwatch.get_alarm" in __salt__ else False
+    if "boto_cloudwatch.get_alarm" in __salt__:
+        return "boto_cloudwatch_alarm"
+    return (False, "boto_cloudwatch module could not be loaded")
 
 
 def present(name, attributes, region=None, key=None, keyid=None, profile=None):

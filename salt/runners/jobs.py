@@ -415,7 +415,7 @@ def list_jobs_filter(
 
 def print_job(jid, ext_source=None):
     """
-    Print a specific job's detail given by it's jid, including the return data.
+    Print a specific job's detail given by its jid, including the return data.
 
     CLI Example:
 

@@ -1722,7 +1722,7 @@ def install(
             cmd.extend(targets)
             out = _call_yum(cmd, ignore_retcode=False, redirect_stderr=True)
             if out["retcode"] != 0:
-                errors.append(out["stdout"])
+                errors.append(out["stderr"])
 
     targets = []
     with _temporarily_unhold(to_downgrade, targets):
@@ -1733,7 +1733,7 @@ def install(
             cmd.extend(targets)
             out = _call_yum(cmd)
             if out["retcode"] != 0:
-                errors.append(out["stdout"])
+                errors.append(out["stderr"])
 
     targets = []
     with _temporarily_unhold(to_reinstall, targets):
@@ -1744,7 +1744,7 @@ def install(
             cmd.extend(targets)
             out = _call_yum(cmd)
             if out["retcode"] != 0:
-                errors.append(out["stdout"])
+                errors.append(out["stderr"])
 
     __context__.pop("pkg.list_pkgs", None)
     new = (

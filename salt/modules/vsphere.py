@@ -10948,7 +10948,7 @@ def register_vm(name, datacenter, placement, vmx_path, service_instance=None):
 @gets_service_instance_via_proxy
 def power_on_vm(name, datacenter=None, service_instance=None):
     """
-    Powers on a virtual machine specified by it's name.
+    Powers on a virtual machine specified by its name.
 
     name
         Name of the virtual machine
@@ -10989,7 +10989,7 @@ def power_on_vm(name, datacenter=None, service_instance=None):
 @gets_service_instance_via_proxy
 def power_off_vm(name, datacenter=None, service_instance=None):
     """
-    Powers off a virtual machine specified by it's name.
+    Powers off a virtual machine specified by its name.
 
     name
         Name of the virtual machine

@@ -3,23 +3,24 @@
 Tests for various minion timeouts
 """
 
-# Import Python libs
 from __future__ import absolute_import
 
 import os
 import sys
 
+import pytest
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ShellCase
+from tests.support.unit import skipIf
 
 
+@pytest.mark.windows_whitelisted
 class MinionTimeoutTestCase(ShellCase):
     """
     Test minion timing functions
     """
 
+    @skipIf(True, "SLOWTEST skip")
     def test_long_running_job(self):
         """
         Test that we will wait longer than the job timeout for a minion to

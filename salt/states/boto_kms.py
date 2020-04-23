@@ -66,7 +66,9 @@ def __virtual__():
     """
     Only load if boto is available.
     """
-    return "boto_kms" if "boto_kms.describe_key" in __salt__ else False
+    if "boto_kms.describe_key" in __salt__:
+        return "boto_kms"
+    return (False, "boto_kms module could not be loaded")
 
 
 def key_present(
