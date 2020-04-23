@@ -174,13 +174,7 @@ What happens in the above example is we mock a call to
 `__salt__['config.option']` to return the configuration needed for the
 execution of the tests. Additionally, if the ``libcloud`` library is not
 available, since that's not actually part of what's being tested, we mocked that
-import ``sys.modules``
-import are
-import by
-import patching
-import running.
-import tests
-import when
+import by patching ``sys.modules`` when tests are running.
 
 Mocking Filehandles
 -------------------
