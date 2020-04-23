@@ -53,7 +53,7 @@ import os
 
 import salt.utils.args
 import salt.utils.data
-import salt.utils.docker
+import salt.utils.dockermod
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError
@@ -225,7 +225,7 @@ def running(
     watch_action="force",
     start=True,
     shutdown_timeout=None,
-    client_timeout=salt.utils.docker.CLIENT_TIMEOUT,
+    client_timeout=salt.utils.dockermod.CLIENT_TIMEOUT,
     networks=None,
     **kwargs
 ):
@@ -2107,7 +2107,7 @@ def run(
     skip_translate=None,
     ignore_collisions=False,
     validate_ip_addrs=True,
-    client_timeout=salt.utils.docker.CLIENT_TIMEOUT,
+    client_timeout=salt.utils.dockermod.CLIENT_TIMEOUT,
     **kwargs
 ):
     """

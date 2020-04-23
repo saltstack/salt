@@ -2615,12 +2615,18 @@ class _policy_info(object):
                         "lgpo_section": self.account_lockout_policy_gpedit_path,
                         "Settings": {
                             "Function": "_in_range_inclusive",
-                            "Args": {"min": 0, "max": 6000000},
+                            "Args": {
+                                "min": 0,
+                                "max": 6000000,
+                                "zero_value": 0xFFFFFFFF,
+                            },
                         },
                         "NetUserModal": {"Modal": 3, "Option": "lockout_duration"},
                         "Transform": {
                             "Get": "_seconds_to_minutes",
                             "Put": "_minutes_to_seconds",
+                            "GetArgs": {"zero_value": 0xFFFFFFFF},
+                            "PutArgs": {"zero_value": 0xFFFFFFFF},
                         },
                     },
                     "LockoutThreshold": {
@@ -4252,7 +4258,10 @@ class _policy_info(object):
         """
         converts a number of seconds to minutes
         """
+        zero_value = kwargs.get("zero_value", 0)
         if val is not None:
+            if val == zero_value:
+                return 0
             return val / 60
         else:
             return "Not Defined"
@@ -4262,7 +4271,10 @@ class _policy_info(object):
         """
         converts number of minutes to seconds
         """
+        zero_value = kwargs.get("zero_value", 0)
         if val is not None:
+            if val == 0:
+                return zero_value
             return val * 60
         else:
             return "Not Defined"
@@ -10033,7 +10045,7 @@ def set_(
                             _regedits[regedit]["value"] is not None
                             and _regedits[regedit]["value"] != "(value not set)"
                         ):
-                            _ret = __salt__["reg.set_value"](
+                            _ret = __utils__["reg.set_value"](
                                 _regedits[regedit]["policy"]["Registry"]["Hive"],
                                 _regedits[regedit]["policy"]["Registry"]["Path"],
                                 _regedits[regedit]["policy"]["Registry"]["Value"],
@@ -10041,13 +10053,13 @@ def set_(
                                 _regedits[regedit]["policy"]["Registry"]["Type"],
                             )
                         else:
-                            _ret = __salt__["reg.read_value"](
+                            _ret = __utils__["reg.read_value"](
                                 _regedits[regedit]["policy"]["Registry"]["Hive"],
                                 _regedits[regedit]["policy"]["Registry"]["Path"],
                                 _regedits[regedit]["policy"]["Registry"]["Value"],
                             )
                             if _ret["success"] and _ret["vdata"] != "(value not set)":
-                                _ret = __salt__["reg.delete_value"](
+                                _ret = __utils__["reg.delete_value"](
                                     _regedits[regedit]["policy"]["Registry"]["Hive"],
                                     _regedits[regedit]["policy"]["Registry"]["Path"],
                                     _regedits[regedit]["policy"]["Registry"]["Value"],

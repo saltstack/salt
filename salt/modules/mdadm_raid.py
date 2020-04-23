@@ -136,7 +136,7 @@ def destroy(device):
     stop_cmd = ["mdadm", "--stop", device]
     zero_cmd = ["mdadm", "--zero-superblock"]
 
-    if __salt__["cmd.retcode"](stop_cmd, python_shell=False):
+    if __salt__["cmd.retcode"](stop_cmd, python_shell=False) == 0:
         for number in details["members"]:
             zero_cmd.append(details["members"][number]["device"])
         __salt__["cmd.retcode"](zero_cmd, python_shell=False)
