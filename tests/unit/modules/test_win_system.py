@@ -410,22 +410,18 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         """
             Test setting a new hostname
         """
-        with patch(
-            "salt.utils.winapi.Com", MagicMock()
-        ), patch.object(
+        with patch("salt.utils.winapi.Com", MagicMock()), patch.object(
             self.WMI, "Win32_ComputerSystem", return_value=[MockWMI_ComputerSystem()]
-        ), patch.object(
-            wmi, "WMI", Mock(return_value=self.WMI)
-        ):
+        ), patch.object(wmi, "WMI", Mock(return_value=self.WMI)):
             self.assertTrue(win_system.set_hostname("NEW"))
 
     def test_get_domain_workgroup(self):
         """
         Test get_domain_workgroup
         """
-        with patch.object(
-            wmi, "WMI", Mock(return_value=self.WMI)
-        ), patch("salt.utils.winapi.Com", MagicMock()), patch.object(
+        with patch.object(wmi, "WMI", Mock(return_value=self.WMI)), patch(
+            "salt.utils.winapi.Com", MagicMock()
+        ), patch.object(
             self.WMI, "Win32_ComputerSystem", return_value=[MockWMI_ComputerSystem()]
         ):
             self.assertDictEqual(
@@ -436,9 +432,9 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test set_domain_workgroup
         """
-        with patch.object(
-            wmi, "WMI", Mock(return_value=self.WMI)
-        ), patch("salt.utils.winapi.Com", MagicMock()), patch.object(
+        with patch.object(wmi, "WMI", Mock(return_value=self.WMI)), patch(
+            "salt.utils.winapi.Com", MagicMock()
+        ), patch.object(
             self.WMI, "Win32_ComputerSystem", return_value=[MockWMI_ComputerSystem()]
         ):
             self.assertTrue(win_system.set_domain_workgroup("test"))
@@ -504,9 +500,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             "windows_directory",
             "workgroup",
         ]
-        with patch(
-            "salt.utils.win_system.get_computer_name", MagicMock()
-        ), patch(
+        with patch("salt.utils.win_system.get_computer_name", MagicMock()), patch(
             "salt.utils.winapi.Com", MagicMock()
         ), patch.object(
             self.WMI, "Win32_OperatingSystem", return_value=[MockWMI_OperatingSystem()]
