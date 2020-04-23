@@ -96,7 +96,7 @@ def condition_input(args, kwargs):
     return ret
 
 
-def parse_input(args, condition=True, no_parse=None):
+def parse_input(args, kwargs=None, condition=True, no_parse=None):
     """
 
     Parse out the args and kwargs from a list of input values. Optionally,
@@ -104,10 +104,8 @@ def parse_input(args, condition=True, no_parse=None):
 
     Don't pull args with key=val apart if it has a newline in it.
     """
-    if no_parse is None:
-        no_parse = ()
-    if kwargs is None:
-        kwargs = {}
+    no_parse = no_parse or ()
+    kwargs = kwargs or {}
     _args = []
     _kwargs = {}
     for arg in args:
