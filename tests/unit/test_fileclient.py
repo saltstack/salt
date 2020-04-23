@@ -18,17 +18,11 @@ from salt.ext import six
 from salt.ext.six.moves import range
 from tests.integration import AdaptedConfigurationTestCaseMixin
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import (  # pylint: disable=no-name-in-module
-    NO_MOCK,
-    NO_MOCK_REASON,
-    MagicMock,
-    Mock,
-    patch,
-)
+from tests.support.mock import MagicMock, Mock, patch
 
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
 
@@ -108,7 +102,6 @@ def _get_file_roots(fs_root):
     return dict([(x, [os.path.join(fs_root, x)]) for x in SALTENVS])
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class FileClientTest(
     TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin
 ):
@@ -155,7 +148,6 @@ class FileClientTest(
             self.assertEqual("remote_client", ret)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class FileclientCacheTest(
     TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin
 ):
