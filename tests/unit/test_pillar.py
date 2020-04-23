@@ -18,7 +18,6 @@ import textwrap
 # Import salt libs
 import salt.exceptions
 import salt.fileclient
-import salt.pillar
 import salt.utils.stringutils
 from salt.utils.files import fopen
 from tests.support.helpers import with_tempdir
