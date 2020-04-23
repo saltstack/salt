@@ -3,29 +3,26 @@
 mac_utils tests
 """
 
-# Import python libs
 from __future__ import absolute_import, unicode_literals
 
 import os
 import plistlib
 import xml.parsers.expat
 
-# Import Salt libs
+import pytest
 import salt.utils.mac_utils as mac_utils
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext import six
-
-# Import 3rd-party libs
 from salt.ext.six.moves import range
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, mock_open, patch
-
-# Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
-@skipIf(not salt.utils.platform.is_darwin(), "These tests run only on mac")
+@pytest.mark.skipif(
+    not salt.utils.platform.is_darwin(), reason="These tests run only on mac"
+)
 class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
     """
     test mac_utils salt utility
