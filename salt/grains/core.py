@@ -280,7 +280,7 @@ def _linux_gpu_data():
 
     gpus = []
     for gpu in devs:
-        vendor_strings = gpu["Vendor"].lower().split()
+        vendor_strings = re.split("[^A-Za-z0-9]", gpu["Vendor"].lower())
         # default vendor to 'unknown', overwrite if we match a known one
         vendor = "unknown"
         for name in known_vendors:
