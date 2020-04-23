@@ -5059,6 +5059,172 @@ def _parse_pools_caps(doc):
     return [_parse_pool_caps(pool) for pool in doc.findall("pool")]
 
 
+def _pool_capabilities(conn):
+    """
+    Return the hypervisor connection storage pool capabilities.
+
+    :param conn: opened libvirt connection to use
+    """
+    has_pool_capabilities = bool(getattr(conn, "getStoragePoolCapabilities", None))
+    if has_pool_capabilities:
+        caps = ElementTree.fromstring(conn.getStoragePoolCapabilities())
+        pool_types = _parse_pools_caps(caps)
+    else:
+        # Compute reasonable values
+        all_hypervisors = ["xen", "kvm", "bhyve"]
+        images_formats = [
+            "none",
+            "raw",
+            "dir",
+            "bochs",
+            "cloop",
+            "dmg",
+            "iso",
+            "vpc",
+            "vdi",
+            "fat",
+            "vhd",
+            "ploop",
+            "cow",
+            "qcow",
+            "qcow2",
+            "qed",
+            "vmdk",
+        ]
+        common_drivers = [
+            {
+                "name": "fs",
+                "default_source_format": "auto",
+                "source_formats": [
+                    "auto",
+                    "ext2",
+                    "ext3",
+                    "ext4",
+                    "ufs",
+                    "iso9660",
+                    "udf",
+                    "gfs",
+                    "gfs2",
+                    "vfat",
+                    "hfs+",
+                    "xfs",
+                    "ocfs2",
+                ],
+                "default_target_format": "raw",
+                "target_formats": images_formats,
+            },
+            {
+                "name": "dir",
+                "default_target_format": "raw",
+                "target_formats": images_formats,
+            },
+            {"name": "iscsi"},
+            {"name": "scsi"},
+            {
+                "name": "logical",
+                "default_source_format": "lvm2",
+                "source_formats": ["unknown", "lvm2"],
+            },
+            {
+                "name": "netfs",
+                "default_source_format": "auto",
+                "source_formats": ["auto", "nfs", "glusterfs", "cifs"],
+                "default_target_format": "raw",
+                "target_formats": images_formats,
+            },
+            {
+                "name": "disk",
+                "default_source_format": "unknown",
+                "source_formats": [
+                    "unknown",
+                    "dos",
+                    "dvh",
+                    "gpt",
+                    "mac",
+                    "bsd",
+                    "pc98",
+                    "sun",
+                    "lvm2",
+                ],
+                "default_target_format": "none",
+                "target_formats": [
+                    "none",
+                    "linux",
+                    "fat16",
+                    "fat32",
+                    "linux-swap",
+                    "linux-lvm",
+                    "linux-raid",
+                    "extended",
+                ],
+            },
+            {"name": "mpath"},
+            {"name": "rbd", "default_target_format": "raw", "target_formats": []},
+            {
+                "name": "sheepdog",
+                "version": 10000,
+                "hypervisors": ["kvm"],
+                "default_target_format": "raw",
+                "target_formats": images_formats,
+            },
+            {
+                "name": "gluster",
+                "version": 1002000,
+                "hypervisors": ["kvm"],
+                "default_target_format": "raw",
+                "target_formats": images_formats,
+            },
+            {"name": "zfs", "version": 1002008, "hypervisors": ["bhyve"]},
+            {
+                "name": "iscsi-direct",
+                "version": 4007000,
+                "hypervisors": ["kvm", "xen"],
+            },
+        ]
+
+        libvirt_version = conn.getLibVersion()
+        hypervisor = get_hypervisor()
+
+        def _get_backend_output(backend):
+            output = {
+                "name": backend["name"],
+                "supported": (
+                    not backend.get("version") or libvirt_version >= backend["version"]
+                )
+                and hypervisor in backend.get("hypervisors", all_hypervisors),
+                "options": {
+                    "pool": {
+                        "default_format": backend.get("default_source_format"),
+                        "sourceFormatType": backend.get("source_formats"),
+                    },
+                    "volume": {
+                        "default_format": backend.get("default_target_format"),
+                        "targetFormatType": backend.get("target_formats"),
+                    },
+                },
+            }
+
+            # Cleanup the empty members to match the libvirt output
+            for option_kind in ["pool", "volume"]:
+                if not [
+                    value
+                    for value in output["options"][option_kind].values()
+                    if value is not None
+                ]:
+                    del output["options"][option_kind]
+            if not output["options"]:
+                del output["options"]
+
+            return output
+
+        pool_types = [_get_backend_output(backend) for backend in common_drivers]
+
+    return {
+        "computed": not has_pool_capabilities,
+        "pool_types": pool_types,
+    }
+
+
 def pool_capabilities(**kwargs):
     """
     Return the hypervisor connection storage pool capabilities.
@@ -5082,167 +5248,9 @@ def pool_capabilities(**kwargs):
     """
     try:
         conn = __get_conn(**kwargs)
-        has_pool_capabilities = bool(getattr(conn, "getStoragePoolCapabilities", None))
-        if has_pool_capabilities:
-            caps = ElementTree.fromstring(conn.getStoragePoolCapabilities())
-            pool_types = _parse_pools_caps(caps)
-        else:
-            # Compute reasonable values
-            all_hypervisors = ["xen", "kvm", "bhyve"]
-            images_formats = [
-                "none",
-                "raw",
-                "dir",
-                "bochs",
-                "cloop",
-                "dmg",
-                "iso",
-                "vpc",
-                "vdi",
-                "fat",
-                "vhd",
-                "ploop",
-                "cow",
-                "qcow",
-                "qcow2",
-                "qed",
-                "vmdk",
-            ]
-            common_drivers = [
-                {
-                    "name": "fs",
-                    "default_source_format": "auto",
-                    "source_formats": [
-                        "auto",
-                        "ext2",
-                        "ext3",
-                        "ext4",
-                        "ufs",
-                        "iso9660",
-                        "udf",
-                        "gfs",
-                        "gfs2",
-                        "vfat",
-                        "hfs+",
-                        "xfs",
-                        "ocfs2",
-                    ],
-                    "default_target_format": "raw",
-                    "target_formats": images_formats,
-                },
-                {
-                    "name": "dir",
-                    "default_target_format": "raw",
-                    "target_formats": images_formats,
-                },
-                {"name": "iscsi"},
-                {"name": "scsi"},
-                {
-                    "name": "logical",
-                    "default_source_format": "lvm2",
-                    "source_formats": ["unknown", "lvm2"],
-                },
-                {
-                    "name": "netfs",
-                    "default_source_format": "auto",
-                    "source_formats": ["auto", "nfs", "glusterfs", "cifs"],
-                    "default_target_format": "raw",
-                    "target_formats": images_formats,
-                },
-                {
-                    "name": "disk",
-                    "default_source_format": "unknown",
-                    "source_formats": [
-                        "unknown",
-                        "dos",
-                        "dvh",
-                        "gpt",
-                        "mac",
-                        "bsd",
-                        "pc98",
-                        "sun",
-                        "lvm2",
-                    ],
-                    "default_target_format": "none",
-                    "target_formats": [
-                        "none",
-                        "linux",
-                        "fat16",
-                        "fat32",
-                        "linux-swap",
-                        "linux-lvm",
-                        "linux-raid",
-                        "extended",
-                    ],
-                },
-                {"name": "mpath"},
-                {"name": "rbd", "default_target_format": "raw", "target_formats": []},
-                {
-                    "name": "sheepdog",
-                    "version": 10000,
-                    "hypervisors": ["kvm"],
-                    "default_target_format": "raw",
-                    "target_formats": images_formats,
-                },
-                {
-                    "name": "gluster",
-                    "version": 1002000,
-                    "hypervisors": ["kvm"],
-                    "default_target_format": "raw",
-                    "target_formats": images_formats,
-                },
-                {"name": "zfs", "version": 1002008, "hypervisors": ["bhyve"]},
-                {
-                    "name": "iscsi-direct",
-                    "version": 4007000,
-                    "hypervisors": ["kvm", "xen"],
-                },
-            ]
-
-            libvirt_version = conn.getLibVersion()
-            hypervisor = get_hypervisor()
-
-            def _get_backend_output(backend):
-                output = {
-                    "name": backend["name"],
-                    "supported": (
-                        not backend.get("version")
-                        or libvirt_version >= backend["version"]
-                    )
-                    and hypervisor in backend.get("hypervisors", all_hypervisors),
-                    "options": {
-                        "pool": {
-                            "default_format": backend.get("default_source_format"),
-                            "sourceFormatType": backend.get("source_formats"),
-                        },
-                        "volume": {
-                            "default_format": backend.get("default_target_format"),
-                            "targetFormatType": backend.get("target_formats"),
-                        },
-                    },
-                }
-
-                # Cleanup the empty members to match the libvirt output
-                for option_kind in ["pool", "volume"]:
-                    if not [
-                        value
-                        for value in output["options"][option_kind].values()
-                        if value is not None
-                    ]:
-                        del output["options"][option_kind]
-                if not output["options"]:
-                    del output["options"]
-
-                return output
-
-            pool_types = [_get_backend_output(backend) for backend in common_drivers]
+        return _pool_capabilities(conn)
     finally:
         conn.close()
-
-    return {
-        "computed": not has_pool_capabilities,
-        "pool_types": pool_types,
-    }
 
 
 def pool_define(
