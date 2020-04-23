@@ -2357,7 +2357,7 @@ def download(*packages, **kwargs):
     )
 
 
-def list_downloaded():
+def list_downloaded(**kwargs):
     """
     .. versionadded:: 2017.7.0
 
