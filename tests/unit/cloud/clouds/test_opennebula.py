@@ -9,6 +9,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Libs
 from salt.cloud.clouds import opennebula
 from salt.exceptions import SaltCloudNotFound, SaltCloudSystemExit
+
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
@@ -1364,7 +1365,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
         )
 
     def test_vm_migrate_no_host_id_or_host_name(self):
-        '''
+        """
         Tests that a SaltCloudSystemExit is raised when the host_id and the
         host_name args are missing.
         """
