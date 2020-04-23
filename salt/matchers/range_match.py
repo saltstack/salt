@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 This is the default range matcher.
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
@@ -9,6 +9,7 @@ import logging
 HAS_RANGE = False
 try:
     import seco.range
+
     HAS_RANGE = True
 except ImportError:
     pass
@@ -16,15 +17,17 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-def match(tgt):
-    '''
+def match(tgt, opts=None):
+    """
     Matches based on range cluster
-    '''
+    """
+    if not opts:
+        opts = __opts__
     if HAS_RANGE:
-        range_ = seco.range.Range(__opts__['range_server'])
+        range_ = seco.range.Range(opts["range_server"])
         try:
-            return __opts__['grains']['fqdn'] in range_.expand(tgt)
+            return opts["grains"]["fqdn"] in range_.expand(tgt)
         except seco.range.RangeException as exc:
-            log.debug('Range exception in compound match: %s', exc)
+            log.debug("Range exception in compound match: %s", exc)
             return False
     return False

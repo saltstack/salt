@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
-'''
+"""
     salt.log.handlers
     ~~~~~~~~~~~~~~~~~
 
     .. versionadded:: 0.17.0
 
     Custom logging handlers to be used in salt.
-'''
-from __future__ import absolute_import, print_function, unicode_literals
+"""
 
 # Import python libs
+<<<<<<< HEAD
 import sys
 import copy
 import logging
@@ -291,3 +291,30 @@ else:
             except queue.Full:
                 sys.stderr.write('[WARNING ] Message queue is full, '
                                  'unable to write "{0}" to log'.format(record))
+=======
+from __future__ import absolute_import, print_function, unicode_literals
+
+import logging
+
+# Import salt libs
+from salt._logging.handlers import (
+    FileHandler,
+    QueueHandler,
+    RotatingFileHandler,
+    StreamHandler,
+    SysLogHandler,
+    TemporaryLoggingHandler,
+    WatchedFileHandler,
+)
+
+# from salt.utils.versions import warn_until_date
+# warn_until_date(
+#    '20220101',
+#    'Please stop using \'{name}\' and instead use \'salt._logging.handlers\'. '
+#    '\'{name}\' will go away after {{date}}.'.format(
+#        name=__name__
+#    )
+# )
+
+NullHandler = logging.NullHandler
+>>>>>>> 8d70836c614efff36c045d0a87f7a94614409610

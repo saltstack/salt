@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Define the maximum time, in hours, that a test run should run for
 def testrun_timeout = 6
 // Now define a global pipeline timeout. This is the test run timeout with one(1) additional
@@ -139,5 +140,21 @@ node('kitchen-slave') {
         }
     }
 }
+=======
+@Library('salt@master-1.7') _
+
+runTestSuite(
+    concurrent_builds: 1,
+    distro_name: 'ubuntu',
+    distro_version: '1604',
+    env: env,
+    golden_images_branch: 'master',
+    jenkins_slave_label: 'kitchen-slave',
+    nox_env_name: 'runtests-zeromq',
+    nox_passthrough_opts: '--ssh-tests',
+    python_version: 'py3',
+    testrun_timeout: 6,
+    use_spot_instances: true)
+>>>>>>> 8d70836c614efff36c045d0a87f7a94614409610
 
 // vim: ft=groovy

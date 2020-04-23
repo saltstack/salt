@@ -27,6 +27,9 @@
 # modified files cause conflicts, set verify_env to False.
 #user: root
 
+# Tell the master to also use salt-ssh when running commands against minions.
+#enable_ssh_minions: False
+
 # The port used by the communication interface. The ret (return) port is the
 # interface used for the file server, authentication, job returns, etc.
 #ret_port: 4506
@@ -347,7 +350,7 @@
 # the autosign_file and the auto_accept setting.
 #autoreject_file: /etc/salt/autoreject.conf
 
-# If the autosign_grains_dir is specified, incoming keys from minons with grain
+# If the autosign_grains_dir is specified, incoming keys from minions with grain
 # values matching those defined in files in this directory will be accepted
 # automatically. This is insecure. Minions need to be configured to send the grains.
 #autosign_grains_dir: /etc/salt/autosign_grains
@@ -502,6 +505,12 @@
 
 # Boolean to run command via sudo.
 #ssh_sudo: False
+
+# Boolean to run ssh_pre_flight script defined in roster. By default
+# the script will only run if the thin_dir does not exist on the targeted
+# minion. This forces the script to run regardless of the thin dir existing
+# or not.
+#ssh_run_pre_flight: True
 
 # Number of seconds to wait for a response when establishing an SSH connection.
 #ssh_timeout: 60
@@ -668,7 +677,9 @@
 
 # The master_roots setting configures a master-only copy of the file_roots dictionary,
 # used by the state compiler.
-#master_roots: /srv/salt-master
+#master_roots:
+#  base:
+#    - /srv/salt-master
 
 # When using multiple environments, each with their own top file, the
 # default behaviour is an unordered merge. To prevent top files from
@@ -1269,7 +1280,7 @@
 ############################################
 # Warning: Failure to set TCP keepalives on the salt-master can result in
 # not detecting the loss of a minion when the connection is lost or when
-# it's host has been terminated without first closing the socket.
+# its host has been terminated without first closing the socket.
 # Salt's Presence System depends on this connection status to know if a minion
 # is "present".
 # ZeroMQ now includes support for configuring SO_KEEPALIVE if supported by
@@ -1296,3 +1307,9 @@
 # use OS defaults, typically 75 seconds on Linux, see
 # /proc/sys/net/ipv4/tcp_keepalive_intvl.
 #tcp_keepalive_intvl: -1
+
+
+#####         NetAPI settings          #####
+############################################
+# Allow the raw_shell parameter to be used when calling Salt SSH client via API
+#netapi_allow_raw_shell: True

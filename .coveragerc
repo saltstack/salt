@@ -1,13 +1,11 @@
 [run]
 branch = True
 cover_pylib = False
-source =
-  salt
 parallel = True
 concurrency = multiprocessing
 omit =
-  tests/*.py
   setup.py
+  .nox/*
 
 [report]
 # Regexes for lines to exclude from consideration
@@ -24,11 +22,8 @@ exclude_lines =
 
     # Don't complain if non-runnable code isn't run:
     if 0:
+    if False:
     if __name__ == .__main__.:
 
 
 ignore_errors = True
-
-[paths]
-source =
-   salt

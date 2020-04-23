@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-r'''
+r"""
 Manage the Windows registry
 
 Hives
@@ -64,7 +64,7 @@ Value:
     - Each value name has a corresponding value
 
 :depends:   - salt.utils.win_reg
-'''
+"""
 # When production windows installer is using Python 3, Python 2 code can be removed
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -78,26 +78,31 @@ from salt.exceptions import CommandExecutionError
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = 'reg'
+__virtualname__ = "reg"
 
 
 def __virtual__():
-    '''
+    """
     Only works on Windows systems with PyWin32
-    '''
+    """
     if not salt.utils.platform.is_windows():
-        return (False, 'reg execution module failed to load: '
-                       'The module will only run on Windows systems')
+        return (
+            False,
+            "reg execution module failed to load: "
+            "The module will only run on Windows systems",
+        )
 
-    if 'reg.read_value' not in __utils__:
-        return (False, 'reg execution module failed to load: '
-                       'The reg salt util is unavailable')
+    if "reg.read_value" not in __utils__:
+        return (
+            False,
+            "reg execution module failed to load: The reg salt util is unavailable",
+        )
 
     return __virtualname__
 
 
 def key_exists(hive, key, use_32bit_registry=False):
-    r'''
+    r"""
     Check that the key is found in the registry. This refers to keys and not
     value/data pairs.
 
@@ -117,14 +122,44 @@ def key_exists(hive, key, use_32bit_registry=False):
         .. code-block:: bash
 
             salt '*' reg.key_exists HKLM SOFTWARE\Microsoft
-    '''
-    return __utils__['reg.key_exists'](hive=hive,
-                                       key=key,
-                                       use_32bit_registry=use_32bit_registry)
+    """
+    return __utils__["reg.key_exists"](
+        hive=hive, key=key, use_32bit_registry=use_32bit_registry
+    )
+
+
+def value_exists(hive, key, vname, use_32bit_registry=False):
+    r"""
+    Check that the value/data pair is found in the registry.
+
+    .. versionadded:: 3000
+
+    Args:
+
+        hive (str): The hive to connect to
+
+        key (str): The key to check in
+
+        vname (str): The name of the value/data pair you're checking
+
+        use_32bit_registry (bool): Look in the 32bit portion of the registry
+
+    Returns:
+        bool: True if exists, otherwise False
+
+    CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' reg.value_exists HKLM SOFTWARE\Microsoft\Windows\CurrentVersion CommonFilesDir
+    """
+    return __utils__["reg.value_exists"](
+        hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry
+    )
 
 
 def broadcast_change():
-    '''
+    """
     Refresh the windows environment.
 
     .. note::
@@ -139,12 +174,12 @@ def broadcast_change():
         .. code-block:: bash
 
             salt '*' reg.broadcast_change
-    '''
-    return salt.utils.win_functions.broadcast_setting_change('Environment')
+    """
+    return salt.utils.win_functions.broadcast_setting_change("Environment")
 
 
 def list_keys(hive, key=None, use_32bit_registry=False):
-    '''
+    """
     Enumerates the subkeys in a registry key or hive.
 
     Args:
@@ -174,15 +209,19 @@ def list_keys(hive, key=None, use_32bit_registry=False):
         .. code-block:: bash
 
             salt '*' reg.list_keys HKLM 'SOFTWARE'
-    '''
-    return __utils__['reg.list_keys'](hive=hive,
-                                      key=key,
-                                      use_32bit_registry=use_32bit_registry)
+    """
+    return __utils__["reg.list_keys"](
+        hive=hive, key=key, use_32bit_registry=use_32bit_registry
+    )
 
 
-def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
-    r'''
+def list_values(hive, key=None, use_32bit_registry=False):
+    r"""
     Enumerates the values in a registry key or hive.
+
+    .. note::
+        The ``(Default)`` value will only be returned if it is set, otherwise it
+        will not be returned in the list of values.
 
     Args:
 
@@ -203,9 +242,6 @@ def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
             Accesses the 32bit portion of the registry on 64 bit installations.
             On 32bit machines this is ignored.
 
-        include_default (bool):
-            Toggle whether to include the '(Default)' value.
-
     Returns:
         list: A list of values under the hive or key.
 
@@ -214,15 +250,14 @@ def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
         .. code-block:: bash
 
             salt '*' reg.list_values HKLM 'SYSTEM\\CurrentControlSet\\Services\\Tcpip'
-    '''
-    return __utils__['reg.list_values'](hive=hive,
-                                        key=key,
-                                        use_32bit_registry=use_32bit_registry,
-                                        include_default=include_default)
+    """
+    return __utils__["reg.list_values"](
+        hive=hive, key=key, use_32bit_registry=use_32bit_registry
+    )
 
 
 def read_value(hive, key, vname=None, use_32bit_registry=False):
-    r'''
+    r"""
     Reads a registry value entry or the default value for a key. To read the
     default value, don't pass ``vname``
 
@@ -275,21 +310,22 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
         .. code-block:: bash
 
             salt '*' reg.read_value HKEY_LOCAL_MACHINE 'SOFTWARE\Salt'
-    '''
-    return __utils__['reg.read_value'](hive=hive,
-                                       key=key,
-                                       vname=vname,
-                                       use_32bit_registry=use_32bit_registry)
+    """
+    return __utils__["reg.read_value"](
+        hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry
+    )
 
 
-def set_value(hive,
-              key,
-              vname=None,
-              vdata=None,
-              vtype='REG_SZ',
-              use_32bit_registry=False,
-              volatile=False):
-    '''
+def set_value(
+    hive,
+    key,
+    vname=None,
+    vdata=None,
+    vtype="REG_SZ",
+    use_32bit_registry=False,
+    volatile=False,
+):
+    """
     Sets a value in the registry. If ``vname`` is passed, it will be the value
     for that value name, otherwise it will be the default value for the
     specified key
@@ -398,18 +434,20 @@ def set_value(hive,
         .. code-block:: bash
 
             salt '*' reg.set_value HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'list_data' vtype=REG_MULTI_SZ vdata='["Salt", "is", "great"]'
-    '''
-    return __utils__['reg.set_value'](hive=hive,
-                                      key=key,
-                                      vname=vname,
-                                      vdata=vdata,
-                                      vtype=vtype,
-                                      use_32bit_registry=use_32bit_registry,
-                                      volatile=volatile)
+    """
+    return __utils__["reg.set_value"](
+        hive=hive,
+        key=key,
+        vname=vname,
+        vdata=vdata,
+        vtype=vtype,
+        use_32bit_registry=use_32bit_registry,
+        volatile=volatile,
+    )
 
 
 def delete_key_recursive(hive, key, use_32bit_registry=False):
-    r'''
+    r"""
     .. versionadded:: 2015.5.4
 
     Delete a registry key to include all subkeys and value/data pairs.
@@ -444,14 +482,14 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
         .. code-block:: bash
 
             salt '*' reg.delete_key_recursive HKLM SOFTWARE\\delete_me
-    '''
-    return __utils__['reg.delete_key_recursive'](hive=hive,
-                                                 key=key,
-                                                 use_32bit_registry=use_32bit_registry)
+    """
+    return __utils__["reg.delete_key_recursive"](
+        hive=hive, key=key, use_32bit_registry=use_32bit_registry
+    )
 
 
 def delete_value(hive, key, vname=None, use_32bit_registry=False):
-    r'''
+    r"""
     Delete a registry value entry or the default value for a key.
 
     Args:
@@ -484,15 +522,14 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
         .. code-block:: bash
 
             salt '*' reg.delete_value HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version'
-    '''
-    return __utils__['reg.delete_value'](hive=hive,
-                                         key=key,
-                                         vname=vname,
-                                         use_32bit_registry=use_32bit_registry)
+    """
+    return __utils__["reg.delete_value"](
+        hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry
+    )
 
 
 def import_file(source, use_32bit_registry=False):
-    '''
+    """
     Import registry settings from a Windows ``REG`` file by invoking ``REG.EXE``.
 
     .. versionadded:: 2018.3.0
@@ -522,8 +559,8 @@ def import_file(source, use_32bit_registry=False):
 
             salt machine1 reg.import_file salt://win/printer_config/110_Canon/postinstall_config.reg
 
-    '''
-    cache_path = __salt__['cp.cache_file'](source)
+    """
+    cache_path = __salt__["cp.cache_file"](source)
     if not cache_path:
         error_msg = "File/URL '{0}' probably invalid.".format(source)
         raise ValueError(error_msg)
@@ -532,11 +569,8 @@ def import_file(source, use_32bit_registry=False):
     else:
         word_sz_txt = "64"
     cmd = 'reg import "{0}" /reg:{1}'.format(cache_path, word_sz_txt)
-    cmd_ret_dict = __salt__['cmd.run_all'](cmd, python_shell=True)
-    retcode = cmd_ret_dict['retcode']
+    cmd_ret_dict = __salt__["cmd.run_all"](cmd, python_shell=True)
+    retcode = cmd_ret_dict["retcode"]
     if retcode != 0:
-        raise CommandExecutionError(
-            'reg.exe import failed',
-            info=cmd_ret_dict
-        )
+        raise CommandExecutionError("reg.exe import failed", info=cmd_ret_dict)
     return True

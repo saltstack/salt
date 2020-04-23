@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Test module for syslog_ng state
-'''
+"""
 
 # Import python libs
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
+
 import os
 import re
 import tempfile
 
-from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-
+import salt.modules.syslog_ng as syslog_ng_module
+import salt.states.syslog_ng as syslog_ng
 import salt.utils.files
 import salt.utils.yaml
-import salt.states.syslog_ng as syslog_ng
-import salt.modules.syslog_ng as syslog_ng_module
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mock import MagicMock, patch
+from tests.support.unit import TestCase
 
 SOURCE_1_CONFIG = {
     "id": "s_tail",
@@ -29,11 +29,11 @@ SOURCE_1_CONFIG = {
               - flags:
                 - no-parse
                 - validate-utf8
-        """)
+        """
+    ),
 }
 
-SOURCE_1_EXPECTED = (
-"""
+SOURCE_1_EXPECTED = """
 source s_tail {
    file(
          "/var/log/apache/access.log",
@@ -42,7 +42,6 @@ source s_tail {
    );
 };
 """
-)
 
 SOURCE_2_CONFIG = {
     "id": "s_gsoc2014",
@@ -54,11 +53,10 @@ SOURCE_2_CONFIG = {
             - port: 1234
             - flags: no-parse
         """
-    )
+    ),
 }
 
-SOURCE_2_EXPECTED = (
-"""
+SOURCE_2_EXPECTED = """
 source s_gsoc2014 {
    tcp(
          ip("0.0.0.0"),
@@ -66,7 +64,6 @@ source s_gsoc2014 {
          flags(no-parse)
    );
 };"""
-)
 
 FILTER_1_CONFIG = {
     "id": "f_json",
@@ -76,18 +73,16 @@ FILTER_1_CONFIG = {
           - match:
             - '"@json:"'
         """
-    )
+    ),
 }
 
-FILTER_1_EXPECTED = (
-    """
+FILTER_1_EXPECTED = """
     filter f_json {
        match(
              "@json:"
        );
     };
     """
-)
 
 TEMPLATE_1_CONFIG = {
     "id": "t_demo_filetemplate",
@@ -99,11 +94,10 @@ TEMPLATE_1_CONFIG = {
           - template_escape:
             - "no"
         """
-    )
+    ),
 }
 
-TEMPLATE_1_EXPECTED = (
-    """
+TEMPLATE_1_EXPECTED = """
     template t_demo_filetemplate {
        template(
              "$ISODATE $HOST $MSG "
@@ -113,7 +107,6 @@ TEMPLATE_1_EXPECTED = (
        );
     };
     """
-)
 
 REWRITE_1_CONFIG = {
     "id": "r_set_message_to_MESSAGE",
@@ -124,11 +117,10 @@ REWRITE_1_CONFIG = {
             - '"${.json.message}"'
             - value : '"$MESSAGE"'
         """
-    )
+    ),
 }
 
-REWRITE_1_EXPECTED = (
-    """
+REWRITE_1_EXPECTED = """
     rewrite r_set_message_to_MESSAGE {
        set(
              "${.json.message}",
@@ -136,7 +128,6 @@ REWRITE_1_EXPECTED = (
        );
     };
     """
-)
 
 LOG_1_CONFIG = {
     "id": "l_gsoc2014",
@@ -166,11 +157,10 @@ LOG_1_CONFIG = {
               - '"/tmp/all.log"'
               - template: t_gsoc2014
         """
-    )
+    ),
 }
 
-LOG_1_EXPECTED = (
-    """
+LOG_1_EXPECTED = """
     log {
        source(s_gsoc2014);
        junction {
@@ -206,7 +196,6 @@ LOG_1_EXPECTED = (
        };
     };
     """
-)
 
 OPTIONS_1_CONFIG = {
     "id": "global_options",
@@ -217,18 +206,16 @@ OPTIONS_1_CONFIG = {
           - mark_freq: 10
           - keep_hostname: "yes"
         """
-    )
+    ),
 }
 
-OPTIONS_1_EXPECTED = (
-    """
+OPTIONS_1_EXPECTED = """
     options {
         time_reap(30);
         mark_freq(10);
         keep_hostname(yes);
     };
     """
-)
 
 SHORT_FORM_CONFIG = {
     "id": "source.s_gsoc",
@@ -239,11 +226,10 @@ SHORT_FORM_CONFIG = {
             - port: 1234
             - flags: no-parse
         """
-    )
+    ),
 }
 
-SHORT_FORM_EXPECTED = (
-    """
+SHORT_FORM_EXPECTED = """
     source s_gsoc {
         tcp(
             ip(
@@ -258,11 +244,10 @@ SHORT_FORM_EXPECTED = (
         );
     };
     """
-)
 
 GIVEN_CONFIG = {
-    'id': "config.some_name",
-    'config': (
+    "id": "config.some_name",
+    "config": (
         """
                source s_gsoc {
                   tcp(
@@ -278,16 +263,16 @@ GIVEN_CONFIG = {
                   );
                };
         """
-    )
+    ),
 }
 
 _SALT_VAR_WITH_MODULE_METHODS = {
-    'syslog_ng.config': syslog_ng_module.config,
-    'syslog_ng.start': syslog_ng_module.start,
-    'syslog_ng.reload': syslog_ng_module.reload_,
-    'syslog_ng.stop': syslog_ng_module.stop,
-    'syslog_ng.write_version': syslog_ng_module.write_version,
-    'syslog_ng.write_config': syslog_ng_module.write_config
+    "syslog_ng.config": syslog_ng_module.config,
+    "syslog_ng.start": syslog_ng_module.start,
+    "syslog_ng.reload": syslog_ng_module.reload_,
+    "syslog_ng.stop": syslog_ng_module.stop,
+    "syslog_ng.write_version": syslog_ng_module.write_version,
+    "syslog_ng.write_config": syslog_ng_module.write_config,
 }
 
 
@@ -295,13 +280,9 @@ def remove_whitespaces(source):
     return re.sub(r"\s+", "", source.strip())
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
-        return {
-            syslog_ng: {},
-            syslog_ng_module: {'__opts__': {'test': False}}
-        }
+        return {syslog_ng: {}, syslog_ng_module: {"__opts__": {"test": False}}}
 
     def test_generate_source_config(self):
         self._config_generator_template(SOURCE_1_CONFIG, SOURCE_1_EXPECTED)
@@ -331,7 +312,9 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
         self._config_generator_template(GIVEN_CONFIG, SHORT_FORM_EXPECTED)
 
     def _config_generator_template(self, yaml_input, expected):
-        parsed_yaml_config = salt.utils.data.decode(salt.utils.yaml.safe_load(yaml_input["config"]))
+        parsed_yaml_config = salt.utils.data.decode(
+            salt.utils.yaml.safe_load(yaml_input["config"])
+        )
         id = yaml_input["id"]
 
         with patch.dict(syslog_ng.__salt__, _SALT_VAR_WITH_MODULE_METHODS):
@@ -342,11 +325,20 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_write_config(self):
         yaml_inputs = (
-            SOURCE_2_CONFIG, SOURCE_1_CONFIG, FILTER_1_CONFIG, TEMPLATE_1_CONFIG, REWRITE_1_CONFIG, LOG_1_CONFIG
+            SOURCE_2_CONFIG,
+            SOURCE_1_CONFIG,
+            FILTER_1_CONFIG,
+            TEMPLATE_1_CONFIG,
+            REWRITE_1_CONFIG,
+            LOG_1_CONFIG,
         )
         expected_outputs = (
-            SOURCE_2_EXPECTED, SOURCE_1_EXPECTED, FILTER_1_EXPECTED, TEMPLATE_1_EXPECTED, REWRITE_1_EXPECTED,
-            LOG_1_EXPECTED
+            SOURCE_2_EXPECTED,
+            SOURCE_1_EXPECTED,
+            FILTER_1_EXPECTED,
+            TEMPLATE_1_EXPECTED,
+            REWRITE_1_EXPECTED,
+            LOG_1_EXPECTED,
         )
         config_file_fd, config_file_name = tempfile.mkstemp()
         os.close(config_file_fd)
@@ -357,7 +349,9 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
             syslog_ng_module.write_config(config='@include "scl.conf"')
 
             for i in yaml_inputs:
-                parsed_yaml_config = salt.utils.data.decode(salt.utils.yaml.safe_load(i["config"]))
+                parsed_yaml_config = salt.utils.data.decode(
+                    salt.utils.yaml.safe_load(i["config"])
+                )
                 id = i["id"]
                 got = syslog_ng.config(id, config=parsed_yaml_config, write=True)
 
@@ -377,8 +371,11 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
         mock_func = MagicMock(return_value={"retcode": 0, "stdout": "", "pid": 1000})
 
         with patch.dict(syslog_ng.__salt__, _SALT_VAR_WITH_MODULE_METHODS):
-            with patch.dict(syslog_ng_module.__salt__, {'cmd.run_all': mock_func}):
+            with patch.dict(syslog_ng_module.__salt__, {"cmd.run_all": mock_func}):
                 got = syslog_ng.started(user="joe", group="users", enable_core=True)
                 command = got["changes"]["new"]
                 self.assertTrue(
-                    command.endswith("syslog-ng --user=joe --group=users --enable-core --cfgfile=/etc/syslog-ng.conf"))
+                    command.endswith(
+                        "syslog-ng --user=joe --group=users --enable-core --cfgfile=/etc/syslog-ng.conf"
+                    )
+                )

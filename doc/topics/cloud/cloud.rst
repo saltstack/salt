@@ -31,7 +31,7 @@ imports, to decide whether to load the module. In most cases, it will return a
 filename, then that name should be returned instead of ``True``. An example of
 this may be seen in the Azure module:
 
-https://github.com/saltstack/salt/tree/develop/salt/cloud/clouds/msazure.py
+https://github.com/saltstack/salt/tree/|repo_primary_branch|/salt/cloud/clouds/msazure.py
 
 The get_configured_provider() Function
 --------------------------------------
@@ -57,7 +57,7 @@ created by the cloud host, wait for it to become available, and then
 A good example to follow for writing a cloud driver module based on libcloud
 is the module provided for Linode:
 
-https://github.com/saltstack/salt/tree/develop/salt/cloud/clouds/linode.py
+https://github.com/saltstack/salt/tree/|repo_primary_branch|/salt/cloud/clouds/linode.py
 
 The basic flow of a ``create()`` function is as follows:
 
@@ -183,7 +183,7 @@ imports should be absent from the Salt Cloud module.
 
 A good example of a non-libcloud driver is the DigitalOcean driver:
 
-https://github.com/saltstack/salt/tree/develop/salt/cloud/clouds/digitalocean.py
+https://github.com/saltstack/salt/tree/|repo_primary_branch|/salt/cloud/clouds/digitalocean.py
 
 The ``create()`` Function
 -------------------------

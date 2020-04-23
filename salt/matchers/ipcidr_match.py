@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 This is the default ipcidr matcher.
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-from salt.ext import six  # pylint: disable=3rd-party-module-not-gated
 
 import salt.utils.network  # pylint: disable=3rd-party-module-not-gated
+from salt.ext import six  # pylint: disable=3rd-party-module-not-gated
 
 if six.PY3:
     import ipaddress
@@ -17,10 +17,13 @@ else:
 log = logging.getLogger(__name__)
 
 
-def match(tgt):
-    '''
+def match(tgt, opts=None):
+    """
     Matches based on IP address or CIDR notation
-    '''
+    """
+    if not opts:
+        opts = __opts__
+
     try:
         # Target is an address?
         tgt = ipaddress.ip_address(tgt)
@@ -29,11 +32,11 @@ def match(tgt):
             # Target is a network?
             tgt = ipaddress.ip_network(tgt)
         except:  # pylint: disable=bare-except
-            log.error('Invalid IP/CIDR target: %s', tgt)
+            log.error("Invalid IP/CIDR target: %s", tgt)
             return []
-    proto = 'ipv{0}'.format(tgt.version)
+    proto = "ipv{0}".format(tgt.version)
 
-    grains = __opts__['grains']
+    grains = opts["grains"]
 
     if proto not in grains:
         match = False

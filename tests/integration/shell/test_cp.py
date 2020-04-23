@@ -1,47 +1,41 @@
 # -*- coding: utf-8 -*-
-'''
+"""
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     tests.integration.shell.cp
     ~~~~~~~~~~~~~~~~~~~~~~~~~~
-'''
+"""
 
-# Import python libs
 from __future__ import absolute_import
-import errno
+
+import logging
 import os
 import pipes
-import shutil
-import tempfile
-import logging
 
-# Import Salt Testing libs
-from tests.support.case import ShellCase
-from tests.support.paths import TMP
-from tests.support.mixins import ShellCaseCommonTestsMixin
-from tests.support.unit import skipIf
-
-# Import salt libs
-import salt.utils.platform
+import pytest
 import salt.utils.files
+import salt.utils.platform
 import salt.utils.yaml
-
-# Import 3rd-party libs
 from salt.ext import six
-
+from tests.support.case import ShellCase
+from tests.support.mixins import ShellCaseCommonTestsMixin
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.windows_whitelisted
 class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
 
-    _call_binary_ = 'salt-cp'
+    _call_binary_ = "salt-cp"
 
+    @skipIf(True, "SLOWTEST skip")
     def test_cp_testfile(self):
-        '''
+        """
         test salt-cp
-        '''
+        """
         minions = []
         for line in self.run_salt('--out yaml "*" test.ping'):
             if not line:
@@ -54,10 +48,13 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
         testfile = os.path.abspath(
             os.path.join(
                 os.path.dirname(os.path.dirname(__file__)),
-                'files', 'file', 'base', 'testfile'
+                "files",
+                "file",
+                "base",
+                "testfile",
             )
         )
-        with salt.utils.files.fopen(testfile, 'r') as fh_:
+        with salt.utils.files.fopen(testfile, "r") as fh_:
             testfile_contents = fh_.read()
 
         def quote(arg):
@@ -66,119 +63,58 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
             return pipes.quote(arg)
 
         for idx, minion in enumerate(minions):
-            if 'localhost' in minion:
+            if "localhost" in minion:
                 continue
             ret = self.run_salt(
-                '--out yaml {0} file.directory_exists {1}'.format(
-                    quote(minion), TMP
+                "--out yaml {0} file.directory_exists {1}".format(
+                    quote(minion), RUNTIME_VARS.TMP
                 )
             )
-            data = salt.utils.yaml.safe_load('\n'.join(ret))
+            data = salt.utils.yaml.safe_load("\n".join(ret))
             if data[minion] is False:
                 ret = self.run_salt(
-                    '--out yaml {0} file.makedirs {1}'.format(
-                        quote(minion),
-                        TMP
+                    "--out yaml {0} file.makedirs {1}".format(
+                        quote(minion), RUNTIME_VARS.TMP
                     )
                 )
 
-                data = salt.utils.yaml.safe_load('\n'.join(ret))
+                data = salt.utils.yaml.safe_load("\n".join(ret))
                 self.assertTrue(data[minion])
 
             minion_testfile = os.path.join(
-                TMP, 'cp_{0}_testfile'.format(idx)
+                RUNTIME_VARS.TMP, "cp_{0}_testfile".format(idx)
             )
 
-            ret = self.run_cp('--out pprint {0} {1} {2}'.format(
-                quote(minion),
-                quote(testfile),
-                quote(minion_testfile),
-            ))
+            ret = self.run_cp(
+                "--out pprint {0} {1} {2}".format(
+                    quote(minion), quote(testfile), quote(minion_testfile),
+                )
+            )
 
-            data = eval('\n'.join(ret), {}, {})  # pylint: disable=eval-used
+            data = eval("\n".join(ret), {}, {})  # pylint: disable=eval-used
             for part in six.itervalues(data):
                 key = minion_testfile
                 self.assertTrue(part[key])
 
             ret = self.run_salt(
-                '--out yaml {0} file.file_exists {1}'.format(
-                    quote(minion),
-                    quote(minion_testfile)
+                "--out yaml {0} file.file_exists {1}".format(
+                    quote(minion), quote(minion_testfile)
                 )
             )
-            data = salt.utils.yaml.safe_load('\n'.join(ret))
+            data = salt.utils.yaml.safe_load("\n".join(ret))
             self.assertTrue(data[minion])
 
             ret = self.run_salt(
-                '--out yaml {0} file.contains {1} {2}'.format(
-                    quote(minion),
-                    quote(minion_testfile),
-                    quote(testfile_contents)
+                "--out yaml {0} file.contains {1} {2}".format(
+                    quote(minion), quote(minion_testfile), quote(testfile_contents)
                 )
             )
-            data = salt.utils.yaml.safe_load('\n'.join(ret))
+            data = salt.utils.yaml.safe_load("\n".join(ret))
             self.assertTrue(data[minion])
             ret = self.run_salt(
-                '--out yaml {0} file.remove {1}'.format(
-                    quote(minion),
-                    quote(minion_testfile)
+                "--out yaml {0} file.remove {1}".format(
+                    quote(minion), quote(minion_testfile)
                 )
             )
-            data = salt.utils.yaml.safe_load('\n'.join(ret))
+            data = salt.utils.yaml.safe_load("\n".join(ret))
             self.assertTrue(data[minion])
-
-    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
-    def test_issue_7754(self):
-        config_dir = os.path.join(TMP, 'issue-7754')
-
-        try:
-            os.makedirs(config_dir)
-        except OSError as exc:
-            if exc.errno != errno.EEXIST:
-                raise
-
-        config_file_name = 'master'
-        with salt.utils.files.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
-            config = salt.utils.yaml.safe_load(fhr)
-            config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
-            with salt.utils.files.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
-                salt.utils.yaml.safe_dump(config, fhw, default_flow_style=False)
-
-        try:
-            fd_, fn_ = tempfile.mkstemp()
-            os.close(fd_)
-
-            with salt.utils.files.fopen(fn_, 'w') as fp_:
-                fp_.write('Hello world!\n')
-
-            ret = self.run_script(
-                self._call_binary_,
-                '--out pprint --config-dir {0} \'*minion\' {1} {0}/{2}'.format(
-                    config_dir,
-                    fn_,
-                    os.path.basename(fn_),
-                ),
-                catch_stderr=True,
-                with_retcode=True
-            )
-
-            self.assertIn('minion', '\n'.join(ret[0]))
-            self.assertIn('sub_minion', '\n'.join(ret[0]))
-            self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
-        except AssertionError:
-            if os.path.exists('/dev/log') and ret[2] != 2:
-                # If there's a syslog device and the exit code was not 2, 'No
-                # such file or directory', raise the error
-                raise
-            self.assertIn(
-                'Failed to setup the Syslog logging handler', '\n'.join(ret[1])
-            )
-            self.assertEqual(ret[2], 2)
-        finally:
-            try:
-                os.remove(fn_)
-            except OSError as exc:
-                if exc.errno != errno.ENOENT:
-                    raise
-            if os.path.isdir(config_dir):
-                shutil.rmtree(config_dir)

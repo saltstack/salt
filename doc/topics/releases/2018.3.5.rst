@@ -1,7 +1,8 @@
-========================================
-In Progress: Salt 2018.3.5 Release Notes
-========================================
+===========================
+Salt 2018.3.5 Release Notes
+===========================
 
+<<<<<<< HEAD
 Version 2018.3.5 is an **unreleased** bugfix release for :ref:`2018.3.0 <release-2018-3-0>`.
 This release is still in progress and has not been released yet.
 
@@ -14,3 +15,16 @@ in the listen queue is older than `event_listen_queue_max_seconds`, the queue wi
 returners regardless of how many events are in the queue.
 
 .. _`#53411`: https://github.com/saltstack/salt/issues/53411
+=======
+Version 2018.3.5 is a CVE-fix release for :ref:`2018.3.0 <release-2018-3-0>`.
+
+Security Fix
+============
+
+**CVE-2019-17361** 
+
+With the Salt NetAPI enabled in addition to having a SSH roster defined,
+unauthenticated access is possible when specifying the client as SSH.
+Additionally, when the raw_shell option is specified any arbitrary command
+may be run on the Salt master when specifying SSH options.
+>>>>>>> 8d70836c614efff36c045d0a87f7a94614409610

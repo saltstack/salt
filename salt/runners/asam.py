@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Novell ASAM Runner
 ==================
 
@@ -27,7 +27,7 @@ master configuration at ``/etc/salt/master`` or ``/etc/salt/master.d/asam.conf``
     Optionally, ``protocol`` and ``port`` can be specified if the Fan-Out Driver server
     is not using the defaults. Default is ``protocol: https`` and ``port: 3451``.
 
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
@@ -40,6 +40,7 @@ HAS_LIBS = False
 try:
     import requests
     from salt.ext.six.moves.html_parser import HTMLParser  # pylint: disable=E0611
+
     HAS_LIBS = True
 
     class ASAMHTMLParser(HTMLParser):  # fix issue #30477
@@ -55,6 +56,7 @@ try:
                     return
                 self.data.append(attr[1])
 
+
 except ImportError:
     pass
 
@@ -62,10 +64,10 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Check for ASAM Fan-Out driver configuration in master config file
     or directory and load runner only if it is specified
-    '''
+    """
     if not HAS_LIBS:
         return False
 
@@ -74,47 +76,57 @@ def __virtual__():
     return True
 
 
-def _get_asam_configuration(driver_url=''):
-    '''
+def _get_asam_configuration(driver_url=""):
+    """
     Return the configuration read from the master configuration
     file or directory
-    '''
-    asam_config = __opts__['asam'] if 'asam' in __opts__ else None
+    """
+    asam_config = __opts__["asam"] if "asam" in __opts__ else None
 
     if asam_config:
         try:
             for asam_server, service_config in six.iteritems(asam_config):
-                username = service_config.get('username', None)
-                password = service_config.get('password', None)
-                protocol = service_config.get('protocol', 'https')
-                port = service_config.get('port', 3451)
+                username = service_config.get("username", None)
+                password = service_config.get("password", None)
+                protocol = service_config.get("protocol", "https")
+                port = service_config.get("port", 3451)
 
                 if not username or not password:
                     log.error(
-                        'Username or Password has not been specified in the '
-                        'master configuration for %s', asam_server
+                        "Username or Password has not been specified in the "
+                        "master configuration for %s",
+                        asam_server,
                     )
                     return False
 
                 ret = {
-                    'platform_edit_url': "{0}://{1}:{2}/config/PlatformEdit.html".format(protocol, asam_server, port),
-                    'platform_config_url': "{0}://{1}:{2}/config/PlatformConfig.html".format(protocol, asam_server, port),
-                    'platformset_edit_url': "{0}://{1}:{2}/config/PlatformSetEdit.html".format(protocol, asam_server, port),
-                    'platformset_config_url': "{0}://{1}:{2}/config/PlatformSetConfig.html".format(protocol, asam_server, port),
-                    'username': username,
-                    'password': password
+                    "platform_edit_url": "{0}://{1}:{2}/config/PlatformEdit.html".format(
+                        protocol, asam_server, port
+                    ),
+                    "platform_config_url": "{0}://{1}:{2}/config/PlatformConfig.html".format(
+                        protocol, asam_server, port
+                    ),
+                    "platformset_edit_url": "{0}://{1}:{2}/config/PlatformSetEdit.html".format(
+                        protocol, asam_server, port
+                    ),
+                    "platformset_config_url": "{0}://{1}:{2}/config/PlatformSetConfig.html".format(
+                        protocol, asam_server, port
+                    ),
+                    "username": username,
+                    "password": password,
                 }
 
                 if (not driver_url) or (driver_url == asam_server):
                     return ret
-        except Exception as exc:
-            log.error('Exception encountered: %s', exc)
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error("Exception encountered: %s", exc)
             return False
 
         if driver_url:
             log.error(
-                'Configuration for %s has not been specified in the master '
-                'configuration', driver_url
+                "Configuration for %s has not been specified in the master "
+                "configuration",
+                driver_url,
             )
             return False
 
@@ -126,7 +138,7 @@ def _make_post_request(url, data, auth, verify=True):
     if r.status_code != requests.codes.ok:
         r.raise_for_status()
     else:
-        return r.text.split('\n')
+        return r.text.split("\n")
 
 
 def _parse_html_content(html_content):
@@ -142,11 +154,11 @@ def _parse_html_content(html_content):
 
 def _get_platformset_name(data, platform_name):
     for item in data:
-        if platform_name in item and item.startswith('PlatformEdit.html?'):
-            parameter_list = item.split('&')
+        if platform_name in item and item.startswith("PlatformEdit.html?"):
+            parameter_list = item.split("&")
             for parameter in parameter_list:
                 if parameter.startswith("platformSetName"):
-                    return parameter.split('=')[1]
+                    return parameter.split("=")[1]
 
     return None
 
@@ -154,11 +166,11 @@ def _get_platformset_name(data, platform_name):
 def _get_platforms(data):
     platform_list = []
     for item in data:
-        if item.startswith('PlatformEdit.html?'):
-            parameter_list = item.split('PlatformEdit.html?', 1)[1].split('&')
+        if item.startswith("PlatformEdit.html?"):
+            parameter_list = item.split("PlatformEdit.html?", 1)[1].split("&")
             for parameter in parameter_list:
                 if parameter.startswith("platformName"):
-                    platform_list.append(parameter.split('=')[1])
+                    platform_list.append(parameter.split("=")[1])
 
     return platform_list
 
@@ -166,17 +178,19 @@ def _get_platforms(data):
 def _get_platform_sets(data):
     platform_set_list = []
     for item in data:
-        if item.startswith('PlatformSetEdit.html?'):
-            parameter_list = item.split('PlatformSetEdit.html?', 1)[1].split('&')
+        if item.startswith("PlatformSetEdit.html?"):
+            parameter_list = item.split("PlatformSetEdit.html?", 1)[1].split("&")
             for parameter in parameter_list:
                 if parameter.startswith("platformSetName"):
-                    platform_set_list.append(parameter.split('=')[1].replace('%20', ' '))
+                    platform_set_list.append(
+                        parameter.split("=")[1].replace("%20", " ")
+                    )
 
     return platform_set_list
 
 
 def remove_platform(name, server_url):
-    '''
+    """
     To remove specified ASAM platform from the Novell Fan-Out Driver
 
     CLI Example:
@@ -184,27 +198,24 @@ def remove_platform(name, server_url):
     .. code-block:: bash
 
         salt-run asam.remove_platform my-test-vm prov1.domain.com
-    '''
+    """
     config = _get_asam_configuration(server_url)
     if not config:
         return False
 
-    url = config['platform_config_url']
+    url = config["platform_config_url"]
 
     data = {
-        'manual': 'false',
+        "manual": "false",
     }
 
-    auth = (
-        config['username'],
-        config['password']
-    )
+    auth = (config["username"], config["password"])
 
     try:
         html_content = _make_post_request(url, data, auth, verify=False)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         err_msg = "Failed to look up existing platforms on {0}".format(server_url)
-        log.error('%s:\n%s', err_msg, exc)
+        log.error("%s:\n%s", err_msg, exc)
         return {name: err_msg}
 
     parser = _parse_html_content(html_content)
@@ -212,15 +223,15 @@ def remove_platform(name, server_url):
 
     if platformset_name:
         log.debug(platformset_name)
-        data['platformName'] = name
-        data['platformSetName'] = six.text_type(platformset_name)
-        data['postType'] = 'platformRemove'
-        data['Submit'] = 'Yes'
+        data["platformName"] = name
+        data["platformSetName"] = six.text_type(platformset_name)
+        data["postType"] = "platformRemove"
+        data["Submit"] = "Yes"
         try:
             html_content = _make_post_request(url, data, auth, verify=False)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             err_msg = "Failed to delete platform from {1}".format(server_url)
-            log.error('%s:\n%s', err_msg, exc)
+            log.error("%s:\n%s", err_msg, exc)
             return {name: err_msg}
 
         parser = _parse_html_content(html_content)
@@ -230,11 +241,13 @@ def remove_platform(name, server_url):
         else:
             return {name: "Successfully deleted platform from {0}".format(server_url)}
     else:
-        return {name: "Specified platform name does not exist on {0}".format(server_url)}
+        return {
+            name: "Specified platform name does not exist on {0}".format(server_url)
+        }
 
 
 def list_platforms(server_url):
-    '''
+    """
     To list all ASAM platforms present on the Novell Fan-Out Driver
 
     CLI Example:
@@ -242,27 +255,24 @@ def list_platforms(server_url):
     .. code-block:: bash
 
         salt-run asam.list_platforms prov1.domain.com
-    '''
+    """
     config = _get_asam_configuration(server_url)
     if not config:
         return False
 
-    url = config['platform_config_url']
+    url = config["platform_config_url"]
 
     data = {
-        'manual': 'false',
+        "manual": "false",
     }
 
-    auth = (
-        config['username'],
-        config['password']
-    )
+    auth = (config["username"], config["password"])
 
     try:
         html_content = _make_post_request(url, data, auth, verify=False)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         err_msg = "Failed to look up existing platforms"
-        log.error('%s:\n%s', err_msg, exc)
+        log.error("%s:\n%s", err_msg, exc)
         return {server_url: err_msg}
 
     parser = _parse_html_content(html_content)
@@ -275,7 +285,7 @@ def list_platforms(server_url):
 
 
 def list_platform_sets(server_url):
-    '''
+    """
     To list all ASAM platform sets present on the Novell Fan-Out Driver
 
     CLI Example:
@@ -283,27 +293,24 @@ def list_platform_sets(server_url):
     .. code-block:: bash
 
         salt-run asam.list_platform_sets prov1.domain.com
-    '''
+    """
     config = _get_asam_configuration(server_url)
     if not config:
         return False
 
-    url = config['platformset_config_url']
+    url = config["platformset_config_url"]
 
     data = {
-        'manual': 'false',
+        "manual": "false",
     }
 
-    auth = (
-        config['username'],
-        config['password']
-    )
+    auth = (config["username"], config["password"])
 
     try:
         html_content = _make_post_request(url, data, auth, verify=False)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         err_msg = "Failed to look up existing platform sets"
-        log.error('%s:\n%s', err_msg, exc)
+        log.error("%s:\n%s", err_msg, exc)
         return {server_url: err_msg}
 
     parser = _parse_html_content(html_content)
@@ -316,7 +323,7 @@ def list_platform_sets(server_url):
 
 
 def add_platform(name, platform_set, server_url):
-    '''
+    """
     To add an ASAM platform using the specified ASAM platform set on the Novell
     Fan-Out Driver
 
@@ -325,7 +332,7 @@ def add_platform(name, platform_set, server_url):
     .. code-block:: bash
 
         salt-run asam.add_platform my-test-vm test-platform-set prov1.domain.com
-    '''
+    """
     config = _get_asam_configuration(server_url)
     if not config:
         return False
@@ -338,27 +345,24 @@ def add_platform(name, platform_set, server_url):
     if platform_set not in platform_sets[server_url]:
         return {name: "Specified platform set does not exist on {0}".format(server_url)}
 
-    url = config['platform_edit_url']
+    url = config["platform_edit_url"]
 
     data = {
-        'platformName': name,
-        'platformSetName': platform_set,
-        'manual': 'false',
-        'previousURL': '/config/platformAdd.html',
-        'postType': 'PlatformAdd',
-        'Submit': 'Apply'
+        "platformName": name,
+        "platformSetName": platform_set,
+        "manual": "false",
+        "previousURL": "/config/platformAdd.html",
+        "postType": "PlatformAdd",
+        "Submit": "Apply",
     }
 
-    auth = (
-        config['username'],
-        config['password']
-    )
+    auth = (config["username"], config["password"])
 
     try:
         html_content = _make_post_request(url, data, auth, verify=False)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         err_msg = "Failed to add platform on {0}".format(server_url)
-        log.error('%s:\n%s', err_msg, exc)
+        log.error("%s:\n%s", err_msg, exc)
         return {name: err_msg}
 
     platforms = list_platforms(server_url)

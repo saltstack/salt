@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Define the maximum time, in hours, that a test run should run for
 def global_timeout = 3
 def salt_target_branch = '2019.2'
@@ -201,5 +202,11 @@ node('lint') {
         }
     }
 }
+=======
+@Library('salt@master-1.7') _
+
+runLint(
+    env: env)
+>>>>>>> 8d70836c614efff36c045d0a87f7a94614409610
 
 // vim: ft=groovy
