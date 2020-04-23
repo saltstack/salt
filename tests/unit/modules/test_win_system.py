@@ -119,30 +119,6 @@ class MockWMI_BIOS(object):
         pass
 
 
-class Mockwinapi(object):
-    """
-    Mock winapi class
-    """
-
-    def __init__(self):
-        pass
-
-    class winapi(object):
-        """
-        Mock winapi class
-        """
-
-        def __init__(self):
-            pass
-
-        @staticmethod
-        def Com():
-            """
-            Mock Com method
-            """
-            return True
-
-
 @skipIf(not HAS_WMI, "WMI only available on Windows")
 @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
 class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
@@ -303,129 +279,6 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             self.assertFalse(win_system.set_computer_name("salt"))
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
-    def test_get_pending_computer_name(self):
-        """
-            Test to get a pending computer name.
-        """
-        with patch.object(
-            win_system, "get_computer_name", MagicMock(return_value="salt")
-        ):
-            reg_mock = MagicMock(return_value={"vdata": "salt"})
-            with patch.dict(win_system.__utils__, {"reg.read_value": reg_mock}):
-                self.assertFalse(win_system.get_pending_computer_name())
-
-            reg_mock = MagicMock(return_value={"vdata": "salt_pending"})
-            with patch.dict(win_system.__utils__, {"reg.read_value": reg_mock}):
-                self.assertEqual(win_system.get_pending_computer_name(), "salt_pending")
-
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
-    def test_get_pending_file_rename_no_key(self):
-        """
-        Test to get a pending file rename, keys don't exist. Should return False
-        """
-        reg_mock = MagicMock(return_value={"success": False})
-        with patch.dict(win_system.__utils__, {"reg.read_value": reg_mock}):
-            self.assertFalse(win_system.get_pending_file_rename())
-
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
-    def test_get_pending_file_rename_key_no_value(self):
-        """
-        Test to get a pending file rename, keys exist but not set. Should return
-        False
-        """
-        reg_mock = MagicMock(return_value={"success": True, "vdata": "(value not set)"})
-        with patch.dict(win_system.__utils__, {"reg.read_value": reg_mock}):
-            self.assertFalse(win_system.get_pending_file_rename())
-
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
-    def test_get_pending_file_rename_key_present_value_set(self):
-        """
-        Test to get a pending file rename, keys exist and value set. Should
-        return True
-        """
-        reg_mock = MagicMock(return_value={"success": True, "vdata": "something"})
-        with patch.dict(win_system.__utils__, {"reg.read_value": reg_mock}):
-            self.assertTrue(win_system.get_pending_file_rename())
-
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
-    def test_get_pending_servermanager_key_not_present(self):
-        """
-        Test to get pending servermanager, key not present. Should return False
-        """
-        reg_mock = MagicMock(return_value={"success": False})
-        with patch.dict(win_system.__utils__, {"reg.read_value": reg_mock}):
-            self.assertFalse(win_system.get_pending_servermanager())
-
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
-    def test_get_pending_servermanager_key_present_not_int(self):
-        """
-        Test to get pending servermanager, key present, value not int. Should
-        return False
-        """
-        reg_mock = MagicMock(return_value={"success": True, "vdata": "(value not set)"})
-        with patch.dict(win_system.__utils__, {"reg.read_value": reg_mock}):
-            self.assertFalse(win_system.get_pending_servermanager())
-
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
-    def test_get_pending_servermanager_key_present_int_0(self):
-        """
-        Test to get pending servermanager, key present, value is int 0. Should
-        return False
-        """
-        reg_mock = MagicMock(return_value={"success": True, "vdata": 0})
-        with patch.dict(win_system.__utils__, {"reg.read_value": reg_mock}):
-            self.assertFalse(win_system.get_pending_servermanager())
-
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
-    def test_get_pending_servermanager_key_present_int_1(self):
-        """
-        Test to get pending servermanager, key present, value is int 1. Should
-        return True
-        """
-        reg_mock = MagicMock(return_value={"success": True, "vdata": 1})
-        with patch.dict(win_system.__utils__, {"reg.read_value": reg_mock}):
-            self.assertTrue(win_system.get_pending_servermanager())
-
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
-    def test_set_reboot_required_witnessed(self):
-        """
-        Test set_reboot_required_witnessed, Should return True
-        """
-        reg_mock = MagicMock(return_value=True)
-        with patch.dict(win_system.__utils__, {"reg.set_value": reg_mock}):
-            self.assertTrue(win_system.set_reboot_required_witnessed())
-
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
-    def test_get_reboot_required_witnessed_false(self):
-        """
-        Test get_reboot_required_witnessed, not witnessed. Should return False
-        """
-        reg_mock = MagicMock(return_value={"success": False, "vdata": None})
-        with patch.dict(win_system.__utils__, {"reg.read_value": reg_mock}):
-            self.assertFalse(win_system.get_reboot_required_witnessed())
-
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
-    def test_get_reboot_required_witnessed_true(self):
-        """
-        Test get_reboot_required_witnessed, witnessed. Should return True
-        """
-        reg_mock = MagicMock(return_value={"success": True, "vdata": 1})
-        with patch.dict(win_system.__utils__, {"reg.read_value": reg_mock}):
-            self.assertTrue(win_system.get_reboot_required_witnessed())
-
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
-    def test_get_computer_name(self):
-        """
-            Test to get the Windows computer name
-        """
-        with patch(
-            "salt.modules.win_system.win32api.GetComputerNameEx",
-            MagicMock(side_effect=["computer name", ""]),
-        ):
-            self.assertEqual(win_system.get_computer_name(), "computer name")
-            self.assertFalse(win_system.get_computer_name())
-
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
     def test_set_computer_desc(self):
         """
             Test to set the Windows computer description
@@ -557,7 +410,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         """
             Test setting a new hostname
         """
-        with patch("salt.utils", Mockwinapi), patch(
+        with patch(
             "salt.utils.winapi.Com", MagicMock()
         ), patch.object(
             self.WMI, "Win32_ComputerSystem", return_value=[MockWMI_ComputerSystem()]
@@ -570,7 +423,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test get_domain_workgroup
         """
-        with patch("salt.utils", Mockwinapi), patch.object(
+        with patch.object(
             wmi, "WMI", Mock(return_value=self.WMI)
         ), patch("salt.utils.winapi.Com", MagicMock()), patch.object(
             self.WMI, "Win32_ComputerSystem", return_value=[MockWMI_ComputerSystem()]
@@ -583,7 +436,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test set_domain_workgroup
         """
-        with patch("salt.utils", Mockwinapi), patch.object(
+        with patch.object(
             wmi, "WMI", Mock(return_value=self.WMI)
         ), patch("salt.utils.winapi.Com", MagicMock()), patch.object(
             self.WMI, "Win32_ComputerSystem", return_value=[MockWMI_ComputerSystem()]
@@ -651,7 +504,9 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             "windows_directory",
             "workgroup",
         ]
-        with patch("salt.utils", Mockwinapi), patch(
+        with patch(
+            "salt.utils.win_system.get_computer_name", MagicMock()
+        ), patch(
             "salt.utils.winapi.Com", MagicMock()
         ), patch.object(
             self.WMI, "Win32_OperatingSystem", return_value=[MockWMI_OperatingSystem()]
