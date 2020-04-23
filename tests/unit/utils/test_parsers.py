@@ -15,7 +15,6 @@ import salt.log.setup
 import salt.syspaths
 import salt.utils.parsers
 import salt.utils.platform
-from tests.support.helpers import destructiveTest
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
@@ -110,7 +109,7 @@ class ObjectView(object):  # pylint: disable=too-few-public-methods
         self.__dict__ = d
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
 class ParserBase(object):
     """

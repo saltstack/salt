@@ -9,7 +9,6 @@
 
     Test support helpers
 """
-
 from __future__ import absolute_import, print_function, unicode_literals
 
 import base64
@@ -84,48 +83,6 @@ def no_symlinks():
     if output.strip() == "true":
         HAS_SYMLINKS = True
     return not HAS_SYMLINKS
-
-
-def destructiveTest(caller):
-    """
-    Mark a test case as a destructive test for example adding or removing users
-    from your system.
-
-    .. code-block:: python
-
-        class MyTestCase(TestCase):
-
-            @destructiveTest
-            def test_create_user(self):
-                pass
-    """
-    # Late import
-    from tests.support.runtests import RUNTIME_VARS
-
-    if RUNTIME_VARS.PYTEST_SESSION:
-        setattr(caller, "__destructive_test__", True)
-
-    if inspect.isclass(caller):
-        # We're decorating a class
-        old_setup = getattr(caller, "setUp", None)
-
-        def setUp(self, *args, **kwargs):
-            if os.environ.get("DESTRUCTIVE_TESTS", "False").lower() == "false":
-                self.skipTest("Destructive tests are disabled")
-            if old_setup is not None:
-                old_setup(self, *args, **kwargs)
-
-        caller.setUp = setUp
-        return caller
-
-    # We're simply decorating functions
-    @functools.wraps(caller)
-    def wrap(cls):
-        if os.environ.get("DESTRUCTIVE_TESTS", "False").lower() == "false":
-            cls.skipTest("Destructive tests are disabled")
-        return caller(cls)
-
-    return wrap
 
 
 def expensiveTest(caller):

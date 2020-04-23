@@ -5,15 +5,11 @@ Integration tests for timezone module
 Linux and Solaris are supported
 """
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
+import pytest
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 from tests.support.unit import skipIf
 
 try:
@@ -71,7 +67,7 @@ class TimezoneWindowsModuleTest(ModuleCase):
         ret = self.run_function("timezone.get_hwclock")
         self.assertIn(ret, timescale)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_get_zone(self):
         """
         test timezone.set_zone, get_zone and zone_compare

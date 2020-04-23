@@ -10,7 +10,7 @@ import pytest
 import salt.utils.platform
 import salt.utils.win_reg as reg
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, random_string
+from tests.support.helpers import random_string
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 
@@ -23,7 +23,7 @@ UNICODE_VALUE = (
 FAKE_KEY = "SOFTWARE\\{0}".format(random_string("SaltTesting-", lowercase=False))
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(not salt.utils.platform.is_windows(), "Windows Specific Test")
 @pytest.mark.windows_whitelisted
 class RegTest(ModuleCase, SaltReturnAssertsMixin):

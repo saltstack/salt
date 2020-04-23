@@ -4,29 +4,26 @@ tests.integration.setup.test_egg
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import re
 import shutil
 
-# Import salt libs
+import pytest
 import salt.utils.path
 import salt.utils.platform
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from tests.support.case import ModuleCase
-from tests.support.helpers import VirtualEnv, destructiveTest
-
-# Import Salt Testing libs
+from tests.support.helpers import VirtualEnv
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
 
-@destructiveTest
 @skipIf(
     salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, "virtualenv not installed"
 )
+@pytest.mark.destructive_test
 class EggSetupTest(ModuleCase):
     """
     Tests for building and installing egg packages

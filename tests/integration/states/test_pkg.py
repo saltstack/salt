@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 """
 tests for pkg state
 """
@@ -18,7 +17,6 @@ from salt.ext import six
 from salt.ext.six.moves import range
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
-    destructiveTest,
     not_runs_on,
     requires_salt_modules,
     requires_salt_states,
@@ -30,7 +28,7 @@ from tests.support.mixins import SaltReturnAssertsMixin
 log = logging.getLogger(__name__)
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.windows_whitelisted
 class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     _PKG_EPOCH_TARGETS = []

@@ -16,11 +16,7 @@ import salt.utils.platform
 from salt.ext import six
 from salt.ext.six.moves import configparser
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    destructiveTest,
-    requires_system_grains,
-    runs_on,
-)
+from tests.support.helpers import requires_system_grains, runs_on
 from tests.support.unit import skipIf
 
 try:
@@ -35,10 +31,11 @@ except ImportError:
     CaseInsensitiveDict = None
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
 @skipIf(not pyiface, "The python pyiface package is not installed")
 @skipIf(not CaseInsensitiveDict, "The python package requests is not installed")
+@runs_on(os_family="NILinuxRT", reason="Tests applicable only to NILinuxRT")
 class NilrtIpModuleTest(ModuleCase):
     """
     Validate the nilrt_ip module

@@ -3,23 +3,16 @@
 tests for pkgrepo states
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
+import pytest
 import salt.utils.files
-
-# Import Salt libs
 import salt.utils.platform
-
-# Import 3rd-party libs
 from salt.ext import six
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
-    destructiveTest,
     requires_salt_modules,
     requires_salt_states,
     requires_system_grains,
@@ -28,7 +21,7 @@ from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(salt.utils.platform.is_windows(), "minion is windows")
 class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
     """

@@ -1,17 +1,13 @@
 # -*- coding: utf-8 -*-
 
-# Import Python libs
 from __future__ import absolute_import
 
 import os
 
-# Import Salt Libs
+import pytest
 import salt.utils.files
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -44,7 +40,7 @@ class DscModuleTest(ModuleCase):
             os.remove(self.psd1file)
         super(DscModuleTest, self).tearDown()
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_compile_config(self):
         ret = self.run_function(
             "dsc.compile_config",

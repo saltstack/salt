@@ -9,7 +9,7 @@ import pytest
 from salt.exceptions import CommandExecutionError
 from salt.ext import six
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, random_string
+from tests.support.helpers import random_string
 
 # Create group name strings for tests
 ADD_GROUP = random_string("RS-", lowercase=False)
@@ -19,7 +19,7 @@ ADD_USER = random_string("RS-", lowercase=False)
 REP_USER_GROUP = random_string("RS-", lowercase=False)
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
 class MacGroupModuleTest(ModuleCase):
     """

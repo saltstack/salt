@@ -8,10 +8,9 @@ from __future__ import absolute_import, print_function, unicode_literals
 import pytest
 from salt.ext import six
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
 class MacDesktopTestCase(ModuleCase):
     """

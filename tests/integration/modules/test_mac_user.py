@@ -12,7 +12,7 @@ import salt.ext.six as six
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, random_string
+from tests.support.helpers import random_string
 
 # Create user strings for tests
 ADD_USER = random_string("RS-", lowercase=False)
@@ -21,7 +21,7 @@ PRIMARY_GROUP_USER = random_string("RS-", lowercase=False)
 CHANGE_USER = random_string("RS-", lowercase=False)
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
 class MacUserModuleTest(ModuleCase):
     """

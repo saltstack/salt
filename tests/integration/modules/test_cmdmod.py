@@ -13,7 +13,7 @@ import salt.utils.path
 import salt.utils.platform
 from salt.ext import six
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_binaries_missing
+from tests.support.helpers import skip_if_binaries_missing
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -223,7 +223,7 @@ class CMDModuleTest(ModuleCase):
         ret = self.run_function("cmd.script", [script, args], cwd=tmp_cwd)
         self.assertEqual(ret["stdout"], args)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_tty(self):
         """
         cmd.tty
@@ -339,7 +339,7 @@ class CMDModuleTest(ModuleCase):
         result = self.run_function("cmd.run_stdout", [cmd], runas=runas).strip()
         self.assertEqual(result, expected_result)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
     @skipIf(salt.utils.platform.is_windows(), "skip windows, uses unix commands")
     def test_avoid_injecting_shell_code_as_root(self):
@@ -360,7 +360,7 @@ class CMDModuleTest(ModuleCase):
         self.assertNotEqual(user_id, runas_root_id)
         self.assertEqual(root_id, runas_root_id)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
     @skipIf(salt.utils.platform.is_windows(), "skip windows, uses unix commands")
     def test_cwd_runas(self):
@@ -383,7 +383,7 @@ class CMDModuleTest(ModuleCase):
             ).rstrip("\n")
         self.assertEqual(tmp_cwd, cwd_runas)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
     @skipIf(not salt.utils.platform.is_darwin(), "applicable to MacOS only")
     def test_runas_env(self):
@@ -400,7 +400,7 @@ class CMDModuleTest(ModuleCase):
         # profile.
         self.assertNotEqual("/bin:/usr/bin", user_path)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
     @skipIf(not salt.utils.platform.is_darwin(), "applicable to MacOS only")
     def test_runas_complex_command_bad_cwd(self):
@@ -431,7 +431,7 @@ class CMDModuleTest(ModuleCase):
 
     @skipIf(salt.utils.platform.is_windows(), "minion is windows")
     @pytest.mark.skip_if_not_root
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_runas(self):
         """
         Ensure that the env is the runas user's

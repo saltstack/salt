@@ -31,7 +31,6 @@ from tests.support.case import ModuleCase
 from tests.support.helpers import (
     Webserver,
     dedent,
-    destructiveTest,
     with_system_user_and_group,
     with_tempdir,
     with_tempfile,
@@ -2701,9 +2700,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         os.remove(source)
         os.remove(dest)
 
-    @destructiveTest
     @pytest.mark.skip_if_not_root
     @skipIf(IS_WINDOWS, "Windows does not report any file modes. Skipping.")
+    @pytest.mark.destructive_test
     @with_tempfile()
     def test_file_copy_make_dirs(self, source):
         """
@@ -5043,7 +5042,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
 WIN_TEST_FILE = "c:/testfile"
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(not IS_WINDOWS, "windows test only")
 @pytest.mark.windows_whitelisted
 class WinFileTest(ModuleCase):

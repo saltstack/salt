@@ -3,23 +3,17 @@
 Integration tests for the docker_container states
 """
 
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import random
 import string
 import sys
 
-# Import Salt Libs
+import pytest
 import salt.utils.path
-
-# Import 3rd-party libs
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import range
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
-
-# Import Salt Testing Libs
 from tests.support.unit import skipIf
 
 
@@ -30,7 +24,7 @@ def _random_name(prefix=""):
     return ret
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(not salt.utils.path.which("dockerd"), "Docker not installed")
 class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
     """

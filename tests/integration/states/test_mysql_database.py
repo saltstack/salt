@@ -3,16 +3,12 @@
 Tests for the MySQL states
 """
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
+import pytest
 import salt.utils.path
 from salt.ext import six
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 
@@ -39,7 +35,7 @@ class MysqlDatabaseStateTest(ModuleCase, SaltReturnAssertsMixin):
     user = "root"
     password = "poney"
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def setUp(self):
         """
         Test presence of MySQL server, enforce a root password
@@ -112,7 +108,7 @@ class MysqlDatabaseStateTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltStateChangesEqual(ret, {})
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_present_absent(self):
         """
         mysql_database.present
@@ -131,7 +127,7 @@ class MysqlDatabaseStateTest(ModuleCase, SaltReturnAssertsMixin):
     # TODO: test with variations on collate and charset, check for db alter
     # once it will be done in mysql_database.present state
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_present_absent_fuzzy(self):
         """
         mysql_database.present with utf-8 andf fuzzy db name
@@ -167,7 +163,7 @@ class MysqlDatabaseStateTest(ModuleCase, SaltReturnAssertsMixin):
             # saltenv={"LC_ALL": "en_US.utf8"}
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @skipIf(True, "This tests needs issue #8947 to be fixed first")
     def test_utf8_from_sls_file(self):
         """

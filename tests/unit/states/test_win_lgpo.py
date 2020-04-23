@@ -2,31 +2,18 @@
 """
 :codeauthor: Shane Lee <slee@saltstack.com>
 """
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
+import pytest
 import salt.config
-
-# Import 3rd Party Libs
 import salt.ext.six as six
 import salt.loader
 import salt.states.win_lgpo as win_lgpo
 import salt.utils.platform
 import salt.utils.stringutils
-
-# Import Salt Testing Libs
-from tests.support.helpers import destructiveTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
-
-# We're going to actually use the loader, without grains (slow)
-opts = salt.config.DEFAULT_MINION_OPTS.copy()
-utils = salt.loader.utils(opts)
-modules = salt.loader.minion_mods(opts, utils=utils)
-
-LOADER_DICTS = {win_lgpo: {"__opts__": opts, "__salt__": modules, "__utils__": utils}}
 
 
 class WinLGPOComparePoliciesTestCase(TestCase):
@@ -107,7 +94,7 @@ class WinLGPOComparePoliciesTestCase(TestCase):
         self.assertFalse(win_lgpo._compare_policies(compare_integer, None))
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
 class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
     """
@@ -115,8 +102,22 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
     Configured (NC)
     """
 
+    @classmethod
+    def setUpClass(cls):
+        # We're going to actually use the loader, without grains (slow)
+        opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        utils = salt.loader.utils(opts)
+        modules = salt.loader.minion_mods(opts, utils=utils)
+        cls.loader_dicts = {
+            win_lgpo: {"__opts__": opts, "__salt__": modules, "__utils__": utils}
+        }
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.loader_dicts = None
+
     def setup_loader_modules(self):
-        return LOADER_DICTS
+        return self.loader_dicts
 
     def setUp(self):
         computer_policy = {"Point and Print Restrictions": "Not Configured"}
@@ -213,7 +214,7 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
         self.assertFalse(expected["result"])
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
 class WinLGPOPolicyElementNamesTestTrue(TestCase, LoaderModuleMockMixin):
     """
@@ -221,10 +222,24 @@ class WinLGPOPolicyElementNamesTestTrue(TestCase, LoaderModuleMockMixin):
     Configured (NC)
     """
 
-    configured = False
+    @classmethod
+    def setUpClass(cls):
+        # We're going to actually use the loader, without grains (slow)
+        opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        utils = salt.loader.utils(opts)
+        modules = salt.loader.minion_mods(opts, utils=utils)
+        cls.loader_dicts = {
+            win_lgpo: {"__opts__": opts, "__salt__": modules, "__utils__": utils}
+        }
+        cls.configured = False
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.loader_dicts = None
+        cls.configured = False
 
     def setup_loader_modules(self):
-        return LOADER_DICTS
+        return self.loader_dicts
 
     def setUp(self):
         if not self.configured:

@@ -10,14 +10,11 @@ import os
 import pytest
 from salt.exceptions import CommandExecutionError
 from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 from tests.support.runtests import RUNTIME_VARS
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
 class MacKeychainModuleTest(ModuleCase):
     """

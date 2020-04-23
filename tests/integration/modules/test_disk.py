@@ -9,11 +9,10 @@ import pytest
 import salt.utils.platform
 from salt.ext import six
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 from tests.support.unit import skipIf
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.windows_whitelisted
 @skipIf(salt.utils.platform.is_darwin(), "No mtab on Darwin")
 @skipIf(salt.utils.platform.is_freebsd(), "No mtab on FreeBSD")

@@ -9,7 +9,6 @@ import pytest
 import salt.utils.path
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 from tests.support.unit import skipIf
 
 
@@ -65,7 +64,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         # is the correct type, dict
         self.assertIsInstance(self.run_function("softwareupdate.list_available"), dict)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_ignore(self):
         """
         Test softwareupdate.ignore
@@ -84,7 +83,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         self.assertIn("spongebob", self.run_function("softwareupdate.list_ignored"))
         self.assertIn("squidward", self.run_function("softwareupdate.list_ignored"))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_schedule(self):
         """
         Test softwareupdate.schedule_enable
@@ -98,7 +97,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         self.assertTrue(self.run_function("softwareupdate.schedule_enable", [False]))
         self.assertFalse(self.run_function("softwareupdate.schedule_enabled"))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_update(self):
         """
         Test softwareupdate.update_all
@@ -129,7 +128,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         """
         self.assertIsInstance(self.run_function("softwareupdate.list_downloads"), list)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_download(self):
         """
         Test softwareupdate.download
@@ -143,14 +142,14 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
             self.run_function("softwareupdate.download", ["spongebob"]),
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_download_all(self):
         """
         Test softwareupdate.download_all
         """
         self.assertIsInstance(self.run_function("softwareupdate.download_all"), list)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_get_set_reset_catalog(self):
         """
         Test softwareupdate.download_all

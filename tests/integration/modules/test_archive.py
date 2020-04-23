@@ -15,7 +15,6 @@ import salt.utils.platform
 import salt.utils.stringutils
 from salt.ext import six
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -27,7 +26,7 @@ except ImportError:
     HAS_ZIPFILE = False
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.windows_whitelisted
 class ArchiveTest(ModuleCase):
     """

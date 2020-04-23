@@ -6,18 +6,17 @@ import pytest
 import salt.modules.chocolatey as choco
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 from tests.support.unit import skipIf
 
 
 @skipIf(not salt.utils.platform.is_windows(), "Tests for only Windows")
+@pytest.mark.destructive_test
 @pytest.mark.windows_whitelisted
 class ChocolateyModuleTest(ModuleCase):
     """
     Validate Chocolatey module
     """
 
-    @destructiveTest
     def setUp(self):
         """
         Ensure that Chocolatey is installed

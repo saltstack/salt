@@ -3,28 +3,16 @@
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
 
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
 import salt.config
 import salt.loader
 import salt.states.service as service
-
-# Import Salt Libs
 import salt.utils.platform
-
-# Import Salt Testing Libs
-from tests.support.helpers import destructiveTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
-
-
-def func(name):
-    """
-        Mock func method
-    """
-    return name
 
 
 class ServiceTestCase(TestCase, LoaderModuleMockMixin):
@@ -368,6 +356,12 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
             },
         ]
 
+        def func(name):
+            """
+                Mock func method
+            """
+            return name
+
         mock = MagicMock(return_value=False)
         with patch.dict(service.__salt__, {"service.status": mock}):
             self.assertDictEqual(service.mod_watch("salt", "dead"), ret[0])
@@ -382,8 +376,8 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(service.mod_watch("salt", "stack"), ret[1])
 
 
-@destructiveTest
 @skipIf(salt.utils.platform.is_darwin(), "service.running is currently failing on OSX")
+@pytest.mark.destructive_test
 class ServiceTestCaseFunctional(TestCase, LoaderModuleMockMixin):
     """
         Validate the service state

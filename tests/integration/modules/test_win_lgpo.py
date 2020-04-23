@@ -7,11 +7,12 @@ import logging
 import os
 import re
 
+import pytest
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.win_reg as reg
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, random_string
+from tests.support.helpers import random_string
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -214,7 +215,7 @@ class WinLgpoTest(ModuleCase):
             )
             log.debug("ret from archive.unzip == %s", ret)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_user_policy_point_and_print_restrictions(self):
         """
         Test setting/unsetting/changing the PointAndPrint_Restrictions user policy
@@ -263,7 +264,7 @@ class WinLgpoTest(ModuleCase):
             policy_class="User",
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_NTP_Client(self):
         """
         Test setting/unsetting/changing NTP Client policies
@@ -313,7 +314,7 @@ class WinLgpoTest(ModuleCase):
             ],
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_RA_Unsolicit(self):
         """
         Test setting/unsetting/changing RA_Unsolicit policy
@@ -356,7 +357,7 @@ class WinLgpoTest(ModuleCase):
             ],
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_Pol_HardenedPaths(self):
         # Disable Pol_HardenedPaths
         log.debug("Attempting to disable Pol_HardenedPaths")
@@ -392,7 +393,7 @@ class WinLgpoTest(ModuleCase):
             ],
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_WindowsUpdate(self):
         """
         Test setting/unsetting/changing WindowsUpdate policy
@@ -527,7 +528,7 @@ class WinLgpoTest(ModuleCase):
             ],
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_ClipboardRedirection(self):
         """
         Test setting/unsetting/changing ClipboardRedirection policy
@@ -555,7 +556,7 @@ class WinLgpoTest(ModuleCase):
             ],
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_LockoutDuration(self):
         """
         Test setting LockoutDuration
@@ -576,7 +577,7 @@ class WinLgpoTest(ModuleCase):
         # set LockoutDuration zero value, the secedit zero value is -1
         self._testSeceditPolicy("LockoutDuration", 0, [r"^LockoutDuration = -1"])
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_GuestAccountStatus(self):
         """
         Test setting/unsetting/changing GuestAccountStatus
@@ -590,7 +591,7 @@ class WinLgpoTest(ModuleCase):
             "GuestAccountStatus", "Enabled", [r"^EnableGuestAccount = 1"]
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_PasswordComplexity(self):
         """
         Test setting/unsetting/changing PasswordComplexity
@@ -606,7 +607,7 @@ class WinLgpoTest(ModuleCase):
             "PasswordComplexity", "Enabled", [r"^PasswordComplexity = 1"]
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_PasswordLen(self):
         """
         Test setting/unsetting/changing PasswordLength
@@ -618,7 +619,7 @@ class WinLgpoTest(ModuleCase):
         # set MinimumPasswordLength = 0
         self._testSeceditPolicy("MinPasswordLen", 0, [r"^MinimumPasswordLength = 0"])
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_SeNetworkLogonRight(self):
         """
         Test setting/unsetting/changing PasswordLength
@@ -639,7 +640,7 @@ class WinLgpoTest(ModuleCase):
             ],
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_multipleAdmxPolicies(self):
         """
         Tests setting several ADMX policies in succession and validating the configuration w/lgop
@@ -688,7 +689,7 @@ class WinLgpoTest(ModuleCase):
             ],
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_DisableDomainCreds(self):
         """
         Tests Enable/Disable of DisableDomainCreds policy
@@ -710,7 +711,7 @@ class WinLgpoTest(ModuleCase):
             expected_value_data=0,
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_ForceGuest(self):
         """
         Tests changing ForceGuest policy
@@ -732,7 +733,7 @@ class WinLgpoTest(ModuleCase):
             expected_value_data=0,
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_DisableUXWUAccess(self):
         """
         Tests changing DisableUXWUAccess
@@ -769,7 +770,7 @@ class WinLgpoTest(ModuleCase):
                 ],
             )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_Access_data_sources_across_domains(self):
         """
         Tests that a policy that has multiple names
@@ -799,7 +800,7 @@ class WinLgpoTest(ModuleCase):
             ],
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_ActiveHours(self):
         """
         Test configuring the ActiveHours policy, #47784
@@ -855,7 +856,7 @@ class WinLgpoTest(ModuleCase):
                 ],
             )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_AllowTelemetry(self):
         """
         Tests that a the AllowTelemetry policy is applied correctly and that it

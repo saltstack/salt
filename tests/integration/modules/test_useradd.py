@@ -5,11 +5,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 import pytest
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, random_string, requires_system_grains
+from tests.support.helpers import random_string, requires_system_grains
 from tests.support.unit import skipIf
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(not salt.utils.platform.is_linux(), "These tests can only be run on linux")
 @pytest.mark.skip_if_not_root
 @pytest.mark.windows_whitelisted
@@ -85,7 +85,7 @@ class UseraddModuleTestLinux(ModuleCase):
             raise
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(not salt.utils.platform.is_windows(), "These tests can only be run on Windows")
 @pytest.mark.skip_if_not_root
 @pytest.mark.windows_whitelisted

@@ -5,7 +5,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import pytest
 import salt.modules.iptables
 from tests.support.case import MultimasterModuleCase, MultiMasterTestShellCase
-from tests.support.helpers import destructiveTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.unit import skipIf
 
@@ -14,7 +13,7 @@ if isinstance(HAS_IPTABLES, tuple):
     HAS_IPTABLES = HAS_IPTABLES[0]
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
 @skipIf(not HAS_IPTABLES, "iptables command is not available")
 class TestHandleEvents(

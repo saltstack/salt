@@ -2,7 +2,6 @@
 """
 Integration tests for the docker_container states
 """
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
@@ -13,20 +12,16 @@ import subprocess
 import sys
 import tempfile
 
-# Import Salt Libs
+import pytest
+import salt.modules.config
 import salt.utils.files
 import salt.utils.network
 import salt.utils.path
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
 from salt.ext import six
-from salt.modules.config import DEFAULTS as _config_defaults
-
-# Import Salt Testing Libs
 from tests.support.case import ModuleCase
 from tests.support.docker import random_name, with_network
-from tests.support.helpers import destructiveTest, with_tempdir
+from tests.support.helpers import with_tempdir
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
@@ -56,7 +51,7 @@ def container_name(func):
     return wrapper
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(not salt.utils.path.which("busybox"), "Busybox not installed")
 @skipIf(not salt.utils.path.which("dockerd"), "Docker not installed")
 class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
@@ -722,7 +717,9 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             .get("NetworkSettings", {})
             .get("Networks", {})[nets[-1].name]
         )
-        autoip_keys = _config_defaults["docker.compare_container_networks"]["automatic"]
+        autoip_keys = salt.modules.config.DEFAULTS["docker.compare_container_networks"][
+            "automatic"
+        ]
         autoip_config = {
             x: y for x, y in six.iteritems(container_netinfo) if x in autoip_keys and y
         }

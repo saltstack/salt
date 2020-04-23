@@ -2,26 +2,20 @@
 """
 Tests for the Chocolatey State
 """
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
+import pytest
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
-__testcontext__ = {}
 
-
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(not salt.utils.platform.is_windows(), "Windows Specific Test")
 class ChocolateyTest(ModuleCase, SaltReturnAssertsMixin):
     """
@@ -29,14 +23,22 @@ class ChocolateyTest(ModuleCase, SaltReturnAssertsMixin):
     These tests are destructive as the install and remove software
     """
 
+    @classmethod
+    def setUpClass(cls):
+        cls.chocolatey_bootstrapped = False
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.chocolatey_bootstrapped = False
+
     def setUp(self):
         """
         Ensure that Chocolatey is installed
         """
         super(ChocolateyTest, self).setUp()
-        if "chocolatey" not in __testcontext__:
+        if self.chocolatey_bootstrapped is False:
             self.run_function("chocolatey.bootstrap")
-            __testcontext__["chocolatey"] = True
+            self.chocolatey_bootstrapped = True
 
     def test_chocolatey(self):
         """

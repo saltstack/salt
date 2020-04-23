@@ -10,13 +10,13 @@ import os
 import pytest
 import salt.utils.files
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, with_system_user
+from tests.support.helpers import with_system_user
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 
 
 class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
-    @destructiveTest
+    @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
     @with_system_user("issue_7409", on_existing="delete", delete=True)
     def test_issue_7409_no_linebreaks_between_keys(self, username):
@@ -51,7 +51,7 @@ class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
                 "ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n".format(username),
             )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
     @with_system_user("issue_10198", on_existing="delete", delete=True)
     def test_issue_10198_keyfile_from_another_env(self, username=None):

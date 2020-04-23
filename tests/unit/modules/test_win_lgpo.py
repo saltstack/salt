@@ -3,16 +3,13 @@
 :codeauthor: Shane Lee <slee@saltstack.com>
 """
 
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import glob
 import os
 
-# Import Salt Libs
+import pytest
 import salt.config
-
-# Import 3rd Party Libs
 import salt.ext.six as six
 import salt.loader
 import salt.modules.win_lgpo as win_lgpo
@@ -20,21 +17,12 @@ import salt.states.win_lgpo
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
-
-# Import Salt Testing Libs
-from tests.support.helpers import destructiveTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.unit import TestCase, skipIf
 
-# We're going to actually use the loader, without grains (slow)
-opts = salt.config.DEFAULT_MINION_OPTS.copy()
-utils = salt.loader.utils(opts)
-modules = salt.loader.minion_mods(opts, utils=utils)
 
-LOADER_DICTS = {win_lgpo: {"__opts__": opts, "__salt__": modules, "__utils__": utils}}
-
-
+@skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
 class WinLGPOTestCase(TestCase):
     """
     Test cases for salt.modules.win_lgpo
@@ -260,8 +248,22 @@ class WinLGPOGetPolicyADMXTestCase(TestCase, LoaderModuleMockMixin):
     (admx/adml)
     """
 
+    @classmethod
+    def setUpClass(cls):
+        # We're going to actually use the loader, without grains (slow)
+        opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        utils = salt.loader.utils(opts)
+        modules = salt.loader.minion_mods(opts, utils=utils)
+        cls.loader_dicts = {
+            win_lgpo: {"__opts__": opts, "__salt__": modules, "__utils__": utils}
+        }
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.loader_dicts = None
+
     def setup_loader_modules(self):
-        return LOADER_DICTS
+        return self.loader_dicts
 
     def test_get_policy_name(self):
         result = win_lgpo.get_policy(
@@ -377,7 +379,7 @@ class WinLGPOGetPolicyADMXTestCase(TestCase, LoaderModuleMockMixin):
         }
         self.assertDictEqual(result, expected)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test__load_policy_definitions(self):
         """
         Test that unexpected files in the PolicyDefinitions directory won't
@@ -413,8 +415,22 @@ class WinLGPOGetPolicyFromPolicyInfoTestCase(TestCase, LoaderModuleMockMixin):
     object
     """
 
+    @classmethod
+    def setUpClass(cls):
+        # We're going to actually use the loader, without grains (slow)
+        opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        utils = salt.loader.utils(opts)
+        modules = salt.loader.minion_mods(opts, utils=utils)
+        cls.loader_dicts = {
+            win_lgpo: {"__opts__": opts, "__salt__": modules, "__utils__": utils}
+        }
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.loader_dicts = None
+
     def setup_loader_modules(self):
-        return LOADER_DICTS
+        return self.loader_dicts
 
     def test_get_policy_name(self):
         result = win_lgpo.get_policy(
@@ -545,12 +561,24 @@ class WinLGPOPolicyInfoMechanismsTestCase(TestCase, LoaderModuleMockMixin):
     Go through each mechanism
     """
 
-    def setup_loader_modules(self):
-        return LOADER_DICTS
-
     @classmethod
     def setUpClass(cls):
+        # We're going to actually use the loader, without grains (slow)
+        opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        utils = salt.loader.utils(opts)
+        modules = salt.loader.minion_mods(opts, utils=utils)
+        cls.loader_dicts = {
+            win_lgpo: {"__opts__": opts, "__salt__": modules, "__utils__": utils}
+        }
         cls.policy_data = salt.modules.win_lgpo._policy_info()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.loader_dicts = None
+        cls.policy_data = None
+
+    def setup_loader_modules(self):
+        return self.loader_dicts
 
     def _test_policy(self, policy_name):
         """
@@ -592,7 +620,7 @@ class WinLGPOPolicyInfoMechanismsTestCase(TestCase, LoaderModuleMockMixin):
         expected = "Not configured"
         self.assertEqual(result, expected)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_adv_audit_mechanism(self):
         """
         Test getting the policy value using the AdvAudit mechanism
@@ -646,7 +674,7 @@ class WinLGPOPolicyInfoMechanismsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(result, expected)
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
 class WinLGPOGetPointAndPrintNCTestCase(TestCase, LoaderModuleMockMixin):
     """
@@ -654,10 +682,24 @@ class WinLGPOGetPointAndPrintNCTestCase(TestCase, LoaderModuleMockMixin):
     Configured (NC)
     """
 
-    not_configured = False
+    @classmethod
+    def setUpClass(cls):
+        # We're going to actually use the loader, without grains (slow)
+        opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        utils = salt.loader.utils(opts)
+        modules = salt.loader.minion_mods(opts, utils=utils)
+        cls.loader_dicts = {
+            win_lgpo: {"__opts__": opts, "__salt__": modules, "__utils__": utils}
+        }
+        cls.not_configured = False
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.loader_dicts = None
+        cls.not_configured = False
 
     def setup_loader_modules(self):
-        return LOADER_DICTS
+        return self.loader_dicts
 
     def setUp(self):
         if not self.not_configured:
@@ -738,17 +780,31 @@ class WinLGPOGetPointAndPrintNCTestCase(TestCase, LoaderModuleMockMixin):
         self.assertDictEqual(result, expected)
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
 class WinLGPOGetPointAndPrintENTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test variations of the Point and Print Restrictions policy when Enabled (EN)
     """
 
-    configured = False
+    @classmethod
+    def setUpClass(cls):
+        # We're going to actually use the loader, without grains (slow)
+        opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        utils = salt.loader.utils(opts)
+        modules = salt.loader.minion_mods(opts, utils=utils)
+        cls.loader_dicts = {
+            win_lgpo: {"__opts__": opts, "__salt__": modules, "__utils__": utils}
+        }
+        cls.configured = False
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.loader_dicts = None
+        cls.configured = False
 
     def setup_loader_modules(self):
-        return LOADER_DICTS
+        return self.loader_dicts
 
     def setUp(self):
         if not self.configured:
@@ -882,10 +938,24 @@ class WinLGPOGetPolicyFromPolicyResources(TestCase, LoaderModuleMockMixin):
     Test functions related to policy info gathered from ADMX/ADML files
     """
 
-    adml_data = None
+    @classmethod
+    def setUpClass(cls):
+        # We're going to actually use the loader, without grains (slow)
+        opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        utils = salt.loader.utils(opts)
+        modules = salt.loader.minion_mods(opts, utils=utils)
+        cls.loader_dicts = {
+            win_lgpo: {"__opts__": opts, "__salt__": modules, "__utils__": utils}
+        }
+        cls.adml_data = None
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.loader_dicts = None
+        cls.adml_data = None
 
     def setup_loader_modules(self):
-        return LOADER_DICTS
+        return self.loader_dicts
 
     def setUp(self):
         if self.adml_data is None:

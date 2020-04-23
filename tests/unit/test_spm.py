@@ -1,51 +1,21 @@
 # coding: utf-8
 
-# Import Python libs
 from __future__ import absolute_import
 
 import os
 import shutil
 import tempfile
 
+import pytest
 import salt.config
 import salt.spm
 import salt.utils.files
-from tests.support.helpers import destructiveTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
 
-_F1 = {
-    "definition": {
-        "name": "formula1",
-        "version": "1.2",
-        "release": "2",
-        "summary": "test",
-        "description": "testing, nothing to see here",
-    }
-}
 
-_F1["contents"] = (
-    (
-        "FORMULA",
-        (
-            "name: {name}\n"
-            "version: {version}\n"
-            "release: {release}\n"
-            "summary: {summary}\n"
-            "description: {description}"
-        ).format(**_F1["definition"]),
-    ),
-    ("modules/mod1.py", "# mod1.py"),
-    ("modules/mod2.py", "# mod2.py"),
-    ("states/state1.sls", "# state1.sls"),
-    ("states/state2.sls", "# state2.sls"),
-)
-
-
-@destructiveTest
+@pytest.mark.destructive_test
 class SPMTestUserInterface(salt.spm.SPMUserInterface):
     """
     Unit test user interface to SPMClient
@@ -67,6 +37,39 @@ class SPMTestUserInterface(salt.spm.SPMUserInterface):
 
 
 class SPMTest(TestCase, AdaptedConfigurationTestCaseMixin):
+    @classmethod
+    def setUpClass(cls):
+        cls._F1 = {
+            "definition": {
+                "name": "formula1",
+                "version": "1.2",
+                "release": "2",
+                "summary": "test",
+                "description": "testing, nothing to see here",
+            }
+        }
+
+        cls._F1["contents"] = (
+            (
+                "FORMULA",
+                (
+                    "name: {name}\n"
+                    "version: {version}\n"
+                    "release: {release}\n"
+                    "summary: {summary}\n"
+                    "description: {description}"
+                ).format(**cls._F1["definition"]),
+            ),
+            ("modules/mod1.py", "# mod1.py"),
+            ("modules/mod2.py", "# mod2.py"),
+            ("states/state1.sls", "# state1.sls"),
+            ("states/state2.sls", "# state2.sls"),
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._F1 = None
+
     def setUp(self):
         self._tmp_spm = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, self._tmp_spm, ignore_errors=True)
@@ -116,8 +119,8 @@ class SPMTest(TestCase, AdaptedConfigurationTestCaseMixin):
         return fdir
 
     def test_build_install(self):
-        # Build package
-        fdir = self._create_formula_files(_F1)
+        # Build package?!?jedi=0, ?!?                  (*_*formula*_*) ?!?jedi?!?
+        fdir = self._create_formula_files(self._F1)
         with patch("salt.client.Caller", MagicMock(return_value=self.minion_opts)):
             with patch(
                 "salt.client.get_local_client",
@@ -134,10 +137,10 @@ class SPMTest(TestCase, AdaptedConfigurationTestCaseMixin):
             ):
                 self.client.run(["local", "install", pkgpath])
         # Check filesystem
-        for path, contents in _F1["contents"]:
+        for path, contents in self._F1["contents"]:
             path = os.path.join(
                 self.minion_config["file_roots"]["base"][0],
-                _F1["definition"]["name"],
+                self._F1["definition"]["name"],
                 path,
             )
             assert os.path.exists(path)
@@ -149,7 +152,7 @@ class SPMTest(TestCase, AdaptedConfigurationTestCaseMixin):
                 "salt.client.get_local_client",
                 MagicMock(return_value=self.minion_opts["conf_file"]),
             ):
-                self.client.run(["info", _F1["definition"]["name"]])
+                self.client.run(["info", self._F1["definition"]["name"]])
         lines = self.ui._status[-1].split("\n")
         for key, line in (
             ("name", "Name: {0}"),
@@ -157,7 +160,7 @@ class SPMTest(TestCase, AdaptedConfigurationTestCaseMixin):
             ("release", "Release: {0}"),
             ("summary", "Summary: {0}"),
         ):
-            assert line.format(_F1["definition"][key]) in lines
+            assert line.format(self._F1["definition"][key]) in lines
         # Reinstall with force=False, should fail
         self.ui._error = []
         with patch("salt.client.Caller", MagicMock(return_value=self.minion_opts)):

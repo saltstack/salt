@@ -8,10 +8,9 @@ import shutil
 
 import pytest
 from tests.support.case import SPMCase
-from tests.support.helpers import destructiveTest
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.windows_whitelisted
 class SPMInfoTest(SPMCase):
     """

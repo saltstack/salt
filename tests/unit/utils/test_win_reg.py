@@ -2,11 +2,12 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
 import salt.utils.stringutils
 import salt.utils.win_reg as win_reg
 from salt.exceptions import CommandExecutionError
 from salt.ext import six
-from tests.support.helpers import destructiveTest, random_string
+from tests.support.helpers import random_string
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
@@ -16,6 +17,15 @@ try:
     HAS_WIN32 = True
 except ImportError:
     HAS_WIN32 = False
+
+# This is to fix the pylint error: E0602: Undefined variable "WindowsError"
+try:
+    from exceptions import WindowsError  # pylint: disable=no-name-in-module
+except ImportError:
+
+    class WindowsError(OSError):
+        pass
+
 
 UNICODE_KEY = "Unicode Key \N{TRADE MARK SIGN}"
 UNICODE_VALUE = (
@@ -370,7 +380,7 @@ class WinFunctionsTestCase(TestCase):
                 vname="ProgramFilesPath",
             )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_read_value_multi_sz_empty_list(self):
         """
         An empty REG_MULTI_SZ value should return an empty list, not None
@@ -400,7 +410,7 @@ class WinFunctionsTestCase(TestCase):
         finally:
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_value(self):
         """
         Test the set_value function
@@ -426,7 +436,7 @@ class WinFunctionsTestCase(TestCase):
         finally:
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_value_default(self):
         """
         Test the set_value function on the default value
@@ -447,7 +457,7 @@ class WinFunctionsTestCase(TestCase):
         finally:
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_value_unicode_key(self):
         """
         Test the set_value function on a unicode key
@@ -480,7 +490,7 @@ class WinFunctionsTestCase(TestCase):
         finally:
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_value_unicode_value(self):
         """
         Test the set_value function on a unicode value
@@ -506,7 +516,7 @@ class WinFunctionsTestCase(TestCase):
         finally:
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_value_reg_dword(self):
         """
         Test the set_value function on a REG_DWORD value
@@ -536,7 +546,7 @@ class WinFunctionsTestCase(TestCase):
         finally:
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_value_reg_qword(self):
         """
         Test the set_value function on a REG_QWORD value
@@ -702,21 +712,11 @@ class WinFunctionsTestCase(TestCase):
         """
         vdata = 1
         result = win_reg.cast_vdata(vdata=vdata, vtype="REG_QWORD")
-        if six.PY2:
-            # pylint: disable=incompatible-py3-code,undefined-variable
-            self.assertTrue(isinstance(result, long))
-            # pylint: enable=incompatible-py3-code,undefined-variable
-        else:
-            self.assertTrue(isinstance(result, int))
+        self.assertTrue(isinstance(result, int))
 
         vdata = "1"
         result = win_reg.cast_vdata(vdata=vdata, vtype="REG_QWORD")
-        if six.PY2:
-            # pylint: disable=incompatible-py3-code,undefined-variable
-            self.assertTrue(isinstance(result, long))
-            # pylint: enable=incompatible-py3-code,undefined-variable
-        else:
-            self.assertTrue(isinstance(result, int))
+        self.assertTrue(isinstance(result, int))
 
     def test_cast_vdata_reg_sz(self):
         """
@@ -731,7 +731,7 @@ class WinFunctionsTestCase(TestCase):
         result = win_reg.cast_vdata(vdata=vdata, vtype="REG_SZ")
         self.assertTrue(isinstance(result, six.text_type))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_delete_value(self):
         """
         Test the delete_value function
@@ -788,7 +788,7 @@ class WinFunctionsTestCase(TestCase):
                 vname="fake_name",
             )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_delete_value_unicode(self):
         """
         Test the delete_value function on a unicode value
@@ -805,7 +805,7 @@ class WinFunctionsTestCase(TestCase):
         finally:
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_delete_value_unicode_vname(self):
         """
         Test the delete_value function on a unicode vname
@@ -822,7 +822,7 @@ class WinFunctionsTestCase(TestCase):
         finally:
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_delete_value_unicode_key(self):
         """
         Test the delete_value function on a unicode key
@@ -874,7 +874,7 @@ class WinFunctionsTestCase(TestCase):
         with patch("salt.utils.win_reg.key_exists", mock_true):
             self.assertFalse(win_reg.delete_key_recursive(hive="HKLM", key="FAKE_KEY"))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_delete_key_recursive(self):
         """
         Test the delete_key_recursive function
@@ -892,7 +892,7 @@ class WinFunctionsTestCase(TestCase):
         finally:
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_delete_key_recursive_failed_to_open_key(self):
         """
         Test the delete_key_recursive function on failure to open the key
@@ -923,7 +923,7 @@ class WinFunctionsTestCase(TestCase):
         finally:
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_delete_key_recursive_failed_to_delete(self):
         """
         Test the delete_key_recursive function on failure to delete a key
@@ -938,9 +938,7 @@ class WinFunctionsTestCase(TestCase):
                 "Deleted": [],
                 "Failed": ["\\".join(["HKLM", FAKE_KEY]) + " Unknown error"],
             }
-            # pylint: disable=undefined-variable
             mock_error = MagicMock(side_effect=WindowsError("Unknown error"))
-            # pylint: enable=undefined-variable
             with patch("salt.utils.win_reg.win32api.RegDeleteKey", mock_error):
                 self.assertDictEqual(
                     win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY), expected
@@ -948,7 +946,7 @@ class WinFunctionsTestCase(TestCase):
         finally:
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_delete_key_recursive_unicode(self):
         """
         Test the delete_key_recursive function on value within a unicode key
@@ -980,14 +978,4 @@ class WinFunctionsTestCase(TestCase):
         Test the ``_to_unicode`` function when it receives an integer value.
         Should return a unicode value, which is unicode in PY2 and str in PY3.
         """
-        if six.PY3:
-            self.assertTrue(isinstance(win_reg._to_unicode(1), str))
-        else:
-            # fmt: off
-            self.assertTrue(
-                isinstance(
-                    win_reg._to_unicode(1),
-                    unicode,  # pylint: disable=incompatible-py3-code,undefined-variable
-                )
-            )
-            # fmt: on
+        self.assertTrue(isinstance(win_reg._to_unicode(1), str))

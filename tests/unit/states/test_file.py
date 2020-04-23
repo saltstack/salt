@@ -8,6 +8,7 @@ import pprint
 import shutil
 from datetime import datetime
 
+import pytest
 import salt.modules.file as filemod
 import salt.serializers.json as jsonserializer
 import salt.serializers.python as pythonserializer
@@ -20,7 +21,6 @@ import salt.utils.win_functions
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError
 from salt.ext.six.moves import range
-from tests.support.helpers import destructiveTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, call, mock_open, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -2849,7 +2849,7 @@ class TestFilePrivateFunctions(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {filestate: {"__salt__": {"file.stats": filemod.stats}}}
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @skipIf(salt.utils.platform.is_windows(), "File modes do not exist on windows")
     def test__check_directory(self):
         """

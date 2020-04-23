@@ -3,17 +3,13 @@
 Tests for the Openstack Cloud Provider
 """
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt Libs
+import pytest
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 
@@ -28,7 +24,6 @@ try:
 except ImportError:
     HAS_KEYSTONE = False
 
-# Import Third-Party Libs
 try:
     import shade  # pylint: disable=unused-import
 
@@ -50,7 +45,7 @@ class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
     endpoint = "http://localhost:35357/v2.0"
     token = "administrator"
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_aaa_setup_keystone_endpoint(self):
         ret = self.run_state(
             "keystone.service_present",
@@ -136,7 +131,7 @@ class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertTrue(ret["keystone_|-demo_|-demo_|-user_present"]["result"])
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_zzz_teardown_keystone_endpoint(self):
         ret = self.run_state(
             "keystone.user_absent",
@@ -196,7 +191,7 @@ class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
             ret["keystone_|-keystone_|-keystone_|-service_absent"]["result"]
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_libcloud_auth_v3(self):
         driver = OpenStackIdentity_3_0_Connection(
             auth_url="http://localhost:5000",

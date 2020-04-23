@@ -9,7 +9,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, random_string
+from tests.support.helpers import random_string
 
 
 @pytest.mark.skip_unless_on_freebsd
@@ -20,7 +20,7 @@ class PwUserModuleTest(ModuleCase):
         if os_grain["kernel"] != "FreeBSD":
             self.skipTest("Test not applicable to '{kernel}' kernel".format(**os_grain))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
     def test_groups_includes_primary(self):
         # Let's create a user, which usually creates the group matching the name

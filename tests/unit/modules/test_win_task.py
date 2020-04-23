@@ -1,19 +1,15 @@
 # -*- coding: utf-8 -*-
 
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
+import pytest
 import salt.modules.win_task as win_task
 import salt.utils.platform
-from tests.support.helpers import destructiveTest
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 
 
-@destructiveTest
 @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
+@pytest.mark.destructive_test
 class WinTaskTestCase(TestCase):
     """
     Test cases for salt.modules.win_task

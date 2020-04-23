@@ -2,7 +2,6 @@
 """
 Tests for the salt-run command
 """
-# Import Python libs
 from __future__ import absolute_import
 
 import functools
@@ -10,15 +9,15 @@ import random
 import string
 import tempfile
 
+import pytest
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.x509.oid import NameOID
 from salt.ext.six import text_type
 from salt.ext.six.moves import range
-
-# Import Salt Testing libs
 from tests.support.case import ShellCase
+from tests.support.helpers import expensiveTest
 
 
 def _random_name(prefix=""):
@@ -41,6 +40,8 @@ def with_random_name(func):
     return wrapper
 
 
+@pytest.mark.destructive_test
+@expensiveTest
 class VenafiTest(ShellCase):
     """
     Test the venafi runner

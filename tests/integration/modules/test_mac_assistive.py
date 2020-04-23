@@ -7,12 +7,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 
 OSA_SCRIPT = "/usr/bin/osascript"
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
 class MacAssistiveTest(ModuleCase):
     """

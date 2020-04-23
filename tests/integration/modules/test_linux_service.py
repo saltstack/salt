@@ -7,11 +7,11 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.systemd
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, flaky
+from tests.support.helpers import flaky
 from tests.support.unit import skipIf
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.windows_whitelisted
 class ServiceModuleTest(ModuleCase):
     """

@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, unicode_literals
 
+import pytest
 import salt.modules.win_task as task
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 from tests.support.unit import skipIf
 
 
@@ -15,7 +15,7 @@ class WinTasksTest(ModuleCase):
     Tests for salt.modules.win_task.
     """
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_adding_task_with_xml(self):
         """
         Test adding a task using xml
@@ -73,7 +73,7 @@ class WinTasksTest(ModuleCase):
         all_tasks = self.run_function("task.list_tasks")
         self.assertIn("foo", all_tasks)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_adding_task_with_invalid_xml(self):
         """
         Test adding a task using a malformed xml

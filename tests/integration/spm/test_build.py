@@ -11,11 +11,10 @@ import pytest
 import salt.utils.files
 import salt.utils.path
 from tests.support.case import ModuleCase, SPMCase
-from tests.support.helpers import destructiveTest
 from tests.support.unit import skipIf
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.windows_whitelisted
 class SPMBuildTest(SPMCase, ModuleCase):
     """

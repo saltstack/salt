@@ -10,13 +10,12 @@ import pytest
 import salt.utils.path
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 INIT_DELAY = 5
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.windows_whitelisted
 class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
     """

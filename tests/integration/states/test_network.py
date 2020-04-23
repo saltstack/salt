@@ -5,16 +5,14 @@
     tests.integration.states.network
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
-# Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt testing libs
+import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 class NetworkTest(ModuleCase, SaltReturnAssertsMixin):
     """
     Validate network state module
