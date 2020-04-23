@@ -6,7 +6,6 @@
     versionadded:: 2017.7.0
 """
 
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
@@ -14,20 +13,10 @@ import textwrap
 
 import salt.modules.aptpkg as aptpkg
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import Salt Libs
 from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
-from tests.support.unit import TestCase, skipIf
-
-try:
-    import pytest
-except ImportError:
-    pytest = None
-
+from tests.support.unit import TestCase
 
 APT_KEY_LIST = r"""
 pub:-:1024:17:46181433FBB75451:1104433784:::-:::scSC:
@@ -596,7 +585,6 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(list_downloaded, DOWNLOADED_RET)
 
 
-@skipIf(pytest is None, "PyTest is missing")
 class AptUtilsTestCase(TestCase, LoaderModuleMockMixin):
     """
     apt utils test case

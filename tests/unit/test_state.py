@@ -3,14 +3,13 @@
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
 import tempfile
 
-# Import Salt libs
+import pytest
 import salt.exceptions
 import salt.state
 import salt.utils.files
@@ -21,14 +20,7 @@ from tests.support.helpers import with_tempfile
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-
-# Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
-
-try:
-    import pytest
-except ImportError as err:
-    pytest = None
+from tests.support.unit import TestCase
 
 
 class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
@@ -527,7 +519,6 @@ class MultiEnvHighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         )
 
 
-@skipIf(pytest is None, "PyTest is missing")
 class StateReturnsTestCase(TestCase):
     """
     TestCase for code handling state returns.
@@ -821,9 +812,8 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(cdata, {"args": ["arg"], "kwargs": {"key": "value1thing~"}})
 
     # Skip on windows like integration.modules.test_state.StateModuleTest.test_parallel_state_with_long_tag
-    @skipIf(
-        salt.utils.platform.is_windows(),
-        "Skipped until parallel states can be fixed on Windows",
+    @pytest.mark.skip_on_windows(
+        reason="Skipped until parallel states can be fixed on Windows",
     )
     def test_format_slots_parallel(self):
         """

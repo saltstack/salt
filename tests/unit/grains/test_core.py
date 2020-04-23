@@ -3,7 +3,6 @@
     :codeauthor: Erik Johnson <erik@saltstack.com>
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
@@ -15,27 +14,16 @@ import textwrap
 import salt.grains.core as core
 import salt.modules.cmdmod
 import salt.modules.smbios
-
-# Import Salt Libs
 import salt.utils.dns
 import salt.utils.files
 import salt.utils.network
 import salt.utils.path
 import salt.utils.platform
 from salt._compat import ipaddress
-
-# Import 3rd-party libs
 from salt.ext import six
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, mock_open, patch
 from tests.support.unit import TestCase, skipIf
-
-# Import Salt Testing Libs
-try:
-    import pytest
-except ImportError as import_error:
-    pytest = None
-
 
 log = logging.getLogger(__name__)
 
@@ -53,7 +41,6 @@ OS_RELEASE_DIR = os.path.join(os.path.dirname(__file__), "os-releases")
 SOLARIS_DIR = os.path.join(os.path.dirname(__file__), "solaris")
 
 
-@skipIf(not pytest, False)
 class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for core grains

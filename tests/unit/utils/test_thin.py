@@ -7,6 +7,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 
+import pytest
 import salt.exceptions
 import salt.ext.six
 import salt.utils.json
@@ -19,13 +20,7 @@ from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
-try:
-    import pytest
-except ImportError:
-    pytest = None
 
-
-@skipIf(pytest is None, "PyTest is missing")
 class SSHThinTestCase(TestCase):
     """
     TestCase for SaltSSH-related parts.

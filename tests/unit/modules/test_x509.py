@@ -15,7 +15,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Import Salt Testing Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
@@ -29,12 +28,6 @@ from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
 try:
-    import pytest
-except ImportError as import_error:
-    pytest = None
-
-
-try:
     import M2Crypto  # pylint: disable=unused-import
 
     HAS_M2CRYPTO = True
@@ -42,7 +35,6 @@ except ImportError:
     HAS_M2CRYPTO = False
 
 
-@skipIf(not bool(pytest), False)
 class X509TestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {x509: {}}

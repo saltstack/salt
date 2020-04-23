@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
@@ -8,6 +7,7 @@ import shutil
 import tempfile
 import textwrap
 
+import pytest
 import salt.config
 import salt.loader
 import salt.modules.cmdmod as cmdmod
@@ -18,23 +18,13 @@ import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import Salt libs
 from salt.ext import six
 from salt.utils.jinja import SaltCacheLoader
 from tests.support.helpers import with_tempfile
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import DEFAULT, MagicMock, Mock, mock_open, patch
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
-
-try:
-    import pytest
-except ImportError:
-    pytest = None
-
 
 if salt.utils.platform.is_windows():
     import salt.modules.win_file as win_file
@@ -1285,7 +1275,6 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(ret["type"], "file")
 
 
-@skipIf(pytest is None, "PyTest required for this set of tests")
 class FilemodLineTests(TestCase, LoaderModuleMockMixin):
     """
     Unit tests for file.line

@@ -15,11 +15,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Import Salt Testing Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
+import pytest
 import salt.modules.ansiblegate as ansible
 import salt.utils.platform
 from salt.exceptions import LoaderError
@@ -27,14 +27,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
-try:
-    import pytest
-except ImportError as import_error:
-    pytest = None
-NO_PYTEST = not bool(pytest)
 
-
-@skipIf(NO_PYTEST, False)
 @skipIf(salt.utils.platform.is_windows(), "Not supported on Windows")
 class AnsiblegateTestCase(TestCase, LoaderModuleMockMixin):
     def setUp(self):

@@ -1,27 +1,18 @@
 # -*- coding: utf-8 -*-
 
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
+import pytest
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.rpm_lowpkg as rpm
 import salt.modules.yumpkg as yumpkg
-
-# Import Salt libs
 from salt.exceptions import CommandExecutionError
 from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.unit import TestCase, skipIf
-
-try:
-    import pytest
-except ImportError:
-    pytest = None
 
 LIST_REPOS = {
     "base": {
@@ -1540,7 +1531,6 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(info, expected)
 
 
-@skipIf(pytest is None, "PyTest is missing")
 class YumUtilsTestCase(TestCase, LoaderModuleMockMixin):
     """
     Yum/Dnf utils tests.
