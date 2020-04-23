@@ -732,6 +732,9 @@ def _gen_xml(
                         "usage": usage,
                     }
             else:
+                if pool_type in ["disk", "logical"]:
+                    # The volume format for these types doesn't match the driver format in the VM
+                    disk_context["format"] = "raw"
                 disk_context["type"] = "volume"
                 disk_context["pool"] = disk["pool"]
 
@@ -1295,6 +1298,18 @@ def _fill_disk_filename(conn, vm_name, disk, hypervisor, pool_caps):
                     disk["format"] = "qcow2"
                 else:
                     disk["format"] = volume_options.get("default_format", None)
+
+            # Disk pools volume names are partition names, they need to be named based on the device name
+            if pool_type == "disk":
+                device = pool_xml.find("./source/device").get("path")
+                indexes = [
+                    int(re.sub("[a-z]+", "", vol_name))
+                    for vol_name in pool_obj.listVolumes()
+                ] or [0]
+                index = min(
+                    [idx for idx in range(1, max(indexes) + 2) if idx not in indexes]
+                )
+                disk["filename"] = "{}{}".format(os.path.basename(device), index)
 
     elif hypervisor == "bhyve" and vm_name:
         disk["filename"] = "{0}.{1}".format(vm_name, disk["name"])

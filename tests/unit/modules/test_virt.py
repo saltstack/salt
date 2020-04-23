@@ -860,6 +860,64 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(len(diskp), 1)
             self.assertEqual(diskp[0]["source_file"], ("/path/to/my/image.qcow2"))
 
+    def test_disk_profile_pool_disk_type(self):
+        """
+        Test virt._disk_profile(), with a disk pool of disk type
+        """
+        self.mock_conn.listStoragePools.return_value = ["test-vdb"]
+        self.mock_conn.storagePoolLookupByName.return_value.XMLDesc.return_value = """
+            <pool type="disk">
+              <name>test-vdb</name>
+              <source>
+                <device path='/dev/vdb'/>
+              </source>
+              <target>
+                <path>/dev</path>
+              </target>
+            </pool>
+        """
+
+        # No existing disk case
+        self.mock_conn.storagePoolLookupByName.return_value.listVolumes.return_value = (
+            []
+        )
+        diskp = virt._disk_profile(
+            self.mock_conn,
+            None,
+            "kvm",
+            [{"name": "mydisk", "pool": "test-vdb"}],
+            "hello",
+        )
+        self.assertEqual(diskp[0]["filename"], ("vdb1"))
+
+        # Append to the end case
+        self.mock_conn.storagePoolLookupByName.return_value.listVolumes.return_value = [
+            "vdb1",
+            "vdb2",
+        ]
+        diskp = virt._disk_profile(
+            self.mock_conn,
+            None,
+            "kvm",
+            [{"name": "mydisk", "pool": "test-vdb"}],
+            "hello",
+        )
+        self.assertEqual(diskp[0]["filename"], ("vdb3"))
+
+        # Hole in the middle case
+        self.mock_conn.storagePoolLookupByName.return_value.listVolumes.return_value = [
+            "vdb1",
+            "vdb3",
+        ]
+        diskp = virt._disk_profile(
+            self.mock_conn,
+            None,
+            "kvm",
+            [{"name": "mydisk", "pool": "test-vdb"}],
+            "hello",
+        )
+        self.assertEqual(diskp[0]["filename"], ("vdb2"))
+
     def test_gen_xml_volume(self):
         """
         Test virt._gen_xml(), generating a disk of volume type
@@ -1006,6 +1064,52 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             salt.utils.xmlutil.to_dict(root.find(".//disk/source/auth"), True),
         )
         self.mock_conn.secretLookupByUUIDString.assert_called_once_with("some-uuid")
+
+        # Disk volume test case
+        self.mock_conn.getStoragePoolCapabilities.return_value = """
+            <storagepoolCapabilities>
+              <pool type='disk' supported='yes'>
+                <volOptions>
+                  <defaultFormat type='none'/>
+                  <enum name='targetFormatType'>
+                    <value>none</value>
+                    <value>linux</value>
+                    <value>fat16</value>
+                  </enum>
+                </volOptions>
+              </pool>
+            </storagepoolCapabilities>
+        """
+        self.mock_conn.storagePoolLookupByName.return_value.XMLDesc.return_value = """
+            <pool type='disk'>
+              <name>test-vdb</name>
+              <source>
+                <device path='/dev/vdb'/>
+                <format type='gpt'/>
+              </source>
+            </pool>
+        """
+        self.mock_conn.listStoragePools.return_value = ["test-vdb"]
+        self.mock_conn.storagePoolLookupByName.return_value.listVolumes.return_value = [
+            "vdb1",
+        ]
+        diskp = virt._disk_profile(
+            self.mock_conn,
+            None,
+            "kvm",
+            [{"name": "system", "pool": "test-vdb"}],
+            "test-vm",
+        )
+        xml_data = virt._gen_xml(
+            self.mock_conn, "hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64",
+        )
+        root = ET.fromstring(xml_data)
+        disk = root.findall(".//disk")[0]
+        self.assertEqual(disk.attrib["type"], "volume")
+        source = disk.find("source")
+        self.assertEqual("test-vdb", source.attrib["pool"])
+        self.assertEqual("vdb2", source.attrib["volume"])
+        self.assertEqual("raw", disk.find("driver").get("type"))
 
     def test_gen_xml_cdrom(self):
         """
