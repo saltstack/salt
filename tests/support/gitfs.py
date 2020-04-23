@@ -68,6 +68,7 @@ _OPTS = {
     "git_pillar_base": "master",
     "git_pillar_branch": "master",
     "git_pillar_env": "",
+    "git_pillar_fallback": "",
     "git_pillar_root": "",
     "git_pillar_ssl_verify": True,
     "git_pillar_global_lock": True,

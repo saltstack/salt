@@ -13,7 +13,9 @@ import re
 
 
 def __virtual__():
-    return "nxos.cmd" in __salt__
+    if "nxos.cmd" in __salt__:
+        return True
+    return (False, "nxos module could not be loaded")
 
 
 def user_present(
