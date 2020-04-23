@@ -1030,6 +1030,24 @@ def installed(
     Ensure that the package is installed, and that it is the correct version
     (if specified).
 
+    .. note::
+        Any argument which is either a) not explicitly defined for this state,
+        or b) not a global state argument like ``saltenv``, or
+        ``reload_modules``, will be passed through to the call to
+        ``pkg.install`` to install the package(s). For example, you can include
+        a ``disablerepo`` argument on platforms that use yum/dnf to disable
+        that repo:
+
+        .. code-block:: yaml
+
+            mypkg:
+              pkg.installed:
+                - disablerepo: base,updates
+
+        To see what is supported, check :ref:`this page <virtual-pkg>` to find
+        the documentation for your platform's ``pkg`` module, then look at the
+        documentation for the ``install`` function.
+
     :param str name:
         The name of the package to be installed. This parameter is ignored if
         either "pkgs" or "sources" is used. Additionally, please note that this
@@ -2116,6 +2134,24 @@ def downloaded(
     Ensure that the package is downloaded, and that it is the correct version
     (if specified).
 
+    .. note::
+        Any argument which is either a) not explicitly defined for this state,
+        or b) not a global state argument like ``saltenv``, or
+        ``reload_modules``, will be passed through to the call to
+        ``pkg.install`` to download the package(s). For example, you can include
+        a ``disablerepo`` argument on platforms that use yum/dnf to disable
+        that repo:
+
+        .. code-block:: yaml
+
+            mypkg:
+              pkg.downloaded:
+                - disablerepo: base,updates
+
+        To see what is supported, check :ref:`this page <virtual-pkg>` to find
+        the documentation for your platform's ``pkg`` module, then look at the
+        documentation for the ``install`` function.
+
     Currently supported for the following pkg providers:
     :mod:`yumpkg <salt.modules.yumpkg>`, :mod:`zypper <salt.modules.zypper>` and :mod:`zypper <salt.modules.aptpkg>`
 
@@ -2266,6 +2302,16 @@ def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
 
     Ensure that packages related to certain advisory ids are installed.
 
+    .. note::
+        Any argument which is either a) not explicitly defined for this state,
+        or b) not a global state argument like ``saltenv``, or
+        ``reload_modules``, will be passed through to the call to
+        ``pkg.install`` to install the patch(es).
+
+        To see what is supported, check :ref:`this page <virtual-pkg>` to find
+        the documentation for your platform's ``pkg`` module, then look at the
+        documentation for the ``install`` function.
+
     Currently supported for the following pkg providers:
     :mod:`yumpkg <salt.modules.yumpkg>` and :mod:`zypper <salt.modules.zypper>`
 
@@ -2397,6 +2443,24 @@ def latest(
     :mod:`installed <salt.states.pkg.installed>` function to be
     used, as :mod:`latest <salt.states.pkg.latest>` will update the package
     whenever a new package is available.
+
+    .. note::
+        Any argument which is either a) not explicitly defined for this state,
+        or b) not a global state argument like ``saltenv``, or
+        ``reload_modules``, will be passed through to the call to
+        ``pkg.install`` to install the package(s). For example, you can include
+        a ``disablerepo`` argument on platforms that use yum/dnf to disable
+        that repo:
+
+        .. code-block:: yaml
+
+            mypkg:
+              pkg.latest:
+                - disablerepo: base,updates
+
+        To see what is supported, check :ref:`this page <virtual-pkg>` to find
+        the documentation for your platform's ``pkg`` module, then look at the
+        documentation for the ``install`` function.
 
     name
         The name of the package to maintain at the latest available version.
