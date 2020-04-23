@@ -78,7 +78,7 @@ def avail_images(call=None):
     else:
         return {
             image['id']: image['name']
-            for image in _request('service/server?images=1&datacenter=%s' % __opts__['location'])
+            for image in _request('service/server?images=1&datacenter={0}'.format(__opts__['location']))
         }
 
 
@@ -105,7 +105,7 @@ def avail_sizes(call=None):
                 ) for k, v in cpuType.items()
                 if k != 'id'
             }
-            for cpuType in _request('service/server?capabilities=1&datacenter=%s' % __opts__['location'])['cpuTypes']
+            for cpuType in _request('service/server?capabilities=1&datacenter={0}'.format(__opts__['location']))['cpuTypes']
         }
 
 
@@ -126,7 +126,7 @@ def avail_server_options(kwargs=None, call=None):
     else:
         return {
             k: (str(v) if k == 'diskSizeGB' else v)
-            for k, v in _request('service/server?capabilities=1&datacenter=%s' % __opts__['location']).items()
+            for k, v in _request('service/server?capabilities=1&datacenter={0}'.format(__opts__['location'])).items()
             if k not in ['cpuTypes', 'defaultMonthlyTrafficPackage']
         }
 
@@ -148,7 +148,7 @@ def avail_locations(call=None):
         )
     else:
         return {
-            datacenter.pop('id'): '%s, %s (%s)' % (datacenter['subCategory'], datacenter['name'], datacenter['category'])
+            datacenter.pop('id'): '{0}, {1} ({2})'.format(datacenter['subCategory'], datacenter['name'], datacenter['category'])
             for datacenter in _request('service/server?datacenter=1')
         }
 
@@ -177,7 +177,7 @@ def create(vm_):
     def _getval(key, default=None):
         val = config.get_cloud_config_value(key, vm_, __opts__, default=None)
         if not val and default is None:
-            raise SaltCloudException('missing required profile option: %s' % key)
+            raise SaltCloudException('missing required profile option: {0}'.format(key))
         else:
             return val or default
 
@@ -188,16 +188,16 @@ def create(vm_):
         'ssh-key': _getval('ssh_pub_key', ''),
         "datacenter": _getval('location'),
         "image": _getval('image'),
-        "cpu": '%s%s' % (_getval('cpu_cores'), _getval('cpu_type')),
+        "cpu": '{0}{1}'.format(_getval('cpu_cores'), _getval('cpu_type')),
         "ram": _getval('ram_mb'),
         "disk": ' '.join([
-            'size=%d' % disksize for disksize
+            'size={0}'.format(disksize) for disksize
             in [_getval('disk_size_gb')] + _getval('extra_disk_sizes_gb', [])
         ]),
         "dailybackup": 'yes' if _getval('daily_backup', False) else 'no',
         "managed": 'yes' if _getval('managed', False) else 'no',
         "network": ' '.join([','.join([
-            '%s=%s' % (k, v) for k, v
+            '{0}={1}'.format(k, v) for k, v
             in network.items()]) for network in _getval('networks', [{'name': 'wan', 'ip': 'auto'}])]),
         "quantity": 1,
         "billingcycle": _getval('billing_cycle', 'hourly'),
@@ -227,8 +227,8 @@ def create(vm_):
     command = _wait_command(command_id, _getval)
     create_log = command['log']
     try:
-        created_at = datetime.datetime.strptime(command['completed'], '%Y-%m-%d %H:%M:%S')
-    except Exception:
+        created_at = datetime.datetime.strptime(command.get("completed") or "", '%Y-%m-%d %H:%M:%S')
+    except ValueError:
         created_at = None
     name_lines = [line for line in create_log.split("\n") if line.startswith('Name: ')]
     if len(name_lines) != 1:
@@ -251,7 +251,7 @@ def create(vm_):
     data = dict(
         image=_getval('image'),
         name=server['name'],
-        size='%s%s-%smb-%sgb' % (server['cpu_cores'], server['cpu_type'], server['ram_mb'], server['disk_size_gb']),
+        size='{0}{1}-{2}mb-{3}gb'.format(server['cpu_cores'], server['cpu_type'], server['ram_mb'], server['disk_size_gb']),
         state=server['state'],
         private_ips=private_ips,
         public_ips=public_ips
@@ -351,7 +351,7 @@ def list_nodes(call=None, full=False, name_regex=None):
         server = {
             "id": server_res.pop("id"),
             "image": "",
-            "size": "%s%s-%smb-%sgb" % (server_res.pop("cpu_cores"), server_res.pop("cpu_type"), server_res.pop("ram_mb"), server_res.pop("disk_size_gb")),
+            "size": "{0}{1}-{2}mb-{3}gb".format(server_res.pop("cpu_cores"), server_res.pop("cpu_type"), server_res.pop("ram_mb"), server_res.pop("disk_size_gb")),
             "state": server_res.pop("state"),
             "private_ips": private_ips,
             "public_ips": public_ips,
@@ -540,8 +540,8 @@ def _request(path, method='GET', request_data=None):
     elif result['dict']['status'] != 200:
         try:
             message = result['dict']['response'].pop('message')
-        except Exception:
-            message = 'Unexpected response from Kamatera API (status=%s)' % result['dict']['status']
+        except KeyError:
+            message = 'Unexpected response from Kamatera API (status={0})'.format(result['dict']['status'])
         logging.error(result['dict']['response'])
         raise SaltCloudException(message)
     else:
@@ -563,11 +563,11 @@ def _wait_command(command_id, _getval=None):
     wait_poll_interval_seconds = _getval('wait_poll_interval_seconds', 2)
     wait_timeout_seconds = _getval('wait_timeout_seconds', 600)
     start_time = datetime.datetime.now()
+    max_time = start_time + datetime.timedelta(seconds=wait_timeout_seconds)
     time.sleep(wait_poll_interval_seconds)
     while True:
-        max_time = start_time + datetime.timedelta(seconds=wait_timeout_seconds)
         if max_time < datetime.datetime.now():
-            raise SaltCloudException('Timeout waiting for command (timeout_seconds=%s, command_id=%s)' % (str(wait_timeout_seconds), str(command_id)))
+            raise SaltCloudException('Timeout waiting for command (timeout_seconds={0}, command_id={1})'.format(str(wait_timeout_seconds), str(command_id)))
         time.sleep(wait_poll_interval_seconds)
         command = _get_command_status(command_id)
         status = command.get('status')
@@ -625,7 +625,7 @@ def _server_operation(name, operation):
     """Run custom operations on the server"""
     state = _list_servers(name)[0]["state"]
     if operation != "terminate" and state not in ["stopped", "running"]:
-        raise SaltCloudException("Invalid state for %s operation: %s" % (operation, state))
+        raise SaltCloudException("Invalid state for {0} operation: {1}".format(operation, state))
     if (
         (operation == "poweron" and state == "stopped")
         or (operation == "poweroff" and state == "running")
@@ -635,7 +635,7 @@ def _server_operation(name, operation):
         request_data = {'name': name}
         if operation == 'terminate':
             request_data['force'] = True
-        command_id = _request('/service/server/%s' % operation, 'POST', request_data)[0]
+        command_id = _request('/service/server/{0}'.format(operation), 'POST', request_data)[0]
         _wait_command(command_id)
         state = "destroyed" if operation == "terminate" else _list_servers(name)[0]["state"]
     return {
