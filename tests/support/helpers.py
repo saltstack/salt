@@ -61,6 +61,9 @@ PYTEST_MIGRATION_SKIP_REASON = "Test disabled during the migration to PyTest"
 PYTEST_MIGRATION_XFAIL_REASON = (
     "Test marked as expected failure during the migration to PyTest"
 )
+PYTEST_MIGRATION_PR_JAM_SKIP_REASON = (
+    "Test added during the PR Jam which is currently broken under PyTest"
+)
 
 
 def no_symlinks():

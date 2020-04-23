@@ -6,12 +6,14 @@ import pytest
 import salt.modules.chocolatey as choco
 import salt.utils.platform
 from tests.support.case import ModuleCase
+from tests.support.helpers import PYTEST_MIGRATION_PR_JAM_SKIP_REASON
 from tests.support.unit import skipIf
 
 
 @skipIf(not salt.utils.platform.is_windows(), "Tests for only Windows")
 @pytest.mark.destructive_test
 @pytest.mark.windows_whitelisted
+@pytest.mark.skipif(reason=PYTEST_MIGRATION_PR_JAM_SKIP_REASON)
 class ChocolateyModuleTest(ModuleCase):
     """
     Validate Chocolatey module

@@ -16,7 +16,10 @@ import pytest
 import salt.utils.files
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import requires_system_grains
+from tests.support.helpers import (
+    PYTEST_MIGRATION_PR_JAM_SKIP_REASON,
+    requires_system_grains,
+)
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 
@@ -125,6 +128,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         else:
             self.assertEqual(group_name, self.user_name)
 
+    @pytest.mark.skipif(reason=PYTEST_MIGRATION_PR_JAM_SKIP_REASON)
     @skipIf(
         salt.utils.platform.is_windows(), "windows minion does not support usergroup"
     )

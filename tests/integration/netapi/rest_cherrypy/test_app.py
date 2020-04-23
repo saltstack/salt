@@ -9,6 +9,7 @@ import salt.utils.json
 import salt.utils.stringutils
 import tests.support.cherrypy_testclasses as cptc
 from salt.ext.six.moves.urllib.parse import urlencode
+from tests.support.helpers import PYTEST_MIGRATION_PR_JAM_SKIP_REASON
 
 
 class TestAuth(cptc.BaseRestCherryPyTest):
@@ -271,6 +272,7 @@ class TestArgKwarg(cptc.BaseRestCherryPyTest):
         )
         return response.headers["X-Auth-Token"]
 
+    @pytest.mark.skipif(reason=PYTEST_MIGRATION_PR_JAM_SKIP_REASON)
     def test_accepts_arg_kwarg_keys(self):
         """
         Ensure that (singular) arg and kwarg keys (for passing parameters)
