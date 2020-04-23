@@ -3,25 +3,22 @@
 Validate the mac-keychain module
 """
 
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import Salt Libs
+import pytest
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
 from salt.ext import six
 
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import destructiveTest
 from tests.support.runtests import RUNTIME_VARS
 
 
 @destructiveTest
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 class MacKeychainModuleTest(ModuleCase):
     """
     Integration tests for the mac_keychain module

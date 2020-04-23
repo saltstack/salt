@@ -3,18 +3,15 @@
 integration tests for mac_pkgutil
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import Salt libs
+import pytest
 import salt.utils.path
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
-
-# Import Salt Testing libs
+from tests.support.helpers import destructiveTest
 from tests.support.runtests import RUNTIME_VARS
 
 TEST_PKG_URL = (
@@ -23,7 +20,7 @@ TEST_PKG_URL = (
 TEST_PKG_NAME = "org.macports.MacPorts"
 
 
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 class MacPkgutilModuleTest(ModuleCase):
     """
     Validate the mac_pkgutil module

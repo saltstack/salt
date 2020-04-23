@@ -3,19 +3,16 @@
 integration tests for mac_ports
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
+import pytest
 import salt.utils.path
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import destructiveTest
 
 
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 class MacPortsModuleTest(ModuleCase):
     """
     Validate the mac_ports module

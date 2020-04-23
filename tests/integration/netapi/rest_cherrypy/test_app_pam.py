@@ -3,21 +3,14 @@
 Integration Tests for restcherry salt-api with pam eauth
 """
 
-# Import Python libs
 from __future__ import absolute_import
 
-# Import Salt Libs
+import pytest
 import salt.utils.platform
 import tests.support.cherrypy_testclasses as cptc
-
-# Import 3rd-party libs
-from salt.ext.six.moves.urllib.parse import (  # pylint: disable=no-name-in-module,import-error
-    urlencode,
-)
-
-# Import test support libs
+from salt.ext.six.moves.urllib.parse import urlencode
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import destructiveTest
 from tests.support.unit import skipIf
 
 if cptc.HAS_CHERRYPY:
@@ -37,7 +30,7 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
     """
 
     @destructiveTest
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def setUp(self):
         super(TestAuthPAM, self).setUp()
         try:
@@ -128,7 +121,7 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
         self.assertEqual(response.status, "200 OK")
 
     @destructiveTest
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def tearDown(self):
         """
         Clean up after tests. Delete user

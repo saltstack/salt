@@ -7,15 +7,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
+import pytest
 import salt.utils.path
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    destructiveTest,
-    flaky,
-    random_string,
-    skip_if_not_root,
-)
+from tests.support.helpers import destructiveTest, flaky, random_string
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
@@ -25,7 +21,7 @@ SET_COMPUTER_NAME = random_string("RS-", lowercase=False)
 SET_SUBNET_NAME = random_string("RS-", lowercase=False)
 
 
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @flaky(attempts=10)
 @skipIf(not salt.utils.platform.is_darwin(), "Test only available on macOS")
 @skipIf(
@@ -235,8 +231,8 @@ class MacSystemModuleTest(ModuleCase):
         )
 
 
-@skip_if_not_root
 @skipIf(not salt.utils.platform.is_darwin(), "Test only available on macOS")
+@pytest.mark.skip_if_not_root
 class MacSystemComputerNameTest(ModuleCase):
     def setUp(self):
         self.COMPUTER_NAME = self.run_function("system.get_computer_name")

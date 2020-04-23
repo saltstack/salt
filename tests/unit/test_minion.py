@@ -3,12 +3,12 @@
     :codeauthor: Mike Place <mp@saltstack.com>
 """
 
-# Import python libs
 from __future__ import absolute_import
 
 import copy
 import os
 
+import pytest
 import salt.ext.tornado
 import salt.ext.tornado.testing
 
@@ -20,11 +20,8 @@ import salt.utils.event as event
 import salt.utils.process
 from salt.exceptions import SaltMasterUnresolvableError, SaltSystemExit
 from salt.ext.six.moves import range
-from tests.support.helpers import skip_if_not_root
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
 
 
@@ -627,7 +624,7 @@ class MinionAsyncTestCase(
         self.opts = {}
         self.addCleanup(delattr, self, "opts")
 
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def test_sock_path_len(self):
         """
         This tests whether or not a larger hash causes the sock path to exceed

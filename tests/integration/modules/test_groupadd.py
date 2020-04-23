@@ -9,14 +9,14 @@ import salt.utils.stringutils
 from salt.ext import six
 from salt.ext.six.moves import range
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, random_string, skip_if_not_root
+from tests.support.helpers import destructiveTest, random_string
 from tests.support.unit import skipIf
 
 if not salt.utils.platform.is_windows():
     import grp
 
 
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @destructiveTest
 @pytest.mark.windows_whitelisted
 class GroupModuleTest(ModuleCase):

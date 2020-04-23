@@ -7,11 +7,12 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
+import pytest
 import salt.ext.six as six
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, random_string, skip_if_not_root
+from tests.support.helpers import destructiveTest, random_string
 
 # Create user strings for tests
 ADD_USER = random_string("RS-", lowercase=False)
@@ -21,7 +22,7 @@ CHANGE_USER = random_string("RS-", lowercase=False)
 
 
 @destructiveTest
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 class MacUserModuleTest(ModuleCase):
     """
     Integration tests for the mac_user module

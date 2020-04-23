@@ -3,23 +3,17 @@
     :codeauthor: Erik Johnson <erik@saltstack.com>
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import textwrap
 
-# Import Salt Testing libs
+import pytest
 import salt.utils.platform
-import salt.utils.stringutils
-
-# Import 3rd-party libs
 from salt.ext import six
-from tests.support.helpers import skip_if_not_root
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import DEFAULT, MagicMock, mock_open, patch
 from tests.support.unit import TestCase, skipIf
 
-# Import salt libs
 try:
     import salt.modules.linux_shadow as shadow
 
@@ -152,7 +146,7 @@ class LinuxShadowTest(TestCase, LoaderModuleMockMixin):
         # Make sure we wrote the correct info
         assert filehandles[1].write_calls[0].split(":")[:2] == [user, password]
 
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def test_list_users(self):
         """
         Test if it returns a list of all users

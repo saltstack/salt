@@ -3,12 +3,11 @@
 Validate the mac-defaults module
 """
 
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Testing Libs
+import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import destructiveTest
 
 DEFAULT_DOMAIN = "com.apple.AppleMultitouchMouse"
 DEFAULT_KEY = "MouseHorizontalScroll"
@@ -16,7 +15,7 @@ DEFAULT_VALUE = "0"
 
 
 @destructiveTest
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 class MacDefaultsModuleTest(ModuleCase):
     """
     Integration tests for the mac_default module

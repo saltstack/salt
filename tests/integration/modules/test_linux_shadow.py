@@ -7,20 +7,16 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
+import pytest
 import salt.modules.linux_shadow
 import salt.utils.files
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    destructiveTest,
-    flaky,
-    random_string,
-    skip_if_not_root,
-)
+from tests.support.helpers import destructiveTest, flaky, random_string
 from tests.support.unit import skipIf
 
 
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @skipIf(not salt.utils.platform.is_linux(), "These tests can only be run on linux")
 class ShadowModuleTest(ModuleCase):
     """
@@ -31,9 +27,6 @@ class ShadowModuleTest(ModuleCase):
         """
         Get current settings
         """
-        self._password = self.run_function("shadow.gen_password", ["Password1234"])
-        if "ERROR" in self._password:
-            self.fail("Failed to generate password: {0}".format(self._password))
         super(ShadowModuleTest, self).setUp()
         self._no_user = random_string("tu-", uppercase=False)
         self._test_user = random_string("tu-", uppercase=False)

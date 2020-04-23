@@ -9,7 +9,6 @@
 
     Test support helpers
 """
-# pylint: disable=repr-flag-used-in-string,wrong-import-order
 
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -1282,30 +1281,6 @@ def skip_if_binaries_missing(*binaries, **kwargs):
             )
         )
     return _id
-
-
-def skip_if_not_root(func):
-    # Late import
-    from tests.support.runtests import RUNTIME_VARS
-
-    if RUNTIME_VARS.PYTEST_SESSION:
-        setattr(func, "__skip_if_not_root__", True)
-
-    if not sys.platform.startswith("win"):
-        if os.getuid() != 0:
-            func.__unittest_skip__ = True
-            func.__unittest_skip_why__ = (
-                "You must be logged in as root to run this test"
-            )
-    else:
-        current_user = salt.utils.win_functions.get_current_user()
-        if current_user != "SYSTEM":
-            if not salt.utils.win_functions.is_admin(current_user):
-                func.__unittest_skip__ = True
-                func.__unittest_skip_why__ = (
-                    "You must be logged in as an Administrator to run this test"
-                )
-    return func
 
 
 def repeat(caller=None, condition=True, times=5):

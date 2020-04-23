@@ -32,7 +32,6 @@ from tests.support.helpers import (
     destructiveTest,
     patched_environ,
     requires_system_grains,
-    skip_if_not_root,
     with_system_user,
     with_tempdir,
 )
@@ -285,7 +284,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 )
 
     @destructiveTest
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     @with_system_user(
         "issue-6912", on_existing="delete", delete=True, password="PassWord1!"
     )
@@ -336,7 +335,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                     self.assertEqual(salt.utils.win_dacl.get_owner(path), username)
 
     @destructiveTest
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     @skipIf(salt.utils.platform.is_darwin(), "Test is flaky on macosx")
     @with_system_user(
         "issue-6912", on_existing="delete", delete=True, password="PassWord1!"

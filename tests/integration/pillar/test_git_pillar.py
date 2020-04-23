@@ -64,16 +64,15 @@ https://github.com/git/git/commit/6bc0cb5
 https://github.com/unbit/uwsgi/commit/ac1e354
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import random
 import string
 
-# Import Salt libs
+import pytest
 import salt.utils.path
 import salt.utils.platform
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
+from salt.ext.six.moves import range
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES as VIRTUALENV_NAMES
 from salt.utils.gitfs import (
     GITPYTHON_MINVER,
@@ -83,19 +82,13 @@ from salt.utils.gitfs import (
     PYGIT2_MINVER,
     PYGIT2_VERSION,
 )
-
-# Import Salt Testing libs
 from tests.support.gitfs import (
     PASSWORD,
     USERNAME,
     GitPillarHTTPTestBase,
     GitPillarSSHTestBase,
 )
-from tests.support.helpers import (
-    destructiveTest,
-    requires_system_grains,
-    skip_if_not_root,
-)
+from tests.support.helpers import destructiveTest, requires_system_grains
 from tests.support.unit import skipIf
 
 # Check for requisite components
@@ -621,7 +614,7 @@ class GitPythonMixin(object):
 
 @destructiveTest
 @skipIf(_windows_or_mac(), "minion is windows or mac")
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @skipIf(not HAS_GITPYTHON, "GitPython >= {0} required".format(GITPYTHON_MINVER))
 @skipIf(not HAS_SSHD, "sshd not present")
 class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
@@ -636,7 +629,7 @@ class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
 
 
 @skipIf(_windows_or_mac(), "minion is windows or mac")
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @skipIf(not HAS_GITPYTHON, "GitPython >= {0} required".format(GITPYTHON_MINVER))
 @skipIf(not HAS_NGINX, "nginx not present")
 @skipIf(not HAS_VIRTUALENV, "virtualenv not present")
@@ -647,7 +640,7 @@ class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
 
 
 @skipIf(_windows_or_mac(), "minion is windows or mac")
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @skipIf(not HAS_GITPYTHON, "GitPython >= {0} required".format(GITPYTHON_MINVER))
 @skipIf(not HAS_NGINX, "nginx not present")
 @skipIf(not HAS_VIRTUALENV, "virtualenv not present")
@@ -681,7 +674,7 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
 
 @destructiveTest
 @skipIf(_windows_or_mac(), "minion is windows or mac")
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @skipIf(
     not HAS_PYGIT2,
     "pygit2 >= {0} and libgit2 >= {1} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
@@ -2211,7 +2204,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
 
 @skipIf(_windows_or_mac(), "minion is windows or mac")
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @skipIf(
     not HAS_PYGIT2,
     "pygit2 >= {0} and libgit2 >= {1} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
@@ -2705,7 +2698,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
 
 
 @skipIf(_windows_or_mac(), "minion is windows or mac")
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @skipIf(
     not HAS_PYGIT2,
     "pygit2 >= {0} and libgit2 >= {1} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),

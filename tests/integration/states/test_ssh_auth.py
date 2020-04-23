@@ -3,24 +3,21 @@
 Test the ssh_auth states
 """
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import salt libs
+import pytest
 import salt.utils.files
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root, with_system_user
+from tests.support.helpers import destructiveTest, with_system_user
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 
 
 class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
     @destructiveTest
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     @with_system_user("issue_7409", on_existing="delete", delete=True)
     def test_issue_7409_no_linebreaks_between_keys(self, username):
 
@@ -55,7 +52,7 @@ class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
             )
 
     @destructiveTest
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     @with_system_user("issue_10198", on_existing="delete", delete=True)
     def test_issue_10198_keyfile_from_another_env(self, username=None):
         userdetails = self.run_function("user.info", [username])

@@ -3,25 +3,22 @@
 integration tests for mac_softwareupdate
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
+import pytest
 import salt.utils.path
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
-
-# Import Salt Testing libs
+from tests.support.helpers import destructiveTest
 from tests.support.unit import skipIf
 
 
-@skip_if_not_root
 @skipIf(not salt.utils.platform.is_darwin(), "Test only available on macOS")
 @skipIf(
     not salt.utils.path.which("softwareupdate"),
     "'softwareupdate' binary not found in $PATH",
 )
+@pytest.mark.skip_if_not_root
 class MacSoftwareUpdateModuleTest(ModuleCase):
     """
     Validate the mac_softwareupdate module

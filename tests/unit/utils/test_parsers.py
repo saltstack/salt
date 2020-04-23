@@ -3,24 +3,21 @@
     :codeauthor: Denys Havrysh <denys.gavrysh@gmail.com>
 """
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
 import tempfile
 
+import pytest
 import salt.config
-
-# Import Salt Libs
-import salt.log.setup as log
+import salt.log.setup
 import salt.syspaths
 import salt.utils.parsers
 import salt.utils.platform
+from tests.support.helpers import destructiveTest
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 
 
@@ -113,6 +110,8 @@ class ObjectView(object):  # pylint: disable=too-few-public-methods
         self.__dict__ = d
 
 
+@destructiveTest
+@pytest.mark.skip_if_not_root
 class ParserBase(object):
     """
     Unit Tests for Log Level Mixin with Salt parsers
@@ -154,7 +153,7 @@ class ParserBase(object):
         self.addCleanup(setattr, self, "testing_config", None)
         self.log_setup = LogSetupMock()
         patcher = patch.multiple(
-            log,
+            salt.log.setup,
             setup_console_logger=self.log_setup.setup_console_logger,
             setup_extended_logging=self.log_setup.setup_extended_logging,
             setup_logfile_logger=self.log_setup.setup_logfile_logger,

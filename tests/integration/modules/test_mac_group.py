@@ -5,10 +5,11 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
 from salt.exceptions import CommandExecutionError
 from salt.ext import six
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, random_string, skip_if_not_root
+from tests.support.helpers import destructiveTest, random_string
 
 # Create group name strings for tests
 ADD_GROUP = random_string("RS-", lowercase=False)
@@ -19,7 +20,7 @@ REP_USER_GROUP = random_string("RS-", lowercase=False)
 
 
 @destructiveTest
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 class MacGroupModuleTest(ModuleCase):
     """
     Integration tests for the mac_group module

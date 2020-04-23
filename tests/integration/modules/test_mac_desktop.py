@@ -3,19 +3,16 @@
 Integration tests for the mac_desktop execution module.
 """
 
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import 3rd-party libs
+import pytest
 from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import destructiveTest
 
 
 @destructiveTest
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 class MacDesktopTestCase(ModuleCase):
     """
     Integration tests for the mac_desktop module.

@@ -13,11 +13,7 @@ import salt.utils.path
 import salt.utils.platform
 from salt.ext import six
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    destructiveTest,
-    skip_if_binaries_missing,
-    skip_if_not_root,
-)
+from tests.support.helpers import destructiveTest, skip_if_binaries_missing
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -328,7 +324,7 @@ class CMDModuleTest(ModuleCase):
         result = self.run_function("cmd.run_stdout", [cmd]).strip()
         self.assertEqual(result, expected_result)
 
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     @skipIf(salt.utils.platform.is_windows(), "skip windows, requires password")
     def test_quotes_runas(self):
         """
@@ -344,7 +340,7 @@ class CMDModuleTest(ModuleCase):
         self.assertEqual(result, expected_result)
 
     @destructiveTest
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     @skipIf(salt.utils.platform.is_windows(), "skip windows, uses unix commands")
     def test_avoid_injecting_shell_code_as_root(self):
         """
@@ -365,7 +361,7 @@ class CMDModuleTest(ModuleCase):
         self.assertEqual(root_id, runas_root_id)
 
     @destructiveTest
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     @skipIf(salt.utils.platform.is_windows(), "skip windows, uses unix commands")
     def test_cwd_runas(self):
         """
@@ -388,7 +384,7 @@ class CMDModuleTest(ModuleCase):
         self.assertEqual(tmp_cwd, cwd_runas)
 
     @destructiveTest
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     @skipIf(not salt.utils.platform.is_darwin(), "applicable to MacOS only")
     def test_runas_env(self):
         """
@@ -405,7 +401,7 @@ class CMDModuleTest(ModuleCase):
         self.assertNotEqual("/bin:/usr/bin", user_path)
 
     @destructiveTest
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     @skipIf(not salt.utils.platform.is_darwin(), "applicable to MacOS only")
     def test_runas_complex_command_bad_cwd(self):
         """
@@ -434,7 +430,7 @@ class CMDModuleTest(ModuleCase):
         self.assertNotEqual(0, cmd_result["retcode"])
 
     @skipIf(salt.utils.platform.is_windows(), "minion is windows")
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     @destructiveTest
     def test_runas(self):
         """

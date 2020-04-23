@@ -3,20 +3,17 @@
 integration tests for mac_power
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
+import pytest
 import salt.utils.path
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, flaky, skip_if_not_root
+from tests.support.helpers import destructiveTest, flaky
 from tests.support.unit import skipIf
 
 
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @flaky(attempts=10)
 @skipIf(not salt.utils.platform.is_darwin(), "Test only available on macOS")
 @skipIf(
@@ -158,7 +155,7 @@ class MacPowerModuleTest(ModuleCase):
         self.assertTrue(self.run_function("power.get_restart_freeze"))
 
 
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @flaky(attempts=10)
 @skipIf(not salt.utils.platform.is_darwin(), "Test only available on macOS")
 @skipIf(
@@ -210,7 +207,7 @@ class MacPowerModuleTestSleepOnPowerButton(ModuleCase):
             self.assertFalse(self.run_function("power.get_sleep_on_power_button"))
 
 
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @flaky(attempts=10)
 @skipIf(not salt.utils.platform.is_darwin(), "Test only available on macOS")
 @skipIf(
@@ -262,7 +259,7 @@ class MacPowerModuleTestRestartPowerFailure(ModuleCase):
             self.assertFalse(self.run_function("power.get_restart_power_failure"))
 
 
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @flaky(attempts=10)
 @skipIf(not salt.utils.platform.is_darwin(), "Test only available on macOS")
 @skipIf(
@@ -310,7 +307,7 @@ class MacPowerModuleTestWakeOnNet(ModuleCase):
             self.assertFalse(self.run_function("power.get_wake_on_network"))
 
 
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @flaky(attempts=10)
 @skipIf(not salt.utils.platform.is_darwin(), "Test only available on macOS")
 @skipIf(

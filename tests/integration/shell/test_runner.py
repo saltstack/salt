@@ -12,7 +12,6 @@ import salt.utils.platform
 import salt.utils.yaml
 from tests.integration.utils import testprogram
 from tests.support.case import ShellCase
-from tests.support.helpers import skip_if_not_root
 from tests.support.mixins import ShellCaseCommonTestsMixin
 
 USERA = "saltdev"
@@ -122,7 +121,7 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
             status, "EX_OK", message="correct usage", stdout=stdout, stderr=stderr
         )
 
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def test_salt_run_with_eauth_all_args(self):
         """
         test salt-run with eauth
@@ -148,7 +147,7 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
             self.assertEqual(expect, run_cmd)
         self._remove_user()
 
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def test_salt_run_with_eauth_bad_passwd(self):
         """
         test salt-run with eauth and bad password

@@ -7,13 +7,12 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
 
-# Import Salt libs
+import pytest
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -21,7 +20,7 @@ from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
@@ -33,7 +32,7 @@ from tests.support.unit import skipIf
 class VirtualenvTest(ModuleCase, SaltReturnAssertsMixin):
     @skipIf(salt.utils.platform.is_darwin(), "Test is flaky on macosx")
     @destructiveTest
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def test_issue_1959_virtualenv_runas(self):
         user = "issue-1959"
         self.assertSaltTrueReturn(self.run_state("user.present", name=user))
