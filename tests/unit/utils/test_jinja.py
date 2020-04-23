@@ -12,6 +12,7 @@ import pprint
 import re
 import tempfile
 
+import pytest
 import salt.config
 import salt.loader
 
@@ -36,7 +37,6 @@ from salt.utils.jinja import (
 from salt.utils.odict import OrderedDict
 from salt.utils.templates import JINJA, render_jinja_tmpl
 from tests.support.case import ModuleCase
-from tests.support.helpers import requires_network
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
@@ -1369,7 +1369,7 @@ class TestCustomExtensions(TestCase):
         )
         self.assertEqual(rendered, "16777216")
 
-    @requires_network()
+    @pytest.mark.requires_network
     def test_http_query(self):
         """
         Test the `http_query` Jinja filter.

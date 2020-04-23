@@ -3,7 +3,6 @@
 Test the verification routines
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import getpass
@@ -14,13 +13,11 @@ import stat
 import sys
 import tempfile
 
-# Import salt libs
+import pytest
 import salt.utils.files
 import salt.utils.platform
-
-# Import 3rd-party libs
 from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import range
 from salt.utils.verify import (
     check_max_open_files,
     check_user,
@@ -33,14 +30,11 @@ from salt.utils.verify import (
     verify_socket,
     zmq_version,
 )
-from tests.support.helpers import TstSuiteLoggingHandler, requires_network
+from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
-# Import third party libs
 if sys.platform.startswith("win"):
     import win32file
 else:
@@ -119,7 +113,7 @@ class TestVerify(TestCase):
         self.assertEqual(dir_stat.st_mode & stat.S_IRWXG, 40)
         self.assertEqual(dir_stat.st_mode & stat.S_IRWXO, 5)
 
-    @requires_network(only_local_network=True)
+    @pytest.mark.requires_network(only_local_network=True)
     def test_verify_socket(self):
         self.assertTrue(verify_socket("", 18000, 18001))
         if socket.has_ipv6:

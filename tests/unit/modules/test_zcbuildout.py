@@ -18,7 +18,7 @@ import salt.utils.platform
 from salt.ext import six
 from salt.ext.six.moves.urllib.error import URLError
 from salt.ext.six.moves.urllib.request import urlopen
-from tests.support.helpers import patched_environ, requires_network
+from tests.support.helpers import patched_environ
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
@@ -133,7 +133,7 @@ class Base(TestCase, LoaderModuleMockMixin):
     salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
     "The 'virtualenv' packaged needs to be installed",
 )
-@requires_network()
+@pytest.mark.requires_network
 @pytest.mark.skip_if_binaries_missing("tar")
 class BuildoutTestCase(Base):
     def test_onlyif_unless(self):
@@ -330,7 +330,7 @@ class BuildoutTestCase(Base):
     salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
     "The 'virtualenv' packaged needs to be installed",
 )
-@requires_network()
+@pytest.mark.requires_network
 class BuildoutOnlineTestCase(Base):
     @classmethod
     def setUpClass(cls):

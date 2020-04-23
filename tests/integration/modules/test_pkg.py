@@ -10,11 +10,7 @@ import salt.utils.path
 import salt.utils.pkg
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    requires_network,
-    requires_salt_states,
-    requires_system_grains,
-)
+from tests.support.helpers import requires_salt_states, requires_system_grains
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 
@@ -76,7 +72,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     @pytest.mark.destructive_test
     @pytest.mark.requires_salt_modules("pkg.mod_repo", "pkg.del_repo", "pkg.get_repo")
-    @requires_network()
+    @pytest.mark.requires_network
     @requires_system_grains
     def test_mod_del_repo(self, grains):
         """
@@ -211,7 +207,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     @pytest.mark.destructive_test
     @pytest.mark.requires_salt_modules("pkg.version", "pkg.install", "pkg.remove")
-    @requires_network()
+    @pytest.mark.requires_network
     def test_install_remove(self):
         """
         successfully install and uninstall a package
@@ -246,7 +242,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         "pkg.remove",
         "pkg.list_pkgs",
     )
-    @requires_network()
+    @pytest.mark.requires_network
     @requires_system_grains
     def test_hold_unhold(self, grains):
         """
@@ -292,7 +288,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     @pytest.mark.destructive_test
     @pytest.mark.requires_salt_modules("pkg.refresh_db")
-    @requires_network()
+    @pytest.mark.requires_network
     @requires_system_grains
     def test_refresh_db(self, grains):
         """
@@ -352,7 +348,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertIn(self.pkg, keys)
 
     @pytest.mark.destructive_test
-    @requires_network()
+    @pytest.mark.requires_network
     @pytest.mark.requires_salt_modules(
         "pkg.refresh_db",
         "pkg.upgrade",

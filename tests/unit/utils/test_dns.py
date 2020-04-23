@@ -4,16 +4,14 @@
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Python
 import socket
 import textwrap
 
+import pytest
 import salt.modules.cmdmod
 import salt.utils.dns
-
-# Salt
 from salt._compat import ipaddress
-from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
+from salt.ext.six.moves import zip
 from salt.utils.dns import (
     _data2rec,
     _data2rec_group,
@@ -28,9 +26,6 @@ from salt.utils.dns import (
     lookup,
 )
 from salt.utils.odict import OrderedDict
-
-# Testing
-from tests.support.helpers import requires_network
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
@@ -312,7 +307,7 @@ class DNSlookupsCase(TestCase):
                     )
 
     @skipIf(not salt.utils.dns.HAS_NSLOOKUP, "nslookup is not available")
-    @requires_network()
+    @pytest.mark.requires_network
     def test_lookup_with_servers(self):
         rights = {
             "A": [
