@@ -1221,7 +1221,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             self.suffix_order.append(suffix)
 
         self._lock = threading.RLock()
-        self._refresh_file_mapping()
+        with self._lock:
+            self._refresh_file_mapping()
 
         super(LazyLoader, self).__init__()  # late init the lazy loader
         # create all of the import namespaces
