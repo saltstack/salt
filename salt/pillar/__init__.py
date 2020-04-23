@@ -904,6 +904,10 @@ class Pillar(object):
                             else:
                                 key = None
                             try:
+                                matched_pstates = fnmatch.filter(
+                                    self.avail[saltenv],
+                                    sub_sls.lstrip(".").replace("/", "."),
+                                )
                                 if sub_sls.startswith("."):
                                     if state_data.get("source", "").endswith(
                                         "/init.sls"

@@ -115,6 +115,11 @@ Saltcheck Keywords
 **skip:**
     (bool) Optional keyword to skip running the individual test
 
+.. versionadded:: 3000
+    Multiple assertions can be run against the output of a single ``module_and_function`` call. The ``assertion``,
+    ``expected_return``, ``assertion_section``, and ``assertion_section_delimiter`` keys can be placed in a list under an
+    ``assertions`` key. See the multiple assertions example below.
+
 Sample Cases/Examples
 =====================
 
@@ -251,6 +256,22 @@ Example suppressing print results
       expected_return: nameNode = hdfs://nameservice2
       assertion: assertNotIn
       print_result: False
+
+Example with multiple assertions and output_details
+---------------------------------------------------
+
+.. code-block:: yaml
+
+    multiple_validations:
+      module_and_function: network.netstat
+      assertions:
+        - assertion: assertEqual
+          assertion_section: "0:program"
+          expected_return: "systemd-resolve"
+        - assertion: assertEqual
+          assertion_section: "0:proto"
+          expected_return: "udp"
+      output_details: True
 
 Supported assertions
 ====================
@@ -572,90 +593,75 @@ class SaltCheck(object):
                                   assertLess assertLessEqual
                                   assertEmpty assertNotEmpty""".split()
 
+    def _check_assertions(self, dict):
+        """Validate assertion keys"""
+        is_valid = True
+        assertion = dict.get("assertion", None)
+        # support old expected-return and newer name normalized expected_return
+        exp_ret_key = any(
+            key in dict.keys() for key in ["expected_return", "expected-return"]
+        )
+        exp_ret_val = dict.get("expected_return", dict.get("expected-return", None))
+
+        if assertion not in self.assertions_list:
+            log.error("Saltcheck: %s is not in the assertions list", assertion)
+            is_valid = False
+
+        # Only check expected returns for assertions which require them
+        if assertion not in [
+            "assertEmpty",
+            "assertNotEmpty",
+            "assertTrue",
+            "assertFalse",
+        ]:
+            if exp_ret_key is None:
+                log.error("Saltcheck: missing expected_return")
+                is_valid = False
+            if exp_ret_val is None:
+                log.error("Saltcheck: expected_return missing a value")
+                is_valid = False
+
+        return is_valid
+
     def __is_valid_test(self, test_dict):
         """
         Determine if a test contains:
 
         - a test name
         - a valid module and function
-        - a valid assertion
+        - a valid assertion, or valid grouping under an assertions key
         - an expected return value - if assertion type requires it
-
-        6 points needed for standard test
-        4 points needed for test with assertion not requiring expected return
         """
-        test_errors = []
-        tots = 0  # need total of >= 6 to be a valid test
+        log.info("Saltcheck: validating data: %s", test_dict)
+        is_valid = True
         skip = test_dict.get("skip", False)
         m_and_f = test_dict.get("module_and_function", None)
-        assertion = test_dict.get("assertion", None)
-        # support old expected-return and newer name normalized expected_return
-        exp_ret_key = any(
-            key in test_dict.keys() for key in ["expected_return", "expected-return"]
-        )
-        exp_ret_val = test_dict.get(
-            "expected_return", test_dict.get("expected-return", None)
-        )
-        log.info("__is_valid_test has test: %s", test_dict)
-        if skip:
-            required_total = 0
-        elif m_and_f in ["saltcheck.state_apply"]:
-            required_total = 2
-        elif assertion in [
-            "assertEmpty",
-            "assertNotEmpty",
-            "assertTrue",
-            "assertFalse",
-        ]:
-            required_total = 4
+
+        # Running a state does not require assertions or checks
+        if m_and_f == "saltcheck.state_apply":
+            return is_valid
+
+        if test_dict.get("assertions"):
+            for assertion_group in test_dict.get("assertions"):
+                is_valid = self._check_assertions(assertion_group)
         else:
-            required_total = 6
+            is_valid = self._check_assertions(test_dict)
 
         if m_and_f:
-            tots += 1
             module, function = m_and_f.split(".")
-            if _is_valid_module(module):
-                tots += 1
-            else:
-                test_errors.append("{0} is not a valid module".format(module))
-            if _is_valid_function(module, function):
-                tots += 1
-            else:
-                test_errors.append("{0} is not a valid function".format(function))
-            log.info("__is_valid_test has valid m_and_f")
-        if assertion in self.assertions_list:
-            log.info("__is_valid_test has valid_assertion")
-            tots += 1
+            if not _is_valid_module(module):
+                is_valid = False
+                log.error("Saltcheck: %s is not a valid module", module)
+            if not _is_valid_function(module, function):
+                is_valid = False
+                log.error("Saltcheck: %s is not a valid function", function)
         else:
-            test_errors.append("{0} is not in the assertions list".format(assertion))
+            log.error("Saltcheck: missing module_and_function")
+            is_valid = False
 
-        if exp_ret_key:
-            tots += 1
-        else:
-            test_errors.append("No expected return key")
+        return is_valid
 
-        if exp_ret_val is not None:
-            tots += 1
-        else:
-            test_errors.append("expected_return does not have a value")
-
-        # log the test score for debug purposes
-        log.info("__test score: %s and required: %s", tots, required_total)
-        if not tots >= required_total:
-            log.error(
-                "Test failed with the following test verifications: %s",
-                ", ".join(test_errors),
-            )
-        return tots >= required_total
-
-    def _call_salt_command(
-        self,
-        fun,
-        args,
-        kwargs,
-        assertion_section=None,
-        assertion_section_delimiter=DEFAULT_TARGET_DELIM,
-    ):
+    def _call_salt_command(self, fun, args, kwargs):
         """
         Generic call of salt Caller command
         """
@@ -675,21 +681,127 @@ class SaltCheck(object):
         else:
             value = salt.client.Caller(mopts=mlocal_opts).cmd(fun)
         __opts__["file_client"] = orig_file_client
-        if isinstance(value, dict) and assertion_section:
-            return_value = salt.utils.data.traverse_dict_and_list(
-                value,
+
+        return value
+
+    def _run_assertions(
+        self,
+        mod_and_func,
+        args,
+        data,
+        module_output,
+        output_details,
+        assert_print_result,
+    ):
+        """
+        Run assertion against input
+        """
+        value = {}
+
+        assertion_section = data.get("assertion_section", None)
+        assertion_section_delimiter = data.get(
+            "assertion_section_delimiter", DEFAULT_TARGET_DELIM
+        )
+
+        if assertion_section:
+            module_output = salt.utils.data.traverse_dict_and_list(
+                module_output,
                 assertion_section,
                 default=False,
                 delimiter=assertion_section_delimiter,
             )
-            return return_value
+
+        if mod_and_func in ["saltcheck.state_apply"]:
+            assertion = "assertNotEmpty"
         else:
-            return value
+            assertion = data["assertion"]
+        expected_return = data.get("expected_return", data.get("expected-return", None))
+
+        if assertion not in [
+            "assertIn",
+            "assertNotIn",
+            "assertEmpty",
+            "assertNotEmpty",
+            "assertTrue",
+            "assertFalse",
+        ]:
+            expected_return = self._cast_expected_to_returned_type(
+                expected_return, module_output
+            )
+        if assertion == "assertEqual":
+            assertion_desc = "=="
+            value["status"] = self.__assert_equal(
+                expected_return, module_output, assert_print_result
+            )
+        elif assertion == "assertNotEqual":
+            assertion_desc = "!="
+            value["status"] = self.__assert_not_equal(
+                expected_return, module_output, assert_print_result
+            )
+        elif assertion == "assertTrue":
+            assertion_desc = "True is"
+            value["status"] = self.__assert_true(module_output)
+        elif assertion == "assertFalse":
+            assertion_desc = "False is"
+            value["status"] = self.__assert_false(module_output)
+        elif assertion == "assertIn":
+            assertion_desc = "IN"
+            value["status"] = self.__assert_in(
+                expected_return, module_output, assert_print_result
+            )
+        elif assertion == "assertNotIn":
+            assertion_desc = "NOT IN"
+            value["status"] = self.__assert_not_in(
+                expected_return, module_output, assert_print_result
+            )
+        elif assertion == "assertGreater":
+            assertion_desc = ">"
+            value["status"] = self.__assert_greater(expected_return, module_output)
+        elif assertion == "assertGreaterEqual":
+            assertion_desc = ">="
+            value["status"] = self.__assert_greater_equal(
+                expected_return, module_output
+            )
+        elif assertion == "assertLess":
+            assertion_desc = "<"
+            value["status"] = self.__assert_less(expected_return, module_output)
+        elif assertion == "assertLessEqual":
+            assertion_desc = "<="
+            value["status"] = self.__assert_less_equal(expected_return, module_output)
+        elif assertion == "assertEmpty":
+            assertion_desc = "IS EMPTY"
+            value["status"] = self.__assert_empty(module_output)
+        elif assertion == "assertNotEmpty":
+            assertion_desc = "IS NOT EMPTY"
+            value["status"] = self.__assert_not_empty(module_output)
+        else:
+            value["status"] = "Fail - bad assertion"
+
+        if output_details:
+            if assertion_section:
+                assertion_section_repr_title = " {0}".format("assertion_section")
+                assertion_section_repr_value = " {0}".format(assertion_section)
+            else:
+                assertion_section_repr_title = ""
+                assertion_section_repr_value = ""
+            value[
+                "module.function [args]{0}".format(assertion_section_repr_title)
+            ] = "{0} {1}{2}".format(
+                mod_and_func, dumps(args), assertion_section_repr_value,
+            )
+            value["saltcheck assertion"] = "{0}{1} {2}".format(
+                ("" if expected_return is None else "{0} ".format(expected_return)),
+                assertion_desc,
+                ("hidden" if not assert_print_result else module_output),
+            )
+
+        return value
 
     def run_test(self, test_dict):
         """
         Run a single saltcheck test
         """
+        result = {}
         start = time.time()
         global_output_details = __salt__["config.get"](
             "saltcheck_output_details", False
@@ -700,10 +812,7 @@ class SaltCheck(object):
             if skip:
                 return {"status": "Skip", "duration": 0.0}
             mod_and_func = test_dict["module_and_function"]
-            assertion_section = test_dict.get("assertion_section", None)
-            assertion_section_delimiter = test_dict.get(
-                "assertion_section_delimiter", DEFAULT_TARGET_DELIM
-            )
+
             args = test_dict.get("args", None)
             kwargs = test_dict.get("kwargs", None)
             pillar_data = test_dict.get(
@@ -718,103 +827,48 @@ class SaltCheck(object):
                 if kwargs:
                     kwargs.pop("pillar", None)
 
-            if mod_and_func in ["saltcheck.state_apply"]:
-                assertion = "assertNotEmpty"
-            else:
-                assertion = test_dict["assertion"]
-            expected_return = test_dict.get(
-                "expected_return", test_dict.get("expected-return", None)
-            )
             assert_print_result = test_dict.get("print_result", True)
 
-            actual_return = self._call_salt_command(
-                mod_and_func,
-                args,
-                kwargs,
-                assertion_section,
-                assertion_section_delimiter,
-            )
-            if assertion not in [
-                "assertIn",
-                "assertNotIn",
-                "assertEmpty",
-                "assertNotEmpty",
-                "assertTrue",
-                "assertFalse",
-            ]:
-                expected_return = self._cast_expected_to_returned_type(
-                    expected_return, actual_return
-                )
-            if assertion == "assertEqual":
-                assertion_desc = "=="
-                value = self.__assert_equal(
-                    expected_return, actual_return, assert_print_result
-                )
-            elif assertion == "assertNotEqual":
-                assertion_desc = "!="
-                value = self.__assert_not_equal(
-                    expected_return, actual_return, assert_print_result
-                )
-            elif assertion == "assertTrue":
-                assertion_desc = "True is"
-                value = self.__assert_true(actual_return)
-            elif assertion == "assertFalse":
-                assertion_desc = "False is"
-                value = self.__assert_false(actual_return)
-            elif assertion == "assertIn":
-                assertion_desc = "IN"
-                value = self.__assert_in(
-                    expected_return, actual_return, assert_print_result
-                )
-            elif assertion == "assertNotIn":
-                assertion_desc = "NOT IN"
-                value = self.__assert_not_in(
-                    expected_return, actual_return, assert_print_result
-                )
-            elif assertion == "assertGreater":
-                assertion_desc = ">"
-                value = self.__assert_greater(expected_return, actual_return)
-            elif assertion == "assertGreaterEqual":
-                assertion_desc = ">="
-                value = self.__assert_greater_equal(expected_return, actual_return)
-            elif assertion == "assertLess":
-                assertion_desc = "<"
-                value = self.__assert_less(expected_return, actual_return)
-            elif assertion == "assertLessEqual":
-                assertion_desc = "<="
-                value = self.__assert_less_equal(expected_return, actual_return)
-            elif assertion == "assertEmpty":
-                assertion_desc = "IS EMPTY"
-                value = self.__assert_empty(actual_return)
-            elif assertion == "assertNotEmpty":
-                assertion_desc = "IS NOT EMPTY"
-                value = self.__assert_not_empty(actual_return)
+            actual_return = self._call_salt_command(mod_and_func, args, kwargs)
+
+            if test_dict.get("assertions"):
+                for num, assert_group in enumerate(
+                    test_dict.get("assertions"), start=1
+                ):
+                    result["assertion{}".format(num)] = self._run_assertions(
+                        mod_and_func,
+                        args,
+                        assert_group,
+                        actual_return,
+                        output_details,
+                        assert_print_result,
+                    )
+                # Walk individual assert status results to set the top level status
+                # key as needed
+                for k, v in copy.deepcopy(result).items():
+                    if k.startswith("assertion"):
+                        for assert_k, assert_v in result[k].items():
+                            if assert_k.startswith("status"):
+                                if result[k][assert_k] != "Pass":
+                                    result["status"] = "Fail"
+                if not result.get("status"):
+                    result["status"] = "Pass"
             else:
-                value = "Fail - bad assertion"
+                result.update(
+                    self._run_assertions(
+                        mod_and_func,
+                        args,
+                        test_dict,
+                        actual_return,
+                        output_details,
+                        assert_print_result,
+                    )
+                )
+
         else:
-            value = "Fail - invalid test"
+            result["status"] = "Fail - invalid test"
+
         end = time.time()
-        result = {}
-        result["status"] = value
-
-        if output_details:
-            if assertion_section:
-                assertion_section_repr_title = ".{0}".format("assertion_section")
-                assertion_section_repr_value = ".{0}".format(assertion_section)
-            else:
-                assertion_section_repr_title = ""
-                assertion_section_repr_value = ""
-            result[
-                "module.function [args]{0}".format(assertion_section_repr_title)
-            ] = "{0} {1}{2}".format(
-                mod_and_func, dumps(args), assertion_section_repr_value,
-            )
-            result["saltcheck assertion"] = "{0}{1} {2}".format(
-                ("" if expected_return is None else "{0} ".format(expected_return)),
-                assertion_desc,
-                ("hidden" if not assert_print_result else actual_return),
-            )
-
         result["duration"] = round(end - start, 4)
         return result
 
