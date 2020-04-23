@@ -86,9 +86,7 @@ def cluster_create(
     cmdstr = " ".join([pipes.quote(c) for c in cmd])
     ret = __salt__["cmd.run_all"](cmdstr, python_shell=False)
     if ret.get("retcode", 0) != 0:
-        log.error(
-            "Error creating a Postgresql" " cluster {0}/{1}".format(version, name)
-        )
+        log.error("Error creating a Postgresql cluster %s/%s", version, name)
         return False
     return ret
 
@@ -154,9 +152,7 @@ def cluster_remove(version, name="main", stop=False):
     ret = __salt__["cmd.run_all"](cmdstr, python_shell=False)
     # FIXME - return Boolean ?
     if ret.get("retcode", 0) != 0:
-        log.error(
-            "Error removing a Postgresql" " cluster {0}/{1}".format(version, name)
-        )
+        log.error("Error removing a Postgresql cluster %s/%s", version, name)
     else:
         ret["changes"] = ("Successfully removed" " cluster {0}/{1}").format(
             version, name
