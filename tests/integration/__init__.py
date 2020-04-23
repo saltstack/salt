@@ -942,8 +942,9 @@ class TestDaemon(object):
         syndic_opts.update(
             salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, "syndic"))
         )
-        syndic_opts["cachedir"] = os.path.join(TMP, "rootdir", "cache")
         syndic_opts["config_dir"] = RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR
+        syndic_opts["cachedir"] = os.path.join(TMP, "rootdir", "cache")
+        syndic_opts["root_dir"] = os.path.join(TMP, "rootdir")
 
         # This proxy connects to master
         proxy_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, "proxy"))
