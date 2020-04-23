@@ -925,7 +925,7 @@ VALID_OPTS = immutabletypes.freeze(
         # Allow raw_shell option when using the ssh
         # client via the Salt API
         "netapi_allow_raw_shell": bool,
-        "disabled_requisites": [],
+        "disabled_requisites": (six.string_types, list),
     }
 )
 
