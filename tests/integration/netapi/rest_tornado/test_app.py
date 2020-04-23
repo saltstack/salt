@@ -1,26 +1,20 @@
 # -*- coding: utf-8 -*-
 
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import threading
 import time
 
-# Import Salt Libs
+import pytest
 import salt.utils.json
 import salt.utils.stringutils
-
-# Import 3rd-party libs
 from salt.ext import six
 from salt.netapi.rest_tornado import saltnado
 from salt.utils.versions import StrictVersion
 from salt.utils.zeromq import ZMQDefaultLoop as ZMQIOLoop
 from salt.utils.zeromq import zmq
-from tests.support.helpers import flaky
 from tests.support.unit import skipIf
-
-# Import Salt Testing Libs
 from tests.unit.netapi.test_rest_tornado import SaltnadoTestCase
 
 HAS_ZMQ_IOLOOP = bool(zmq)
@@ -406,7 +400,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertIn("tag", response_obj["return"][0])
 
 
-@flaky
+@pytest.mark.flaky(max_runs=4)
 @skipIf(HAS_ZMQ_IOLOOP is False, "PyZMQ version must be >= 14.0.1 to run these tests.")
 class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
     def get_app(self):

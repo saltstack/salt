@@ -3,13 +3,13 @@
     :codeauthor: Thomas Jackson <jacksontj.89@gmail.com>
 """
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import socket
 import threading
 
+import pytest
 import salt.config
 import salt.exceptions
 import salt.ext.tornado.concurrent
@@ -27,11 +27,9 @@ from salt.transport.tcp import (
     SaltMessageClientPool,
     TCPPubServerChannel,
 )
-from tests.support.helpers import flaky, get_unused_localhost_port
+from tests.support.helpers import get_unused_localhost_port
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 from tests.unit.transport.mixins import (
     PubChannelMixin,
@@ -157,7 +155,7 @@ class AESReqTestCases(BaseTCPReqCase, ReqChannelMixin):
 
     # TODO: make failed returns have a specific framing so we can raise the same exception
     # on encrypted channels
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     def test_badload(self):
         """
         Test a variety of bad requests, make sure that we get some sort of error

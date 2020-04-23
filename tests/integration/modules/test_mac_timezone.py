@@ -19,11 +19,10 @@ import salt.utils.path
 import salt.utils.platform
 from salt.ext import six
 from tests.support.case import ModuleCase
-from tests.support.helpers import flaky
 from tests.support.unit import skipIf
 
 
-@flaky
+@pytest.mark.flaky(max_runs=4)
 @skipIf(not salt.utils.platform.is_darwin(), "Test only available on macOS")
 @skipIf(
     not salt.utils.path.which("systemsetup"), "'systemsetup' binary not found in $PATH"

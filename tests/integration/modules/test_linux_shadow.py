@@ -12,7 +12,7 @@ import salt.modules.linux_shadow
 import salt.utils.files
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import flaky, random_string
+from tests.support.helpers import random_string
 from tests.support.unit import skipIf
 
 
@@ -123,7 +123,7 @@ class ShadowModuleTest(ModuleCase):
         # User does not exist (set_inactdays return None is user does not exist)
         self.assertFalse(self.run_function("shadow.set_mindays", [self._no_user, 12]))
 
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     def test_lock_password(self):
         """
         Test shadow.lock_password

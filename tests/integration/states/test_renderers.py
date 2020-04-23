@@ -9,7 +9,6 @@ import pytest
 import salt.utils.platform
 from salt.ext import six
 from tests.support.case import ModuleCase
-from tests.support.helpers import flaky
 from tests.support.unit import skipIf
 
 
@@ -27,7 +26,7 @@ class TestJinjaRenderer(ModuleCase):
         for state_ret in ret.values():
             self.assertTrue(state_ret["result"])
 
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     @skipIf(
         salt.utils.platform.is_darwin() and six.PY2, "This test hangs on OS X on Py2"
     )

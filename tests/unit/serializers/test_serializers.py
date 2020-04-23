@@ -1,14 +1,11 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 from textwrap import dedent
 
-# Import 3rd party libs
 import jinja2
-
-# Import salt libs
+import pytest
 import salt.serializers.configparser as configparser
 import salt.serializers.json as json
 import salt.serializers.msgpack as msgpack
@@ -21,17 +18,12 @@ from salt.ext import six
 from salt.serializers import SerializationError
 from salt.serializers.yaml import EncryptedString
 from salt.utils.odict import OrderedDict
-
-# Import test support libs
-from tests.support.helpers import flaky
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 
 SKIP_MESSAGE = "%s is unavailable, have prerequisites been met?"
 
 
-@flaky(condition=six.PY3)
+@pytest.mark.flaky(max_runs=4, rerun_filter=lambda *args: six.PY3)
 class TestSerializers(TestCase):
     @skipIf(not json.available, SKIP_MESSAGE % "json")
     def test_serialize_json(self):

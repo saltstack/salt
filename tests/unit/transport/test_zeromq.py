@@ -27,7 +27,7 @@ from salt.ext import six
 from salt.ext.six.moves import range
 from salt.ext.tornado.testing import AsyncTestCase
 from salt.transport.zeromq import AsyncReqMessageClientPool
-from tests.support.helpers import flaky, get_unused_localhost_port
+from tests.support.helpers import get_unused_localhost_port
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -166,7 +166,7 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         del channel
 
 
-@flaky
+@pytest.mark.flaky(max_runs=4)
 @pytest.mark.skipif(
     'grains["os_family"] == "Suse"',
     reason="Skipping until https://github.com/saltstack/salt/issues/32902 gets fixed",

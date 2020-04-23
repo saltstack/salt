@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
@@ -9,13 +8,10 @@ import shutil
 import threading
 import time
 
-# Import Salt Libs
+import pytest
 from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
+from salt.ext.six.moves import range
 from tests.support.case import SSHCase
-from tests.support.helpers import flaky
-
-# Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
 
 SSH_SLS = "ssh_state_tests"
@@ -202,7 +198,7 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function("file.file_exists", [SSH_SLS_FILE], wipe=False)
         self.assertTrue(check_file)
 
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     def test_state_running(self):
         """
         test state.running with salt-ssh

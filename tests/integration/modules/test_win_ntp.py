@@ -5,13 +5,13 @@ from __future__ import absolute_import
 import pytest
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import flaky
-from tests.support.unit import skipIf
 
 
-@flaky
-@skipIf(not salt.utils.platform.is_windows(), "Tests for only Windows")
+@pytest.mark.flaky(max_runs=4)
 @pytest.mark.windows_whitelisted
+@pytest.mark.skipif(
+    not salt.utils.platform.is_windows(), reason="Test is Windows specific."
+)
 class NTPTest(ModuleCase):
     """
     Validate windows ntp module

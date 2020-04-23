@@ -1,22 +1,14 @@
 # coding: utf-8
 
-# Import python libs
 from __future__ import absolute_import
 
 import os
 
-# Import salt libs
+import pytest
 import salt.utils.json
 import salt.utils.stringutils
-
-# Import test support libs
 import tests.support.cherrypy_testclasses as cptc
-
-# Import 3rd-party libs
-from salt.ext.six.moves.urllib.parse import (  # pylint: disable=no-name-in-module,import-error
-    urlencode,
-)
-from tests.support.helpers import flaky
+from salt.ext.six.moves.urllib.parse import urlencode
 
 
 class TestAuth(cptc.BaseRestCherryPyTest):
@@ -343,7 +335,7 @@ class TestJobs(cptc.BaseRestCherryPyTest):
         )
         self.assertEqual(response.status, "200 OK")
 
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     def test_all_jobs(self):
         """
         test query to /jobs returns job data
