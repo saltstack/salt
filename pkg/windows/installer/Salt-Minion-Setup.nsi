@@ -671,7 +671,6 @@ Function .onInit
             /SD IDOK IDOK uninst
         Abort
 
-
     uninst:
 
         # Get current Silent status
