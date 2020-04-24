@@ -4,7 +4,7 @@ SmartOS Metadata grain provider
 
 :maintainer:    Jorge Schrauwen <sjorge@blackdot.be>
 :maturity:      new
-:depends:       salt.module.cmdmod
+:depends:       salt.utils, salt.module.cmdmod
 :platform:      SmartOS
 
 .. versionadded:: nitrogen
@@ -66,6 +66,9 @@ def _user_mdata(mdata_list=None, mdata_get=None):
     for mdata_grain in __salt__["cmd.run"](
         mdata_list, ignore_retcode=True
     ).splitlines():
+        if mdata_grain.startswith("ERROR:"):
+            log.warning("mdata-list returned an error, skipping mdata grains.")
+            continue
         mdata_value = __salt__["cmd.run"](
             "{0} {1}".format(mdata_get, mdata_grain), ignore_retcode=True
         )
@@ -94,6 +97,7 @@ def _sdc_mdata(mdata_list=None, mdata_get=None):
         "datacenter_name",
         "hostname",
         "dns_domain",
+        "alias",
     ]
     sdc_json_keys = [
         "resolvers",
@@ -114,6 +118,13 @@ def _sdc_mdata(mdata_list=None, mdata_get=None):
         mdata_value = __salt__["cmd.run"](
             "{0} sdc:{1}".format(mdata_get, mdata_grain), ignore_retcode=True
         )
+        if mdata_value.startswith("ERROR:"):
+            log.warning(
+                "unable to read sdc:{0} via mdata-get, mdata grain may be incomplete.".format(
+                    mdata_grain,
+                )
+            )
+            continue
 
         if not mdata_value.startswith("No metadata for "):
             if "mdata" not in grains:
@@ -134,6 +145,36 @@ def _sdc_mdata(mdata_list=None, mdata_get=None):
     return grains
 
 
+def _legacy_grains(grains):
+    """
+    Grains for backwards compatibility
+    Remove this function in Neon
+    """
+    # parse legacy sdc grains
+    if "mdata" in grains and "sdc" in grains["mdata"]:
+        if (
+            "server_uuid" not in grains["mdata"]["sdc"]
+            or "FAILURE" in grains["mdata"]["sdc"]["server_uuid"]
+        ):
+            grains["hypervisor_uuid"] = "unknown"
+        else:
+            grains["hypervisor_uuid"] = grains["mdata"]["sdc"]["server_uuid"]
+
+        if (
+            "datacenter_name" not in grains["mdata"]["sdc"]
+            or "FAILURE" in grains["mdata"]["sdc"]["datacenter_name"]
+        ):
+            grains["datacenter"] = "unknown"
+        else:
+            grains["datacenter"] = grains["mdata"]["sdc"]["datacenter_name"]
+
+    # parse rules grains
+    if "mdata" in grains and "rules" in grains["mdata"]:
+        grains["roles"] = grains["mdata"]["roles"].split(",")
+
+    return grains
+
+
 def mdata():
     """
     Provide grains from the SmartOS metadata
@@ -148,6 +189,8 @@ def mdata():
     grains = salt.utils.dictupdate.update(
         grains, _sdc_mdata(mdata_list, mdata_get), merge_lists=True
     )
+    ## remove _legacy_grains in Neon
+    grains = _legacy_grains(grains)
 
     return grains
 
