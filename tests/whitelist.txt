@@ -32,6 +32,8 @@ integration.modules.test_groupadd
 integration.modules.test_hosts
 integration.modules.test_key
 integration.modules.test_linux_acl
+integration.modules.test_linux_service
+integration.modules.test_linux_shadow
 integration.modules.test_localemod
 integration.modules.test_lxc
 integration.modules.test_mine
@@ -45,8 +47,6 @@ integration.modules.test_publish
 integration.modules.test_pw_user
 integration.modules.test_rabbitmq
 integration.modules.test_saltutil
-integration.modules.test_service
-integration.modules.test_shadow
 integration.modules.test_ssh
 integration.modules.test_state
 integration.modules.test_status
@@ -69,10 +69,6 @@ integration.runners.test_manage
 integration.runners.test_runner_returns
 integration.runners.test_nacl
 integration.runners.test_salt
-integration.scheduler.test_eval
-integration.scheduler.test_postpone
-integration.scheduler.test_skip
-integration.scheduler.test_helpers
 integration.sdb.test_env
 integration.shell.test_arguments
 integration.shell.test_auth

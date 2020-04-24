@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Custom configparser classes
-'''
+"""
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import re
 
 # Import Salt libs
@@ -22,7 +23,7 @@ except ImportError:
 
 # pylint: disable=string-substitution-usage-error
 class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-variable
-    '''
+    """
     Custom ConfigParser which reads and writes git config files.
 
     READ A GIT CONFIG FILE INTO THE PARSER OBJECT
@@ -44,20 +45,24 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
     >>> with salt.utils.files.fopen('/home/user/.git/config', 'w') as fh:
     ...     conf.write(fh)
     >>>
-    '''
-    DEFAULTSECT = 'DEFAULT'
-    SPACEINDENT = ' ' * 8
+    """
 
-    def __init__(self, defaults=None, dict_type=_default_dict,
-                 allow_no_value=True):
-        '''
+    DEFAULTSECT = "DEFAULT"
+    SPACEINDENT = " " * 8
+
+    # pylint: disable=useless-super-delegation
+    def __init__(
+        self, defaults=None, dict_type=_default_dict, allow_no_value=True,
+    ):
+        """
         Changes default value for allow_no_value from False to True
-        '''
-        super(GitConfigParser, self).__init__(
-            defaults, dict_type, allow_no_value)
+        """
+        super(GitConfigParser, self).__init__(defaults, dict_type, allow_no_value)
+
+    # pylint: enable=useless-super-delegation
 
     def _read(self, fp, fpname):
-        '''
+        """
         Makes the following changes from the RawConfigParser:
 
         1. Strip leading tabs from non-section-header lines.
@@ -66,31 +71,31 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
         4. Drops support for continuation lines.
         5. Multiple values for a given option are stored as a list.
         6. Keys and values are decoded to the system encoding.
-        '''
-        cursect = None                        # None, or a dictionary
+        """
+        cursect = None  # None, or a dictionary
         optname = None
         lineno = 0
-        e = None                              # None, or an exception
+        e = None  # None, or an exception
         while True:
             line = salt.utils.stringutils.to_unicode(fp.readline())
             if not line:
                 break
             lineno = lineno + 1
             # comment or blank line?
-            if line.strip() == '' or line[0] in '#;':
+            if line.strip() == "" or line[0] in "#;":
                 continue
-            if line.split(None, 1)[0].lower() == 'rem' and line[0] in 'rR':
+            if line.split(None, 1)[0].lower() == "rem" and line[0] in "rR":
                 # no leading whitespace
                 continue
             # Replace space indentation with a tab. Allows parser to work
             # properly in cases where someone has edited the git config by hand
             # and indented using spaces instead of tabs.
             if line.startswith(self.SPACEINDENT):
-                line = '\t' + line[len(self.SPACEINDENT):]
+                line = "\t" + line[len(self.SPACEINDENT) :]
             # is it a section header?
             mo = self.SECTCRE.match(line)
             if mo:
-                sectname = mo.group('header')
+                sectname = mo.group("header")
                 if sectname in self._sections:
                     cursect = self._sections[sectname]
                 elif sectname == self.DEFAULTSECT:
@@ -105,26 +110,27 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
                 raise MissingSectionHeaderError(  # pylint: disable=undefined-variable
                     salt.utils.stringutils.to_str(fpname),
                     lineno,
-                    salt.utils.stringutils.to_str(line))
+                    salt.utils.stringutils.to_str(line),
+                )
             # an option line?
             else:
                 mo = self._optcre.match(line.lstrip())
                 if mo:
-                    optname, vi, optval = mo.group('option', 'vi', 'value')
+                    optname, vi, optval = mo.group("option", "vi", "value")
                     optname = self.optionxform(optname.rstrip())
                     if optval is None:
-                        optval = ''
+                        optval = ""
                     if optval:
-                        if vi in ('=', ':') and ';' in optval:
+                        if vi in ("=", ":") and ";" in optval:
                             # ';' is a comment delimiter only if it follows
                             # a spacing character
-                            pos = optval.find(';')
-                            if pos != -1 and optval[pos-1].isspace():
+                            pos = optval.find(";")
+                            if pos != -1 and optval[pos - 1].isspace():
                                 optval = optval[:pos]
                         optval = optval.strip()
                         # Empty strings should be considered as blank strings
                         if optval in ('""', "''"):
-                            optval = ''
+                            optval = ""
                     self._add_option(cursect, optname, optval)
                 else:
                     # a non-fatal parsing error occurred.  set up the
@@ -139,35 +145,37 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
             raise e  # pylint: disable=raising-bad-type
 
     def _string_check(self, value, allow_list=False):
-        '''
+        """
         Based on the string-checking code from the SafeConfigParser's set()
         function, this enforces string values for config options.
-        '''
+        """
         if self._optcre is self.OPTCRE or value:
             is_list = isinstance(value, list)
             if is_list and not allow_list:
-                raise TypeError('option value cannot be a list unless allow_list is True')
+                raise TypeError(
+                    "option value cannot be a list unless allow_list is True"
+                )
             elif not is_list:
                 value = [value]
             if not all(isinstance(x, six.string_types) for x in value):
-                raise TypeError('option values must be strings')
+                raise TypeError("option values must be strings")
 
     def get(self, section, option, as_list=False):
-        '''
+        """
         Adds an optional "as_list" argument to ensure a list is returned. This
         is helpful when iterating over an option which may or may not be a
         multivar.
-        '''
+        """
         ret = super(GitConfigParser, self).get(section, option)
         if as_list and not isinstance(ret, list):
             ret = [ret]
         return ret
 
-    def set(self, section, option, value=''):
-        '''
+    def set(self, section, option, value=""):
+        """
         This is overridden from the RawConfigParser merely to change the
         default value for the 'value' argument.
-        '''
+        """
         self._string_check(value)
         super(GitConfigParser, self).set(section, option, value)
 
@@ -186,17 +194,19 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
                 sectdict[key] = [sectdict[key]]
                 sectdict[key].append(value)
         else:
-            raise TypeError('Expected str or list for option value, got %s' % type(value).__name__)
+            raise TypeError(
+                "Expected str or list for option value, got %s" % type(value).__name__
+            )
 
-    def set_multivar(self, section, option, value=''):
-        '''
+    def set_multivar(self, section, option, value=""):
+        """
         This function is unique to the GitConfigParser. It will add another
         value for the option if it already exists, converting the option's
         value to a list if applicable.
 
         If "value" is a list, then any existing values for the specified
         section and option will be replaced with the list being passed.
-        '''
+        """
         self._string_check(value, allow_list=True)
         if not section or section == self.DEFAULTSECT:
             sectdict = self._defaults
@@ -205,15 +215,16 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
                 sectdict = self._sections[section]
             except KeyError:
                 raise NoSectionError(  # pylint: disable=undefined-variable
-                    salt.utils.stringutils.to_str(section))
+                    salt.utils.stringutils.to_str(section)
+                )
         key = self.optionxform(option)
         self._add_option(sectdict, key, value)
 
     def remove_option_regexp(self, section, option, expr):
-        '''
+        """
         Remove an option with a value matching the expression. Works on single
         values and multivars.
-        '''
+        """
         if not section or section == self.DEFAULTSECT:
             sectdict = self._defaults
         else:
@@ -221,7 +232,8 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
                 sectdict = self._sections[section]
             except KeyError:
                 raise NoSectionError(  # pylint: disable=undefined-variable
-                    salt.utils.stringutils.to_str(section))
+                    salt.utils.stringutils.to_str(section)
+                )
         option = self.optionxform(option)
         if option not in sectdict:
             return False
@@ -243,7 +255,7 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
         return existed
 
     def write(self, fp_):
-        '''
+        """
         Makes the following changes from the RawConfigParser:
 
         1. Prepends options with a tab character.
@@ -251,20 +263,22 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
         3. When an option's value is a list, a line for each option is written.
            This allows us to support multivars like a remote's "fetch" option.
         4. Drops support for continuation lines.
-        '''
-        convert = salt.utils.stringutils.to_bytes \
-            if 'b' in fp_.mode \
+        """
+        convert = (
+            salt.utils.stringutils.to_bytes
+            if "b" in fp_.mode
             else salt.utils.stringutils.to_str
+        )
         if self._defaults:
-            fp_.write(convert('[%s]\n' % self.DEFAULTSECT))
+            fp_.write(convert("[%s]\n" % self.DEFAULTSECT))
             for (key, value) in six.iteritems(self._defaults):
-                value = salt.utils.stringutils.to_unicode(value).replace('\n', '\n\t')
-                fp_.write(convert('%s = %s\n' % (key, value)))
+                value = salt.utils.stringutils.to_unicode(value).replace("\n", "\n\t")
+                fp_.write(convert("%s = %s\n" % (key, value)))
         for section in self._sections:
-            fp_.write(convert('[%s]\n' % section))
+            fp_.write(convert("[%s]\n" % section))
             for (key, value) in six.iteritems(self._sections[section]):
                 if (value is not None) or (self._optcre == self.OPTCRE):
                     if not isinstance(value, list):
                         value = [value]
                     for item in value:
-                        fp_.write(convert('\t%s\n' % ' = '.join((key, item)).rstrip()))
+                        fp_.write(convert("\t%s\n" % " = ".join((key, item)).rstrip()))

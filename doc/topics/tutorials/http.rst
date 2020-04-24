@@ -188,7 +188,7 @@ password may be passed in as ``username`` and ``password``, respectively.
     salt.utils.http.query(
         'http://example.com',
         username='larry',
-        password=`5700g3543v4r`,
+        password='5700g3543v4r',
     )
 
 Cookies and Sessions
@@ -543,7 +543,7 @@ checked. This is done using the ``status`` argument:
 
     http://example.com/:
       http.query:
-        - status: '200'
+        - status: 200
 
 If both are specified, both will be checked, but if only one is ``True`` and the
 other is ``False``, then ``False`` will be returned. In this case, the comments

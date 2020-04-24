@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Splay function calls across targeted minions
-'''
+"""
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
-import time
+
 import logging
+import time
 
 import salt.utils.stringutils
 
@@ -22,15 +23,15 @@ def __init__(opts):
 
 
 def _get_hash():
-    '''
+    """
     Jenkins One-At-A-Time Hash Function
     More Info: http://en.wikipedia.org/wiki/Jenkins_hash_function#one-at-a-time
-    '''
+    """
     # Using bitmask to emulate rollover behavior of C unsigned 32 bit int
-    bitmask = 0xffffffff
+    bitmask = 0xFFFFFFFF
     h = 0
 
-    for i in bytearray(salt.utils.stringutils.to_bytes(__grains__['id'])):
+    for i in bytearray(salt.utils.stringutils.to_bytes(__grains__["id"])):
         h = (h + i) & bitmask
         h = (h + (h << 10)) & bitmask
         h = (h ^ (h >> 6)) & bitmask
@@ -47,7 +48,7 @@ def _calc_splay(splaytime):
 
 
 def execute(opts, data, func, args, kwargs):
-    '''
+    """
     Splay a salt function call execution time across minions over
     a number of seconds (default: 300)
 
@@ -68,15 +69,15 @@ def execute(opts, data, func, args, kwargs):
     .. code-block:: bash
 
         # With specified splaytime (5 minutes) and timeout with 10 second buffer
-        salt -t 310 --module-executors='[slpay, direct_call]' --executor-opts='{splaytime: 300}' '*' pkg.version cowsay
-    '''
-    if 'executor_opts' in data and 'splaytime' in data['executor_opts']:
-        splaytime = data['executor_opts']['splaytime']
+        salt -t 310 --module-executors='[splay, direct_call]' --executor-opts='{splaytime: 300}' '*' pkg.version cowsay
+    """
+    if "executor_opts" in data and "splaytime" in data["executor_opts"]:
+        splaytime = data["executor_opts"]["splaytime"]
     else:
-        splaytime = opts.get('splaytime', _DEFAULT_SPLAYTIME)
+        splaytime = opts.get("splaytime", _DEFAULT_SPLAYTIME)
     if splaytime <= 0:
-        raise ValueError('splaytime must be a positive integer')
-    fun_name = data.get('fun')
+        raise ValueError("splaytime must be a positive integer")
+    fun_name = data.get("fun")
     my_delay = _calc_splay(splaytime)
     log.debug("Splay is sleeping %s secs on %s", my_delay, fun_name)
 

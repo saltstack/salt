@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Insert minion return data into a sqlite3 database
 
 :maintainer:    Mickey Malone <mickey.malone@gmail.com>
@@ -79,17 +79,19 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
 
     salt '*' test.ping --return sqlite3 --return_kwargs '{"db": "/var/lib/salt/another-salt.db"}'
 
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
+import datetime
 
 # Import python libs
 import logging
-import datetime
+
+import salt.returners
 
 # Import Salt libs
 import salt.utils.jid
 import salt.utils.json
-import salt.returners
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -97,6 +99,7 @@ from salt.ext import six
 # Better safe than sorry here. Even though sqlite3 is included in python
 try:
     import sqlite3
+
     HAS_SQLITE3 = True
 except ImportError:
     HAS_SQLITE3 = False
@@ -104,112 +107,107 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = 'sqlite3'
+__virtualname__ = "sqlite3"
 
 
 def __virtual__():
     if not HAS_SQLITE3:
-        return False, 'Could not import sqlite3 returner; sqlite3 is not installed.'
+        return False, "Could not import sqlite3 returner; sqlite3 is not installed."
     return __virtualname__
 
 
 def _get_options(ret=None):
-    '''
+    """
     Get the SQLite3 options from salt.
-    '''
-    attrs = {'database': 'database',
-             'timeout': 'timeout'}
+    """
+    attrs = {"database": "database", "timeout": "timeout"}
 
-    _options = salt.returners.get_returner_options(__virtualname__,
-                                                   ret,
-                                                   attrs,
-                                                   __salt__=__salt__,
-                                                   __opts__=__opts__)
+    _options = salt.returners.get_returner_options(
+        __virtualname__, ret, attrs, __salt__=__salt__, __opts__=__opts__
+    )
     return _options
 
 
 def _get_conn(ret=None):
-    '''
+    """
     Return a sqlite3 database connection
-    '''
+    """
     # Possible todo: support detect_types, isolation_level, check_same_thread,
     # factory, cached_statements. Do we really need to though?
     _options = _get_options(ret)
-    database = _options.get('database')
-    timeout = _options.get('timeout')
+    database = _options.get("database")
+    timeout = _options.get("timeout")
 
     if not database:
-        raise Exception(
-                'sqlite3 config option "sqlite3.database" is missing')
+        raise Exception('sqlite3 config option "sqlite3.database" is missing')
     if not timeout:
-        raise Exception(
-                'sqlite3 config option "sqlite3.timeout" is missing')
-    log.debug('Connecting the sqlite3 database: %s timeout: %s', database, timeout)
+        raise Exception('sqlite3 config option "sqlite3.timeout" is missing')
+    log.debug("Connecting the sqlite3 database: %s timeout: %s", database, timeout)
     conn = sqlite3.connect(database, timeout=float(timeout))
     return conn
 
 
 def _close_conn(conn):
-    '''
+    """
     Close the sqlite3 database connection
-    '''
-    log.debug('Closing the sqlite3 database connection')
+    """
+    log.debug("Closing the sqlite3 database connection")
     conn.commit()
     conn.close()
 
 
 def returner(ret):
-    '''
+    """
     Insert minion return data into the sqlite3 database
-    '''
-    log.debug('sqlite3 returner <returner> called with data: %s', ret)
+    """
+    log.debug("sqlite3 returner <returner> called with data: %s", ret)
     conn = _get_conn(ret)
     cur = conn.cursor()
-    sql = '''INSERT INTO salt_returns
+    sql = """INSERT INTO salt_returns
              (fun, jid, id, fun_args, date, full_ret, success)
-             VALUES (:fun, :jid, :id, :fun_args, :date, :full_ret, :success)'''
-    cur.execute(sql,
-                {'fun': ret['fun'],
-                 'jid': ret['jid'],
-                 'id': ret['id'],
-                 'fun_args': six.text_type(ret['fun_args']) if ret.get('fun_args') else None,
-                 'date': six.text_type(datetime.datetime.now()),
-                 'full_ret': salt.utils.json.dumps(ret['return']),
-                 'success': ret.get('success', '')})
+             VALUES (:fun, :jid, :id, :fun_args, :date, :full_ret, :success)"""
+    cur.execute(
+        sql,
+        {
+            "fun": ret["fun"],
+            "jid": ret["jid"],
+            "id": ret["id"],
+            "fun_args": six.text_type(ret["fun_args"]) if ret.get("fun_args") else None,
+            "date": six.text_type(datetime.datetime.now()),
+            "full_ret": salt.utils.json.dumps(ret["return"]),
+            "success": ret.get("success", ""),
+        },
+    )
     _close_conn(conn)
 
 
 def save_load(jid, load, minions=None):
-    '''
+    """
     Save the load to the specified jid
-    '''
-    log.debug('sqlite3 returner <save_load> called jid: %s load: %s', jid, load)
+    """
+    log.debug("sqlite3 returner <save_load> called jid: %s load: %s", jid, load)
     conn = _get_conn(ret=None)
     cur = conn.cursor()
-    sql = '''INSERT INTO jids (jid, load) VALUES (:jid, :load)'''
-    cur.execute(sql,
-                {'jid': jid,
-                 'load': salt.utils.json.dumps(load)})
+    sql = """INSERT INTO jids (jid, load) VALUES (:jid, :load)"""
+    cur.execute(sql, {"jid": jid, "load": salt.utils.json.dumps(load)})
     _close_conn(conn)
 
 
 def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
-    '''
+    """
     Included for API consistency
-    '''
-    pass
+    """
 
 
 def get_load(jid):
-    '''
+    """
     Return the load from a specified jid
-    '''
-    log.debug('sqlite3 returner <get_load> called jid: %s', jid)
+    """
+    log.debug("sqlite3 returner <get_load> called jid: %s", jid)
     conn = _get_conn(ret=None)
     cur = conn.cursor()
-    sql = '''SELECT load FROM jids WHERE jid = :jid'''
-    cur.execute(sql,
-                {'jid': jid})
+    sql = """SELECT load FROM jids WHERE jid = :jid"""
+    cur.execute(sql, {"jid": jid})
     data = cur.fetchone()
     if data:
         return salt.utils.json.loads(data[0].encode())
@@ -218,40 +216,38 @@ def get_load(jid):
 
 
 def get_jid(jid):
-    '''
+    """
     Return the information returned from a specified jid
-    '''
-    log.debug('sqlite3 returner <get_jid> called jid: %s', jid)
+    """
+    log.debug("sqlite3 returner <get_jid> called jid: %s", jid)
     conn = _get_conn(ret=None)
     cur = conn.cursor()
-    sql = '''SELECT id, full_ret FROM salt_returns WHERE jid = :jid'''
-    cur.execute(sql,
-                {'jid': jid})
+    sql = """SELECT id, full_ret FROM salt_returns WHERE jid = :jid"""
+    cur.execute(sql, {"jid": jid})
     data = cur.fetchone()
-    log.debug('query result: %s', data)
+    log.debug("query result: %s", data)
     ret = {}
     if data and len(data) > 1:
-        ret = {six.text_type(data[0]): {'return': salt.utils.json.loads(data[1])}}
-        log.debug('ret: %s', ret)
+        ret = {six.text_type(data[0]): {"return": salt.utils.json.loads(data[1])}}
+        log.debug("ret: %s", ret)
     _close_conn(conn)
     return ret
 
 
 def get_fun(fun):
-    '''
+    """
     Return a dict of the last function called for all minions
-    '''
-    log.debug('sqlite3 returner <get_fun> called fun: %s', fun)
+    """
+    log.debug("sqlite3 returner <get_fun> called fun: %s", fun)
     conn = _get_conn(ret=None)
     cur = conn.cursor()
-    sql = '''SELECT s.id, s.full_ret, s.jid
+    sql = """SELECT s.id, s.full_ret, s.jid
             FROM salt_returns s
             JOIN ( SELECT MAX(jid) AS jid FROM salt_returns GROUP BY fun, id) max
             ON s.jid = max.jid
             WHERE s.fun = :fun
-            '''
-    cur.execute(sql,
-                {'fun': fun})
+            """
+    cur.execute(sql, {"fun": fun})
     data = cur.fetchall()
     ret = {}
     if data:
@@ -266,13 +262,13 @@ def get_fun(fun):
 
 
 def get_jids():
-    '''
+    """
     Return a list of all job ids
-    '''
-    log.debug('sqlite3 returner <get_jids> called')
+    """
+    log.debug("sqlite3 returner <get_jids> called")
     conn = _get_conn(ret=None)
     cur = conn.cursor()
-    sql = '''SELECT jid, load FROM jids'''
+    sql = """SELECT jid, load FROM jids"""
     cur.execute(sql)
     data = cur.fetchall()
     ret = {}
@@ -283,13 +279,13 @@ def get_jids():
 
 
 def get_minions():
-    '''
+    """
     Return a list of minions
-    '''
-    log.debug('sqlite3 returner <get_minions> called')
+    """
+    log.debug("sqlite3 returner <get_minions> called")
     conn = _get_conn(ret=None)
     cur = conn.cursor()
-    sql = '''SELECT DISTINCT id FROM salt_returns'''
+    sql = """SELECT DISTINCT id FROM salt_returns"""
     cur.execute(sql)
     data = cur.fetchall()
     ret = []
@@ -300,7 +296,7 @@ def get_minions():
 
 
 def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
-    '''
+    """
     Do any work necessary to prepare a JID, including sending a custom id
-    '''
+    """
     return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Network NTP
 ===========
 
@@ -7,7 +7,7 @@ Network NTP
 
 Manage the configuration of NTP peers and servers on the network devices through the NAPALM proxy.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net> & Jerome Fleury <jf@cloudflare.com>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
@@ -24,27 +24,30 @@ Dependencies
 
 .. _netaddr: https://pythonhosted.org/netaddr/
 .. _dnspython: http://www.dnspython.org/
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import logging
 
-# Import 3rd-party libs
-from salt.ext import six
+import logging
 
 # import NAPALM utils
 import salt.utils.napalm
 
+# Import 3rd-party libs
+from salt.ext import six
+
 try:
     from netaddr import IPAddress
     from netaddr.core import AddrFormatError
+
     HAS_NETADDR = True
 except ImportError:
     HAS_NETADDR = False
 
 try:
     import dns.resolver
+
     HAS_DNSRESOLVER = True
 except ImportError:
     HAS_DNSRESOLVER = False
@@ -53,7 +56,7 @@ except ImportError:
 # state properties
 # ----------------------------------------------------------------------------------------------------------------------
 
-__virtualname__ = 'netntp'
+__virtualname__ = "netntp"
 
 log = logging.getLogger(__name__)
 
@@ -67,10 +70,11 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     NAPALM library must be installed for this module to work and run in a (proxy) minion.
-    '''
+    """
     return salt.utils.napalm.virtual(__opts__, __virtualname__, __file__)
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
@@ -79,32 +83,27 @@ def __virtual__():
 
 def _default_ret(name):
 
-    ret = {
-        'name': name,
-        'changes': {},
-        'result': False,
-        'comment': ''
-    }
+    ret = {"name": name, "changes": {}, "result": False, "comment": ""}
     return ret
 
 
 def _retrieve_ntp_peers():
 
-    '''Retrieves configured NTP peers'''
+    """Retrieves configured NTP peers"""
 
-    return __salt__['ntp.peers']()
+    return __salt__["ntp.peers"]()
 
 
 def _retrieve_ntp_servers():
 
-    '''Retrieves configured NTP servers'''
+    """Retrieves configured NTP servers"""
 
-    return __salt__['ntp.servers']()
+    return __salt__["ntp.servers"]()
 
 
 def _check(peers):
 
-    '''Checks whether the input is a valid list of peers and transforms domain names into IP Addresses'''
+    """Checks whether the input is a valid list of peers and transforms domain names into IP Addresses"""
 
     if not isinstance(peers, list):
         return False
@@ -113,7 +112,9 @@ def _check(peers):
         if not isinstance(peer, six.string_types):
             return False
 
-    if not HAS_NETADDR:  # if does not have this lib installed, will simply try to load what user specified
+    if (
+        not HAS_NETADDR
+    ):  # if does not have this lib installed, will simply try to load what user specified
         # if the addresses are not correctly specified, will trow error when loading the actual config
         return True
 
@@ -149,30 +150,30 @@ def _clean(lst):
 
 def _set_ntp_peers(peers):
 
-    '''Calls ntp.set_peers.'''
+    """Calls ntp.set_peers."""
 
-    return __salt__['ntp.set_peers'](*peers, commit=False)
+    return __salt__["ntp.set_peers"](*peers, commit=False)
 
 
 def _set_ntp_servers(servers):
 
-    '''Calls ntp.set_servers.'''
+    """Calls ntp.set_servers."""
 
-    return __salt__['ntp.set_servers'](*servers, commit=False)
+    return __salt__["ntp.set_servers"](*servers, commit=False)
 
 
 def _delete_ntp_peers(peers):
 
-    '''Calls ntp.delete_peers.'''
+    """Calls ntp.delete_peers."""
 
-    return __salt__['ntp.delete_peers'](*peers, commit=False)
+    return __salt__["ntp.delete_peers"](*peers, commit=False)
 
 
 def _delete_ntp_servers(servers):
 
-    '''Calls ntp.delete_servers.'''
+    """Calls ntp.delete_servers."""
 
-    return __salt__['ntp.delete_servers'](*servers, commit=False)
+    return __salt__["ntp.delete_servers"](*servers, commit=False)
 
 
 def _exec_fun(name, *kargs):
@@ -183,35 +184,36 @@ def _exec_fun(name, *kargs):
     return None
 
 
-def _check_diff_and_configure(fun_name, peers_servers, name='peers'):
+def _check_diff_and_configure(fun_name, peers_servers, name="peers"):
 
     _ret = _default_ret(fun_name)
 
-    _options = ['peers', 'servers']
+    _options = ["peers", "servers"]
 
     if name not in _options:
         return _ret
 
-    _retrieve_fun = '_retrieve_ntp_{what}'.format(what=name)
-    ntp_list_output = _exec_fun(_retrieve_fun)  # contains only IP Addresses as dictionary keys
+    _retrieve_fun = "_retrieve_ntp_{what}".format(what=name)
+    ntp_list_output = _exec_fun(
+        _retrieve_fun
+    )  # contains only IP Addresses as dictionary keys
 
-    if ntp_list_output.get('result', False) is False:
-        _ret['comment'] = 'Cannot retrieve NTP {what} from the device: {reason}'.format(
-            what=name,
-            reason=ntp_list_output.get('comment')
+    if ntp_list_output.get("result", False) is False:
+        _ret["comment"] = "Cannot retrieve NTP {what} from the device: {reason}".format(
+            what=name, reason=ntp_list_output.get("comment")
         )
         return _ret
 
-    configured_ntp_list = set(ntp_list_output.get('out', {}))
+    configured_ntp_list = set(ntp_list_output.get("out", {}))
     desired_ntp_list = set(peers_servers)
 
     if configured_ntp_list == desired_ntp_list:
-        _ret.update({
-            'comment': 'NTP {what} already configured as needed.'.format(
-                what=name
-            ),
-            'result': True
-        })
+        _ret.update(
+            {
+                "comment": "NTP {what} already configured as needed.".format(what=name),
+                "result": True,
+            }
+        )
         return _ret
 
     list_to_set = list(desired_ntp_list - configured_ntp_list)
@@ -222,19 +224,16 @@ def _check_diff_and_configure(fun_name, peers_servers, name='peers'):
 
     changes = {}
     if list_to_set:
-        changes['added'] = list_to_set
+        changes["added"] = list_to_set
     if list_to_delete:
-        changes['removed'] = list_to_delete
+        changes["removed"] = list_to_delete
 
-    _ret.update({
-        'changes': changes
-    })
+    _ret.update({"changes": changes})
 
-    if __opts__['test'] is True:
-        _ret.update({
-            'result': None,
-            'comment': 'Testing mode: configuration was not changed!'
-        })
+    if __opts__["test"] is True:
+        _ret.update(
+            {"result": None, "comment": "Testing mode: configuration was not changed!"}
+        )
         return _ret
 
     # <---- Retrieve existing NTP peers and determine peers to be added/removed --------------------------------------->
@@ -244,37 +243,37 @@ def _check_diff_and_configure(fun_name, peers_servers, name='peers'):
     expected_config_change = False
     successfully_changed = True
 
-    comment = ''
+    comment = ""
 
     if list_to_set:
-        _set_fun = '_set_ntp_{what}'.format(what=name)
+        _set_fun = "_set_ntp_{what}".format(what=name)
         _set = _exec_fun(_set_fun, list_to_set)
-        if _set.get('result'):
+        if _set.get("result"):
             expected_config_change = True
         else:  # something went wrong...
             successfully_changed = False
-            comment += 'Cannot set NTP {what}: {reason}'.format(
-                what=name,
-                reason=_set.get('comment')
+            comment += "Cannot set NTP {what}: {reason}".format(
+                what=name, reason=_set.get("comment")
             )
 
     if list_to_delete:
-        _delete_fun = '_delete_ntp_{what}'.format(what=name)
+        _delete_fun = "_delete_ntp_{what}".format(what=name)
         _removed = _exec_fun(_delete_fun, list_to_delete)
-        if _removed.get('result'):
+        if _removed.get("result"):
             expected_config_change = True
         else:  # something went wrong...
             successfully_changed = False
-            comment += 'Cannot remove NTP {what}: {reason}'.format(
-                what=name,
-                reason=_removed.get('comment')
+            comment += "Cannot remove NTP {what}: {reason}".format(
+                what=name, reason=_removed.get("comment")
             )
 
-    _ret.update({
-        'successfully_changed': successfully_changed,
-        'expected_config_change': expected_config_change,
-        'comment': comment
-    })
+    _ret.update(
+        {
+            "successfully_changed": successfully_changed,
+            "expected_config_change": expected_config_change,
+            "comment": comment,
+        }
+    )
 
     return _ret
 
@@ -286,7 +285,7 @@ def _check_diff_and_configure(fun_name, peers_servers, name='peers'):
 
 def managed(name, peers=None, servers=None):
 
-    '''
+    """
     Manages the configuration of NTP peers and servers on the device, as specified in the state SLS file.
     NTP entities not specified in these lists will be removed whilst entities not configured on the device will be set.
 
@@ -330,22 +329,28 @@ def managed(name, peers=None, servers=None):
                 }
             }
         }
-    '''
+    """
 
     ret = _default_ret(name)
-    result = ret.get('result', False)
-    comment = ret.get('comment', '')
-    changes = ret.get('changes', {})
+    result = ret.get("result", False)
+    comment = ret.get("comment", "")
+    changes = ret.get("changes", {})
 
-    if not(isinstance(peers, list) or isinstance(servers, list)):  # none of the is a list
+    if not (
+        isinstance(peers, list) or isinstance(servers, list)
+    ):  # none of the is a list
         return ret  # just exit
 
     if isinstance(peers, list) and not _check(peers):  # check and clean peers
-        ret['comment'] = 'NTP peers must be a list of valid IP Addresses or Domain Names'
+        ret[
+            "comment"
+        ] = "NTP peers must be a list of valid IP Addresses or Domain Names"
         return ret
 
     if isinstance(servers, list) and not _check(servers):  # check and clean servers
-        ret['comment'] = 'NTP servers must be a list of valid IP Addresses or Domain Names'
+        ret[
+            "comment"
+        ] = "NTP servers must be a list of valid IP Addresses or Domain Names"
         return ret
 
     # ----- Retrieve existing NTP peers and determine peers to be added/removed --------------------------------------->
@@ -354,40 +359,41 @@ def managed(name, peers=None, servers=None):
     expected_config_change = False
 
     if isinstance(peers, list):
-        _peers_ret = _check_diff_and_configure(name, peers, name='peers')
-        expected_config_change = _peers_ret.get('expected_config_change', False)
-        successfully_changed = _peers_ret.get('successfully_changed', True)
-        result = result and _peers_ret.get('result', False)
-        comment += ('\n' + _peers_ret.get('comment', ''))
-        _changed_peers = _peers_ret.get('changes', {})
+        _peers_ret = _check_diff_and_configure(name, peers, name="peers")
+        expected_config_change = _peers_ret.get("expected_config_change", False)
+        successfully_changed = _peers_ret.get("successfully_changed", True)
+        result = result and _peers_ret.get("result", False)
+        comment += "\n" + _peers_ret.get("comment", "")
+        _changed_peers = _peers_ret.get("changes", {})
         if _changed_peers:
-            changes['peers'] = _changed_peers
+            changes["peers"] = _changed_peers
     if isinstance(servers, list):
-        _servers_ret = _check_diff_and_configure(name, servers, name='servers')
-        expected_config_change = expected_config_change or _servers_ret.get('expected_config_change', False)
-        successfully_changed = successfully_changed and _servers_ret.get('successfully_changed', True)
-        result = result and _servers_ret.get('result', False)
-        comment += ('\n' + _servers_ret.get('comment', ''))
-        _changed_servers = _servers_ret.get('changes', {})
+        _servers_ret = _check_diff_and_configure(name, servers, name="servers")
+        expected_config_change = expected_config_change or _servers_ret.get(
+            "expected_config_change", False
+        )
+        successfully_changed = successfully_changed and _servers_ret.get(
+            "successfully_changed", True
+        )
+        result = result and _servers_ret.get("result", False)
+        comment += "\n" + _servers_ret.get("comment", "")
+        _changed_servers = _servers_ret.get("changes", {})
         if _changed_servers:
-            changes['servers'] = _changed_servers
+            changes["servers"] = _changed_servers
 
-    ret.update({
-        'changes': changes
-    })
+    ret.update({"changes": changes})
 
     if not (changes or expected_config_change):
-        ret.update({
-            'result': True,
-            'comment': 'Device configured properly.'
-        })
+        ret.update({"result": True, "comment": "Device configured properly."})
         return ret
 
-    if __opts__['test'] is True:
-        ret.update({
-            'result': None,
-            'comment': 'This is in testing mode, the device configuration was not changed!'
-        })
+    if __opts__["test"] is True:
+        ret.update(
+            {
+                "result": None,
+                "comment": "This is in testing mode, the device configuration was not changed!",
+            }
+        )
         return ret
 
     # <---- Call _set_ntp_peers and _delete_ntp_peers as needed --------------------------------------------------------
@@ -395,15 +401,12 @@ def managed(name, peers=None, servers=None):
     # ----- Try to commit changes ------------------------------------------------------------------------------------->
 
     if expected_config_change:  # commit only in case there's something to update
-        config_result, config_comment = __salt__['net.config_control']()
+        config_result, config_comment = __salt__["net.config_control"]()
         result = config_result and successfully_changed
         comment += config_comment
 
     # <---- Try to commit changes --------------------------------------------------------------------------------------
 
-    ret.update({
-        'result': result,
-        'comment': comment
-    })
+    ret.update({"result": result, "comment": comment})
 
     return ret

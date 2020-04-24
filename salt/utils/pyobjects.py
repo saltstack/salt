@@ -1,19 +1,33 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 :maintainer: Evan Borgstrom <evan@borgstrom.ca>
 
 Pythonic object interface to creating state data, see the pyobjects renderer
 for more documentation.
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
 import inspect
 import logging
 
+from salt.ext import six
 from salt.utils.odict import OrderedDict
 from salt.utils.schema import Prepareable
-from salt.ext import six
 
-REQUISITES = ('listen', 'onchanges', 'onfail', 'require', 'watch', 'use', 'listen_in', 'onchanges_in', 'onfail_in', 'require_in', 'watch_in', 'use_in')
+REQUISITES = (
+    "listen",
+    "onchanges",
+    "onfail",
+    "require",
+    "watch",
+    "use",
+    "listen_in",
+    "onchanges_in",
+    "onfail_in",
+    "require_in",
+    "watch_in",
+    "use_in",
+)
 
 log = logging.getLogger(__name__)
 
@@ -31,9 +45,10 @@ class InvalidFunction(StateException):
 
 
 class Registry(object):
-    '''
+    """
     The StateRegistry holds all of the states that have been created.
-    '''
+    """
+
     states = OrderedDict()
     requisites = []
     includes = []
@@ -56,19 +71,17 @@ class Registry(object):
 
     @classmethod
     def salt_data(cls):
-        states = OrderedDict([
-            (id_, states_)
-            for id_, states_ in six.iteritems(cls.states)
-        ])
+        states = OrderedDict(
+            [(id_, states_) for id_, states_ in six.iteritems(cls.states)]
+        )
 
         if cls.includes:
-            states['include'] = cls.includes
+            states["include"] = cls.includes
 
         if cls.extends:
-            states['extend'] = OrderedDict([
-                (id_, states_)
-                for id_, states_ in six.iteritems(cls.extends)
-            ])
+            states["extend"] = OrderedDict(
+                [(id_, states_) for id_, states_ in six.iteritems(cls.extends)]
+            )
 
         cls.empty()
 
@@ -87,9 +100,8 @@ class Registry(object):
         if id_ in attr:
             if state.full_func in attr[id_]:
                 raise DuplicateState(
-                    "A state with id '\'{0}\'', type '\'{1}\'' exists".format(
-                        id_,
-                        state.full_func
+                    "A state with id ''{0}'', type ''{1}'' exists".format(
+                        id_, state.full_func
                     )
                 )
         else:
@@ -149,7 +161,7 @@ class StateRequisite(object):
 
 
 class StateFactory(object):
-    '''
+    """
     The StateFactory is used to generate new States through a natural syntax
 
     It is used by initializing it with the name of the salt module::
@@ -162,7 +174,8 @@ class StateFactory(object):
         File.managed('/path/', owner='root', group='root')
 
     The kwargs are passed through to the State object
-    '''
+    """
+
     def __init__(self, module, valid_funcs=None):
         self.module = module
         if valid_funcs is None:
@@ -171,37 +184,32 @@ class StateFactory(object):
 
     def __getattr__(self, func):
         if len(self.valid_funcs) > 0 and func not in self.valid_funcs:
-            raise InvalidFunction('The function \'{0}\' does not exist in the '
-                                  'StateFactory for \'{1}\''.format(
-                                      func,
-                                      self.module
-                                  ))
+            raise InvalidFunction(
+                "The function '{0}' does not exist in the "
+                "StateFactory for '{1}'".format(func, self.module)
+            )
 
         def make_state(id_, **kwargs):
-            return State(
-                id_,
-                self.module,
-                func,
-                **kwargs
-            )
+            return State(id_, self.module, func, **kwargs)
+
         return make_state
 
-    def __call__(self, id_, requisite='require'):
-        '''
+    def __call__(self, id_, requisite="require"):
+        """
         When an object is called it is being used as a requisite
-        '''
+        """
         # return the correct data structure for the requisite
         return StateRequisite(requisite, self.module, id_)
 
 
 class State(object):
-    '''
+    """
     This represents a single item in the state tree
 
     The id_ is the id of the state, the func is the full name of the salt
     state (i.e. file.managed). All the keyword args you pass in become the
     properties of your state.
-    '''
+    """
 
     def __init__(self, id_, module, func, **kwargs):
         self.id_ = id_
@@ -225,7 +233,7 @@ class State(object):
         else:
             Registry.add(self.id_, self)
 
-        self.requisite = StateRequisite('require', self.module, self.id_)
+        self.requisite = StateRequisite("require", self.module, self.id_)
 
     @property
     def attrs(self):
@@ -243,10 +251,7 @@ class State(object):
 
         # build our attrs from kwargs. we sort the kwargs by key so that we
         # have consistent ordering for tests
-        return [
-            {k: kwargs[k]}
-            for k in sorted(six.iterkeys(kwargs))
-        ]
+        return [{k: kwargs[k]} for k in sorted(six.iterkeys(kwargs))]
 
     @property
     def full_func(self):
@@ -256,9 +261,7 @@ class State(object):
         return "{0!s} = {1!s}:{2!s}".format(self.id_, self.full_func, self.attrs)
 
     def __call__(self):
-        return {
-            self.full_func: self.attrs
-        }
+        return {self.full_func: self.attrs}
 
     def __enter__(self):
         Registry.push_requisite(self.requisite)
@@ -268,14 +271,15 @@ class State(object):
 
 
 class SaltObject(object):
-    '''
+    """
     Object based interface to the functions in __salt__
 
     .. code-block:: python
        :linenos:
         Salt = SaltObject(__salt__)
         Salt.cmd.run(bar)
-    '''
+    """
+
     def __init__(self, salt):
         self._salt = salt
 
@@ -283,17 +287,19 @@ class SaltObject(object):
         class __wrapper__(object):
             def __getattr__(wself, func):  # pylint: disable=E0213
                 try:
-                    return self._salt['{0}.{1}'.format(mod, func)]
+                    return self._salt["{0}.{1}".format(mod, func)]
                 except KeyError:
                     raise AttributeError
+
         return __wrapper__()
 
 
 class MapMeta(six.with_metaclass(Prepareable, type)):
-    '''
+    """
     This is the metaclass for our Map class, used for building data maps based
     off of grain data.
-    '''
+    """
+
     @classmethod
     def __prepare__(metacls, name, bases):
         return OrderedDict()
@@ -304,7 +310,7 @@ class MapMeta(six.with_metaclass(Prepareable, type)):
         return c
 
     def __init__(cls, name, bases, nmspc):
-        cls.__set_attributes__()
+        cls.__set_attributes__()  # pylint: disable=no-value-for-parameter
         super(MapMeta, cls).__init__(name, bases, nmspc)
 
     def __set_attributes__(cls):
@@ -313,7 +319,7 @@ class MapMeta(six.with_metaclass(Prepareable, type)):
 
         # find all of our filters
         for item in cls.__ordered_attrs__:
-            if item[0] == '_':
+            if item[0] == "_":
                 continue
 
             filt = cls.__dict__[item]
@@ -323,26 +329,26 @@ class MapMeta(six.with_metaclass(Prepareable, type)):
                 continue
 
             # which grain are we filtering on
-            grain = getattr(filt, '__grain__', 'os_family')
+            grain = getattr(filt, "__grain__", "os_family")
             grain_targets.add(grain)
 
             # does the object pointed to have a __match__ attribute?
             # if so use it, otherwise use the name of the object
             # this is so that you can match complex values, which the python
             # class name syntax does not allow
-            match = getattr(filt, '__match__', item)
+            match = getattr(filt, "__match__", item)
 
             match_attrs = {}
             for name in filt.__dict__:
-                if name[0] != '_':
+                if name[0] != "_":
                     match_attrs[name] = filt.__dict__[name]
 
             match_info.append((grain, match, match_attrs))
 
         # Reorder based on priority
         try:
-            if not hasattr(cls.priority, '__iter__'):
-                log.error('pyobjects: priority must be an iterable')
+            if not hasattr(cls.priority, "__iter__"):
+                log.error("pyobjects: priority must be an iterable")
             else:
                 new_match_info = []
                 for grain in cls.priority:
@@ -368,15 +374,15 @@ class MapMeta(six.with_metaclass(Prepareable, type)):
         # Check for matches and update the attrs dict accordingly
         attrs = {}
         if match_info:
-            grain_vals = Map.__salt__['grains.item'](*grain_targets)
+            grain_vals = Map.__salt__["grains.item"](*grain_targets)
             for grain, match, match_attrs in match_info:
                 if grain not in grain_vals:
                     continue
                 if grain_vals[grain] == match:
                     attrs.update(match_attrs)
 
-        if hasattr(cls, 'merge'):
-            pillar = Map.__salt__['pillar.get'](cls.merge)
+        if hasattr(cls, "merge"):
+            pillar = Map.__salt__["pillar.get"](cls.merge)
             if pillar:
                 attrs.update(pillar)
 
@@ -390,7 +396,4 @@ def need_salt(*a, **k):
 
 
 class Map(six.with_metaclass(MapMeta, object)):  # pylint: disable=W0232
-    __salt__ = {
-        'grains.filter_by': need_salt,
-        'pillar.get': need_salt
-    }
+    __salt__ = {"grains.filter_by": need_salt, "pillar.get": need_salt}

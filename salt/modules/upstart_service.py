@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module for the management of upstart systems. The Upstart system only supports
 service starting, stopping and restarting.
 
@@ -43,127 +43,135 @@ about this, at least.
     the :mod:`rh_service <salt.modules.rh_service>` module should be
     used, as it supports the hybrid upstart/sysvinit system used in
     RHEL/CentOS 6.
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
+from __future__ import absolute_import, print_function, unicode_literals
+
+import fnmatch
 
 # Import python libs
 import glob
 import os
 import re
-import itertools
-import fnmatch
 
 # Import salt libs
 import salt.modules.cmdmod
 import salt.utils.files
 import salt.utils.path
 import salt.utils.systemd
+from salt.ext.six.moves import filter  # pylint: disable=import-error,redefined-builtin
 
-__func_alias__ = {
-    'reload_': 'reload'
-}
+__func_alias__ = {"reload_": "reload"}
 
 # Define the module's virtual name
-__virtualname__ = 'service'
+__virtualname__ = "service"
 
 
 def __virtual__():
-    '''
+    """
     Only work on Ubuntu
-    '''
+    """
     # Disable on these platforms, specific service modules exist:
     if salt.utils.systemd.booted(__context__):
-        return (False, 'The upstart execution module failed to load: this system was booted with systemd.')
-    elif __grains__['os'] in ('Ubuntu', 'Linaro', 'elementary OS', 'Mint'):
+        return (
+            False,
+            "The upstart execution module failed to load: this system was booted with systemd.",
+        )
+    elif __grains__["os"] in ("Ubuntu", "Linaro", "elementary OS", "Mint"):
         return __virtualname__
-    elif __grains__['os'] in ('Debian', 'Raspbian'):
-        debian_initctl = '/sbin/initctl'
+    elif __grains__["os"] in ("Debian", "Raspbian"):
+        debian_initctl = "/sbin/initctl"
         if os.path.isfile(debian_initctl):
-            initctl_version = salt.modules.cmdmod._run_quiet(debian_initctl + ' version')
-            if 'upstart' in initctl_version:
+            initctl_version = salt.modules.cmdmod._run_quiet(
+                debian_initctl + " version"
+            )
+            if "upstart" in initctl_version:
                 return __virtualname__
-    return (False, 'The upstart execution module failed to load: '
-        ' the system must be Ubuntu-based, or Debian-based with upstart support.')
+    return (
+        False,
+        "The upstart execution module failed to load: "
+        " the system must be Ubuntu-based, or Debian-based with upstart support.",
+    )
 
 
 def _find_utmp():
-    '''
+    """
     Figure out which utmp file to use when determining runlevel.
     Sometimes /var/run/utmp doesn't exist, /run/utmp is the new hotness.
-    '''
+    """
     result = {}
     # These are the likely locations for the file on Ubuntu
-    for utmp in '/var/run/utmp', '/run/utmp':
+    for utmp in "/var/run/utmp", "/run/utmp":
         try:
             result[os.stat(utmp).st_mtime] = utmp
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
-    if len(result):
+    if result:
         return result[sorted(result).pop()]
     else:
         return False
 
 
 def _default_runlevel():
-    '''
+    """
     Try to figure out the default runlevel.  It is kept in
     /etc/init/rc-sysinit.conf, but can be overridden with entries
     in /etc/inittab, or via the kernel command-line at boot
-    '''
+    """
     # Try to get the "main" default.  If this fails, throw up our
     # hands and just guess "2", because things are horribly broken
     try:
-        with salt.utils.files.fopen('/etc/init/rc-sysinit.conf') as fp_:
+        with salt.utils.files.fopen("/etc/init/rc-sysinit.conf") as fp_:
             for line in fp_:
                 line = salt.utils.stringutils.to_unicode(line)
-                if line.startswith('env DEFAULT_RUNLEVEL'):
-                    runlevel = line.split('=')[-1].strip()
-    except Exception:
-        return '2'
+                if line.startswith("env DEFAULT_RUNLEVEL"):
+                    runlevel = line.split("=")[-1].strip()
+    except Exception:  # pylint: disable=broad-except
+        return "2"
 
     # Look for an optional "legacy" override in /etc/inittab
     try:
-        with salt.utils.files.fopen('/etc/inittab') as fp_:
+        with salt.utils.files.fopen("/etc/inittab") as fp_:
             for line in fp_:
                 line = salt.utils.stringutils.to_unicode(line)
-                if not line.startswith('#') and 'initdefault' in line:
-                    runlevel = line.split(':')[1]
-    except Exception:
+                if not line.startswith("#") and "initdefault" in line:
+                    runlevel = line.split(":")[1]
+    except Exception:  # pylint: disable=broad-except
         pass
 
     # The default runlevel can also be set via the kernel command-line.
     # Kinky.
     try:
         valid_strings = set(
-            ('0', '1', '2', '3', '4', '5', '6', 's', 'S', '-s', 'single'))
-        with salt.utils.files.fopen('/proc/cmdline') as fp_:
+            ("0", "1", "2", "3", "4", "5", "6", "s", "S", "-s", "single")
+        )
+        with salt.utils.files.fopen("/proc/cmdline") as fp_:
             for line in fp_:
                 line = salt.utils.stringutils.to_unicode(line)
                 for arg in line.strip().split():
                     if arg in valid_strings:
                         runlevel = arg
                         break
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         pass
 
     return runlevel
 
 
 def _runlevel():
-    '''
+    """
     Return the current runlevel
-    '''
-    if 'upstart._runlevel' in __context__:
-        return __context__['upstart._runlevel']
+    """
+    if "upstart._runlevel" in __context__:
+        return __context__["upstart._runlevel"]
     ret = _default_runlevel()
     utmp = _find_utmp()
     if utmp:
-        out = __salt__['cmd.run'](['runlevel', '{0}'.format(utmp)], python_shell=False)
+        out = __salt__["cmd.run"](["runlevel", "{0}".format(utmp)], python_shell=False)
         try:
             ret = out.split()[1]
         except IndexError:
             pass
-    __context__['upstart._runlevel'] = ret
+    __context__["upstart._runlevel"] = ret
     return ret
 
 
@@ -172,76 +180,78 @@ def _is_symlink(name):
 
 
 def _service_is_upstart(name):
-    '''
+    """
     From "Writing Jobs" at
     http://upstart.ubuntu.com/getting-started.html:
 
     Jobs are defined in files placed in /etc/init, the name of the job
     is the filename under this directory without the .conf extension.
-    '''
-    return os.access('/etc/init/{0}.conf'.format(name), os.R_OK)
+    """
+    return os.access("/etc/init/{0}.conf".format(name), os.R_OK)
 
 
 def _upstart_is_disabled(name):
-    '''
+    """
     An Upstart service is assumed disabled if a manual stanza is
     placed in /etc/init/[name].override.
     NOTE: An Upstart service can also be disabled by placing "manual"
     in /etc/init/[name].conf.
-    '''
-    files = ['/etc/init/{0}.conf'.format(name), '/etc/init/{0}.override'.format(name)]
-    for file_name in itertools.ifilter(os.path.isfile, files):
+    """
+    files = ["/etc/init/{0}.conf".format(name), "/etc/init/{0}.override".format(name)]
+    for file_name in filter(os.path.isfile, files):
         with salt.utils.files.fopen(file_name) as fp_:
-            if re.search(r'^\s*manual',
-                         salt.utils.stringutils.to_unicode(fp_.read()),
-                         re.MULTILINE):
+            if re.search(
+                r"^\s*manual",
+                salt.utils.stringutils.to_unicode(fp_.read()),
+                re.MULTILINE,
+            ):
                 return True
     return False
 
 
 def _upstart_is_enabled(name):
-    '''
+    """
     Assume that if an Upstart service is not disabled then it must be
     enabled.
-    '''
+    """
     return not _upstart_is_disabled(name)
 
 
 def _service_is_sysv(name):
-    '''
+    """
     A System-V style service will have a control script in
     /etc/init.d. We make sure to skip over symbolic links that point
     to Upstart's /lib/init/upstart-job, and anything that isn't an
     executable, like README or skeleton.
-    '''
-    script = '/etc/init.d/{0}'.format(name)
+    """
+    script = "/etc/init.d/{0}".format(name)
     return not _service_is_upstart(name) and os.access(script, os.X_OK)
 
 
 def _sysv_is_disabled(name):
-    '''
+    """
     A System-V style service is assumed disabled if there is no
     start-up link (starts with "S") to its script in /etc/init.d in
     the current runlevel.
-    '''
-    return not bool(glob.glob('/etc/rc{0}.d/S*{1}'.format(_runlevel(), name)))
+    """
+    return not bool(glob.glob("/etc/rc{0}.d/S*{1}".format(_runlevel(), name)))
 
 
 def _sysv_is_enabled(name):
-    '''
+    """
     Assume that if a System-V style service is not disabled then it
     must be enabled.
-    '''
+    """
     return not _sysv_is_disabled(name)
 
 
 def _iter_service_names():
-    '''
+    """
     Detect all of the service names available to upstart via init configuration
     files and via classic sysv init scripts
-    '''
+    """
     found = set()
-    for line in glob.glob('/etc/init.d/*'):
+    for line in glob.glob("/etc/init.d/*"):
         name = os.path.basename(line)
         found.add(name)
         yield name
@@ -250,11 +260,11 @@ def _iter_service_names():
     # definition 'For example a configuration file /etc/init/rc-sysinit.conf
     # is named rc-sysinit, while a configuration file /etc/init/net/apache.conf
     # is named net/apache'
-    init_root = '/etc/init/'
+    init_root = "/etc/init/"
     for root, dirnames, filenames in salt.utils.path.os_walk(init_root):
         relpath = os.path.relpath(root, init_root)
-        for filename in fnmatch.filter(filenames, '*.conf'):
-            if relpath == '.':
+        for filename in fnmatch.filter(filenames, "*.conf"):
+            if relpath == ".":
                 # service is defined in the root, no need to append prefix.
                 name = filename[:-5]
             else:
@@ -266,7 +276,7 @@ def _iter_service_names():
 
 
 def get_enabled():
-    '''
+    """
     Return the enabled services
 
     CLI Example:
@@ -274,7 +284,7 @@ def get_enabled():
     .. code-block:: bash
 
         salt '*' service.get_enabled
-    '''
+    """
     ret = set()
     for name in _iter_service_names():
         if _service_is_upstart(name):
@@ -288,7 +298,7 @@ def get_enabled():
 
 
 def get_disabled():
-    '''
+    """
     Return the disabled services
 
     CLI Example:
@@ -296,7 +306,7 @@ def get_disabled():
     .. code-block:: bash
 
         salt '*' service.get_disabled
-    '''
+    """
     ret = set()
     for name in _iter_service_names():
         if _service_is_upstart(name):
@@ -310,7 +320,7 @@ def get_disabled():
 
 
 def available(name):
-    '''
+    """
     Returns ``True`` if the specified service is available, otherwise returns
     ``False``.
 
@@ -319,12 +329,12 @@ def available(name):
     .. code-block:: bash
 
         salt '*' service.available sshd
-    '''
+    """
     return name in get_all()
 
 
 def missing(name):
-    '''
+    """
     The inverse of service.available.
     Returns ``True`` if the specified service is not available, otherwise returns
     ``False``.
@@ -334,12 +344,12 @@ def missing(name):
     .. code-block:: bash
 
         salt '*' service.missing sshd
-    '''
+    """
     return name not in get_all()
 
 
 def get_all():
-    '''
+    """
     Return all installed services
 
     CLI Example:
@@ -347,12 +357,12 @@ def get_all():
     .. code-block:: bash
 
         salt '*' service.get_all
-    '''
+    """
     return sorted(get_enabled() + get_disabled())
 
 
 def start(name):
-    '''
+    """
     Start the specified service
 
     CLI Example:
@@ -360,13 +370,13 @@ def start(name):
     .. code-block:: bash
 
         salt '*' service.start <service name>
-    '''
-    cmd = ['service', name, 'start']
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    """
+    cmd = ["service", name, "start"]
+    return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
 def stop(name):
-    '''
+    """
     Stop the specified service
 
     CLI Example:
@@ -374,13 +384,13 @@ def stop(name):
     .. code-block:: bash
 
         salt '*' service.stop <service name>
-    '''
-    cmd = ['service', name, 'stop']
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    """
+    cmd = ["service", name, "stop"]
+    return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
 def restart(name):
-    '''
+    """
     Restart the named service
 
     CLI Example:
@@ -388,13 +398,13 @@ def restart(name):
     .. code-block:: bash
 
         salt '*' service.restart <service name>
-    '''
-    cmd = ['service', name, 'restart']
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    """
+    cmd = ["service", name, "restart"]
+    return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
 def full_restart(name):
-    '''
+    """
     Do a full restart (stop/start) of the named service
 
     CLI Example:
@@ -402,13 +412,13 @@ def full_restart(name):
     .. code-block:: bash
 
         salt '*' service.full_restart <service name>
-    '''
-    cmd = ['service', name, '--full-restart']
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    """
+    cmd = ["service", name, "--full-restart"]
+    return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
 def reload_(name):
-    '''
+    """
     Reload the named service
 
     CLI Example:
@@ -416,13 +426,13 @@ def reload_(name):
     .. code-block:: bash
 
         salt '*' service.reload <service name>
-    '''
-    cmd = ['service', name, 'reload']
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    """
+    cmd = ["service", name, "reload"]
+    return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
 def force_reload(name):
-    '''
+    """
     Force-reload the named service
 
     CLI Example:
@@ -430,13 +440,13 @@ def force_reload(name):
     .. code-block:: bash
 
         salt '*' service.force_reload <service name>
-    '''
-    cmd = ['service', name, 'force-reload']
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    """
+    cmd = ["service", name, "force-reload"]
+    return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
 def status(name, sig=None):
-    '''
+    """
     Return the status for a service.
     If the name contains globbing, a dict mapping service name to True/False
     values is returned.
@@ -457,78 +467,79 @@ def status(name, sig=None):
     .. code-block:: bash
 
         salt '*' service.status <service name> [service signature]
-    '''
+    """
     if sig:
-        return bool(__salt__['status.pid'](sig))
+        return bool(__salt__["status.pid"](sig))
 
-    contains_globbing = bool(re.search(r'\*|\?|\[.+\]', name))
+    contains_globbing = bool(re.search(r"\*|\?|\[.+\]", name))
     if contains_globbing:
         services = fnmatch.filter(get_all(), name)
     else:
         services = [name]
     results = {}
     for service in services:
-        cmd = ['service', service, 'status']
+        cmd = ["service", service, "status"]
         if _service_is_upstart(service):
             # decide result base on cmd output, thus ignore retcode,
             # which makes cmd output not at error lvl even when cmd fail.
-            results[service] = 'start/running' in __salt__['cmd.run'](cmd, python_shell=False,
-                                                                      ignore_retcode=True)
+            results[service] = "start/running" in __salt__["cmd.run"](
+                cmd, python_shell=False, ignore_retcode=True
+            )
         else:
             # decide result base on retcode, thus ignore output (set quite)
             # because there is no way to avoid logging at error lvl when
             # service is not running - retcode != 0 (which is totally relevant).
-            results[service] = not bool(__salt__['cmd.retcode'](cmd, python_shell=False,
-                                                                ignore_retcode=True,
-                                                                quite=True))
+            results[service] = not bool(
+                __salt__["cmd.retcode"](
+                    cmd, python_shell=False, ignore_retcode=True, quite=True
+                )
+            )
     if contains_globbing:
         return results
     return results[name]
 
 
 def _get_service_exec():
-    '''
+    """
     Debian uses update-rc.d to manage System-V style services.
     http://www.debian.org/doc/debian-policy/ch-opersys.html#s9.3.3
-    '''
-    executable = 'update-rc.d'
+    """
+    executable = "update-rc.d"
     salt.utils.path.check_or_die(executable)
     return executable
 
 
 def _upstart_disable(name):
-    '''
+    """
     Disable an Upstart service.
-    '''
+    """
     if _upstart_is_disabled(name):
         return _upstart_is_disabled(name)
-    override = '/etc/init/{0}.override'.format(name)
-    with salt.utils.files.fopen(override, 'a') as ofile:
-        ofile.write(salt.utils.stringutils.to_str('manual\n'))
+    override = "/etc/init/{0}.override".format(name)
+    with salt.utils.files.fopen(override, "a") as ofile:
+        ofile.write(salt.utils.stringutils.to_str("manual\n"))
     return _upstart_is_disabled(name)
 
 
 def _upstart_enable(name):
-    '''
+    """
     Enable an Upstart service.
-    '''
+    """
     if _upstart_is_enabled(name):
         return _upstart_is_enabled(name)
-    override = '/etc/init/{0}.override'.format(name)
-    files = ['/etc/init/{0}.conf'.format(name), override]
-    for file_name in itertools.ifilter(os.path.isfile, files):
-        with salt.utils.files.fopen(file_name, 'r+') as fp_:
-            new_text = re.sub(r'^\s*manual\n?',
-                              '',
-                              salt.utils.stringutils.to_unicode(fp_.read()),
-                              0,
-                              re.MULTILINE)
-            fp_.seek(0)
-            fp_.write(
-                salt.utils.stringutils.to_str(
-                    new_text
-                )
+    override = "/etc/init/{0}.override".format(name)
+    files = ["/etc/init/{0}.conf".format(name), override]
+    for file_name in filter(os.path.isfile, files):
+        with salt.utils.files.fopen(file_name, "r+") as fp_:
+            new_text = re.sub(
+                r"^\s*manual\n?",
+                "",
+                salt.utils.stringutils.to_unicode(fp_.read()),
+                0,
+                re.MULTILINE,
             )
+            fp_.seek(0)
+            fp_.write(salt.utils.stringutils.to_str(new_text))
             fp_.truncate()
     if os.access(override, os.R_OK) and os.path.getsize(override) == 0:
         os.unlink(override)
@@ -536,7 +547,7 @@ def _upstart_enable(name):
 
 
 def enable(name, **kwargs):
-    '''
+    """
     Enable the named service to start at boot
 
     CLI Example:
@@ -544,16 +555,16 @@ def enable(name, **kwargs):
     .. code-block:: bash
 
         salt '*' service.enable <service name>
-    '''
+    """
     if _service_is_upstart(name):
         return _upstart_enable(name)
     executable = _get_service_exec()
-    cmd = '{0} -f {1} defaults'.format(executable, name)
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    cmd = "{0} -f {1} defaults".format(executable, name)
+    return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
 def disable(name, **kwargs):
-    '''
+    """
     Disable the named service from starting on boot
 
     CLI Example:
@@ -561,16 +572,16 @@ def disable(name, **kwargs):
     .. code-block:: bash
 
         salt '*' service.disable <service name>
-    '''
+    """
     if _service_is_upstart(name):
         return _upstart_disable(name)
     executable = _get_service_exec()
-    cmd = [executable, '-f', name, 'remove']
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    cmd = [executable, "-f", name, "remove"]
+    return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
 def enabled(name, **kwargs):
-    '''
+    """
     Check to see if the named service is enabled to start on boot
 
     CLI Example:
@@ -578,7 +589,7 @@ def enabled(name, **kwargs):
     .. code-block:: bash
 
         salt '*' service.enabled <service name>
-    '''
+    """
     if _service_is_upstart(name):
         return _upstart_is_enabled(name)
     else:
@@ -588,7 +599,7 @@ def enabled(name, **kwargs):
 
 
 def disabled(name):
-    '''
+    """
     Check to see if the named service is disabled to start on boot
 
     CLI Example:
@@ -596,7 +607,7 @@ def disabled(name):
     .. code-block:: bash
 
         salt '*' service.disabled <service name>
-    '''
+    """
     if _service_is_upstart(name):
         return _upstart_is_disabled(name)
     else:

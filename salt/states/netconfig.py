@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Network Config
 ==============
 
 Manage the configuration on a network device given a specific static config or template.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net> & Jerome Fleury <jf@cloudflare.com>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
@@ -16,22 +16,24 @@ Dependencies
 - :mod:`Network-related basic features execution module <salt.modules.napalm_network>`
 
 .. versionadded:: 2017.7.0
-'''
+"""
 
 # Import Salt libs
 from __future__ import absolute_import, print_function, unicode_literals
-import logging
 
-log = logging.getLogger(__name__)
+import logging
 
 # import Salt libs
 import salt.utils.napalm
+
+log = logging.getLogger(__name__)
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # state properties
 # ----------------------------------------------------------------------------------------------------------------------
 
-__virtualname__ = 'netconfig'
+__virtualname__ = "netconfig"
 
 # ----------------------------------------------------------------------------------------------------------------------
 # global variables
@@ -43,81 +45,89 @@ __virtualname__ = 'netconfig'
 
 
 def __virtual__():
-    '''
+    """
     NAPALM library must be installed for this module to work and run in a (proxy) minion.
-    '''
+    """
     return salt.utils.napalm.virtual(__opts__, __virtualname__, __file__)
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def _update_config(template_name,
-                   template_source=None,
-                   template_hash=None,
-                   template_hash_name=None,
-                   template_user='root',
-                   template_group='root',
-                   template_mode='755',
-                   template_attrs='--------------e----',
-                   saltenv=None,
-                   template_engine='jinja',
-                   skip_verify=False,
-                   defaults=None,
-                   test=False,
-                   commit=True,
-                   debug=False,
-                   replace=False,
-                   **template_vars):
-    '''
+def _update_config(
+    template_name,
+    template_source=None,
+    template_hash=None,
+    template_hash_name=None,
+    template_user="root",
+    template_group="root",
+    template_mode="755",
+    template_attrs="--------------e----",
+    saltenv=None,
+    template_engine="jinja",
+    skip_verify=False,
+    defaults=None,
+    test=False,
+    commit=True,
+    debug=False,
+    replace=False,
+    **template_vars
+):
+    """
     Call the necessary functions in order to execute the state.
     For the moment this only calls the ``net.load_template`` function from the
     :mod:`Network-related basic features execution module <salt.modules.napalm_network>`, but this may change in time.
-    '''
+    """
 
-    return __salt__['net.load_template'](template_name,
-                                         template_source=template_source,
-                                         template_hash=template_hash,
-                                         template_hash_name=template_hash_name,
-                                         template_user=template_user,
-                                         template_group=template_group,
-                                         template_mode=template_mode,
-                                         template_attrs=template_attrs,
-                                         saltenv=saltenv,
-                                         template_engine=template_engine,
-                                         skip_verify=skip_verify,
-                                         defaults=defaults,
-                                         test=test,
-                                         commit=commit,
-                                         debug=debug,
-                                         replace=replace,
-                                         **template_vars)
+    return __salt__["net.load_template"](
+        template_name,
+        template_source=template_source,
+        template_hash=template_hash,
+        template_hash_name=template_hash_name,
+        template_user=template_user,
+        template_group=template_group,
+        template_mode=template_mode,
+        template_attrs=template_attrs,
+        saltenv=saltenv,
+        template_engine=template_engine,
+        skip_verify=skip_verify,
+        defaults=defaults,
+        test=test,
+        commit=commit,
+        debug=debug,
+        replace=replace,
+        **template_vars
+    )
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # callable functions
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def replace_pattern(name,
-                    pattern,
-                    repl,
-                    count=0,
-                    flags=8,
-                    bufsize=1,
-                    append_if_not_found=False,
-                    prepend_if_not_found=False,
-                    not_found_content=None,
-                    search_only=False,
-                    show_changes=True,
-                    backslash_literal=False,
-                    source='running',
-                    path=None,
-                    test=False,
-                    replace=True,
-                    debug=False,
-                    commit=True):
-    '''
+def replace_pattern(
+    name,
+    pattern,
+    repl,
+    count=0,
+    flags=8,
+    bufsize=1,
+    append_if_not_found=False,
+    prepend_if_not_found=False,
+    not_found_content=None,
+    search_only=False,
+    show_changes=True,
+    backslash_literal=False,
+    source="running",
+    path=None,
+    test=False,
+    replace=True,
+    debug=False,
+    commit=True,
+):
+    """
     .. versionadded:: 2019.2.0
 
     Replace occurrences of a pattern in the configuration source. If
@@ -216,60 +226,64 @@ def replace_pattern(name,
             - pattern: OLD-POLICY-NAME
             - repl: new-policy-name
             - debug: true
-    '''
+    """
     ret = salt.utils.napalm.default_ret(name)
     # the user can override the flags the equivalent CLI args
     # which have higher precedence
-    test = __salt__['config.merge']('test', test)
-    debug = __salt__['config.merge']('debug', debug)
-    commit = __salt__['config.merge']('commit', commit)
-    replace = __salt__['config.merge']('replace', replace)  # this might be a bit risky
-    replace_ret = __salt__['net.replace_pattern'](pattern,
-                                                  repl,
-                                                  count=count,
-                                                  flags=flags,
-                                                  bufsize=bufsize,
-                                                  append_if_not_found=append_if_not_found,
-                                                  prepend_if_not_found=prepend_if_not_found,
-                                                  not_found_content=not_found_content,
-                                                  search_only=search_only,
-                                                  show_changes=show_changes,
-                                                  backslash_literal=backslash_literal,
-                                                  source=source,
-                                                  path=path,
-                                                  test=test,
-                                                  replace=replace,
-                                                  debug=debug,
-                                                  commit=commit)
+    test = __salt__["config.merge"]("test", test)
+    debug = __salt__["config.merge"]("debug", debug)
+    commit = __salt__["config.merge"]("commit", commit)
+    replace = __salt__["config.merge"]("replace", replace)  # this might be a bit risky
+    replace_ret = __salt__["net.replace_pattern"](
+        pattern,
+        repl,
+        count=count,
+        flags=flags,
+        bufsize=bufsize,
+        append_if_not_found=append_if_not_found,
+        prepend_if_not_found=prepend_if_not_found,
+        not_found_content=not_found_content,
+        search_only=search_only,
+        show_changes=show_changes,
+        backslash_literal=backslash_literal,
+        source=source,
+        path=path,
+        test=test,
+        replace=replace,
+        debug=debug,
+        commit=commit,
+    )
     return salt.utils.napalm.loaded_ret(ret, replace_ret, test, debug)
 
 
-def saved(name,
-          source='running',
-          user=None,
-          group=None,
-          mode=None,
-          attrs=None,
-          makedirs=False,
-          dir_mode=None,
-          replace=True,
-          backup='',
-          show_changes=True,
-          create=True,
-          tmp_dir='',
-          tmp_ext='',
-          encoding=None,
-          encoding_errors='strict',
-          allow_empty=False,
-          follow_symlinks=True,
-          check_cmd=None,
-          win_owner=None,
-          win_perms=None,
-          win_deny_perms=None,
-          win_inheritance=True,
-          win_perms_reset=False,
-          **kwargs):
-    '''
+def saved(
+    name,
+    source="running",
+    user=None,
+    group=None,
+    mode=None,
+    attrs=None,
+    makedirs=False,
+    dir_mode=None,
+    replace=True,
+    backup="",
+    show_changes=True,
+    create=True,
+    tmp_dir="",
+    tmp_ext="",
+    encoding=None,
+    encoding_errors="strict",
+    allow_empty=False,
+    follow_symlinks=True,
+    check_cmd=None,
+    win_owner=None,
+    win_perms=None,
+    win_deny_perms=None,
+    win_inheritance=True,
+    win_perms_reset=False,
+    **kwargs
+):
+    """
     .. versionadded:: 2019.2.0
 
     Save the configuration to a file on the local file system.
@@ -415,62 +429,61 @@ def saved(name,
     on the 3rd of August 2018, at 5:15PM, on the Minion ``core1.lon01``, the
     configuration would saved in the file:
     ``/var/backups/core01.lon01/1533316558.cfg``
-    '''
-    ret = __salt__['net.config'](source=source)
-    if not ret['result']:
-        return {
-            'name': name,
-            'changes': {},
-            'result': False,
-            'comment': ret['comment']
-        }
-    return __states__['file.managed'](name,
-                                      user=user,
-                                      group=group,
-                                      mode=mode,
-                                      attrs=attrs,
-                                      makedirs=makedirs,
-                                      dir_mode=dir_mode,
-                                      replace=replace,
-                                      backup=backup,
-                                      show_changes=show_changes,
-                                      create=create,
-                                      contents=ret['out'][source],
-                                      tmp_dir=tmp_dir,
-                                      tmp_ext=tmp_ext,
-                                      encoding=encoding,
-                                      encoding_errors=encoding_errors,
-                                      allow_empty=allow_empty,
-                                      follow_symlinks=follow_symlinks,
-                                      check_cmd=check_cmd,
-                                      win_owner=win_owner,
-                                      win_perms=win_perms,
-                                      win_deny_perms=win_deny_perms,
-                                      win_inheritance=win_inheritance,
-                                      win_perms_reset=win_perms_reset,
-                                      **kwargs)
+    """
+    ret = __salt__["net.config"](source=source)
+    if not ret["result"]:
+        return {"name": name, "changes": {}, "result": False, "comment": ret["comment"]}
+    return __states__["file.managed"](
+        name,
+        user=user,
+        group=group,
+        mode=mode,
+        attrs=attrs,
+        makedirs=makedirs,
+        dir_mode=dir_mode,
+        replace=replace,
+        backup=backup,
+        show_changes=show_changes,
+        create=create,
+        contents=ret["out"][source],
+        tmp_dir=tmp_dir,
+        tmp_ext=tmp_ext,
+        encoding=encoding,
+        encoding_errors=encoding_errors,
+        allow_empty=allow_empty,
+        follow_symlinks=follow_symlinks,
+        check_cmd=check_cmd,
+        win_owner=win_owner,
+        win_perms=win_perms,
+        win_deny_perms=win_deny_perms,
+        win_inheritance=win_inheritance,
+        win_perms_reset=win_perms_reset,
+        **kwargs
+    )
 
 
-def managed(name,
-            template_name=None,
-            template_source=None,
-            template_hash=None,
-            template_hash_name=None,
-            saltenv='base',
-            template_engine='jinja',
-            skip_verify=False,
-            context=None,
-            defaults=None,
-            test=False,
-            commit=True,
-            debug=False,
-            replace=False,
-            commit_in=None,
-            commit_at=None,
-            revert_in=None,
-            revert_at=None,
-            **template_vars):
-    '''
+def managed(
+    name,
+    template_name=None,
+    template_source=None,
+    template_hash=None,
+    template_hash_name=None,
+    saltenv="base",
+    template_engine="jinja",
+    skip_verify=False,
+    context=None,
+    defaults=None,
+    test=False,
+    commit=True,
+    debug=False,
+    replace=False,
+    commit_in=None,
+    commit_at=None,
+    revert_in=None,
+    revert_at=None,
+    **template_vars
+):
+    """
     Manages the configuration on network devices.
 
     By default this state will commit the changes on the device. If there are no changes required, it does not commit
@@ -811,45 +824,47 @@ def managed(name,
                 }
             }
         }
-    '''
+    """
     ret = salt.utils.napalm.default_ret(name)
 
     # the user can override the flags the equivalent CLI args
     # which have higher precedence
-    test = __salt__['config.merge']('test', test)
-    debug = __salt__['config.merge']('debug', debug)
-    commit = __salt__['config.merge']('commit', commit)
-    replace = __salt__['config.merge']('replace', replace)  # this might be a bit risky
-    skip_verify = __salt__['config.merge']('skip_verify', skip_verify)
-    commit_in = __salt__['config.merge']('commit_in', commit_in)
-    commit_at = __salt__['config.merge']('commit_at', commit_at)
-    revert_in = __salt__['config.merge']('revert_in', revert_in)
-    revert_at = __salt__['config.merge']('revert_at', revert_at)
+    test = __salt__["config.merge"]("test", test)
+    debug = __salt__["config.merge"]("debug", debug)
+    commit = __salt__["config.merge"]("commit", commit)
+    replace = __salt__["config.merge"]("replace", replace)  # this might be a bit risky
+    skip_verify = __salt__["config.merge"]("skip_verify", skip_verify)
+    commit_in = __salt__["config.merge"]("commit_in", commit_in)
+    commit_at = __salt__["config.merge"]("commit_at", commit_at)
+    revert_in = __salt__["config.merge"]("revert_in", revert_in)
+    revert_at = __salt__["config.merge"]("revert_at", revert_at)
 
-    config_update_ret = _update_config(template_name=template_name,
-                                       template_source=template_source,
-                                       template_hash=template_hash,
-                                       template_hash_name=template_hash_name,
-                                       saltenv=saltenv,
-                                       template_engine=template_engine,
-                                       skip_verify=skip_verify,
-                                       context=context,
-                                       defaults=defaults,
-                                       test=test,
-                                       commit=commit,
-                                       commit_in=commit_in,
-                                       commit_at=commit_at,
-                                       revert_in=revert_in,
-                                       revert_at=revert_at,
-                                       debug=debug,
-                                       replace=replace,
-                                       **template_vars)
+    config_update_ret = _update_config(
+        template_name=template_name,
+        template_source=template_source,
+        template_hash=template_hash,
+        template_hash_name=template_hash_name,
+        saltenv=saltenv,
+        template_engine=template_engine,
+        skip_verify=skip_verify,
+        context=context,
+        defaults=defaults,
+        test=test,
+        commit=commit,
+        commit_in=commit_in,
+        commit_at=commit_at,
+        revert_in=revert_in,
+        revert_at=revert_at,
+        debug=debug,
+        replace=replace,
+        **template_vars
+    )
 
     return salt.utils.napalm.loaded_ret(ret, config_update_ret, test, debug)
 
 
 def commit_cancelled(name):
-    '''
+    """
     .. versionadded:: 2019.2.0
 
     Cancel a commit scheduled to be executed via the ``commit_in`` and
@@ -865,23 +880,18 @@ def commit_cancelled(name):
 
         '20180726083540640360':
           netconfig.commit_cancelled
-    '''
-    cancelled = {
-        'name': name,
-        'result': None,
-        'changes': {},
-        'comment': ''
-    }
-    if __opts__['test']:
-        cancelled['comment'] = 'It would cancel commit #{}'.format(name)
+    """
+    cancelled = {"name": name, "result": None, "changes": {}, "comment": ""}
+    if __opts__["test"]:
+        cancelled["comment"] = "It would cancel commit #{}".format(name)
         return cancelled
-    ret = __salt__['net.cancel_commit'](name)
+    ret = __salt__["net.cancel_commit"](name)
     cancelled.update(ret)
     return cancelled
 
 
 def commit_confirmed(name):
-    '''
+    """
     .. versionadded:: 2019.2.0
 
     Confirm a commit scheduled to be reverted via the ``revert_in`` and
@@ -897,16 +907,11 @@ def commit_confirmed(name):
 
         '20180726083540640360':
           netconfig.commit_confirmed
-    '''
-    confirmed = {
-        'name': name,
-        'result': None,
-        'changes': {},
-        'comment': ''
-    }
-    if __opts__['test']:
-        confirmed['comment'] = 'It would confirm commit #{}'.format(name)
+    """
+    confirmed = {"name": name, "result": None, "changes": {}, "comment": ""}
+    if __opts__["test"]:
+        confirmed["comment"] = "It would confirm commit #{}".format(name)
         return confirmed
-    ret = __salt__['net.confirm_commit'](name)
+    ret = __salt__["net.confirm_commit"](name)
     confirmed.update(ret)
     return confirmed
