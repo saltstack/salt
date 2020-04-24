@@ -131,7 +131,7 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
         output = process.communicate()[0]
         log.debug("Output from %s:\n%s", " ".join(cmd), output)
 
-        if process.returncode != 0 and "No such image" not in output:
+        if process.returncode != 0 and "No such image" not in str(output):
             raise Exception("Failed to destroy image")
 
     def run_state(self, function, **kwargs):
