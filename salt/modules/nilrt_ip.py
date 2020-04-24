@@ -52,6 +52,7 @@ __virtualname__ = "ip"
 
 SERVICE_PATH = "/net/connman/service/"
 INTERFACES_CONFIG = "/var/lib/connman/interfaces.config"
+CONNMAN_MAIN_CONFIG = "/etc/connman/main.conf"
 NIRTCFG_PATH = "/usr/local/natinst/bin/nirtcfg"
 INI_FILE = "/etc/natinst/share/ni-rt.ini"
 _CONFIG_TRUE = ["yes", "on", "true", "1", True]
@@ -152,8 +153,7 @@ def _space_delimited_list(value):
 
     if valid:
         return True, "space-delimited string"
-    else:
-        return False, "{0} is not a valid list.\n".format(value)
+    return False, "{0} is not a valid list.\n".format(value)
 
 
 def _validate_ipv4(value):
@@ -232,9 +232,9 @@ def _get_service_info(service):
         data["ipv4"]["dns"] = nameservers
     else:
         data["up"] = False
+        data["ipv4"] = {"requestmode": "disabled"}
 
-    if "ipv4" in data:
-        data["ipv4"]["supportedrequestmodes"] = ["static", "dhcp_linklocal"]
+    data["ipv4"]["supportedrequestmodes"] = ["dhcp_linklocal", "disabled", "static"]
     return data
 
 
@@ -378,22 +378,32 @@ def _get_static_info(interface):
         "hwaddr": interface.hwaddr[:-1],
         "up": False,
         "ipv4": {
-            "supportedrequestmodes": ["static", "dhcp_linklocal"],
-            "requestmode": "static",
+            "supportedrequestmodes": ["dhcp_linklocal", "disabled", "static"],
+            "requestmode": "dhcp_linklocal",
         },
         "wireless": False,
     }
     hwaddr_section_number = "".join(data["hwaddr"].split(":"))
     if os.path.exists(INTERFACES_CONFIG):
         information = _load_config(
-            hwaddr_section_number, ["IPv4", "Nameservers"], filename=INTERFACES_CONFIG
+            "service_" + hwaddr_section_number,
+            ["IPv4", "Nameservers", "IPv4.method"],
+            filename=INTERFACES_CONFIG,
         )
-        if information["IPv4"] != "":
+        if information["IPv4.method"] == "manual" and information["IPv4"] != "":
             ipv4_information = information["IPv4"].split("/")
             data["ipv4"]["address"] = ipv4_information[0]
             data["ipv4"]["dns"] = information["Nameservers"].split(",")
             data["ipv4"]["netmask"] = ipv4_information[1]
             data["ipv4"]["gateway"] = ipv4_information[2]
+            data["ipv4"]["requestmode"] = "static"
+        else:
+            information = _load_config(
+                "General", ["NetworkInterfaceBlacklist"], filename=CONNMAN_MAIN_CONFIG
+            )
+            if data["label"] in information["NetworkInterfaceBlacklist"]:
+                data["ipv4"]["requestmode"] = "disabled"
+
     return data
 
 
@@ -545,6 +555,124 @@ def get_interfaces_details():
     return {"interfaces": list(map(_get_info, _interfaces))}
 
 
+def _change_state_legacy(interface, new_state):
+    """
+    Enable or disable an interface on a legacy distro
+
+    Change adapter mode to TCP/IP. If previous adapter mode was EtherCAT, the target will need reboot.
+
+    :param interface: interface label
+    :param new_state: up or down
+    :return: True if the service was enabled, otherwise an exception will be thrown.
+    :rtype: bool
+    """
+    initial_mode = _get_adapter_mode_info(interface)
+    _save_config(interface, "Mode", "TCPIP" if new_state == "up" else "Disabled")
+    if initial_mode == "ethercat":
+        __salt__["system.set_reboot_required_witnessed"]()
+    else:
+        out = __salt__["cmd.run_all"](
+            "ip link set {0} {1}".format(interface, new_state)
+        )
+        if out["retcode"] != 0:
+            msg = "Couldn't {0} interface {1}. Error: {2}".format(
+                "enable" if new_state == "up" else "disable", interface, out["stderr"]
+            )
+            raise salt.exceptions.CommandExecutionError(msg)
+    return True
+
+
+def _remove_interface_section(interface):
+    """
+    Remove interface section from connman config file
+    """
+    parser = configparser.ConfigParser()
+    parser.optionxform = str
+    if os.path.exists(INTERFACES_CONFIG):
+        try:
+            with salt.utils.files.fopen(INTERFACES_CONFIG, "r") as config_file:
+                parser.readfp(config_file)
+        except configparser.MissingSectionHeaderError:
+            pass
+    interface = pyiface.Interface(name=interface)
+    hwaddr = interface.hwaddr[:-1]
+    hwaddr_section_number = "".join(hwaddr.split(":"))
+    if parser.has_section("service_{0}".format(hwaddr_section_number)):
+        parser.remove_section("service_{0}".format(hwaddr_section_number))
+    with salt.utils.files.fopen(INTERFACES_CONFIG, "w") as config_file:
+        parser.write(config_file)
+    return True
+
+
+def _change_connman_backlist(interface, add=True):
+    """
+    Remove or add an interface to connman blacklist
+
+    :param interface: interface label
+    :param add: True to add interface to blacklist, False otherwise. Default is True.
+    """
+    parser = configparser.ConfigParser()
+    parser.optionxform = str
+    if os.path.exists(CONNMAN_MAIN_CONFIG):
+        try:
+            with salt.utils.files.fopen(CONNMAN_MAIN_CONFIG, "r") as config_file:
+                parser.readfp(config_file)
+        except configparser.MissingSectionHeaderError:
+            pass
+    if not parser.has_section("General"):
+        parser.add_section("General")
+        parser.set("General", "AlwaysConnectedTechnologies", "wifi,ehternet,bluetooth")
+    if parser.has_option("General", "NetworkInterfaceBlacklist"):
+        blacklist = parser.get("General", "NetworkInterfaceBlacklist")
+        blacklist = [] if blacklist == "" else blacklist.split(",")
+        if add:
+            blacklist.append(interface)
+        else:
+            blacklist.remove(interface)
+        blacklist = ",".join(blacklist)
+    else:
+        blacklist = interface if add else ""
+    parser.set("General", "NetworkInterfaceBlacklist", blacklist)
+    with salt.utils.files.fopen(CONNMAN_MAIN_CONFIG, "w") as config_file:
+        parser.write(config_file)
+    if add:
+        return _remove_interface_section(interface)
+    return _enable_dhcp(interface)
+
+
+def _enable_dhcp(interface):
+    """
+    Enable dhcp for an interface which isn't a service
+
+    :param interface: interface label
+    """
+    parser = configparser.ConfigParser()
+    parser.optionxform = str
+    if os.path.exists(INTERFACES_CONFIG):
+        try:
+            with salt.utils.files.fopen(INTERFACES_CONFIG, "r") as config_file:
+                parser.readfp(config_file)
+        except configparser.MissingSectionHeaderError:
+            pass
+    interface = pyiface.Interface(name=interface)
+    hwaddr = interface.hwaddr[:-1]
+    hwaddr_section_number = "".join(hwaddr.split(":"))
+    if parser.has_section("service_{0}".format(hwaddr_section_number)):
+        parser.remove_section("service_{0}".format(hwaddr_section_number))
+    parser.add_section("service_{0}".format(hwaddr_section_number))
+    parser.set("service_{0}".format(hwaddr_section_number), "MAC", hwaddr)
+    parser.set(
+        "service_{0}".format(hwaddr_section_number),
+        "Name",
+        "ethernet_cable_{0}".format(hwaddr_section_number),
+    )
+    parser.set("service_{0}".format(hwaddr_section_number), "IPv4.method", "dhcp")
+    parser.set("service_{0}".format(hwaddr_section_number), "AutoConnect", "true")
+    with salt.utils.files.fopen(INTERFACES_CONFIG, "w") as config_file:
+        parser.write(config_file)
+    return True
+
+
 def _change_state(interface, new_state):
     """
     Enable or disable an interface
@@ -557,24 +685,16 @@ def _change_state(interface, new_state):
     :rtype: bool
     """
     if __grains__["lsb_distrib_id"] == "nilrt":
-        initial_mode = _get_adapter_mode_info(interface)
-        _save_config(interface, "Mode", "TCPIP" if new_state == "up" else "Disabled")
-        if initial_mode == "ethercat":
-            __salt__["system.set_reboot_required_witnessed"]()
-        else:
-            out = __salt__["cmd.run_all"](
-                "ip link set {0} {1}".format(interface, new_state)
-            )
-            if out["retcode"] != 0:
-                msg = "Couldn't {0} interface {1}. Error: {2}".format(
-                    "enable" if new_state == "up" else "disable",
-                    interface,
-                    out["stderr"],
-                )
-                raise salt.exceptions.CommandExecutionError(msg)
-        return True
+        return _change_state_legacy(interface, new_state)
     service = _interface_to_service(interface)
     if not service:
+        if interface in map(lambda x: x.name, pyiface.getIfaces()):
+            ret = _change_connman_backlist(interface, add=new_state == "down")
+            return (
+                ret
+                and __salt__["cmd.run_all"]("/etc/init.d/connman restart")["retcode"]
+                == 0
+            )
         raise salt.exceptions.CommandExecutionError(
             "Invalid interface name: {0}".format(interface)
         )
@@ -583,8 +703,9 @@ def _change_state(interface, new_state):
         service = pyconnman.ConnService(os.path.join(SERVICE_PATH, service))
         try:
             state = service.connect() if new_state == "up" else service.disconnect()
+            _change_connman_backlist(interface, add=new_state == "down")
             return state is None
-        except Exception:  # pylint: disable=broad-except
+        except Exception:
             raise salt.exceptions.CommandExecutionError(
                 "Couldn't {0} service: {1}\n".format(
                     "enable" if new_state == "up" else "disable", service
@@ -741,6 +862,8 @@ def set_dhcp_linklocal_all(interface):
         return True
     service = _interface_to_service(interface)
     if not service:
+        if interface in map(lambda x: x.name, pyiface.getIfaces()):
+            return _enable_dhcp(interface)
         raise salt.exceptions.CommandExecutionError(
             "Invalid interface name: {0}".format(interface)
         )
@@ -755,7 +878,7 @@ def set_dhcp_linklocal_all(interface):
         service.set_property(
             "Nameservers.Configuration", [""]
         )  # reset nameservers list
-    except Exception as exc:  # pylint: disable=broad-except
+    except Exception as exc:
         exc_msg = "Couldn't set dhcp linklocal for service: {0}\nError: {1}\n".format(
             service, exc
         )
@@ -837,6 +960,7 @@ def _configure_static_interface(interface, **settings):
     """
     interface = pyiface.Interface(name=interface)
     parser = configparser.ConfigParser()
+    parser.optionxform = str
     if os.path.exists(INTERFACES_CONFIG):
         try:
             with salt.utils.files.fopen(INTERFACES_CONFIG, "r") as config_file:
@@ -845,30 +969,30 @@ def _configure_static_interface(interface, **settings):
             pass
     hwaddr = interface.hwaddr[:-1]
     hwaddr_section_number = "".join(hwaddr.split(":"))
-    if not parser.has_section("interface_{0}".format(hwaddr_section_number)):
-        parser.add_section("interface_{0}".format(hwaddr_section_number))
+    if parser.has_section("service_{0}".format(hwaddr_section_number)):
+        parser.remove_section("service_{0}".format(hwaddr_section_number))
+    parser.add_section("service_{0}".format(hwaddr_section_number))
     ip_address = settings.get("ip", "0.0.0.0")
     netmask = settings.get("netmask", "0.0.0.0")
     gateway = settings.get("gateway", "0.0.0.0")
     dns_servers = settings.get("dns", "")
     name = settings.get("name", "ethernet_cable_{0}".format(hwaddr_section_number))
     parser.set(
-        "interface_{0}".format(hwaddr_section_number),
+        "service_{0}".format(hwaddr_section_number),
         "IPv4",
         "{0}/{1}/{2}".format(ip_address, netmask, gateway),
     )
-    parser.set(
-        "interface_{0}".format(hwaddr_section_number), "Nameservers", dns_servers
-    )
-    parser.set("interface_{0}".format(hwaddr_section_number), "Name", name)
-    parser.set("interface_{0}".format(hwaddr_section_number), "MAC", hwaddr)
-    parser.set("interface_{0}".format(hwaddr_section_number), "Type", "ethernet")
+    parser.set("service_{0}".format(hwaddr_section_number), "Nameservers", dns_servers)
+    parser.set("service_{0}".format(hwaddr_section_number), "Name", name)
+    parser.set("service_{0}".format(hwaddr_section_number), "MAC", hwaddr)
+    parser.set("service_{0}".format(hwaddr_section_number), "Type", "ethernet")
+    parser.set("service_{0}".format(hwaddr_section_number), "IPv4.method", "manual")
     with salt.utils.files.fopen(INTERFACES_CONFIG, "w") as config_file:
         parser.write(config_file)
     return True
 
 
-def set_static_all(interface, address, netmask, gateway, nameservers):
+def set_static_all(interface, address, netmask, gateway, nameservers=None):
     """
     Configure specified adapter to use ipv4 manual settings
 
@@ -878,7 +1002,7 @@ def set_static_all(interface, address, netmask, gateway, nameservers):
     :param str address: ipv4 address
     :param str netmask: ipv4 netmask
     :param str gateway: ipv4 gateway
-    :param str nameservers: list of nameservers servers separated by spaces
+    :param str nameservers: list of nameservers servers separated by spaces (Optional)
     :return: True if the settings were applied, otherwise an exception will be thrown.
     :rtype: bool
 
@@ -891,11 +1015,12 @@ def set_static_all(interface, address, netmask, gateway, nameservers):
     validate, msg = _validate_ipv4([address, netmask, gateway])
     if not validate:
         raise salt.exceptions.CommandExecutionError(msg)
-    validate, msg = _space_delimited_list(nameservers)
-    if not validate:
-        raise salt.exceptions.CommandExecutionError(msg)
-    if not isinstance(nameservers, list):
-        nameservers = nameservers.split(" ")
+    if nameservers:
+        validate, msg = _space_delimited_list(nameservers)
+        if not validate:
+            raise salt.exceptions.CommandExecutionError(msg)
+        if not isinstance(nameservers, list):
+            nameservers = nameservers.split(" ")
     if __grains__["lsb_distrib_id"] == "nilrt":
         initial_mode = _get_adapter_mode_info(interface)
         _save_config(interface, "Mode", "TCPIP")
@@ -911,39 +1036,27 @@ def set_static_all(interface, address, netmask, gateway, nameservers):
         else:
             _restart(interface)
         return True
-    service = _interface_to_service(interface)
-    if not service:
-        if interface in pyiface.getIfaces():
-            return _configure_static_interface(
-                interface,
-                **{
-                    "ip": address,
-                    "dns": ",".join(nameservers),
-                    "netmask": netmask,
-                    "gateway": gateway,
-                }
+    if interface in map(lambda x: x.name, pyiface.getIfaces()):
+        ret_value = _configure_static_interface(
+            interface,
+            **{
+                "ip": address,
+                "dns": ",".join(nameservers) if nameservers else "",
+                "netmask": netmask,
+                "gateway": gateway,
+            }
+        )
+        service = _interface_to_service(interface)
+        if service:
+            ret_value = (
+                ret_value
+                and __salt__["cmd.run_all"]("/etc/init.d/connman restart")["retcode"]
+                == 0
             )
-        raise salt.exceptions.CommandExecutionError(
-            "Invalid interface name: {0}".format(interface)
-        )
-    service = pyconnman.ConnService(os.path.join(SERVICE_PATH, service))
-    ipv4 = service.get_property("IPv4.Configuration")
-    ipv4["Method"] = dbus.String("manual", variant_level=1)
-    ipv4["Address"] = dbus.String("{0}".format(address), variant_level=1)
-    ipv4["Netmask"] = dbus.String("{0}".format(netmask), variant_level=1)
-    ipv4["Gateway"] = dbus.String("{0}".format(gateway), variant_level=1)
-    try:
-        service.set_property("IPv4.Configuration", ipv4)
-        service.set_property(
-            "Nameservers.Configuration",
-            [dbus.String("{0}".format(d)) for d in nameservers],
-        )
-    except Exception as exc:  # pylint: disable=broad-except
-        exc_msg = "Couldn't set manual settings for service: {0}\nError: {1}\n".format(
-            service, exc
-        )
-        raise salt.exceptions.CommandExecutionError(exc_msg)
-    return True
+        return ret_value
+    raise salt.exceptions.CommandExecutionError(
+        "Invalid interface name: {0}".format(interface)
+    )
 
 
 def get_interface(iface):
