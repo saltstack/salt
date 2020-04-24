@@ -341,13 +341,11 @@ def query(
     else:
         default_url = "https://api-marketplace.scaleway.com"
 
+    vm_ = get_configured_provider()
+
     base_path = six.text_type(
         config.get_cloud_config_value(
-            root,
-            get_configured_provider(),
-            __opts__,
-            search_global=False,
-            default=default_url,
+            root, vm_, __opts__, search_global=False, default=default_url,
         )
     )
 
@@ -362,9 +360,7 @@ def query(
     if not isinstance(args, dict):
         args = {}
 
-    token = config.get_cloud_config_value(
-        "token", get_configured_provider(), __opts__, search_global=False
-    )
+    token = config.get_cloud_config_value("token", vm_, __opts__, search_global=False)
 
     data = salt.utils.json.dumps(args)
 
