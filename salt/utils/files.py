@@ -5,7 +5,6 @@ Functions for working with files
 
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import codecs
 import contextlib
 import errno
@@ -18,18 +17,13 @@ import subprocess
 import tempfile
 import time
 
-import salt.modules.selinux
-
-# Import Salt libs
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, FileLockError, MinionError
-
-# Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range
-from salt.ext.six.moves.urllib.parse import quote  # pylint: disable=no-name-in-module
+from salt.ext.six.moves.urllib.parse import quote
 from salt.utils.decorators.jinja import jinja_filter
 
 try:
@@ -134,6 +128,9 @@ def copyfile(source, dest, backup_mode="", cachedir=""):
     Copy files from a source to a destination in an atomic way, and if
     specified cache the file.
     """
+    # Late import
+    import salt.modules.selinux
+
     if not os.path.isfile(source):
         raise IOError("[Errno 2] No such file or directory: {0}".format(source))
     if not os.path.isdir(os.path.dirname(dest)):
