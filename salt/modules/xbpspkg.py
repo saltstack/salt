@@ -37,7 +37,7 @@ def __virtual__():
     """
     if __grains__["os"] in ("Void") and _check_xbps():
         return __virtualname__
-    return False
+    return (False, "Missing dependency: xbps-install")
 
 
 @decorators.memoize

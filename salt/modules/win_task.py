@@ -19,6 +19,7 @@ from datetime import datetime
 # Import Salt libs
 import salt.utils.platform
 import salt.utils.winapi
+from salt.exceptions import ArgumentValueError, CommandExecutionError
 from salt.ext.six.moves import range
 
 # Import 3rd Party Libraries
@@ -238,7 +239,7 @@ def _get_date_value(date):
 
 def _reverse_lookup(dictionary, value):
     """
-    Lookup the key in a dictionary by it's value. Will return the first match.
+    Lookup the key in a dictionary by its value. Will return the first match.
 
     :param dict dictionary: The dictionary to search
 
@@ -624,6 +625,11 @@ def create_task_from_xml(
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
+        str: A string with the error message if there is an error
+
+    Raises:
+        ArgumentValueError: If arguments are invalid
+        CommandExecutionError
 
     CLI Example:
 
@@ -637,7 +643,7 @@ def create_task_from_xml(
         return "{0} already exists".format(name)
 
     if not xml_text and not xml_path:
-        return "Must specify either xml_text or xml_path"
+        raise ArgumentValueError("Must specify either xml_text or xml_path")
 
     # Create the task service object
     with salt.utils.winapi.Com():
@@ -665,6 +671,7 @@ def create_task_from_xml(
                 logon_type = TASK_LOGON_INTERACTIVE_TOKEN
     else:
         password = None
+        logon_type = TASK_LOGON_NONE
 
     # Save the task
     try:
@@ -674,17 +681,43 @@ def create_task_from_xml(
 
     except pythoncom.com_error as error:
         hr, msg, exc, arg = error.args  # pylint: disable=W0633
+        error_code = hex(exc[5] + 2 ** 32)
         fc = {
-            -2147216615: "Required element or attribute missing",
-            -2147216616: "Value incorrectly formatted or out of range",
-            -2147352571: "Access denied",
+            0x80041319: "Required element or attribute missing",
+            0x80041318: "Value incorrectly formatted or out of range",
+            0x80020005: "Access denied",
+            0x80041309: "A task's trigger is not found",
+            0x8004130A: "One or more of the properties required to run this "
+            "task have not been set",
+            0x8004130C: "The Task Scheduler service is not installed on this "
+            "computer",
+            0x8004130D: "The task object could not be opened",
+            0x8004130E: "The object is either an invalid task object or is not "
+            "a task object",
+            0x8004130F: "No account information could be found in the Task "
+            "Scheduler security database for the task indicated",
+            0x80041310: "Unable to establish existence of the account specified",
+            0x80041311: "Corruption was detected in the Task Scheduler "
+            "security database; the database has been reset",
+            0x80041313: "The task object version is either unsupported or invalid",
+            0x80041314: "The task has been configured with an unsupported "
+            "combination of account settings and run time options",
+            0x80041315: "The Task Scheduler Service is not running",
+            0x80041316: "The task XML contains an unexpected node",
+            0x80041317: "The task XML contains an element or attribute from an "
+            "unexpected namespace",
+            0x8004131A: "The task XML is malformed",
+            0x0004131C: "The task is registered, but may fail to start. Batch "
+            "logon privilege needs to be enabled for the task principal",
+            0x8004131D: "The task XML contains too many nodes of the same type",
         }
         try:
-            failure_code = fc[exc[5]]
+            failure_code = fc[error_code]
         except KeyError:
-            failure_code = "Unknown Failure: {0}".format(error)
-
-        log.debug("Failed to create task: %s", failure_code)
+            failure_code = "Unknown Failure: {0}".format(error_code)
+        finally:
+            log.debug("Failed to create task: %s", failure_code)
+        raise CommandExecutionError(failure_code)
 
     # Verify creation
     return name in list_tasks(location)

@@ -116,7 +116,9 @@ def __virtual__():
     """
     Only load if the snapper module is available in __salt__
     """
-    return "snapper" if "snapper.diff" in __salt__ else False
+    if "snapper.diff" in __salt__:
+        return "snapper"
+    return (False, "snapper module could not be loaded")
 
 
 def _get_baseline_from_tag(config, tag):

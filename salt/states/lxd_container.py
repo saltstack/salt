@@ -6,7 +6,7 @@ Manage LXD containers.
 
 .. note:
 
-    - `pylxd`_ version 2 is required to let this work,
+    - :ref:`pylxd` version 2 is required to let this work,
       currently only available via pip.
 
         To install on Ubuntu:
@@ -20,7 +20,7 @@ Manage LXD containers.
     - for the config_get() and config_get() methods
       you need to have lxd-client installed.
 
-.. _: https://github.com/lxc/pylxd/blob/master/doc/source/installation.rst
+.. _pylxd: https://github.com/lxc/pylxd/blob/master/doc/source/installation.rst
 
 :maintainer: René Jochum <rene@jochums.at>
 :maturity: new
@@ -51,7 +51,9 @@ def __virtual__():
     """
     Only load if the lxd module is available in __salt__
     """
-    return __virtualname__ if "lxd.version" in __salt__ else False
+    if "lxd.version" in __salt__:
+        return __virtualname__
+    return (False, "lxd module could not be loaded")
 
 
 def present(
@@ -83,26 +85,48 @@ def present(
 
     source : None
         Can be either a string containing an image alias:
+
+        .. code-block:: none
+
              "xenial/amd64"
+
         or an dict with type "image" with alias:
+
+        .. code-block:: python
+
             {"type": "image",
              "alias": "xenial/amd64"}
+
         or image with "fingerprint":
+
+        .. code-block:: python
+
             {"type": "image",
              "fingerprint": "SHA-256"}
+
         or image with "properties":
+
+        .. code-block:: python
+
             {"type": "image",
              "properties": {
                 "os": "ubuntu",
                 "release": "14.04",
                 "architecture": "x86_64"
              }}
+
         or none:
+
+        .. code-block:: python
+
             {"type": "none"}
+
         or copy:
+
+        .. code-block:: python
+
             {"type": "copy",
              "source": "my-old-container"}
-
 
     profiles : ['default']
         List of profiles to apply on this container
@@ -111,6 +135,9 @@ def present(
         A config dict or None (None = unset).
 
         Can also be a list:
+
+        .. code-block:: python
+
             [{'key': 'boot.autostart', 'value': 1},
              {'key': 'security.privileged', 'value': '1'}]
 
@@ -119,15 +146,16 @@ def present(
 
     architecture : 'x86_64'
         Can be one of the following:
-            * unknown
-            * i686
-            * x86_64
-            * armv7l
-            * aarch64
-            * ppc
-            * ppc64
-            * ppc64le
-            * s390x
+
+        * unknown
+        * i686
+        * x86_64
+        * armv7l
+        * aarch64
+        * ppc
+        * ppc64
+        * ppc64le
+        * s390x
 
     ephemeral : False
         Destroy this container after stop?

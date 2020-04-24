@@ -42,7 +42,7 @@ import logging
 import salt.utils.args
 
 # Import salt libs
-import salt.utils.docker
+import salt.utils.dockermod
 from salt.exceptions import CommandExecutionError
 from salt.ext import six
 from salt.ext.six.moves import zip
@@ -71,7 +71,7 @@ def present(
     load=None,
     force=False,
     insecure_registry=False,
-    client_timeout=salt.utils.docker.CLIENT_TIMEOUT,
+    client_timeout=salt.utils.dockermod.CLIENT_TIMEOUT,
     dockerfile=None,
     sls=None,
     base="opensuse/python",
@@ -132,8 +132,8 @@ def present(
             The ``tag`` must be manually specified using the ``tag`` argument.
 
     load
-        Loads a tar archive created with :py:func:`docker.load
-        <salt.modules.dockermod.load>` (or the ``docker load`` Docker CLI
+        Loads a tar archive created with :py:func:`docker.save
+        <salt.modules.dockermod.save>` (or the ``docker save`` Docker CLI
         command), and assigns it the specified repo and tag.
 
         .. code-block:: yaml

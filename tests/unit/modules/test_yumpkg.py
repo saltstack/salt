@@ -68,6 +68,7 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 "__context__": {"yum_bin": "yum"},
                 "__grains__": {
                     "osarch": "x86_64",
+                    "os": "CentOS",
                     "os_family": "RedHat",
                     "osmajorrelease": 7,
                 },
@@ -1166,12 +1167,377 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 for info in pkg_info_list:
                     self.assertTrue(info["arch"] in ("x86_64", "i686"))
 
+    def test_pkg_hold_yum(self):
+        """
+        Tests that we properly identify versionlock plugin when using yum
+        for RHEL/CentOS 7 and Fedora < 22
+        """
+
+        # Test RHEL/CentOS 7
+        list_pkgs_mock = {
+            "yum-plugin-versionlock": "0:1.0.0-0.n.el7",
+            "yum-versionlock": "0:1.0.0-0.n.el7",
+        }
+
+        cmd = MagicMock(return_value={"retcode": 0})
+        with patch.object(
+            yumpkg, "list_pkgs", MagicMock(return_value=list_pkgs_mock)
+        ), patch.object(yumpkg, "list_holds", MagicMock(return_value=[])), patch.dict(
+            yumpkg.__salt__, {"cmd.run_all": cmd}
+        ), patch(
+            "salt.utils.systemd.has_scope", MagicMock(return_value=False)
+        ):
+            yumpkg.hold("foo")
+            cmd.assert_called_once_with(
+                ["yum", "versionlock", "foo"],
+                env={},
+                output_loglevel="trace",
+                python_shell=False,
+            )
+
+        # Test Fedora 20
+        cmd = MagicMock(return_value={"retcode": 0})
+        with patch.dict(
+            yumpkg.__grains__, {"os": "Fedora", "osrelease": 20}
+        ), patch.object(
+            yumpkg, "list_pkgs", MagicMock(return_value=list_pkgs_mock)
+        ), patch.object(
+            yumpkg, "list_holds", MagicMock(return_value=[])
+        ), patch.dict(
+            yumpkg.__salt__, {"cmd.run_all": cmd}
+        ), patch(
+            "salt.utils.systemd.has_scope", MagicMock(return_value=False)
+        ):
+            yumpkg.hold("foo")
+            cmd.assert_called_once_with(
+                ["yum", "versionlock", "foo"],
+                env={},
+                output_loglevel="trace",
+                python_shell=False,
+            )
+
+    def test_pkg_hold_dnf(self):
+        """
+        Tests that we properly identify versionlock plugin when using dnf
+        for RHEL/CentOS 8 and Fedora >= 22
+        """
+
+        # Test RHEL/CentOS 8
+        list_pkgs_mock = {
+            "python2-dnf-plugin-versionlock": "0:1.0.0-0.n.el8",
+            "python3-dnf-plugin-versionlock": "0:1.0.0-0.n.el8",
+        }
+
+        yumpkg.__context__.pop("yum_bin")
+        cmd = MagicMock(return_value={"retcode": 0})
+        with patch.dict(yumpkg.__grains__, {"osmajorrelease": 8}), patch.object(
+            yumpkg, "list_pkgs", MagicMock(return_value=list_pkgs_mock)
+        ), patch.object(yumpkg, "list_holds", MagicMock(return_value=[])), patch.dict(
+            yumpkg.__salt__, {"cmd.run_all": cmd}
+        ), patch(
+            "salt.utils.systemd.has_scope", MagicMock(return_value=False)
+        ):
+            yumpkg.hold("foo")
+            cmd.assert_called_once_with(
+                ["dnf", "versionlock", "foo"],
+                env={},
+                output_loglevel="trace",
+                python_shell=False,
+            )
+
+        # Test Fedora 26+
+        yumpkg.__context__.pop("yum_bin")
+        cmd = MagicMock(return_value={"retcode": 0})
+        with patch.dict(
+            yumpkg.__grains__, {"os": "Fedora", "osrelease": 26}
+        ), patch.object(
+            yumpkg, "list_pkgs", MagicMock(return_value=list_pkgs_mock)
+        ), patch.object(
+            yumpkg, "list_holds", MagicMock(return_value=[])
+        ), patch.dict(
+            yumpkg.__salt__, {"cmd.run_all": cmd}
+        ), patch(
+            "salt.utils.systemd.has_scope", MagicMock(return_value=False)
+        ):
+            yumpkg.hold("foo")
+            cmd.assert_called_once_with(
+                ["dnf", "versionlock", "foo"],
+                env={},
+                output_loglevel="trace",
+                python_shell=False,
+            )
+
+        # Test Fedora 22-25
+        list_pkgs_mock = {
+            "python-dnf-plugins-extras-versionlock": "0:1.0.0-0.n.el8",
+            "python3-dnf-plugins-extras-versionlock": "0:1.0.0-0.n.el8",
+        }
+
+        yumpkg.__context__.pop("yum_bin")
+        cmd = MagicMock(return_value={"retcode": 0})
+        with patch.dict(
+            yumpkg.__grains__, {"os": "Fedora", "osrelease": 25}
+        ), patch.object(
+            yumpkg, "list_pkgs", MagicMock(return_value=list_pkgs_mock)
+        ), patch.object(
+            yumpkg, "list_holds", MagicMock(return_value=[])
+        ), patch.dict(
+            yumpkg.__salt__, {"cmd.run_all": cmd}
+        ), patch(
+            "salt.utils.systemd.has_scope", MagicMock(return_value=False)
+        ):
+            yumpkg.hold("foo")
+            cmd.assert_called_once_with(
+                ["dnf", "versionlock", "foo"],
+                env={},
+                output_loglevel="trace",
+                python_shell=False,
+            )
+
     @skipIf(not yumpkg.HAS_YUM, "Could not import yum")
     def test_yum_base_error(self):
         with patch("yum.YumBase") as mock_yum_yumbase:
             mock_yum_yumbase.side_effect = CommandExecutionError
             with pytest.raises(CommandExecutionError):
                 yumpkg._get_yum_config()
+
+    def test_group_info(self):
+        """
+        Test yumpkg.group_info parsing
+        """
+        expected = {
+            "conditional": [],
+            "default": ["qgnomeplatform", "xdg-desktop-portal-gtk"],
+            "description": "GNOME is a highly intuitive and user friendly desktop environment.",
+            "group": "GNOME",
+            "id": "gnome-desktop",
+            "mandatory": [
+                "NetworkManager-libreswan-gnome",
+                "PackageKit-command-not-found",
+                "PackageKit-gtk3-module",
+                "abrt-desktop",
+                "at-spi2-atk",
+                "at-spi2-core",
+                "avahi",
+                "baobab",
+                "caribou",
+                "caribou-gtk2-module",
+                "caribou-gtk3-module",
+                "cheese",
+                "chrome-gnome-shell",
+                "compat-cheese314",
+                "control-center",
+                "dconf",
+                "empathy",
+                "eog",
+                "evince",
+                "evince-nautilus",
+                "file-roller",
+                "file-roller-nautilus",
+                "firewall-config",
+                "firstboot",
+                "fprintd-pam",
+                "gdm",
+                "gedit",
+                "glib-networking",
+                "gnome-bluetooth",
+                "gnome-boxes",
+                "gnome-calculator",
+                "gnome-classic-session",
+                "gnome-clocks",
+                "gnome-color-manager",
+                "gnome-contacts",
+                "gnome-dictionary",
+                "gnome-disk-utility",
+                "gnome-font-viewer",
+                "gnome-getting-started-docs",
+                "gnome-icon-theme",
+                "gnome-icon-theme-extras",
+                "gnome-icon-theme-symbolic",
+                "gnome-initial-setup",
+                "gnome-packagekit",
+                "gnome-packagekit-updater",
+                "gnome-screenshot",
+                "gnome-session",
+                "gnome-session-xsession",
+                "gnome-settings-daemon",
+                "gnome-shell",
+                "gnome-software",
+                "gnome-system-log",
+                "gnome-system-monitor",
+                "gnome-terminal",
+                "gnome-terminal-nautilus",
+                "gnome-themes-standard",
+                "gnome-tweak-tool",
+                "gnome-user-docs",
+                "gnome-weather",
+                "gucharmap",
+                "gvfs-afc",
+                "gvfs-afp",
+                "gvfs-archive",
+                "gvfs-fuse",
+                "gvfs-goa",
+                "gvfs-gphoto2",
+                "gvfs-mtp",
+                "gvfs-smb",
+                "initial-setup-gui",
+                "libcanberra-gtk2",
+                "libcanberra-gtk3",
+                "libproxy-mozjs",
+                "librsvg2",
+                "libsane-hpaio",
+                "metacity",
+                "mousetweaks",
+                "nautilus",
+                "nautilus-sendto",
+                "nm-connection-editor",
+                "orca",
+                "redhat-access-gui",
+                "sane-backends-drivers-scanners",
+                "seahorse",
+                "setroubleshoot",
+                "sushi",
+                "totem",
+                "totem-nautilus",
+                "vinagre",
+                "vino",
+                "xdg-user-dirs-gtk",
+                "yelp",
+            ],
+            "optional": [
+                "",
+                "alacarte",
+                "dconf-editor",
+                "dvgrab",
+                "fonts-tweak-tool",
+                "gconf-editor",
+                "gedit-plugins",
+                "gnote",
+                "libappindicator-gtk3",
+                "seahorse-nautilus",
+                "seahorse-sharing",
+                "vim-X11",
+                "xguest",
+            ],
+            "type": "package group",
+        }
+        cmd_out = """Group: GNOME
+         Group-Id: gnome-desktop
+         Description: GNOME is a highly intuitive and user friendly desktop environment.
+         Mandatory Packages:
+           =NetworkManager-libreswan-gnome
+           =PackageKit-command-not-found
+           =PackageKit-gtk3-module
+            abrt-desktop
+           =at-spi2-atk
+           =at-spi2-core
+           =avahi
+           =baobab
+           -caribou
+           -caribou-gtk2-module
+           -caribou-gtk3-module
+           =cheese
+           =chrome-gnome-shell
+           =compat-cheese314
+           =control-center
+           =dconf
+           =empathy
+           =eog
+           =evince
+           =evince-nautilus
+           =file-roller
+           =file-roller-nautilus
+           =firewall-config
+           =firstboot
+            fprintd-pam
+           =gdm
+           =gedit
+           =glib-networking
+           =gnome-bluetooth
+           =gnome-boxes
+           =gnome-calculator
+           =gnome-classic-session
+           =gnome-clocks
+           =gnome-color-manager
+           =gnome-contacts
+           =gnome-dictionary
+           =gnome-disk-utility
+           =gnome-font-viewer
+           =gnome-getting-started-docs
+           =gnome-icon-theme
+           =gnome-icon-theme-extras
+           =gnome-icon-theme-symbolic
+           =gnome-initial-setup
+           =gnome-packagekit
+           =gnome-packagekit-updater
+           =gnome-screenshot
+           =gnome-session
+           =gnome-session-xsession
+           =gnome-settings-daemon
+           =gnome-shell
+           =gnome-software
+           =gnome-system-log
+           =gnome-system-monitor
+           =gnome-terminal
+           =gnome-terminal-nautilus
+           =gnome-themes-standard
+           =gnome-tweak-tool
+           =gnome-user-docs
+           =gnome-weather
+           =gucharmap
+           =gvfs-afc
+           =gvfs-afp
+           =gvfs-archive
+           =gvfs-fuse
+           =gvfs-goa
+           =gvfs-gphoto2
+           =gvfs-mtp
+           =gvfs-smb
+            initial-setup-gui
+           =libcanberra-gtk2
+           =libcanberra-gtk3
+           =libproxy-mozjs
+           =librsvg2
+           =libsane-hpaio
+           =metacity
+           =mousetweaks
+           =nautilus
+           =nautilus-sendto
+           =nm-connection-editor
+           =orca
+           -redhat-access-gui
+           =sane-backends-drivers-scanners
+           =seahorse
+           =setroubleshoot
+           =sushi
+           =totem
+           =totem-nautilus
+           =vinagre
+           =vino
+           =xdg-user-dirs-gtk
+           =yelp
+         Default Packages:
+           =qgnomeplatform
+           =xdg-desktop-portal-gtk
+         Optional Packages:
+           alacarte
+           dconf-editor
+           dvgrab
+           fonts-tweak-tool
+           gconf-editor
+           gedit-plugins
+           gnote
+           libappindicator-gtk3
+           seahorse-nautilus
+           seahorse-sharing
+           vim-X11
+           xguest
+        """
+        with patch.dict(
+            yumpkg.__salt__, {"cmd.run_stdout": MagicMock(return_value=cmd_out)}
+        ):
+            info = yumpkg.group_info("@gnome-desktop")
+            self.assertDictEqual(info, expected)
 
 
 @skipIf(pytest is None, "PyTest is missing")

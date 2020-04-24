@@ -28,7 +28,9 @@ def __virtual__():
     """
     Only load if RabbitMQ is installed.
     """
-    return salt.utils.path.which("rabbitmqctl") is not None
+    if salt.utils.path.which("rabbitmqctl"):
+        return True
+    return (False, "Command not found: rabbitmqctl")
 
 
 def joined(name, host, user="rabbit", ram_node=None, runas="root"):

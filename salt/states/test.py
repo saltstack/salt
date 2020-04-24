@@ -77,7 +77,9 @@ def succeed_without_changes(name, **kwargs):  # pylint: disable=unused-argument
     name
         A unique string.
     """
-    ret = {"name": name, "changes": {}, "result": True, "comment": "Success!"}
+    comment = kwargs.get("comment", "Success!")
+
+    ret = {"name": name, "changes": {}, "result": True, "comment": comment}
     return ret
 
 
@@ -90,7 +92,9 @@ def fail_without_changes(name, **kwargs):  # pylint: disable=unused-argument
     name:
         A unique string.
     """
-    ret = {"name": name, "changes": {}, "result": False, "comment": "Failure!"}
+    comment = kwargs.get("comment", "Failure!")
+
+    ret = {"name": name, "changes": {}, "result": False, "comment": comment}
 
     if __opts__["test"]:
         ret["result"] = False
@@ -108,7 +112,9 @@ def succeed_with_changes(name, **kwargs):  # pylint: disable=unused-argument
     name:
         A unique string.
     """
-    ret = {"name": name, "changes": {}, "result": True, "comment": "Success!"}
+    comment = kwargs.get("comment", "Success!")
+
+    ret = {"name": name, "changes": {}, "result": True, "comment": comment}
 
     # Following the docs as written here
     # http://docs.saltstack.com/ref/states/writing.html#return-data
@@ -134,6 +140,8 @@ def fail_with_changes(name, **kwargs):  # pylint: disable=unused-argument
     name:
         A unique string.
     """
+    comment = kwargs.get("comment", "Failure!")
+
     ret = {"name": name, "changes": {}, "result": False, "comment": "Failure!"}
 
     # Following the docs as written here

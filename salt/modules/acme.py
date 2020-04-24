@@ -58,6 +58,9 @@ LEA = salt.utils.path.which_bin(
 )
 LE_LIVE = "/etc/letsencrypt/live/"
 
+if salt.utils.platform.is_freebsd():
+    LE_LIVE = "/usr/local" + LE_LIVE
+
 
 def __virtual__():
     """
@@ -410,7 +413,7 @@ def needs_renewal(name, window=None):
             log.info('Your certificate is still good')
     """
     if window:
-        if str(window).lower in ("force", "true"):
+        if str(window).lower() in ("force", "true"):
             return True
         if not (
             isinstance(window, int) or (hasattr(window, "isdigit") and window.isdigit())
