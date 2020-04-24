@@ -4,11 +4,15 @@
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
+import copy
 import os
+import shutil
 import sys
 
+import jinja2
 import salt.exceptions
 import salt.ext.six
+import salt.utils.hashutils
 import salt.utils.json
 import salt.utils.platform
 import salt.utils.stringutils
@@ -17,6 +21,7 @@ from salt.utils import thin
 from salt.utils.stringutils import to_bytes as bts
 from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.mock import MagicMock, patch
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
 try:
@@ -30,6 +35,34 @@ class SSHThinTestCase(TestCase):
     """
     TestCase for SaltSSH-related parts.
     """
+
+    def setUp(self):
+        self.jinja_fp = os.path.dirname(jinja2.__file__)
+
+        self.ext_conf = {
+            "test": {
+                "py-version": [2, 7],
+                "path": os.path.join(RUNTIME_VARS.CODE_DIR, "salt"),
+                "dependencies": {"jinja2": self.jinja_fp},
+            }
+        }
+        self.tops = copy.deepcopy(self.ext_conf)
+        self.tops["test"]["dependencies"] = [self.jinja_fp]
+        self.tar = self._tarfile(None).open()
+        self.digest = salt.utils.hashutils.DigestCollector()
+        self.exp_files = ["salt/payload.py", "jinja2/__init__.py"]
+        lib_root = os.path.join(RUNTIME_VARS.TMP, "fake-libs")
+        self.fake_libs = {
+            "jinja2": os.path.join(lib_root, "jinja2"),
+            "yaml": os.path.join(lib_root, "yaml"),
+            "tornado": os.path.join(lib_root, "tornado"),
+            "msgpack": os.path.join(lib_root, "msgpack"),
+        }
+
+    def tearDown(self):
+        for lib, fp in self.fake_libs.items():
+            if os.path.exists(fp):
+                shutil.rmtree(fp)
 
     def _popen(self, return_value=None, side_effect=None, returncode=0):
         """
@@ -890,7 +923,18 @@ class SSHThinTestCase(TestCase):
 
         :return:
         """
-        thin.gen_thin("")
+        ext_conf = {
+            "namespace": {
+                "py-version": [2, 7],
+                "path": "/opt/2015.8/salt",
+                "dependencies": {
+                    "certifi": "/opt/certifi",
+                    "whatever": "/opt/whatever",
+                },
+            }
+        }
+
+        thin.gen_thin("", extended_cfg=ext_conf)
         files = []
         for py in ("pyall", "pyall", "py2"):
             for i in range(1, 4):
@@ -951,3 +995,243 @@ class SSHThinTestCase(TestCase):
         )
         for t_line in ["second-system-effect:2:7", "solar-interference:2:6"]:
             self.assertIn(t_line, out)
+
+    def test_get_tops_python(self):
+        """
+        test get_tops_python
+        """
+        patch_proc = patch(
+            "salt.utils.thin.subprocess.Popen",
+            self._popen(
+                None,
+                side_effect=[
+                    (bts("jinja2/__init__.py"), bts("")),
+                    (bts("yaml/__init__.py"), bts("")),
+                    (bts("tornado/__init__.py"), bts("")),
+                    (bts("msgpack/__init__.py"), bts("")),
+                    (bts("certifi/__init__.py"), bts("")),
+                    (bts("singledispatch.py"), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                ],
+            ),
+        )
+
+        exp_ret = {
+            "jinja2": os.path.join(RUNTIME_VARS.CODE_DIR, "jinja2"),
+            "yaml": os.path.join(RUNTIME_VARS.CODE_DIR, "yaml"),
+            "tornado": os.path.join(RUNTIME_VARS.CODE_DIR, "tornado"),
+            "msgpack": os.path.join(RUNTIME_VARS.CODE_DIR, "msgpack"),
+            "certifi": os.path.join(RUNTIME_VARS.CODE_DIR, "certifi"),
+            "singledispatch": os.path.join(RUNTIME_VARS.CODE_DIR, "singledispatch.py"),
+        }
+
+        patch_os = patch("os.path.exists", return_value=True)
+        with patch_proc, patch_os:
+            with TstSuiteLoggingHandler() as log_handler:
+                ret = thin.get_tops_python("python2.7")
+                assert ret == exp_ret
+                assert (
+                    "ERROR:Could not auto detect file location for module concurrent for python version python2.7"
+                    in log_handler.messages
+                )
+
+    def test_get_tops_python_exclude(self):
+        """
+        test get_tops_python when excluding modules
+        """
+        patch_proc = patch(
+            "salt.utils.thin.subprocess.Popen",
+            self._popen(
+                None,
+                side_effect=[
+                    (bts("tornado/__init__.py"), bts("")),
+                    (bts("msgpack/__init__.py"), bts("")),
+                    (bts("certifi/__init__.py"), bts("")),
+                    (bts("singledispatch.py"), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                ],
+            ),
+        )
+
+        exp_ret = {
+            "tornado": os.path.join(RUNTIME_VARS.CODE_DIR, "tornado"),
+            "msgpack": os.path.join(RUNTIME_VARS.CODE_DIR, "msgpack"),
+            "certifi": os.path.join(RUNTIME_VARS.CODE_DIR, "certifi"),
+            "singledispatch": os.path.join(RUNTIME_VARS.CODE_DIR, "singledispatch.py"),
+        }
+
+        patch_os = patch("os.path.exists", return_value=True)
+        with patch_proc, patch_os:
+            ret = thin.get_tops_python("python2.7", exclude=["jinja2", "yaml"])
+            assert ret == exp_ret
+
+    def test_pack_alternatives_exclude(self):
+        """
+        test pack_alternatives when mixing
+        manually set dependencies and auto
+        detecting other modules.
+        """
+        patch_proc = patch(
+            "salt.utils.thin.subprocess.Popen",
+            self._popen(
+                None,
+                side_effect=[
+                    (bts(self.fake_libs["yaml"]), bts("")),
+                    (bts(self.fake_libs["tornado"]), bts("")),
+                    (bts(self.fake_libs["msgpack"]), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                ],
+            ),
+        )
+
+        patch_os = patch("os.path.exists", return_value=True)
+        ext_conf = copy.deepcopy(self.ext_conf)
+        ext_conf["test"]["auto_detect"] = True
+
+        for lib in self.fake_libs.values():
+            os.makedirs(lib)
+            with salt.utils.files.fopen(os.path.join(lib, "__init__.py"), "w+") as fp_:
+                fp_.write("test")
+
+        exp_files = self.exp_files.copy()
+        exp_files.extend(
+            ["yaml/__init__.py", "tornado/__init__.py", "msgpack/__init__.py"]
+        )
+        with patch_os, patch_proc:
+            thin._pack_alternative(ext_conf, self.digest, self.tar)
+            calls = self.tar.mock_calls
+            for _file in exp_files:
+                assert [x for x in calls if "{}".format(_file) in x.args]
+
+    def test_pack_alternatives(self):
+        """
+        test thin._pack_alternatives
+        """
+        with patch("salt.utils.thin.get_ext_tops", MagicMock(return_value=self.tops)):
+            thin._pack_alternative(self.ext_conf, self.digest, self.tar)
+            calls = self.tar.mock_calls
+            for _file in self.exp_files:
+                assert [x for x in calls if "{}".format(_file) in x.args]
+                assert [
+                    x
+                    for x in calls
+                    if "test/pyall/{}".format(_file) in x.kwargs["arcname"]
+                ]
+
+    def test_pack_alternatives_not_normalized(self):
+        """
+        test thin._pack_alternatives when the path
+        is not normalized
+        """
+        tops = copy.deepcopy(self.tops)
+        tops["test"]["dependencies"] = [self.jinja_fp + "/"]
+        with patch("salt.utils.thin.get_ext_tops", MagicMock(return_value=tops)):
+            thin._pack_alternative(self.ext_conf, self.digest, self.tar)
+            calls = self.tar.mock_calls
+            for _file in self.exp_files:
+                assert [x for x in calls if "{}".format(_file) in x.args]
+                assert [
+                    x
+                    for x in calls
+                    if "test/pyall/{}".format(_file) in x.kwargs["arcname"]
+                ]
+
+    def test_pack_alternatives_path_doesnot_exist(self):
+        """
+        test thin._pack_alternatives when the path
+        doesnt exist. Check error log message
+        and expect that because the directory
+        does not exist jinja2 does not get
+        added to the tar
+        """
+        bad_path = "/tmp/doesnotexisthere"
+        tops = copy.deepcopy(self.tops)
+        tops["test"]["dependencies"] = [bad_path]
+        with patch("salt.utils.thin.get_ext_tops", MagicMock(return_value=tops)):
+            with TstSuiteLoggingHandler() as log_handler:
+                thin._pack_alternative(self.ext_conf, self.digest, self.tar)
+                msg = "ERROR:File path {} does not exist. Unable to add to salt-ssh thin".format(
+                    bad_path
+                )
+                assert msg in log_handler.messages
+        calls = self.tar.mock_calls
+        for _file in self.exp_files:
+            arg = [x for x in calls if "{}".format(_file) in x.args]
+            kwargs = [
+                x for x in calls if "test/pyall/{}".format(_file) in x.kwargs["arcname"]
+            ]
+            if "jinja2" in _file:
+                assert not arg
+                assert not kwargs
+            else:
+                assert arg
+                assert kwargs
+
+    def test_pack_alternatives_auto_detect(self):
+        """
+        test thin._pack_alternatives when auto_detect
+        is enabled
+        """
+        ext_conf = copy.deepcopy(self.ext_conf)
+        ext_conf["test"]["auto_detect"] = True
+
+        for lib in self.fake_libs.values():
+            os.makedirs(lib)
+            with salt.utils.files.fopen(os.path.join(lib, "__init__.py"), "w+") as fp_:
+                fp_.write("test")
+
+        patch_tops_py = patch(
+            "salt.utils.thin.get_tops_python", return_value=self.fake_libs
+        )
+
+        exp_files = self.exp_files.copy()
+        exp_files.extend(
+            ["yaml/__init__.py", "tornado/__init__.py", "msgpack/__init__.py"]
+        )
+        with patch_tops_py:
+            thin._pack_alternative(ext_conf, self.digest, self.tar)
+            calls = self.tar.mock_calls
+            for _file in exp_files:
+                assert [x for x in calls if "{}".format(_file) in x.args]
+
+    def test_pack_alternatives_empty_dependencies(self):
+        """
+        test _pack_alternatives when dependencies is not
+        set in the config.
+        """
+        ext_conf = copy.deepcopy(self.ext_conf)
+        ext_conf["test"]["auto_detect"] = True
+        ext_conf["test"].pop("dependencies")
+
+        for lib in self.fake_libs.values():
+            os.makedirs(lib)
+            with salt.utils.files.fopen(os.path.join(lib, "__init__.py"), "w+") as fp_:
+                fp_.write("test")
+
+        patch_tops_py = patch(
+            "salt.utils.thin.get_tops_python", return_value=self.fake_libs
+        )
+
+        exp_files = self.exp_files.copy()
+        exp_files.extend(
+            ["yaml/__init__.py", "tornado/__init__.py", "msgpack/__init__.py"]
+        )
+        with patch_tops_py:
+            thin._pack_alternative(ext_conf, self.digest, self.tar)
+            calls = self.tar.mock_calls
+            for _file in exp_files:
+                assert [x for x in calls if "{}".format(_file) in x.args]
