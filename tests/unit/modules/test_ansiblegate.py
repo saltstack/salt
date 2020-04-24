@@ -171,12 +171,12 @@ description:
             def main():  # pylint: disable=no-method-argument
                 pass
 
-        ANSIBLE_MODULE_ARGS = "{'ANSIBLE_MODULE_ARGS': ['arg_1', {'kwarg1': 'foobar'}]}"
+        ANSIBLE_MODULE_ARGS = '{"ANSIBLE_MODULE_ARGS": ["arg_1", {"kwarg1": "foobar"}]}'
 
         proc = MagicMock(
             side_effect=[
                 MockTimedProc(stdout=ANSIBLE_MODULE_ARGS.encode(), stderr=None),
-                MockTimedProc(stdout="{'completed': true}".encode(), stderr=None),
+                MockTimedProc(stdout='{"completed": true}'.encode(), stderr=None),
             ]
         )
 
@@ -198,7 +198,7 @@ description:
                     proc.assert_any_call(
                         [
                             "echo",
-                            "{'ANSIBLE_MODULE_ARGS': {'kwarg1': 'foobar', '_raw_params': 'arg_1'}}",
+                            '{"ANSIBLE_MODULE_ARGS": {"kwarg1": "foobar", "_raw_params": "arg_1"}}',
                         ],
                         stdout=-1,
                         timeout=1200,
@@ -207,7 +207,7 @@ description:
                     proc.assert_any_call(
                         [
                             "echo",
-                            "{'ANSIBLE_MODULE_ARGS': {'_raw_params': 'arg_1', 'kwarg1': 'foobar'}}",
+                            '{"ANSIBLE_MODULE_ARGS": {"_raw_params": "arg_1", "kwarg1": "foobar"}}',
                         ],
                         stdout=-1,
                         timeout=1200,
