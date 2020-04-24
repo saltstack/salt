@@ -27,9 +27,7 @@ class GoGridTest(CloudTest):
         Test creating an instance on GoGrid
         """
         # check if instance with salt installed returned
-        ret_str = self.run_cloud(
-            "-p gogrid-test {0}".format(self.instance_name)
-        )
+        ret_str = self.run_cloud("-p gogrid-test {0}".format(self.instance_name))
         self.assertInstanceExists(ret_str)
 
         self.assertDestroyInstance()
