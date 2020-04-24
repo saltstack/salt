@@ -617,6 +617,27 @@ Function .onInit
 
     Call parseCommandLineSwitches
 
+    ###############################################
+    # Uninstall msi-installed salt
+    # Source    https://nsis-dev.github.io/NSIS-Forums/html/t-303468.html
+    !define upgradecode {FC6FB3A2-65DE-41A9-AD91-D10A402BD641}    ;Salt upgrade code
+    StrCpy $0 0
+    loop:
+    System::Call 'MSI::MsiEnumRelatedProducts(t "${upgradecode}",i0,i r0,t.r1)i.r2'
+    ${If} $2 = 0
+	# Now $1 contains the product code
+        DetailPrint product:$1
+        push $R0
+          StrCpy $R0 $1
+          Call UninstallMSI
+        pop $R0
+        IntOp $0 $0 + 1
+        goto loop
+    ${Endif}
+    #
+    ###############################################
+
+
     # If custom config passed, verify its existence before continuing so we
     # don't uninstall an existing installation and then fail
     ${If} $ConfigType_State == "Custom Config"
@@ -650,18 +671,6 @@ Function .onInit
             /SD IDOK IDOK uninst
         Abort
 
-    checkMsi:
-        # WIP Check for existing installation of msi salt
-        ReadRegStr $R0 HKLM \
-            "Software\Microsoft\Windows\CurrentVersion\Installer\UpgradeCodes\2A3BF6CFED569A14DA191DA004B26D14" \
-            ""
-        StrCmp $R0 "" skipUninstall
-        # Found existing installation, prompt to uninstall
-        MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION \
-            "${PRODUCT_NAME} is already installed.$\n$\n\
-            Click `OK` to remove the existing installation." \
-            /SD IDOK IDOK uninstMsi
-        Abort
 
     uninst:
 
@@ -914,6 +923,20 @@ Function MsiQueryProductState
     StrCpy $NeedVcRedist "True"
 
 FunctionEnd
+
+###############################################################################
+# Source    https://nsis.sourceforge.io/Uninstalling_a_previous_MSI_(Windows_installer_package)
+###############################################################################
+Function UninstallMSI
+    ; $R0 === product code
+    MessageBox MB_YESNOCANCEL|MB_ICONQUESTION  "Uninstalling a previous version of ${PRODUCT_NAME}" IDNO UninstallMSI_nomsi IDYES UninstallMSI_yesmsi
+        Abort
+UninstallMSI_yesmsi:
+    ExecWait '"msiexec.exe" /x $R0'
+    MessageBox MB_OK|MB_ICONINFORMATION "Click OK to continue upgrading your version of ${PRODUCT_NAME}"
+UninstallMSI_nomsi:
+FunctionEnd
+
 
 
 #------------------------------------------------------------------------------
