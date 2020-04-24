@@ -1,6 +1,6 @@
 -r req_win.txt
 backports-abc==0.5; python_version < '3.0'
-backports.ssl-match-hostname==3.7.0.1
+backports.ssl-match-hostname==3.7.0.1; python_version < '3.7'
 certifi
 cffi==1.12.2
 CherryPy==17.4.1
@@ -19,7 +19,7 @@ msgpack-python==0.5.6
 psutil==5.6.6
 pyasn1==0.4.5
 pycparser==2.19
-pycryptodomex==3.8.1
+pycryptodomex==3.9.7
 pycurl==7.43.0.5
 pymssql==2.1.4
 PyMySQL==0.9.3

@@ -9,6 +9,7 @@ import logging
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
+from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
@@ -18,6 +19,7 @@ class ManageTest(ShellCase):
     Test the manage runner
     """
 
+    @skipIf(True, "SLOWTEST skip")
     def test_cache(self):
         """
         Store, list, fetch, then flush data
@@ -44,6 +46,7 @@ class ManageTest(ShellCase):
         ret = self.run_run_plus("cache.list", bank="cachetest/runner")
         self.assertNotIn("test_cache", ret["return"])
 
+    @skipIf(True, "SLOWTEST skip")
     def test_cache_invalid(self):
         """
         Store, list, fetch, then flush data
@@ -54,6 +57,7 @@ class ManageTest(ShellCase):
         expected = "Passed invalid arguments:"
         self.assertIn(expected, ret["return"])
 
+    @skipIf(True, "SLOWTEST skip")
     def test_grains(self):
         """
         Test cache.grains
@@ -63,6 +67,7 @@ class ManageTest(ShellCase):
 
         self.assertIn("minion", ret["return"])
 
+    @skipIf(True, "SLOWTEST skip")
     def test_pillar(self):
         """
         Test cache.pillar
@@ -73,6 +78,7 @@ class ManageTest(ShellCase):
         assert "minion" in ret["return"]
         assert "sub_minion" not in ret["return"]
 
+    @skipIf(True, "SLOWTEST skip")
     def test_pillar_no_tgt(self):
         """
         Test cache.pillar when no tgt is
@@ -84,6 +90,7 @@ class ManageTest(ShellCase):
 
         assert all(x in ret["return"] for x in ["minion", "sub_minion"])
 
+    @skipIf(True, "SLOWTEST skip")
     def test_pillar_minion_noexist(self):
         """
         Test cache.pillar when the target does not exist
@@ -93,6 +100,7 @@ class ManageTest(ShellCase):
         assert "minion" not in ret["return"]
         assert "sub_minion" not in ret["return"]
 
+    @skipIf(True, "SLOWTEST skip")
     def test_pillar_minion_tgt_type_pillar(self):
         """
         Test cache.pillar when the target exists
@@ -102,6 +110,7 @@ class ManageTest(ShellCase):
 
         assert all(x in ret["return"] for x in ["minion", "sub_minion"])
 
+    @skipIf(True, "SLOWTEST skip")
     def test_mine(self):
         """
         Test cache.mine

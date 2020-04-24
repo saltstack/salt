@@ -144,6 +144,10 @@ def call_function(salt_function, *args, **kwargs):
         for arg in argspec.args[_passed_prm:]:
             if arg not in function_kwargs:
                 missing.append(arg)
+            else:
+                # Found the expected argument as a keyword
+                # increase the _passed_prm count
+                _passed_prm += 1
     if missing:
         raise SaltInvocationError("Missing arguments: {0}".format(", ".join(missing)))
     elif _exp_prm > _passed_prm:

@@ -67,11 +67,9 @@ def __virtual__():
     """
     Only load if boto is available.
     """
-    return (
-        "boto_datapipeline"
-        if "boto_datapipeline.create_pipeline" in __salt__
-        else False
-    )
+    if "boto_datapipeline.create_pipeline" in __salt__:
+        return "boto_datapipeline"
+    return (False, "boto_datapipeline module could not be loaded")
 
 
 def present(
