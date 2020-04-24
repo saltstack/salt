@@ -8,9 +8,23 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import subprocess
 import sys
+import warnings
 
 # Import Salt libs
 from salt.utils.decorators import memoize as real_memoize
+
+# linux_distribution deprecated in py3.7
+try:
+    from platform import linux_distribution as _deprecated_linux_distribution
+
+    def linux_distribution(**kwargs):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return _deprecated_linux_distribution(**kwargs)
+
+
+except ImportError:
+    from distro import linux_distribution
 
 
 @real_memoize
@@ -167,3 +181,14 @@ def is_aix():
     Simple function to return if host is AIX or not
     """
     return sys.platform.startswith("aix")
+
+
+@real_memoize
+def is_fedora():
+    """
+    Simple function to return if host is Fedora or not
+    """
+    (osname, osrelease, oscodename) = [
+        x.strip('"').strip("'") for x in linux_distribution()
+    ]
+    return osname == "Fedora"
