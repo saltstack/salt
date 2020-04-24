@@ -136,7 +136,7 @@ def build_file_list(files, extension):
     if not _files:
         _files = CODE_DIR.rglob("*{}".format(extension))
     else:
-        _files = [pathlib.Path(fname) for fname in _files]
+        _files = [pathlib.Path(fname).resolve() for fname in _files]
     _files = [path.relative_to(CODE_DIR) for path in _files]
     return _files
 
