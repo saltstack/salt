@@ -56,7 +56,9 @@ def __virtual__():
     Only make these states available if a kernelpkg provider has been detected or
     assigned for this minion
     """
-    return "kernelpkg.upgrade" in __salt__
+    if "kernelpkg.upgrade" in __salt__:
+        return True
+    return (False, "kernelpkg module could not be loaded")
 
 
 def latest_installed(name, **kwargs):  # pylint: disable=unused-argument
