@@ -20,9 +20,7 @@ import salt.utils.stringutils
 from salt.ext.six.moves import range
 
 # Import Salt Testing Libs
-# Import Salt Testing Libs
 from tests.integration.cloud.helpers.cloud_test_base import (
-    TIMEOUT,
     CloudTest,
     requires_provider_config,
 )

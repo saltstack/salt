@@ -7,7 +7,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Create the cloud instance name to be used throughout the tests
-from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
+from tests.integration.cloud.helpers.cloud_test_base import CloudTest
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf
@@ -28,7 +28,7 @@ class GoGridTest(CloudTest):
         """
         # check if instance with salt installed returned
         ret_str = self.run_cloud(
-            "-p gogrid-test {0}".format(self.instance_name), timeout=TIMEOUT
+            "-p gogrid-test {0}".format(self.instance_name)
         )
         self.assertInstanceExists(ret_str)
 

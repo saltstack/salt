@@ -11,7 +11,6 @@ import logging
 # Import Salt Libs
 # Import Salt Libs
 from tests.integration.cloud.helpers.cloud_test_base import (
-    TIMEOUT,
     CloudTest,
     requires_provider_config,
 )

@@ -12,7 +12,6 @@ import logging
 import os
 import shutil
 import time
-from time import sleep
 
 # Import Salt Libs
 import salt.utils.cloud
@@ -27,7 +26,7 @@ from salt.config import (
 from salt.ext.six.moves import range
 from salt.utils.yaml import safe_load
 from tests.support.case import ShellCase
-from tests.support.helpers import expensiveTest, random_string
+from tests.support.helpers import expensiveTest, generate_random_name
 from tests.support.paths import FILES
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import SkipTest

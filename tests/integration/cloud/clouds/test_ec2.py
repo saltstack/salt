@@ -14,7 +14,6 @@ import salt.utils.cloud
 import salt.utils.files
 import salt.utils.path
 import salt.utils.yaml
-import yaml
 
 # Import Salt Libs
 from salt.ext.six.moves import range
