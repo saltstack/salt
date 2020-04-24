@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# Import Python libs
 from __future__ import absolute_import
 
 import copy
@@ -9,16 +8,14 @@ import logging
 import os
 
 import dateutil.parser as dateutil_parser
-
-# Import Salt libs
+import pytest
 import salt.utils.schedule
 from salt.modules.test import ping
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 ROOT_DIR = os.path.join(RUNTIME_VARS.TMP, "schedule-unit-tests")
@@ -32,6 +29,7 @@ DEFAULT_CONFIG["pki_dir"] = os.path.join(ROOT_DIR, "pki")
 DEFAULT_CONFIG["cachedir"] = os.path.join(ROOT_DIR, "cache")
 
 
+@pytest.mark.windows_whitelisted
 class SchedulerPostponeTest(ModuleCase, SaltReturnAssertsMixin):
     """
     Validate the pkg module
@@ -48,6 +46,7 @@ class SchedulerPostponeTest(ModuleCase, SaltReturnAssertsMixin):
     def tearDown(self):
         self.schedule.reset()
 
+    @skipIf(True, "SLOWTEST skip")
     def test_postpone(self):
         """
         verify that scheduled job is postponed until the specified time.

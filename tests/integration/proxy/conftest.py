@@ -28,7 +28,7 @@ def session_salt_proxy(
     stats_key = "        Salt Proxy"
     request.session.stats_processes[stats_key] = psutil.Process(session_salt_proxy.pid)
     yield session_salt_proxy
-    # Terminate Proxy now, we want to cleanup it's key before we move along
+    # Terminate Proxy now, we want to cleanup its key before we move along
     session_salt_proxy.terminate()
     del request.session.stats_processes[stats_key]
 
