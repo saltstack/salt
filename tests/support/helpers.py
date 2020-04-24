@@ -11,7 +11,6 @@
 """
 # pylint: disable=repr-flag-used-in-string,wrong-import-order
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import base64
@@ -35,21 +34,16 @@ import types
 
 import salt.ext.tornado.ioloop
 import salt.ext.tornado.web
-
-# Import Salt libs
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.versions
 from pytestsalt.utils import get_unused_localhost_port
-
-# Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import builtins, range
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
-
-# Import Salt Tests Support libs
 from tests.support.unit import SkipTest, _id, skip
 
 if salt.utils.platform.is_windows():
@@ -626,6 +620,9 @@ def requires_network(only_local_network=False):
                     # local network was detected, skip the test
                     cls.skipTest("No local network was detected")
                 return func(cls)
+
+            if os.environ.get("NO_INTERNET"):
+                cls.skipTest("Environment variable NO_INTERNET is set.")
 
             # We are using the google.com DNS records as numerical IPs to avoid
             # DNS lookups which could greatly slow down this check
@@ -1416,9 +1413,42 @@ def generate_random_name(prefix, size=6):
     size
         The number of characters to generate. Default: 6.
     """
-    return prefix + "".join(
-        random.choice(string.ascii_uppercase + string.digits) for x in range(size)
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please replace your call 'generate_random_name({0})' with 'random_string({0}, lowercase=False)' as "
+        "'generate_random_name' will be removed after {{date}}".format(prefix),
     )
+    return random_string(prefix, size=size, lowercase=False)
+
+
+def random_string(prefix, size=6, uppercase=True, lowercase=True, digits=True):
+    """
+    Generates a random string.
+
+    ..versionadded: 3001
+
+    Args:
+        prefix(str): The prefix for the random string
+        size(int): The size of the random string
+        uppercase(bool): If true, include uppercased ascii chars in choice sample
+        lowercase(bool): If true, include lowercased ascii chars in choice sample
+        digits(bool): If true, include digits in choice sample
+    Returns:
+        str: The random string
+    """
+    if not any([uppercase, lowercase, digits]):
+        raise RuntimeError(
+            "At least one of 'uppercase', 'lowercase' or 'digits' needs to be true"
+        )
+    choices = []
+    if uppercase:
+        choices.extend(string.ascii_uppercase)
+    if lowercase:
+        choices.extend(string.ascii_lowercase)
+    if digits:
+        choices.extend(string.digits)
+
+    return prefix + "".join(random.choice(choices) for _ in range(size))
 
 
 class Webserver(object):

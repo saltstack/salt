@@ -73,6 +73,7 @@ import tempfile
 
 # Import Salt libs
 import salt.utils.data
+import salt.utils.stringutils
 
 # Import 3rd-party libs
 # pylint: disable=no-name-in-module,import-error
@@ -250,6 +251,13 @@ def _wget(cmd, opts=None, url="http://localhost:8080/manager", timeout=180):
             ret["msg"] = _urlopen(url6, timeout=timeout).read().splitlines()
         except Exception:  # pylint: disable=broad-except
             ret["msg"] = "Failed to create HTTP request"
+
+    # Force all byte strings to utf-8 strings, for python >= 3.4
+    for key, value in enumerate(ret["msg"]):
+        try:
+            ret["msg"][key] = salt.utils.stringutils.to_unicode(value, "utf-8")
+        except (UnicodeDecodeError, AttributeError):
+            pass
 
     if not ret["msg"][0].startswith("OK"):
         ret["res"] = False

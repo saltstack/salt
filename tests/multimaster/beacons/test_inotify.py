@@ -40,6 +40,7 @@ class TestBeaconsInotify(MultimasterModuleCase, AdaptedConfigurationTestCaseMixi
         self.tmpdir = salt.utils.stringutils.to_unicode(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self.tmpdir, ignore_errors=True)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_beacons_duplicate_53344(self):
         # Also add a status beacon to use it for interval checks
         res = self.run_function(

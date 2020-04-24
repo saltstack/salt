@@ -17,6 +17,16 @@ The old syntax for the mine_function - as a dict, or as a list with dicts that
 contain more than exactly one key - is still supported but discouraged in favor
 of the more uniform syntax of module.run.
 
+State Execution Module
+======================
+
+The :mod:`state.test <salt.modules.state.test>` function
+can be used to test a state on a minion. This works by executing the
+:mod:`state.apply <salt.modules.state.apply>` function while forcing the ``test`` kwarg
+to ``True`` so that the ``state.apply`` function is not required to be called by the
+user directly. This also allows you to add the ``state.test`` function to a minion's 
+``minion_blackout_whitelist`` pillar if you wish to be able to test a state while a
+minion is in blackout.
 
 New Grains
 ==========
@@ -77,3 +87,9 @@ You can set this setting in your roster file like so:
     user: root
     passwd: P@ssword
     set_path: '$PATH:/usr/local/bin/'
+
+
+State Changes
+=============
+- Adding a new option for the State compiler, ``disabled_requisites`` will allow
+  requisites to be disabled during State runs.
