@@ -152,6 +152,8 @@ def _strip_exc(exc):
 
 
 def _uptodate(ret, target, comments=None, local_changes=False):
+    assert comments is None or isinstance(comments, six.string_types)
+
     ret["comment"] = "Repository {0} is up-to-date".format(target)
     if local_changes:
         ret["comment"] += (
