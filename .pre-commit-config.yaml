@@ -106,7 +106,6 @@ repos:
           - --py-version=3.5
           - --platform=linux
 
-
       - id: pip-tools-compile
         alias: compile-linux-py3.6-zmq-requirements
         name: Linux Py3.6 ZeroMQ Requirements
@@ -205,7 +204,6 @@ repos:
           - -v
           - --py-version=3.6
           - --platform=linux
-
 
       - id: pip-tools-compile
         alias: compile-linux-py3.7-zmq-requirements
@@ -306,8 +304,251 @@ repos:
           - --py-version=3.7
           - --platform=linux
 
+      - id: pip-tools-compile
+        alias: compile-linux-py3.8-zmq-requirements
+        name: Linux Py3.8 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/linux\.in)$
+        exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|darwin|windows)\.in$
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+
+      - id: pip-tools-compile
+        alias: compile-darwin-py3.8-zmq-requirements
+        name: Darwin Py3.8 ZeroMQ Requirements
+        files: ^(pkg/osx/(req|req_ext)\.txt|requirements/((base|zeromq|pytest)\.txt|static/darwin\.in))$
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=darwin
+          - --include=pkg/osx/req.txt
+          - --include=pkg/osx/req_ext.txt
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --passthrough-line-from-input=^pyobjc(.*)$
+
+# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
+#      - id: pip-tools-compile
+#        alias: compile-windows-py3.8-zmq-requirements
+#        name: Windows Py3.8 ZeroMQ Requirements
+#        files: ^(pkg/windows/(req|req_win)\.txt|requirements/((base|zeromq|pytest)\.txt|static/windows\.in))$
+#        args:
+#          - -v
+#          - --py-version=3.8
+#          - --platform=windows
+#          - --include=pkg/windows/req.txt
+#          - --include=pkg/windows/req_win.txt
+#          - --include=requirements/base.txt
+#          - --include=requirements/zeromq.txt
+#          - --include=requirements/pytest.txt
+
+      - id: pip-tools-compile
+        alias: compile-cloud-py3.8-requirements
+        name: Cloud Py3.8 Requirements
+        files: ^requirements/(static/cloud\.in)$
+        args:
+          - -v
+          - --py-version=3.8
+
+      - id: pip-tools-compile
+        alias: compile-doc-requirements
+        name: Docs Py3.8 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/docs\.in)$
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=linux
+
+      - id: pip-tools-compile
+        alias: compile-linux-crypto-py3.8-requirements
+        name: Linux Py3.8 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/crypto\.in)$
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=linux
+          - --out-prefix=linux
+
+      - id: pip-tools-compile
+        alias: compile-darwin-crypto-py3.8-requirements
+        name: Darwin Py3.8 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/crypto\.in)$
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=darwin
+          - --out-prefix=darwin
+
+# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
+#      - id: pip-tools-compile
+#        alias: compile-windows-crypto-py3.8-requirements
+#        name: Windows Py3.8 Crypto Requirements
+#        files: ^requirements/(crypto\.txt|static/crypto\.in)$
+#        args:
+#          - -v
+#          - --py-version=3.8
+#          - --platform=windows
+#          - --out-prefix=windows
+
+      - id: pip-tools-compile
+        alias: compile-lint-py3.8-requirements
+        name: Lint Py3.8 Requirements
+        files: ^requirements/static/lint\.in$
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=linux
+
+
+      - id: pip-tools-compile
+        alias: compile-linux-py3.9-zmq-requirements
+        name: Linux Py3.9 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/linux\.in)$
+        exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|darwin|windows)\.in$
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+
+      - id: pip-tools-compile
+        alias: compile-darwin-py3.9-zmq-requirements
+        name: Darwin Py3.9 ZeroMQ Requirements
+        files: ^(pkg/osx/(req|req_ext)\.txt|requirements/((base|zeromq|pytest)\.txt|static/darwin\.in))$
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=darwin
+          - --include=pkg/osx/req.txt
+          - --include=pkg/osx/req_ext.txt
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --passthrough-line-from-input=^pyobjc(.*)$
+
+# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
+#      - id: pip-tools-compile
+#        alias: compile-windows-py3.9-zmq-requirements
+#        name: Windows Py3.9 ZeroMQ Requirements
+#        files: ^(pkg/windows/(req|req_win)\.txt|requirements/((base|zeromq|pytest)\.txt|static/windows\.in))$
+#        args:
+#          - -v
+#          - --py-version=3.9
+#          - --platform=windows
+#          - --include=pkg/windows/req.txt
+#          - --include=pkg/windows/req_win.txt
+#          - --include=requirements/base.txt
+#          - --include=requirements/zeromq.txt
+#          - --include=requirements/pytest.txt
+
+      - id: pip-tools-compile
+        alias: compile-cloud-py3.9-requirements
+        name: Cloud Py3.9 Requirements
+        files: ^requirements/(static/cloud\.in)$
+        args:
+          - -v
+          - --py-version=3.9
+
+      - id: pip-tools-compile
+        alias: compile-doc-requirements
+        name: Docs Py3.9 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/docs\.in)$
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=linux
+
+      - id: pip-tools-compile
+        alias: compile-linux-crypto-py3.9-requirements
+        name: Linux Py3.9 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/crypto\.in)$
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=linux
+          - --out-prefix=linux
+
+      - id: pip-tools-compile
+        alias: compile-darwin-crypto-py3.9-requirements
+        name: Darwin Py3.9 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/crypto\.in)$
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=darwin
+          - --out-prefix=darwin
+
+# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
+#      - id: pip-tools-compile
+#        alias: compile-windows-crypto-py3.9-requirements
+#        name: Windows Py3.9 Crypto Requirements
+#        files: ^requirements/(crypto\.txt|static/crypto\.in)$
+#        args:
+#          - -v
+#          - --py-version=3.9
+#          - --platform=windows
+#          - --out-prefix=windows
+
+      - id: pip-tools-compile
+        alias: compile-lint-py3.9-requirements
+        name: Lint Py3.9 Requirements
+        files: ^requirements/static/lint\.in$
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=linux
+
+  # ----- Invoke ---------------------------------------------------------------------------------------------------->
+      - id: pip-tools-compile
+        alias: compile-py3.5-invoke-requirements
+        name: Linux Py3.5 Invoke Requirements
+        files: ^requirements/static/invoke\.in$
+        args:
+          - -v
+          - --py-version=3.5
+
+      - id: pip-tools-compile
+        alias: compile-py3.6-invoke-requirements
+        name: Linux Py3.6 Invoke Requirements
+        files: ^requirements/static/invoke\.in$
+        args:
+          - -v
+          - --py-version=3.6
+
+      - id: pip-tools-compile
+        alias: compile-py3.7-invoke-requirements
+        name: Linux Py3.7 Invoke Requirements
+        files: ^requirements/static/invoke\.in$
+        args:
+          - -v
+          - --py-version=3.7
+
+      - id: pip-tools-compile
+        alias: compile-py3.8-invoke-requirements
+        name: Linux Py3.8 Invoke Requirements
+        files: ^requirements/static/invoke\.in$
+        args:
+          - -v
+          - --py-version=3.8
+
+      - id: pip-tools-compile
+        alias: compile-py3.9-invoke-requirements
+        name: Linux Py3.9 Invoke Requirements
+        files: ^requirements/static/invoke\.in$
+        args:
+          - -v
+          - --py-version=3.9
+  # <---- Invoke -----------------------------------------------------------------------------------------------------
+
   - repo: https://github.com/timothycrosley/isort
-    rev: '1e78a9acf3110e1f9721feb591f89a451fc9876a'
+    rev: "1e78a9acf3110e1f9721feb591f89a451fc9876a"
     hooks:
       - id: isort
         additional_dependencies: ['toml']
@@ -333,13 +574,14 @@ repos:
                 tests/kitchen/.*
             )$
 
+
   - repo: https://github.com/saltstack/salt-nox-pre-commit
     rev: master
     hooks:
       - id: nox-py2
         alias: lint-salt
         name: Lint Salt
-        files: ^((setup|noxfile)|salt/.*)\.py$
+        files: ^((setup|noxfile)|(salt|tasks)/.*)\.py$
         args:
           - -e
           - lint-salt-pre-commit
@@ -356,3 +598,16 @@ repos:
           - -e
           - lint-tests-pre-commit
           - --
+
+  - repo: https://github.com/saltstack/salt-nox-pre-commit
+    rev: master
+    hooks:
+      - id: nox-py2
+        alias: check-docs
+        name: Check Docs
+        files: ^(salt/.*\.py|doc/ref/.*\.rst)$
+        args:
+          - -e
+          - invoke-pre-commit
+          - --
+          - docs.check

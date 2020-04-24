@@ -250,7 +250,9 @@ def __virtual__():
     """
     Only load if the locale module is available in __salt__
     """
-    return "iptables.version" in __salt__
+    if "iptables.version" in __salt__:
+        return True
+    return (False, "iptables module could not be loaded")
 
 
 def chain_present(name, table="filter", family="ipv4"):

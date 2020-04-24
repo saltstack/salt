@@ -270,7 +270,7 @@ def latest_version(*names, **kwargs):
     fromrepo = kwargs.pop("fromrepo", None)
     cache_valid_time = kwargs.pop("cache_valid_time", 0)
 
-    if len(names) == 0:
+    if not names:
         return ""
     ret = {}
     # Initialize the dict with empty strings
@@ -634,7 +634,7 @@ def install(
     if not fromrepo and repo:
         fromrepo = repo
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     cmd_prefix = []
