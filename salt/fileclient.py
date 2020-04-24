@@ -40,10 +40,12 @@ from salt.exceptions import CommandExecutionError, MinionError
 from salt.ext import six
 from salt.ext.six.moves.urllib.error import HTTPError, URLError
 from salt.ext.six.moves.urllib.parse import urlparse, urlunparse
+from salt.ext.tornado.httputil import (
+    HTTPHeaders,
+    HTTPInputError,
+    parse_response_start_line,
+)
 from salt.utils.openstack.swift import SaltSwift
-from tornado.httputil import HTTPHeaders, HTTPInputError, parse_response_start_line
-
-# pylint: enable=no-name-in-module,import-error
 
 log = logging.getLogger(__name__)
 MAX_FILENAME_LENGTH = 255
