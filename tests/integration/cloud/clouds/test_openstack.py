@@ -9,7 +9,12 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt Libs
-from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
+# Import Salt Libs
+from tests.integration.cloud.helpers.cloud_test_base import (
+    TIMEOUT,
+    CloudTest,
+    requires_provider_config,
+)
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -39,13 +44,17 @@ except ImportError:
 
 @skipIf(
     not HAS_KEYSTONE,
-    "Please install keystoneclient and a keystone server before running"
-    "openstack integration tests.",
+    "Please install keystoneclient and a keystone server before running openstack integration tests.",
 )
-class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
+class KeystoneTest(ModuleCase, SaltReturnAssertsMixin):
     """
     Validate the keystone state
     """
+
+    endpoint = "http://localhost:35357/v2.0"
+    auth_url = "http://localhost:5000"
+    internal_url = "{}/v2.0".format(auth_url)
+    token = "administrator"
 
     endpoint = "http://localhost:35357/v2.0"
     token = "administrator"
@@ -68,9 +77,9 @@ class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
             "keystone.endpoint_present",
             name="keystone",
             region="RegionOne",
-            publicurl="http://localhost:5000/v2.0",
-            internalurl="http://localhost:5000/v2.0",
-            adminurl="http://localhost:35357/v2.0",
+            publicurl=self.internal_url,
+            internalurl=self.internal_url,
+            adminurl=self.endpoint,
             connection_endpoint=self.endpoint,
             connection_token=self.token,
         )
@@ -199,7 +208,7 @@ class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
     @destructiveTest
     def test_libcloud_auth_v3(self):
         driver = OpenStackIdentity_3_0_Connection(
-            auth_url="http://localhost:5000",
+            auth_url=self.auth_url,
             user_id="admin",
             key="adminpass",
             token_scope=OpenStackIdentityTokenScope.PROJECT,
@@ -210,6 +219,7 @@ class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(driver.auth_token)
 
 
+@requires_provider_config("region_name")
 @skipIf(not HAS_SHADE, "openstack driver requires `shade`")
 class RackspaceTest(CloudTest):
     """
@@ -217,16 +227,55 @@ class RackspaceTest(CloudTest):
     """
 
     PROVIDER = "openstack"
-    REQUIRED_PROVIDER_CONFIG_ITEMS = ("auth", "cloud", "region_name")
+    PROVIDER_CONFIG_FILE = "rackspace.conf"
+    PROFILE_CONFIG_FILE = "rackspace.conf"
+    PROFILE_CONFIG_NAME = "rackspace-test"
+    _provider_config_name = "rackspace-config"
+
+    def setUp(self):
+        """
+        Sets up the test requirements
+        """
+        if not any(
+            (self.provider_config.get("auth"), self.provider_config.get("cloud"))
+        ):
+            self.skipTest("auth or cloud missing from {} config".format(self.PROVIDER))
+
+        super(RackspaceTest, self).setUp()
 
     def test_instance(self):
         """
         Test creating an instance on rackspace with the openstack driver
         """
-        # check if instance with salt installed returned
-        ret_val = self.run_cloud(
-            "-p rackspace-test {0}".format(self.instance_name), timeout=TIMEOUT
-        )
-        self.assertInstanceExists(ret_val)
+        self.assertCreateInstance()
+        self.assertDestroyInstance()
 
+
+@requires_provider_config("region_name")
+@skipIf(not HAS_SHADE, "openstack driver requires `shade`")
+class OpenstackCloudTest(CloudTest):
+    """
+    Integration tests for the Openstack cloud provider using the Openstack driver
+    """
+
+    PROVIDER = "openstack"
+    PROFILE_CONFIG_FILE = "rackspace.conf"
+    PROFILE_CONFIG_NAME = "rackspace-test"
+
+    def setUp(self):
+        """
+        Sets up the test requirements
+        """
+        if not any(
+            (self.provider_config.get("auth"), self.provider_config.get("cloud"))
+        ):
+            self.skipTest("auth or cloud missing from {} config".format(self.PROVIDER))
+
+        super(OpenstackCloudTest, self).setUp()
+
+    def test_instance(self):
+        """
+        Test creating an instance on openstack with the openstack driver
+        """
+        self.assertCreateInstance()
         self.assertDestroyInstance()
