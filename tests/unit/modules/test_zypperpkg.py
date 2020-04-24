@@ -304,9 +304,23 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
 
             ref_out = {"retcode": 0, "stdout": get_test_data(filename)}
 
-            with patch.dict(
-                zypper.__salt__, {"cmd.run_all": MagicMock(return_value=ref_out)}
-            ):
+            cmd_run_all = MagicMock(return_value=ref_out)
+            mock_call = call(
+                [
+                    "zypper",
+                    "--non-interactive",
+                    "--xmlout",
+                    "--no-refresh",
+                    "--disable-repositories",
+                    "products",
+                    u"-i",
+                ],
+                env={"ZYPP_READONLY_HACK": "1"},
+                output_loglevel="trace",
+                python_shell=False,
+            )
+
+            with patch.dict(zypper.__salt__, {"cmd.run_all": cmd_run_all}):
                 products = zypper.list_products()
                 self.assertEqual(len(products), 7)
                 self.assertIn(
@@ -329,6 +343,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                         self.assertEqual(
                             test_data[kwd], sorted([prod.get(kwd) for prod in products])
                         )
+                cmd_run_all.assert_has_calls([mock_call])
 
     def test_refresh_db(self):
         """
@@ -346,14 +361,25 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
 
         run_out = {"stderr": "", "stdout": "\n".join(ref_out), "retcode": 0}
 
-        with patch.dict(
-            zypper.__salt__, {"cmd.run_all": MagicMock(return_value=run_out)}
-        ):
+        zypper_mock = MagicMock(return_value=run_out)
+        call_kwargs = {"output_loglevel": "trace", "python_shell": False, "env": {}}
+        with patch.dict(zypper.__salt__, {"cmd.run_all": zypper_mock}):
             with patch.object(salt.utils.pkg, "clear_rtag", Mock()):
                 result = zypper.refresh_db()
                 self.assertEqual(result.get("openSUSE-Leap-42.1-LATEST"), False)
                 self.assertEqual(result.get("openSUSE-Leap-42.1-Update"), False)
                 self.assertEqual(result.get("openSUSE-Leap-42.1-Update-Non-Oss"), True)
+                zypper_mock.assert_called_with(
+                    ["zypper", "--non-interactive", "refresh", "--force"], **call_kwargs
+                )
+                zypper.refresh_db(force=False)
+                zypper_mock.assert_called_with(
+                    ["zypper", "--non-interactive", "refresh"], **call_kwargs
+                )
+                zypper.refresh_db(force=True)
+                zypper_mock.assert_called_with(
+                    ["zypper", "--non-interactive", "refresh", "--force"], **call_kwargs
+                )
 
     def test_info_installed(self):
         """
@@ -1091,6 +1117,44 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             list_patches = zypper.list_patches(refresh=False)
             self.assertEqual(len(list_patches), 3)
             self.assertDictEqual(list_patches, PATCHES_RET)
+
+    @patch(
+        "salt.utils.path.os_walk", MagicMock(return_value=[("test", "test", "test")])
+    )
+    @patch("os.path.getsize", MagicMock(return_value=123456))
+    @patch("os.path.getctime", MagicMock(return_value=1234567890.123456))
+    @patch(
+        "fnmatch.filter",
+        MagicMock(return_value=["/var/cache/zypper/packages/foo/bar/test_package.rpm"]),
+    )
+    def test_list_downloaded_with_kwargs(self):
+        """
+        Test downloaded packages listing.
+
+        :return:
+        """
+        DOWNLOADED_RET = {
+            "test-package": {
+                "1.0": {
+                    "path": "/var/cache/zypper/packages/foo/bar/test_package.rpm",
+                    "size": 123456,
+                    "creation_date_time_t": 1234567890,
+                    "creation_date_time": "2009-02-13T23:31:30",
+                }
+            }
+        }
+
+        with patch.dict(
+            zypper.__salt__,
+            {
+                "lowpkg.bin_pkg_info": MagicMock(
+                    return_value={"name": "test-package", "version": "1.0"}
+                )
+            },
+        ):
+            list_downloaded = zypper.list_downloaded(kw1=True, kw2=False)
+            self.assertEqual(len(list_downloaded), 1)
+            self.assertDictEqual(list_downloaded, DOWNLOADED_RET)
 
     @patch(
         "salt.utils.path.os_walk", MagicMock(return_value=[("test", "test", "test")])

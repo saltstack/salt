@@ -15,6 +15,12 @@
                   {% if 'cmdline' in boot %}
                     <cmdline>{{ boot.cmdline }}</cmdline>
                   {% endif %}
+                  {% if 'loader' in boot %}
+                    <loader readonly='yes' type='pflash'>{{ boot.loader }}</loader>
+                  {% endif %}
+                  {% if 'nvram' in boot %}
+                    <nvram template='{{boot.nvram}}'></nvram>
+                  {% endif %}
                 {% endif %}
                 {% for dev in boot_dev %}
                 <boot dev='{{ dev }}' />

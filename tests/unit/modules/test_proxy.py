@@ -138,6 +138,40 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertTrue(out)
 
+    def test_get_proxy_win(self):
+        """
+        Test to make sure that we correctly get the current proxy info on
+        Windows
+        """
+        result = [
+            {
+                "vdata": "http=192.168.0.1:3128;https=192.168.0.2:3128;ftp=192.168.0.3:3128"
+            },
+            {"vdata": 1},
+        ]
+        mock_reg_read = MagicMock(side_effect=result)
+        expected = {
+            "enabled": True,
+            "http": {"server": "192.168.0.1", "port": "3128"},
+            "https": {"server": "192.168.0.2", "port": "3128"},
+            "ftp": {"server": "192.168.0.3", "port": "3128"},
+        }
+        with patch.dict(proxy.__grains__, {"os": "Windows"}), patch.dict(
+            proxy.__utils__, {"reg.read_value": mock_reg_read}
+        ):
+            out = proxy.get_proxy_win()
+            self.assertDictEqual(out, expected)
+            mock_reg_read.assert_any_call(
+                hive="HKEY_CURRENT_USER",
+                key="SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",
+                vname="ProxyServer",
+            )
+            mock_reg_read.assert_any_call(
+                hive="HKEY_CURRENT_USER",
+                key="SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",
+                vname="ProxyEnable",
+            )
+
     def test_get_http_proxy_windows(self):
         """
         Test to make sure that we correctly get the current proxy info on
@@ -148,15 +182,16 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
         }
         mock = MagicMock(return_value=result)
         expected = {"server": "192.168.0.1", "port": "3128"}
-        with patch.dict(proxy.__grains__, {"os": "Windows"}):
-            with patch.dict(proxy.__salt__, {"reg.read_value": mock}):
-                out = proxy.get_http_proxy()
-                mock.assert_called_once_with(
-                    hive="HKEY_CURRENT_USER",
-                    key="SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",
-                    vname="ProxyServer",
-                )
-                self.assertEqual(expected, out)
+        with patch.dict(proxy.__grains__, {"os": "Windows"}), patch.dict(
+            proxy.__utils__, {"reg.read_value": mock}
+        ):
+            out = proxy.get_http_proxy()
+            mock.assert_called_once_with(
+                hive="HKEY_CURRENT_USER",
+                key="SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",
+                vname="ProxyServer",
+            )
+            self.assertEqual(expected, out)
 
     def test_get_https_proxy_windows(self):
         """
@@ -168,15 +203,16 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
         }
         mock = MagicMock(return_value=result)
         expected = {"server": "192.168.0.2", "port": "3128"}
-        with patch.dict(proxy.__grains__, {"os": "Windows"}):
-            with patch.dict(proxy.__salt__, {"reg.read_value": mock}):
-                out = proxy.get_https_proxy()
-                mock.assert_called_once_with(
-                    hive="HKEY_CURRENT_USER",
-                    key="SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",
-                    vname="ProxyServer",
-                )
-                self.assertEqual(expected, out)
+        with patch.dict(proxy.__grains__, {"os": "Windows"}), patch.dict(
+            proxy.__utils__, {"reg.read_value": mock}
+        ):
+            out = proxy.get_https_proxy()
+            mock.assert_called_once_with(
+                hive="HKEY_CURRENT_USER",
+                key="SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",
+                vname="ProxyServer",
+            )
+            self.assertEqual(expected, out)
 
     def test_get_ftp_proxy_windows(self):
         """
@@ -188,19 +224,20 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
         }
         mock = MagicMock(return_value=result)
         expected = {"server": "192.168.0.3", "port": "3128"}
-        with patch.dict(proxy.__grains__, {"os": "Windows"}):
-            with patch.dict(proxy.__salt__, {"reg.read_value": mock}):
-                out = proxy.get_ftp_proxy()
-                mock.assert_called_once_with(
-                    hive="HKEY_CURRENT_USER",
-                    key="SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",
-                    vname="ProxyServer",
-                )
-                self.assertEqual(expected, out)
+        with patch.dict(proxy.__grains__, {"os": "Windows"}), patch.dict(
+            proxy.__utils__, {"reg.read_value": mock}
+        ):
+            out = proxy.get_ftp_proxy()
+            mock.assert_called_once_with(
+                hive="HKEY_CURRENT_USER",
+                key="SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",
+                vname="ProxyServer",
+            )
+            self.assertEqual(expected, out)
 
     def test_get_all_proxies_macos_fails(self):
         mock = MagicMock()
-        with patch.dict(proxy.__salt__, {"reg.read_value": mock}):
+        with patch.dict(proxy.__utils__, {"reg.read_value": mock}):
             out = proxy.get_proxy_win()
             assert not mock.called
             self.assertEqual(out, None)
@@ -235,11 +272,12 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
                 vname="ProxyEnable",
             ),
         ]
-        with patch.dict(proxy.__grains__, {"os": "Windows"}):
-            with patch.dict(proxy.__salt__, {"reg.read_value": mock}):
-                out = proxy.get_proxy_win()
-                mock.assert_has_calls(calls)
-                self.assertEqual(expected, out)
+        with patch.dict(proxy.__grains__, {"os": "Windows"}), patch.dict(
+            proxy.__utils__, {"reg.read_value": mock}
+        ):
+            out = proxy.get_proxy_win()
+            mock.assert_has_calls(calls)
+            self.assertEqual(expected, out)
 
     def test_set_http_proxy_windows(self):
         """
@@ -268,18 +306,15 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
         ]
         mock_reg = MagicMock()
         mock_cmd = MagicMock()
-        with patch.dict(proxy.__grains__, {"os": "Windows"}):
-            with patch.dict(
-                proxy.__salt__, {"reg.set_value": mock_reg, "cmd.run": mock_cmd}
-            ):
-                out = proxy.set_http_proxy(
-                    server="192.168.0.1",
-                    port=3128,
-                    bypass_hosts=[".moo.com", ".salt.com"],
-                )
-                mock_reg.assert_has_calls(calls)
-                mock_cmd.assert_called_once_with("netsh winhttp import proxy source=ie")
-                self.assertTrue(out)
+        with patch.dict(proxy.__grains__, {"os": "Windows"}), patch.dict(
+            proxy.__utils__, {"reg.set_value": mock_reg}
+        ), patch.dict(proxy.__salt__, {"cmd.run": mock_cmd}):
+            out = proxy.set_http_proxy(
+                server="192.168.0.1", port=3128, bypass_hosts=[".moo.com", ".salt.com"],
+            )
+            mock_reg.assert_has_calls(calls)
+            mock_cmd.assert_called_once_with("netsh winhttp import proxy source=ie")
+            self.assertTrue(out)
 
     def test_set_https_proxy_windows(self):
         """
@@ -308,18 +343,15 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
         ]
         mock_reg = MagicMock()
         mock_cmd = MagicMock()
-        with patch.dict(proxy.__grains__, {"os": "Windows"}):
-            with patch.dict(
-                proxy.__salt__, {"reg.set_value": mock_reg, "cmd.run": mock_cmd}
-            ):
-                out = proxy.set_https_proxy(
-                    server="192.168.0.1",
-                    port=3128,
-                    bypass_hosts=[".moo.com", ".salt.com"],
-                )
-                mock_reg.assert_has_calls(calls)
-                mock_cmd.assert_called_once_with("netsh winhttp import proxy source=ie")
-                self.assertTrue(out)
+        with patch.dict(proxy.__grains__, {"os": "Windows"}), patch.dict(
+            proxy.__utils__, {"reg.set_value": mock_reg}
+        ), patch.dict(proxy.__salt__, {"cmd.run": mock_cmd}):
+            out = proxy.set_https_proxy(
+                server="192.168.0.1", port=3128, bypass_hosts=[".moo.com", ".salt.com"],
+            )
+            mock_reg.assert_has_calls(calls)
+            mock_cmd.assert_called_once_with("netsh winhttp import proxy source=ie")
+            self.assertTrue(out)
 
     def test_set_ftp_proxy_windows(self):
         """
@@ -348,18 +380,15 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
         ]
         mock_reg = MagicMock()
         mock_cmd = MagicMock()
-        with patch.dict(proxy.__grains__, {"os": "Windows"}):
-            with patch.dict(
-                proxy.__salt__, {"reg.set_value": mock_reg, "cmd.run": mock_cmd}
-            ):
-                out = proxy.set_ftp_proxy(
-                    server="192.168.0.1",
-                    port=3128,
-                    bypass_hosts=[".moo.com", ".salt.com"],
-                )
-                mock_reg.assert_has_calls(calls)
-                mock_cmd.assert_called_once_with("netsh winhttp import proxy source=ie")
-                self.assertTrue(out)
+        with patch.dict(proxy.__grains__, {"os": "Windows"}), patch.dict(
+            proxy.__utils__, {"reg.set_value": mock_reg}
+        ), patch.dict(proxy.__salt__, {"cmd.run": mock_cmd}):
+            out = proxy.set_ftp_proxy(
+                server="192.168.0.1", port=3128, bypass_hosts=[".moo.com", ".salt.com"],
+            )
+            mock_reg.assert_has_calls(calls)
+            mock_cmd.assert_called_once_with("netsh winhttp import proxy source=ie")
+            self.assertTrue(out)
 
     def test_set_proxy_windows(self):
         """
@@ -388,18 +417,15 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
         ]
         mock_reg = MagicMock()
         mock_cmd = MagicMock()
-        with patch.dict(proxy.__grains__, {"os": "Windows"}):
-            with patch.dict(
-                proxy.__salt__, {"reg.set_value": mock_reg, "cmd.run": mock_cmd}
-            ):
-                out = proxy.set_proxy_win(
-                    server="192.168.0.1",
-                    port=3128,
-                    bypass_hosts=[".moo.com", ".salt.com"],
-                )
-                mock_reg.assert_has_calls(calls)
-                mock_cmd.assert_called_once_with("netsh winhttp import proxy source=ie")
-                self.assertTrue(out)
+        with patch.dict(proxy.__grains__, {"os": "Windows"}), patch.dict(
+            proxy.__utils__, {"reg.set_value": mock_reg}
+        ), patch.dict(proxy.__salt__, {"cmd.run": mock_cmd}):
+            out = proxy.set_proxy_win(
+                server="192.168.0.1", port=3128, bypass_hosts=[".moo.com", ".salt.com"],
+            )
+            mock_reg.assert_has_calls(calls)
+            mock_cmd.assert_called_once_with("netsh winhttp import proxy source=ie")
+            self.assertTrue(out)
 
     def test_set_proxy_windows_no_ftp(self):
         """
@@ -428,16 +454,15 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
         ]
         mock_reg = MagicMock()
         mock_cmd = MagicMock()
-        with patch.dict(proxy.__grains__, {"os": "Windows"}):
-            with patch.dict(
-                proxy.__salt__, {"reg.set_value": mock_reg, "cmd.run": mock_cmd}
-            ):
-                out = proxy.set_proxy_win(
-                    server="192.168.0.1",
-                    port=3128,
-                    types=["http", "https"],
-                    bypass_hosts=[".moo.com", ".salt.com"],
-                )
-                mock_reg.assert_has_calls(calls)
-                mock_cmd.assert_called_once_with("netsh winhttp import proxy source=ie")
-                self.assertTrue(out)
+        with patch.dict(proxy.__grains__, {"os": "Windows"}), patch.dict(
+            proxy.__utils__, {"reg.set_value": mock_reg}
+        ), patch.dict(proxy.__salt__, {"cmd.run": mock_cmd}):
+            out = proxy.set_proxy_win(
+                server="192.168.0.1",
+                port=3128,
+                types=["http", "https"],
+                bypass_hosts=[".moo.com", ".salt.com"],
+            )
+            mock_reg.assert_has_calls(calls)
+            mock_cmd.assert_called_once_with("netsh winhttp import proxy source=ie")
+            self.assertTrue(out)

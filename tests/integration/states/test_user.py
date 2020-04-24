@@ -7,17 +7,15 @@ user present
 user present with custom homedir
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import sys
 from random import randint
 
-# Import Salt libs
+import pytest
+import salt.utils.files
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
@@ -51,6 +49,7 @@ else:
 
 @destructiveTest
 @skip_if_not_root
+@pytest.mark.windows_whitelisted
 class UserTest(ModuleCase, SaltReturnAssertsMixin):
     """
     test for user absent
@@ -63,14 +62,17 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         else os.path.join("tmp", user_name)
     )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_user_absent(self):
         ret = self.run_state("user.absent", name="unpossible")
         self.assertSaltTrueReturn(ret)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_user_if_present(self):
         ret = self.run_state("user.present", name=USER)
         self.assertSaltTrueReturn(ret)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_user_if_present_with_gid(self):
         if self.run_function("group.info", [USER]):
             ret = self.run_state("user.present", name=USER, gid=GID)
@@ -80,6 +82,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
             self.skipTest("Neither 'nobody' nor 'nogroup' are valid groups")
         self.assertSaltTrueReturn(ret)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_user_not_present(self):
         """
         This is a DESTRUCTIVE TEST it creates a new user on the minion.
@@ -89,6 +92,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state("user.present", name=self.user_name)
         self.assertSaltTrueReturn(ret)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_user_present_when_home_dir_does_not_18843(self):
         """
         This is a DESTRUCTIVE TEST it creates a new user on the minion.
@@ -107,6 +111,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @requires_system_grains
+    @skipIf(True, "SLOWTEST skip")
     def test_user_present_nondefault(self, grains=None):
         """
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
@@ -132,68 +137,30 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual(group_name, self.user_name)
 
     @skipIf(
-        salt.utils.platform.is_windows(),
-        "windows minion does not support gid_from_name",
+        salt.utils.platform.is_windows(), "windows minion does not support usergroup"
     )
-    @requires_system_grains
-    def test_user_present_gid_from_name_default(self, grains=None):
-        """
-        This is a DESTRUCTIVE TEST. It creates a new user on the on the minion.
-        This is an integration test. Not all systems will automatically create
-        a group of the same name as the user, but I don't have access to any.
-        If you run the test and it fails, please fix the code it's testing to
-        work on your operating system.
-        """
-        # MacOS users' primary group defaults to staff (20), not the name of
-        # user
-        gid_from_name = False if grains["os_family"] == "MacOS" else True
-
-        ret_user_present = self.run_state(
-            "user.present",
-            name=self.user_name,
-            gid_from_name=gid_from_name,
-            home=self.user_home,
-        )
-
-        if gid_from_name:
-            self.assertSaltFalseReturn(ret_user_present)
-            ret_user_present = ret_user_present[next(iter(ret_user_present))]
-            self.assertTrue("is not present" in ret_user_present["comment"])
-        else:
-            self.assertSaltTrueReturn(ret_user_present)
-            ret_user_info = self.run_function("user.info", [self.user_name])
-            self.assertReturnNonEmptySaltType(ret_user_info)
-            group_name = grp.getgrgid(ret_user_info["gid"]).gr_name
-            if not salt.utils.platform.is_darwin():
-                self.assertTrue(os.path.isdir(self.user_home))
-            if grains["os_family"] in ("Suse",):
-                self.assertEqual(group_name, "users")
-            elif grains["os_family"] == "MacOS":
-                self.assertEqual(group_name, "staff")
-            else:
-                self.assertEqual(group_name, self.user_name)
-
-    @skipIf(
-        salt.utils.platform.is_windows(),
-        "windows minion does not support gid_from_name",
-    )
-    def test_user_present_gid_from_name(self):
+    @skipIf(True, "SLOWTEST skip")
+    def test_user_present_usergroup_false(self):
         """
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
         This is a unit test, NOT an integration test. We create a group of the
         same name as the user beforehand, so it should all run smoothly.
         """
+        # MacOS users' primary group defaults to staff (20), not the name of
+        # user
         ret = self.run_state("group.present", name=self.user_name)
         self.assertSaltTrueReturn(ret)
         ret = self.run_state(
-            "user.present", name=self.user_name, gid_from_name=True, home=self.user_home
+            "user.present",
+            name=self.user_name,
+            gid=self.user_name,
+            usergroup=False,
+            home=self.user_home,
         )
         self.assertSaltTrueReturn(ret)
-
         ret = self.run_function("user.info", [self.user_name])
         self.assertReturnNonEmptySaltType(ret)
         group_name = grp.getgrgid(ret["gid"]).gr_name
-
         if not salt.utils.platform.is_darwin():
             self.assertTrue(os.path.isdir(self.user_home))
         self.assertEqual(group_name, self.user_name)
@@ -203,11 +170,46 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @skipIf(
+        salt.utils.platform.is_windows(),
+        "windows minion does not support gid_from_name",
+    )
+    @skipIf(
+        salt.utils.platform.is_windows(), "windows minion does not support usergroup"
+    )
+    def test_user_present_usergroup(self):
+        """
+        This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
+        This is a unit test, NOT an integration test.
+        """
+        ret = self.run_state(
+            "user.present", name=self.user_name, usergroup=True, home=self.user_home
+        )
+        self.assertSaltTrueReturn(ret)
+
+        ret = self.run_function("user.info", [self.user_name])
+        self.assertReturnNonEmptySaltType(ret)
+        group_name = grp.getgrgid(ret["gid"]).gr_name
+
+        if not salt.utils.platform.is_darwin():
+            self.assertTrue(os.path.isdir(self.user_home))
+        if salt.utils.platform.is_darwin():
+            group_name = "staff"
+        else:
+            group_name = self.user_name
+        self.assertEqual(group_name, group_name)
+        ret = self.run_state("user.absent", name=self.user_name)
+        self.assertSaltTrueReturn(ret)
+        if not salt.utils.platform.is_darwin():
+            ret = self.run_state("group.absent", name=self.user_name)
+            self.assertSaltTrueReturn(ret)
+
+    @skipIf(
         sys.getfilesystemencoding().startswith("ANSI"),
         "A system encoding which supports Unicode characters must be set. Current setting is: {0}. Try setting $LANG='en_US.UTF-8'".format(
             sys.getfilesystemencoding()
         ),
     )
+    @skipIf(True, "SLOWTEST skip")
     def test_user_present_unicode(self):
         """
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
@@ -239,6 +241,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         salt.utils.platform.is_windows(),
         "windows minon does not support roomnumber or phone",
     )
+    @skipIf(True, "SLOWTEST skip")
     def test_user_present_gecos(self):
         """
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
@@ -262,6 +265,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         salt.utils.platform.is_windows(),
         "windows minon does not support roomnumber or phone",
     )
+    @skipIf(True, "SLOWTEST skip")
     def test_user_present_gecos_none_fields(self):
         """
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
@@ -288,6 +292,22 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual("", ret["workphone"])
             self.assertEqual("", ret["homephone"])
 
+    @skipIf(
+        salt.utils.platform.is_windows(), "windows minon does not support createhome"
+    )
+    @skipIf(True, "SLOWTEST skip")
+    def test_user_present_home_directory_created(self):
+        """
+        This is a DESTRUCTIVE TEST it creates a new user on the minion.
+
+        It ensures that the home directory is created.
+        """
+        ret = self.run_state("user.present", name=self.user_name, createhome=True)
+        self.assertSaltTrueReturn(ret)
+
+        user_info = self.run_function("user.info", [self.user_name])
+        self.assertTrue(os.path.exists(user_info["home"]))
+
     def tearDown(self):
         if salt.utils.platform.is_darwin():
             check_user = self.run_function("user.list_users")
@@ -299,6 +319,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
 @destructiveTest
 @skip_if_not_root
 @skipIf(not salt.utils.platform.is_windows(), "Windows only tests")
+@pytest.mark.windows_whitelisted
 class WinUserTest(ModuleCase, SaltReturnAssertsMixin):
     """
     test for user absent
@@ -307,6 +328,7 @@ class WinUserTest(ModuleCase, SaltReturnAssertsMixin):
     def tearDown(self):
         self.assertSaltTrueReturn(self.run_state("user.absent", name=USER))
 
+    @skipIf(True, "SLOWTEST skip")
     def test_user_present_existing(self):
         ret = self.run_state(
             "user.present",

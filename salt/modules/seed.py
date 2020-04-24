@@ -81,12 +81,18 @@ def _mount(path, ftype, root=None):
     return mpt
 
 
-def _umount(mpt, ftype):
+def _umount(mpt, disk, ftype):
     if ftype == "block":
         __salt__["mount.umount"](mpt)
         os.rmdir(mpt)
     elif ftype == "file":
-        __salt__["mount.umount"](mpt, util="qemu_nbd")
+        util = None
+        if "guestfs.mount" in __salt__:
+            util = "guestfs"
+        elif "qemu_nbd.init" in __salt__:
+            util = "qemu_nbd"
+        if util:
+            __salt__["mount.umount"](mpt, device=disk, util=util)
 
 
 def apply_(
@@ -197,7 +203,7 @@ def apply_(
         log.warning("No useful action performed on %s", mpt)
         res = False
 
-    _umount(mpt, ftype)
+    _umount(mpt, path, ftype)
     return res
 
 

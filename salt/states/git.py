@@ -39,7 +39,7 @@ def __virtual__():
     Only load if git is available
     """
     if "git.version" not in __salt__:
-        return False
+        return (False, "git module could not be loaded")
     git_ver = _LooseVersion(__salt__["git.version"](versioninfo=False))
     return git_ver >= _LooseVersion("1.6.5")
 
