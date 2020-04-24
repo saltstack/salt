@@ -39,7 +39,9 @@ def __virtual__():
     """
     Only load if RabbitMQ is installed.
     """
-    return salt.utils.path.which("rabbitmqctl") is not None
+    if salt.utils.path.which("rabbitmqctl"):
+        return True
+    return (False, "Command not found: rabbitmqctl")
 
 
 def _check_perms_changes(name, newperms, runas=None, existing=None):

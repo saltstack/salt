@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import hashlib
@@ -8,24 +7,18 @@ import logging
 import os
 import shutil
 import signal
-import sys
 import tempfile
 import textwrap
 import time
 import uuid
 
 import psutil
-
-# Import 3rd party libs
+import pytest
 import salt.ext.six as six
-
-# Import salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     get_unused_localhost_port,
@@ -38,9 +31,7 @@ from tests.support.unit import skipIf
 log = logging.getLogger(__name__)
 
 
-SSL3_SUPPORT = sys.version_info >= (2, 7, 9)
-
-
+@pytest.mark.windows_whitelisted
 class CPModuleTest(ModuleCase):
     """
     Validate the cp module
@@ -57,6 +48,7 @@ class CPModuleTest(ModuleCase):
         )
 
     @with_tempfile()
+    @skipIf(True, "SLOWTEST skip")
     def test_get_file(self, tgt):
         """
         cp.get_file
@@ -67,6 +59,7 @@ class CPModuleTest(ModuleCase):
         self.assertIn("KNIGHT:  They're nervous, sire.", data)
         self.assertNotIn("bacon", data)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_get_file_to_dir(self):
         """
         cp.get_file
@@ -101,6 +94,7 @@ class CPModuleTest(ModuleCase):
         self.assertNotIn("bacon", data)
 
     @with_tempfile()
+    @skipIf(True, "SLOWTEST skip")
     def test_get_file_gzipped(self, tgt):
         """
         cp.get_file
@@ -117,6 +111,7 @@ class CPModuleTest(ModuleCase):
         self.assertIn("KNIGHT:  They're nervous, sire.", data)
         self.assertNotIn("bacon", data)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_get_file_makedirs(self):
         """
         cp.get_file
@@ -132,6 +127,7 @@ class CPModuleTest(ModuleCase):
         self.assertNotIn("bacon", data)
 
     @with_tempfile()
+    @skipIf(True, "SLOWTEST skip")
     def test_get_template(self, tgt):
         """
         cp.get_template
@@ -144,6 +140,7 @@ class CPModuleTest(ModuleCase):
         self.assertIn("bacon", data)
         self.assertNotIn("spam", data)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_get_dir(self):
         """
         cp.get_dir
@@ -155,6 +152,7 @@ class CPModuleTest(ModuleCase):
         self.assertIn("empty", os.listdir(os.path.join(tgt, "grail")))
         self.assertIn("scene", os.listdir(os.path.join(tgt, "grail", "36")))
 
+    @skipIf(True, "SLOWTEST skip")
     def test_get_dir_templated_paths(self):
         """
         cp.get_dir
@@ -172,6 +170,7 @@ class CPModuleTest(ModuleCase):
     # cp.get_url tests
 
     @with_tempfile()
+    @skipIf(True, "SLOWTEST skip")
     def test_get_url(self, tgt):
         """
         cp.get_url with salt:// source given
@@ -182,6 +181,7 @@ class CPModuleTest(ModuleCase):
         self.assertIn("KNIGHT:  They're nervous, sire.", data)
         self.assertNotIn("bacon", data)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_get_url_makedirs(self):
         """
         cp.get_url
@@ -196,6 +196,7 @@ class CPModuleTest(ModuleCase):
         self.assertIn("KNIGHT:  They're nervous, sire.", data)
         self.assertNotIn("bacon", data)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_get_url_dest_empty(self):
         """
         cp.get_url with salt:// source given and destination omitted.
@@ -206,6 +207,7 @@ class CPModuleTest(ModuleCase):
         self.assertIn("KNIGHT:  They're nervous, sire.", data)
         self.assertNotIn("bacon", data)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_get_url_no_dest(self):
         """
         cp.get_url with salt:// source given and destination set as None
@@ -214,6 +216,7 @@ class CPModuleTest(ModuleCase):
         ret = self.run_function("cp.get_url", ["salt://grail/scene33", tgt])
         self.assertIn("KNIGHT:  They're nervous, sire.", ret)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_get_url_nonexistent_source(self):
         """
         cp.get_url with nonexistent salt:// source given
@@ -222,6 +225,7 @@ class CPModuleTest(ModuleCase):
         ret = self.run_function("cp.get_url", ["salt://grail/nonexistent_scene", tgt])
         self.assertEqual(ret, False)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_get_url_to_dir(self):
         """
         cp.get_url with salt:// source
@@ -233,11 +237,11 @@ class CPModuleTest(ModuleCase):
         self.assertIn("KNIGHT:  They're nervous, sire.", data)
         self.assertNotIn("bacon", data)
 
-    @skipIf(not SSL3_SUPPORT, "Requires python with SSL3 support")
     @skipIf(
         salt.utils.platform.is_darwin() and six.PY2, "This test hangs on OS X on Py2"
     )
     @with_tempfile()
+    @skipIf(True, "SLOWTEST skip")
     def test_get_url_https(self, tgt):
         """
         cp.get_url with https:// source given
@@ -250,10 +254,10 @@ class CPModuleTest(ModuleCase):
         self.assertIn("Windows", data)
         self.assertNotIn("AYBABTU", data)
 
-    @skipIf(not SSL3_SUPPORT, "Requires python with SSL3 support")
     @skipIf(
         salt.utils.platform.is_darwin() and six.PY2, "This test hangs on OS X on Py2"
     )
+    @skipIf(True, "SLOWTEST skip")
     def test_get_url_https_dest_empty(self):
         """
         cp.get_url with https:// source given and destination omitted.
@@ -267,10 +271,10 @@ class CPModuleTest(ModuleCase):
         self.assertIn("Windows", data)
         self.assertNotIn("AYBABTU", data)
 
-    @skipIf(not SSL3_SUPPORT, "Requires python with SSL3 support")
     @skipIf(
         salt.utils.platform.is_darwin() and six.PY2, "This test hangs on OS X on Py2"
     )
+    @skipIf(True, "SLOWTEST skip")
     def test_get_url_https_no_dest(self):
         """
         cp.get_url with https:// source given and destination set as None
@@ -293,6 +297,7 @@ class CPModuleTest(ModuleCase):
         self.assertIn("Windows", ret)
         self.assertNotIn("AYBABTU", ret)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_get_url_file(self):
         """
         cp.get_url with file:// source given
@@ -305,6 +310,7 @@ class CPModuleTest(ModuleCase):
         self.assertIn("KNIGHT:  They're nervous, sire.", data)
         self.assertNotIn("bacon", data)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_get_url_file_no_dest(self):
         """
         cp.get_url with file:// source given and destination set as None
@@ -316,6 +322,7 @@ class CPModuleTest(ModuleCase):
         self.assertNotIn("bacon", ret)
 
     @with_tempfile()
+    @skipIf(True, "SLOWTEST skip")
     def test_get_url_ftp(self, tgt):
         """
         cp.get_url with https:// source given
@@ -333,6 +340,7 @@ class CPModuleTest(ModuleCase):
 
     # cp.get_file_str tests
 
+    @skipIf(True, "SLOWTEST skip")
     def test_get_file_str_salt(self):
         """
         cp.get_file_str with salt:// source given
@@ -341,6 +349,7 @@ class CPModuleTest(ModuleCase):
         ret = self.run_function("cp.get_file_str", [src])
         self.assertIn("KNIGHT:  They're nervous, sire.", ret)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_get_file_str_nonexistent_source(self):
         """
         cp.get_file_str with nonexistent salt:// source given
@@ -349,10 +358,10 @@ class CPModuleTest(ModuleCase):
         ret = self.run_function("cp.get_file_str", [src])
         self.assertEqual(ret, False)
 
-    @skipIf(not SSL3_SUPPORT, "Requires python with SSL3 support")
     @skipIf(
         salt.utils.platform.is_darwin() and six.PY2, "This test hangs on OS X on Py2"
     )
+    @skipIf(True, "SLOWTEST skip")
     def test_get_file_str_https(self):
         """
         cp.get_file_str with https:// source given
@@ -364,6 +373,7 @@ class CPModuleTest(ModuleCase):
         self.assertIn("Windows", ret)
         self.assertNotIn("AYBABTU", ret)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_get_file_str_local(self):
         """
         cp.get_file_str with file:// source given
@@ -375,6 +385,7 @@ class CPModuleTest(ModuleCase):
 
     # caching tests
 
+    @skipIf(True, "SLOWTEST skip")
     def test_cache_file(self):
         """
         cp.cache_file
@@ -385,6 +396,7 @@ class CPModuleTest(ModuleCase):
         self.assertIn("KNIGHT:  They're nervous, sire.", data)
         self.assertNotIn("bacon", data)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_cache_files(self):
         """
         cp.cache_files
@@ -399,6 +411,7 @@ class CPModuleTest(ModuleCase):
             self.assertNotIn("bacon", data)
 
     @with_tempfile()
+    @skipIf(True, "SLOWTEST skip")
     def test_cache_master(self, tgt):
         """
         cp.cache_master
@@ -407,6 +420,7 @@ class CPModuleTest(ModuleCase):
         for path in ret:
             self.assertTrue(os.path.exists(path))
 
+    @skipIf(True, "SLOWTEST skip")
     def test_cache_local_file(self):
         """
         cp.cache_local_file
@@ -420,6 +434,7 @@ class CPModuleTest(ModuleCase):
 
     @skipIf(not salt.utils.path.which("nginx"), "nginx not installed")
     @skip_if_not_root
+    @skipIf(True, "SLOWTEST skip")
     def test_cache_remote_file(self):
         """
         cp.cache_file
@@ -500,6 +515,7 @@ class CPModuleTest(ModuleCase):
                 cached_contents = salt.utils.stringutils.to_unicode(fp_.read())
                 self.assertEqual(cached_contents, file_contents)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_list_states(self):
         """
         cp.list_states
@@ -508,6 +524,7 @@ class CPModuleTest(ModuleCase):
         self.assertIn("core", ret)
         self.assertIn("top", ret)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_list_minion(self):
         """
         cp.list_minion
@@ -524,6 +541,7 @@ class CPModuleTest(ModuleCase):
                 break
         self.assertTrue(found)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_is_cached(self):
         """
         cp.is_cached
@@ -534,6 +552,7 @@ class CPModuleTest(ModuleCase):
         ret2 = self.run_function("cp.is_cached", ["salt://fasldkgj/poicxzbn"])
         self.assertFalse(ret2)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_hash_file(self):
         """
         cp.hash_file
@@ -545,6 +564,7 @@ class CPModuleTest(ModuleCase):
             self.assertEqual(sha256_hash["hsum"], hashlib.sha256(data).hexdigest())
 
     @with_tempfile()
+    @skipIf(True, "SLOWTEST skip")
     def test_get_file_from_env_predefined(self, tgt):
         """
         cp.get_file
@@ -560,6 +580,7 @@ class CPModuleTest(ModuleCase):
             os.unlink(tgt)
 
     @with_tempfile()
+    @skipIf(True, "SLOWTEST skip")
     def test_get_file_from_env_in_url(self, tgt):
         tgt = os.path.join(RUNTIME_VARS.TMP, "cheese")
         try:
@@ -571,6 +592,7 @@ class CPModuleTest(ModuleCase):
         finally:
             os.unlink(tgt)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_push(self):
         log_to_xfer = os.path.join(RUNTIME_VARS.TMP, uuid.uuid4().hex)
         open(log_to_xfer, "w").close()  # pylint: disable=resource-leakage
@@ -592,5 +614,6 @@ class CPModuleTest(ModuleCase):
         finally:
             os.unlink(tgt_cache_file)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_envs(self):
         self.assertEqual(sorted(self.run_function("cp.envs")), sorted(["base", "prod"]))

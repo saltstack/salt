@@ -20,6 +20,7 @@ class SSHMineTest(SSHCase):
     testing salt-ssh with mine
     """
 
+    @skipIf(True, "SLOWTEST skip")
     def test_ssh_mine_get(self):
         """
         test salt-ssh with mine

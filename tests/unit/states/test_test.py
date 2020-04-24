@@ -36,6 +36,12 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({"comment": "Success!"})
             self.assertDictEqual(test.succeed_without_changes("salt"), ret)
 
+        with patch.dict(test.__opts__, {"test": False}):
+            ret.update({"comment": "A success comment!"})
+            self.assertDictEqual(
+                test.succeed_without_changes("salt", comment="A success comment!"), ret
+            )
+
     def test_fail_without_changes(self):
         """
             Test to returns failure.
@@ -44,6 +50,12 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(test.__opts__, {"test": False}):
             ret.update({"comment": "Failure!"})
             self.assertDictEqual(test.fail_without_changes("salt"), ret)
+
+        with patch.dict(test.__opts__, {"test": False}):
+            ret.update({"comment": "A failure comment!"})
+            self.assertDictEqual(
+                test.fail_without_changes("salt", comment="A failure comment!"), ret
+            )
 
     def test_succeed_with_changes(self):
         """
@@ -65,6 +77,23 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertDictEqual(test.succeed_with_changes("salt"), ret)
 
+        with patch.dict(test.__opts__, {"test": False}):
+            ret.update(
+                {
+                    "changes": {
+                        "testing": {
+                            "new": "Something pretended" " to change",
+                            "old": "Unchanged",
+                        }
+                    },
+                    "comment": "A success comment!",
+                    "result": True,
+                }
+            )
+            self.assertDictEqual(
+                test.succeed_with_changes("salt", comment="A success comment!"), ret
+            )
+
     def test_fail_with_changes(self):
         """
             Test to returns failure and changes is not empty.
@@ -84,6 +113,23 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
                 }
             )
             self.assertDictEqual(test.succeed_with_changes("salt"), ret)
+
+        with patch.dict(test.__opts__, {"test": False}):
+            ret.update(
+                {
+                    "changes": {
+                        "testing": {
+                            "new": "Something pretended" " to change",
+                            "old": "Unchanged",
+                        }
+                    },
+                    "comment": "A failure comment!",
+                    "result": True,
+                }
+            )
+            self.assertDictEqual(
+                test.succeed_with_changes("salt", comment="A failure comment!"), ret
+            )
 
     def test_configurable_test_state(self):
         """
