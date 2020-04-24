@@ -242,7 +242,7 @@ def get_last_change(name):
 
 
 def get_login_failed_count(name):
-    '''
+    """
     Get the number of failed login attempts
 
     :param str name: The username of the account
