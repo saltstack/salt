@@ -39,4 +39,3 @@ Execution Module                       Used for
 
 .. _Homebrew: https://brew.sh/
 .. _OpenCSW: https://www.opencsw.org/
-
