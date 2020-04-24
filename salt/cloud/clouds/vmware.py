@@ -141,7 +141,7 @@ import salt.config as config
 from salt.ext import six
 try:
     # Attempt to import pyVmomi libs
-    from pyVmomi import vim
+    from pyVmomi import vim  # pylint: disable=no-name-in-module
     HAS_PYVMOMI = True
 except ImportError:
     HAS_PYVMOMI = False
@@ -2633,11 +2633,33 @@ def create(vm_):
     win_run_once = config.get_cloud_config_value(
         'win_run_once', vm_, __opts__, search_global=False, default=None
     )
+    win_ad_domain = config.get_cloud_config_value(
+        'win_ad_domain', vm_, __opts__, search_global=False, default=''
+    )
+    win_ad_user = config.get_cloud_config_value(
+        'win_ad_user', vm_, __opts__, search_global=False, default=''
+    )
+    win_ad_password = config.get_cloud_config_value(
+        'win_ad_password', vm_, __opts__, search_global=False, default=''
+    )
+    win_autologon = config.get_cloud_config_value(
+        'win_autologon', vm_, __opts__, search_global=False, default=True
+    )
+    timezone = config.get_cloud_config_value(
+        'timezone', vm_, __opts__, search_global=False, default=''
+    )
+    hw_clock_utc = config.get_cloud_config_value(
+        'hw_clock_utc', vm_, __opts__, search_global=False, default=''
+    )
+    clonefrom_datacenter = config.get_cloud_config_value(
+        'clonefrom_datacenter', vm_, __opts__, search_global=False, default=datacenter
+    )
 
     # Get service instance object
     si = _get_si()
 
     container_ref = None
+    clonefrom_datacenter_ref = None
 
     # If datacenter is specified, set the container reference to start search from it instead
     if datacenter:
@@ -2653,13 +2675,22 @@ def create(vm_):
                                  datacenter
                              )
             container_ref = datacenter_ref if datacenter_ref else None
+            clonefrom_container_ref = datacenter_ref if datacenter_ref else None
+        # allow specifying a different datacenter that the template lives in
+        if clonefrom_datacenter:
+            clonefrom_datacenter_ref = salt.utils.vmware.get_mor_by_property(
+                                           si,
+                                           vim.Datacenter,
+                                           clonefrom_datacenter
+                                       )
+            clonefrom_container_ref = clonefrom_datacenter_ref if clonefrom_datacenter_ref else None
 
         # Clone VM/template from specified VM/template
         object_ref = salt.utils.vmware.get_mor_by_property(
                          si,
                          vim.VirtualMachine,
                          vm_['clonefrom'],
-                         container_ref=container_ref
+                         container_ref=clonefrom_container_ref
                      )
         if object_ref:
             clone_type = "template" if object_ref.config.template else "vm"
@@ -2897,14 +2928,23 @@ def create(vm_):
                 identity = vim.vm.customization.LinuxPrep()
                 identity.hostName = vim.vm.customization.FixedName(name=host_name)
                 identity.domain = domain_name
+                if timezone:
+                    identity.timeZone = timezone
+                if isinstance(hw_clock_utc, bool):
+                    identity.hwClockUTC = hw_clock_utc
             else:
                 identity = vim.vm.customization.Sysprep()
                 identity.guiUnattended = vim.vm.customization.GuiUnattended()
-                identity.guiUnattended.autoLogon = True
-                identity.guiUnattended.autoLogonCount = 1
+                identity.guiUnattended.autoLogon = win_autologon
+                if win_autologon:
+                    identity.guiUnattended.autoLogonCount = 1
+                else:
+                    identity.guiUnattended.autoLogonCount = 0
                 identity.guiUnattended.password = vim.vm.customization.Password()
                 identity.guiUnattended.password.value = win_password
                 identity.guiUnattended.password.plainText = plain_text
+                if timezone:
+                    identity.guiUnattended.timeZone = timezone
                 if win_run_once:
                     identity.guiRunOnce = vim.vm.customization.GuiRunOnce()
                     identity.guiRunOnce.commandList = win_run_once
@@ -2914,6 +2954,12 @@ def create(vm_):
                 identity.userData.computerName = vim.vm.customization.FixedName()
                 identity.userData.computerName.name = host_name
                 identity.identification = vim.vm.customization.Identification()
+                if win_ad_domain and win_ad_user and win_ad_password:
+                    identity.identification.joinDomain = win_ad_domain
+                    identity.identification.domainAdmin = win_ad_user
+                    identity.identification.domainAdminPassword = vim.vm.customization.Password()
+                    identity.identification.domainAdminPassword.value = win_ad_password
+                    identity.identification.domainAdminPassword.plainText = plain_text
             custom_spec = vim.vm.customization.Specification(
                 globalIPSettings=global_ip,
                 identity=identity,

@@ -40,7 +40,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is Arch
     '''
-    if __grains__['os_family'] == 'Arch':
+    if __grains__.get('os_family') == 'Arch':
         return __virtualname__
     return (False, 'The pacman module could not be loaded: unsupported OS family.')
 
@@ -111,7 +111,7 @@ def latest_version(*names, **kwargs):
 available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
-def upgrade_available(name):
+def upgrade_available(name, **kwargs):
     '''
     Check whether or not an upgrade is available for a given package
 
@@ -393,7 +393,7 @@ def group_diff(name):
     return ret
 
 
-def refresh_db(root=None):
+def refresh_db(root=None, **kwargs):
     '''
     Just run a ``pacman -Sy``, return a dict::
 
@@ -843,7 +843,7 @@ def purge(name=None, pkgs=None, **kwargs):
     return _uninstall(action='purge', name=name, pkgs=pkgs)
 
 
-def file_list(*packages):
+def file_list(*packages, **kwargs):
     '''
     List the files that belong to a package. Not specifying any packages will
     return a list of _every_ file on the system's package database (not
@@ -877,7 +877,7 @@ def file_list(*packages):
     return {'errors': errors, 'files': ret}
 
 
-def file_dict(*packages):
+def file_dict(*packages, **kwargs):
     '''
     List the files that belong to a package, grouped by package. Not
     specifying any packages will return a list of _every_ file on the system's
@@ -913,7 +913,7 @@ def file_dict(*packages):
     return {'errors': errors, 'packages': ret}
 
 
-def owner(*paths):
+def owner(*paths, **kwargs):
     '''
     .. versionadded:: 2014.7.0
 

@@ -163,17 +163,14 @@ def beacon(config):
         else:
             # No direct match, try with * wildcard regexp
             interface_regexp = interface.replace('*', '[0-9]+')
-            for interface in _stats:
-                match = re.search(interface_regexp, interface)
+            for _interface in _stats:
+                match = re.search(interface_regexp, _interface)
                 if match:
                     interfaces.append(match.group())
-                    expanded_config[match.group()] = config['interfaces'][interface]
+                    expanded_config[match.group()] = _config['interfaces'][interface]
 
     if expanded_config:
-        config.update(expanded_config)
-
-        # config updated so update _config
-        list(map(_config.update, config))
+        _config['interfaces'].update(expanded_config)
 
     log.debug('interfaces %s', interfaces)
     for interface in interfaces:

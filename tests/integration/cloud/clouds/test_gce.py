@@ -14,7 +14,7 @@ from salt.config import cloud_providers_config
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.helpers import expensiveTest, generate_random_name
+from tests.support.helpers import expensiveTest, generate_random_name, flaky
 
 TIMEOUT = 500
 
@@ -72,6 +72,7 @@ class GCETest(ShellCase):
                 .format(provider)
             )
 
+    @flaky
     def test_instance(self):
         '''
         Tests creating and deleting an instance on GCE
@@ -100,6 +101,7 @@ class GCETest(ShellCase):
         except AssertionError:
             raise
 
+    @flaky
     def test_instance_extra(self):
         '''
         Tests creating and deleting an instance on GCE

@@ -29,7 +29,7 @@ fqdn_separator: ``str``
     This is in case a minion_id contains a dot. Because NSoT
     doesn't allow hostnmes with dots, this option allows you to look up a device
     with this character replacing dots. For example, with this option set to
-     '-', the minion rtr1.lax1 would be looked up in NSoT as rtr1-lax1.
+    '-', the minion rtr1.lax1 would be looked up in NSoT as rtr1-lax1.
 
 all_devices_regex: ``list``
     This is a list of minions that will receive all device

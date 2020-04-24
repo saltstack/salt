@@ -127,7 +127,7 @@ command:
 
 .. code-block:: bash
 
-    salt-ssh '*' test.ping
+    salt-ssh '*' test.version
 
 Commands with ``salt-ssh`` follow the same syntax as the ``salt`` command.
 
@@ -218,8 +218,8 @@ YAML contents:
       ssh_wipe: True
 
 Instead of having to call
-``salt-ssh --config-dir=path/to/config/dir --max-procs=30 --wipe \* test.ping`` you
-can call ``salt-ssh \* test.ping``.
+``salt-ssh --config-dir=path/to/config/dir --max-procs=30 --wipe \* test.version`` you
+can call ``salt-ssh \* test.version``.
 
 Boolean-style options should be specified in their YAML representation.
 

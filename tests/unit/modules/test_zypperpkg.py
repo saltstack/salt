@@ -570,6 +570,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
              patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}):
             pkgs = zypper.list_pkgs(versions_as_list=True)
             self.assertFalse(pkgs.get('gpg-pubkey', False))
+            self.assertTrue('pkg.list_pkgs_None_[]' in zypper.__context__)
             for pkg_name, pkg_version in {
                 'jakarta-commons-discovery': ['0.4-129.686'],
                 'yast2-ftp-server': ['3.1.8-8.1'],
@@ -611,6 +612,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
              patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}):
             pkgs = zypper.list_pkgs(attr=['epoch', 'release', 'arch', 'install_date_time_t'])
             self.assertFalse(pkgs.get('gpg-pubkey', False))
+            self.assertTrue('pkg.list_pkgs_None_[]' in zypper.__context__)
             for pkg_name, pkg_attr in {
                 'jakarta-commons-discovery': [{
                     'version': '0.4',
@@ -855,7 +857,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                     'pico': '0.1.1',
                 }
 
-            def __call__(self, root=None):
+            def __call__(self, root=None, includes=None):
                 pkgs = self._pkgs.copy()
                 for target in self._packages:
                     if self._pkgs.get(target):
@@ -1300,3 +1302,77 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         with self.assertRaises(CommandExecutionError):
             for op in ['>>', '==', '<<', '+']:
                 zypper.Wildcard(_zpr)('libzypp', '{0}*.1'.format(op))
+
+    @patch('salt.modules.zypperpkg._get_visible_patterns')
+    def test__get_installed_patterns(self, get_visible_patterns):
+        '''Test installed patterns in the system'''
+        get_visible_patterns.return_value = {
+            'package-a': {
+                'installed': True,
+                'summary': 'description a',
+            },
+            'package-b': {
+                'installed': False,
+                'summary': 'description b',
+            },
+        }
+
+        salt_mock = {
+            'cmd.run': MagicMock(return_value='''pattern() = package-a
+pattern-visible()
+pattern() = package-c'''),
+        }
+        with patch.dict('salt.modules.zypperpkg.__salt__', salt_mock):
+            assert zypper._get_installed_patterns() == {
+                'package-a': {
+                    'installed': True,
+                    'summary': 'description a',
+                },
+                'package-c': {
+                    'installed': True,
+                    'summary': 'Non-visible pattern',
+                },
+            }
+
+    @patch('salt.modules.zypperpkg._get_visible_patterns')
+    def test_list_patterns(self, get_visible_patterns):
+        '''Test available patterns in the repo'''
+        get_visible_patterns.return_value = {
+            'package-a': {
+                'installed': True,
+                'summary': 'description a',
+            },
+            'package-b': {
+                'installed': False,
+                'summary': 'description b',
+            },
+        }
+        assert zypper.list_patterns() == {
+            'package-a': {
+                'installed': True,
+                'summary': 'description a',
+            },
+            'package-b': {
+                'installed': False,
+                'summary': 'description b',
+            },
+        }
+
+    def test__clean_cache_empty(self):
+        '''Test that an empty cached can be cleaned'''
+        context = {}
+        with patch.dict(zypper.__context__, context):
+            zypper._clean_cache()
+            assert context == {}
+
+    def test__clean_cache_filled(self):
+        '''Test that a filled cached can be cleaned'''
+        context = {
+            'pkg.list_pkgs_/mnt_[]': None,
+            'pkg.list_pkgs_/mnt_[patterns]': None,
+            'pkg.list_provides': None,
+            'pkg.other_data': None,
+        }
+        with patch.dict(zypper.__context__, context):
+            zypper._clean_cache()
+            self.assertEqual(zypper.__context__, {'pkg.other_data': None})

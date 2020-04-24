@@ -96,7 +96,7 @@ Once the instance has been created with salt-minion installed, connectivity to i
 
 .. code-block:: bash
 
-    salt my-new-vm test.ping
+    salt my-new-vm test.version
 
 OpenNebula uses an image --> template --> virtual machine paradigm where the template draws on the image, or disk,
 and virtual machines are created from templates. Because of this, there is no need to define a ``size`` in the cloud

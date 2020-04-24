@@ -66,7 +66,7 @@ clean:
 
 # User-friendly check for sphinx-build
 check_sphinx-build:
-	@which $(SPHINXBUILD) >/dev/null 2>&1 || (echo "The '$(SPHINXBUILD)' command was not found. Make sure you have Sphinx installed, then set the SPHINXBUILD environment variable to point to the full path of the '$(SPHINXBUILD)' executable. Alternatively you can add the directory with the executable to your PATH. If you don't have Sphinx installed, grab it from http://sphinx-doc.org/)" >&2; false)
+	@which $(SPHINXBUILD) >/dev/null 2>&1 || (echo "The '$(SPHINXBUILD)' command was not found. Make sure you have Sphinx installed, then set the SPHINXBUILD environment variable to point to the full path of the '$(SPHINXBUILD)' executable. Alternatively you can add the directory with the executable to your PATH. If you don't have Sphinx installed, grab it from http://www.sphinx-doc.org/en/master/)" >&2; false)
 
 html: check_sphinx-build translations
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
@@ -147,8 +147,7 @@ pdf: check_sphinx-build translations
 	fi
 	$(SPHINXBUILD) -b latex $(ALLSPHINXOPTS) $(BUILDDIR)/latex
 	@echo "Running LaTeX files through xelatex..."
-	perl -pi -e 's!pdflatex!xelatex!' $(BUILDDIR)/latex/Makefile
-	$(MAKE) -C $(BUILDDIR)/latex -i LATEXOPTS="-interaction=nonstopmode"
+	$(MAKE) -C $(BUILDDIR)/latex -i "PDFLATEX=latexmk" "LATEXMKOPTS=-xelatex -interaction=nonstopmode -f -quiet"
 	@echo "xelatex finished; the PDF files are in $(BUILDDIR)/latex."
 
 cheatsheet: translations

@@ -28,7 +28,7 @@ def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
-    if __grains__['os_family'] == 'Debian':
+    if __grains__.get('os_family') == 'Debian':
         return __virtualname__
     return (False, 'The dpkg execution module cannot be loaded: '
             'only works on Debian family systems.')
@@ -135,7 +135,7 @@ def unpurge(*packages):
     return salt.utils.data.compare_dicts(old, new)
 
 
-def list_pkgs(*packages):
+def list_pkgs(*packages, **kwargs):
     '''
     List the packages currently installed in a dict::
 
@@ -169,7 +169,7 @@ def list_pkgs(*packages):
     return pkgs
 
 
-def file_list(*packages):
+def file_list(*packages, **kwargs):
     '''
     List the files that belong to a package. Not specifying any packages will
     return a list of _every_ file on the system's package database (not
@@ -211,7 +211,7 @@ def file_list(*packages):
     return {'errors': errors, 'files': list(ret)}
 
 
-def file_dict(*packages):
+def file_dict(*packages, **kwargs):
     '''
     List the files that belong to a package, grouped by package. Not
     specifying any packages will return a list of _every_ file on the system's

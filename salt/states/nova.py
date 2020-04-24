@@ -95,7 +95,9 @@ def flavor_access_list(name, projects, **kwargs):
                     - project2
 
     To remove all project from access list:
+
     .. code-block:: yaml
+
         - project: []
     '''
     dry_run = __opts__['test']
