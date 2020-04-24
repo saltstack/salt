@@ -5,5 +5,13 @@
 #    pip-compile -o requirements/static/py3.8/invoke.txt -v requirements/static/invoke.in
 #
 blessings==1.7
+certifi==2020.4.5.1       # via requests
+chardet==3.0.4            # via requests
+idna==2.9                 # via requests
 invoke==1.4.1
-six==1.14.0               # via blessings
+multi-key-dict==2.0.3     # via python-jenkins
+pbr==5.4.5                # via python-jenkins
+python-jenkins==1.7.0
+requests==2.23.0          # via python-jenkins
+six==1.14.0               # via blessings, python-jenkins
+urllib3==1.25.9           # via requests
