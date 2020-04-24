@@ -68,6 +68,8 @@ class SysctlTestCase(TestCase, LoaderModuleMockMixin):
 
         comt7 = "Sysctl value {0} = {1} is already set".format(name, value)
 
+        comt8 = "Sysctl value {0} = {1} was ignored".format(name, value)
+
         def mock_current(config_file=None):
             """
             Mock return value for __salt__.
@@ -134,4 +136,9 @@ class SysctlTestCase(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(return_value="Already set")
             with patch.dict(sysctl.__salt__, {"sysctl.persist": mock}):
                 ret.update({"comment": comt7, "result": True})
+                self.assertDictEqual(sysctl.present(name, value), ret)
+
+            mock = MagicMock(return_value="Ignored")
+            with patch.dict(sysctl.__salt__, {"sysctl.persist": mock}):
+                ret.update({"comment": comt8, "result": True})
                 self.assertDictEqual(sysctl.present(name, value), ret)

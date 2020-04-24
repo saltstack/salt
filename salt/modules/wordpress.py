@@ -20,7 +20,7 @@ Plugin = collections.namedtuple("Plugin", "name status update versino")
 def __virtual__():
     if salt.utils.path.which("wp"):
         return True
-    return False
+    return (False, "Missing dependency: wp")
 
 
 def _get_plugins(stuff):

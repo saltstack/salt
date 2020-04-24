@@ -667,6 +667,15 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._run_os_grains_tests("debian-9", _os_release_map, expectation)
 
+    def test_unicode_error(self):
+        raise_unicode_mock = MagicMock(
+            name="raise_unicode_error", side_effect=UnicodeError
+        )
+        with patch("salt.grains.core.hostname"):
+            with patch("socket.getaddrinfo", raise_unicode_mock):
+                ret = salt.grains.core.ip_fqdn()
+                assert ret["fqdn_ip4"] == ret["fqdn_ip6"] == []
+
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     def test_ubuntu_xenial_os_grains(self):
         """
@@ -1784,3 +1793,182 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             assert len(info) == 2
         assert all([x is not None for x in info])
         assert all([isinstance(x, int) for x in info])
+
+    def test_path(self):
+        comps = ["foo", "bar", "baz"]
+        path = os.path.pathsep.join(comps)
+        with patch.dict(os.environ, {"PATH": path}):
+            result = core.path()
+        assert result == {"path": path, "systempath": comps}, result
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    @patch("os.path.exists")
+    @patch("salt.utils.platform.is_proxy")
+    def test__hw_data_linux_empty(self, is_proxy, exists):
+        is_proxy.return_value = False
+        exists.return_value = True
+        with patch("salt.utils.files.fopen", mock_open(read_data="")):
+            self.assertEqual(
+                core._hw_data({"kernel": "Linux"}),
+                {
+                    "biosreleasedate": "",
+                    "biosversion": "",
+                    "manufacturer": "",
+                    "productname": "",
+                    "serialnumber": "",
+                    "uuid": "",
+                },
+            )
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    @patch("os.path.exists")
+    @patch("salt.utils.platform.is_proxy")
+    def test__hw_data_linux_unicode_error(self, is_proxy, exists):
+        def _fopen(*args):
+            class _File(object):
+                def __enter__(self):
+                    return self
+
+                def __exit__(self, *args):
+                    pass
+
+                def read(self):
+                    raise UnicodeDecodeError("enconding", b"", 1, 2, "reason")
+
+            return _File()
+
+        is_proxy.return_value = False
+        exists.return_value = True
+        with patch("salt.utils.files.fopen", _fopen):
+            self.assertEqual(core._hw_data({"kernel": "Linux"}), {})
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    def test_kernelparams_return(self):
+        expectations = [
+            (
+                "BOOT_IMAGE=/vmlinuz-3.10.0-693.2.2.el7.x86_64",
+                {
+                    "kernelparams": [
+                        ("BOOT_IMAGE", "/vmlinuz-3.10.0-693.2.2.el7.x86_64")
+                    ]
+                },
+            ),
+            (
+                "root=/dev/mapper/centos_daemon-root",
+                {"kernelparams": [("root", "/dev/mapper/centos_daemon-root")]},
+            ),
+            (
+                "rhgb quiet ro",
+                {"kernelparams": [("rhgb", None), ("quiet", None), ("ro", None)]},
+            ),
+            ('param="value1"', {"kernelparams": [("param", "value1")]}),
+            (
+                'param="value1 value2 value3"',
+                {"kernelparams": [("param", "value1 value2 value3")]},
+            ),
+            (
+                'param="value1 value2 value3" LANG="pl" ro',
+                {
+                    "kernelparams": [
+                        ("param", "value1 value2 value3"),
+                        ("LANG", "pl"),
+                        ("ro", None),
+                    ]
+                },
+            ),
+            ("ipv6.disable=1", {"kernelparams": [("ipv6.disable", "1")]}),
+            (
+                'param="value1:value2:value3"',
+                {"kernelparams": [("param", "value1:value2:value3")]},
+            ),
+            (
+                'param="value1,value2,value3"',
+                {"kernelparams": [("param", "value1,value2,value3")]},
+            ),
+            (
+                'param="value1" param="value2" param="value3"',
+                {
+                    "kernelparams": [
+                        ("param", "value1"),
+                        ("param", "value2"),
+                        ("param", "value3"),
+                    ]
+                },
+            ),
+        ]
+
+        for cmdline, expectation in expectations:
+            with patch("salt.utils.files.fopen", mock_open(read_data=cmdline)):
+                self.assertEqual(core.kernelparams(), expectation)
+
+    @patch("salt.utils.path.which", MagicMock(return_value="/usr/sbin/lspci"))
+    def test_linux_gpus(self):
+        """
+        Test GPU detection on Linux systems
+        """
+
+        def _cmd_side_effect(cmd):
+            ret = ""
+            for device in devices:
+                ret += textwrap.dedent(
+                    """
+                                          Class:	{0}
+                                          Vendor:	{1}
+                                          Device:	{2}
+                                          SVendor:	Evil Corp.
+                                          SDevice:	Graphics XXL
+                                          Rev:	c1
+                                          NUMANode:	0"""
+                ).format(*device)
+                ret += "\n"
+            return ret.strip()
+
+        devices = [
+            [
+                "VGA compatible controller",
+                "Advanced Micro Devices, Inc. [AMD/ATI]",
+                "Vega [Radeon RX Vega]]",
+                "amd",
+            ],  # AMD
+            [
+                "Audio device",
+                "Advanced Micro Devices, Inc. [AMD/ATI]",
+                "Device aaf8",
+                None,
+            ],  # non-GPU device
+            [
+                "VGA compatible controller",
+                "NVIDIA Corporation",
+                "GK208 [GeForce GT 730]",
+                "nvidia",
+            ],  # Nvidia
+            [
+                "VGA compatible controller",
+                "Intel Corporation",
+                "Device 5912",
+                "intel",
+            ],  # Intel
+            [
+                "VGA compatible controller",
+                "ATI Technologies Inc",
+                "RC410 [Radeon Xpress 200M]",
+                "ati",
+            ],  # ATI
+            [
+                "3D controller",
+                "NVIDIA Corporation",
+                "GeForce GTX 950M",
+                "nvidia",
+            ],  # 3D controller
+        ]
+        with patch.dict(
+            core.__salt__, {"cmd.run": MagicMock(side_effect=_cmd_side_effect)}
+        ):
+            ret = core._linux_gpu_data()["gpus"]
+            count = 0
+            for device in devices:
+                if device[3] is None:
+                    continue
+                assert ret[count]["model"] == device[2]
+                assert ret[count]["vendor"] == device[3]
+                count += 1

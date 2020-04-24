@@ -231,7 +231,7 @@ def present(
     name,
     uid=None,
     gid=None,
-    gid_from_name=False,
+    usergroup=None,
     groups=None,
     optional_groups=None,
     remove_groups=True,
@@ -279,11 +279,6 @@ def present(
         or gid can be used. If not specified, and the user does not exist, then
         the next available gid will be assigned.
 
-    gid_from_name : False
-        If ``True``, the default group id will be set to the id of the group
-        with the same name as the user. If the group does not exist the state
-        will fail.
-
     allow_uid_change : False
         Set to ``True`` to allow the state to update the uid.
 
@@ -293,6 +288,17 @@ def present(
         Set to ``True`` to allow the state to update the gid.
 
         .. versionadded:: 2018.3.1
+
+    usergroup
+        If True, a group with the same name as the user will be created. If
+        False, a group with the same name as the user will not be created. The
+        default is distribution-specific. See the USERGROUPS_ENAB section of
+        the login.defs(5) man page.
+
+        .. note::
+            Only supported on GNU/Linux distributions
+
+        .. versionadded:: Sodium
 
     groups
         A list of groups to assign the user to, pass a list object. If a group
@@ -334,14 +340,14 @@ def present(
         databases.
 
         .. note::
-            Not supported on Windows or Mac OS.
+            Not supported on Windows.
 
     password
         A password hash to set for the user. This field is only supported on
         Linux, FreeBSD, NetBSD, OpenBSD, and Solaris. If the ``empty_password``
         argument is set to ``True`` then ``password`` is ignored.
         For Windows this is the plain text password.
-        For Linux, the hash can be generated with ``openssl passwd -1``.
+        For Linux, the hash can be generated with ``mkpasswd -m sha-256``.
 
     .. versionchanged:: 0.16.0
        BSD support added.
@@ -497,8 +503,8 @@ def present(
     if other is not None:
         other = salt.utils.data.decode(other)
 
-    # createhome not supported on Windows or Mac
-    if __grains__["kernel"] in ("Darwin", "Windows"):
+    # createhome not supported on Windows
+    if __grains__["kernel"] == "Windows":
         createhome = False
 
     ret = {
@@ -549,18 +555,19 @@ def present(
                 name,
             )
 
-    if gid_from_name:
-        gid = __salt__["file.group_to_gid"](name)
-        if gid == "":
-            ret["comment"] = 'Default group with name "{0}" is not present'.format(name)
-            ret["result"] = False
-            return ret
+    # If usergroup was specified, we'll also be creating a new
+    # group. We should report this change without setting the gid
+    # variable.
+    if usergroup and __salt__["file.group_to_gid"](name) != "":
+        changes_gid = name
+    else:
+        changes_gid = gid
 
     try:
         changes = _changes(
             name,
             uid,
-            gid,
+            changes_gid,
             groups,
             present_optgroups,
             remove_groups,
@@ -765,6 +772,7 @@ def present(
                 "createhome": createhome,
                 "nologinit": nologinit,
                 "loginclass": loginclass,
+                "usergroup": usergroup,
             }
         else:
             params = {
