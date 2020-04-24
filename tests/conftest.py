@@ -117,7 +117,7 @@ for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
 
 
-# Reset the root logger to it's default level(because salt changed it)
+# Reset the root logger to its default level(because salt changed it)
 logging.root.setLevel(logging.WARNING)
 
 log = logging.getLogger("salt.testsuite")
@@ -560,37 +560,31 @@ def pytest_runtest_setup(item):
 
 
 # ----- Test Groups Selection --------------------------------------------------------------------------------------->
-def get_group_size(total_items, total_groups):
+def get_group_size_and_start(total_items, total_groups, group_id):
     """
-    Return the group size.
+    Calculate group size and start index.
     """
-    return int(total_items / total_groups)
+    base_size = total_items // total_groups
+    rem = total_items % total_groups
+
+    start = base_size * (group_id - 1) + min(group_id - 1, rem)
+    size = base_size + 1 if group_id <= rem else base_size
+
+    return (start, size)
 
 
-def get_group(items, group_count, group_size, group_id):
+def get_group(items, total_groups, group_id):
     """
     Get the items from the passed in group based on group size.
     """
-    start = group_size * (group_id - 1)
-    end = start + group_size
-    total_items = len(items)
+    if not 0 < group_id <= total_groups:
+        raise ValueError("Invalid test-group argument")
 
-    if start >= total_items:
-        pytest.fail(
-            "Invalid test-group argument. start({})>=total_items({})".format(
-                start, total_items
-            )
-        )
-    elif start < 0:
-        pytest.fail("Invalid test-group argument. Start({})<0".format(start))
-
-    if group_count == group_id and end < total_items:
-        # If this is the last group and there are still items to test
-        # which don't fit in this group based on the group items count
-        # add them anyway
-        end = total_items
-
-    return items[start:end]
+    start, size = get_group_size_and_start(len(items), total_groups, group_id)
+    selected = items[start : start + size]
+    deselected = items[:start] + items[start + size :]
+    assert len(selected) + len(deselected) == len(items)
+    return selected, deselected
 
 
 @pytest.hookimpl(hookwrapper=True, tryfirst=True)
@@ -607,10 +601,11 @@ def pytest_collection_modifyitems(config, items):
 
     total_items = len(items)
 
-    group_size = get_group_size(total_items, group_count)
-    tests_in_group = get_group(items, group_count, group_size, group_id)
+    tests_in_group, deselected = get_group(items, group_count, group_id)
     # Replace all items in the list
     items[:] = tests_in_group
+    if deselected:
+        config.hook.pytest_deselected(items=deselected)
 
     terminal_reporter = config.pluginmanager.get_plugin("terminalreporter")
     terminal_reporter.write(
