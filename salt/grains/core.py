@@ -2434,7 +2434,7 @@ def ip_fqdn():
                 start_time = datetime.datetime.utcnow()
                 info = socket.getaddrinfo(_fqdn, None, socket_type)
                 ret[key] = list(set(item[4][0] for item in info))
-            except socket.error:
+            except (socket.error, UnicodeError):
                 timediff = datetime.datetime.utcnow() - start_time
                 if timediff.seconds > 5 and __opts__["__role"] == "master":
                     log.warning(
