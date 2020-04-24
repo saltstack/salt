@@ -9,6 +9,7 @@ thread of execution.
 
 # Import python libs
 from __future__ import absolute_import
+
 import threading
 
 # Import 3rd-party libs

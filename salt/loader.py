@@ -35,9 +35,8 @@ import salt.utils.lazy
 import salt.utils.odict
 import salt.utils.platform
 import salt.utils.stringutils
-import salt.utils.versions
-import salt.utils.stringutils
 import salt.utils.thread_local_proxy as thread_local_proxy
+import salt.utils.versions
 from salt.exceptions import LoaderError
 
 # Import 3rd-party libs
