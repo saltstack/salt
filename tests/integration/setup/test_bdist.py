@@ -3,26 +3,20 @@
 tests.integration.setup.test_bdist
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
-
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import re
 
-# Import salt libs
 import salt.utils.path
 import salt.utils.platform
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from tests.support.case import ModuleCase
-from tests.support.helpers import VirtualEnv, skip_if_not_root
-
-# Import Salt Testing libs
+from tests.support.helpers import VirtualEnv
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
 
-@skip_if_not_root
 @skipIf(
     salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, "virtualenv not installed"
 )

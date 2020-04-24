@@ -15,20 +15,18 @@ import logging
 # Import Salt libs
 import salt.utils.args
 import salt.utils.data
-import salt.utils.docker.translate
+import salt.utils.dockermod.translate
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Import 3rd-party libs
 from salt.ext import six
 from salt.utils.args import get_function_argspec as _argspec
-from salt.utils.docker.translate.helpers import split as _split
+from salt.utils.dockermod.translate.helpers import split as _split
 
 try:
     import docker
-
-    HAS_DOCKER_PY = True
 except ImportError:
-    HAS_DOCKER_PY = False
+    docker = None
 
 # These next two imports are only necessary to have access to the needed
 # functions so that we can get argspecs for the container config, host config,
@@ -44,6 +42,8 @@ except ImportError:
 
 NOTSET = object()
 
+__virtualname__ = "docker"
+
 # Default timeout as of docker-py 1.0.0
 CLIENT_TIMEOUT = 60
 # Timeout for stopping the container, before a kill is invoked
@@ -52,8 +52,14 @@ SHUTDOWN_TIMEOUT = 10
 log = logging.getLogger(__name__)
 
 
+def __virtual__():
+    if docker is None:
+        return False
+    return __virtualname__
+
+
 def get_client_args(limit=None):
-    if not HAS_DOCKER_PY:
+    if docker is None:
         raise CommandExecutionError("docker Python module not imported")
 
     limit = salt.utils.args.split_input(limit or [])
@@ -180,7 +186,7 @@ def translate_input(
     """
     Translate CLI/SLS input into the format the API expects. The ``translator``
     argument must be a module containing translation functions, within
-    salt.utils.docker.translate. A ``skip_translate`` kwarg can be passed to
+    salt.utils.dockermod.translate. A ``skip_translate`` kwarg can be passed to
     control which arguments are translated. It can be either a comma-separated
     list or an iterable containing strings (e.g. a list or tuple), and members
     of that tuple will have their translation skipped. Optionally,

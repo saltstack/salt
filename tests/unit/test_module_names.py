@@ -13,11 +13,11 @@ import os
 # Import Salt libs
 import salt.utils.path
 import salt.utils.stringutils
-from tests.support.paths import list_test_mods
-from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.paths import list_test_mods
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import TestCase, skipIf
 
 EXCLUDED_DIRS = [
     os.path.join("tests", "pkg"),
@@ -101,6 +101,10 @@ class BadTestModuleNamesTestCase(TestCase):
         error_msg += "If it is a tests module, then please rename as suggested."
         self.assertEqual([], bad_names, error_msg)
 
+    @skipIf(
+        not os.path.isdir(os.path.join(RUNTIME_VARS.CODE_DIR, "salt")),
+        "Failed to find salt directory in '{}'.".format(RUNTIME_VARS.CODE_DIR),
+    )
     def test_module_name_source_match(self):
         """
         Check all the test mods and check if they correspond to actual files in
