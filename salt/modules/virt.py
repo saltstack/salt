@@ -1529,119 +1529,123 @@ def init(
     .. _disk element: https://libvirt.org/formatdomain.html#elementsDisks
     .. _graphics element: https://libvirt.org/formatdomain.html#elementsGraphics
     """
-    caps = capabilities(**kwargs)
-    os_types = sorted({guest["os_type"] for guest in caps["guests"]})
-    arches = sorted({guest["arch"]["name"] for guest in caps["guests"]})
-
-    virt_hypervisor = hypervisor
-    if not virt_hypervisor:
-        # Use the machine types as possible values
-        # Prefer "kvm" over the others if available
-        hypervisors = sorted(
-            {
-                x
-                for y in [guest["arch"]["domains"].keys() for guest in caps["guests"]]
-                for x in y
-            }
-        )
-        virt_hypervisor = "kvm" if "kvm" in hypervisors else hypervisors[0]
-
-    # esxi used to be a possible value for the hypervisor: map it to vmware since it"s the same
-    virt_hypervisor = "vmware" if virt_hypervisor == "esxi" else virt_hypervisor
-
-    log.debug("Using hypervisor %s", virt_hypervisor)
-
-    nicp = _get_merged_nics(virt_hypervisor, nic, interfaces)
-
-    # the disks are computed as follows:
-    # 1 - get the disks defined in the profile
-    # 3 - update the disks from the profile with the ones from the user. The matching key is the name.
-    diskp = _disk_profile(disk, virt_hypervisor, disks, name, **kwargs)
-
-    # Create multiple disks, empty or from specified images.
-    for _disk in diskp:
-        log.debug("Creating disk for VM [ %s ]: %s", name, _disk)
-
-        if virt_hypervisor == "vmware":
-            if "image" in _disk:
-                # TODO: we should be copying the image file onto the ESX host
-                raise SaltInvocationError(
-                    "virt.init does not support image "
-                    "template in conjunction with esxi hypervisor"
-                )
-            else:
-                # assume libvirt manages disks for us
-                log.debug("Generating libvirt XML for %s", _disk)
-                volume_name = "{0}/{1}".format(name, _disk["name"])
-                filename = "{0}.{1}".format(volume_name, _disk["format"])
-                vol_xml = _gen_vol_xml(filename, _disk["size"], format=_disk["format"])
-                define_vol_xml_str(vol_xml, pool=_disk.get("pool"))
-
-        elif virt_hypervisor in ["qemu", "kvm", "xen"]:
-            create_overlay = _disk.get("overlay_image", False)
-            if _disk["source_file"]:
-                if os.path.exists(_disk["source_file"]):
-                    img_dest = _disk["source_file"]
-                else:
-                    img_dest = _qemu_image_create(_disk, create_overlay, saltenv)
-            else:
-                img_dest = None
-
-            # Seed only if there is an image specified
-            if seed and img_dest and _disk.get("image", None):
-                log.debug("Seed command is %s", seed_cmd)
-                __salt__[seed_cmd](
-                    img_dest,
-                    id_=name,
-                    config=kwargs.get("config"),
-                    install=install,
-                    pub_key=pub_key,
-                    priv_key=priv_key,
-                )
-
-        elif hypervisor in ["bhyve"]:
-            img_dest = _zfs_image_create(
-                vm_name=name,
-                pool=_disk.get("pool"),
-                disk_name=_disk.get("name"),
-                disk_size=_disk.get("size"),
-                disk_image_name=_disk.get("image"),
-                hostname_property_name=_disk.get("hostname_property"),
-                sparse_volume=_disk.get("sparse_volume"),
-            )
-
-        else:
-            # Unknown hypervisor
-            raise SaltInvocationError(
-                "Unsupported hypervisor when handling disk image: {0}".format(
-                    virt_hypervisor
-                )
-            )
-
-    log.debug("Generating VM XML")
-    if os_type is None:
-        os_type = "hvm" if "hvm" in os_types else os_types[0]
-    if arch is None:
-        arch = "x86_64" if "x86_64" in arches else arches[0]
-
-    if boot is not None:
-        boot = _handle_remote_boot_params(boot)
-
-    vm_xml = _gen_xml(
-        name,
-        cpu,
-        mem,
-        diskp,
-        nicp,
-        virt_hypervisor,
-        os_type,
-        arch,
-        graphics,
-        boot,
-        **kwargs
-    )
-    conn = __get_conn(**kwargs)
     try:
+        conn = __get_conn(**kwargs)
+        caps = _capabilities(conn)
+        os_types = sorted({guest["os_type"] for guest in caps["guests"]})
+        arches = sorted({guest["arch"]["name"] for guest in caps["guests"]})
+
+        virt_hypervisor = hypervisor
+        if not virt_hypervisor:
+            # Use the machine types as possible values
+            # Prefer "kvm" over the others if available
+            hypervisors = sorted(
+                {
+                    x
+                    for y in [
+                        guest["arch"]["domains"].keys() for guest in caps["guests"]
+                    ]
+                    for x in y
+                }
+            )
+            virt_hypervisor = "kvm" if "kvm" in hypervisors else hypervisors[0]
+
+        # esxi used to be a possible value for the hypervisor: map it to vmware since it"s the same
+        virt_hypervisor = "vmware" if virt_hypervisor == "esxi" else virt_hypervisor
+
+        log.debug("Using hypervisor %s", virt_hypervisor)
+
+        nicp = _get_merged_nics(virt_hypervisor, nic, interfaces)
+
+        # the disks are computed as follows:
+        # 1 - get the disks defined in the profile
+        # 3 - update the disks from the profile with the ones from the user. The matching key is the name.
+        diskp = _disk_profile(disk, virt_hypervisor, disks, name, **kwargs)
+
+        # Create multiple disks, empty or from specified images.
+        for _disk in diskp:
+            log.debug("Creating disk for VM [ %s ]: %s", name, _disk)
+
+            if virt_hypervisor == "vmware":
+                if "image" in _disk:
+                    # TODO: we should be copying the image file onto the ESX host
+                    raise SaltInvocationError(
+                        "virt.init does not support image "
+                        "template in conjunction with esxi hypervisor"
+                    )
+                else:
+                    # assume libvirt manages disks for us
+                    log.debug("Generating libvirt XML for %s", _disk)
+                    volume_name = "{0}/{1}".format(name, _disk["name"])
+                    filename = "{0}.{1}".format(volume_name, _disk["format"])
+                    vol_xml = _gen_vol_xml(
+                        filename, _disk["size"], format=_disk["format"]
+                    )
+                    define_vol_xml_str(vol_xml, pool=_disk.get("pool"))
+
+            elif virt_hypervisor in ["qemu", "kvm", "xen"]:
+                create_overlay = _disk.get("overlay_image", False)
+                if _disk["source_file"]:
+                    if os.path.exists(_disk["source_file"]):
+                        img_dest = _disk["source_file"]
+                    else:
+                        img_dest = _qemu_image_create(_disk, create_overlay, saltenv)
+                else:
+                    img_dest = None
+
+                # Seed only if there is an image specified
+                if seed and img_dest and _disk.get("image", None):
+                    log.debug("Seed command is %s", seed_cmd)
+                    __salt__[seed_cmd](
+                        img_dest,
+                        id_=name,
+                        config=kwargs.get("config"),
+                        install=install,
+                        pub_key=pub_key,
+                        priv_key=priv_key,
+                    )
+
+            elif hypervisor in ["bhyve"]:
+                img_dest = _zfs_image_create(
+                    vm_name=name,
+                    pool=_disk.get("pool"),
+                    disk_name=_disk.get("name"),
+                    disk_size=_disk.get("size"),
+                    disk_image_name=_disk.get("image"),
+                    hostname_property_name=_disk.get("hostname_property"),
+                    sparse_volume=_disk.get("sparse_volume"),
+                )
+
+            else:
+                # Unknown hypervisor
+                raise SaltInvocationError(
+                    "Unsupported hypervisor when handling disk image: {0}".format(
+                        virt_hypervisor
+                    )
+                )
+
+        log.debug("Generating VM XML")
+        if os_type is None:
+            os_type = "hvm" if "hvm" in os_types else os_types[0]
+        if arch is None:
+            arch = "x86_64" if "x86_64" in arches else arches[0]
+
+        if boot is not None:
+            boot = _handle_remote_boot_params(boot)
+
+        vm_xml = _gen_xml(
+            name,
+            cpu,
+            mem,
+            diskp,
+            nicp,
+            virt_hypervisor,
+            os_type,
+            arch,
+            graphics,
+            boot,
+            **kwargs
+        )
         conn.defineXML(vm_xml)
     except libvirtError as err:
         # check if failure is due to this domain already existing
