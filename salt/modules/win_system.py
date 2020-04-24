@@ -23,8 +23,8 @@ from datetime import datetime
 import salt.utils.functools
 import salt.utils.locales
 import salt.utils.platform
-import salt.utils.winapi
 import salt.utils.win_system
+import salt.utils.winapi
 from salt.exceptions import CommandExecutionError
 from salt.ext import six
 
