@@ -96,8 +96,8 @@ def pack(o, stream, **kwargs):
 
     By default, this function uses the msgpack module and falls back to
     msgpack_pure, if the msgpack is not available.
-    '''
-    orig_enc_func = kwargs.pop('default', lambda x: x)
+    """
+    orig_enc_func = kwargs.pop("default", lambda x: x)
 
     def _enc_func(obj):
         return orig_enc_func(thread_local_proxy.ThreadLocalProxy.unproxy(obj))
@@ -115,8 +115,8 @@ def packb(o, **kwargs):
 
     By default, this function uses the msgpack module and falls back to
     msgpack_pure, if the msgpack is not available.
-    '''
-    orig_enc_func = kwargs.pop('default', lambda x: x)
+    """
+    orig_enc_func = kwargs.pop("default", lambda x: x)
 
     def _enc_func(obj):
         return orig_enc_func(thread_local_proxy.ThreadLocalProxy.unproxy(obj))

@@ -27,6 +27,7 @@ import salt.loader
 import salt.utils.files
 import salt.utils.stringutils
 import salt.utils.thread_local_proxy as thread_local_proxy
+
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves import range
@@ -1497,25 +1498,25 @@ class ThreadLocalProxyLoaderTest(TestCase):
 
     def test__inject_into_mod(self):
         class test_module(object):
-            name = 'inject_into_mod.test.module'
+            name = "inject_into_mod.test.module"
 
         # First path, Force is not true, proxy doesn't exist -- also takes the path of Force True and proxy not exist
-        salt.loader._inject_into_mod(test_module, '__opts__', self.opts)
-        self.assertTrue(hasattr(test_module, '__opts__'))
+        salt.loader._inject_into_mod(test_module, "__opts__", self.opts)
+        self.assertTrue(hasattr(test_module, "__opts__"))
         self.assertIsInstance(test_module.__opts__, thread_local_proxy.ThreadLocalProxy)
         self.assertEqual(self.opts, test_module.__opts__)
         foo = test_module.__opts__
 
         # Second path, Force is not true, proxy exists
-        salt.loader._inject_into_mod(test_module, '__opts__', self.opts)
+        salt.loader._inject_into_mod(test_module, "__opts__", self.opts)
         self.assertIsInstance(test_module.__opts__, thread_local_proxy.ThreadLocalProxy)
         self.assertEqual(self.opts, test_module.__opts__)
         bar = test_module.__opts__
 
         self.assertIs(foo, bar)
         self.assertEqual(foo, bar)
-        foo['yes'] = 'no'
-        self.assertIn('yes', bar)
+        foo["yes"] = "no"
+        self.assertIn("yes", bar)
 
         # Final path, Force is true, proxy exists
-        salt.loader._inject_into_mod(test_module, '__opts__', self.opts, True)
+        salt.loader._inject_into_mod(test_module, "__opts__", self.opts, True)

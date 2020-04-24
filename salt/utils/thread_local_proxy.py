@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Proxy object that can reference different values depending on the current
 thread of execution.
 
 ..versionadded:: 2018.3.4
 
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import
@@ -16,7 +16,7 @@ from salt.ext import six
 
 
 class ThreadLocalProxy(object):
-    '''
+    """
     Proxy that delegates all operations to its referenced object. The referenced
     object is hold through a thread-local variable, so that this proxy may refer
     to different objects in different threads of execution.
@@ -39,13 +39,13 @@ class ThreadLocalProxy(object):
 
     This class has primarily been designed for use by the Salt loader, but it
     might also be useful in other places.
-    '''
+    """
 
-    __slots__ = ['_thread_local', '_last_reference', '_fallback_to_shared']
+    __slots__ = ["_thread_local", "_last_reference", "_fallback_to_shared"]
 
     @staticmethod
     def get_reference(proxy):
-        '''
+        """
         Return the object that is referenced by the specified proxy.
 
         If the proxy has not been bound to a reference for the current thread,
@@ -64,18 +64,17 @@ class ThreadLocalProxy(object):
             specified object is not an instance of `ThreadLocalProxy`, the
             behavior is unspecified. Typically, an ``AttributeError`` is
             going to be raised.
-        '''
-        thread_local = object.__getattribute__(proxy, '_thread_local')
+        """
+        thread_local = object.__getattribute__(proxy, "_thread_local")
         try:
             return thread_local.reference
         except AttributeError:
-            fallback_to_shared = object.__getattribute__(
-                proxy, '_fallback_to_shared')
+            fallback_to_shared = object.__getattribute__(proxy, "_fallback_to_shared")
             if fallback_to_shared:
                 # If the reference has never been set in the current thread of
                 # execution, we use the reference that has been last set by any
                 # thread.
-                reference = object.__getattribute__(proxy, '_last_reference')
+                reference = object.__getattribute__(proxy, "_last_reference")
                 # We save the reference in the thread local so that future
                 # calls to get_reference will have consistent results.
                 ThreadLocalProxy.set_reference(proxy, reference)
@@ -89,11 +88,12 @@ class ThreadLocalProxy(object):
                 # For this reason, we raise an AttributeError with an error
                 # message explaining the problem.
                 raise AttributeError(
-                    'The proxy object has not been bound to a reference in this thread of execution.')
+                    "The proxy object has not been bound to a reference in this thread of execution."
+                )
 
     @staticmethod
     def set_reference(proxy, new_reference):
-        '''
+        """
         Set the reference to be used the current thread of execution.
 
         After calling this function, the specified proxy will act like it was
@@ -108,7 +108,7 @@ class ThreadLocalProxy(object):
         new_reference:
             reference the proxy should point to for the current thread after
             calling this function.
-        '''
+        """
         # If the new reference is itself a proxy, we have to ensure that it does
         # not refer to this proxy. If it does, we simply return because updating
         # the reference would result in an inifite loop when trying to use the
@@ -118,13 +118,13 @@ class ThreadLocalProxy(object):
             if possible_proxy is proxy:
                 return
             possible_proxy = ThreadLocalProxy.get_reference(possible_proxy)
-        thread_local = object.__getattribute__(proxy, '_thread_local')
+        thread_local = object.__getattribute__(proxy, "_thread_local")
         thread_local.reference = new_reference
-        object.__setattr__(proxy, '_last_reference', new_reference)
+        object.__setattr__(proxy, "_last_reference", new_reference)
 
     @staticmethod
     def unset_reference(proxy):
-        '''
+        """
         Unset the reference to be used by the current thread of execution.
 
         After calling this function, the specified proxy will act like the
@@ -135,13 +135,13 @@ class ThreadLocalProxy(object):
             specified object is not an instance of `ThreadLocalProxy`, the
             behavior is unspecified. Typically, an ``AttributeError`` is going
             to be raised.
-        '''
-        thread_local = object.__getattribute__(proxy, '_thread_local')
+        """
+        thread_local = object.__getattribute__(proxy, "_thread_local")
         del thread_local.reference
 
     @staticmethod
     def unproxy(possible_proxy):
-        '''
+        """
         Unwrap and return the object referenced by a proxy.
 
         This function is very similar to :func:`get_reference`, but works for
@@ -154,13 +154,13 @@ class ThreadLocalProxy(object):
 
         possible_proxy:
             object that might or might not be a proxy.
-        '''
+        """
         while isinstance(possible_proxy, ThreadLocalProxy):
             possible_proxy = ThreadLocalProxy.get_reference(possible_proxy)
         return possible_proxy
 
     def __init__(self, initial_reference, fallback_to_shared=False):
-        '''
+        """
         Create a proxy object that references the specified object.
 
         initial_reference:
@@ -175,9 +175,9 @@ class ThreadLocalProxy(object):
             reference last set by any thread. If ``False`` (the default), an
             exception is raised when the proxy is used in a thread without
             first initializing the reference in this thread.
-        '''
-        object.__setattr__(self, '_thread_local', threading.local())
-        object.__setattr__(self, '_fallback_to_shared', fallback_to_shared)
+        """
+        object.__setattr__(self, "_thread_local", threading.local())
+        object.__setattr__(self, "_fallback_to_shared", fallback_to_shared)
         ThreadLocalProxy.set_reference(self, initial_reference)
 
     def __repr__(self):
@@ -541,11 +541,11 @@ class ThreadLocalProxy(object):
 
     def __neg__(self):
         reference = ThreadLocalProxy.get_reference(self)
-        return - reference
+        return -reference
 
     def __pos__(self):
         reference = ThreadLocalProxy.get_reference(self)
-        return + reference
+        return +reference
 
     def __abs__(self):
         reference = ThreadLocalProxy.get_reference(self)
@@ -553,7 +553,7 @@ class ThreadLocalProxy(object):
 
     def __invert__(self):
         reference = ThreadLocalProxy.get_reference(self)
-        return ~ reference
+        return ~reference
 
     def __complex__(self):
         reference = ThreadLocalProxy.get_reference(self)

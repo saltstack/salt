@@ -118,18 +118,20 @@ def dump(obj, fp, **kwargs):
 
     You can pass an alternate json module (loaded via import_json() above)
     using the _json_module argument)
-    '''
-    json_module = kwargs.pop('_json_module', json)
-    orig_enc_func = kwargs.pop('default', lambda x: x)
+    """
+    json_module = kwargs.pop("_json_module", json)
+    orig_enc_func = kwargs.pop("default", lambda x: x)
 
     def _enc_func(_obj):
         return orig_enc_func(thread_local_proxy.ThreadLocalProxy.unproxy(_obj))
 
-    if 'ensure_ascii' not in kwargs:
-        kwargs['ensure_ascii'] = False
+    if "ensure_ascii" not in kwargs:
+        kwargs["ensure_ascii"] = False
     if six.PY2:
         obj = salt.utils.data.encode(obj)
-    return json_module.dump(obj, fp, default=_enc_func, **kwargs)  # future lint: blacklisted-function
+    return json_module.dump(
+        obj, fp, default=_enc_func, **kwargs
+    )  # future lint: blacklisted-function
 
 
 def dumps(obj, **kwargs):
@@ -146,15 +148,17 @@ def dumps(obj, **kwargs):
 
     You can pass an alternate json module (loaded via import_json() above)
     using the _json_module argument)
-    '''
-    json_module = kwargs.pop('_json_module', json)
-    orig_enc_func = kwargs.pop('default', lambda x: x)
+    """
+    json_module = kwargs.pop("_json_module", json)
+    orig_enc_func = kwargs.pop("default", lambda x: x)
 
     def _enc_func(_obj):
         return orig_enc_func(thread_local_proxy.ThreadLocalProxy.unproxy(_obj))
 
-    if 'ensure_ascii' not in kwargs:
-        kwargs['ensure_ascii'] = False
+    if "ensure_ascii" not in kwargs:
+        kwargs["ensure_ascii"] = False
     if six.PY2:
         obj = salt.utils.data.encode(obj)
-    return json_module.dumps(obj, default=_enc_func, **kwargs)  # future lint: blacklisted-function
+    return json_module.dumps(
+        obj, default=_enc_func, **kwargs
+    )  # future lint: blacklisted-function

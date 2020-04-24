@@ -1092,7 +1092,7 @@ def _mod_type(module_path):
 
 
 def _inject_into_mod(mod, name, value, force_lock=False):
-    '''
+    """
     Inject a variable into a module. This is used to inject "globals" like
     ``__salt__``, ``__pillar``, or ``grains``.
 
@@ -1124,7 +1124,7 @@ def _inject_into_mod(mod, name, value, force_lock=False):
         module. If ``False`` (the default), this function checks for the
         module's variable without acquiring the lock and only acquires the lock
         if a new proxy has to be created and injected.
-    '''
+    """
     old_value = getattr(mod, name, None)
     # We use a double-checked locking scheme in order to avoid taking the lock
     # when a proxy object has already been injected.
@@ -1256,10 +1256,14 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         for k, v in six.iteritems(self.pack):
             if v is None:  # if the value of a pack is None, lets make an empty dict
-                value = thread_local_proxy.ThreadLocalProxy.unproxy(self.context_dict.get(k, {}))
+                value = thread_local_proxy.ThreadLocalProxy.unproxy(
+                    self.context_dict.get(k, {})
+                )
 
                 self.context_dict[k] = value
-                self.pack[k] = salt.utils.context.NamespacedDictWrapper(self.context_dict, k)
+                self.pack[k] = salt.utils.context.NamespacedDictWrapper(
+                    self.context_dict, k
+                )
 
         self.whitelist = whitelist
         self.virtual_enable = virtual_enable
@@ -1537,18 +1541,24 @@ class LazyLoader(salt.utils.lazy.LazyDict):
     def __prep_mod_opts(self, opts):
         """
         Strip out of the opts any logger instance
-        '''
-        if '__grains__' not in self.pack:
-            _grains = thread_local_proxy.ThreadLocalProxy.unproxy(opts.get('grains', {}))
+        """
+        if "__grains__" not in self.pack:
+            _grains = thread_local_proxy.ThreadLocalProxy.unproxy(
+                opts.get("grains", {})
+            )
 
-            self.context_dict['grains'] = _grains
-            self.pack['__grains__'] = salt.utils.context.NamespacedDictWrapper(self.context_dict, 'grains')
+            self.context_dict["grains"] = _grains
+            self.pack["__grains__"] = salt.utils.context.NamespacedDictWrapper(
+                self.context_dict, "grains"
+            )
 
-        if '__pillar__' not in self.pack:
-            pillar = thread_local_proxy.ThreadLocalProxy.unproxy(opts.get('pillar', {}))
+        if "__pillar__" not in self.pack:
+            pillar = thread_local_proxy.ThreadLocalProxy.unproxy(opts.get("pillar", {}))
 
-            self.context_dict['pillar'] = pillar
-            self.pack['__pillar__'] = salt.utils.context.NamespacedDictWrapper(self.context_dict, 'pillar')
+            self.context_dict["pillar"] = pillar
+            self.pack["__pillar__"] = salt.utils.context.NamespacedDictWrapper(
+                self.context_dict, "pillar"
+            )
 
         mod_opts = {}
         for key, val in list(opts.items()):
