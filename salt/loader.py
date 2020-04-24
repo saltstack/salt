@@ -285,7 +285,7 @@ def minion_mods(
     if notify:
         with salt.utils.event.get_event("minion", opts=opts, listen=False) as evt:
             evt.fire_event(
-                {"complete": True}, tag=salt.defaults.events.MINION_MOD_COMPLETE
+                {"complete": True}, tag=salt.defaults.events.MINION_MOD_REFRESH_COMPLETE
             )
 
     return ret

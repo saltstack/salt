@@ -2411,14 +2411,14 @@ class Minion(MinionBase):
 
     # TODO: only allow one future in flight at a time?
     @salt.ext.tornado.gen.coroutine
-    def pillar_refresh(self, force_refresh=False, notify=False):
+    def pillar_refresh(self, force_refresh=False):
         """
         Refresh the pillar
         """
         self.module_refresh(force_refresh)
 
         if self.connected:
-            log.debug("Refreshing pillar. Notify: %s", notify)
+            log.debug("Refreshing pillar.")
             async_pillar = salt.pillar.get_async_pillar(
                 self.opts,
                 self.opts["grains"],
@@ -2428,14 +2428,6 @@ class Minion(MinionBase):
             )
             try:
                 self.opts["pillar"] = yield async_pillar.compile_pillar()
-                if notify:
-                    with salt.utils.event.get_event(
-                        "minion", opts=self.opts, listen=False
-                    ) as evt:
-                        evt.fire_event(
-                            {"complete": True},
-                            tag=salt.defaults.events.MINION_PILLAR_COMPLETE,
-                        )
             except SaltClientError:
                 # Do not exit if a pillar refresh fails.
                 log.error(
@@ -2446,10 +2438,11 @@ class Minion(MinionBase):
                 async_pillar.destroy()
         self.matchers_refresh()
         self.beacons_refresh()
-        evt = salt.utils.event.get_event("minion", opts=self.opts)
-        evt.fire_event(
-            {"complete": True}, tag="/salt/minion/minion_pillar_refresh_complete"
-        )
+        with salt.utils.event.get_event("minion", opts=self.opts, listen=False) as evt:
+            evt.fire_event(
+                {"complete": True},
+                tag=salt.defaults.events.MINION_PILLAR_REFRESH_COMPLETE,
+            )
 
     def manage_schedule(self, tag, data):
         """
@@ -2599,10 +2592,7 @@ class Minion(MinionBase):
                 notify=data.get("notify", False),
             )
         elif tag.startswith("pillar_refresh"):
-            yield self.pillar_refresh(
-                force_refresh=data.get("force_refresh", False),
-                notify=data.get("notify", False),
-            )
+            yield self.pillar_refresh(force_refresh=data.get("force_refresh", False))
         elif tag.startswith("beacons_refresh"):
             self.beacons_refresh()
         elif tag.startswith("matchers_refresh"):

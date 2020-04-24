@@ -354,7 +354,9 @@ class SaltUtilSyncPillarTest(ModuleCase):
             )
 
         opts = self.run_function("test.get_opts")
-        wait = self.WaitForEvent(opts, salt.defaults.events.MINION_PILLAR_COMPLETE)
+        wait = self.WaitForEvent(
+            opts, salt.defaults.events.MINION_PILLAR_REFRESH_COMPLETE
+        )
         wait.start()
         self.run_function("saltutil.refresh_pillar", wait=True)
         while wait.is_alive():

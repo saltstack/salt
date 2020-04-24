@@ -9,5 +9,5 @@ as this may result in circular imports.
 """
 
 # Constants for events on the minion bus
-MINION_PILLAR_COMPLETE = "/salt/minion/minion_pillar_complete"
-MINION_MOD_COMPLETE = "/salt/minion/minion_mod_complete"
+MINION_PILLAR_REFRESH_COMPLETE = "/salt/minion/minion_pillar_refresh_complete"
+MINION_MOD_REFRESH_COMPLETE = "/salt/minion/minion_mod_refresh_complete"

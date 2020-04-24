@@ -1150,15 +1150,18 @@ def refresh_pillar(wait=False, timeout=30):
             with salt.utils.event.get_event(
                 "minion", opts=__opts__, listen=True
             ) as eventer:
-                ret = __salt__["event.fire"]({"notify": True}, "pillar_refresh")
+                ret = __salt__["event.fire"]({}, "pillar_refresh")
                 # Wait for the finish event to fire
                 log.trace("refresh_pillar waiting for pillar refresh to complete")
                 # Blocks until we hear this event or until the timeout expires
                 event_ret = eventer.get_event(
-                    tag=salt.defaults.events.MINION_PILLAR_COMPLETE, wait=timeout
+                    tag=salt.defaults.events.MINION_PILLAR_REFRESH_COMPLETE,
+                    wait=timeout,
                 )
                 if not event_ret or event_ret["complete"] is False:
-                    log.warn("Pillar refresh did not complete within timeout %s", timeout)
+                    log.warn(
+                        "Pillar refresh did not complete within timeout %s", timeout
+                    )
         else:
             ret = __salt__["event.fire"]({}, "pillar_refresh")
     except KeyError:
@@ -1197,7 +1200,9 @@ def refresh_modules(**kwargs):
                 # Wait for the finish event to fire
                 log.trace("refresh_modules waiting for module refresh to complete")
                 # Blocks until we hear this event or until the timeout expires
-                eventer.get_event(tag=salt.defaults.events.MINION_MOD_COMPLETE, wait=30)
+                eventer.get_event(
+                    tag=salt.defaults.events.MINION_MOD_REFRESH_COMPLETE, wait=30
+                )
     except KeyError:
         log.error("Event module not available. Module refresh failed.")
         ret = False  # Effectively a no-op, since we can't really return without an event system
