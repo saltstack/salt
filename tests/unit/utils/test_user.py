@@ -2,18 +2,19 @@
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import os
-import grp
-import pwd
 
-# Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
-from tests.support.helpers import this_user
-from tests.support.mock import patch
+import grp
+import os
+import pwd
 
 # Import salt libs
 import salt.utils.platform
 import salt.utils.user
+from tests.support.helpers import this_user
+from tests.support.mock import patch
+
+# Import Salt Testing libs
+from tests.support.unit import TestCase, skipIf
 
 
 class TestUser(TestCase):
@@ -23,11 +24,19 @@ class TestUser(TestCase):
         running_user = this_user()
         running_group = grp.getgrgid(os.getgid()).gr_name
 
-        gids = {30: 'expectedgroup', 20: running_group}
-        getgrnams = {'expectedgroup': grp.struct_group(('expectedgroup', '*', 30, ['expecteduser'])),
-                     running_group: grp.struct_group((running_group, '*', 20, [running_user]))}
-        getpwnams = {'expecteduser': pwd.struct_passwd(('expecteduser', 'x', 30, 30, '-', '-', '-')),
-                     running_user: pwd.struct_passwd((running_user, 'x', 20, 20, '-', '-', '-'))}
+        gids = {30: "expectedgroup", 20: running_group}
+        getgrnams = {
+            "expectedgroup": grp.struct_group(
+                ("expectedgroup", "*", 30, ["expecteduser"])
+            ),
+            running_group: grp.struct_group((running_group, "*", 20, [running_user])),
+        }
+        getpwnams = {
+            "expecteduser": pwd.struct_passwd(
+                ("expecteduser", "x", 30, 30, "-", "-", "-")
+            ),
+            running_user: pwd.struct_passwd((running_user, "x", 20, 20, "-", "-", "-")),
+        }
 
         def getgrnam(group):
             return getgrnams[group]
@@ -38,11 +47,15 @@ class TestUser(TestCase):
         def getgrgid(gid):
             return getgrnams[gids[gid]]
 
-        with patch('grp.getgrgid', getgrgid):
-            with patch('grp.getgrnam', getgrnam):
-                with patch('pwd.getpwnam', getpwnam):
-                    with patch('salt.utils.user.chugid') as chugid_mock:
-                        salt.utils.user.chugid_and_umask('expecteduser', umask=None, group=running_group)
-                        chugid_mock.assert_called_with('expecteduser', running_group)
-                        salt.utils.user.chugid_and_umask('expecteduser', umask=None, group=None)
-                        chugid_mock.assert_called_with('expecteduser', 'expectedgroup')
+        with patch("grp.getgrgid", getgrgid):
+            with patch("grp.getgrnam", getgrnam):
+                with patch("pwd.getpwnam", getpwnam):
+                    with patch("salt.utils.user.chugid") as chugid_mock:
+                        salt.utils.user.chugid_and_umask(
+                            "expecteduser", umask=None, group=running_group
+                        )
+                        chugid_mock.assert_called_with("expecteduser", running_group)
+                        salt.utils.user.chugid_and_umask(
+                            "expecteduser", umask=None, group=None
+                        )
+                        chugid_mock.assert_called_with("expecteduser", "expectedgroup")

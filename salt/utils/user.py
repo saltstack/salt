@@ -246,10 +246,10 @@ def chugid(runas, group=None):
 
 
 def chugid_and_umask(runas, umask, group=None):
-    '''
+    """
     Helper method for for subprocess.Popen to initialise uid/gid and umask
     for the new process.
-    '''
+    """
     set_runas = False
     set_grp = False
 
