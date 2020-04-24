@@ -489,24 +489,22 @@ def _runtests(session, coverage, cmd_args):
 @nox.session(python=_PYTHON_VERSIONS, name="runtests-parametrized")
 @nox.parametrize("coverage", [False, True])
 @nox.parametrize("transport", ["zeromq", "tcp"])
-@nox.parametrize("crypto", [None, "m2crypto", "pycryptodomex"])
+@nox.parametrize("crypto", [None, "m2crypto", "pycryptodome"])
 def runtests_parametrized(session, coverage, transport, crypto):
     # Install requirements
     _install_requirements(session, transport, "unittest-xml-reporting==2.5.2")
 
     if crypto:
-        if crypto == "m2crypto":
-            session.run(
-                "pip",
-                "uninstall",
-                "-y",
-                "pycrypto",
-                "pycryptodome",
-                "pycryptodomex",
-                silent=True,
-            )
-        else:
-            session.run("pip", "uninstall", "-y", "m2crypto", silent=True)
+        session.run(
+            "pip",
+            "uninstall",
+            "-y",
+            "m2crypto",
+            "pycrypto",
+            "pycryptodome",
+            "pycryptodomex",
+            silent=True,
+        )
         distro_constraints = _get_distro_pip_constraints(session, transport)
         install_command = [
             "--progress-bar=off",
@@ -601,40 +599,40 @@ def runtests_zeromq_m2crypto(session, coverage):
     )
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="runtests-pycryptodomex")
+@nox.session(python=_PYTHON_VERSIONS, name="runtests-pycryptodome")
 @nox.parametrize("coverage", [False, True])
-def runtests_pycryptodomex(session, coverage):
+def runtests_pycryptodome(session, coverage):
     """
-    runtests.py session with zeromq transport and pycryptodomex
+    runtests.py session with zeromq transport and pycryptodome
     """
     session.notify(
-        "runtests-parametrized-{}(coverage={}, crypto='pycryptodomex', transport='zeromq')".format(
+        "runtests-parametrized-{}(coverage={}, crypto='pycryptodome', transport='zeromq')".format(
             session.python, coverage
         )
     )
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="runtests-tcp-pycryptodomex")
+@nox.session(python=_PYTHON_VERSIONS, name="runtests-tcp-pycryptodome")
 @nox.parametrize("coverage", [False, True])
-def runtests_tcp_pycryptodomex(session, coverage):
+def runtests_tcp_pycryptodome(session, coverage):
     """
-    runtests.py session with TCP transport and pycryptodomex
+    runtests.py session with TCP transport and pycryptodome
     """
     session.notify(
-        "runtests-parametrized-{}(coverage={}, crypto='pycryptodomex', transport='tcp')".format(
+        "runtests-parametrized-{}(coverage={}, crypto='pycryptodome', transport='tcp')".format(
             session.python, coverage
         )
     )
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="runtests-zeromq-pycryptodomex")
+@nox.session(python=_PYTHON_VERSIONS, name="runtests-zeromq-pycryptodome")
 @nox.parametrize("coverage", [False, True])
-def runtests_zeromq_pycryptodomex(session, coverage):
+def runtests_zeromq_pycryptodome(session, coverage):
     """
-    runtests.py session with zeromq transport and pycryptodomex
+    runtests.py session with zeromq transport and pycryptodome
     """
     session.notify(
-        "runtests-parametrized-{}(coverage={}, crypto='pycryptodomex', transport='zeromq')".format(
+        "runtests-parametrized-{}(coverage={}, crypto='pycryptodome', transport='zeromq')".format(
             session.python, coverage
         )
     )
@@ -675,24 +673,22 @@ def runtests_tornado(session, coverage):
 @nox.session(python=_PYTHON_VERSIONS, name="pytest-parametrized")
 @nox.parametrize("coverage", [False, True])
 @nox.parametrize("transport", ["zeromq", "tcp"])
-@nox.parametrize("crypto", [None, "m2crypto", "pycryptodomex"])
+@nox.parametrize("crypto", [None, "m2crypto", "pycryptodome"])
 def pytest_parametrized(session, coverage, transport, crypto):
     # Install requirements
     _install_requirements(session, transport)
 
     if crypto:
-        if crypto == "m2crypto":
-            session.run(
-                "pip",
-                "uninstall",
-                "-y",
-                "pycrypto",
-                "pycryptodome",
-                "pycryptodomex",
-                silent=True,
-            )
-        else:
-            session.run("pip", "uninstall", "-y", "m2crypto", silent=True)
+        session.run(
+            "pip",
+            "uninstall",
+            "-y",
+            "m2crypto",
+            "pycrypto",
+            "pycryptodome",
+            "pycryptodomex",
+            silent=True,
+        )
         distro_constraints = _get_distro_pip_constraints(session, transport)
         install_command = [
             "--progress-bar=off",
@@ -793,40 +789,40 @@ def pytest_zeromq_m2crypto(session, coverage):
     )
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-pycryptodomex")
+@nox.session(python=_PYTHON_VERSIONS, name="pytest-pycryptodome")
 @nox.parametrize("coverage", [False, True])
-def pytest_pycryptodomex(session, coverage):
+def pytest_pycryptodome(session, coverage):
     """
-    pytest session with zeromq transport and pycryptodomex
+    pytest session with zeromq transport and pycryptodome
     """
     session.notify(
-        "pytest-parametrized-{}(coverage={}, crypto='pycryptodomex', transport='zeromq')".format(
+        "pytest-parametrized-{}(coverage={}, crypto='pycryptodome', transport='zeromq')".format(
             session.python, coverage
         )
     )
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-tcp-pycryptodomex")
+@nox.session(python=_PYTHON_VERSIONS, name="pytest-tcp-pycryptodome")
 @nox.parametrize("coverage", [False, True])
-def pytest_tcp_pycryptodomex(session, coverage):
+def pytest_tcp_pycryptodome(session, coverage):
     """
-    pytest session with TCP transport and pycryptodomex
+    pytest session with TCP transport and pycryptodome
     """
     session.notify(
-        "pytest-parametrized-{}(coverage={}, crypto='pycryptodomex', transport='tcp')".format(
+        "pytest-parametrized-{}(coverage={}, crypto='pycryptodome', transport='tcp')".format(
             session.python, coverage
         )
     )
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-zeromq-pycryptodomex")
+@nox.session(python=_PYTHON_VERSIONS, name="pytest-zeromq-pycryptodome")
 @nox.parametrize("coverage", [False, True])
-def pytest_zeromq_pycryptodomex(session, coverage):
+def pytest_zeromq_pycryptodome(session, coverage):
     """
-    pytest session with zeromq transport and pycryptodomex
+    pytest session with zeromq transport and pycryptodome
     """
     session.notify(
-        "pytest-parametrized-{}(coverage={}, crypto='pycryptodomex', transport='zeromq')".format(
+        "pytest-parametrized-{}(coverage={}, crypto='pycryptodome', transport='zeromq')".format(
             session.python, coverage
         )
     )
@@ -1031,7 +1027,7 @@ def lint_salt(session):
     if session.posargs:
         paths = session.posargs
     else:
-        paths = ["setup.py", "noxfile.py", "salt/"]
+        paths = ["setup.py", "noxfile.py", "salt/", "tasks/"]
     _lint(session, ".pylintrc", flags, paths)
 
 
@@ -1133,3 +1129,72 @@ def docs_man(session, compress, update):
     if compress:
         session.run("tar", "-cJvf", "man-archive.tar.xz", "_build/man", external=True)
     os.chdir("..")
+
+
+def _invoke(session):
+    """
+    Run invoke tasks
+    """
+    requirements_file = "requirements/static/invoke.in"
+    distro_constraints = [
+        "requirements/static/{}/invoke.txt".format(_get_pydir(session))
+    ]
+    install_command = ["--progress-bar=off", "-r", requirements_file]
+    for distro_constraint in distro_constraints:
+        install_command.extend(["--constraint", distro_constraint])
+    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    cmd = ["inv"]
+    files = []
+
+    # Unfortunately, invoke doesn't support the nargs functionality like argpase does.
+    # Let's make it behave properly
+    for idx, posarg in enumerate(session.posargs):
+        if idx == 0:
+            cmd.append(posarg)
+            continue
+        if posarg.startswith("--"):
+            cmd.append(posarg)
+            continue
+        files.append(posarg)
+    if files:
+        cmd.append("--files={}".format(" ".join(files)))
+    session.run(*cmd)
+
+
+@nox.session(name="invoke", python="3")
+def invoke(session):
+    _invoke(session)
+
+
+@nox.session(name="invoke-pre-commit", python="3")
+def invoke_pre_commit(session):
+    if "VIRTUAL_ENV" not in os.environ:
+        session.error(
+            "This should be running from within a virtualenv and "
+            "'VIRTUAL_ENV' was not found as an environment variable."
+        )
+    if "pre-commit" not in os.environ["VIRTUAL_ENV"]:
+        session.error(
+            "This should be running from within a pre-commit virtualenv and "
+            "'VIRTUAL_ENV'({}) does not appear to be a pre-commit virtualenv.".format(
+                os.environ["VIRTUAL_ENV"]
+            )
+        )
+    from nox.virtualenv import VirtualEnv
+
+    # Let's patch nox to make it run inside the pre-commit virtualenv
+    try:
+        session._runner.venv = VirtualEnv(  # pylint: disable=unexpected-keyword-arg
+            os.environ["VIRTUAL_ENV"],
+            interpreter=session._runner.func.python,
+            reuse_existing=True,
+            venv=True,
+        )
+    except TypeError:
+        # This is still nox-py2
+        session._runner.venv = VirtualEnv(
+            os.environ["VIRTUAL_ENV"],
+            interpreter=session._runner.func.python,
+            reuse_existing=True,
+        )
+    _invoke(session)
