@@ -122,10 +122,10 @@ def destructiveTest(caller):
 
     # We're simply decorating functions
     @functools.wraps(caller)
-    def wrap(cls):
+    def wrap(cls, *args, **kwargs):
         if os.environ.get("DESTRUCTIVE_TESTS", "False").lower() == "false":
             cls.skipTest("Destructive tests are disabled")
-        return caller(cls)
+        return caller(cls, *args, **kwargs)
 
     return wrap
 
@@ -164,10 +164,10 @@ def expensiveTest(caller):
 
     # We're simply decorating functions
     @functools.wraps(caller)
-    def wrap(cls):
+    def wrap(cls, *args, **kwargs):
         if os.environ.get("EXPENSIVE_TESTS", "False").lower() == "false":
             cls.skipTest("Expensive tests are disabled")
-        return caller(cls)
+        return caller(cls, *args, **kwargs)
 
     return wrap
 
@@ -192,10 +192,10 @@ def slowTest(caller):
 
     # We're simply decorating functions
     @functools.wraps(caller)
-    def wrap(cls):
+    def wrap(cls, *args, **kwargs):
         if os.environ.get("SLOW_TESTS", "False").lower() == "false":
             raise SkipTest("Slow tests are disabled")
-        return caller(cls)
+        return caller(cls, *args, **kwargs)
 
     return wrap
 
@@ -618,7 +618,7 @@ def requires_network(only_local_network=False):
 
     def decorator(func):
         @functools.wraps(func)
-        def wrapper(cls):
+        def wrapper(cls, *args, **kwargs):
             has_local_network = False
             # First lets try if we have a local network. Inspired in
             # verify_socket
@@ -686,7 +686,7 @@ def requires_network(only_local_network=False):
                     cls.skipTest("No internet network connection was detected")
                 finally:
                     sock.close()
-            return func(cls)
+            return func(cls, *args, **kwargs)
 
         return wrapper
 
