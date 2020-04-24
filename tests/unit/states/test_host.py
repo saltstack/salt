@@ -5,6 +5,8 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import logging
+
 # Import Salt Libs
 import salt.states.host as host
 
@@ -12,6 +14,8 @@ import salt.states.host as host
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch
 from tests.support.unit import TestCase
+
+log = logging.getLogger(__name__)
 
 
 class HostTestCase(TestCase, LoaderModuleMockMixin):
@@ -23,13 +27,14 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
     localhost_ip = "127.0.0.1"
     ip_list = ["203.0.113.113", "203.0.113.14"]
     default_hosts = {
-        ip_list[0]: [hostname],
-        ip_list[1]: [hostname],
+        ip_list[0]: {"aliases": [hostname]},
+        ip_list[1]: {"aliases": [hostname]},
     }
 
     def setUp(self):
         self.add_host_mock = MagicMock(return_value=True)
         self.rm_host_mock = MagicMock(return_value=True)
+        self.set_comment_mock = MagicMock(return_value=True)
         self.list_hosts_mock = MagicMock(return_value=self.default_hosts)
 
     def setup_loader_modules(self):
@@ -43,12 +48,13 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
         """
         add_host = MagicMock(return_value=True)
         rm_host = MagicMock(return_value=True)
+        set_comment = MagicMock(return_value=True)
         hostname = "salt"
         ip_str = "127.0.0.1"
         ip_list = ["10.1.2.3", "10.4.5.6"]
 
         # Case 1: No match for hostname. Single IP address passed to the state.
-        list_hosts = MagicMock(return_value={"127.0.0.1": ["localhost"]})
+        list_hosts = MagicMock(return_value={"127.0.0.1": {"aliases": ["localhost"]}})
         with patch.dict(
             host.__salt__,
             {
@@ -69,7 +75,7 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
 
         # Case 2: No match for hostname. Multiple IP addresses passed to the
         # state.
-        list_hosts = MagicMock(return_value={"127.0.0.1": ["localhost"]})
+        list_hosts = MagicMock(return_value={"127.0.0.1": {"aliases": ["localhost"]}})
         add_host.reset_mock()
         rm_host.reset_mock()
         with patch.dict(
@@ -94,7 +100,10 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
         # Case 3: Match for hostname, but no matching IP. Single IP address
         # passed to the state.
         list_hosts = MagicMock(
-            return_value={"127.0.0.1": ["localhost"], ip_list[0]: [hostname]}
+            return_value={
+                "127.0.0.1": {"aliases": ["localhost"]},
+                ip_list[0]: {"aliases": [hostname]},
+            }
         )
         add_host.reset_mock()
         rm_host.reset_mock()
@@ -148,7 +157,10 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
         # passed to the state.
         cur_ip = "1.2.3.4"
         list_hosts = MagicMock(
-            return_value={"127.0.0.1": ["localhost"], cur_ip: [hostname]}
+            return_value={
+                "127.0.0.1": {"aliases": ["localhost"]},
+                cur_ip: {"aliases": [hostname]},
+            }
         )
         add_host.reset_mock()
         rm_host.reset_mock()
@@ -202,9 +214,9 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
         cur_ip = "1.2.3.4"
         list_hosts = MagicMock(
             return_value={
-                "127.0.0.1": ["localhost"],
-                cur_ip: [hostname],
-                ip_list[0]: [hostname],
+                "127.0.0.1": {"aliases": ["localhost"]},
+                cur_ip: {"aliases": [hostname]},
+                ip_list[0]: {"aliases": [hostname]},
             }
         )
         add_host.reset_mock()
@@ -251,7 +263,7 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
 
         # Case 6: Single IP address passed to the state, which matches the
         # current configuration for that hostname. No changes should be made.
-        list_hosts = MagicMock(return_value={ip_str: [hostname]})
+        list_hosts = MagicMock(return_value={ip_str: {"aliases": [hostname]}})
         add_host.reset_mock()
         rm_host.reset_mock()
         with patch.dict(
@@ -277,7 +289,10 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
         # the current configuration for that hostname. No changes should be
         # made.
         list_hosts = MagicMock(
-            return_value={ip_list[0]: [hostname], ip_list[1]: [hostname]}
+            return_value={
+                ip_list[0]: {"aliases": [hostname]},
+                ip_list[1]: {"aliases": [hostname]},
+            }
         )
         add_host.reset_mock()
         rm_host.reset_mock()
@@ -303,6 +318,60 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
             assert add_host.mock_calls == [], add_host.mock_calls
             assert rm_host.mock_calls == [], rm_host.mock_calls
 
+        # Case 8: Passing a comment to host.present with multiple IPs
+        list_hosts = MagicMock(return_value={"127.0.0.1": {"aliases": ["localhost"]}})
+        self.add_host_mock.reset_mock()
+        self.rm_host_mock.reset_mock()
+        self.set_comment_mock.reset_mock()
+        with patch.dict(
+            host.__salt__,
+            {
+                "hosts.list_hosts": list_hosts,
+                "hosts.add_host": self.add_host_mock,
+                "hosts.rm_host": self.rm_host_mock,
+                "hosts.set_comment": self.set_comment_mock,
+            },
+        ):
+            ret = host.present(self.hostname, self.ip_list, comment="A comment")
+            assert ret["result"] is True
+            assert (
+                "Added host {0} ({1})".format(self.hostname, self.ip_list[0])
+                in ret["comment"]
+            )
+            assert (
+                "Added host {0} ({1})".format(self.hostname, self.ip_list[1])
+                in ret["comment"]
+            )
+            assert (
+                "Set comment for host {0} (A comment)".format(self.ip_list[0])
+                in ret["comment"]
+            )
+            assert (
+                "Set comment for host {0} (A comment)".format(self.ip_list[1])
+                in ret["comment"]
+            )
+            assert ret["changes"] == {
+                "added": {
+                    self.ip_list[0]: [self.hostname],
+                    self.ip_list[1]: [self.hostname],
+                },
+                "comment_added": {
+                    self.ip_list[0]: ["A comment"],
+                    self.ip_list[1]: ["A comment"],
+                },
+            }, ret["changes"]
+            expected = sorted([call(x, self.hostname) for x in self.ip_list])
+            assert (
+                sorted(self.add_host_mock.mock_calls) == expected
+            ), self.add_host_mock.mock_calls
+
+            expected = sorted([call(x, "A comment") for x in self.ip_list])
+            assert (
+                sorted(self.set_comment_mock.mock_calls) == expected
+            ), self.set_comment_mock.mock_calls
+
+            assert self.rm_host_mock.mock_calls == [], self.rm_host_mock.mock_calls
+
     def test_host_present_should_return_True_if_test_and_no_changes(self):
         expected = {
             "comment": "Host {} ({}) already present".format(
@@ -312,7 +381,9 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
             "name": self.hostname,
             "result": True,
         }
-        list_hosts = MagicMock(return_value={self.ip_list[0]: [self.hostname]},)
+        list_hosts = MagicMock(
+            return_value={self.ip_list[0]: {"aliases": [self.hostname]}},
+        )
         with patch.dict(
             host.__salt__,
             {
@@ -335,7 +406,9 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
             "name": self.hostname,
             "result": None,
         }
-        list_hosts = MagicMock(return_value={self.ip_list[0]: [self.hostname]},)
+        list_hosts = MagicMock(
+            return_value={self.ip_list[0]: {"aliases": [self.hostname]}},
+        )
         with patch.dict(
             host.__salt__,
             {

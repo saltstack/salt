@@ -576,7 +576,7 @@ class AsyncTCPPubChannel(
                 yield self.auth.authenticate()
             if self.auth.authenticated:
                 # if this is changed from the default, we assume it was intentional
-                if int(self.opts.get("publish_port", 4506)) != 4506:
+                if int(self.opts.get("publish_port", 4505)) != 4505:
                     self.publish_port = self.opts.get("publish_port")
                 # else take the relayed publish_port master reports
                 else:

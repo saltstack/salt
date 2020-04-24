@@ -2,12 +2,11 @@
 """
 Tests for the salt-run command
 """
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt Testing libs
+import pytest
 from tests.support.case import ShellCase
 from tests.support.unit import skipIf
 
@@ -23,11 +22,13 @@ log = logging.getLogger(__name__)
 
 
 @skipIf(not HAS_LIBNACL, "skipping test_nacl, libnacl is unavailable")
+@pytest.mark.windows_whitelisted
 class NaclTest(ShellCase):
     """
     Test the nacl runner
     """
 
+    @skipIf(True, "SLOWTEST skip")
     def test_keygen(self):
         """
         Test keygen
@@ -37,6 +38,7 @@ class NaclTest(ShellCase):
         self.assertIn("pk", ret["return"])
         self.assertIn("sk", ret["return"])
 
+    @skipIf(True, "SLOWTEST skip")
     def test_enc(self):
         """
         Test keygen
@@ -54,6 +56,7 @@ class NaclTest(ShellCase):
         ret = self.run_run_plus("nacl.enc", data=unencrypted_data, pk=pk,)
         self.assertIn("return", ret)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_enc_dec(self):
         """
         Store, list, fetch, then flush data
@@ -77,6 +80,7 @@ class NaclTest(ShellCase):
         self.assertIn("return", ret)
         self.assertEqual(unencrypted_data, ret["return"])
 
+    @skipIf(True, "SLOWTEST skip")
     def test_sealedbox_enc_dec(self):
         """
         Generate keys, encrypt, then decrypt.
@@ -98,6 +102,7 @@ class NaclTest(ShellCase):
         ret = self.run_run_plus("nacl.sealedbox_decrypt", data=encrypted_data, sk=sk,)
         self.assertEqual(unencrypted_data, ret["return"])
 
+    @skipIf(True, "SLOWTEST skip")
     def test_secretbox_enc_dec(self):
         """
         Generate keys, encrypt, then decrypt.
@@ -119,6 +124,7 @@ class NaclTest(ShellCase):
         ret = self.run_run_plus("nacl.secretbox_decrypt", data=encrypted_data, sk=sk,)
         self.assertEqual(unencrypted_data, ret["return"])
 
+    @skipIf(True, "SLOWTEST skip")
     def test_enc_dec_no_pk_no_sk(self):
         """
         Store, list, fetch, then flush data

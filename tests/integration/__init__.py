@@ -755,8 +755,10 @@ class TestDaemon(object):
         ) as roster:
             roster.write("  user: {0}\n".format(RUNTIME_VARS.RUNNING_TESTS_USER))
             roster.write(
-                "  priv: {0}/{1}".format(RUNTIME_VARS.TMP_CONF_DIR, "key_test")
+                "  priv: {0}/{1}\n".format(RUNTIME_VARS.TMP_CONF_DIR, "key_test")
             )
+            if salt.utils.platform.is_darwin():
+                roster.write("  set_path: $PATH:/usr/local/bin/\n")
         sys.stdout.write(" {LIGHT_GREEN}STARTED!\n{ENDC}".format(**self.colors))
 
     @classmethod
@@ -940,8 +942,9 @@ class TestDaemon(object):
         syndic_opts.update(
             salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, "syndic"))
         )
-        syndic_opts["cachedir"] = os.path.join(TMP, "rootdir", "cache")
         syndic_opts["config_dir"] = RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR
+        syndic_opts["cachedir"] = os.path.join(TMP, "rootdir", "cache")
+        syndic_opts["root_dir"] = os.path.join(TMP, "rootdir")
 
         # This proxy connects to master
         proxy_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, "proxy"))
@@ -1010,6 +1013,9 @@ class TestDaemon(object):
         }
         master_opts.setdefault("reactor", []).append(
             {"salt/minion/*/start": [os.path.join(FILES, "reactor-sync-minion.sls")]}
+        )
+        master_opts.setdefault("reactor", []).append(
+            {"salt/test/reactor": [os.path.join(FILES, "reactor-test.sls")]}
         )
         for opts_dict in (master_opts, syndic_master_opts):
             if "ext_pillar" not in opts_dict:
