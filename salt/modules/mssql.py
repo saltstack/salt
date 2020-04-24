@@ -176,7 +176,7 @@ def db_create(database, containment="NONE", new_database_options=None, **kwargs)
         # cur.execute(sql)
         conn.cursor().execute(sql)
     except Exception as e:  # pylint: disable=broad-except
-        return "Could not create the login: {0}".format(e)
+        return "Could not create the database: {0}".format(e)
     finally:
         if conn:
             conn.autocommit(False)
@@ -308,7 +308,7 @@ def role_remove(role, **kwargs):
         conn.close()
         return True
     except Exception as e:  # pylint: disable=broad-except
-        return "Could not create the role: {0}".format(e)
+        return "Could not remove the role: {0}".format(e)
 
 
 def login_exists(login, domain="", **kwargs):
@@ -561,4 +561,4 @@ def user_remove(username, **kwargs):
         conn.close()
         return True
     except Exception as e:  # pylint: disable=broad-except
-        return "Could not create the user: {0}".format(e)
+        return "Could not remove the user: {0}".format(e)

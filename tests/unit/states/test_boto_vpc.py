@@ -169,6 +169,7 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
+    @skipIf(True, "SLOWTEST skip")
     def test_present_when_vpc_does_not_exist(self):
         """
         Tests present on a VPC that does not exist.
@@ -212,6 +213,7 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
+    @skipIf(True, "SLOWTEST skip")
     def test_absent_when_vpc_does_not_exist(self):
         """
         Tests absent on a VPC that does not exist.
@@ -226,6 +228,7 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
+    @skipIf(True, "SLOWTEST skip")
     def test_absent_when_vpc_exists(self):
         vpc = self._create_vpc(name="test")
         with patch.dict(botomod.__salt__, self.funcs):
@@ -261,6 +264,8 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_present_when_resource_does_not_exist(self):
         """
         Tests present on a resource that does not exist.
@@ -283,6 +288,8 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_present_when_resource_exists(self):
         vpc = self._create_vpc(name="test")
         self._create_resource(vpc_id=vpc.id, name="test")
@@ -313,6 +320,8 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_absent_when_resource_does_not_exist(self):
         """
         Tests absent on a resource that does not exist.
@@ -329,6 +338,8 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_absent_when_resource_exists(self):
         vpc = self._create_vpc(name="test")
         self._create_resource(vpc_id=vpc.id, name="test")

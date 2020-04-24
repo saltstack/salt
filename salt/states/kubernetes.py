@@ -95,7 +95,9 @@ def __virtual__():
     """
     Only load if the kubernetes module is available in __salt__
     """
-    return "kubernetes.ping" in __salt__
+    if "kubernetes.ping" in __salt__:
+        return True
+    return (False, "kubernetes module could not be loaded")
 
 
 def _error(ret, err_msg):
