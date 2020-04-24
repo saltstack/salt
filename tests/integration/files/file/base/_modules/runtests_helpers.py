@@ -11,6 +11,7 @@
 from __future__ import absolute_import
 
 import fnmatch
+import logging
 import os
 import re
 import sys
@@ -41,6 +42,9 @@ except ImportError:
     class RUNTIME_VARS(object):
         TMP = TMP
         SYS_TMP_DIR = SYS_TMP_DIR
+
+
+log = logging.getLogger(__name__)
 
 
 def get_salt_temp_dir():
@@ -187,7 +191,20 @@ def get_python_executable():
             python_binary = os.path.join(
                 sys.real_prefix, "bin", os.path.basename(sys.executable)
             )
+            if not os.path.exists(python_binary):
+                if not python_binary[-1].isdigit():
+                    versioned_python_binary = "{}{}".format(
+                        python_binary, *sys.version_info
+                    )
+                    log.info(
+                        "Python binary could not be found at %s. Trying %s",
+                        python_binary,
+                        versioned_python_binary,
+                    )
+                    if os.path.exists(versioned_python_binary):
+                        python_binary = versioned_python_binary
         if not os.path.exists(python_binary):
+            log.warning("Python binary could not be found at %s", python_binary)
             python_binary = None
     except AttributeError:
         # We're not running inside a virtualenv

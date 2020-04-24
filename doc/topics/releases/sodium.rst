@@ -23,7 +23,20 @@ State updates
 The ``creates`` state requisite has been migrated from the
 :mod:`docker_container <salt.states.docker_container>` and :mod:`cmd <salt.states.cmd>`
 states to become a global option. This acts similar to an equivalent
-``unless: test -f filename`` but can also accept a list of filenames.
+``unless: test -f filename`` but can also accept a list of filenames. This allows
+all states to take advantage of the enhanced functionality released in Neon, of allowing
+salt execution modules for requisite checks. 
+
+State Execution Module
+======================
+
+The :mod:`state.test <salt.modules.state.test>` function
+can be used to test a state on a minion. This works by executing the
+:mod:`state.apply <salt.modules.state.apply>` function while forcing the ``test`` kwarg
+to ``True`` so that the ``state.apply`` function is not required to be called by the
+user directly. This also allows you to add the ``state.test`` function to a minion's 
+``minion_blackout_whitelist`` pillar if you wish to be able to test a state while a
+minion is in blackout.
 
 New Grains
 ==========
@@ -35,9 +48,11 @@ This grain provides the same information as the ``path`` grain, only formatted
 as a list of directories.
 
 
-================
 Salt-SSH updates
 ================
+
+ssh_pre_flight
+--------------
 
 A new Salt-SSH roster option `ssh_pre_flight` has been added. This enables you to run a
 script before Salt-SSH tries to run any commands. You can set this option in the roster
@@ -67,3 +82,24 @@ minion. If you want to force the script to run you have the following options:
 * Wipe the thin dir on the targeted minion using the -w arg.
 * Set ssh_run_pre_flight to True in the config.
 * Run salt-ssh with the --pre-flight arg.
+
+set_path
+--------
+
+A new salt-ssh roster option `set_path` has been added. This allows you to set
+the path environment variable used to run the salt-ssh command on the target minion.
+You can set this setting in your roster file like so:
+
+.. code-block:: yaml
+
+  minion1:
+    host: localhost
+    user: root
+    passwd: P@ssword
+    set_path: '$PATH:/usr/local/bin/'
+
+
+State Changes
+=============
+- Adding a new option for the State compiler, ``disabled_requisites`` will allow
+  requisites to be disabled during State runs.

@@ -934,6 +934,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         with salt.utils.files.fopen(tfile.name) as tfile2:
             new_file = salt.utils.stringutils.to_unicode(tfile2.read())
         self.assertEqual(new_file, expected)
+        os.remove(tfile.name)
 
         # File not ending with a newline
         with tempfile.NamedTemporaryFile(mode="wb", delete=False) as tfile:
@@ -950,6 +951,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(
                 salt.utils.stringutils.to_unicode(tfile2.read()), "bar" + os.linesep
             )
+        os.remove(tfile.name)
 
     def test_extract_hash(self):
         """
@@ -960,9 +962,9 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             tfile.write(
                 salt.utils.stringutils.to_bytes(
                     "rc.conf ef6e82e4006dee563d98ada2a2a80a27\n"
-                    "ead48423703509d37c4a90e6a0d53e143b6fc268 example.tar.gz\n"
+                    "ead48423703509d37c4a90e6a0d53e143b6fc268  example.tar.gz\n"
                     "fe05bcdcdc4928012781a5f1a2a77cbb5398e106 ./subdir/example.tar.gz\n"
-                    "ad782ecdac770fc6eb9a62e44f90873fb97fb26b foo.tar.bz2\n"
+                    "ad782ecdac770fc6eb9a62e44f90873fb97fb26b *foo.tar.bz2\n"
                 )
             )
             tfile.flush()
@@ -1041,6 +1043,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 else None
             )
             self.assertEqual(result, expected)
+        os.remove(tfile.name)
 
         # Hash only, no file name (Maven repo checksum format)
         # Since there is no name match, the first checksum in the file will
@@ -1065,6 +1068,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 else None
             )
             self.assertEqual(result, expected)
+        os.remove(tfile.name)
 
     def test_user_to_uid_int(self):
         """
@@ -1359,10 +1363,9 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 self.assertFalse(
                     filemod.line("/dummy/path", content="foo", match="bar", mode=mode)
                 )
-            self.assertIn(
-                "Cannot find text to {0}".format(mode),
-                _log.warning.call_args_list[0][0][0],
-            )
+            warning_call = _log.warning.call_args_list[0][0]
+            warning_log_msg = warning_call[0] % warning_call[1:]
+            self.assertIn("Cannot find text to {0}".format(mode), warning_log_msg)
 
     @patch("os.path.realpath", MagicMock())
     @patch("os.path.isfile", MagicMock(return_value=True))
@@ -2685,3 +2688,95 @@ class ChattrTests(TestCase, LoaderModuleMockMixin):
                 follow_symlinks=False,
             )
             self.assertDictEqual(actual_ret["changes"], expected)
+
+
+@skipIf(salt.modules.selinux.getenforce() != "Enforcing", "Skip if selinux not enabled")
+class FileSelinuxTestCase(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        return {
+            filemod: {
+                "__salt__": {
+                    "cmd.run": cmdmod.run,
+                    "cmd.run_all": cmdmod.run_all,
+                    "cmd.retcode": cmdmod.retcode,
+                    "selinux.fcontext_add_policy": MagicMock(
+                        return_value={"retcode": 0, "stdout": ""}
+                    ),
+                },
+                "__opts__": {"test": False},
+            }
+        }
+
+    def setUp(self):
+        # Read copy 1
+        self.tfile1 = tempfile.NamedTemporaryFile(delete=False, mode="w+")
+
+        # Edit copy 2
+        self.tfile2 = tempfile.NamedTemporaryFile(delete=False, mode="w+")
+
+        # Edit copy 3
+        self.tfile3 = tempfile.NamedTemporaryFile(delete=False, mode="w+")
+
+    def tearDown(self):
+        os.remove(self.tfile1.name)
+        del self.tfile1
+        os.remove(self.tfile2.name)
+        del self.tfile2
+        os.remove(self.tfile3.name)
+        del self.tfile3
+
+    def test_selinux_getcontext(self):
+        """
+            Test get selinux context
+            Assumes default selinux attributes on temporary files
+        """
+        result = filemod.get_selinux_context(self.tfile1.name)
+        self.assertEqual(result, "unconfined_u:object_r:user_tmp_t:s0")
+
+    def test_selinux_setcontext(self):
+        """
+            Test set selinux context
+            Assumes default selinux attributes on temporary files
+        """
+        result = filemod.set_selinux_context(self.tfile2.name, user="system_u")
+        self.assertEqual(result, "system_u:object_r:user_tmp_t:s0")
+
+    def test_selinux_setcontext_persist(self):
+        """
+            Test set selinux context with persist=True
+            Assumes default selinux attributes on temporary files
+        """
+        result = filemod.set_selinux_context(
+            self.tfile2.name, user="system_u", persist=True
+        )
+        self.assertEqual(result, "system_u:object_r:user_tmp_t:s0")
+
+    def test_file_check_perms(self):
+        expected_result = (
+            {
+                "comment": "The file {0} is set to be changed".format(self.tfile3.name),
+                "changes": {
+                    "selinux": {"New": "Type: lost_found_t", "Old": "Type: user_tmp_t"},
+                    "mode": "0644",
+                },
+                "name": self.tfile3.name,
+                "result": True,
+            },
+            {"luser": "root", "lmode": "0600", "lgroup": "root"},
+        )
+
+        # Disable lsattr calls
+        with patch("salt.utils.path.which") as m_which:
+            m_which.return_value = None
+            result = filemod.check_perms(
+                self.tfile3.name,
+                {},
+                "root",
+                "root",
+                644,
+                seuser=None,
+                serole=None,
+                setype="lost_found_t",
+                serange=None,
+            )
+            self.assertEqual(result, expected_result)

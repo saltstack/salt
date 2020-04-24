@@ -144,7 +144,9 @@ except ImportError:
 
 
 def __virtual__():
-    return "esxi.cmd" in __salt__
+    if "esxi.cmd" in __salt__:
+        return True
+    return (False, "esxi module could not be loaded")
 
 
 def coredump_configured(name, enabled, dump_ip, host_vnic="vmk0", dump_port=6500):
@@ -925,7 +927,7 @@ def syslog_configured(
         After a successful parameter set, reset the service. Defaults to ``True``.
 
     reset_syslog_config
-        Resets the syslog service to it's default settings. Defaults to ``False``.
+        Resets the syslog service to its default settings. Defaults to ``False``.
         If set to ``True``, default settings defined by the list of syslog configs
         in ``reset_configs`` will be reset before running any other syslog settings.
 

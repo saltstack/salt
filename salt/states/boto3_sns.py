@@ -78,7 +78,9 @@ def __virtual__():
     """
     Only load if boto is available.
     """
-    return "boto3_sns" if "boto3_sns.topic_exists" in __salt__ else False
+    if "boto3_sns.topic_exists" in __salt__:
+        return "boto3_sns"
+    return (False, "boto3_sns module could not be loaded")
 
 
 def topic_present(
@@ -231,7 +233,9 @@ def topic_present(
             subscribe += [sub]
     for sub in current_subs:
         minimal = {"Protocol": sub["Protocol"], "Endpoint": sub["Endpoint"]}
-        if minimal not in obfuscated_subs:
+        if minimal not in obfuscated_subs and sub["SubscriptionArn"].startswith(
+            "arn:aws:sns:"
+        ):
             unsubscribe += [sub["SubscriptionArn"]]
     for sub in subscribe:
         prot = sub["Protocol"]

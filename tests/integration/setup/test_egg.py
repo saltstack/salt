@@ -49,6 +49,7 @@ class EggSetupTest(ModuleCase):
             if os.path.exists(_dir):
                 shutil.rmtree(_dir)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_egg_install(self):
         """
         test installing an egg package

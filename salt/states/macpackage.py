@@ -44,7 +44,7 @@ def __virtual__():
     """
     if salt.utils.platform.is_darwin():
         return __virtualname__
-    return False
+    return (False, "Only supported on Mac OS")
 
 
 def installed(
