@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, unicode_literals
 
-import logging
+import datetime
 import os
 import textwrap
 
@@ -19,9 +19,6 @@ try:
     HAS_M2CRYPTO = True
 except ImportError:
     HAS_M2CRYPTO = False
-
-
-log = logging.getLogger(__name__)
 
 
 @skipIf(not HAS_M2CRYPTO, "Skip when no M2Crypto found")
@@ -79,12 +76,8 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
             salt.utils.files.rm_rf(certs_path)
         self.run_function("saltutil.refresh_pillar")
 
-    def run_function(self, *args, **kwargs):  # pylint: disable=arguments-differ
-        ret = super(x509Test, self).run_function(*args, **kwargs)
-        log.debug("ret = %s", ret)
-        return ret
-
     @with_tempfile(suffix=".pem", create=False)
+    @skipIf(True, "SLOWTEST skip")
     def test_issue_49027(self, pemfile):
         ret = self.run_state("x509.pem_managed", name=pemfile, text=self.x509_cert_text)
         assert isinstance(ret, dict), ret
@@ -96,6 +89,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
 
     @with_tempfile(suffix=".crt", create=False)
     @with_tempfile(suffix=".key", create=False)
+    @skipIf(True, "SLOWTEST skip")
     def test_issue_49008(self, keyfile, crtfile):
         ret = self.run_function(
             "state.apply",
@@ -108,9 +102,10 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         assert os.path.exists(keyfile)
         assert os.path.exists(crtfile)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_cert_signing(self):
         ret = self.run_function(
-            "state.apply", ["test_cert"], pillar={"tmp_dir": RUNTIME_VARS.TMP}
+            "state.apply", ["x509.cert_signing"], pillar={"tmp_dir": RUNTIME_VARS.TMP}
         )
         key = "x509_|-test_crt_|-{}/pki/test.crt_|-certificate_managed".format(
             RUNTIME_VARS.TMP
@@ -173,3 +168,193 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         assert "Not After" in ret[key]["changes"]["Certificate"]["New"]
         not_after = ret[key]["changes"]["Certificate"]["New"]["Not After"]
         assert not_after == "2020-05-05 14:30:00"
+
+    @with_tempfile(suffix=".crt", create=False)
+    @with_tempfile(suffix=".key", create=False)
+    def test_self_signed_cert(self, keyfile, crtfile):
+        """
+        Self-signed certificate, no CA.
+        Run the state twice to confirm the cert is only created once
+        and its contents don't change.
+        """
+        first_run = self.run_function(
+            "state.apply",
+            ["x509.self_signed"],
+            pillar={"keyfile": keyfile, "crtfile": crtfile},
+        )
+        key = "x509_|-self_signed_cert_|-{}_|-certificate_managed".format(crtfile)
+        self.assertIn("New", first_run[key]["changes"]["Certificate"])
+        self.assertEqual(
+            "Certificate is valid and up to date",
+            first_run[key]["changes"]["Status"]["New"],
+        )
+        self.assertTrue(os.path.exists(crtfile), "Certificate was not created.")
+
+        with salt.utils.files.fopen(crtfile, "r") as first_cert:
+            cert_contents = first_cert.read()
+
+        second_run = self.run_function(
+            "state.apply",
+            ["x509.self_signed"],
+            pillar={"keyfile": keyfile, "crtfile": crtfile},
+        )
+        self.assertEqual({}, second_run[key]["changes"])
+        with salt.utils.files.fopen(crtfile, "r") as second_cert:
+            self.assertEqual(
+                cert_contents,
+                second_cert.read(),
+                "Certificate contents should not have changed.",
+            )
+
+    @with_tempfile(suffix=".crt", create=False)
+    @with_tempfile(suffix=".key", create=False)
+    def test_old_self_signed_cert_is_recreated(self, keyfile, crtfile):
+        """
+        Self-signed certificate, no CA.
+        First create a cert that expires in 30 days, then recreate
+        the cert because the second state run requires days_remaining
+        to be at least 90.
+        """
+        first_run = self.run_function(
+            "state.apply",
+            ["x509.self_signed_expiry"],
+            pillar={
+                "keyfile": keyfile,
+                "crtfile": crtfile,
+                "days_valid": 30,
+                "days_remaining": 10,
+            },
+        )
+        key = "x509_|-self_signed_cert_|-{0}_|-certificate_managed".format(crtfile)
+        self.assertEqual(
+            "Certificate is valid and up to date",
+            first_run[key]["changes"]["Status"]["New"],
+        )
+        expiry = datetime.datetime.strptime(
+            first_run[key]["changes"]["Certificate"]["New"]["Not After"],
+            "%Y-%m-%d %H:%M:%S",
+        )
+        self.assertEqual(29, (expiry - datetime.datetime.now()).days)
+        self.assertTrue(os.path.exists(crtfile), "Certificate was not created.")
+
+        with salt.utils.files.fopen(crtfile, "r") as first_cert:
+            cert_contents = first_cert.read()
+
+        second_run = self.run_function(
+            "state.apply",
+            ["x509.self_signed_expiry"],
+            pillar={
+                "keyfile": keyfile,
+                "crtfile": crtfile,
+                "days_valid": 180,
+                "days_remaining": 90,
+            },
+        )
+        self.assertEqual(
+            "Certificate needs renewal: 29 days remaining but it needs to be at least 90",
+            second_run[key]["changes"]["Status"]["Old"],
+        )
+        expiry = datetime.datetime.strptime(
+            second_run[key]["changes"]["Certificate"]["New"]["Not After"],
+            "%Y-%m-%d %H:%M:%S",
+        )
+        self.assertEqual(179, (expiry - datetime.datetime.now()).days)
+        with salt.utils.files.fopen(crtfile, "r") as second_cert:
+            self.assertNotEqual(
+                cert_contents,
+                second_cert.read(),
+                "Certificate contents should have changed.",
+            )
+
+    @with_tempfile(suffix=".crt", create=False)
+    @with_tempfile(suffix=".key", create=False)
+    def test_mismatched_self_signed_cert_is_recreated(self, keyfile, crtfile):
+        """
+        Self-signed certificate, no CA.
+        First create a cert, then run the state again with a different
+        subjectAltName. The cert should be recreated.
+        Finally, run once more with the same subjectAltName as the
+        second run. Nothing should change.
+        """
+        first_run = self.run_function(
+            "state.apply",
+            ["x509.self_signed_different_properties"],
+            pillar={
+                "keyfile": keyfile,
+                "crtfile": crtfile,
+                "subjectAltName": "DNS:alt.service.local",
+            },
+        )
+        key = "x509_|-self_signed_cert_|-{0}_|-certificate_managed".format(crtfile)
+        self.assertEqual(
+            "Certificate is valid and up to date",
+            first_run[key]["changes"]["Status"]["New"],
+        )
+        sans = first_run[key]["changes"]["Certificate"]["New"]["X509v3 Extensions"][
+            "subjectAltName"
+        ]
+        self.assertEqual("DNS:alt.service.local", sans)
+        self.assertTrue(os.path.exists(crtfile), "Certificate was not created.")
+
+        with salt.utils.files.fopen(crtfile, "r") as first_cert:
+            first_cert_contents = first_cert.read()
+
+        second_run_pillar = {
+            "keyfile": keyfile,
+            "crtfile": crtfile,
+            "subjectAltName": "DNS:alt1.service.local, DNS:alt2.service.local",
+        }
+        second_run = self.run_function(
+            "state.apply",
+            ["x509.self_signed_different_properties"],
+            pillar=second_run_pillar,
+        )
+        self.assertEqual(
+            "Certificate properties are different: X509v3 Extensions",
+            second_run[key]["changes"]["Status"]["Old"],
+        )
+        sans = second_run[key]["changes"]["Certificate"]["New"]["X509v3 Extensions"][
+            "subjectAltName"
+        ]
+        self.assertEqual("DNS:alt1.service.local, DNS:alt2.service.local", sans)
+        with salt.utils.files.fopen(crtfile, "r") as second_cert:
+            second_cert_contents = second_cert.read()
+            self.assertNotEqual(
+                first_cert_contents,
+                second_cert_contents,
+                "Certificate contents should have changed.",
+            )
+
+        third_run = self.run_function(
+            "state.apply",
+            ["x509.self_signed_different_properties"],
+            pillar=second_run_pillar,
+        )
+        self.assertEqual({}, third_run[key]["changes"])
+        with salt.utils.files.fopen(crtfile, "r") as third_cert:
+            self.assertEqual(
+                second_cert_contents,
+                third_cert.read(),
+                "Certificate contents should not have changed.",
+            )
+
+    @with_tempfile(suffix=".crt", create=False)
+    @with_tempfile(suffix=".key", create=False)
+    def test_certificate_managed_with_managed_private_key_does_not_error(
+        self, keyfile, crtfile
+    ):
+        """
+        Test using the deprecated managed_private_key arg in certificate_managed does not throw an error.
+
+        TODO: Remove this test in Aluminium when the arg is removed.
+        """
+        self.run_state("x509.private_key_managed", name=keyfile, bits=4096)
+        ret = self.run_state(
+            "x509.certificate_managed",
+            name=crtfile,
+            CN="localhost",
+            signing_private_key=keyfile,
+            managed_private_key={"name": keyfile, "bits": 4096},
+        )
+        key = "x509_|-{0}_|-{0}_|-certificate_managed".format(crtfile)
+        self.assertEqual(True, ret[key]["result"])

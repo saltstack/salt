@@ -123,6 +123,7 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_lgpo.__opts__, {"test": False}):
             win_lgpo.set_(name="nc_state", computer_policy=computer_policy)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_current_element_naming_style(self):
         computer_policy = {
             "Point and Print Restrictions": {
@@ -151,6 +152,7 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
             result["changes"]["new"]["Computer Configuration"], expected
         )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_old_element_naming_style(self):
         computer_policy = {
             "Point and Print Restrictions": {
@@ -190,6 +192,7 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(result["comment"], expected)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_invalid_elements(self):
         computer_policy = {
             "Point and Print Restrictions": {
@@ -243,6 +246,7 @@ class WinLGPOPolicyElementNamesTestTrue(TestCase, LoaderModuleMockMixin):
                 win_lgpo.set_(name="nc_state", computer_policy=computer_policy)
             self.configured = True
 
+    @skipIf(True, "SLOWTEST skip")
     def test_current_element_naming_style(self):
         computer_policy = {
             "Point and Print Restrictions": {
@@ -264,6 +268,7 @@ class WinLGPOPolicyElementNamesTestTrue(TestCase, LoaderModuleMockMixin):
         self.assertTrue(result["result"])
         self.assertEqual(result["comment"], expected["comment"])
 
+    @skipIf(True, "SLOWTEST skip")
     def test_old_element_naming_style(self):
         computer_policy = {
             "Point and Print Restrictions": {
@@ -289,6 +294,7 @@ class WinLGPOPolicyElementNamesTestTrue(TestCase, LoaderModuleMockMixin):
         self.assertTrue(result["result"])
         self.assertEqual(result["comment"], expected["comment"])
 
+    @skipIf(True, "SLOWTEST skip")
     def test_invalid_elements(self):
         computer_policy = {
             "Point and Print Restrictions": {

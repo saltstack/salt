@@ -1318,7 +1318,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                   <alias name='net1'/>
                   <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x1'/>
                 </interface>
-                <graphics type='spice' port='5900' autoport='yes' listen='127.0.0.1'>
+                <graphics type='spice' listen='127.0.0.1' autoport='yes'>
                   <listen type='address' address='127.0.0.1'/>
                 </graphics>
                 <video>
@@ -1335,6 +1335,40 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         domain_mock.OSType = MagicMock(return_value="hvm")
         define_mock = MagicMock(return_value=True)
         self.mock_conn.defineXML = define_mock
+
+        # No parameter passed case
+        self.assertEqual(
+            {
+                "definition": False,
+                "disk": {"attached": [], "detached": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm"),
+        )
+
+        # Same parameters passed than in default virt.defined state case
+        self.assertEqual(
+            {
+                "definition": False,
+                "disk": {"attached": [], "detached": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update(
+                "my_vm",
+                cpu=None,
+                mem=None,
+                disk_profile=None,
+                disks=None,
+                nic_profile=None,
+                interfaces=None,
+                graphics=None,
+                live=True,
+                connection=None,
+                username=None,
+                password=None,
+                boot=None,
+            ),
+        )
 
         # Update vcpus case
         setvcpus_mock = MagicMock(return_value=0)

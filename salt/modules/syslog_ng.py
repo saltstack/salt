@@ -151,7 +151,7 @@ class Buildable(object):
     def build(self):
         """
         Builds the textual representation of the whole configuration object
-        with it's children.
+        with its children.
         """
         header = self.build_header()
         body = self.build_body()
@@ -457,7 +457,7 @@ def _get_type_id_options(name, configuration):
 
 def _expand_one_key_dictionary(_dict):
     """
-    Returns the only one key and it's value from a dictionary.
+    Returns the only one key and its value from a dictionary.
     """
     key = next(six.iterkeys(_dict))
     value = _dict[key]
