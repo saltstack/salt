@@ -1,12 +1,9 @@
 # -*- coding: utf-8 -*-
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
+import pytest
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest, requires_salt_modules
 from tests.support.unit import skipIf
@@ -21,12 +18,14 @@ def _find_new_locale(current_locale):
 @skipIf(salt.utils.platform.is_windows(), "minion is windows")
 @skipIf(salt.utils.platform.is_darwin(), "locale method is not supported on mac")
 @requires_salt_modules("locale")
+@pytest.mark.windows_whitelisted
 class LocaleModuleTest(ModuleCase):
     def test_get_locale(self):
         locale = self.run_function("locale.get_locale")
         self.assertNotIn("Unsupported platform!", locale)
 
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_gen_locale(self):
         # Make sure charmaps are available on test system before attempting
         # call gen_locale. We log this error to the user in the function, but
@@ -48,6 +47,7 @@ class LocaleModuleTest(ModuleCase):
         self.assertTrue(ret)
 
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_set_locale(self):
         original_locale = self.run_function("locale.get_locale")
         locale_to_set = _find_new_locale(original_locale)

@@ -6,22 +6,20 @@
     Test Salt's loader regarding external grains
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import time
 
-# Import salt libs
+import pytest
 import salt.config
 import salt.loader
 from tests.support.case import ModuleCase
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
 
+@pytest.mark.windows_whitelisted
 class LoaderGrainsTest(ModuleCase):
     """
     Test the loader standard behavior with external grains
@@ -32,6 +30,7 @@ class LoaderGrainsTest(ModuleCase):
     #    self.opts['disable_modules'] = ['pillar']
     #    self.opts['grains'] = grains(self.opts)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_grains_overwrite(self):
         # Force a grains sync
         self.run_function("saltutil.sync_grains")
@@ -40,18 +39,21 @@ class LoaderGrainsTest(ModuleCase):
         # before trying to get the grains. This test may execute before the
         # minion has finished syncing down the files it needs.
         module = os.path.join(
-            RUNTIME_VARS.TMP,
-            "rootdir",
-            "cache",
+            RUNTIME_VARS.RUNTIME_CONFIGS["minion"]["cachedir"],
             "files",
             "base",
             "_grains",
-            "test_custom_grain2.py",
+            "custom_grain2.py",
         )
         tries = 0
         while not os.path.exists(module):
             tries += 1
             if tries > 60:
+                self.fail(
+                    "Failed to found custom grains module in cache path {}".format(
+                        module
+                    )
+                )
                 break
             time.sleep(1)
         grains = self.run_function("grains.items")
@@ -61,6 +63,7 @@ class LoaderGrainsTest(ModuleCase):
 
 
 @skipIf(True, "needs a way to reload minion after config change")
+@pytest.mark.windows_whitelisted
 class LoaderGrainsMergeTest(ModuleCase):
     """
     Test the loader deep merge behavior with external grains

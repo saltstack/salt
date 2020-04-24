@@ -18,8 +18,9 @@ def __virtual__():
     """
     Load this state if modjk is loaded
     """
-
-    return "modjk.workers" in __salt__
+    if "modjk.workers" in __salt__:
+        return True
+    return (False, "modjk module could not be loaded")
 
 
 def _bulk_state(saltfunc, lbn, workers, profile):

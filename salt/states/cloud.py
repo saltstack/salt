@@ -30,7 +30,9 @@ def __virtual__():
     """
     Only load if the cloud module is available in __salt__
     """
-    return "cloud.profile" in __salt__
+    if "cloud.profile" in __salt__:
+        return True
+    return (False, "cloud module could not be loaded")
 
 
 def _check_name(name):

@@ -9,30 +9,30 @@
            in the python importer with the expected ``salt`` namespace and breaks imports.
 """
 
-# Import python libs
 from __future__ import absolute_import
 
 import logging
 import os
 
-# Import Salt libs
+import pytest
 import salt.defaults.exitcodes
 import salt.utils.files
 import salt.utils.path
 from tests.integration.utils import testprogram
-
-# Import Salt Testing libs
 from tests.support.case import ShellCase
+from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.windows_whitelisted
 class SaltTest(testprogram.TestProgramCase):
     """
     Various integration tests for the salt executable.
     """
 
     # pylint: disable=invalid-name
+    @skipIf(True, "SLOWTEST skip")
     def test_exit_status_unknown_argument(self):
         """
         Ensure correct exit status when an unknown argument is passed to salt-run.
@@ -51,6 +51,7 @@ class SaltTest(testprogram.TestProgramCase):
         )
         # runner.shutdown() should be unnecessary since the start-up should fail
 
+    @skipIf(True, "SLOWTEST skip")
     def test_exit_status_correct_usage(self):
         """
         Ensure correct exit status when salt-run starts correctly.
@@ -69,6 +70,7 @@ class SaltTest(testprogram.TestProgramCase):
         )
 
 
+@pytest.mark.windows_whitelisted
 class RetcodeTestCase(ShellCase):
     """
     Tests to ensure that we set non-zero retcodes when execution fails
@@ -119,6 +121,7 @@ class RetcodeTestCase(ShellCase):
         retcode = _run('test.echo "{foo: bar, success: False}"')
         assert retcode == self.error_status, retcode
 
+    @skipIf(True, "SLOWTEST skip")
     def test_zero_exit_code(self):
         """
         Test that a zero exit code is set when there are no errors and there is
@@ -130,6 +133,7 @@ class RetcodeTestCase(ShellCase):
         retcode = self._salt_call("test.ping")
         assert retcode == 0, retcode
 
+    @skipIf(True, "SLOWTEST skip")
     def test_context_retcode(self):
         """
         Test that a nonzero retcode set in the context dunder will cause the
@@ -166,6 +170,7 @@ class RetcodeTestCase(ShellCase):
         )
         assert retcode == self.state_compiler_error, retcode
 
+    @skipIf(True, "SLOWTEST skip")
     def test_salt_error(self):
         """
         Test that we return the expected retcode when a minion function raises
@@ -174,6 +179,7 @@ class RetcodeTestCase(ShellCase):
         self._test_error()
         self._test_error(salt_call=True)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_missing_minion(self):
         """
         Test that a minion which doesn't respond results in a nonzeo exit code

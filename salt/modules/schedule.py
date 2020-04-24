@@ -157,9 +157,12 @@ def list_(show_all=False, show_disabled=True, where=None, return_yaml=True):
         return {"schedule": {}}
 
 
-def is_enabled(name):
+def is_enabled(name=None):
     """
     List a Job only if its enabled
+
+    If job is not specified, indicate
+    if the scheduler is enabled or disabled.
 
     .. versionadded:: 2015.5.3
 
@@ -168,13 +171,18 @@ def is_enabled(name):
     .. code-block:: bash
 
         salt '*' schedule.is_enabled name=job_name
+
+        salt '*' schedule.is_enabled
     """
 
     current_schedule = __salt__["schedule.list"](show_all=False, return_yaml=False)
-    if name in current_schedule:
-        return current_schedule[name]
+    if not name:
+        return current_schedule.get("enabled", True)
     else:
-        return {}
+        if name in current_schedule:
+            return current_schedule[name]
+        else:
+            return {}
 
 
 def purge(**kwargs):
