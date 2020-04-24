@@ -710,7 +710,7 @@ This directory may contain sensitive data and should be protected accordingly.
 
     cachedir: /var/cache/salt/minion
 
-.. conf_master:: color_theme
+.. conf_minion:: color_theme
 
 ``color_theme``
 ---------------

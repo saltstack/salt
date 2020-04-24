@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-tests.unit.utils.test_docker
-============================
+tests.unit.utils.test_dockermod
+===============================
 
-Test the funcs in salt.utils.docker and salt.utils.docker.translate
+Test the funcs in salt.utils.dockermod and salt.utils.dockermod.translate
 """
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -16,14 +16,14 @@ import os
 # Import salt libs
 import salt.config
 import salt.loader
-import salt.utils.docker.translate.container
-import salt.utils.docker.translate.network
+import salt.utils.dockermod.translate.container
+import salt.utils.dockermod.translate.network
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
 from salt.ext import six
-from salt.utils.docker.translate import helpers as translate_helpers
+from salt.utils.dockermod.translate import helpers as translate_helpers
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase
@@ -58,19 +58,19 @@ class Assert(object):
             if item is None:
                 continue
             testcase.assertEqual(
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, **{item: ",".join(data)}
                 ),
                 testcase.apply_defaults({name: data}),
             )
             testcase.assertEqual(
-                salt.utils.docker.translate_input(self.translator, **{item: data}),
+                salt.utils.dockermod.translate_input(self.translator, **{item: data}),
                 testcase.apply_defaults({name: data}),
             )
             if name != "volumes":
                 # Test coercing to string
                 testcase.assertEqual(
-                    salt.utils.docker.translate_input(
+                    salt.utils.dockermod.translate_input(
                         self.translator, **{item: ["one", 2]}
                     ),
                     testcase.apply_defaults({name: ["one", "2"]}),
@@ -81,7 +81,7 @@ class Assert(object):
             # alias' value and go with the unsorted version.
             test_kwargs = {name: data, alias: sorted(data)}
             testcase.assertEqual(
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, ignore_collisions=True, **test_kwargs
                 ),
                 testcase.apply_defaults({name: test_kwargs[name]}),
@@ -89,7 +89,7 @@ class Assert(object):
             with testcase.assertRaisesRegex(
                 CommandExecutionError, "is an alias for.+cannot both be used"
             ):
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, ignore_collisions=False, **test_kwargs
                 )
 
@@ -106,21 +106,21 @@ class Assert(object):
                 continue
             for val in (vals, vals.split(",")):
                 testcase.assertEqual(
-                    salt.utils.docker.translate_input(
+                    salt.utils.dockermod.translate_input(
                         self.translator, validate_ip_addrs=False, **{item: val}
                     ),
                     testcase.apply_defaults({name: expected}),
                 )
             # Dictionary input
             testcase.assertEqual(
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, validate_ip_addrs=False, **{item: expected}
                 ),
                 testcase.apply_defaults({name: expected}),
             )
             # "Dictlist" input from states
             testcase.assertEqual(
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator,
                     validate_ip_addrs=False,
                     **{item: [{"foo": "bar"}, {"baz": "qux"}]}
@@ -131,7 +131,7 @@ class Assert(object):
             # Test collision
             test_kwargs = {name: vals, alias: "hello{0}world".format(delimiter)}
             testcase.assertEqual(
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator,
                     validate_ip_addrs=False,
                     ignore_collisions=True,
@@ -142,7 +142,7 @@ class Assert(object):
             with testcase.assertRaisesRegex(
                 CommandExecutionError, "is an alias for.+cannot both be used"
             ):
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator,
                     validate_ip_addrs=False,
                     ignore_collisions=False,
@@ -163,24 +163,24 @@ class assert_bool(Assert):
             if item is None:
                 continue
             testcase.assertEqual(
-                salt.utils.docker.translate_input(self.translator, **{item: True}),
+                salt.utils.dockermod.translate_input(self.translator, **{item: True}),
                 testcase.apply_defaults({name: True}),
             )
             # These two are contrived examples, but they will test bool-ifying
             # a non-bool value to ensure proper input format.
             testcase.assertEqual(
-                salt.utils.docker.translate_input(self.translator, **{item: "foo"}),
+                salt.utils.dockermod.translate_input(self.translator, **{item: "foo"}),
                 testcase.apply_defaults({name: True}),
             )
             testcase.assertEqual(
-                salt.utils.docker.translate_input(self.translator, **{item: 0}),
+                salt.utils.dockermod.translate_input(self.translator, **{item: 0}),
                 testcase.apply_defaults({name: False}),
             )
         if alias is not None:
             # Test collision
             test_kwargs = {name: True, alias: False}
             testcase.assertEqual(
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, ignore_collisions=True, **test_kwargs
                 ),
                 testcase.apply_defaults({name: test_kwargs[name]}),
@@ -188,7 +188,7 @@ class assert_bool(Assert):
             with testcase.assertRaisesRegex(
                 CommandExecutionError, "is an alias for.+cannot both be used"
             ):
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, ignore_collisions=False, **test_kwargs
                 )
         return self.func(testcase, *args, **kwargs)
@@ -208,19 +208,21 @@ class assert_int(Assert):
                 continue
             for val in (100, "100"):
                 testcase.assertEqual(
-                    salt.utils.docker.translate_input(self.translator, **{item: val}),
+                    salt.utils.dockermod.translate_input(
+                        self.translator, **{item: val}
+                    ),
                     testcase.apply_defaults({name: 100}),
                 )
             # Error case: non-numeric value passed
             with testcase.assertRaisesRegex(
                 CommandExecutionError, "'foo' is not an integer"
             ):
-                salt.utils.docker.translate_input(self.translator, **{item: "foo"})
+                salt.utils.dockermod.translate_input(self.translator, **{item: "foo"})
         if alias is not None:
             # Test collision
             test_kwargs = {name: 100, alias: 200}
             testcase.assertEqual(
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, ignore_collisions=True, **test_kwargs
                 ),
                 testcase.apply_defaults({name: test_kwargs[name]}),
@@ -228,7 +230,7 @@ class assert_int(Assert):
             with testcase.assertRaisesRegex(
                 CommandExecutionError, "is an alias for.+cannot both be used"
             ):
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, ignore_collisions=False, **test_kwargs
                 )
         return self.func(testcase, *args, **kwargs)
@@ -253,20 +255,22 @@ class assert_string(Assert):
             if item is None:
                 continue
             testcase.assertEqual(
-                salt.utils.docker.translate_input(self.translator, **{item: data}),
+                salt.utils.dockermod.translate_input(self.translator, **{item: data}),
                 testcase.apply_defaults({name: data}),
             )
             if name != "working_dir":
                 # Test coercing to string
                 testcase.assertEqual(
-                    salt.utils.docker.translate_input(self.translator, **{item: 123}),
+                    salt.utils.dockermod.translate_input(
+                        self.translator, **{item: 123}
+                    ),
                     testcase.apply_defaults({name: "123"}),
                 )
         if alias is not None:
             # Test collision
             test_kwargs = {name: data, alias: data}
             testcase.assertEqual(
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, ignore_collisions=True, **test_kwargs
                 ),
                 testcase.apply_defaults({name: test_kwargs[name]}),
@@ -274,7 +278,7 @@ class assert_string(Assert):
             with testcase.assertRaisesRegex(
                 CommandExecutionError, "is an alias for.+cannot both be used"
             ):
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, ignore_collisions=False, **test_kwargs
                 )
         return self.func(testcase, *args, **kwargs)
@@ -293,18 +297,18 @@ class assert_int_or_string(Assert):
             if item is None:
                 continue
             testcase.assertEqual(
-                salt.utils.docker.translate_input(self.translator, **{item: 100}),
+                salt.utils.dockermod.translate_input(self.translator, **{item: 100}),
                 testcase.apply_defaults({name: 100}),
             )
             testcase.assertEqual(
-                salt.utils.docker.translate_input(self.translator, **{item: "100M"}),
+                salt.utils.dockermod.translate_input(self.translator, **{item: "100M"}),
                 testcase.apply_defaults({name: "100M"}),
             )
         if alias is not None:
             # Test collision
             test_kwargs = {name: 100, alias: "100M"}
             testcase.assertEqual(
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, ignore_collisions=True, **test_kwargs
                 ),
                 testcase.apply_defaults({name: test_kwargs[name]}),
@@ -312,7 +316,7 @@ class assert_int_or_string(Assert):
             with testcase.assertRaisesRegex(
                 CommandExecutionError, "is an alias for.+cannot both be used"
             ):
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, ignore_collisions=False, **test_kwargs
                 )
         return self.func(testcase, *args, **kwargs)
@@ -345,12 +349,14 @@ class assert_dict(Assert):
             if item is None:
                 continue
             testcase.assertEqual(
-                salt.utils.docker.translate_input(self.translator, **{item: expected}),
+                salt.utils.dockermod.translate_input(
+                    self.translator, **{item: expected}
+                ),
                 testcase.apply_defaults({name: expected}),
             )
             # "Dictlist" input from states
             testcase.assertEqual(
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator,
                     **{item: [{x: y} for x, y in six.iteritems(expected)]}
                 ),
@@ -360,12 +366,12 @@ class assert_dict(Assert):
             with testcase.assertRaisesRegex(
                 CommandExecutionError, "'foo' is not a dictionary"
             ):
-                salt.utils.docker.translate_input(self.translator, **{item: "foo"})
+                salt.utils.dockermod.translate_input(self.translator, **{item: "foo"})
         if alias is not None:
             # Test collision
             test_kwargs = {name: "foo", alias: "bar"}
             testcase.assertEqual(
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, ignore_collisions=True, **test_kwargs
                 ),
                 testcase.apply_defaults({name: test_kwargs[name]}),
@@ -373,7 +379,7 @@ class assert_dict(Assert):
             with testcase.assertRaisesRegex(
                 CommandExecutionError, "is an alias for.+cannot both be used"
             ):
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, ignore_collisions=False, **test_kwargs
                 )
         return self.func(testcase, *args, **kwargs)
@@ -394,22 +400,24 @@ class assert_cmd(Assert):
             if item is None:
                 continue
             testcase.assertEqual(
-                salt.utils.docker.translate_input(self.translator, **{item: "foo bar"}),
+                salt.utils.dockermod.translate_input(
+                    self.translator, **{item: "foo bar"}
+                ),
                 testcase.apply_defaults({name: "foo bar"}),
             )
             testcase.assertEqual(
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, **{item: ["foo", "bar"]}
                 ),
                 testcase.apply_defaults({name: ["foo", "bar"]}),
             )
             # Test coercing to string
             testcase.assertEqual(
-                salt.utils.docker.translate_input(self.translator, **{item: 123}),
+                salt.utils.dockermod.translate_input(self.translator, **{item: 123}),
                 testcase.apply_defaults({name: "123"}),
             )
             testcase.assertEqual(
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, **{item: ["one", 2]}
                 ),
                 testcase.apply_defaults({name: ["one", "2"]}),
@@ -418,7 +426,7 @@ class assert_cmd(Assert):
             # Test collision
             test_kwargs = {name: "foo", alias: "bar"}
             testcase.assertEqual(
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, ignore_collisions=True, **test_kwargs
                 ),
                 testcase.apply_defaults({name: test_kwargs[name]}),
@@ -426,7 +434,7 @@ class assert_cmd(Assert):
             with testcase.assertRaisesRegex(
                 CommandExecutionError, "is an alias for.+cannot both be used"
             ):
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, ignore_collisions=False, **test_kwargs
                 )
         return self.func(testcase, *args, **kwargs)
@@ -470,7 +478,7 @@ class assert_labels(Assert):
                 continue
 
             testcase.assertEqual(
-                salt.utils.docker.translate_input(self.translator, **{item: labels}),
+                salt.utils.dockermod.translate_input(self.translator, **{item: labels}),
                 testcase.apply_defaults({name: expected}),
             )
             # Error case: Passed a mutli-element dict in dictlist
@@ -479,7 +487,9 @@ class assert_labels(Assert):
             with testcase.assertRaisesRegex(
                 CommandExecutionError, r"Invalid label\(s\)"
             ):
-                salt.utils.docker.translate_input(self.translator, **{item: bad_labels})
+                salt.utils.dockermod.translate_input(
+                    self.translator, **{item: bad_labels}
+                )
         return self.func(testcase, *args, **kwargs)
 
 
@@ -504,7 +514,7 @@ class assert_device_rates(Assert):
                 CommandExecutionError,
                 "Path '{0}' is not absolute".format(path.replace("\\", "\\\\")),
             ):
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, **{item: "{0}:1048576".format(path)}
                 )
 
@@ -515,7 +525,7 @@ class assert_device_rates(Assert):
                 vals = "/dev/sda:1048576,/dev/sdb:1048576"
                 for val in (vals, vals.split(",")):
                     testcase.assertEqual(
-                        salt.utils.docker.translate_input(
+                        salt.utils.dockermod.translate_input(
                             self.translator, **{item: val}
                         ),
                         testcase.apply_defaults(
@@ -531,7 +541,7 @@ class assert_device_rates(Assert):
                 vals = "/dev/sda:1mb,/dev/sdb:5mb"
                 for val in (vals, vals.split(",")):
                     testcase.assertEqual(
-                        salt.utils.docker.translate_input(
+                        salt.utils.dockermod.translate_input(
                             self.translator, **{item: val}
                         ),
                         testcase.apply_defaults(
@@ -551,7 +561,7 @@ class assert_device_rates(Assert):
                         alias: "/dev/sda:1mb,/dev/sdb:5mb",
                     }
                     testcase.assertEqual(
-                        salt.utils.docker.translate_input(
+                        salt.utils.dockermod.translate_input(
                             self.translator, ignore_collisions=True, **test_kwargs
                         ),
                         testcase.apply_defaults(
@@ -566,7 +576,7 @@ class assert_device_rates(Assert):
                     with testcase.assertRaisesRegex(
                         CommandExecutionError, "is an alias for.+cannot both be used"
                     ):
-                        salt.utils.docker.translate_input(
+                        salt.utils.dockermod.translate_input(
                             self.translator, ignore_collisions=False, **test_kwargs
                         )
             else:
@@ -574,7 +584,7 @@ class assert_device_rates(Assert):
                 vals = "/dev/sda:1000,/dev/sdb:500"
                 for val in (vals, vals.split(",")):
                     testcase.assertEqual(
-                        salt.utils.docker.translate_input(
+                        salt.utils.dockermod.translate_input(
                             self.translator, **{item: val}
                         ),
                         testcase.apply_defaults(
@@ -598,7 +608,7 @@ class assert_device_rates(Assert):
                         CommandExecutionError,
                         "Rate '5mb' for path '/dev/sdb' is non-numeric",
                     ):
-                        salt.utils.docker.translate_input(
+                        salt.utils.dockermod.translate_input(
                             self.translator, **{item: val}
                         )
 
@@ -609,7 +619,7 @@ class assert_device_rates(Assert):
                         alias: "/dev/sda:888,/dev/sdb:999",
                     }
                     testcase.assertEqual(
-                        salt.utils.docker.translate_input(
+                        salt.utils.dockermod.translate_input(
                             self.translator, ignore_collisions=True, **test_kwargs
                         ),
                         testcase.apply_defaults(
@@ -624,7 +634,7 @@ class assert_device_rates(Assert):
                     with testcase.assertRaisesRegex(
                         CommandExecutionError, "is an alias for.+cannot both be used"
                     ):
-                        salt.utils.docker.translate_input(
+                        salt.utils.dockermod.translate_input(
                             self.translator, ignore_collisions=False, **test_kwargs
                         )
         return self.func(testcase, *args, **kwargs)
@@ -645,7 +655,7 @@ class assert_subnet(Assert):
             for val in ("127.0.0.1/32", "::1/128"):
                 log.debug("Verifying '%s' is a valid subnet", val)
                 testcase.assertEqual(
-                    salt.utils.docker.translate_input(
+                    salt.utils.dockermod.translate_input(
                         self.translator, validate_ip_addrs=True, **{item: val}
                     ),
                     testcase.apply_defaults({name: val}),
@@ -663,7 +673,7 @@ class assert_subnet(Assert):
                 with testcase.assertRaisesRegex(
                     CommandExecutionError, "'{0}' is not a valid subnet".format(val)
                 ):
-                    salt.utils.docker.translate_input(
+                    salt.utils.dockermod.translate_input(
                         self.translator, validate_ip_addrs=True, **{item: val}
                     )
 
@@ -671,7 +681,7 @@ class assert_subnet(Assert):
             # validation happened
             val = "foo"
             testcase.assertEqual(
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, validate_ip_addrs=False, **{item: val}
                 ),
                 testcase.apply_defaults({name: val}),
@@ -681,7 +691,7 @@ class assert_subnet(Assert):
             # Test collision
             test_kwargs = {name: "10.0.0.0/24", alias: "192.168.50.128/25"}
             testcase.assertEqual(
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, ignore_collisions=True, **test_kwargs
                 ),
                 testcase.apply_defaults({name: test_kwargs[name]}),
@@ -689,7 +699,7 @@ class assert_subnet(Assert):
             with testcase.assertRaisesRegex(
                 CommandExecutionError, "is an alias for.+cannot both be used"
             ):
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, ignore_collisions=False, **test_kwargs
                 )
         return self.func(testcase, *args, **kwargs)
@@ -739,7 +749,7 @@ class TranslateBase(TestCase):
         # assertions confirm that we successfully skipped translation.
         for val in (True, name, [name]):
             self.assertEqual(
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, skip_translate=val, **{name: "foo"}
                 ),
                 self.apply_defaults({name: "foo"}, skip_translate=val),
@@ -748,11 +758,11 @@ class TranslateBase(TestCase):
 
 class TranslateContainerInputTestCase(TranslateBase):
     """
-    Tests for salt.utils.docker.translate_input(), invoked using
-    salt.utils.docker.translate.container as the translator module.
+    Tests for salt.utils.dockermod.translate_input(), invoked using
+    salt.utils.dockermod.translate.container as the translator module.
     """
 
-    translator = salt.utils.docker.translate.container
+    translator = salt.utils.dockermod.translate.container
 
     @staticmethod
     def normalize_ports(ret):
@@ -777,7 +787,7 @@ class TranslateContainerInputTestCase(TranslateBase):
             ret["ports"] = sorted(tcp_ports) + sorted(udp_ports)
         return ret
 
-    @assert_bool(salt.utils.docker.translate.container)
+    @assert_bool(salt.utils.dockermod.translate.container)
     def test_auto_remove(self):
         """
         Should be a bool or converted to one
@@ -789,19 +799,19 @@ class TranslateContainerInputTestCase(TranslateBase):
         should be added to the results.
         """
         self.assertEqual(
-            salt.utils.docker.translate_input(
+            salt.utils.dockermod.translate_input(
                 self.translator, binds="/srv/www:/var/www:ro", volumes="/testing"
             ),
             {"binds": ["/srv/www:/var/www:ro"], "volumes": ["/testing", "/var/www"]},
         )
         self.assertEqual(
-            salt.utils.docker.translate_input(
+            salt.utils.dockermod.translate_input(
                 self.translator, binds=["/srv/www:/var/www:ro"], volumes="/testing"
             ),
             {"binds": ["/srv/www:/var/www:ro"], "volumes": ["/testing", "/var/www"]},
         )
         self.assertEqual(
-            salt.utils.docker.translate_input(
+            salt.utils.dockermod.translate_input(
                 self.translator,
                 binds={"/srv/www": {"bind": "/var/www", "mode": "ro"}},
                 volumes="/testing",
@@ -812,7 +822,7 @@ class TranslateContainerInputTestCase(TranslateBase):
             },
         )
 
-    @assert_int(salt.utils.docker.translate.container)
+    @assert_int(salt.utils.dockermod.translate.container)
     def test_blkio_weight(self):
         """
         Should be an int or converted to one
@@ -825,7 +835,7 @@ class TranslateContainerInputTestCase(TranslateBase):
         """
         for val in ("/dev/sda:100,/dev/sdb:200", ["/dev/sda:100", "/dev/sdb:200"]):
             self.assertEqual(
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, blkio_weight_device="/dev/sda:100,/dev/sdb:200"
                 ),
                 {
@@ -840,117 +850,117 @@ class TranslateContainerInputTestCase(TranslateBase):
         with self.assertRaisesRegex(
             CommandExecutionError, r"'foo' contains 1 value\(s\) \(expected 2\)"
         ):
-            salt.utils.docker.translate_input(
+            salt.utils.dockermod.translate_input(
                 self.translator, blkio_weight_device="foo"
             )
         with self.assertRaisesRegex(
             CommandExecutionError, r"'foo:bar:baz' contains 3 value\(s\) \(expected 2\)"
         ):
-            salt.utils.docker.translate_input(
+            salt.utils.dockermod.translate_input(
                 self.translator, blkio_weight_device="foo:bar:baz"
             )
         with self.assertRaisesRegex(
             CommandExecutionError, r"Weight 'foo' for path '/dev/sdb' is not an integer"
         ):
-            salt.utils.docker.translate_input(
+            salt.utils.dockermod.translate_input(
                 self.translator, blkio_weight_device=["/dev/sda:100", "/dev/sdb:foo"]
             )
 
-    @assert_stringlist(salt.utils.docker.translate.container)
+    @assert_stringlist(salt.utils.dockermod.translate.container)
     def test_cap_add(self):
         """
         Should be a list of strings or converted to one
         """
 
-    @assert_stringlist(salt.utils.docker.translate.container)
+    @assert_stringlist(salt.utils.dockermod.translate.container)
     def test_cap_drop(self):
         """
         Should be a list of strings or converted to one
         """
 
-    @assert_cmd(salt.utils.docker.translate.container)
+    @assert_cmd(salt.utils.dockermod.translate.container)
     def test_command(self):
         """
         Can either be a string or a comma-separated or Python list of strings.
         """
 
-    @assert_string(salt.utils.docker.translate.container)
+    @assert_string(salt.utils.dockermod.translate.container)
     def test_cpuset_cpus(self):
         """
         Should be a string or converted to one
         """
 
-    @assert_string(salt.utils.docker.translate.container)
+    @assert_string(salt.utils.dockermod.translate.container)
     def test_cpuset_mems(self):
         """
         Should be a string or converted to one
         """
 
-    @assert_int(salt.utils.docker.translate.container)
+    @assert_int(salt.utils.dockermod.translate.container)
     def test_cpu_group(self):
         """
         Should be an int or converted to one
         """
 
-    @assert_int(salt.utils.docker.translate.container)
+    @assert_int(salt.utils.dockermod.translate.container)
     def test_cpu_period(self):
         """
         Should be an int or converted to one
         """
 
-    @assert_int(salt.utils.docker.translate.container)
+    @assert_int(salt.utils.dockermod.translate.container)
     def test_cpu_shares(self):
         """
         Should be an int or converted to one
         """
 
-    @assert_bool(salt.utils.docker.translate.container)
+    @assert_bool(salt.utils.dockermod.translate.container)
     def test_detach(self):
         """
         Should be a bool or converted to one
         """
 
-    @assert_device_rates(salt.utils.docker.translate.container)
+    @assert_device_rates(salt.utils.dockermod.translate.container)
     def test_device_read_bps(self):
         """
         CLI input is a list of PATH:RATE pairs, but the API expects a list of
         dictionaries in the format [{'Path': path, 'Rate': rate}]
         """
 
-    @assert_device_rates(salt.utils.docker.translate.container)
+    @assert_device_rates(salt.utils.dockermod.translate.container)
     def test_device_read_iops(self):
         """
         CLI input is a list of PATH:RATE pairs, but the API expects a list of
         dictionaries in the format [{'Path': path, 'Rate': rate}]
         """
 
-    @assert_device_rates(salt.utils.docker.translate.container)
+    @assert_device_rates(salt.utils.dockermod.translate.container)
     def test_device_write_bps(self):
         """
         CLI input is a list of PATH:RATE pairs, but the API expects a list of
         dictionaries in the format [{'Path': path, 'Rate': rate}]
         """
 
-    @assert_device_rates(salt.utils.docker.translate.container)
+    @assert_device_rates(salt.utils.dockermod.translate.container)
     def test_device_write_iops(self):
         """
         CLI input is a list of PATH:RATE pairs, but the API expects a list of
         dictionaries in the format [{'Path': path, 'Rate': rate}]
         """
 
-    @assert_stringlist(salt.utils.docker.translate.container)
+    @assert_stringlist(salt.utils.dockermod.translate.container)
     def test_devices(self):
         """
         Should be a list of strings or converted to one
         """
 
-    @assert_stringlist(salt.utils.docker.translate.container)
+    @assert_stringlist(salt.utils.dockermod.translate.container)
     def test_dns_opt(self):
         """
         Should be a list of strings or converted to one
         """
 
-    @assert_stringlist(salt.utils.docker.translate.container)
+    @assert_stringlist(salt.utils.dockermod.translate.container)
     def test_dns_search(self):
         """
         Should be a list of strings or converted to one
@@ -965,7 +975,7 @@ class TranslateContainerInputTestCase(TranslateBase):
         """
         for val in ("8.8.8.8,8.8.4.4", ["8.8.8.8", "8.8.4.4"]):
             self.assertEqual(
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, dns=val, validate_ip_addrs=True,
                 ),
                 {"dns": ["8.8.8.8", "8.8.4.4"]},
@@ -976,7 +986,7 @@ class TranslateContainerInputTestCase(TranslateBase):
             with self.assertRaisesRegex(
                 CommandExecutionError, r"'8.8.8.888' is not a valid IP address"
             ):
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, dns=val, validate_ip_addrs=True,
                 )
 
@@ -984,25 +994,25 @@ class TranslateContainerInputTestCase(TranslateBase):
         # validation happened.
         for val in ("foo,bar", ["foo", "bar"]):
             self.assertEqual(
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, dns=val, validate_ip_addrs=False,
                 ),
                 {"dns": ["foo", "bar"]},
             )
 
-    @assert_string(salt.utils.docker.translate.container)
+    @assert_string(salt.utils.dockermod.translate.container)
     def test_domainname(self):
         """
         Should be a list of strings or converted to one
         """
 
-    @assert_cmd(salt.utils.docker.translate.container)
+    @assert_cmd(salt.utils.dockermod.translate.container)
     def test_entrypoint(self):
         """
         Can either be a string or a comma-separated or Python list of strings.
         """
 
-    @assert_key_equals_value(salt.utils.docker.translate.container)
+    @assert_key_equals_value(salt.utils.dockermod.translate.container)
     def test_environment(self):
         """
         Can be passed in several formats but must end up as a dictionary
@@ -1017,7 +1027,7 @@ class TranslateContainerInputTestCase(TranslateBase):
         """
         for val in ("web1:10.9.8.7,web2:10.9.8.8", ["web1:10.9.8.7", "web2:10.9.8.8"]):
             self.assertEqual(
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, extra_hosts=val, validate_ip_addrs=True,
                 ),
                 {"extra_hosts": {"web1": "10.9.8.7", "web2": "10.9.8.8"}},
@@ -1031,7 +1041,7 @@ class TranslateContainerInputTestCase(TranslateBase):
             with self.assertRaisesRegex(
                 CommandExecutionError, r"'10.9.8.299' is not a valid IP address"
             ):
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, extra_hosts=val, validate_ip_addrs=True,
                 )
 
@@ -1039,44 +1049,44 @@ class TranslateContainerInputTestCase(TranslateBase):
         # validation happened.
         for val in ("foo:bar,baz:qux", ["foo:bar", "baz:qux"]):
             self.assertEqual(
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, extra_hosts=val, validate_ip_addrs=False,
                 ),
                 {"extra_hosts": {"foo": "bar", "baz": "qux"}},
             )
 
-    @assert_stringlist(salt.utils.docker.translate.container)
+    @assert_stringlist(salt.utils.dockermod.translate.container)
     def test_group_add(self):
         """
         Should be a list of strings or converted to one
         """
 
-    @assert_string(salt.utils.docker.translate.container)
+    @assert_string(salt.utils.dockermod.translate.container)
     def test_hostname(self):
         """
         Should be a string or converted to one
         """
 
-    @assert_string(salt.utils.docker.translate.container)
+    @assert_string(salt.utils.dockermod.translate.container)
     def test_ipc_mode(self):
         """
         Should be a string or converted to one
         """
 
-    @assert_string(salt.utils.docker.translate.container)
+    @assert_string(salt.utils.dockermod.translate.container)
     def test_isolation(self):
         """
         Should be a string or converted to one
         """
 
-    @assert_labels(salt.utils.docker.translate.container)
+    @assert_labels(salt.utils.dockermod.translate.container)
     def test_labels(self):
         """
         Can be passed as a list of key=value pairs or a dictionary, and must
         ultimately end up as a dictionary.
         """
 
-    @assert_key_colon_value(salt.utils.docker.translate.container)
+    @assert_key_colon_value(salt.utils.dockermod.translate.container)
     def test_links(self):
         """
         Can be passed as a list of key:value pairs or a dictionary, and must
@@ -1103,7 +1113,7 @@ class TranslateContainerInputTestCase(TranslateBase):
             {"foo": "bar", "baz": "qux"},
         ):
             self.assertEqual(
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, log_driver="foo", log_opt="foo=bar,baz=qux"
                 ),
                 {"log_config": {"Type": "foo", "Config": {"foo": "bar", "baz": "qux"}}},
@@ -1111,84 +1121,84 @@ class TranslateContainerInputTestCase(TranslateBase):
 
         # Ensure passing either `log_driver` or `log_opt` alone works
         self.assertEqual(
-            salt.utils.docker.translate_input(self.translator, log_driver="foo"),
+            salt.utils.dockermod.translate_input(self.translator, log_driver="foo"),
             {"log_config": {"Type": "foo", "Config": {}}},
         )
         self.assertEqual(
-            salt.utils.docker.translate_input(
+            salt.utils.dockermod.translate_input(
                 self.translator, log_opt={"foo": "bar", "baz": "qux"}
             ),
             {"log_config": {"Type": "none", "Config": {"foo": "bar", "baz": "qux"}}},
         )
 
-    @assert_key_equals_value(salt.utils.docker.translate.container)
+    @assert_key_equals_value(salt.utils.dockermod.translate.container)
     def test_lxc_conf(self):
         """
         Can be passed as a list of key=value pairs or a dictionary, and must
         ultimately end up as a dictionary.
         """
 
-    @assert_string(salt.utils.docker.translate.container)
+    @assert_string(salt.utils.dockermod.translate.container)
     def test_mac_address(self):
         """
         Should be a string or converted to one
         """
 
-    @assert_int_or_string(salt.utils.docker.translate.container)
+    @assert_int_or_string(salt.utils.dockermod.translate.container)
     def test_mem_limit(self):
         """
         Should be a string or converted to one
         """
 
-    @assert_int(salt.utils.docker.translate.container)
+    @assert_int(salt.utils.dockermod.translate.container)
     def test_mem_swappiness(self):
         """
         Should be an int or converted to one
         """
 
-    @assert_int_or_string(salt.utils.docker.translate.container)
+    @assert_int_or_string(salt.utils.dockermod.translate.container)
     def test_memswap_limit(self):
         """
         Should be a string or converted to one
         """
 
-    @assert_string(salt.utils.docker.translate.container)
+    @assert_string(salt.utils.dockermod.translate.container)
     def test_name(self):
         """
         Should be a string or converted to one
         """
 
-    @assert_bool(salt.utils.docker.translate.container)
+    @assert_bool(salt.utils.dockermod.translate.container)
     def test_network_disabled(self):
         """
         Should be a bool or converted to one
         """
 
-    @assert_string(salt.utils.docker.translate.container)
+    @assert_string(salt.utils.dockermod.translate.container)
     def test_network_mode(self):
         """
         Should be a string or converted to one
         """
 
-    @assert_bool(salt.utils.docker.translate.container)
+    @assert_bool(salt.utils.dockermod.translate.container)
     def test_oom_kill_disable(self):
         """
         Should be a bool or converted to one
         """
 
-    @assert_int(salt.utils.docker.translate.container)
+    @assert_int(salt.utils.dockermod.translate.container)
     def test_oom_score_adj(self):
         """
         Should be an int or converted to one
         """
 
-    @assert_string(salt.utils.docker.translate.container)
+    @assert_string(salt.utils.dockermod.translate.container)
     def test_pid_mode(self):
         """
         Should be a string or converted to one
         """
 
-    @assert_int(salt.utils.docker.translate.container)
+    @assert_int(salt.utils.dockermod.translate.container)
     def test_pids_limit(self):
         """
         Should be an int or converted to one
@@ -1210,7 +1220,7 @@ class TranslateContainerInputTestCase(TranslateBase):
         for val in (bindings, bindings.split(",")):
             self.assertEqual(
                 self.normalize_ports(
-                    salt.utils.docker.translate_input(
+                    salt.utils.dockermod.translate_input(
                         self.translator, port_bindings=val,
                     )
                 ),
@@ -1248,7 +1258,7 @@ class TranslateContainerInputTestCase(TranslateBase):
         for val in (bindings, bindings.split(",")):
             self.assertEqual(
                 self.normalize_ports(
-                    salt.utils.docker.translate_input(
+                    salt.utils.dockermod.translate_input(
                         self.translator, port_bindings=val,
                     )
                 ),
@@ -1285,7 +1295,7 @@ class TranslateContainerInputTestCase(TranslateBase):
         for val in (bindings, bindings.split(",")):
             self.assertEqual(
                 self.normalize_ports(
-                    salt.utils.docker.translate_input(
+                    salt.utils.dockermod.translate_input(
                         self.translator, port_bindings=val,
                     )
                 ),
@@ -1319,7 +1329,7 @@ class TranslateContainerInputTestCase(TranslateBase):
         for val in (bindings, bindings.split(",")):
             self.assertEqual(
                 self.normalize_ports(
-                    salt.utils.docker.translate_input(
+                    salt.utils.dockermod.translate_input(
                         self.translator, port_bindings=val,
                     )
                 ),
@@ -1356,7 +1366,7 @@ class TranslateContainerInputTestCase(TranslateBase):
         for val in (bindings, bindings.split(",")):
             self.assertEqual(
                 self.normalize_ports(
-                    salt.utils.docker.translate_input(
+                    salt.utils.dockermod.translate_input(
                         self.translator, port_bindings=val,
                     )
                 ),
@@ -1402,7 +1412,7 @@ class TranslateContainerInputTestCase(TranslateBase):
             r"'10.1.2.3:8080:80:123' is an invalid port binding "
             r"definition \(at most 3 components are allowed, found 4\)",
         ):
-            salt.utils.docker.translate_input(
+            salt.utils.dockermod.translate_input(
                 self.translator, port_bindings="10.1.2.3:8080:80:123"
             )
 
@@ -1420,7 +1430,7 @@ class TranslateContainerInputTestCase(TranslateBase):
                 r"Start of port range \(5555\) cannot be greater than end "
                 r"of port range \(5554\)",
             ):
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, port_bindings=val,
                 )
 
@@ -1436,7 +1446,7 @@ class TranslateContainerInputTestCase(TranslateBase):
             with self.assertRaisesRegex(
                 CommandExecutionError, "'foo' is non-numeric or an invalid port range"
             ):
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, port_bindings=val,
                 )
 
@@ -1447,7 +1457,7 @@ class TranslateContainerInputTestCase(TranslateBase):
                 r"Host port range \(1111-1113\) does not have the same "
                 r"number of ports as the container port range \(1111-1112\)",
             ):
-                salt.utils.docker.translate_input(self.translator, port_bindings=val)
+                salt.utils.dockermod.translate_input(self.translator, port_bindings=val)
 
         for val in ("10.1.2.3:1111-1112:1111-1113", "1111-1112:1111-1113"):
             with self.assertRaisesRegex(
@@ -1455,7 +1465,7 @@ class TranslateContainerInputTestCase(TranslateBase):
                 r"Host port range \(1111-1112\) does not have the same "
                 r"number of ports as the container port range \(1111-1113\)",
             ):
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, port_bindings=val,
                 )
 
@@ -1463,16 +1473,16 @@ class TranslateContainerInputTestCase(TranslateBase):
         with self.assertRaisesRegex(
             CommandExecutionError, "Empty host port in port binding definition ':1111'"
         ):
-            salt.utils.docker.translate_input(self.translator, port_bindings=":1111")
+            salt.utils.dockermod.translate_input(self.translator, port_bindings=":1111")
         with self.assertRaisesRegex(
             CommandExecutionError,
             "Empty container port in port binding definition '1111:'",
         ):
-            salt.utils.docker.translate_input(self.translator, port_bindings="1111:")
+            salt.utils.dockermod.translate_input(self.translator, port_bindings="1111:")
         with self.assertRaisesRegex(
             CommandExecutionError, "Empty port binding definition found"
         ):
-            salt.utils.docker.translate_input(self.translator, port_bindings="")
+            salt.utils.dockermod.translate_input(self.translator, port_bindings="")
 
     def test_ports(self):
         """
@@ -1490,7 +1500,7 @@ class TranslateContainerInputTestCase(TranslateBase):
         ):
             self.assertEqual(
                 self.normalize_ports(
-                    salt.utils.docker.translate_input(self.translator, ports=val,)
+                    salt.utils.dockermod.translate_input(self.translator, ports=val,)
                 ),
                 {"ports": [1111, 2222, 4505, 4506, (3333, "udp")]},
             )
@@ -1500,7 +1510,7 @@ class TranslateContainerInputTestCase(TranslateBase):
             with self.assertRaisesRegex(
                 CommandExecutionError, "'1.0' is not a valid port definition"
             ):
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, ports=val,
                 )
 
@@ -1510,23 +1520,23 @@ class TranslateContainerInputTestCase(TranslateBase):
             r"Start of port range \(5555\) cannot be greater than end of "
             r"port range \(5554\)",
         ):
-            salt.utils.docker.translate_input(
+            salt.utils.dockermod.translate_input(
                 self.translator, ports="5555-5554",
             )
 
-    @assert_bool(salt.utils.docker.translate.container)
+    @assert_bool(salt.utils.dockermod.translate.container)
     def test_privileged(self):
         """
         Should be a bool or converted to one
         """
 
-    @assert_bool(salt.utils.docker.translate.container)
+    @assert_bool(salt.utils.dockermod.translate.container)
     def test_publish_all_ports(self):
         """
         Should be a bool or converted to one
         """
 
-    @assert_bool(salt.utils.docker.translate.container)
+    @assert_bool(salt.utils.dockermod.translate.container)
     def test_read_only(self):
         """
         Should be a bool or converted to one
@@ -1542,14 +1552,14 @@ class TranslateContainerInputTestCase(TranslateBase):
         for item in (name, alias):
             # Test with retry count
             self.assertEqual(
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, **{item: "on-failure:5"}
                 ),
                 {name: {"Name": "on-failure", "MaximumRetryCount": 5}},
             )
             # Test without retry count
             self.assertEqual(
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, **{item: "on-failure"}
                 ),
                 {name: {"Name": "on-failure", "MaximumRetryCount": 0}},
@@ -1558,14 +1568,14 @@ class TranslateContainerInputTestCase(TranslateBase):
             with self.assertRaisesRegex(
                 CommandExecutionError, "Only one policy is permitted"
             ):
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, **{item: "on-failure,always"}
                 )
 
         # Test collision
         test_kwargs = {name: "on-failure:5", alias: "always"}
         self.assertEqual(
-            salt.utils.docker.translate_input(
+            salt.utils.dockermod.translate_input(
                 self.translator, ignore_collisions=True, **test_kwargs
             ),
             {name: {"Name": "on-failure", "MaximumRetryCount": 5}},
@@ -1573,62 +1583,62 @@ class TranslateContainerInputTestCase(TranslateBase):
         with self.assertRaisesRegex(
             CommandExecutionError, "'restart' is an alias for 'restart_policy'"
         ):
-            salt.utils.docker.translate_input(
+            salt.utils.dockermod.translate_input(
                 self.translator, ignore_collisions=False, **test_kwargs
             )
 
-    @assert_stringlist(salt.utils.docker.translate.container)
+    @assert_stringlist(salt.utils.dockermod.translate.container)
     def test_security_opt(self):
         """
         Should be a list of strings or converted to one
         """
 
-    @assert_int_or_string(salt.utils.docker.translate.container)
+    @assert_int_or_string(salt.utils.dockermod.translate.container)
     def test_shm_size(self):
         """
         Should be a string or converted to one
         """
 
-    @assert_bool(salt.utils.docker.translate.container)
+    @assert_bool(salt.utils.dockermod.translate.container)
     def test_stdin_open(self):
         """
         Should be a bool or converted to one
         """
 
-    @assert_string(salt.utils.docker.translate.container)
+    @assert_string(salt.utils.dockermod.translate.container)
     def test_stop_signal(self):
         """
         Should be a string or converted to one
         """
 
-    @assert_int(salt.utils.docker.translate.container)
+    @assert_int(salt.utils.dockermod.translate.container)
     def test_stop_timeout(self):
         """
         Should be an int or converted to one
         """
 
-    @assert_key_equals_value(salt.utils.docker.translate.container)
+    @assert_key_equals_value(salt.utils.dockermod.translate.container)
     def test_storage_opt(self):
         """
         Can be passed in several formats but must end up as a dictionary
         mapping keys to values
         """
 
-    @assert_key_equals_value(salt.utils.docker.translate.container)
+    @assert_key_equals_value(salt.utils.dockermod.translate.container)
     def test_sysctls(self):
         """
         Can be passed in several formats but must end up as a dictionary
         mapping keys to values
         """
 
-    @assert_dict(salt.utils.docker.translate.container)
+    @assert_dict(salt.utils.dockermod.translate.container)
     def test_tmpfs(self):
         """
         Can be passed in several formats but must end up as a dictionary
         mapping keys to values
         """
 
-    @assert_bool(salt.utils.docker.translate.container)
+    @assert_bool(salt.utils.dockermod.translate.container)
     def test_tty(self):
         """
         Should be a bool or converted to one
@@ -1644,7 +1654,7 @@ class TranslateContainerInputTestCase(TranslateBase):
         ulimits = "nofile=1024:2048,nproc=50"
         for val in (ulimits, ulimits.split(",")):
             self.assertEqual(
-                salt.utils.docker.translate_input(self.translator, ulimits=val,),
+                salt.utils.dockermod.translate_input(self.translator, ulimits=val,),
                 {
                     "ulimits": [
                         {"Name": "nofile", "Soft": 1024, "Hard": 2048},
@@ -1659,7 +1669,7 @@ class TranslateContainerInputTestCase(TranslateBase):
             r"Ulimit definition 'nofile:1024:2048' is not in the format "
             r"type=soft_limit\[:hard_limit\]",
         ):
-            salt.utils.docker.translate_input(
+            salt.utils.dockermod.translate_input(
                 self.translator, ulimits="nofile:1024:2048"
             )
 
@@ -1668,7 +1678,7 @@ class TranslateContainerInputTestCase(TranslateBase):
             CommandExecutionError,
             r"Limit 'nofile=foo:2048' contains non-numeric value\(s\)",
         ):
-            salt.utils.docker.translate_input(
+            salt.utils.dockermod.translate_input(
                 self.translator, ulimits="nofile=foo:2048"
             )
 
@@ -1679,12 +1689,12 @@ class TranslateContainerInputTestCase(TranslateBase):
         """
         # Username passed as string
         self.assertEqual(
-            salt.utils.docker.translate_input(self.translator, user="foo"),
+            salt.utils.dockermod.translate_input(self.translator, user="foo"),
             {"user": "foo"},
         )
         for val in (0, "0"):
             self.assertEqual(
-                salt.utils.docker.translate_input(self.translator, user=val),
+                salt.utils.dockermod.translate_input(self.translator, user=val),
                 {"user": 0},
             )
 
@@ -1692,25 +1702,25 @@ class TranslateContainerInputTestCase(TranslateBase):
         with self.assertRaisesRegex(
             CommandExecutionError, "Value must be a username or uid"
         ):
-            salt.utils.docker.translate_input(self.translator, user=["foo"])
+            salt.utils.dockermod.translate_input(self.translator, user=["foo"])
 
         # Error case: negative int passed
         with self.assertRaisesRegex(CommandExecutionError, "'-1' is an invalid uid"):
-            salt.utils.docker.translate_input(self.translator, user=-1)
+            salt.utils.dockermod.translate_input(self.translator, user=-1)
 
-    @assert_string(salt.utils.docker.translate.container)
+    @assert_string(salt.utils.dockermod.translate.container)
     def test_userns_mode(self):
         """
         Should be a bool or converted to one
         """
 
-    @assert_string(salt.utils.docker.translate.container)
+    @assert_string(salt.utils.dockermod.translate.container)
     def test_volume_driver(self):
         """
         Should be a bool or converted to one
         """
 
-    @assert_stringlist(salt.utils.docker.translate.container)
+    @assert_stringlist(salt.utils.dockermod.translate.container)
     def test_volumes(self):
         """
         Should be a list of absolute paths
@@ -1721,15 +1731,15 @@ class TranslateContainerInputTestCase(TranslateBase):
             CommandExecutionError,
             "'{0}' is not an absolute path".format(path.replace("\\", "\\\\")),
         ):
-            salt.utils.docker.translate_input(self.translator, volumes=path)
+            salt.utils.dockermod.translate_input(self.translator, volumes=path)
 
-    @assert_stringlist(salt.utils.docker.translate.container)
+    @assert_stringlist(salt.utils.dockermod.translate.container)
     def test_volumes_from(self):
         """
         Should be a list of strings or converted to one
         """
 
-    @assert_string(salt.utils.docker.translate.container)
+    @assert_string(salt.utils.dockermod.translate.container)
     def test_working_dir(self):
         """
         Should be a single absolute path
@@ -1740,85 +1750,85 @@ class TranslateContainerInputTestCase(TranslateBase):
             CommandExecutionError,
             "'{0}' is not an absolute path".format(path.replace("\\", "\\\\")),
         ):
-            salt.utils.docker.translate_input(self.translator, working_dir=path)
+            salt.utils.dockermod.translate_input(self.translator, working_dir=path)
 
 
 class TranslateNetworkInputTestCase(TranslateBase):
     """
-    Tests for salt.utils.docker.translate_input(), invoked using
-    salt.utils.docker.translate.network as the translator module.
+    Tests for salt.utils.dockermod.translate_input(), invoked using
+    salt.utils.dockermod.translate.network as the translator module.
     """
 
-    translator = salt.utils.docker.translate.network
+    translator = salt.utils.dockermod.translate.network
 
     ip_addrs = {
         True: ("10.1.2.3", "::1"),
         False: ("FOO", "0.9.800.1000", "feaz::1", "aj01::feac"),
     }
 
-    @assert_string(salt.utils.docker.translate.network)
+    @assert_string(salt.utils.dockermod.translate.network)
     def test_driver(self):
         """
         Should be a string or converted to one
         """
 
-    @assert_key_equals_value(salt.utils.docker.translate.network)
+    @assert_key_equals_value(salt.utils.dockermod.translate.network)
     def test_options(self):
         """
         Can be passed in several formats but must end up as a dictionary
         mapping keys to values
         """
 
-    @assert_dict(salt.utils.docker.translate.network)
+    @assert_dict(salt.utils.dockermod.translate.network)
     def test_ipam(self):
         """
         Must be a dict
         """
 
-    @assert_bool(salt.utils.docker.translate.network)
+    @assert_bool(salt.utils.dockermod.translate.network)
     def test_check_duplicate(self):
         """
         Should be a bool or converted to one
         """
 
-    @assert_bool(salt.utils.docker.translate.network)
+    @assert_bool(salt.utils.dockermod.translate.network)
     def test_internal(self):
         """
         Should be a bool or converted to one
         """
 
-    @assert_labels(salt.utils.docker.translate.network)
+    @assert_labels(salt.utils.dockermod.translate.network)
     def test_labels(self):
         """
         Can be passed as a list of key=value pairs or a dictionary, and must
         ultimately end up as a dictionary.
         """
 
-    @assert_bool(salt.utils.docker.translate.network)
+    @assert_bool(salt.utils.dockermod.translate.network)
     def test_enable_ipv6(self):
         """
         Should be a bool or converted to one
         """
 
-    @assert_bool(salt.utils.docker.translate.network)
+    @assert_bool(salt.utils.dockermod.translate.network)
     def test_attachable(self):
         """
         Should be a bool or converted to one
         """
 
-    @assert_bool(salt.utils.docker.translate.network)
+    @assert_bool(salt.utils.dockermod.translate.network)
     def test_ingress(self):
         """
         Should be a bool or converted to one
         """
 
-    @assert_string(salt.utils.docker.translate.network)
+    @assert_string(salt.utils.dockermod.translate.network)
     def test_ipam_driver(self):
         """
         Should be a bool or converted to one
         """
 
-    @assert_key_equals_value(salt.utils.docker.translate.network)
+    @assert_key_equals_value(salt.utils.dockermod.translate.network)
     def test_ipam_opts(self):
         """
         Can be passed in several formats but must end up as a dictionary
@@ -1877,22 +1887,24 @@ class TranslateNetworkInputTestCase(TranslateBase):
             },
         ]
         self.assertEqual(
-            salt.utils.docker.translate_input(self.translator, ipam_pools=[good_pool],),
+            salt.utils.dockermod.translate_input(
+                self.translator, ipam_pools=[good_pool],
+            ),
             {"ipam_pools": [good_pool]},
         )
         for bad_pool in bad_pools:
             with self.assertRaisesRegex(CommandExecutionError, "not a valid"):
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, ipam_pools=[good_pool, bad_pool]
                 )
 
-    @assert_subnet(salt.utils.docker.translate.network)
+    @assert_subnet(salt.utils.dockermod.translate.network)
     def test_subnet(self):
         """
         Must be an IPv4 or IPv6 subnet
         """
 
-    @assert_subnet(salt.utils.docker.translate.network)
+    @assert_subnet(salt.utils.dockermod.translate.network)
     def test_iprange(self):
         """
         Must be an IPv4 or IPv6 subnet
@@ -1904,7 +1916,7 @@ class TranslateNetworkInputTestCase(TranslateBase):
         """
         for val in self.ip_addrs[True]:
             self.assertEqual(
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, validate_ip_addrs=True, gateway=val,
                 ),
                 self.apply_defaults({"gateway": val}),
@@ -1914,11 +1926,11 @@ class TranslateNetworkInputTestCase(TranslateBase):
             with self.assertRaisesRegex(
                 CommandExecutionError, "'{0}' is not a valid IP address".format(val)
             ):
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, validate_ip_addrs=True, gateway=val,
                 )
             self.assertEqual(
-                salt.utils.docker.translate_input(
+                salt.utils.dockermod.translate_input(
                     self.translator, validate_ip_addrs=False, gateway=val,
                 ),
                 self.apply_defaults(
@@ -1930,7 +1942,7 @@ class TranslateNetworkInputTestCase(TranslateBase):
                 ),
             )
 
-    @assert_key_equals_value(salt.utils.docker.translate.network)
+    @assert_key_equals_value(salt.utils.dockermod.translate.network)
     def test_aux_addresses(self):
         """
         Must be a mapping of hostnames to IP addresses
@@ -1941,7 +1953,7 @@ class TranslateNetworkInputTestCase(TranslateBase):
             for val in self.ip_addrs[True]:
                 addresses = {"foo.bar.tld": val}
                 self.assertEqual(
-                    salt.utils.docker.translate_input(
+                    salt.utils.dockermod.translate_input(
                         self.translator, validate_ip_addrs=True, **{item: addresses}
                     ),
                     self.apply_defaults({name: addresses}),
@@ -1952,11 +1964,11 @@ class TranslateNetworkInputTestCase(TranslateBase):
                 with self.assertRaisesRegex(
                     CommandExecutionError, "'{0}' is not a valid IP address".format(val)
                 ):
-                    salt.utils.docker.translate_input(
+                    salt.utils.dockermod.translate_input(
                         self.translator, validate_ip_addrs=True, **{item: addresses}
                     )
                 self.assertEqual(
-                    salt.utils.docker.translate_input(
+                    salt.utils.dockermod.translate_input(
                         self.translator,
                         validate_ip_addrs=False,
                         aux_addresses=addresses,
@@ -1967,7 +1979,7 @@ class TranslateNetworkInputTestCase(TranslateBase):
 
 class DockerTranslateHelperTestCase(TestCase):
     """
-    Tests for a couple helper functions in salt.utils.docker.translate
+    Tests for a couple helper functions in salt.utils.dockermod.translate
     """
 
     def test_get_port_def(self):

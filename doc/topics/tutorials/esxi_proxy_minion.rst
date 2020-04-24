@@ -57,7 +57,7 @@ Dependencies
 ============
 
 Manipulation of the ESXi host via a Proxy Minion requires the machine running
-the Proxy Minion process to have the ESXCLI package (and all of it's dependencies)
+the Proxy Minion process to have the ESXCLI package (and all of its dependencies)
 and the pyVmomi Python Library to be installed.
 
 ESXi Password

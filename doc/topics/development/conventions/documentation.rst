@@ -306,7 +306,7 @@ Documentation Changes and Fixes
 Documentation changes and fixes should be made against the earliest supported
 release branch that the update applies to. The practice of updating a release
 branch instead of making all documentation changes against Salt's main, default
-branch, ``develop``, is necessary in order for the docs to be as up-to-date as
+branch, ``master``, is necessary in order for the docs to be as up-to-date as
 possible when the docs are built.
 
 The workflow mentioned above is also in line with the recommendations outlined

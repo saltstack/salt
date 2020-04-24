@@ -237,7 +237,7 @@ Virtual Terminal
 ----------------
 
 Sometimes the subprocess module is not good enough, and, in fact, not even
-``askpass`` is. This virtual terminal is still in it's infant childhood, needs
+``askpass`` is. This virtual terminal is still in its infant childhood, needs
 quite some love, and was originally created to replace ``askpass``, but, while
 developing it, it immediately proved that it could do so much more. It's
 currently used by salt-cloud when bootstrapping salt on clouds which require

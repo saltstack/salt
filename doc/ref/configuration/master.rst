@@ -607,8 +607,8 @@ be found by analyzing the cache log with ``memcache_debug`` enabled.
 Default: ``False``
 
 If cache storage got full, i.e. the items count exceeds the
-``memcache_max_items`` value, memcache cleans up it's storage. If this option
-set to ``False`` memcache removes the only one oldest value from it's storage.
+``memcache_max_items`` value, memcache cleans up its storage. If this option
+set to ``False`` memcache removes the only one oldest value from its storage.
 If this set set to ``True`` memcache removes all the expired items and also
 removes the oldest one if there are no expired items.
 
@@ -1468,7 +1468,7 @@ This should still be considered a less than secure option, due to the fact
 that trust is based on just the requesting minion id.
 
 .. versionchanged:: 2018.3.0
-    For security reasons the file must be readonly except for it's owner.
+    For security reasons the file must be readonly except for its owner.
     If :conf_master:`permissive_pki_access` is ``True`` the owning group can also
     have write access, but if Salt is running as ``root`` it must be a member of that group.
     A less strict requirement also existed in previous version.
@@ -2654,14 +2654,18 @@ nothing is ignored.
 ``master_roots``
 ----------------
 
-Default: ``/srv/salt-master``
+Default: ``''``
 
 A master-only copy of the :conf_master:`file_roots` dictionary, used by the
 state compiler.
 
+Example:
+
 .. code-block:: yaml
 
-    master_roots: /srv/salt-master
+    master_roots:
+      base:
+        - /srv/salt-master
 
 roots: Master's Local File Server
 ---------------------------------
@@ -4033,7 +4037,7 @@ ext_pillar keys to override those from :conf_master:`pillar_roots`.
 
     ext_pillar_first: False
 
-.. conf_minion:: pillarenv_from_saltenv
+.. conf_master:: pillarenv_from_saltenv
 
 ``pillarenv_from_saltenv``
 --------------------------
@@ -4151,7 +4155,7 @@ branch/tag (or from a per-remote ``env`` parameter), but if set this will
 override the process of deriving the env from the branch/tag name. For example,
 in the configuration below the ``foo`` branch would be assigned to the ``base``
 environment, while the ``bar`` branch would need to explicitly have ``bar``
-configured as it's environment to keep it from also being mapped to the
+configured as its environment to keep it from also being mapped to the
 ``base`` environment.
 
 .. code-block:: yaml

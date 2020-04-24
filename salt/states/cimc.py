@@ -27,7 +27,9 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    return "cimc.get_system_info" in __salt__
+    if "cimc.get_system_info" in __salt__:
+        return True
+    return (False, "cimc module could not be loaded")
 
 
 def _default_ret(name):

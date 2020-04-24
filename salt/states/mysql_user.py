@@ -53,7 +53,9 @@ def __virtual__():
     """
     Only load if the mysql module is in __salt__
     """
-    return "mysql.user_create" in __salt__
+    if "mysql.user_create" in __salt__:
+        return True
+    return (False, "mysql module could not be loaded")
 
 
 def _get_mysql_error():

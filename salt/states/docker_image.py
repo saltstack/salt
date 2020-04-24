@@ -42,7 +42,7 @@ import logging
 import salt.utils.args
 
 # Import salt libs
-import salt.utils.docker
+import salt.utils.dockermod
 from salt.exceptions import CommandExecutionError
 from salt.ext import six
 from salt.ext.six.moves import zip
@@ -71,7 +71,7 @@ def present(
     load=None,
     force=False,
     insecure_registry=False,
-    client_timeout=salt.utils.docker.CLIENT_TIMEOUT,
+    client_timeout=salt.utils.dockermod.CLIENT_TIMEOUT,
     dockerfile=None,
     sls=None,
     base="opensuse/python",

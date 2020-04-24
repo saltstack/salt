@@ -2941,7 +2941,7 @@ class Minion(MinionBase):
 
     def add_periodic_callback(self, name, method, interval=1):
         """
-        Add a periodic callback to the event loop and call it's start method.
+        Add a periodic callback to the event loop and call its start method.
         If a callback by the given name exists this method returns False
         """
         if name in self.periodic_callbacks:

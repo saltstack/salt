@@ -87,7 +87,7 @@ the context into the included file is required:
 .. code-block:: jinja
 
     {% from 'lib.sls' import test with context %}
-    
+
 Includes must use full paths, like so:
 
 .. code-block:: jinja
@@ -647,6 +647,56 @@ Returns:
 .. code-block:: text
 
   1, 4
+
+
+.. jinja_ref:: method_call
+
+``method_call``
+---------------
+
+.. versionadded:: Sodium
+
+Returns a result of object's method call.
+
+Example #1:
+
+.. code-block:: jinja
+
+  {{ [1, 2, 1, 3, 4] | method_call('index', 1, 1, 3) }}
+
+Returns:
+
+.. code-block:: text
+
+  2
+
+This filter can be used with the `map filter`_ to apply object methods without
+using loop constructs or temporary variables.
+
+Example #2:
+
+.. code-block:: jinja
+
+  {% set host_list = ['web01.example.com', 'db01.example.com'] %}
+  {% set host_list_split = [] %}
+  {% for item in host_list %}
+    {% do host_list_split.append(item.split('.', 1)) %}
+  {% endfor %}
+  {{ host_list_split }}
+
+Example #3:
+
+.. code-block:: jinja
+
+  {{ host_list|map('method_call', 'split', '.', 1)|list }}
+
+Return of examples #2 and #3:
+
+.. code-block:: text
+
+  [[web01, example.com], [db01, example.com]]
+
+.. _`map filter`: http://jinja.pocoo.org/docs/2.10/templates/#map
 
 
 .. jinja_ref:: is_sorted
