@@ -1189,11 +1189,11 @@ def get_name(principal):
         # All capability SIDs begin with `S-1-15-3`, so we'll only throw an
         # error when the sid does not begin with `S-1-15-3`
         str_sid = get_sid_string(sid_obj)
-        if not str_sid.startswith('S-1-15-3'):
+        if not str_sid.startswith("S-1-15-3"):
             message = 'Error resolving "{0}"'.format(principal)
             if type(exc) == pywintypes.error:
-                win_error = win32api.FormatMessage(exc.winerror).rstrip('\n')
-                message = '{0}: {1}'.format(message, win_error)
+                win_error = win32api.FormatMessage(exc.winerror).rstrip("\n")
+                message = "{0}: {1}".format(message, win_error)
             log.exception(message)
             raise CommandExecutionError(message, exc)
 
