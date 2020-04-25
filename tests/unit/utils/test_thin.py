@@ -1008,6 +1008,6 @@ class SSHThinTestCase(TestCase):
         for idx, fname in enumerate(
             ["version", ".thin-gen-py-version", "salt-call", "supported-versions"]
         ):
-            name = thin.tarfile.open().method_calls[idx + 4][1][0]
+            name = thin.tarfile.open().method_calls[idx + 2][1][0]
             self.assertEqual(name, fname)
         thin.tarfile.open().close.assert_called()
