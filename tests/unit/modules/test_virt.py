@@ -1318,7 +1318,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                   <alias name='net1'/>
                   <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x1'/>
                 </interface>
-                <graphics type='spice' port='5900' autoport='yes' listen='127.0.0.1'>
+                <graphics type='spice' listen='127.0.0.1' autoport='yes'>
                   <listen type='address' address='127.0.0.1'/>
                 </graphics>
                 <video>
