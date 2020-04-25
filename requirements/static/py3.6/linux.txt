@@ -73,8 +73,8 @@ pyaml==19.4.1             # via moto
 pyasn1-modules==0.2.4     # via google-auth
 pyasn1==0.4.5             # via paramiko, pyasn1-modules, rsa
 pycparser==2.19           # via cffi
-pycrypto==2.6.1 ; sys_platform not in "win32,darwin"
 pycryptodome==3.8.1       # via python-jose
+pycryptodomex==3.9.7
 pygit2==0.28.2
 pyinotify==0.9.6
 pynacl==1.3.0             # via paramiko
@@ -83,7 +83,7 @@ pyparsing==2.4.5          # via packaging
 pyserial==3.4             # via junos-eznc
 pytest-helpers-namespace==2019.1.8
 pytest-salt-runtests-bridge==2019.7.10
-pytest-salt==2019.12.27
+pytest-salt==2020.1.27
 pytest-tempdir==2019.10.12
 pytest==4.6.6
 python-dateutil==2.8.0    # via botocore, croniter, kubernetes, moto, vcert
