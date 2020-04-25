@@ -3390,6 +3390,192 @@ def _depth_limited_walk(top, max_depth=None):
         yield (six.text_type(root), list(dirs), list(files))
 
 
+def _autorequire_states(name, require):
+    """
+    Autorequires children file states managed by Salt.
+
+    name
+        The name of the parent state.
+
+    require
+        The require option of the parent state.
+    """
+    # Normalize the requirements.
+    if not require:
+        require = []
+
+    for low in __lowstate__:
+        # Check the file states.
+        if (low['state'] == 'file' and
+            low['fun'] != 'accumulated' and
+            low['name'] != name and
+            low['name'].startswith(name + '/')):
+            
+            # Update requirements.
+            e = {'file': low['__id__']}
+            if e not in require:
+                require.append(e)
+
+    return require
+
+
+def _gen_exclusion_data(name, require):
+    """
+    Generates the files to exclude during recusion.
+
+    name
+        The name of the parent state.
+
+    require
+        The require option of the parent state.
+    """
+
+
+    def _is_child(path, directory):
+        """
+        Gets if a path is a sub-path of a directory.
+
+        path
+            Path to check.
+        
+        directory
+            Parent directory of reference.
+        """
+        path = os.path.abspath(path)
+        directory = os.path.abspath(directory)
+        relative = os.path.relpath(path, directory)
+        return not relative.startswith(os.pardir)
+
+
+    def _extract_states(name, require):
+        """
+        Extracts the managed states from lowdata.
+
+        name
+            The name of the parent state.
+
+        require
+            The require option of the parent state.
+        """
+        directory = []
+        managed = []
+
+        # Extract file states.
+        required_files = [e['file'] for e in require if 'file' in e]
+
+        # Search for required file states in lowstate data.
+        for low in __lowstate__:
+            if ((low['name'] in required_files or
+                low['__id__'] in required_files) and
+                _is_child(low['name'], name)):
+                
+                # Populates the repositories properly.
+                if low['fun'] == 'directory':
+                    directory.append(low)
+                elif low['fun'] == 'managed':
+                    managed.append(low)
+
+        return directory, managed
+
+
+    def _get_children(path):
+        """
+        Gets children directory and files by path.
+
+        path
+            The path of reference.
+        """
+        d = []
+        f = []
+
+        # Populates the repositories properly.
+        if os.path.isdir(path):
+            for root, dirs, files in salt.utils.path.os_walk(path):
+                d += [salt.utils.path.join(root, path) for path in dirs]
+                f += [salt.utils.path.join(root, path) for path in files]
+
+        return d, f
+
+
+    def _get_permissions(data, current):
+        """
+        Gets the permissions to be left unchanged.
+
+        data
+            The repository containing the permissions.
+
+        current
+            The current permissions setted.
+        """
+        # Gets permission data of the element.
+        if 'user' in data and 'user' not in current:
+            current.append('user')
+        if 'group' in data and 'group' not in current:
+            current.append('group')
+        if 'mode' in data and 'mode' not in current:
+            current.append('mode')
+
+        return current
+
+
+    exclude = dict()
+
+    if isinstance(require, list):
+        # Search for required file states in lowstate data.
+        directory, managed = _extract_states(name, require)
+
+        # Execute processing on the children directory state.
+        for e in directory:
+            # Normalize data.
+            if 'dir_mode' in e:
+                e = {**e, 'mode': e['dir_mode']}
+
+            fn = e['name']
+            exclude[fn] = _get_permissions(e, exclude.get(fn, []))
+
+            # Process the children elements.
+            if 'recurse' in e:
+                dirs, files = _get_children(fn)
+
+                if 'ignore_dirs' not in e['recurse']:
+                    for k in dirs:
+                        exclude[k] = _get_permissions(e['recurse'], exclude.get(k, []))
+                                
+                if 'ignore_files' not in e['recurse']:
+                    for k in files:
+                        exclude[k] = _get_permissions(e['recurse'], exclude.get(k, []))
+
+        # Execute processing on the children managed state.
+        for e in managed:
+            fn = e['name']
+            exclude[fn] = _get_permissions(e, exclude.get(fn, []))
+
+    return exclude
+
+
+def _gen_linux_permissions(exclusion, user, group, mode):
+    """
+    Generates the permission to apply to files and directory.
+
+    exclusion
+        Exclusion data.
+
+    user
+        Default user to apply.
+
+    group
+        Default group to apply.
+
+    mode
+        Default mode to apply.
+    """
+    u = None if 'user' in exclusion else user
+    g = None if 'group' in exclusion else group
+    m = None if 'mode' in exclusion else mode
+
+    return u, g, m
+
+
 def directory(
     name,
     user=None,
@@ -3718,6 +3904,9 @@ def directory(
                     ret, "Specified location {0} exists and is a symlink".format(name)
                 )
 
+    # Auto requires children file states managed by Salt.
+    require = _autorequire_states(name, require)
+
     # Check directory?
     if salt.utils.platform.is_windows():
         presult, pcomment, pchanges = _check_directory_win(
@@ -3880,6 +4069,9 @@ def directory(
         check_files = "ignore_files" not in recurse_set
         check_dirs = "ignore_dirs" not in recurse_set
 
+        # Creates an exclusion dictionary.
+        exclusion = _gen_exclusion_data(name, require)
+
         for root, dirs, files in walk_l:
             if check_files:
                 for fn_ in files:
@@ -3896,8 +4088,11 @@ def directory(
                                 reset=win_perms_reset,
                             )
                         else:
+                            # Gets data to edit, if needed, the current element.
+                            e_values = _gen_linux_permissions(exclusion.get(full, []), user, group, file_mode)
+
                             ret, _ = __salt__["file.check_perms"](
-                                full, ret, user, group, file_mode, None, follow_symlinks
+                                full, ret, e_values[0], e_values[1], e_values[2], None, follow_symlinks
                             )
                     except CommandExecutionError as exc:
                         if not exc.strerror.startswith("Path not found"):
@@ -3918,8 +4113,11 @@ def directory(
                                 reset=win_perms_reset,
                             )
                         else:
+                            # Gets data to edit, if needed, the current element.
+                            e_values = _gen_linux_permissions(exclusion.get(full, []), user, group, dir_mode)
+
                             ret, _ = __salt__["file.check_perms"](
-                                full, ret, user, group, dir_mode, None, follow_symlinks
+                                full, ret, e_values[0], e_values[1], e_values[2], None, follow_symlinks
                             )
                     except CommandExecutionError as exc:
                         if not exc.strerror.startswith("Path not found"):
