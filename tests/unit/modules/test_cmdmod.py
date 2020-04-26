@@ -260,7 +260,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                             MagicMock(side_effect=OSError(expected_error)),
                         ):
                             with self.assertRaises(CommandExecutionError) as error:
-                                cmdmod.run("foo")
+                                cmdmod.run("foo", cwd="/")
                             assert error.exception.args[0].endswith(
                                 expected_error
                             ), repr(error.exception.args[0])
@@ -279,7 +279,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                             MagicMock(side_effect=IOError(expected_error)),
                         ):
                             with self.assertRaises(CommandExecutionError) as error:
-                                cmdmod.run("foo")
+                                cmdmod.run("foo", cwd="/")
                             assert error.exception.args[0].endswith(
                                 expected_error
                             ), repr(error.exception.args[0])
