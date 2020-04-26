@@ -1508,11 +1508,11 @@ def extracted(
                         ret["changes"] = results
                         return ret
                     if _is_bsdtar():
-                        files = results['stderr'].splitlines()
+                        files = results["stderr"].splitlines()
                         if trim_output:
                             files = files[:trim_output]
                     else:
-                        files = results['stdout'].splitlines()
+                        files = results["stdout"].splitlines()
                         if trim_output:
                             files = files[:trim_output]
                     if not files:
@@ -1620,8 +1620,10 @@ def extracted(
                 salt.utils.url.redact_http_basic_auth(source_match), name,
             )
             _add_explanation(ret, source_hash_trigger, contents_missing)
-            ret['comment'] += '. Output was trimmed to {} number of lines'.format(trim_output)
-            ret['result'] = True
+            ret["comment"] += ". Output was trimmed to {} number of lines".format(
+                trim_output
+            )
+            ret["result"] = True
 
         else:
             ret["result"] = False
