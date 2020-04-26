@@ -83,7 +83,7 @@ pyparsing==2.4.5          # via packaging
 pyserial==3.4             # via junos-eznc
 pytest-helpers-namespace==2019.1.8
 pytest-salt-runtests-bridge==2019.7.10
-pytest-salt==2019.12.27
+pytest-salt==2020.1.27
 pytest-tempdir==2019.10.12
 pytest==4.6.6
 python-dateutil==2.8.0    # via botocore, croniter, kubernetes, moto, vcert
@@ -108,6 +108,7 @@ smmap2==2.0.5             # via gitdb2
 strict-rfc3339==0.7
 tempora==1.14.1           # via portend
 timelib==0.2.4
+toml==0.10.0
 urllib3==1.24.2           # via botocore, kubernetes, python-etcd, requests
 vcert==0.7.3
 virtualenv==16.4.3

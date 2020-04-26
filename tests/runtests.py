@@ -129,7 +129,6 @@ TEST_SUITES_UNORDERED = {
     "proxy": {"display_name": "Proxy", "path": "integration/proxy"},
     "external_api": {"display_name": "ExternalAPIs", "path": "integration/externalapi"},
     "daemons": {"display_name": "Daemon", "path": "integration/daemons"},
-    "scheduler": {"display_name": "Scheduler", "path": "integration/scheduler"},
     "sdb": {"display_name": "Sdb", "path": "integration/sdb"},
     "logging": {"display_name": "Logging", "path": "integration/logging"},
 }

@@ -163,7 +163,7 @@ def present(
     sls
         Allow for building of image with :py:func:`docker.sls_build
         <salt.modules.dockermod.sls_build>` by specifying the SLS files with
-        which to build. This can be a list or comma-seperated string.
+        which to build. This can be a list or comma-separated string.
 
         .. code-block:: yaml
 
