@@ -288,7 +288,9 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                 trim_output=1,
             )
             self.assertEqual(ret["changes"]["extracted_files"], ["stderr"])
-            self.assertTrue(ret["comment"].endswith("Output was trimmed to 1 number of lines"))
+            self.assertTrue(
+                ret["comment"].endswith("Output was trimmed to 1 number of lines")
+            )
 
     def test_extracted_when_if_missing_path_exists(self):
         """

@@ -359,7 +359,10 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
         """
         test archive.extracted with local file and trim_output set to 1
         """
-        expected_changes = {'directories_created': ['/tmp/archive/'], 'extracted_files': ['custom']}
+        expected_changes = {
+            "directories_created": ["/tmp/archive/"],
+            "extracted_files": ["custom"],
+        }
         ret = self.run_state(
             "archive.extracted",
             name=ARCHIVE_DIR,
@@ -373,6 +376,8 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
 
         self.assertSaltTrueReturn(ret)
         self._check_extracted(self.untar_file)
-        state_ret = ret['archive_|-/tmp/archive_|-/tmp/archive_|-extracted']
-        self.assertTrue(state_ret['comment'].endswith('Output was trimmed to 1 number of lines'))
-        self.assertEqual(state_ret['changes'], expected_changes)
+        state_ret = ret["archive_|-/tmp/archive_|-/tmp/archive_|-extracted"]
+        self.assertTrue(
+            state_ret["comment"].endswith("Output was trimmed to 1 number of lines")
+        )
+        self.assertEqual(state_ret["changes"], expected_changes)
