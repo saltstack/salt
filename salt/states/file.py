@@ -4108,7 +4108,7 @@ def recurse(
           - include_pat: E@hello      :: regexp matches 'otherhello',
                                          'hello01' ...
 
-        .. versionchanged:: Neon
+        .. versionchanged:: Sodium
 
             List patterns are now supported
 
@@ -4135,7 +4135,7 @@ def recurse(
           - exclude_pat: E@(APPDATA)|(TEMPDATA) :: regexp matches APPDATA
                                                    or TEMPDATA for exclusion
 
-        .. versionchanged:: Neon
+        .. versionchanged:: Sodium
             List patterns are now supported
 
         .. code-block:: text
