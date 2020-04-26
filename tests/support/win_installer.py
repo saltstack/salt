@@ -45,7 +45,7 @@ def iter_installers(content):
 
 def split_installer(name):
     """
-    Return a tuple of the salt version, python verison and architecture from an
+    Return a tuple of the salt version, python version and architecture from an
     installer name.
     """
     x = name[len(PREFIX) :]
