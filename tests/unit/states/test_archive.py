@@ -237,6 +237,59 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(ret["changes"]["extracted_files"], ["stderr"])
 
+    def test_tar_bsdtar_with_trim_output(self):
+        """
+        Tests the call of extraction with bsdtar with trim_output
+        """
+        bsdtar = MagicMock(return_value="tar (bsdtar)")
+        source = "/tmp/foo.tar.gz"
+        mock_false = MagicMock(return_value=False)
+        mock_true = MagicMock(return_value=True)
+        state_single_mock = MagicMock(return_value={"local": {"result": True}})
+        run_all = MagicMock(
+            return_value={"retcode": 0, "stdout": "stdout", "stderr": "stderr"}
+        )
+        mock_source_list = MagicMock(return_value=(source, None))
+        list_mock = MagicMock(
+            return_value={
+                "dirs": [],
+                "files": ["stderr"],
+                "links": [],
+                "top_level_dirs": [],
+                "top_level_files": ["stderr"],
+                "top_level_links": [],
+            }
+        )
+        isfile_mock = MagicMock(side_effect=_isfile_side_effect)
+
+        with patch.dict(
+            archive.__salt__,
+            {
+                "cmd.run": bsdtar,
+                "file.directory_exists": mock_false,
+                "file.file_exists": mock_false,
+                "state.single": state_single_mock,
+                "file.makedirs": mock_true,
+                "cmd.run_all": run_all,
+                "archive.list": list_mock,
+                "file.source_list": mock_source_list,
+            },
+        ), patch.dict(archive.__states__, {"file.directory": mock_true}), patch.object(
+            os.path, "isfile", isfile_mock
+        ), patch(
+            "salt.utils.path.which", MagicMock(return_value=True)
+        ):
+            ret = archive.extracted(
+                os.path.join(os.sep + "tmp", "out"),
+                source,
+                options="xvzf",
+                enforce_toplevel=False,
+                keep_source=True,
+                trim_output=1,
+            )
+            self.assertEqual(ret["changes"]["extracted_files"], ["stderr"])
+            self.assertTrue(ret["comment"].endswith("Output was trimmed to 1 number of lines"))
+
     def test_extracted_when_if_missing_path_exists(self):
         """
         When if_missing exists, we should exit without making any changes.
