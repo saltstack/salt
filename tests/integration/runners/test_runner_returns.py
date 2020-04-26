@@ -47,6 +47,10 @@ class RunnerReturnsTest(ShellCase):
         """
         Close the tempfile.NamedTemporaryFile object, cleaning it up
         """
+        try:
+            self.conf.close()
+        except OSError:
+            pass
         salt.utils.files.rm_rf(self.master_d_dir)
         # Force a reload of the configuration now that our temp config file has
         # been removed.
