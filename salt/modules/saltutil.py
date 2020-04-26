@@ -1153,7 +1153,7 @@ def refresh_pillar(wait=False, timeout=30):
             tag="/salt/minion/minion_pillar_refresh_complete", wait=timeout
         )
         if not event_ret or event_ret["complete"] is False:
-            log.warn("Pillar refresh did not complete within timeout %s", timeout)
+            log.warning("Pillar refresh did not complete within timeout %s", timeout)
     return ret
 
 
