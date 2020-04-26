@@ -74,7 +74,7 @@ of the 2015.5 branch:
    back slash is an escape character.
 
    There is a known incompatibility between Python2 pip>=10.* and Salt <=2018.3.0.
-   The issue is decribed here: https://github.com/saltstack/salt/issues/46163
+   The issue is described here: https://github.com/saltstack/salt/issues/46163
 
 """
 from __future__ import absolute_import, print_function, unicode_literals

@@ -37,9 +37,10 @@ setuptools-scm
 strict_rfc3339
 supervisor==3.3.5; python_version < '3'
 timelib
+toml
+vcert~=0.7.0
 virtualenv
 watchdog
-vcert~=0.7.0
 
 # Available template libraries that can be used
 Genshi
