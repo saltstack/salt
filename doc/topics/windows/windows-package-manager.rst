@@ -27,7 +27,7 @@ High level differences to yum and apt are:
 - The repository metadata (SLS files) is hosted through either salt or
   git.
 - Packages can be downloaded from within the salt repository, a git
-  repository or from http(s) or ftp urls.
+  repository or from HTTP(S) or FTP URLs.
 - No dependencies are managed. Dependencies between packages needs to
   be managed manually.
 
@@ -264,7 +264,7 @@ in the master config file:
 Creating a Package Definition SLS File
 ======================================
 
-The package definition file is a yaml file that contains all the information
+The package definition file is a YAML file that contains all the information
 needed to install a piece of software using salt. It defines information about
 the package to include version, full name, flags required for the installer and
 uninstaller, whether or not to use the Windows task scheduler to install the
@@ -315,17 +315,17 @@ The version line is the version for the package to be installed. It is used when
 you need to install a specific version of a piece of software.
 
 .. warning::
-    The version must be enclosed in quotes, otherwise the yaml parser will
+    The version must be enclosed in quotes, otherwise the YAML parser will
     remove trailing zeros.
 
 .. note::
     There are unique situations where previous versions are unavailable. Take
-    Google Chrome for example. There is only one url provided for a standalone
+    Google Chrome for example. There is only one URL provided for a standalone
     installation of Google Chrome.
 
     (https://dl.google.com/edgedl/chrome/install/GoogleChromeStandaloneEnterprise.msi)
 
-    When a new version is released, the url just points to the new version. To
+    When a new version is released, the URL just points to the new version. To
     handle situations such as these, set the version to `latest`. Salt will
     install the version of Chrome at the URL and report that version. Here's an
     example:
@@ -453,7 +453,7 @@ Available parameters are as follows:
     a GUID. You can find this value in the registry under the following keys:
 
         - Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall
-        - Software\\Wow6432None\\Microsoft\\Windows\\CurrentVersion\\Uninstall
+        - Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall
 
 :param str uninstall_flags:
     Any flags that need to be passed to the uninstaller to make it perform a
@@ -579,7 +579,7 @@ Available parameters are as follows:
 
 :param bool reboot: Not implemented
 
-:param str local: Not implemented
+:param str locale: Not implemented
 
 Examples can be found at https://github.com/saltstack/salt-winrepo-ng
 

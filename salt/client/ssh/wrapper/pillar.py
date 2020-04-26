@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Extract the pillar data for this minion
-'''
+"""
 from __future__ import absolute_import, print_function
 
 # Import python libs
@@ -14,8 +14,8 @@ import salt.utils.dictupdate
 from salt.defaults import DEFAULT_TARGET_DELIM
 
 
-def get(key, default='', merge=False, delimiter=DEFAULT_TARGET_DELIM):
-    '''
+def get(key, default="", merge=False, delimiter=DEFAULT_TARGET_DELIM):
+    """
     .. versionadded:: 0.14
 
     Attempt to retrieve the named value from pillar, if the named value is not
@@ -50,22 +50,19 @@ def get(key, default='', merge=False, delimiter=DEFAULT_TARGET_DELIM):
     .. code-block:: bash
 
         salt '*' pillar.get pkg:apache
-    '''
+    """
     if merge:
         ret = salt.utils.data.traverse_dict_and_list(__pillar__, key, {}, delimiter)
-        if isinstance(ret, collections.Mapping) and \
-                isinstance(default, collections.Mapping):
+        if isinstance(ret, collections.Mapping) and isinstance(
+            default, collections.Mapping
+        ):
             return salt.utils.dictupdate.update(default, ret)
 
-    return salt.utils.data.traverse_dict_and_list(
-        __pillar__,
-        key,
-        default,
-        delimiter)
+    return salt.utils.data.traverse_dict_and_list(__pillar__, key, default, delimiter)
 
 
 def item(*args):
-    '''
+    """
     .. versionadded:: 0.16.2
 
     Return one or more pillar entries
@@ -76,7 +73,7 @@ def item(*args):
 
         salt '*' pillar.item foo
         salt '*' pillar.item foo bar baz
-    '''
+    """
     ret = {}
     for arg in args:
         try:
@@ -87,7 +84,7 @@ def item(*args):
 
 
 def raw(key=None):
-    '''
+    """
     Return the raw pillar data that is available in the module. This will
     show the pillar as it is loaded as the __pillar__ dict.
 
@@ -101,7 +98,7 @@ def raw(key=None):
     pillar raw data.::
 
         salt '*' pillar.raw key='roles'
-    '''
+    """
     if key:
         ret = __pillar__.get(key, {})
     else:
@@ -111,7 +108,7 @@ def raw(key=None):
 
 
 def keys(key, delimiter=DEFAULT_TARGET_DELIM):
-    '''
+    """
     .. versionadded:: 2015.8.0
 
     Attempt to retrieve a list of keys from the named value from the pillar.
@@ -127,9 +124,8 @@ def keys(key, delimiter=DEFAULT_TARGET_DELIM):
     .. code-block:: bash
 
         salt '*' pillar.keys web:sites
-    '''
-    ret = salt.utils.data.traverse_dict_and_list(
-        __pillar__, key, KeyError, delimiter)
+    """
+    ret = salt.utils.data.traverse_dict_and_list(__pillar__, key, KeyError, delimiter)
 
     if ret is KeyError:
         raise KeyError("Pillar key not found: {0}".format(key))

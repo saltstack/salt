@@ -9,9 +9,7 @@ asn1crypto==0.24.0        # via cryptography
 atomicwrites==1.3.0       # via pytest
 attrs==19.1.0             # via pytest
 aws-xray-sdk==0.95        # via moto
-backports-abc==0.5
 backports.functools-lru-cache==1.5  # via cheroot
-backports.ssl-match-hostname==3.7.0.1
 boto3==1.9.132
 boto==2.49.0
 botocore==1.12.132        # via boto3, moto, s3transfer
@@ -31,11 +29,9 @@ docker-pycreds==0.4.0     # via docker
 docker==2.7.0
 docutils==0.14            # via botocore
 ecdsa==0.13.3             # via python-jose
-enum34==1.1.6
 future==0.17.1            # via python-jose
 genshi==0.7.3
-gitdb2==2.0.5             # via gitpython
-gitdb==0.6.4
+gitdb2==2.0.5
 gitpython==2.1.10
 google-auth==1.6.3        # via kubernetes
 idna==2.8
@@ -50,11 +46,11 @@ jsonpickle==1.1           # via aws-xray-sdk
 jsonschema==2.6.0
 keyring==5.7.1
 kubernetes==3.0.0
-libnacl==1.6.1
+libnacl==1.7.1
 lxml==4.3.0
 mako==1.0.7
 markupsafe==1.1.1
-mock==2.0.0               # via moto
+mock==3.0.5
 more-itertools==5.0.0
 moto==1.3.7
 msgpack-python==0.5.6
@@ -62,25 +58,25 @@ msgpack==0.5.6
 packaging==19.2           # via pytest
 patch==1.16
 pathtools==0.1.2          # via watchdog
-pbr==5.1.3                # via mock
 pluggy==0.13.0            # via pytest
 portend==2.4              # via cherrypy
-psutil==5.6.1
+psutil==5.6.6
 py==1.8.0                 # via pytest
 pyaml==19.4.1             # via moto
 pyasn1-modules==0.2.4     # via google-auth
 pyasn1==0.4.5
 pycparser==2.19
 pycryptodome==3.8.1       # via python-jose
-pycryptodomex==3.8.1 ; sys_platform == "win32"
-pycurl==7.43.0.2
+pycryptodomex==3.9.7
+pycurl==7.43.0.5
 pygit2==0.28.2
+pymssql==2.1.4
 pymysql==0.9.3
 pyopenssl==19.0.0
 pyparsing==2.4.5          # via packaging
 pytest-helpers-namespace==2019.1.8
 pytest-salt-runtests-bridge==2019.7.10
-pytest-salt==2019.12.27
+pytest-salt==2020.1.27
 pytest-tempdir==2019.10.12
 pytest==4.6.6
 python-dateutil==2.8.0
@@ -90,7 +86,7 @@ python-jose==2.0.2        # via moto
 pythonnet==2.3.0
 pytz==2019.1              # via moto, tempora
 pyvmomi==6.7.1.2018.12
-pywin32==224
+pywin32==227
 pyyaml==5.1.2
 pyzmq==18.0.1 ; python_version != "3.4"
 requests==2.21.0
@@ -101,14 +97,12 @@ s3transfer==0.2.0         # via boto3
 salttesting==2017.6.1
 sed==0.3.1
 setproctitle==1.1.10
-singledispatch==3.4.0.3
-six==1.12.0               # via cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, kubernetes, mock, more-itertools, moto, packaging, pygit2, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, singledispatch, tempora, websocket-client
-smmap2==2.0.5             # via gitdb2
-smmap==0.9.0
+six==1.12.0               # via cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, kubernetes, mock, more-itertools, moto, packaging, pygit2, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, tempora, websocket-client
+smmap2==2.0.5
 strict-rfc3339==0.7
 tempora==1.14.1           # via portend
 timelib==0.2.4
-tornado==4.5.3 ; python_version >= "3.4"
+toml==0.10.0
 urllib3==1.24.2           # via botocore, kubernetes, python-etcd, requests
 virtualenv==16.4.3
 watchdog==0.9.0
