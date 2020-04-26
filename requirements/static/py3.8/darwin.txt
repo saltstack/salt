@@ -96,7 +96,7 @@ python-jose==2.0.2        # via moto
 pytz==2019.1              # via moto, tempora
 pyvmomi==6.7.1.2018.12
 pyyaml==5.1.2
-pyzmq==18.0.1 ; python_version != "3.4"
+pyzmq==19.0.0 ; python_version >= "3.8"
 requests==2.21.0
 responses==0.10.6         # via moto
 rfc3987==1.3.8
