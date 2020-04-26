@@ -1132,7 +1132,7 @@ def get_pub_key(vm_):
 
 def get_swap_size(vm_):
     r"""
-    Returns the amoutn of swap space to be used in MB.
+    Returns the amount of swap space to be used in MB.
 
     vm\_
         The VM profile to obtain the swap size from.

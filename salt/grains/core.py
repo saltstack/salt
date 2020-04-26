@@ -26,10 +26,6 @@ import uuid
 import warnings
 from errno import EACCES, EPERM
 
-# Extend the default list of supported distros. This will be used for the
-# /etc/DISTRO-release checking that is part of linux_distribution()
-from platform import _supported_dists
-
 # Import salt libs
 import salt.exceptions
 import salt.log

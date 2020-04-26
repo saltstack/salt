@@ -189,7 +189,7 @@ def present(
 
         The following configuration properties can be toggled in the config parameter.
           - import (true) - try to import the pool before creating it if absent
-          - import_dirs (None) - specify additional locations to scan for devices on import (comma-seperated)
+          - import_dirs (None) - specify additional locations to scan for devices on import (comma-separated)
           - device_dir (None, SunOS=/dev/dsk, Linux=/dev) - specify device directory to prepend for none
             absolute device paths
           - force (false) - try to force the import or creation

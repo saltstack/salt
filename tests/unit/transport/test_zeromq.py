@@ -478,7 +478,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         del cls.master_config
 
     def setUp(self):
-        # Start the event loop, even though we dont directly use this with
+        # Start the event loop, even though we don't directly use this with
         # ZeroMQPubServerChannel, having it running seems to increase the
         # likely hood of dropped messages.
         self.io_loop = salt.ext.tornado.ioloop.IOLoop()

@@ -235,7 +235,7 @@ test_interfaces = [
                 'ipv6netmask': '64',
                 'ipv6gateway': '2001:db8:dead:beef::1',
                 'ttl': '18',  # shared
-                'ipv6ttl': '15',  # overriden for v6
+                'ipv6ttl': '15',  # overridden for v6
                 'mtu': '1480',  # shared
                 'enable_ipv6': True,
                 'noifupdown': True,

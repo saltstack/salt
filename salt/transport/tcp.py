@@ -1166,7 +1166,7 @@ class SaltMessageClient(object):
                 self._connecting_future.set_result(True)
                 break
             except Exception as exc:  # pylint: disable=broad-except
-                log.warn("TCP Message Client encountered an exception %r", exc)
+                log.warning("TCP Message Client encountered an exception %r", exc)
                 yield salt.ext.tornado.gen.sleep(1)  # TODO: backoff
                 # self._connecting_future.set_exception(e)
 

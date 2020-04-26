@@ -1907,7 +1907,7 @@ def upgrade(
         .. versionadded:: 2019.2.0
 
     obsoletes : True
-        Controls wether yum/dnf should take obsoletes into account and remove them.
+        Controls whether yum/dnf should take obsoletes into account and remove them.
         If set to ``False`` yum will use ``update`` instead of ``upgrade``
         and dnf will be run with ``--obsoletes=False``
 
