@@ -500,7 +500,7 @@ The Saltify driver is a new, experimental driver designed to install Salt on a r
 machine, virtual or bare metal, using SSH. This driver is useful for provisioning
 machines which are already installed, but not Salted. For more information about using
 this driver and for configuration examples, please see the
-:ref:`Gettting Started with Saltify <getting-started-with-saltify>` documentation.
+:ref:`Getting Started with Saltify <getting-started-with-saltify>` documentation.
 
 .. _config_vagrant:
 

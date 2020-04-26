@@ -23,7 +23,7 @@ def _to_dict(xmltree):
     """
     Converts an XML ElementTree to a dictionary that only contains items.
     This is the default behavior in version 2017.7. This will default to prevent
-    unexpected parsing issues on modules dependant on this.
+    unexpected parsing issues on modules dependent on this.
     """
     # If this object has no children, the for..loop below will return nothing
     # for it, so just return a single dict representing it.
