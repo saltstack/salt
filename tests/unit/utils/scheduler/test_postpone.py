@@ -5,7 +5,7 @@ from __future__ import absolute_import
 import datetime
 import logging
 
-from tests.support.unit import skipIf
+import pytest
 from tests.unit.utils.scheduler.base import SchedulerTestsBase
 
 try:
@@ -18,8 +18,9 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-@skipIf(
-    HAS_DATEUTIL_PARSER is False, "The 'dateutil.parser' library is not available",
+@pytest.mark.skipif(
+    HAS_DATEUTIL_PARSER is False,
+    reason="The 'dateutil.parser' library is not available",
 )
 class SchedulerPostponeTest(SchedulerTestsBase):
     """

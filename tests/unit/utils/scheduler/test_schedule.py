@@ -9,10 +9,10 @@ import copy
 import datetime
 import logging
 
+import pytest
 import salt.utils.schedule
 from salt.utils.schedule import Schedule
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import skipIf
 from tests.unit.utils.scheduler.base import SchedulerTestsBase
 
 # pylint: disable=import-error,unused-import
@@ -342,7 +342,7 @@ class ScheduleTestCase(SchedulerTestsBase):
             > datetime.timedelta(seconds=60)
         )
 
-    @skipIf(not _CRON_SUPPORTED, "croniter module not installed")
+    @pytest.mark.skipif(not _CRON_SUPPORTED, reason="croniter module not installed")
     def test_eval_schedule_cron(self):
         """
         Tests eval if the schedule is defined with cron expression
@@ -357,7 +357,7 @@ class ScheduleTestCase(SchedulerTestsBase):
             self.schedule.opts["schedule"]["testjob"]["_next_fire_time"] > now
         )
 
-    @skipIf(not _CRON_SUPPORTED, "croniter module not installed")
+    @pytest.mark.skipif(not _CRON_SUPPORTED, reason="croniter module not installed")
     def test_eval_schedule_cron_splay(self):
         """
         Tests eval if the schedule is defined with cron expression plus splay

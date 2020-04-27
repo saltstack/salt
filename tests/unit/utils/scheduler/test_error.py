@@ -4,8 +4,8 @@ from __future__ import absolute_import
 
 import logging
 
+import pytest
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import skipIf
 from tests.unit.utils.scheduler.base import SchedulerTestsBase
 
 try:
@@ -25,8 +25,9 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-@skipIf(
-    HAS_DATEUTIL_PARSER is False, "The 'dateutil.parser' library is not available",
+@pytest.mark.skipif(
+    HAS_DATEUTIL_PARSER is False,
+    reason="The 'dateutil.parser' library is not available",
 )
 class SchedulerErrorTest(SchedulerTestsBase):
     def setUp(self):
@@ -35,7 +36,7 @@ class SchedulerErrorTest(SchedulerTestsBase):
 
         self.schedule.opts["grains"]["whens"] = {"tea time": "11/29/2017 12:00pm"}
 
-    @skipIf(not HAS_CRONITER, "Cannot find croniter python module")
+    @pytest.mark.skipif(not HAS_CRONITER, reason="Cannot find croniter python module")
     def test_eval_cron_invalid(self):
         """
         verify that scheduled job runs
