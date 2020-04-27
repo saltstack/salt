@@ -798,6 +798,10 @@ def flush(name, table="filter", family="ipv4", **kwargs):
     family
         Networking family, either ipv4 or ipv6
 
+    chain
+        The chain to be flushed. All the chains in the table if none is given.
+
+
     """
     ret = {"name": name, "changes": {}, "result": None, "comment": ""}
 
