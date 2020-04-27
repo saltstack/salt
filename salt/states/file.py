@@ -4188,6 +4188,7 @@ def recurse(
         True to inherit permissions from parent, otherwise False
 
         .. versionadded:: 2017.7.7
+
     """
     if "env" in kwargs:
         # "env" is not supported; Use "saltenv".

@@ -540,13 +540,25 @@ class StringutilsTestCase(TestCase):
         self.assertTrue(salt.utils.stringutils.check_include_exclude("/some/test"))
 
     def test_check_include_exclude_exclude(self):
-        self.assertFalse(salt.utils.stringutils.check_include_exclude("/some/test", None, "*test*"))
+        self.assertFalse(
+            salt.utils.stringutils.check_include_exclude("/some/test", None, "*test*")
+        )
 
     def test_check_include_exclude_exclude_list(self):
-        self.assertFalse(salt.utils.stringutils.check_include_exclude("/some/test", None, ["*test"]))
+        self.assertFalse(
+            salt.utils.stringutils.check_include_exclude("/some/test", None, ["*test"])
+        )
 
     def test_check_include_exclude_exclude_include(self):
-        self.assertTrue(salt.utils.stringutils.check_include_exclude("/some/test", "*test*", "/some/"))
+        self.assertTrue(
+            salt.utils.stringutils.check_include_exclude(
+                "/some/test", "*test*", "/some/"
+            )
+        )
 
     def test_check_include_exclude_regex(self):
-        self.assertFalse(salt.utils.stringutils.check_include_exclude("/some/test", None, "E@/some/(test|other)"))
+        self.assertFalse(
+            salt.utils.stringutils.check_include_exclude(
+                "/some/test", None, "E@/some/(test|other)"
+            )
+        )
