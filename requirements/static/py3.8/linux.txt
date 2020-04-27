@@ -16,6 +16,7 @@ boto3==1.9.132
 boto==2.49.0
 botocore==1.12.132        # via boto3, moto, s3transfer
 cachetools==3.1.0         # via google-auth
+cassandra-driver==3.23.0
 certifi==2019.3.9
 certvalidator==0.11.1     # via vcert
 cffi==1.12.2
@@ -23,6 +24,7 @@ chardet==3.0.4            # via requests
 cheetah3==3.1.0
 cheroot==6.5.4            # via cherrypy
 cherrypy==17.3.0
+click==7.1.1              # via geomet
 contextlib2==0.5.5        # via cherrypy
 croniter==0.3.29
 cryptography==2.6.1       # via moto, paramiko, pyopenssl, vcert
@@ -33,6 +35,7 @@ docutils==0.14            # via botocore
 ecdsa==0.13.3             # via python-jose
 future==0.17.1            # via python-jose
 genshi==0.7.3
+geomet==0.1.2             # via cassandra-driver
 gitdb2==2.0.5             # via gitpython
 gitpython==2.1.11
 google-auth==1.6.3        # via kubernetes
@@ -102,7 +105,7 @@ salttesting==2017.6.1
 scp==0.13.2               # via junos-eznc
 setproctitle==1.1.10
 setuptools-scm==3.2.0
-six==1.12.0               # via bcrypt, cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, junos-eznc, kazoo, kubernetes, mock, more-itertools, moto, ncclient, packaging, pygit2, pynacl, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, tempora, vcert, websocket-client
+six==1.12.0               # via bcrypt, cassandra-driver, cheroot, cherrypy, cryptography, docker, docker-pycreds, geomet, google-auth, junos-eznc, kazoo, kubernetes, mock, more-itertools, moto, ncclient, packaging, pygit2, pynacl, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, tempora, vcert, websocket-client
 smmap2==2.0.5             # via gitdb2
 strict-rfc3339==0.7
 tempora==1.14.1           # via portend
