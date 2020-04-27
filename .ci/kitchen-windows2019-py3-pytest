@@ -1,4 +1,4 @@
-@Library('salt@master-1.7-staged') _
+@Library('salt@master-1.7') _
 
 runTestSuite(
     concurrent_builds: 2,
@@ -13,6 +13,7 @@ runTestSuite(
     //splits: ['unit', 'integration'],
     testrun_timeout: 10,
     use_spot_instances: false,
-    fast_slow_staged_testrun: true)
+    //fast_slow_staged_testrun: true
+)
 
 // vim: ft=groovy
