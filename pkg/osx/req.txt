@@ -21,7 +21,8 @@ pycryptodomex==3.9.7
 python-dateutil==2.8.0
 python-gnupg==0.4.4
 pyyaml==5.1.2
-pyzmq==18.0.1
+pyzmq==18.0.1 ; python_version < "3.8"
+pyzmq==19.0.0 ; python_version >= "3.8"
 requests==2.21.0
 setproctitle
 singledispatch==3.4.0.3; python_version < '3.4'
