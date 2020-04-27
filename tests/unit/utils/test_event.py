@@ -7,7 +7,6 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import hashlib
@@ -16,22 +15,17 @@ import shutil
 import time
 import warnings
 
-# Import salt libs
 import salt.config
 import salt.ext.tornado.ioloop
 import salt.utils.event
 import salt.utils.stringutils
 import zmq
 import zmq.eventloop.ioloop
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-
-# Import 3rd-+arty libs
+from salt.ext.six.moves import range
 from salt.ext.tornado.testing import AsyncTestCase
+from saltfactories.utils.processes.helpers import terminate_process
 from tests.support.events import eventpublisher_process, eventsender_process
-from tests.support.processes import terminate_process
 from tests.support.runtests import RUNTIME_VARS
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase, expectedFailure, skipIf
 
 # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
