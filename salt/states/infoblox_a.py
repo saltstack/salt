@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Infoblox A record managment.
+Infoblox A record management.
 
 functions accept api_opts:
 

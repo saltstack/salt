@@ -27,7 +27,7 @@ def mk_token(opts, tdata):
     This module uses the hash of random 512 bytes as a token.
 
     :param opts: Salt master config options
-    :param tdata: Token data to be stored with 'token' attirbute of this dict set to the token.
+    :param tdata: Token data to be stored with 'token' attribute of this dict set to the token.
     :returns: tdata with token if successful. Empty dict if failed.
     """
     hash_type = getattr(hashlib, opts.get("hash_type", "md5"))

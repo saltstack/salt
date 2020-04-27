@@ -159,7 +159,7 @@ class CloudTest(ShellCase):
             # Use the first three letters of the subclass, fill with '-' if too short
             self._instance_name = random_string(
                 "cloud-test-{:-<3}-".format(subclass[:3]), uppercase=False
-            )
+            ).lower()
         return self._instance_name
 
     @property

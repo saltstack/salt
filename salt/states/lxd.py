@@ -240,7 +240,7 @@ def authenticate(name, remote_addr, password, cert, key, verify_cert=True):
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
 
     name:
         Ignore this. This is just here for salt.

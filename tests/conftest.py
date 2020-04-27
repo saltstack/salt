@@ -8,12 +8,10 @@
     Prepare py.test for our test suite
 """
 # pylint: disable=wrong-import-order,wrong-import-position,3rd-party-local-module-not-gated
-# pylint: disable=redefined-outer-name,invalid-name
+# pylint: disable=redefined-outer-name,invalid-name,3rd-party-module-not-gated
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-import fnmatch
 import logging
 import os
 import pprint
@@ -24,18 +22,13 @@ import sys
 import tempfile
 import textwrap
 from contextlib import contextmanager
+from functools import partial, wraps
 
 import _pytest.logging
 import _pytest.skipping
-
-# Import 3rd-party libs
 import psutil
-
-# Import pytest libs
 import pytest
 import salt.config
-
-# Import salt libs
 import salt.loader
 import salt.log.mixins
 import salt.log.setup
@@ -44,16 +37,13 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.win_functions
 from _pytest.mark.evaluate import MarkEvaluator
-
-# Import Pytest Salt libs
 from pytestsalt.utils import cli_scripts
 from salt.ext import six
 from salt.serializers import yaml
 from salt.utils.immutabletypes import freeze
-
-# Import test libs
+from tests.support.helpers import PRE_PYTEST_SKIP_OR_NOT, PRE_PYTEST_SKIP_REASON
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.sminion import create_sminion
+from tests.support.sminion import check_required_sminion_attributes, create_sminion
 
 TESTS_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
 CODE_DIR = os.path.dirname(TESTS_DIR)
@@ -93,7 +83,9 @@ class LogCaptureHandler(
 ):
     """
     Subclassing PyTest's LogCaptureHandler in order to add the
-    exc_info_on_loglevel functionality.
+    exc_info_on_loglevel functionality and actually make it a NullHandler,
+    it's only used to print log messages emmited during tests, which we
+    have explicitly disabled in pytest.ini
     """
 
 
@@ -249,10 +241,6 @@ def pytest_configure(config):
         if dirname != "tests":
             config.addinivalue_line("norecursedirs", os.path.join(CODE_DIR, dirname))
 
-    config.addinivalue_line("norecursedirs", os.path.join(CODE_DIR, "templates"))
-    config.addinivalue_line("norecursedirs", os.path.join(CODE_DIR, "tests/kitchen"))
-    config.addinivalue_line("norecursedirs", os.path.join(CODE_DIR, "tests/support"))
-
     # Expose the markers we use to pytest CLI
     config.addinivalue_line(
         "markers",
@@ -275,7 +263,14 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         "markers",
-        "requires_salt_modules(*required_module_names): Skip if at least one module is not available. ",
+        "requires_salt_modules(*required_module_names): Skip if at least one module is not available.",
+    )
+    config.addinivalue_line(
+        "markers",
+        "requires_salt_states(*required_state_names): Skip if at least one state module is not available.",
+    )
+    config.addinivalue_line(
+        "markers", "windows_whitelisted: Mark test as whitelisted to run under Windows"
     )
     # Make sure the test suite "knows" this is a pytest test run
     RUNTIME_VARS.PYTEST_SESSION = True
@@ -346,18 +341,145 @@ def pytest_report_header():
 
 def pytest_runtest_logstart(nodeid):
     """
-    implements the runtest_setup/call/teardown protocol for
-    the given test item, including capturing exceptions and calling
-    reporting hooks.
+    signal the start of running a single test item.
+
+    This hook will be called **before** :func:`pytest_runtest_setup`, :func:`pytest_runtest_call` and
+    :func:`pytest_runtest_teardown` hooks.
+
+    :param str nodeid: full id of the item
+    :param location: a triple of ``(filename, linenum, testname)``
     """
     log.debug(">>>>> START >>>>> %s", nodeid)
 
 
 def pytest_runtest_logfinish(nodeid):
     """
-    called after ``pytest_runtest_call``
+    signal the complete finish of running a single test item.
+
+    This hook will be called **after** :func:`pytest_runtest_setup`, :func:`pytest_runtest_call` and
+    :func:`pytest_runtest_teardown` hooks.
+
+    :param str nodeid: full id of the item
+    :param location: a triple of ``(filename, linenum, testname)``
     """
     log.debug("<<<<< END <<<<<<< %s", nodeid)
+
+
+@pytest.hookimpl(hookwrapper=True, trylast=True)
+def pytest_collection_modifyitems(config, items):
+    """
+    called after collection has been performed, may filter or re-order
+    the items in-place.
+
+    :param _pytest.main.Session session: the pytest session object
+    :param _pytest.config.Config config: pytest config object
+    :param List[_pytest.nodes.Item] items: list of item objects
+    """
+    # Let PyTest or other plugins handle the initial collection
+    yield
+    groups_collection_modifyitems(config, items)
+
+    log.warning("Mofifying collected tests to keep track of fixture usage")
+    for item in items:
+        for fixture in item.fixturenames:
+            if fixture not in item._fixtureinfo.name2fixturedefs:
+                continue
+            for fixturedef in item._fixtureinfo.name2fixturedefs[fixture]:
+                if fixturedef.scope == "function":
+                    continue
+                try:
+                    node_ids = fixturedef.node_ids
+                except AttributeError:
+                    node_ids = fixturedef.node_ids = set()
+                node_ids.add(item.nodeid)
+                try:
+                    fixturedef.finish.__wrapped__
+                except AttributeError:
+                    original_func = fixturedef.finish
+
+                    def wrapper(func, fixturedef):
+                        @wraps(func)
+                        def wrapped(self, request):
+                            try:
+                                return self._finished
+                            except AttributeError:
+                                if self.node_ids:
+                                    log.debug(
+                                        "%s is still going to be used, not terminating it. "
+                                        "Still in use on:\n%s",
+                                        self,
+                                        pprint.pformat(list(self.node_ids)),
+                                    )
+                                    return
+                                log.debug("Finish called on %s", self)
+                                try:
+                                    return func(request)
+                                finally:
+                                    self._finished = True
+
+                        return partial(wrapped, fixturedef)
+
+                    fixturedef.finish = wrapper(fixturedef.finish, fixturedef)
+                    try:
+                        fixturedef.finish.__wrapped__
+                    except AttributeError:
+                        fixturedef.finish.__wrapped__ = original_func
+
+
+@pytest.hookimpl(trylast=True, hookwrapper=True)
+def pytest_runtest_protocol(item, nextitem):
+    """
+    implements the runtest_setup/call/teardown protocol for
+    the given test item, including capturing exceptions and calling
+    reporting hooks.
+
+    :arg item: test item for which the runtest protocol is performed.
+
+    :arg nextitem: the scheduled-to-be-next test item (or None if this
+                   is the end my friend).  This argument is passed on to
+                   :py:func:`pytest_runtest_teardown`.
+
+    :return boolean: True if no further hook implementations should be invoked.
+
+
+    Stops at first non-None result, see :ref:`firstresult`
+    """
+    request = item._request
+    used_fixture_defs = []
+    for fixture in item.fixturenames:
+        if fixture not in item._fixtureinfo.name2fixturedefs:
+            continue
+        for fixturedef in reversed(item._fixtureinfo.name2fixturedefs[fixture]):
+            if fixturedef.scope == "function":
+                continue
+            used_fixture_defs.append(fixturedef)
+    try:
+        # Run the test
+        yield
+    finally:
+        for fixturedef in used_fixture_defs:
+            fixturedef.node_ids.remove(item.nodeid)
+            if not fixturedef.node_ids:
+                # This fixture is not used in any more test functions
+                fixturedef.finish(request)
+    del request
+    del used_fixture_defs
+
+
+def pytest_runtest_teardown(item, nextitem):
+    """
+    called after ``pytest_runtest_call``.
+
+    :arg nextitem: the scheduled-to-be-next test item (None if no further
+                   test item is scheduled).  This argument can be used to
+                   perform exact teardowns, i.e. calling just enough finalizers
+                   so that nextitem only needs to call setup-functions.
+    """
+    # PyTest doesn't reset the capturing log handler when done with it.
+    # Reset it to free used memory and python objects
+    # We currently have PyTest's log_print setting set to false, if it was
+    # set to true, the call bellow would make PyTest not print any logs at all.
+    item.catch_log_handler.reset()
 
 
 # <---- PyTest Tweaks ------------------------------------------------------------------------------------------------
@@ -380,6 +502,16 @@ def pytest_runtest_setup(item):
     """
     Fixtures injection based on markers or test skips based on CLI arguments
     """
+    integration_utils_tests_path = os.path.join(
+        CODE_DIR, "tests", "integration", "utils"
+    )
+    if (
+        str(item.fspath).startswith(integration_utils_tests_path)
+        and PRE_PYTEST_SKIP_OR_NOT is True
+    ):
+        item._skipped_by_mark = True
+        pytest.skip(PRE_PYTEST_SKIP_REASON)
+
     destructive_tests_marker = item.get_closest_marker("destructive_test")
     if destructive_tests_marker is not None or _has_unittest_attr(
         item, "__destructive_test__"
@@ -521,27 +653,9 @@ def pytest_runtest_setup(item):
         ):
             required_salt_modules = required_salt_modules[0]
         required_salt_modules = set(required_salt_modules)
-        sminion = create_sminion()
-        available_modules = list(sminion.functions)
-        not_available_modules = set()
-        try:
-            cached_not_available_modules = sminion.__not_availiable_modules__
-        except AttributeError:
-            cached_not_available_modules = sminion.__not_availiable_modules__ = set()
-
-        if cached_not_available_modules:
-            for not_available_module in cached_not_available_modules:
-                if not_available_module in required_salt_modules:
-                    not_available_modules.add(not_available_module)
-                    required_salt_modules.remove(not_available_module)
-
-        for required_module_name in required_salt_modules:
-            search_name = required_module_name
-            if "." not in search_name:
-                search_name += ".*"
-                if not fnmatch.filter(available_modules, search_name):
-                    not_available_modules.add(required_module_name)
-                    cached_not_available_modules.add(required_module_name)
+        not_available_modules = check_required_sminion_attributes(
+            "functions", required_salt_modules
+        )
 
         if not_available_modules:
             item._skipped_by_mark = True
@@ -554,6 +668,41 @@ def pytest_runtest_setup(item):
                     ", ".join(not_available_modules)
                 )
             )
+
+    requires_salt_states_marker = item.get_closest_marker("requires_salt_states")
+    if requires_salt_states_marker is not None:
+        required_salt_states = requires_salt_states_marker.args
+        if len(required_salt_states) == 1 and isinstance(
+            required_salt_states[0], (list, tuple, set)
+        ):
+            required_salt_states = required_salt_states[0]
+        required_salt_states = set(required_salt_states)
+        not_available_states = check_required_sminion_attributes(
+            "states", required_salt_states
+        )
+
+        if not_available_states:
+            item._skipped_by_mark = True
+            if len(not_available_states) == 1:
+                pytest.skip(
+                    "Salt state module '{}' is not available".format(
+                        *not_available_states
+                    )
+                )
+            pytest.skip(
+                "Salt state modules not available: {}".format(
+                    ", ".join(not_available_states)
+                )
+            )
+
+    if salt.utils.platform.is_windows():
+        if not item.fspath.fnmatch(os.path.join(CODE_DIR, "tests", "unit", "*")):
+            # Unit tests are whitelisted on windows by default, so, we're only
+            # after all other tests
+            windows_whitelisted_marker = item.get_closest_marker("windows_whitelisted")
+            if windows_whitelisted_marker is None:
+                item._skipped_by_mark = True
+                pytest.skip("Test is not whitelisted for Windows")
 
 
 # <---- Test Setup ---------------------------------------------------------------------------------------------------
@@ -587,11 +736,7 @@ def get_group(items, total_groups, group_id):
     return selected, deselected
 
 
-@pytest.hookimpl(hookwrapper=True, tryfirst=True)
-def pytest_collection_modifyitems(config, items):
-    # Let PyTest or other plugins handle the initial collection
-    yield
-
+def groups_collection_modifyitems(config, items):
     group_count = config.getoption("test-group-count")
     group_id = config.getoption("test-group")
 
@@ -1368,7 +1513,10 @@ def reap_stray_processes():
 
         _, alive = psutil.wait_procs(children, timeout=3, callback=on_terminate)
         for child in alive:
-            child.kill()
+            try:
+                child.kill()
+            except psutil.NoSuchProcess:
+                continue
 
         _, alive = psutil.wait_procs(alive, timeout=3, callback=on_terminate)
         if alive:

@@ -2911,3 +2911,49 @@ class TestFilePrivateFunctions(TestCase, LoaderModuleMockMixin):
         finally:
             # Cleanup
             shutil.rmtree(root_tmp_dir)
+
+
+@skipIf(not salt.utils.platform.is_linux(), "Selinux only supported on linux")
+class TestSelinux(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        return {
+            filestate: {
+                "__env__": "base",
+                "__salt__": {"file.manage_file": False},
+                "__opts__": {"test": False, "cachedir": ""},
+                "__instance_id__": "",
+                "__low__": {},
+                "__utils__": {},
+            }
+        }
+
+    def test_selinux_change(self):
+        file_name = "/tmp/some-test-file"
+        check_perms_result = [
+            {
+                "comment": "The file {0} is set to be changed".format(file_name),
+                "changes": {
+                    "selinux": {
+                        "New": "User: unconfined_u Type: lost_found_t",
+                        "Old": "User: system_u Type: user_tmp_t",
+                    }
+                },
+                "name": file_name,
+                "result": True,
+            },
+            {"luser": "root", "lmode": "0644", "lgroup": "root"},
+        ]
+
+        with patch.object(os.path, "exists", MagicMock(return_value=True)):
+            with patch.dict(
+                filestate.__salt__,
+                {
+                    "file.source_list": MagicMock(return_value=[file_name, None]),
+                    "file.check_perms": MagicMock(return_value=check_perms_result),
+                },
+            ):
+                ret = filestate.managed(
+                    file_name,
+                    selinux={"seuser": "unconfined_u", "setype": "user_tmp_t"},
+                )
+                self.assertEqual(True, ret["result"])

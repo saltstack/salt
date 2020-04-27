@@ -347,7 +347,7 @@ def present(
         Linux, FreeBSD, NetBSD, OpenBSD, and Solaris. If the ``empty_password``
         argument is set to ``True`` then ``password`` is ignored.
         For Windows this is the plain text password.
-        For Linux, the hash can be generated with ``openssl passwd -1``.
+        For Linux, the hash can be generated with ``mkpasswd -m sha-256``.
 
     .. versionchanged:: 0.16.0
        BSD support added.

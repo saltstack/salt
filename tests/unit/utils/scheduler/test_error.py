@@ -1,61 +1,39 @@
 # -*- coding: utf-8 -*-
 
-# Import Python libs
 from __future__ import absolute_import
 
-import copy
 import logging
-import os
 
-import dateutil.parser as dateutil_parser
-
-# Import Salt libs
-import salt.utils.schedule
-from salt.modules.test import ping
-
-# Import Salt Testing libs
-from tests.support.case import ModuleCase
-from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
+from tests.unit.utils.scheduler.base import SchedulerTestsBase
 
 try:
-    import croniter  # pylint: disable=W0611
+    import dateutil.parser
+
+    HAS_DATEUTIL_PARSER = True
+except ImportError:
+    HAS_DATEUTIL_PARSER = False
+
+try:
+    import croniter  # pylint: disable=unused-import
 
     HAS_CRONITER = True
 except ImportError:
     HAS_CRONITER = False
 
 log = logging.getLogger(__name__)
-ROOT_DIR = os.path.join(RUNTIME_VARS.TMP, "schedule-unit-tests")
-SOCK_DIR = os.path.join(ROOT_DIR, "test-socks")
-
-DEFAULT_CONFIG = salt.config.minion_config(None)
-DEFAULT_CONFIG["conf_dir"] = ROOT_DIR
-DEFAULT_CONFIG["root_dir"] = ROOT_DIR
-DEFAULT_CONFIG["sock_dir"] = SOCK_DIR
-DEFAULT_CONFIG["pki_dir"] = os.path.join(ROOT_DIR, "pki")
-DEFAULT_CONFIG["cachedir"] = os.path.join(ROOT_DIR, "cache")
 
 
-class SchedulerErrorTest(ModuleCase, SaltReturnAssertsMixin):
-    """
-    Validate the pkg module
-    """
-
+@skipIf(
+    HAS_DATEUTIL_PARSER is False, "The 'dateutil.parser' library is not available",
+)
+class SchedulerErrorTest(SchedulerTestsBase):
     def setUp(self):
-        with patch("salt.utils.schedule.clean_proc_dir", MagicMock(return_value=None)):
-            functions = {"test.ping": ping}
-            self.schedule = salt.utils.schedule.Schedule(
-                copy.deepcopy(DEFAULT_CONFIG), functions, returners={}
-            )
+        super(SchedulerErrorTest, self).setUp()
         self.schedule.opts["loop_interval"] = 1
 
         self.schedule.opts["grains"]["whens"] = {"tea time": "11/29/2017 12:00pm"}
-
-    def tearDown(self):
-        self.schedule.reset()
 
     @skipIf(not HAS_CRONITER, "Cannot find croniter python module")
     def test_eval_cron_invalid(self):
@@ -67,7 +45,7 @@ class SchedulerErrorTest(ModuleCase, SaltReturnAssertsMixin):
         # Add the job to the scheduler
         self.schedule.opts.update(job)
 
-        run_time = dateutil_parser.parse("11/29/2017 4:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 4:00pm")
         with patch("croniter.croniter.get_next", MagicMock(return_value=run_time)):
             self.schedule.eval(now=run_time)
 
@@ -79,7 +57,7 @@ class SchedulerErrorTest(ModuleCase, SaltReturnAssertsMixin):
         verify that scheduled job does not run
         and returns the right error
         """
-        run_time = dateutil_parser.parse("11/29/2017 4:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 4:00pm")
 
         job = {
             "schedule": {"job1": {"function": "test.ping", "when": "13/29/2017 1:00pm"}}
@@ -100,7 +78,7 @@ class SchedulerErrorTest(ModuleCase, SaltReturnAssertsMixin):
         verify that scheduled job does not run
         and returns the right error
         """
-        run_time = dateutil_parser.parse("11/29/2017 4:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 4:00pm")
 
         job = {"schedule": {"job1": {"function": "test.ping", "when": "tea time"}}}
 
@@ -126,7 +104,7 @@ class SchedulerErrorTest(ModuleCase, SaltReturnAssertsMixin):
                 "job1": {"function": "test.ping", "once": "2017-13-13T13:00:00"}
             }
         }
-        run_time = dateutil_parser.parse("12/13/2017 1:00pm")
+        run_time = dateutil.parser.parse("12/13/2017 1:00pm")
 
         # Add the job to the scheduler
         self.schedule.opts.update(job)
@@ -161,12 +139,12 @@ class SchedulerErrorTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.opts.update(job)
 
         # eval at 3:00pm to prime, simulate minion start up.
-        run_time = dateutil_parser.parse("11/29/2017 3:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 3:00pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status("job1")
 
         # eval at 4:00pm to prime
-        run_time = dateutil_parser.parse("11/29/2017 4:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 4:00pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status("job1")
         _expected = (
@@ -194,12 +172,12 @@ class SchedulerErrorTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.opts.update(job)
 
         # eval at 3:00pm to prime, simulate minion start up.
-        run_time = dateutil_parser.parse("11/29/2017 3:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 3:00pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status("job1")
 
         # eval at 4:00pm to prime
-        run_time = dateutil_parser.parse("11/29/2017 4:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 4:00pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status("job1")
         _expected = (
@@ -229,12 +207,12 @@ class SchedulerErrorTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.opts.update(job)
 
         # eval at 3:00pm to prime, simulate minion start up.
-        run_time = dateutil_parser.parse("11/29/2017 3:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 3:00pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status("job1")
 
         # eval at 4:00pm to prime
-        run_time = dateutil_parser.parse("11/29/2017 4:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 4:00pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status("job1")
         _expected = (
