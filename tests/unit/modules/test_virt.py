@@ -334,6 +334,16 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         root = ET.fromstring(xml_data)
         self.assertIsNone(root.find("devices/graphics"))
 
+    def test_gen_xml_noloader_default(self):
+        """
+        Test virt._gen_xml() with default no loader
+        """
+        diskp = virt._disk_profile("default", "kvm", [], "hello")
+        nicp = virt._nic_profile("default", "kvm")
+        xml_data = virt._gen_xml("hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64")
+        root = ET.fromstring(xml_data)
+        self.assertIsNone(root.find("os/loader"))
+
     def test_gen_xml_vnc_default(self):
         """
         Test virt._gen_xml() with default vnc graphics device
@@ -1885,6 +1895,23 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(xml, virt.get_xml("test-vm"))
         self.assertEqual(xml, virt.get_xml(domain))
 
+    def test_get_loader(self):
+        """
+        Test virt.get_loader()
+        """
+        xml = """<domain type='kvm' id='7'>
+              <name>test-vm</name>
+              <os>
+                <loader readonly='yes' type='pflash'>/foo/bar</loader>
+              </os>
+            </domain>
+        """
+        self.set_mock_vm("test-vm", xml)
+
+        loader = virt.get_loader("test-vm")
+        self.assertEqual("/foo/bar", loader["path"])
+        self.assertEqual("yes", loader["readonly"])
+
     def test_parse_qemu_img_info(self):
         """
         Make sure that qemu-img info output is properly parsed
@@ -3295,15 +3322,19 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         # pylint: enable=no-member
         self.assertEqual(names, virt.pool_list_volumes("default"))
 
+    @patch("salt.modules.virt._is_bhyve_hyper", return_value=False)
     @patch("salt.modules.virt._is_kvm_hyper", return_value=True)
     @patch("salt.modules.virt._is_xen_hyper", return_value=False)
-    def test_get_hypervisor(self, isxen_mock, iskvm_mock):
+    def test_get_hypervisor(self, isxen_mock, iskvm_mock, is_bhyve_mock):
         """
         test the virt.get_hypervisor() function
         """
         self.assertEqual("kvm", virt.get_hypervisor())
 
         iskvm_mock.return_value = False
+        self.assertIsNone(virt.get_hypervisor())
+
+        is_bhyve_mock.return_value = False
         self.assertIsNone(virt.get_hypervisor())
 
         isxen_mock.return_value = True
