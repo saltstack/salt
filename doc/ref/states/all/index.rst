@@ -106,6 +106,7 @@ state modules
     file
     firewall
     firewalld
+    flatpak
     gem
     git
     github
