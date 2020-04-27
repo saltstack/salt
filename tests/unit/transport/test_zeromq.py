@@ -151,7 +151,6 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         """
         raise salt.ext.tornado.gen.Return((payload, {"fun": "send_clear"}))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_master_uri_override(self):
         """
         ensure master_uri kwarg is respected
@@ -196,7 +195,6 @@ class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
     # WARNING: This test will fail randomly on any system with > 1 CPU core!!!
     #
     #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    @skipIf(True, "SLOWTEST skip")
     def test_badload(self):
         """
         Test a variety of bad requests, make sure that we get some sort of error
@@ -515,7 +513,6 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
                 results.append(payload["jid"])
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
-    @skipIf(True, "SLOWTEST skip")
     def test_publish_to_pubserv_ipc(self):
         """
         Test sending 10K messags to ZeroMQPubServerChannel using IPC transport
@@ -547,7 +544,6 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         server_channel.pub_close()
         assert len(results) == send_num, (len(results), set(expect).difference(results))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_zeromq_publish_port(self):
         """
         test when connecting that we
@@ -653,7 +649,6 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         assert res.result()["enc"] == "aes"
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
-    @skipIf(True, "SLOWTEST skip")
     def test_zeromq_filtering(self):
         """
         Test sending messags to publisher using UDP
@@ -701,7 +696,6 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         server_channel.pub_close()
         assert len(results) == send_num, (len(results), set(expect).difference(results))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_publish_to_pubserv_tcp(self):
         """
         Test sending 10K messags to ZeroMQPubServerChannel using TCP transport
@@ -751,7 +745,6 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
             server_channel.publish(load)
         server_channel.close()
 
-    @skipIf(True, "SLOWTEST skip")
     def test_issue_36469_tcp(self):
         """
         Test sending both large and small messags to publisher using TCP

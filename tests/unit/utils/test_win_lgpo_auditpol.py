@@ -39,7 +39,6 @@ class WinLgpoAuditpolTestCase(TestCase, LoaderModuleMockMixin):
             KeyError, win_lgpo_auditpol.get_settings, category="Fake Category"
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_get_setting(self):
         names = win_lgpo_auditpol._get_valid_names()
         for name in names:

@@ -59,7 +59,6 @@ class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
     _call_binary_ = "salt-syndic"
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
-    @skipIf(True, "SLOWTEST skip")
     def test_exit_status_unknown_user(self):
         """
         Ensure correct exit status when the syndic is configured to run as an unknown user.
@@ -93,7 +92,6 @@ class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
 
     # pylint: disable=invalid-name
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
-    @skipIf(True, "SLOWTEST skip")
     def test_exit_status_unknown_argument(self):
         """
         Ensure correct exit status when an unknown argument is passed to salt-syndic.
@@ -124,7 +122,6 @@ class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
             syndic.shutdown()
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
-    @skipIf(True, "SLOWTEST skip")
     def test_exit_status_correct_usage(self):
         """
         Ensure correct exit status when salt-syndic starts correctly.

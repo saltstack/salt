@@ -7,7 +7,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
 
 
 class SaltcheckModuleTest(ModuleCase):
@@ -15,7 +14,6 @@ class SaltcheckModuleTest(ModuleCase):
     Test the saltcheck module
     """
 
-    @skipIf(True, "SLOWTEST skip")
     def test_saltcheck_run(self):
         """
         saltcheck.run_test
@@ -29,7 +27,6 @@ class SaltcheckModuleTest(ModuleCase):
         ret = self.run_function("saltcheck.run_test", test=saltcheck_test)
         self.assertDictContainsSubset({"status": "Pass"}, ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_saltcheck_state(self):
         """
         saltcheck.run_state_tests
@@ -41,7 +38,6 @@ class SaltcheckModuleTest(ModuleCase):
         )
         self.assertDictContainsSubset({"Failed": 0}, ret[1]["TEST RESULTS"])
 
-    @skipIf(True, "SLOWTEST skip")
     def test_topfile_validation(self):
         """
         saltcheck.run_highstate_tests
@@ -52,7 +48,6 @@ class SaltcheckModuleTest(ModuleCase):
         for top_state_dict in ret:
             self.assertIn(list(top_state_dict)[0], expected_top_states)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_saltcheck_checkall(self):
         """
         Validate saltcheck.run_state_tests check_all for the default saltenv of base.
@@ -70,7 +65,6 @@ class SaltcheckModuleTest(ModuleCase):
             {"status": "Pass"}, ret[0]["validate-saltcheck"]["check_all_validate"]
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_saltcheck_checkall_saltenv(self):
         """
         Validate saltcheck.run_state_tests check_all for the prod saltenv

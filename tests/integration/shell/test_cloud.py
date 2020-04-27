@@ -36,21 +36,18 @@ class SaltCloudCliTest(ShellCase, ShellCaseCommonTestsMixin):
 
     _call_binary_ = "salt-cloud"
 
-    @skipIf(True, "SLOWTEST skip")
     def test_function_arguments(self):
         self.assertIn(
             "error: --function expects two arguments: " "<function-name> <provider>",
             "\n".join(self.run_cloud("--function show_image -h", catch_stderr=True)[1]),
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_list_providers_accepts_no_arguments(self):
         self.assertIn(
             "error: '--list-providers' does not accept any " "arguments",
             "\n".join(self.run_cloud("--list-providers ec2", catch_stderr=True)[1]),
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_mutually_exclusive_query_options(self):
         test_options = ["--query", "--full-query", "--select-query", "--list-providers"]
         while True:
@@ -73,7 +70,6 @@ class SaltCloudCliTest(ShellCase, ShellCaseCommonTestsMixin):
                 # Only one left? Stop iterating
                 break
 
-    @skipIf(True, "SLOWTEST skip")
     def test_mutually_exclusive_list_options(self):
         test_options = ["--list-locations", "--list-images", "--list-sizes"]
         while True:

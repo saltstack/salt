@@ -20,7 +20,7 @@ import salt.utils.zfs
 from salt.utils.odict import OrderedDict
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 # Import Salt Testing Libs
 from tests.support.zfs import ZFSMockData
@@ -260,7 +260,6 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.snapshot_absent("myzpool/filesystem@snap"))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_bookmark_absent_nobook(self):
         """
         Test if bookmark is absent (non existing bookmark)
@@ -313,7 +312,6 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(ret, zfs.hold_absent("myhold", "myzpool/filesystem@snap"))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_hold_absent_removed(self):
         """
         Test if hold is absent
@@ -381,7 +379,6 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(ret, zfs.hold_present("myhold", "myzpool/filesystem@snap"))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_hold_present_new(self):
         """
         Test if hold is present (new)
@@ -400,7 +397,6 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.hold_present("myhold", "myzpool/filesystem@snap"))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_hold_present_fail(self):
         """
         Test if hold is present (using non existing snapshot)
@@ -429,7 +425,6 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.hold_present("myhold", "myzpool/filesystem@snap"))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_filesystem_present(self):
         """
         Test if filesystem is present (existing filesystem)
@@ -480,7 +475,6 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.filesystem_present("myzpool/filesystem"))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_filesystem_present_update(self):
         """
         Test if filesystem is present (non existing filesystem)
@@ -549,7 +543,6 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.filesystem_present("myzpool/filesystem"))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_volume_present(self):
         """
         Test if volume is present (existing volume)
@@ -742,7 +735,6 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
                 ret, zfs.bookmark_present("mybookmark", "myzpool/filesystem@snap")
             )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_snapshot_present(self):
         """
         Test if snapshot is present (snapshot already present)
@@ -760,7 +752,6 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(ret, zfs.snapshot_present("myzpool/filesystem@snap"))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_snapshot_present_new(self):
         """
         Test if snapshot is present (new)
@@ -779,7 +770,6 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.snapshot_present("myzpool/filesystem@snap"))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_snapshot_present_fail(self):
         """
         Test if snapshot is present (using non existing snapshot)
@@ -835,7 +825,6 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.promoted("myzpool/filesystem"))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_propmoted_clone(self):
         """
         Test promotion of clone
@@ -892,7 +881,6 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(ret, zfs.promoted("myzpool/filesystem"))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_scheduled_snapshot_fail(self):
         """
         Test scheduled_snapshot of unknown dataset

@@ -53,7 +53,6 @@ class ZookeeperTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.run_state("docker_container.absent", name=self.container_name)
         self.run_state("docker_image.absent", name="docker.io/zookeeper", force=True)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_zookeeper_present(self):
         ret = self.run_state(
             "zookeeper.present", name="/test/name", value="testuser", makepath=True,
@@ -78,7 +77,6 @@ class ZookeeperTestCase(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_zookeeper_absent(self):
         self.run_state(
             "zookeeper.present", name="/test/name", value="testuser", makepath=True,
@@ -93,7 +91,6 @@ class ZookeeperTestCase(ModuleCase, SaltReturnAssertsMixin):
             bool(ret["zookeeper_|-/test/name_|-/test/name_|-absent"]["changes"])
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_zookeeper_acls(self):
         ret = self.run_state(
             "zookeeper.acls",

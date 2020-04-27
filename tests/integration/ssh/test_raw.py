@@ -17,7 +17,6 @@ class SSHRawTest(SSHCase):
     testing salt-ssh with raw calls
     """
 
-    @skipIf(True, "SLOWTEST skip")
     def test_ssh_raw(self):
         """
         test salt-ssh with -r argument

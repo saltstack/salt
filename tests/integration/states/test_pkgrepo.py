@@ -82,7 +82,6 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
 
     @requires_salt_states("pkgrepo.absent", "pkgrepo.managed")
     @requires_system_grains
-    @skipIf(True, "SLOWTEST skip")
     def test_pkgrepo_03_with_comments(self, grains):
         """
         Test adding a repo with comments
@@ -135,7 +134,6 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
 
     @requires_salt_states("pkgrepo.managed")
     @requires_system_grains
-    @skipIf(True, "SLOWTEST skip")
     def test_pkgrepo_04_apt_with_architectures(self, grains):
         """
         Test managing a repo with architectures specified

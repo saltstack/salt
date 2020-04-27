@@ -4,7 +4,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import pytest
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
 
 
 @pytest.mark.windows_whitelisted
@@ -13,7 +12,6 @@ class AliasesTest(ModuleCase):
     Validate aliases module
     """
 
-    @skipIf(True, "SLOWTEST skip")
     def test_set_target(self):
         """
         aliases.set_target and aliases.get_target
@@ -23,7 +21,6 @@ class AliasesTest(ModuleCase):
         tgt_ret = self.run_function("aliases.get_target", alias="fred")
         self.assertEqual(tgt_ret, "bob")
 
-    @skipIf(True, "SLOWTEST skip")
     def test_has_target(self):
         """
         aliases.set_target and aliases.has_target
@@ -33,7 +30,6 @@ class AliasesTest(ModuleCase):
         tgt_ret = self.run_function("aliases.has_target", alias="fred", target="bob")
         self.assertTrue(tgt_ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_list_aliases(self):
         """
         aliases.list_aliases
@@ -44,7 +40,6 @@ class AliasesTest(ModuleCase):
         self.assertIsInstance(tgt_ret, dict)
         self.assertIn("fred", tgt_ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_rm_alias(self):
         """
         aliases.rm_alias

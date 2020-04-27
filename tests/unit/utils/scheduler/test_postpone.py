@@ -30,7 +30,6 @@ class SchedulerPostponeTest(SchedulerTestsBase):
         super(SchedulerPostponeTest, self).setUp()
         self.schedule.opts["loop_interval"] = 1
 
-    @skipIf(True, "SLOWTEST skip")
     def test_postpone(self):
         """
         verify that scheduled job is postponed until the specified time.

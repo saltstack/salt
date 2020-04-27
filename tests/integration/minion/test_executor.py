@@ -7,7 +7,6 @@ import logging
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase, ShellCase
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
@@ -16,7 +15,6 @@ class ExecutorTest(ModuleCase, ShellCase):
     def setup(self):
         self.run_function("saltutil.sync_all")
 
-    @skipIf(True, "SLOWTEST skip")
     def test_executor(self):
         """
         test that dunders are set

@@ -19,7 +19,6 @@ from tests.support.unit import skipIf
 @skipIf(salt.utils.path.which("bower") is None, "bower not installed")
 class BowerStateTest(ModuleCase, SaltReturnAssertsMixin):
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
     def test_bower_installed_removed(self):
         """
         Basic test to determine if Bower package was successfully installed and
@@ -39,7 +38,6 @@ class BowerStateTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
     def test_bower_installed_pkgs(self):
         """
         Basic test to determine if Bower package successfully installs multiple
@@ -58,7 +56,6 @@ class BowerStateTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
     def test_bower_installed_from_file(self):
         ret = self.run_state("file.directory", name="/salt_test_bower_3", makedirs=True)
         self.assertSaltTrueReturn(ret)

@@ -19,7 +19,7 @@ from salt.ext import six
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
 
@@ -32,7 +32,6 @@ class EngineTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {engines: {}}
 
-    @skipIf(True, "SLOWTEST skip")
     def test_engine_module(self):
         """
         Test

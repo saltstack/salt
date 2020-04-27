@@ -6,7 +6,6 @@ import pytest
 import salt.utils.platform
 from salt.ext import six
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
 
 
 @pytest.mark.windows_whitelisted
@@ -18,7 +17,6 @@ class StdTest(ModuleCase):
     def setUp(self):
         self.TIMEOUT = 600 if salt.utils.platform.is_windows() else 10
 
-    @skipIf(True, "SLOWTEST skip")
     def test_cli(self):
         """
         Test cli function
@@ -31,7 +29,6 @@ class StdTest(ModuleCase):
             self.assertEqual(data["args"], ["foo", "bar", "baz"])
             self.assertEqual(data["kwargs"]["qux"], "quux")
 
-    @skipIf(True, "SLOWTEST skip")
     def test_iter(self):
         """
         test cmd_iter
@@ -44,7 +41,6 @@ class StdTest(ModuleCase):
             self.assertEqual(data["args"], ["foo", "bar", "baz"])
             self.assertEqual(data["kwargs"]["qux"], "quux")
 
-    @skipIf(True, "SLOWTEST skip")
     def test_iter_no_block(self):
         """
         test cmd_iter_no_block
@@ -59,7 +55,6 @@ class StdTest(ModuleCase):
             self.assertEqual(data["args"], ["foo", "bar", "baz"])
             self.assertEqual(data["kwargs"]["qux"], "quux")
 
-    @skipIf(True, "SLOWTEST skip")
     def test_full_returns(self):
         """
         test cmd_iter
@@ -75,7 +70,6 @@ class StdTest(ModuleCase):
         self.assertEqual(data["args"], ["foo", "bar", "baz"])
         self.assertEqual(data["kwargs"]["qux"], "quux")
 
-    @skipIf(True, "SLOWTEST skip")
     def test_kwarg_type(self):
         """
         Test that kwargs end up on the client as the same type
@@ -94,7 +88,6 @@ class StdTest(ModuleCase):
         self.assertIn("dict", data["kwargs"]["outer"])
         self.assertIn(six.text_type.__name__, data["kwargs"]["inner"])
 
-    @skipIf(True, "SLOWTEST skip")
     def test_full_return_kwarg(self):
         ret = self.client.cmd(
             "minion", "test.ping", full_return=True, timeout=self.TIMEOUT,
@@ -102,7 +95,6 @@ class StdTest(ModuleCase):
         for mid, data in ret.items():
             self.assertIn("retcode", data)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_cmd_arg_kwarg_parsing(self):
         ret = self.client.cmd(
             "minion",

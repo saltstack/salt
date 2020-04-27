@@ -157,7 +157,6 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret[0]["path"], path)
         self.assertEqual(ret[0]["change"], "created")
 
-    @skipIf(True, "SLOWTEST skip")
     def test_trigger_all_possible_events(self):
         path = os.path.join(self.tmpdir, "tmpfile")
         moved = path + "_moved"

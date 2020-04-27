@@ -52,7 +52,6 @@ class BuildoutTestCase(Base):
         self.assertFalse("Log summary:" in cret["comment"], cret["comment"])
         self.assertTrue(cret["result"], cret["comment"])
 
-    @skipIf(True, "SLOWTEST skip")
     def test_error(self):
         b_dir = os.path.join(self.tdir, "e")
         ret = buildout.installed(b_dir, python=self.py_st)
@@ -61,7 +60,6 @@ class BuildoutTestCase(Base):
         )
         self.assertFalse(ret["result"])
 
-    @skipIf(True, "SLOWTEST skip")
     def test_installed(self):
         if salt.modules.virtualenv_mod.virtualenv_ver(self.ppy_st) >= (20, 0, 0):
             self.skipTest(

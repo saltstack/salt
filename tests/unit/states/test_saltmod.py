@@ -20,7 +20,7 @@ from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
@@ -49,7 +49,6 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'state' function tests: 1
 
-    @skipIf(True, "SLOWTEST skip")
     def test_state(self):
         """
         Test to invoke a state run on a given target
@@ -196,7 +195,6 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'function' function tests: 1
 
-    @skipIf(True, "SLOWTEST skip")
     def test_function(self):
         """
         Test to execute a single module function on a remote
@@ -321,7 +319,6 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(saltmod.__salt__, {"saltutil.wheel": wheel_mock}):
             self.assertDictEqual(saltmod.wheel(name), ret)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_state_ssh(self):
         """
         Test saltmod passes roster to saltutil.cmd

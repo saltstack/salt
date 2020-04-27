@@ -283,7 +283,6 @@ class BotoS3BucketTestCase(BotoS3BucketStateTestCaseBase, BotoS3BucketTestCaseMi
     TestCase for salt.modules.boto_s3_bucket state.module
     """
 
-    @skipIf(True, "SLOWTEST skip")
     def test_present_when_bucket_does_not_exist(self):
         """
         Tests present on a bucket that does not exist.
@@ -307,7 +306,6 @@ class BotoS3BucketTestCase(BotoS3BucketStateTestCaseBase, BotoS3BucketTestCaseMi
             config_ret["get_bucket_location"],
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_present_when_bucket_exists_no_mods(self):
         self.conn.list_buckets.return_value = deepcopy(list_ret)
         for key, value in six.iteritems(config_ret):
@@ -323,7 +321,6 @@ class BotoS3BucketTestCase(BotoS3BucketStateTestCaseBase, BotoS3BucketTestCaseMi
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"], {})
 
-    @skipIf(True, "SLOWTEST skip")
     def test_present_when_bucket_exists_all_mods(self):
         self.conn.list_buckets.return_value = deepcopy(list_ret)
         for key, value in six.iteritems(config_ret):
@@ -341,7 +338,6 @@ class BotoS3BucketTestCase(BotoS3BucketStateTestCaseBase, BotoS3BucketTestCaseMi
         self.assertTrue(result["result"])
         self.assertNotEqual(result["changes"], {})
 
-    @skipIf(True, "SLOWTEST skip")
     def test_present_with_failure(self):
         self.conn.head_bucket.side_effect = [not_found_error, None]
         self.conn.list_buckets.return_value = deepcopy(list_ret)

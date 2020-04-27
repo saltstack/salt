@@ -26,7 +26,7 @@ from tests.support.mixins import (
 )
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
 
@@ -304,7 +304,6 @@ class Local_CacheTest(
             "Dir/file does not exist: ", self.JOB_CACHE_DIR_FILES, status="present"
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_clean_old_jobs(self):
         """
         test to ensure jobs are removed from job cache
@@ -318,7 +317,6 @@ class Local_CacheTest(
             "job cache was not removed: ", self.JOB_CACHE_DIR_FILES, status="removed"
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_not_clean_new_jobs(self):
         """
         test to ensure jobs are not removed when
@@ -333,7 +331,6 @@ class Local_CacheTest(
                 "job cache was removed: ", self.JOB_CACHE_DIR_FILES, status="present"
             )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_empty_jid_dir(self):
         """
         test to ensure removal of empty jid dir

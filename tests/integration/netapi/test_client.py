@@ -46,7 +46,6 @@ class NetapiClientTest(TestCase):
     def tearDown(self):
         del self.netapi
 
-    @skipIf(True, "SLOWTEST skip")
     def test_local(self):
         low = {"client": "local", "tgt": "*", "fun": "test.ping", "timeout": 300}
         low.update(self.eauth_creds)
@@ -59,7 +58,6 @@ class NetapiClientTest(TestCase):
         ret.pop("proxytest", None)
         self.assertEqual(ret, {"minion": True, "sub_minion": True})
 
-    @skipIf(True, "SLOWTEST skip")
     def test_local_batch(self):
         low = {"client": "local_batch", "tgt": "*", "fun": "test.ping", "timeout": 300}
         low.update(self.eauth_creds)
@@ -97,7 +95,6 @@ class NetapiClientTest(TestCase):
         with self.assertRaises(EauthAuthenticationError) as excinfo:
             ret = self.netapi.run(low)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_wheel(self):
         low = {"client": "wheel", "fun": "key.list_all"}
         low.update(self.eauth_creds)
@@ -125,7 +122,6 @@ class NetapiClientTest(TestCase):
             )
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_wheel_async(self):
         # Give this test a little breathing room
         time.sleep(3)
@@ -204,7 +200,6 @@ class NetapiSSHClientTest(SSHCase):
         cls.post_webserver.stop()
         del cls.post_webserver
 
-    @skipIf(True, "SLOWTEST skip")
     def test_ssh(self):
         low = {
             "client": "ssh",
@@ -226,14 +221,12 @@ class NetapiSSHClientTest(SSHCase):
         self.assertEqual(ret["localhost"]["id"], "localhost")
         self.assertEqual(ret["localhost"]["fun"], "test.ping")
 
-    @skipIf(True, "SLOWTEST skip")
     def test_ssh_unauthenticated(self):
         low = {"client": "ssh", "tgt": "localhost", "fun": "test.ping"}
 
         with self.assertRaises(EauthAuthenticationError) as excinfo:
             ret = self.netapi.run(low)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_ssh_unauthenticated_raw_shell_curl(self):
 
         fun = "-o ProxyCommand curl {0}".format(self.post_web_root)
@@ -246,7 +239,6 @@ class NetapiSSHClientTest(SSHCase):
         self.assertEqual(self.post_web_handler.received_requests, [])
         self.assertEqual(ret, None)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_ssh_unauthenticated_raw_shell_touch(self):
 
         badfile = os.path.join(TMP, "badfile.txt")
@@ -260,7 +252,6 @@ class NetapiSSHClientTest(SSHCase):
         self.assertEqual(ret, None)
         self.assertFalse(os.path.exists("badfile.txt"))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_ssh_authenticated_raw_shell_disabled(self):
 
         badfile = os.path.join(TMP, "badfile.txt")

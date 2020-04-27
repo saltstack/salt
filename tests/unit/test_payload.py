@@ -256,7 +256,6 @@ class SREQTestCase(TestCase):
     def get_sreq(self):
         return salt.payload.SREQ("tcp://127.0.0.1:{0}".format(SREQTestCase.port))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_send_auto(self):
         """
         Test creation, send/rect

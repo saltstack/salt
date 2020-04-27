@@ -15,7 +15,7 @@ from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 class QueueTest(TestCase, LoaderModuleMockMixin):
@@ -44,7 +44,6 @@ class QueueTest(TestCase, LoaderModuleMockMixin):
         }
         queue_insert.assert_called_once_with(**expected_call)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_process_runner(self):
         ret = [{"fun": "test.stdout_print", "args": [], "kwargs": {}}]
 

@@ -17,7 +17,6 @@ from salt.ext.six.moves.urllib.parse import (  # pylint: disable=no-name-in-modu
     urlencode,
 )
 from tests.support.helpers import flaky
-from tests.support.unit import skipIf
 
 
 class TestAuth(cptc.BaseRestCherryPyTest):
@@ -110,7 +109,6 @@ class TestRun(cptc.BaseRestCherryPyTest):
         ("fun", "test.ping"),
     )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_run_good_login(self):
         """
         Test the run URL with good auth credentials
@@ -216,7 +214,6 @@ class TestRun(cptc.BaseRestCherryPyTest):
         )
         assert response.status == "401 Unauthorized"
 
-    @skipIf(True, "SLOWTEST skip")
     def test_run_extra_parameters(self):
         """
         Test the run URL with good auth credentials
@@ -282,7 +279,6 @@ class TestArgKwarg(cptc.BaseRestCherryPyTest):
         )
         return response.headers["X-Auth-Token"]
 
-    @skipIf(True, "SLOWTEST skip")
     def test_accepts_arg_kwarg_keys(self):
         """
         Ensure that (singular) arg and kwarg keys (for passing parameters)
@@ -348,7 +344,6 @@ class TestJobs(cptc.BaseRestCherryPyTest):
         self.assertEqual(response.status, "200 OK")
 
     @flaky
-    @skipIf(True, "SLOWTEST skip")
     def test_all_jobs(self):
         """
         test query to /jobs returns job data

@@ -176,7 +176,6 @@ class BotoCloudTrailTestCase(
     TestCase for salt.modules.boto_cloudtrail state.module
     """
 
-    @skipIf(True, "SLOWTEST skip")
     def test_present_when_trail_does_not_exist(self):
         """
         Tests present on a trail that does not exist.
@@ -196,7 +195,6 @@ class BotoCloudTrailTestCase(
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"]["new"]["trail"]["Name"], trail_ret["Name"])
 
-    @skipIf(True, "SLOWTEST skip")
     def test_present_when_trail_exists(self):
         self.conn.get_trail_status.return_value = status_ret
         self.conn.create_trail.return_value = trail_ret
@@ -213,7 +211,6 @@ class BotoCloudTrailTestCase(
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"], {})
 
-    @skipIf(True, "SLOWTEST skip")
     def test_present_with_failure(self):
         self.conn.get_trail_status.side_effect = [not_found_error, status_ret]
         self.conn.create_trail.side_effect = ClientError(error_content, "create_trail")

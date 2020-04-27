@@ -421,7 +421,6 @@ class PipStateUtilsTest(TestCase):
 )
 @requires_network()
 class PipStateInstallationErrorTest(TestCase):
-    @skipIf(True, "SLOWTEST skip")
     def test_importable_installation_error(self):
         extra_requirements = []
         for name, version in salt.version.dependency_information():

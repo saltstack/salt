@@ -96,7 +96,6 @@ def spin(func):
 
 class TestProcessManager(TestCase):
     @spin
-    @skipIf(True, "SLOWTEST skip")
     def test_basic(self):
         """
         Make sure that the process is alive 2s later
@@ -189,7 +188,6 @@ class TestProcessManager(TestCase):
 
 
 class TestThreadPool(TestCase):
-    @skipIf(True, "SLOWTEST skip")
     def test_basic(self):
         """
         Make sure the threadpool can do things
@@ -207,7 +205,6 @@ class TestThreadPool(TestCase):
         self.assertEqual(counter.value, 1)
         self.assertEqual(pool._job_queue.qsize(), 0)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_full_queue(self):
         """
         Make sure that a full threadpool acts as we expect
@@ -348,7 +345,6 @@ class TestSignalHandlingProcess(TestCase):
             pass
 
     @skipIf(sys.platform.startswith("win"), "No os.fork on Windows")
-    @skipIf(True, "SLOWTEST skip")
     def test_signal_processing_regression_test(self):
         evt = multiprocessing.Event()
         sh_proc = salt.utils.process.SignalHandlingProcess(
@@ -378,7 +374,6 @@ class TestSignalHandlingProcess(TestCase):
         p.join()
 
     @skipIf(sys.platform.startswith("win"), "Required signals not supported on windows")
-    @skipIf(True, "SLOWTEST skip")
     def test_signal_processing_handle_signals_called(self):
         "Validate SignalHandlingProcess handles signals"
         # Gloobal event to stop all processes we're creating
@@ -507,7 +502,6 @@ class TestProcessList(TestCase):
                 raise Exception("Process did not finishe before timeout")
             time.sleep(0.3)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_process_list_process(self):
         plist = salt.utils.process.SubprocessList()
         proc = multiprocessing.Process(target=null_target)
@@ -530,7 +524,6 @@ class TestProcessList(TestCase):
         plist.cleanup()
         assert thread not in plist.processes
 
-    @skipIf(True, "SLOWTEST skip")
     def test_process_list_cleanup(self):
         plist = salt.utils.process.SubprocessList()
         event = multiprocessing.Event()

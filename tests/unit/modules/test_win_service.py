@@ -138,7 +138,6 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
             )
 
     @skipIf(not WINAPI, "win32serviceutil not available")
-    @skipIf(True, "SLOWTEST skip")
     def test_start(self):
         """
             Test to start the specified service
@@ -183,7 +182,6 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(win_service.start("spongebob"))
 
     @skipIf(not WINAPI, "win32serviceutil not available")
-    @skipIf(True, "SLOWTEST skip")
     def test_stop(self):
         """
             Test to stop the specified service

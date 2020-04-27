@@ -16,7 +16,7 @@ from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
@@ -31,7 +31,6 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {beacons: {}}
 
-    @skipIf(True, "SLOWTEST skip")
     def test_delete(self):
         """
         Test deleting a beacon.
@@ -63,7 +62,6 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
                         beacons.delete("ps"), {"comment": comm1, "result": True}
                     )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_add(self):
         """
         Test adding a beacon
@@ -116,7 +114,6 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
                         {"comment": comm1, "result": True},
                     )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_save(self):
         """
         Test saving beacons.
@@ -140,7 +137,6 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
                         beacons.save(), {"comment": comm1, "result": True}
                     )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_disable(self):
         """
         Test disabling beacons
@@ -167,7 +163,6 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
                         beacons.disable(), {"comment": comm1, "result": True}
                     )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_enable(self):
         """
         Test enabling beacons
@@ -194,7 +189,6 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
                         beacons.enable(), {"comment": comm1, "result": True}
                     )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_add_beacon_module(self):
         """
         Test adding a beacon
@@ -244,7 +238,6 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
                         {"comment": comm1, "result": True},
                     )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_enable_beacon_module(self):
         """
         Test enabling beacons
@@ -272,7 +265,6 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
                         beacons.enable(), {"comment": comm1, "result": True}
                     )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_delete_beacon_module(self):
         """
         Test deleting a beacon.

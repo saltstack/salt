@@ -41,7 +41,6 @@ class CronTest(ModuleCase):
         # Delete user
         self.run_state("user.absent", name="test_cron_user")
 
-    @skipIf(True, "SLOWTEST skip")
     def test_managed(self):
         """
         file.managed

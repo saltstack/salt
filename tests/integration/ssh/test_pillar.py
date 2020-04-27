@@ -17,7 +17,6 @@ class SSHPillarTest(SSHCase):
     testing pillar with salt-ssh
     """
 
-    @skipIf(True, "SLOWTEST skip")
     def test_pillar_items(self):
         """
         test pillar.items with salt-ssh
@@ -28,7 +27,6 @@ class SSHPillarTest(SSHCase):
             {"knights": ["Lancelot", "Galahad", "Bedevere", "Robin"]}, ret
         )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_pillar_get(self):
         """
         test pillar.get with salt-ssh
@@ -36,7 +34,6 @@ class SSHPillarTest(SSHCase):
         ret = self.run_function("pillar.get", ["monty"])
         self.assertEqual(ret, "python")
 
-    @skipIf(True, "SLOWTEST skip")
     def test_pillar_get_doesnotexist(self):
         """
         test pillar.get when pillar does not exist with salt-ssh

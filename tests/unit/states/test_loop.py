@@ -12,7 +12,7 @@ from salt.ext.six.moves import range
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 class LoopTestCase(TestCase, LoaderModuleMockMixin):
@@ -119,7 +119,6 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
                 },
             )
 
-    @skipIf(True, "SLOWTEST skip")
     def test_immediate_success(self):
         """
         Test for an immediate success.

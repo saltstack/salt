@@ -15,7 +15,6 @@ class ManageTest(ShellCase):
     Test the manage runner
     """
 
-    @skipIf(True, "SLOWTEST skip")
     def test_active(self):
         """
         jobs.active
@@ -24,7 +23,6 @@ class ManageTest(ShellCase):
         self.assertEqual(ret["return"], {})
         self.assertEqual(ret["out"], [])
 
-    @skipIf(True, "SLOWTEST skip")
     def test_lookup_jid(self):
         """
         jobs.lookup_jid
@@ -33,7 +31,6 @@ class ManageTest(ShellCase):
         self.assertEqual(ret["return"], {})
         self.assertEqual(ret["out"], [])
 
-    @skipIf(True, "SLOWTEST skip")
     def test_lookup_jid_invalid(self):
         """
         jobs.lookup_jid
@@ -57,7 +54,6 @@ class LocalCacheTargetTest(ShellCase):
     Test that a job stored in the local_cache has target information
     """
 
-    @skipIf(True, "SLOWTEST skip")
     def test_target_info(self):
         """
         This is a test case for issue #48734

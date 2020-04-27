@@ -210,7 +210,6 @@ class LocalClientTestCase(TestCase, SaltClientTestCaseMixin):
                 )
 
     @skipIf(not salt.utils.platform.is_windows(), "Windows only test")
-    @skipIf(True, "SLOWTEST skip")
     def test_pub_win32(self):
         """
         Tests that the client raises a timeout error when using ZeroMQ's TCP

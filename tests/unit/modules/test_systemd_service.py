@@ -3,21 +3,16 @@
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
 import pytest
-
-# Import Salt Libs
 import salt.modules.systemd_service as systemd
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase
 
 _SYSTEMCTL_STATUS = {

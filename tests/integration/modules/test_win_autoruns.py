@@ -15,7 +15,6 @@ class AutoRunsModuleTest(ModuleCase):
     Test the autoruns module
     """
 
-    @skipIf(True, "SLOWTEST skip")
     def test_win_autoruns_list(self):
         """
         test win_autoruns.list module

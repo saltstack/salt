@@ -546,7 +546,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         assert ret == {"base": expected}
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_master_id_function(self, tempdir):
         master_config = os.path.join(tempdir, "master")
 
@@ -619,7 +618,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         )
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_minion_id_function(self, tempdir):
         minion_config = os.path.join(tempdir, "minion")
 
@@ -639,7 +637,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(config["id"], "hello_world")
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_minion_id_lowercase(self, tempdir):
         """
         This tests that setting `minion_id_lowercase: True` does lower case
@@ -665,7 +662,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(config["id"], "king_bob")
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_minion_id_remove_domain_string_positive(self, tempdir):
         """
         This tests that the values of `minion_id_remove_domain` is suppressed from a generated minion id,
@@ -691,7 +687,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(config["id"], "king_bob")
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_minion_id_remove_domain_string_negative(self, tempdir):
         """
         See above
@@ -714,7 +709,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(config["id"], "king_bob.foo.org")
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_minion_id_remove_domain_bool_true(self, tempdir):
         """
         See above
@@ -736,7 +730,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(config["id"], "king_bob")
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
     def test_minion_id_remove_domain_bool_false(self, tempdir):
         """
         See above

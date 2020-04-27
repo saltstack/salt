@@ -158,7 +158,6 @@ class ArchiveTest(ModuleCase):
         self.assertTrue(file_in_ret)
 
     @skipIf(not salt.utils.path.which("tar"), "Cannot find tar executable")
-    @skipIf(True, "SLOWTEST skip")
     def test_tar_pack(self):
         """
         Validate using the tar function to create archives
@@ -173,7 +172,6 @@ class ArchiveTest(ModuleCase):
         self._tear_down()
 
     @skipIf(not salt.utils.path.which("tar"), "Cannot find tar executable")
-    @skipIf(True, "SLOWTEST skip")
     def test_tar_unpack(self):
         """
         Validate using the tar function to extract archives
@@ -189,7 +187,6 @@ class ArchiveTest(ModuleCase):
         self._tear_down()
 
     @skipIf(not salt.utils.path.which("tar"), "Cannot find tar executable")
-    @skipIf(True, "SLOWTEST skip")
     def test_tar_pack_unicode(self):
         """
         Validate using the tar function to create archives
@@ -204,7 +201,6 @@ class ArchiveTest(ModuleCase):
         self._tear_down()
 
     @skipIf(not salt.utils.path.which("tar"), "Cannot find tar executable")
-    @skipIf(True, "SLOWTEST skip")
     def test_tar_unpack_unicode(self):
         """
         Validate using the tar function to extract archives
@@ -220,7 +216,6 @@ class ArchiveTest(ModuleCase):
         self._tear_down()
 
     @skipIf(not salt.utils.path.which("tar"), "Cannot find tar executable")
-    @skipIf(True, "SLOWTEST skip")
     def test_tar_list_unicode(self):
         """
         Validate using the tar function to extract archives
@@ -296,7 +291,6 @@ class ArchiveTest(ModuleCase):
         self._tear_down()
 
     @skipIf(not HAS_ZIPFILE, "Cannot find zipfile python module")
-    @skipIf(True, "SLOWTEST skip")
     def test_zip(self):
         """
         Validate using the zip function
@@ -311,7 +305,6 @@ class ArchiveTest(ModuleCase):
         self._tear_down()
 
     @skipIf(not HAS_ZIPFILE, "Cannot find zipfile python module")
-    @skipIf(True, "SLOWTEST skip")
     def test_unzip(self):
         """
         Validate using the unzip function

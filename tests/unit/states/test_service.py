@@ -438,7 +438,6 @@ class ServiceTestCaseFunctional(TestCase, LoaderModuleMockMixin):
         if self.post_srv_disable:
             self.modules["service.disable"](self.service_name)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_running_with_reload(self):
         with patch.dict(service.__opts__, {"test": False}):
             service.dead(self.service_name, enable=False)

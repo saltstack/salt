@@ -960,7 +960,6 @@ class TestEventListener(AsyncTestCase):
         self.addCleanup(shutil.rmtree, self.sock_dir, ignore_errors=True)
         super(TestEventListener, self).setUp()
 
-    @skipIf(True, "SLOWTEST skip")
     def test_simple(self):
         """
         Test getting a few events
@@ -984,7 +983,6 @@ class TestEventListener(AsyncTestCase):
             self.assertEqual(event_future.result()["tag"], "evt1")
             self.assertEqual(event_future.result()["data"]["data"], "foo1")
 
-    @skipIf(True, "SLOWTEST skip")
     def test_set_event_handler(self):
         """
         Test subscribing events using set_event_handler
@@ -1005,7 +1003,6 @@ class TestEventListener(AsyncTestCase):
             # check that we subscribed the event we wanted
             self.assertEqual(len(event_listener.timeout_map), 0)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_timeout(self):
         """
         Make sure timeouts work correctly
@@ -1024,7 +1021,6 @@ class TestEventListener(AsyncTestCase):
             with self.assertRaises(saltnado.TimeoutException):
                 event_future.result()
 
-    @skipIf(True, "SLOWTEST skip")
     def test_clean_by_request(self):
         """
         Make sure the method clean_by_request clean up every related data in EventListener
