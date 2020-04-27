@@ -8,6 +8,7 @@ import copy
 import os
 import shutil
 import sys
+import tempfile
 
 import jinja2
 import salt.exceptions
@@ -50,7 +51,10 @@ class SSHThinTestCase(TestCase):
         self.tops["test"]["dependencies"] = [self.jinja_fp]
         self.tar = self._tarfile(None).open()
         self.digest = salt.utils.hashutils.DigestCollector()
-        self.exp_files = ["salt/payload.py", "jinja2/__init__.py"]
+        self.exp_files = [
+            os.path.join("salt", "payload.py"),
+            os.path.join("jinja2", "__init__.py"),
+        ]
         lib_root = os.path.join(RUNTIME_VARS.TMP, "fake-libs")
         self.fake_libs = {
             "jinja2": os.path.join(lib_root, "jinja2"),
@@ -58,6 +62,18 @@ class SSHThinTestCase(TestCase):
             "tornado": os.path.join(lib_root, "tornado"),
             "msgpack": os.path.join(lib_root, "msgpack"),
         }
+
+        self.exp_ret = {
+            "jinja2": os.path.normpath(os.path.join(RUNTIME_VARS.CODE_DIR, "jinja2")),
+            "yaml": os.path.normpath(os.path.join(RUNTIME_VARS.CODE_DIR, "yaml")),
+            "tornado": os.path.normpath(os.path.join(RUNTIME_VARS.CODE_DIR, "tornado")),
+            "msgpack": os.path.normpath(os.path.join(RUNTIME_VARS.CODE_DIR, "msgpack")),
+            "certifi": os.path.normpath(os.path.join(RUNTIME_VARS.CODE_DIR, "certifi")),
+            "singledispatch": os.path.normpath(
+                os.path.join(RUNTIME_VARS.CODE_DIR, "singledispatch.py")
+            ),
+        }
+        self.exc_libs = ["jinja2", "yaml"]
 
     def tearDown(self):
         for lib, fp in self.fake_libs.items():
@@ -1020,20 +1036,12 @@ class SSHThinTestCase(TestCase):
             ),
         )
 
-        exp_ret = {
-            "jinja2": os.path.join(RUNTIME_VARS.CODE_DIR, "jinja2"),
-            "yaml": os.path.join(RUNTIME_VARS.CODE_DIR, "yaml"),
-            "tornado": os.path.join(RUNTIME_VARS.CODE_DIR, "tornado"),
-            "msgpack": os.path.join(RUNTIME_VARS.CODE_DIR, "msgpack"),
-            "certifi": os.path.join(RUNTIME_VARS.CODE_DIR, "certifi"),
-            "singledispatch": os.path.join(RUNTIME_VARS.CODE_DIR, "singledispatch.py"),
-        }
-
         patch_os = patch("os.path.exists", return_value=True)
-        with patch_proc, patch_os:
+        patch_which = patch("salt.utils.path.which", return_value=True)
+        with patch_proc, patch_os, patch_which:
             with TstSuiteLoggingHandler() as log_handler:
                 ret = thin.get_tops_python("python2.7")
-                assert ret == exp_ret
+                assert ret == self.exp_ret
                 assert (
                     "ERROR:Could not auto detect file location for module concurrent for python version python2.7"
                     in log_handler.messages
@@ -1060,17 +1068,14 @@ class SSHThinTestCase(TestCase):
                 ],
             ),
         )
-
-        exp_ret = {
-            "tornado": os.path.join(RUNTIME_VARS.CODE_DIR, "tornado"),
-            "msgpack": os.path.join(RUNTIME_VARS.CODE_DIR, "msgpack"),
-            "certifi": os.path.join(RUNTIME_VARS.CODE_DIR, "certifi"),
-            "singledispatch": os.path.join(RUNTIME_VARS.CODE_DIR, "singledispatch.py"),
-        }
+        exp_ret = copy.deepcopy(self.exp_ret)
+        for lib in self.exc_libs:
+            exp_ret.pop(lib)
 
         patch_os = patch("os.path.exists", return_value=True)
-        with patch_proc, patch_os:
-            ret = thin.get_tops_python("python2.7", exclude=["jinja2", "yaml"])
+        patch_which = patch("salt.utils.path.which", return_value=True)
+        with patch_proc, patch_os, patch_which:
+            ret = thin.get_tops_python("python2.7", exclude=self.exc_libs)
             assert ret == exp_ret
 
     def test_pack_alternatives_exclude(self):
@@ -1109,9 +1114,16 @@ class SSHThinTestCase(TestCase):
 
         exp_files = self.exp_files.copy()
         exp_files.extend(
-            ["yaml/__init__.py", "tornado/__init__.py", "msgpack/__init__.py"]
+            [
+                os.path.join("yaml", "__init__.py"),
+                os.path.join("tornado", "__init__.py"),
+                os.path.join("msgpack", "__init__.py"),
+            ]
         )
-        with patch_os, patch_proc:
+
+        patch_which = patch("salt.utils.path.which", return_value=True)
+
+        with patch_os, patch_proc, patch_which:
             thin._pack_alternative(ext_conf, self.digest, self.tar)
             calls = self.tar.mock_calls
             for _file in exp_files:
@@ -1129,7 +1141,7 @@ class SSHThinTestCase(TestCase):
                 assert [
                     x
                     for x in calls
-                    if "test/pyall/{}".format(_file) in x.kwargs["arcname"]
+                    if os.path.join("test", "pyall", _file) in x.kwargs["arcname"]
                 ]
 
     def test_pack_alternatives_not_normalized(self):
@@ -1147,7 +1159,7 @@ class SSHThinTestCase(TestCase):
                 assert [
                     x
                     for x in calls
-                    if "test/pyall/{}".format(_file) in x.kwargs["arcname"]
+                    if os.path.join("test", "pyall", _file) in x.kwargs["arcname"]
                 ]
 
     def test_pack_alternatives_path_doesnot_exist(self):
@@ -1158,7 +1170,7 @@ class SSHThinTestCase(TestCase):
         does not exist jinja2 does not get
         added to the tar
         """
-        bad_path = "/tmp/doesnotexisthere"
+        bad_path = os.path.join(tempfile.gettempdir(), "doesnotexisthere")
         tops = copy.deepcopy(self.tops)
         tops["test"]["dependencies"] = [bad_path]
         with patch("salt.utils.thin.get_ext_tops", MagicMock(return_value=tops)):
@@ -1172,7 +1184,9 @@ class SSHThinTestCase(TestCase):
         for _file in self.exp_files:
             arg = [x for x in calls if "{}".format(_file) in x.args]
             kwargs = [
-                x for x in calls if "test/pyall/{}".format(_file) in x.kwargs["arcname"]
+                x
+                for x in calls
+                if os.path.join("test", "pyall", _file) in x.kwargs["arcname"]
             ]
             if "jinja2" in _file:
                 assert not arg
@@ -1200,7 +1214,11 @@ class SSHThinTestCase(TestCase):
 
         exp_files = self.exp_files.copy()
         exp_files.extend(
-            ["yaml/__init__.py", "tornado/__init__.py", "msgpack/__init__.py"]
+            [
+                os.path.join("yaml", "__init__.py"),
+                os.path.join("tornado", "__init__.py"),
+                os.path.join("msgpack", "__init__.py"),
+            ]
         )
         with patch_tops_py:
             thin._pack_alternative(ext_conf, self.digest, self.tar)
@@ -1228,7 +1246,11 @@ class SSHThinTestCase(TestCase):
 
         exp_files = self.exp_files.copy()
         exp_files.extend(
-            ["yaml/__init__.py", "tornado/__init__.py", "msgpack/__init__.py"]
+            [
+                os.path.join("yaml", "__init__.py"),
+                os.path.join("tornado", "__init__.py"),
+                os.path.join("msgpack", "__init__.py"),
+            ]
         )
         with patch_tops_py:
             thin._pack_alternative(ext_conf, self.digest, self.tar)
