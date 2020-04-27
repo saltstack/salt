@@ -4120,7 +4120,7 @@ def recurse(
 
     exclude_pat
         Exclude this pattern, or list of patterns, from the source when copying.
-         If both `include_pat` and `exclude_pat` are supplied, then it will apply
+        If both `include_pat` and `exclude_pat` are supplied, then it will apply
         conditions cumulatively. i.e. first select based on include_pat, and
         then within that result apply exclude_pat.
 
@@ -4136,6 +4136,7 @@ def recurse(
                                                    or TEMPDATA for exclusion
 
         .. versionchanged:: Sodium
+
             List patterns are now supported
 
         .. code-block:: text
