@@ -38,6 +38,7 @@ docutils==0.14            # via botocore
 ecdsa==0.13.3             # via python-jose
 enum34==1.1.6
 filelock==3.0.12          # via virtualenv
+flaky==3.6.1
 future==0.17.1            # via python-jose
 genshi==0.7.3
 gitdb2==2.0.5             # via gitpython
