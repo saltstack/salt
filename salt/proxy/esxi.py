@@ -270,21 +270,18 @@ for standing up an ESXi host from scratch.
 
 """
 
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 
 from salt.config.schemas.esxi import EsxiProxySchema
-# Import Salt Libs
 from salt.exceptions import InvalidConfigError, SaltSystemExit
 from salt.utils.dictupdate import merge
 
 # This must be present or the Salt loader won't load this module.
 __proxyenabled__ = ["esxi"]
 
-# External libraries
 try:
     import jsonschema
 

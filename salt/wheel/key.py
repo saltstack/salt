@@ -27,7 +27,6 @@ The wheel key functions can also be called via a ``salt`` command at the CLI
 using the :mod:`saltutil execution module <salt.modules.saltutil>`.
 """
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import hashlib
@@ -38,7 +37,6 @@ import salt.crypt
 import salt.utils.crypt
 import salt.utils.files
 import salt.utils.platform
-# Import salt libs
 from salt.key import get_key
 from salt.utils.sanitizers import clean
 
