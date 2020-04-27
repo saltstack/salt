@@ -2,7 +2,7 @@
 """
 Manage flatpak packages via Salt
 
-.. versionadded:: Neon
+.. versionadded:: Sodium
 
 :depends: flatpak for distribution
 """

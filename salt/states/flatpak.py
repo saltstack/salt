@@ -4,7 +4,7 @@ Management of flatpak packages
 ==============================
 Allows the installation and uninstallation of flatpak packages.
 
-.. versionadded:: Neon
+.. versionadded:: Sodium
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
