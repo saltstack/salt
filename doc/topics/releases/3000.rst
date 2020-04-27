@@ -43,7 +43,7 @@ importing the system version of Tornado.
 
 Msgpack 1.0.0rc1 Incompatibility
 ================================
-Salt is currently incompatible with mgspack 1.0.0rc1. We recommend using
+Salt is currently incompatible with msgpack 1.0.0rc1. We recommend using
 versions < 1.0.0 . This impacts the Salt Master's ability to run commands
 against minions. Please see `Issue 56007 <https://github.com/saltstack/salt/issues/56007>`_
 for more details and updates.
@@ -522,6 +522,16 @@ Module Changes
 - The :py:func:`file.remove <salt.modules.file.remove>` module was
   fixed to remove file system entries other than files, directories
   and symbolic links properly.
+
+- The :py:func:`debian_ip <salt.modules.debian_ip>` module used by the
+  :py:func:`network.managed <salt.states.network.managed>` state has been
+  heavily refactored. The order that options appear in inet/inet6 blocks may
+  produce cosmetic changes. Many options without an 'ipvX' prefix will now be
+  shared between inet and inet6 blocks. The options ``enable_ipv4`` and
+  ``enabled_ipv6`` will now fully remove relevant inet/inet6 blocks. Overriding
+  options by prefixing them with 'ipvX' will now work with most options (i.e.
+  ``dns`` can be overriden by ``ipv4dns`` or ``ipv6dns``). The ``proto`` option
+  is now required.
 
 
 Enhancements to Engines
