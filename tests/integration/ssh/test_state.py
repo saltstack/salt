@@ -104,7 +104,7 @@ class SSHStateTest(SSHCase):
         """
         self.run_function(
             "state.sls_id",
-            ["ssh-file-test", SSH_SLS, 'pillar=\'{"test_file_suffix": "_pillar"}\'',],
+            ["ssh-file-test", SSH_SLS, 'pillar=\'{"test_file_suffix": "_pillar"}\''],
         )
         check_file = self.run_function(
             "file.file_exists", ["/tmp/salt_test_file_pillar"]
