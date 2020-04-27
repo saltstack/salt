@@ -141,7 +141,13 @@ class NestDisplay(object):
             if isinstance(ret, salt.utils.odict.OrderedDict):
                 keys = ret.keys()
             else:
-                keys = sorted(ret)
+                try:
+                    keys = sorted(ret)
+                except TypeError:
+                    # Some of the keys must be non-string types
+                    ret = {str(k): v for k, v in ret.items()}
+                    keys = sorted(ret)
+
             color = self.CYAN
             if self.retcode != 0:
                 color = self.RED
