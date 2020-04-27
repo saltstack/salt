@@ -69,7 +69,7 @@ pycparser==2.19
 pycryptodome==3.8.1       # via python-jose
 pycryptodomex==3.9.7
 pycurl==7.43.0.5
-pygit2==0.28.2
+pygit2==0.28.2 ; python_version < "3.8"
 pymssql==2.1.4
 pymysql==0.9.3
 pyopenssl==19.0.0
