@@ -58,6 +58,9 @@ LEA = salt.utils.path.which_bin(
 )
 LE_LIVE = "/etc/letsencrypt/live/"
 
+if salt.utils.platform.is_freebsd():
+    LE_LIVE = "/usr/local" + LE_LIVE
+
 
 def __virtual__():
     """

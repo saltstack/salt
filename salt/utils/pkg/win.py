@@ -795,7 +795,7 @@ class WinSoftware(object):
         Returns the raw data
 
         Returns:
-            dict: contents of the dict are dependant on the parameters passed
+            dict: contents of the dict are dependent on the parameters passed
                 when the class was initiated.
         """
         return self.__reg_software

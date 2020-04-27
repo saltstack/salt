@@ -5799,7 +5799,7 @@ def _apply_cluster_dict(cluster_spec, cluster_dict, vsan_spec=None, vsan_61=True
                     vsan_spec.dataEfficiencyConfig = vim.vsan.DataEfficiencyConfig()
                 vsan_spec.dataEfficiencyConfig.dedupEnabled = vsan_dict["dedup_enabled"]
         # In all cases we need to configure the vsan on the cluster
-        # directly so not to have a missmatch between vsan_spec and
+        # directly so not to have a mismatch between vsan_spec and
         # cluster_spec
         if not cluster_spec.vsanConfig:
             cluster_spec.vsanConfig = vim.VsanClusterConfigInfo()
@@ -10948,7 +10948,7 @@ def register_vm(name, datacenter, placement, vmx_path, service_instance=None):
 @gets_service_instance_via_proxy
 def power_on_vm(name, datacenter=None, service_instance=None):
     """
-    Powers on a virtual machine specified by it's name.
+    Powers on a virtual machine specified by its name.
 
     name
         Name of the virtual machine
@@ -10989,7 +10989,7 @@ def power_on_vm(name, datacenter=None, service_instance=None):
 @gets_service_instance_via_proxy
 def power_off_vm(name, datacenter=None, service_instance=None):
     """
-    Powers off a virtual machine specified by it's name.
+    Powers off a virtual machine specified by its name.
 
     name
         Name of the virtual machine

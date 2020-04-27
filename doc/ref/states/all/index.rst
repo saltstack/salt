@@ -66,6 +66,7 @@ state modules
     boto_sqs
     boto_vpc
     bower
+    btrfs
     cabal
     ceph
     chef
@@ -124,6 +125,7 @@ state modules
     grains
     group
     heat
+    helm
     hg
     highstate_doc
     host

@@ -3,14 +3,11 @@
 Test the core grains
 """
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
+import pytest
 import salt.loader
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf
@@ -26,6 +23,7 @@ def _freebsd_or_openbsd():
     return salt.utils.platform.is_freebsd() or salt.utils.platform.is_openbsd()
 
 
+@pytest.mark.windows_whitelisted
 class TestGrainsCore(ModuleCase):
     """
     Test the core grains grains
@@ -52,6 +50,7 @@ class TestGrainsCore(ModuleCase):
         )
 
 
+@pytest.mark.windows_whitelisted
 class TestGrainsReg(ModuleCase, LoaderModuleMockMixin):
     """
     Test the core windows grains
@@ -63,6 +62,7 @@ class TestGrainsReg(ModuleCase, LoaderModuleMockMixin):
         return {salt.modules.reg: {"__opts__": opts, "__utils__": utils}}
 
     @skipIf(not salt.utils.platform.is_windows(), "Only run on Windows")
+    @skipIf(True, "SLOWTEST skip")
     def test_win_cpu_model(self):
         """
         test grains['cpu_model']

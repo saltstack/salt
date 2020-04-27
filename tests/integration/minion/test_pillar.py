@@ -3,7 +3,6 @@
     :codeauthor: Erik Johnson <erik@saltstack.com>
 """
 
-# Import Python libs
 from __future__ import absolute_import
 
 import copy
@@ -14,17 +13,14 @@ import shutil
 import subprocess
 import textwrap
 
+import pytest
 import salt.pillar as pillar
-
-# Import salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.yaml
 from tests.support.case import ModuleCase
 from tests.support.helpers import dedent, requires_system_grains
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -236,6 +232,7 @@ class _CommonBase(ModuleCase):
         return ret
 
 
+@pytest.mark.windows_whitelisted
 class BasePillarTest(_CommonBase):
     """
     Tests for pillar decryption
@@ -305,6 +302,7 @@ class BasePillarTest(_CommonBase):
 
 
 @skipIf(not salt.utils.path.which("gpg"), "GPG is not installed")
+@pytest.mark.windows_whitelisted
 class DecryptGPGPillarTest(_CommonBase):
     """
     Tests for pillar decryption
@@ -401,6 +399,7 @@ class DecryptGPGPillarTest(_CommonBase):
         self.assertEqual(ret, GPG_PILLAR_DECRYPTED)
 
     @requires_system_grains
+    @skipIf(True, "SLOWTEST skip")
     def test_decrypt_pillar_alternate_delimiter(self, grains=None):
         """
         Test recursive decryption of secrets:vault using a pipe instead of a
@@ -448,7 +447,7 @@ class DecryptGPGPillarTest(_CommonBase):
         """
         Test recursive decryption of secrets:vault, with the renderer
         explicitly defined, overriding the default. Setting the default to a
-        nonexistant renderer so we can be sure that the override happened.
+        nonexistent renderer so we can be sure that the override happened.
         """
         decrypt_pillar_opts = salt.utils.yaml.safe_load(
             textwrap.dedent(
@@ -548,6 +547,7 @@ class DecryptGPGPillarTest(_CommonBase):
         )
 
 
+@pytest.mark.windows_whitelisted
 class RefreshPillarTest(ModuleCase):
     """
     These tests validate the behavior defined in the documentation:
@@ -594,6 +594,7 @@ class RefreshPillarTest(ModuleCase):
             )
         self.addCleanup(self.cleanup_pillars, top_path, pillar_path)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_pillar_refresh_pillar_raw(self):
         """
         Validate the minion's pillar.raw call behavior for new pillars
@@ -617,6 +618,7 @@ class RefreshPillarTest(ModuleCase):
         val = self.run_function("pillar.raw", arg=(key,))
         assert val is True, repr(val)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_pillar_refresh_pillar_get(self):
         """
         Validate the minion's pillar.get call behavior for new pillars
@@ -644,6 +646,7 @@ class RefreshPillarTest(ModuleCase):
         val = self.run_function("pillar.get", arg=(key,))
         assert val is True, repr(val)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_pillar_refresh_pillar_item(self):
         """
         Validate the minion's pillar.item call behavior for new pillars
@@ -672,6 +675,7 @@ class RefreshPillarTest(ModuleCase):
         assert key in val
         assert val[key] is True
 
+    @skipIf(True, "SLOWTEST skip")
     def test_pillar_refresh_pillar_items(self):
         """
         Validate the minion's pillar.item call behavior for new pillars
@@ -690,6 +694,7 @@ class RefreshPillarTest(ModuleCase):
         assert key in val
         assert val[key] is True
 
+    @skipIf(True, "SLOWTEST skip")
     def test_pillar_refresh_pillar_ping(self):
         """
         Validate the minion's test.ping does not update pillars

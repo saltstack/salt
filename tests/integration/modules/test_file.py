@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import getpass
@@ -8,11 +7,9 @@ import os
 import shutil
 import sys
 
-# Import salt libs
+import pytest
 import salt.utils.files
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import requires_system_grains
 from tests.support.runtests import RUNTIME_VARS
@@ -42,6 +39,7 @@ def symlink(source, link_name):
         os.symlink(source, link_name)
 
 
+@pytest.mark.windows_whitelisted
 class FileModuleTest(ModuleCase):
     """
     Validate the file module
@@ -256,6 +254,33 @@ class FileModuleTest(ModuleCase):
             "file.line", self.myfile, "Goodbye", mode="insert", after="Hello"
         )
         self.assertIn("Hello" + os.linesep + "+Goodbye", ret)
+
+    def test_file_line_changes_entire_line(self):
+        """
+        Test file.line entire line matching
+
+        Issue #49855
+        """
+        ret = self.minion_run(
+            "file.line", self.myfile, "Goodbye", mode="insert", after="Hello"
+        )
+        assert "Hello" + os.linesep + "+Goodbye" in ret
+
+        ret = self.minion_run(
+            "file.line", self.myfile, "Goodbye 1", mode="insert", after="Hello"
+        )
+        assert (
+            "Hello" + os.linesep + "+Goodbye 1" + os.linesep + " Goodbye" + os.linesep
+            in ret
+        )
+
+        with salt.utils.files.fopen(self.myfile, "r") as fh_:
+            content = fh_.read()
+
+        assert (
+            "Hello" + os.linesep + "Goodbye 1" + os.linesep + "Goodbye" + os.linesep
+            == content
+        )
 
     def test_file_line_content(self):
         self.minion_run(

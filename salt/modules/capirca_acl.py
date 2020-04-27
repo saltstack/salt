@@ -207,7 +207,7 @@ def _import_platform_generator(platform):
     The generator class is identified looking under the <platform> module
     for a class inheriting the `ACLGenerator` class.
     """
-    log.debug("Using platform: {plat}".format(plat=platform))
+    log.debug("Using platform: %s", platform)
     for mod_name, mod_obj in inspect.getmembers(capirca.aclgen):
         if mod_name == platform and inspect.ismodule(mod_obj):
             for plat_obj_name, plat_obj in inspect.getmembers(
@@ -216,15 +216,9 @@ def _import_platform_generator(platform):
                 if inspect.isclass(plat_obj) and issubclass(
                     plat_obj, capirca.lib.aclgenerator.ACLGenerator
                 ):
-                    log.debug(
-                        "Identified Capirca class {cls} for {plat}".format(
-                            cls=plat_obj, plat=platform
-                        )
-                    )
+                    log.debug("Identified Capirca class %s for %s", plat_obj, platform)
                     return plat_obj
-    log.error(
-        "Unable to identify any Capirca plaform class for {plat}".format(plat=platform)
-    )
+    log.error("Unable to identify any Capirca plaform class for %s", platform)
 
 
 def _get_services_mapping():
@@ -267,9 +261,8 @@ def _get_services_mapping():
                 log.error("Did not read that properly:")
                 log.error(line)
                 log.error(
-                    "Please report the above error: {port} does not seem a valid port value!".format(
-                        port=port
-                    )
+                    "Please report the above error: %s does not seem a valid port value!",
+                    port,
                 )
             _SERVICES[srv_name]["protocol"].append(protocol)
     return _SERVICES
@@ -464,7 +457,7 @@ def _merge_list_of_dict(first, second, prepend=True):
     if first and not second:
         return first
     # Determine overlaps
-    # So we dont change the position of the existing terms/filters
+    # So we don't change the position of the existing terms/filters
     overlaps = []
     merged = []
     appended = []
@@ -501,11 +494,7 @@ def _get_term_object(
     """
     Return an instance of the ``_Term`` class given the term options.
     """
-    log.debug(
-        "Generating config for term {tname} under filter {fname}".format(
-            tname=term_name, fname=filter_name
-        )
-    )
+    log.debug("Generating config for term %s under filter %s", term_name, filter_name)
     term = _Term()
     term.name = term_name
     term_opts = {}
@@ -586,7 +575,7 @@ def _get_policy_object(
     log.debug(six.text_type(policy))
     platform_generator = _import_platform_generator(platform)
     policy_config = platform_generator(policy, 2)
-    log.debug("Generating policy config for {platform}:".format(platform=platform))
+    log.debug("Generating policy config for %s:", platform)
     log.debug(six.text_type(policy_config))
     return policy_config
 

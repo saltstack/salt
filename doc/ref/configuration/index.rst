@@ -5,8 +5,8 @@ Configuring Salt
 ================
 
 Salt configuration is very simple. The default configuration for the
-:term:`master` will work for most installations and the only requirement for
-setting up a :term:`minion` is to set the location of the master in the minion
+:term:`master <Master>` will work for most installations and the only requirement for
+setting up a :term:`minion <Minion>` is to set the location of the master in the minion
 configuration file.
 
 The configuration files will be installed to :file:`/etc/salt` and are named

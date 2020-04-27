@@ -24,6 +24,7 @@ from tests.unit.modules.test_zcbuildout import KNOWN_VIRTUALENV_BINARY_NAMES, Ba
     salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
     "The 'virtualenv' packaged needs to be installed",
 )
+@requires_network()
 class BuildoutTestCase(Base):
     def setup_loader_modules(self):
         module_globals = {
@@ -41,7 +42,6 @@ class BuildoutTestCase(Base):
     # I don't have the time to invest in learning more about buildout,
     # and given we don't have support yet, and there are other priorities
     # I'm going to punt on this for now - WW
-    @requires_network()
     @skipIf(True, "Buildout is still in beta. Test needs fixing.")
     def test_quiet(self):
         c_dir = os.path.join(self.tdir, "c")
@@ -52,7 +52,7 @@ class BuildoutTestCase(Base):
         self.assertFalse("Log summary:" in cret["comment"], cret["comment"])
         self.assertTrue(cret["result"], cret["comment"])
 
-    @requires_network()
+    @skipIf(True, "SLOWTEST skip")
     def test_error(self):
         b_dir = os.path.join(self.tdir, "e")
         ret = buildout.installed(b_dir, python=self.py_st)
@@ -61,7 +61,7 @@ class BuildoutTestCase(Base):
         )
         self.assertFalse(ret["result"])
 
-    @requires_network()
+    @skipIf(True, "SLOWTEST skip")
     def test_installed(self):
         if salt.modules.virtualenv_mod.virtualenv_ver(self.ppy_st) >= (20, 0, 0):
             self.skipTest(

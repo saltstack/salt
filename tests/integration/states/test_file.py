@@ -4,7 +4,6 @@
 Tests for the file state
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
@@ -18,19 +17,16 @@ import sys
 import tempfile
 import textwrap
 
+import pytest
 import salt.serializers.configparser
-
-# Import Salt libs
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
-
-# Import 3rd-party libs
 from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import range
 from salt.utils.versions import LooseVersion as _LooseVersion
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
@@ -43,8 +39,6 @@ from tests.support.helpers import (
     with_tempfile,
 )
 from tests.support.mixins import SaltReturnAssertsMixin
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -122,6 +116,7 @@ def _test_managed_file_mode_keep_helper(testcase, local=False):
         os.chmod(grail_fs_path, grail_fs_mode)
 
 
+@pytest.mark.windows_whitelisted
 class FileTest(ModuleCase, SaltReturnAssertsMixin):
     """
     Validate the file state
@@ -2709,6 +2704,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         os.remove(dest)
 
     @destructiveTest
+    @skip_if_not_root
     @skipIf(IS_WINDOWS, "Windows does not report any file modes. Skipping.")
     @with_tempfile()
     def test_file_copy_make_dirs(self, source):
@@ -2850,7 +2846,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         temp_file_stats = os.stat(tempfile)
 
         # Normalize the mode
-        temp_file_mode = six.text_type(oct(stat.S_IMODE(temp_file_stats.st_mode)))
+        temp_file_mode = str(oct(stat.S_IMODE(temp_file_stats.st_mode)))
         temp_file_mode = salt.utils.files.normalize_mode(temp_file_mode)
 
         self.assertEqual(temp_file_mode, "4750")
@@ -2900,30 +2896,88 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(master_data, minion_data)
         self.assertSaltTrueReturn(ret)
 
+    @with_tempfile()
+    def test_keyvalue(self, name):
+        """
+        file.keyvalue
+        """
+        content = dedent(
+            """\
+            # This is the sshd server system-wide configuration file.  See
+            # sshd_config(5) for more information.
 
+            # The strategy used for options in the default sshd_config shipped with
+            # OpenSSH is to specify options with their default value where
+            # possible, but leave them commented.  Uncommented options override the
+            # default value.
+
+            #Port 22
+            #AddressFamily any
+            #ListenAddress 0.0.0.0
+            #ListenAddress ::
+
+            #HostKey /etc/ssh/ssh_host_rsa_key
+            #HostKey /etc/ssh/ssh_host_ecdsa_key
+            #HostKey /etc/ssh/ssh_host_ed25519_key
+
+            # Ciphers and keying
+            #RekeyLimit default none
+
+            # Logging
+            #SyslogFacility AUTH
+            #LogLevel INFO
+
+            # Authentication:
+
+            #LoginGraceTime 2m
+            #PermitRootLogin prohibit-password
+            #StrictModes yes
+            #MaxAuthTries 6
+            #MaxSessions 10
+            """
+        )
+
+        with salt.utils.files.fopen(name, "w+") as fp_:
+            fp_.write(content)
+
+        ret = self.run_state(
+            "file.keyvalue",
+            name=name,
+            key="permitrootlogin",
+            value="no",
+            separator=" ",
+            uncomment=" #",
+            key_ignore_case=True,
+        )
+
+        with salt.utils.files.fopen(name, "r") as fp_:
+            file_contents = fp_.read()
+            self.assertNotIn("#PermitRootLogin", file_contents)
+            self.assertNotIn("prohibit-password", file_contents)
+            self.assertIn("PermitRootLogin no", file_contents)
+
+        self.assertSaltTrueReturn(ret)
+
+
+@pytest.mark.windows_whitelisted
 class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
     marker_start = "# start"
     marker_end = "# end"
     content = dedent(
-        six.text_type(
-            """\
+        """\
         Line 1 of block
         Line 2 of block
         """
-        )
     )
     without_block = dedent(
-        six.text_type(
-            """\
+        """\
         Hello world!
 
         # comment here
         """
-        )
     )
     with_non_matching_block = dedent(
-        six.text_type(
-            """\
+        """\
         Hello world!
 
         # start
@@ -2931,22 +2985,18 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         # end
         # comment here
         """
-        )
     )
     with_non_matching_block_and_marker_end_not_after_newline = dedent(
-        six.text_type(
-            """\
+        """\
         Hello world!
 
         # start
         No match here# end
         # comment here
         """
-        )
     )
     with_matching_block = dedent(
-        six.text_type(
-            """\
+        """\
         Hello world!
 
         # start
@@ -2955,11 +3005,9 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         # end
         # comment here
         """
-        )
     )
     with_matching_block_and_extra_newline = dedent(
-        six.text_type(
-            """\
+        """\
         Hello world!
 
         # start
@@ -2969,11 +3017,9 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         # end
         # comment here
         """
-        )
     )
     with_matching_block_and_marker_end_not_after_newline = dedent(
-        six.text_type(
-            """\
+        """\
         Hello world!
 
         # start
@@ -2981,7 +3027,6 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         Line 2 of block# end
         # comment here
         """
-        )
     )
     content_explicit_posix_newlines = "Line 1 of block\n" "Line 2 of block\n"
     content_explicit_windows_newlines = "Line 1 of block\r\n" "Line 2 of block\r\n"
@@ -4336,6 +4381,7 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret[job]["changes"]["diff"], diff)
 
 
+@pytest.mark.windows_whitelisted
 class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
     """
     Uses a local tornado webserver to test http(s) file.managed states with and
@@ -4427,6 +4473,7 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
 
 
 @skipIf(not salt.utils.path.which("patch"), "patch is not installed")
+@pytest.mark.windows_whitelisted
 class PatchTest(ModuleCase, SaltReturnAssertsMixin):
     def _check_patch_version(self, min_version):
         """
@@ -5000,6 +5047,7 @@ WIN_TEST_FILE = "c:/testfile"
 
 @destructiveTest
 @skipIf(not IS_WINDOWS, "windows test only")
+@pytest.mark.windows_whitelisted
 class WinFileTest(ModuleCase):
     """
     Test for the file state on Windows
