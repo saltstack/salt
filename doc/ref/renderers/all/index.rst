@@ -27,6 +27,7 @@ renderer modules
     pydsl
     pyobjects
     stateconf
+    toml
     wempy
     yaml
     yamlex

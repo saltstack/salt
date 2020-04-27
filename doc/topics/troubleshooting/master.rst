@@ -182,7 +182,7 @@ Results can then be analyzed with `kcachegrind`_ or similar tool.
 
 Make sure you have yappi installed.
 
-On Windows, in the absense of kcachegrind, a simple file-based workflow to create
+On Windows, in the absence of kcachegrind, a simple file-based workflow to create
 profiling graphs could use `gprof2dot`_, `graphviz`_ and this batch file:
 
 .. _`gprof2dot`: https://pypi.org/project/gprof2dot

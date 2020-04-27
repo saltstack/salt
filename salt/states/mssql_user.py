@@ -44,7 +44,7 @@ def present(
     name, login=None, domain=None, database=None, roles=None, options=None, **kwargs
 ):
     """
-    Checks existance of the named user.
+    Checks existence of the named user.
     If not present, creates the user with the specified roles and options.
 
     name
