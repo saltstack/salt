@@ -297,7 +297,7 @@ def avail_sizes(call=None):
 
 def get_build_status(req_id, nodename):
     """
-    get the build status from CLC to make sure we dont return to early
+    get the build status from CLC to make sure we don't return to early
     """
     counter = 0
     req_id = six.text_type(req_id)

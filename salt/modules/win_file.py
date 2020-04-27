@@ -33,11 +33,6 @@ import stat
 import string  # do not remove, used in imported file.py functions
 import sys  # do not remove, used in imported file.py functions
 import tempfile  # do not remove. Used in salt.modules.file.__clean_tmp
-
-# pylint: disable=no-name-in-module
-from collections import Iterable, Mapping  # do not remove
-
-# pylint: enable=no-name-in-module
 from functools import reduce  # do not remove
 
 import salt.utils.atomicfile  # do not remove, used in imported file.py functions
@@ -64,16 +59,14 @@ from salt.modules.file import (
     _get_bkroot,
     _get_eol,
     _get_flags,
-    _insert_line_after,
-    _insert_line_before,
     _mkstemp_copy,
     _psed,
     _regex_to_static,
     _sed_esc,
+    _set_line,
     _set_line_eol,
     _set_line_indent,
     _splitlines_preserving_trailing_newline,
-    _starts_till,
     access,
     append,
     apply_template_on_contents,
@@ -129,7 +122,12 @@ from salt.modules.file import (
 )
 from salt.utils.functools import namespaced_function as _namespaced_function
 
-# pylint: enable=W0611
+# pylint: disable=no-name-in-module
+try:
+    from collections import Iterable, Mapping
+except ImportError:
+    from collections.abc import Iterable, Mapping
+# pylint: enable=no-name-in-module
 
 
 HAS_WINDOWS_MODULES = False
@@ -190,8 +188,9 @@ def __virtual__():
             global write, pardir, join, _add_flags, apply_template_on_contents
             global path_exists_glob, comment, uncomment, _mkstemp_copy
             global _regex_to_static, _set_line_indent, dirname, basename
-            global list_backups_dir, normpath_, _assert_occurrence, _starts_till
-            global _insert_line_before, _insert_line_after, _set_line_eol, _get_eol
+            global list_backups_dir, normpath_, _assert_occurrence
+            global _set_line_eol, _get_eol
+            global _set_line
 
             replace = _namespaced_function(replace, globals())
             search = _namespaced_function(search, globals())
@@ -250,11 +249,10 @@ def __virtual__():
             uncomment = _namespaced_function(uncomment, globals())
             comment_line = _namespaced_function(comment_line, globals())
             _regex_to_static = _namespaced_function(_regex_to_static, globals())
+            _set_line = _namespaced_function(_set_line, globals())
             _set_line_indent = _namespaced_function(_set_line_indent, globals())
             _set_line_eol = _namespaced_function(_set_line_eol, globals())
             _get_eol = _namespaced_function(_get_eol, globals())
-            _insert_line_after = _namespaced_function(_insert_line_after, globals())
-            _insert_line_before = _namespaced_function(_insert_line_before, globals())
             _mkstemp_copy = _namespaced_function(_mkstemp_copy, globals())
             _add_flags = _namespaced_function(_add_flags, globals())
             apply_template_on_contents = _namespaced_function(
@@ -265,7 +263,6 @@ def __virtual__():
             list_backups_dir = _namespaced_function(list_backups_dir, globals())
             normpath_ = _namespaced_function(normpath_, globals())
             _assert_occurrence = _namespaced_function(_assert_occurrence, globals())
-            _starts_till = _namespaced_function(_starts_till, globals())
 
         else:
             return False, "Module win_file: Missing Win32 modules"

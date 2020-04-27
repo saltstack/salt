@@ -2,25 +2,20 @@
 
 from __future__ import absolute_import
 
-import copy
 import datetime
 import logging
-import os
 import random
 import time
 
 import pytest
 import salt.utils.platform
 import salt.utils.schedule
-from salt.modules.test import ping
-from tests.support.case import ModuleCase
-from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
+from tests.unit.utils.scheduler.base import SchedulerTestsBase
 
 try:
-    import dateutil.parser as dateutil_parser
+    import dateutil.parser
 
     HAS_DATEUTIL_PARSER = True
 except ImportError:
@@ -35,32 +30,16 @@ except ImportError:
     HAS_CRONITER = False
 
 log = logging.getLogger(__name__)
-ROOT_DIR = os.path.join(RUNTIME_VARS.TMP, "schedule-unit-tests")
-SOCK_DIR = os.path.join(ROOT_DIR, "test-socks")
-
-DEFAULT_CONFIG = salt.config.minion_config(None)
-DEFAULT_CONFIG["conf_dir"] = ROOT_DIR
-DEFAULT_CONFIG["root_dir"] = ROOT_DIR
-DEFAULT_CONFIG["sock_dir"] = SOCK_DIR
-DEFAULT_CONFIG["pki_dir"] = os.path.join(ROOT_DIR, "pki")
-DEFAULT_CONFIG["cachedir"] = os.path.join(ROOT_DIR, "cache")
 
 
-@skipIf(HAS_DATEUTIL_PARSER is False, "The 'dateutil.parser' library is not available")
+@skipIf(
+    HAS_DATEUTIL_PARSER is False, "The 'dateutil.parser' library is not available",
+)
 @pytest.mark.windows_whitelisted
-class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
-    """
-    Validate the pkg module
-    """
-
+class SchedulerEvalTest(SchedulerTestsBase):
     def setUp(self):
-        with patch("salt.utils.schedule.clean_proc_dir", MagicMock(return_value=None)):
-            functions = {"test.ping": ping}
-            self.schedule = salt.utils.schedule.Schedule(
-                copy.deepcopy(DEFAULT_CONFIG), functions, returners={}
-            )
+        super(SchedulerEvalTest, self).setUp()
         self.schedule.opts["loop_interval"] = 1
-
         self.schedule.opts["grains"]["whens"] = {"tea time": "11/29/2017 12:00pm"}
 
     def tearDown(self):
@@ -77,7 +56,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
                 job_name: {"function": "test.ping", "when": "11/29/2017 4:00pm"}
             }
         }
-        run_time2 = dateutil_parser.parse("11/29/2017 4:00pm")
+        run_time2 = dateutil.parser.parse("11/29/2017 4:00pm")
         run_time1 = run_time2 - datetime.timedelta(seconds=1)
 
         # Add the job to the scheduler
@@ -110,8 +89,8 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         if salt.utils.platform.is_darwin():
             job["schedule"][job_name]["dry_run"] = True
 
-        run_time1 = dateutil_parser.parse("11/29/2017 4:00pm")
-        run_time2 = dateutil_parser.parse("11/29/2017 5:00pm")
+        run_time1 = dateutil.parser.parse("11/29/2017 4:00pm")
+        run_time2 = dateutil.parser.parse("11/29/2017 5:00pm")
 
         # Add the job to the scheduler
         self.schedule.opts.update(job)
@@ -135,7 +114,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         """
         job_name = "test_eval_whens"
         job = {"schedule": {job_name: {"function": "test.ping", "when": "tea time"}}}
-        run_time = dateutil_parser.parse("11/29/2017 12:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 12:00pm")
 
         # Add the job to the scheduler
         self.schedule.opts.update(job)
@@ -160,7 +139,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         LOOP_INTERVAL = random.randint(30, 59)
         self.schedule.opts["loop_interval"] = LOOP_INTERVAL
 
-        run_time2 = dateutil_parser.parse("11/29/2017 4:00pm")
+        run_time2 = dateutil.parser.parse("11/29/2017 4:00pm")
 
         # Add the job to the scheduler
         self.schedule.opts.update(job)
@@ -194,10 +173,10 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         LOOP_INTERVAL = random.randint(30, 59)
         self.schedule.opts["loop_interval"] = LOOP_INTERVAL
 
-        run_time1 = dateutil_parser.parse("11/29/2017 4:00pm") + datetime.timedelta(
+        run_time1 = dateutil.parser.parse("11/29/2017 4:00pm") + datetime.timedelta(
             seconds=LOOP_INTERVAL
         )
-        run_time2 = dateutil_parser.parse("11/29/2017 5:00pm") + datetime.timedelta(
+        run_time2 = dateutil.parser.parse("11/29/2017 5:00pm") + datetime.timedelta(
             seconds=LOOP_INTERVAL
         )
 
@@ -227,7 +206,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
                 job_name: {"function": "test.ping", "once": "2017-12-13T13:00:00"}
             }
         }
-        run_time = dateutil_parser.parse("12/13/2017 1:00pm")
+        run_time = dateutil.parser.parse("12/13/2017 1:00pm")
 
         # Add the job to the scheduler
         self.schedule.opts["schedule"] = {}
@@ -254,7 +233,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.opts["loop_interval"] = LOOP_INTERVAL
 
         # Run the job at the right plus LOOP_INTERVAL
-        run_time = dateutil_parser.parse("12/13/2017 1:00pm") + datetime.timedelta(
+        run_time = dateutil.parser.parse("12/13/2017 1:00pm") + datetime.timedelta(
             seconds=LOOP_INTERVAL
         )
 
@@ -279,7 +258,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         # Add the job to the scheduler
         self.schedule.opts.update(job)
 
-        run_time = dateutil_parser.parse("11/29/2017 4:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 4:00pm")
         with patch("croniter.croniter.get_next", MagicMock(return_value=run_time)):
             self.schedule.eval(now=run_time)
 
@@ -302,7 +281,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         # Add the job to the scheduler
         self.schedule.opts.update(job)
 
-        run_time = dateutil_parser.parse("11/29/2017 4:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 4:00pm")
         with patch("croniter.croniter.get_next", MagicMock(return_value=run_time)):
             self.schedule.eval(now=run_time)
 
@@ -334,12 +313,12 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.opts.update(job)
 
         # eval at 2:00pm to prime, simulate minion start up.
-        run_time = dateutil_parser.parse("11/29/2017 2:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 2:00pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
 
         # eval at 3:00pm, will run.
-        run_time = dateutil_parser.parse("11/29/2017 3:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 3:00pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
@@ -347,7 +326,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         time.sleep(2)
 
         # eval at 4:00pm, will run.
-        run_time = dateutil_parser.parse("11/29/2017 4:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 4:00pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
@@ -355,7 +334,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         time.sleep(2)
 
         # eval at 5:00pm, will not run
-        run_time = dateutil_parser.parse("11/29/2017 5:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 5:00pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_skip_reason"], "until_passed")
@@ -382,33 +361,33 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.opts.update(job)
 
         # eval at 2:00pm to prime, simulate minion start up.
-        run_time = dateutil_parser.parse("11/29/2017 2:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 2:00pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
 
         # eval at 3:00pm, will not run.
-        run_time = dateutil_parser.parse("11/29/2017 3:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 3:00pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_skip_reason"], "after_not_passed")
         self.assertEqual(ret["_skipped_time"], run_time)
 
         # eval at 4:00pm, will not run.
-        run_time = dateutil_parser.parse("11/29/2017 4:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 4:00pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_skip_reason"], "after_not_passed")
         self.assertEqual(ret["_skipped_time"], run_time)
 
         # eval at 5:00pm, will not run
-        run_time = dateutil_parser.parse("11/29/2017 5:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 5:00pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_skip_reason"], "after_not_passed")
         self.assertEqual(ret["_skipped_time"], run_time)
 
         # eval at 6:00pm, will run
-        run_time = dateutil_parser.parse("11/29/2017 6:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 6:00pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
@@ -425,7 +404,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
                 job_name: {"function": "test.ping", "when": "11/29/2017 4:00pm"},
             }
         }
-        run_time1 = dateutil_parser.parse("11/29/2017 4:00pm")
+        run_time1 = dateutil.parser.parse("11/29/2017 4:00pm")
 
         # Add the job to the scheduler
         self.schedule.opts.update(job)
@@ -449,7 +428,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
                 job_name: {"function": "test.ping", "when": "11/29/2017 4:00pm"},
             }
         }
-        run_time2 = dateutil_parser.parse("11/29/2017 4:00pm")
+        run_time2 = dateutil.parser.parse("11/29/2017 4:00pm")
         run_time1 = run_time2 - datetime.timedelta(seconds=1)
 
         # Add the job to the scheduler
@@ -476,7 +455,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
                 job_name: {"function": "test.ping", "when": "11/29/2017 4:00pm"},
             }
         }
-        run_time1 = dateutil_parser.parse("11/29/2017 4:00pm")
+        run_time1 = dateutil.parser.parse("11/29/2017 4:00pm")
 
         # Add the job to the scheduler
         self.schedule.opts.update(job)
@@ -505,7 +484,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
                 },
             }
         }
-        run_time1 = dateutil_parser.parse("11/29/2017 4:00pm")
+        run_time1 = dateutil.parser.parse("11/29/2017 4:00pm")
 
         # Add the job to the scheduler
         self.schedule.opts.update(job)
@@ -535,13 +514,13 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.opts.update(job)
 
         # eval at 2:00pm, will run.
-        run_time = dateutil_parser.parse("11/29/2017 2:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 2:00pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
 
         # eval at 3:00pm, will run.
-        run_time = dateutil_parser.parse("11/29/2017 3:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 3:00pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
 
@@ -562,12 +541,12 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
 
         with patch("random.randint", MagicMock(return_value=10)):
             # eval at 2:00pm to prime, simulate minion start up.
-            run_time = dateutil_parser.parse("11/29/2017 2:00pm")
+            run_time = dateutil.parser.parse("11/29/2017 2:00pm")
             self.schedule.eval(now=run_time)
             ret = self.schedule.job_status(job_name)
 
             # eval at 2:00:40pm, will run.
-            run_time = dateutil_parser.parse("11/29/2017 2:00:40pm")
+            run_time = dateutil.parser.parse("11/29/2017 2:00:40pm")
             self.schedule.eval(now=run_time)
             ret = self.schedule.job_status(job_name)
             self.assertEqual(ret["_last_run"], run_time)
@@ -593,12 +572,12 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
 
         with patch("random.randint", MagicMock(return_value=10)):
             # eval at 2:00pm to prime, simulate minion start up.
-            run_time = dateutil_parser.parse("11/29/2017 2:00pm")
+            run_time = dateutil.parser.parse("11/29/2017 2:00pm")
             self.schedule.eval(now=run_time)
             ret = self.schedule.job_status(job_name)
 
             # eval at 2:00:40pm, will run.
-            run_time = dateutil_parser.parse("11/29/2017 2:00:40pm")
+            run_time = dateutil.parser.parse("11/29/2017 2:00:40pm")
             self.schedule.eval(now=run_time)
             ret = self.schedule.job_status(job_name)
             self.assertEqual(ret["_last_run"], run_time)
@@ -621,12 +600,12 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
 
         with patch("random.randint", MagicMock(return_value=10)):
             # eval at 2:00pm to prime, simulate minion start up.
-            run_time = dateutil_parser.parse("11/29/2017 2:00pm")
+            run_time = dateutil.parser.parse("11/29/2017 2:00pm")
             self.schedule.eval(now=run_time)
             ret = self.schedule.job_status(job_name)
 
             # eval at 2:00:40pm, will run.
-            run_time = dateutil_parser.parse("11/29/2017 2:00:40pm")
+            run_time = dateutil.parser.parse("11/29/2017 2:00:40pm")
             self.schedule.eval(now=run_time)
             ret = self.schedule.job_status(job_name)
             self.assertEqual(ret["_last_run"], run_time)
@@ -646,21 +625,21 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.opts.update(job)
 
         # eval at 2:00pm to prime, simulate minion start up.
-        run_time = dateutil_parser.parse("11/29/2017 2:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 2:00pm")
         next_run_time = run_time + datetime.timedelta(seconds=30)
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_next_fire_time"], next_run_time)
 
         # eval at 2:00:01pm, will not run.
-        run_time = dateutil_parser.parse("11/29/2017 2:00:01pm")
+        run_time = dateutil.parser.parse("11/29/2017 2:00:01pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
         self.assertNotIn("_last_run", ret)
         self.assertEqual(ret["_next_fire_time"], next_run_time)
 
         # eval at 2:00:30pm, will run.
-        run_time = dateutil_parser.parse("11/29/2017 2:00:30pm")
+        run_time = dateutil.parser.parse("11/29/2017 2:00:30pm")
         next_run_time = run_time + datetime.timedelta(seconds=30)
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
@@ -670,7 +649,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         time.sleep(2)
 
         # eval at 2:01:00pm, will run.
-        run_time = dateutil_parser.parse("11/29/2017 2:01:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 2:01:00pm")
         next_run_time = run_time + datetime.timedelta(seconds=30)
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
@@ -680,7 +659,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         time.sleep(2)
 
         # eval at 2:01:30pm, will run.
-        run_time = dateutil_parser.parse("11/29/2017 2:01:30pm")
+        run_time = dateutil.parser.parse("11/29/2017 2:01:30pm")
         next_run_time = run_time + datetime.timedelta(seconds=30)
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
@@ -702,21 +681,21 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.opts.update(job)
 
         # eval at 2:00pm to prime, simulate minion start up.
-        run_time = dateutil_parser.parse("11/29/2017 2:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 2:00pm")
         next_run_time = run_time + datetime.timedelta(minutes=30)
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_next_fire_time"], next_run_time)
 
         # eval at 2:00:01pm, will not run.
-        run_time = dateutil_parser.parse("11/29/2017 2:00:01pm")
+        run_time = dateutil.parser.parse("11/29/2017 2:00:01pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
         self.assertNotIn("_last_run", ret)
         self.assertEqual(ret["_next_fire_time"], next_run_time)
 
         # eval at 2:30:00pm, will run.
-        run_time = dateutil_parser.parse("11/29/2017 2:30:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 2:30:00pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
@@ -724,7 +703,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         time.sleep(2)
 
         # eval at 3:00:00pm, will run.
-        run_time = dateutil_parser.parse("11/29/2017 3:00:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 3:00:00pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
@@ -732,7 +711,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         time.sleep(2)
 
         # eval at 3:30:00pm, will run.
-        run_time = dateutil_parser.parse("11/29/2017 3:30:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 3:30:00pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
@@ -752,21 +731,21 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.opts.update(job)
 
         # eval at 2:00pm to prime, simulate minion start up.
-        run_time = dateutil_parser.parse("11/29/2017 2:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 2:00pm")
         next_run_time = run_time + datetime.timedelta(hours=2)
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_next_fire_time"], next_run_time)
 
         # eval at 2:00:01pm, will not run.
-        run_time = dateutil_parser.parse("11/29/2017 2:00:01pm")
+        run_time = dateutil.parser.parse("11/29/2017 2:00:01pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
         self.assertNotIn("_last_run", ret)
         self.assertEqual(ret["_next_fire_time"], next_run_time)
 
         # eval at 4:00:00pm, will run.
-        run_time = dateutil_parser.parse("11/29/2017 4:00:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 4:00:00pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
@@ -774,7 +753,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         time.sleep(2)
 
         # eval at 6:00:00pm, will run.
-        run_time = dateutil_parser.parse("11/29/2017 6:00:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 6:00:00pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
@@ -782,7 +761,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         time.sleep(2)
 
         # eval at 8:00:00pm, will run.
-        run_time = dateutil_parser.parse("11/29/2017 8:00:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 8:00:00pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
@@ -806,14 +785,14 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.opts.update(job)
 
         # eval at 11/23/2017 2:00pm to prime, simulate minion start up.
-        run_time = dateutil_parser.parse("11/23/2017 2:00pm")
+        run_time = dateutil.parser.parse("11/23/2017 2:00pm")
         next_run_time = run_time + datetime.timedelta(days=2)
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_next_fire_time"], next_run_time)
 
         # eval at 11/25/2017 2:00:00pm, will run.
-        run_time = dateutil_parser.parse("11/25/2017 2:00:00pm")
+        run_time = dateutil.parser.parse("11/25/2017 2:00:00pm")
         next_run_time = run_time + datetime.timedelta(days=2)
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
@@ -821,7 +800,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["_next_fire_time"], next_run_time)
 
         # eval at 11/26/2017 2:00:00pm, will not run.
-        run_time = dateutil_parser.parse("11/26/2017 2:00:00pm")
+        run_time = dateutil.parser.parse("11/26/2017 2:00:00pm")
         last_run_time = run_time - datetime.timedelta(days=1)
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
@@ -831,7 +810,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         time.sleep(2)
 
         # eval at 11/27/2017 2:00:00pm, will run.
-        run_time = dateutil_parser.parse("11/27/2017 2:00:00pm")
+        run_time = dateutil.parser.parse("11/27/2017 2:00:00pm")
         next_run_time = run_time + datetime.timedelta(days=2)
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
@@ -841,7 +820,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         time.sleep(2)
 
         # eval at 11/28/2017 2:00:00pm, will not run.
-        run_time = dateutil_parser.parse("11/28/2017 2:00:00pm")
+        run_time = dateutil.parser.parse("11/28/2017 2:00:00pm")
         last_run_time = run_time - datetime.timedelta(days=1)
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
@@ -851,7 +830,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         time.sleep(2)
 
         # eval at 11/29/2017 2:00:00pm, will run.
-        run_time = dateutil_parser.parse("11/29/2017 2:00:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 2:00:00pm")
         next_run_time = run_time + datetime.timedelta(days=2)
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
@@ -874,7 +853,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
                 }
             }
         }
-        run_time1 = dateutil_parser.parse("11/29/2017 4:00pm")
+        run_time1 = dateutil.parser.parse("11/29/2017 4:00pm")
         run_time2 = run_time1 + datetime.timedelta(seconds=splay)
         run_time3 = run_time2 + datetime.timedelta(seconds=1)
 
@@ -883,7 +862,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
 
         with patch("random.randint", MagicMock(return_value=splay)):
             # Evaluate to prime
-            run_time = dateutil_parser.parse("11/29/2017 3:00pm")
+            run_time = dateutil.parser.parse("11/29/2017 3:00pm")
             self.schedule.eval(now=run_time)
             ret = self.schedule.job_status(job_name)
 
@@ -919,13 +898,13 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
                 }
             }
         }
-        run_time1 = dateutil_parser.parse("11/29/2017 4:00pm")
+        run_time1 = dateutil.parser.parse("11/29/2017 4:00pm")
 
         # Add the job to the scheduler
         self.schedule.opts.update(job)
 
         # Evaluate to prime
-        run_time = dateutil_parser.parse("11/29/2017 3:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 3:00pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
 

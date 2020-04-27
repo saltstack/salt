@@ -5799,7 +5799,7 @@ def _apply_cluster_dict(cluster_spec, cluster_dict, vsan_spec=None, vsan_61=True
                     vsan_spec.dataEfficiencyConfig = vim.vsan.DataEfficiencyConfig()
                 vsan_spec.dataEfficiencyConfig.dedupEnabled = vsan_dict["dedup_enabled"]
         # In all cases we need to configure the vsan on the cluster
-        # directly so not to have a missmatch between vsan_spec and
+        # directly so not to have a mismatch between vsan_spec and
         # cluster_spec
         if not cluster_spec.vsanConfig:
             cluster_spec.vsanConfig = vim.VsanClusterConfigInfo()

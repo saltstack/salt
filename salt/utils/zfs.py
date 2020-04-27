@@ -383,8 +383,8 @@ def property_data_zpool():
         "capacity-free",
         "operations-read",
         "operations-write",
-        "bandwith-read",
-        "bandwith-write",
+        "bandwidth-read",
+        "bandwidth-write",
         "read",
         "write",
     ]

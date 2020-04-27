@@ -1053,7 +1053,7 @@ def traceroute(host):
 
         ret.append(result)
         if not result:
-            log.warn("Cannot parse traceroute output line: %s", line)
+            log.warning("Cannot parse traceroute output line: %s", line)
     return ret
 
 

@@ -344,6 +344,8 @@ def _run(
         # Strip whitespace
         if isinstance(cmd, six.string_types):
             cmd = cmd.strip()
+        elif isinstance(cmd, list):
+            cmd = " ".join(cmd).strip()
 
         # If we were called by script(), then fakeout the Windows
         # shell to run a Powershell script.
@@ -366,7 +368,6 @@ def _run(
 
     # munge the cmd and cwd through the template
     (cmd, cwd) = _render_cmd(cmd, cwd, template, saltenv, pillarenv, pillar_override)
-
     ret = {}
 
     # If the pub jid is here then this is a remote ex or salt call command and needs to be
