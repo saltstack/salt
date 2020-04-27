@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Tests for gpg state.
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -18,27 +18,30 @@ from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils.files
+
 # pylint: disable=incompatible-py3-code
 
 try:
     import gnupg
-    GPG_VERSION = '.'.join(map(str, gnupg.GPG().version))
+
+    GPG_VERSION = ".".join(map(str, gnupg.GPG().version))
     HAS_GPG = True
 except ImportError:
     HAS_GPG = False
 
 
-@skipIf(not salt.utils.path.which('gpg'), 'GPG not installed. Skipping')
-@skipIf(not HAS_GPG, 'GPG Module Unavailable')
+@skipIf(not salt.utils.path.which("gpg"), "GPG not installed. Skipping")
+@skipIf(not HAS_GPG, "GPG Module Unavailable")
 class GPGTest(ModuleCase, SaltReturnAssertsMixin):
-    '''
+    """
     Validate the host state
-    '''
+    """
+
     @classmethod
     def setUpClass(cls):
-        cls.gnupghome = tempfile.mkdtemp(prefix='saltgpg')
+        cls.gnupghome = tempfile.mkdtemp(prefix="saltgpg")
         cls.secret_key = textwrap.dedent(
-            '''\
+            """\
             -----BEGIN PGP PRIVATE KEY BLOCK-----
 
             lQIGBF1j4XwBBADVcoGjgf3ZGym6GYL6wLztZtMzDvQXUD4OS0qFBVp80d/k4Wdw
@@ -60,30 +63,30 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
             MHLCCQqOaivEoEIH9SoNwy3wrIZPvq7FtT8=
             =WPfN
             -----END PGP PRIVATE KEY BLOCK-----
-            '''
+            """
         )
-        cls.passphrase = 'foo'
-        cls.keyid = '857C86FCF8A3FB11'
-        cls.top_pillar = os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'top.sls')
-        cls.minion_pillar = os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'gpg.sls')
-        with salt.utils.files.fopen(cls.minion_pillar, 'w') as fp:
+        cls.passphrase = "foo"
+        cls.keyid = "857C86FCF8A3FB11"
+        cls.top_pillar = os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, "top.sls")
+        cls.minion_pillar = os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, "gpg.sls")
+        with salt.utils.files.fopen(cls.minion_pillar, "w") as fp:
             fp.write(
                 textwrap.dedent(
-                    '''
+                    """
                     sneaky_stuff: secret data
                     data_to_sign: test data to get signed
                     data_to_sign_10: more test data
-                    '''
+                    """
                 )
             )
-        with salt.utils.files.fopen(cls.top_pillar, 'w') as fp:
+        with salt.utils.files.fopen(cls.top_pillar, "w") as fp:
             fp.write(
                 textwrap.dedent(
-                    '''
+                    """
                     base:
                       '*':
                         - gpg
-                    '''
+                    """
                 )
             )
 
@@ -106,45 +109,45 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
         del cls.minion_pillar
 
     def test_01_present_from_data(self):
-        '''
+        """
         Test gpg.present and gpg.trusted (called by gpg.present when ``trust``
         argument is provided) with a key imported from text.
-        '''
+        """
         ret = self.run_state(
-            'gpg.present',
-            name='whoopsiedoodledoo',
+            "gpg.present",
+            name="whoopsiedoodledoo",
             keydata=self.secret_key,
             gnupghome=self.gnupghome,
-            trust='fully',
+            trust="fully",
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'GPG key from keydata added to GPG keychain.\n'
+            "GPG key from keydata added to GPG keychain.\n"
             'Set trust level for "1B52281BF159856CA76A04F5857C86FCF8A3FB11" to "fully".',
-            ret
+            ret,
         )
         # Test repeated run does not have any changes
         ret = self.run_state(
-            'gpg.present',
-            name='whoopsiedoodledoo',
+            "gpg.present",
+            name="whoopsiedoodledoo",
             keydata=self.secret_key,
             gnupghome=self.gnupghome,
-            trust='fully',
+            trust="fully",
         )
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
-        if salt.utils.versions.version_cmp(GPG_VERSION, '2.1') >= 0:
+        if salt.utils.versions.version_cmp(GPG_VERSION, "2.1") >= 0:
             self.assertInSaltComment(
                 'GPG key with fingerprint "1B52281BF159856CA76A04F5857C86FCF8A3FB11" from keydata already in keychain.',
-                ret
+                ret,
             )
         else:
-            self.assertInSaltComment('GPG key from keydata already in keychain.', ret)
+            self.assertInSaltComment("GPG key from keydata already in keychain.", ret)
 
         # Test gpg.absent by removing the key imported above.
         ret = self.run_state(
-            'gpg.absent',
-            name='1B52281BF159856CA76A04F5857C86FCF8A3FB11',
+            "gpg.absent",
+            name="1B52281BF159856CA76A04F5857C86FCF8A3FB11",
             passphrases=self.passphrase,
             gnupghome=self.gnupghome,
         )
@@ -154,8 +157,8 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
         )
         # Test repeated run does not have any changes
         ret = self.run_state(
-            'gpg.absent',
-            name='1B52281BF159856CA76A04F5857C86FCF8A3FB11',
+            "gpg.absent",
+            name="1B52281BF159856CA76A04F5857C86FCF8A3FB11",
             passphrases=self.passphrase,
             gnupghome=self.gnupghome,
         )
@@ -163,95 +166,94 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltStateChangesEqual(ret, {})
         self.assertInSaltComment(
             'Key "1B52281BF159856CA76A04F5857C86FCF8A3FB11" already not in GPG keychain',
-            ret
+            ret,
         )
 
     # Running this test as part of the standard testsuite might be considered a DDOS,
     # also it is not guaranteed to be stable.
-    @skipIf(True, 'This test contacts an external service')
+    @skipIf(True, "This test contacts an external service")
     def test_02_present_from_keyserver(self):
-        '''
+        """
         Test gpg.present and gpg.trusted (called by gpg.present when ``trust``
         argument is provided).
-        '''
+        """
         ret = self.run_state(
-            'gpg.present',
-            name='754A1A7AE731F165D5E6D4BD0E08A149DE57BFBE',
+            "gpg.present",
+            name="754A1A7AE731F165D5E6D4BD0E08A149DE57BFBE",
             gnupghome=self.gnupghome,
-            trust='fully',
+            trust="fully",
         )
         self.assertInSaltComment(
             'GPG public key "754A1A7AE731F165D5E6D4BD0E08A149DE57BFBE" added to GPG keychain.\n'
             'Set trust level for "754A1A7AE731F165D5E6D4BD0E08A149DE57BFBE" to "fully".',
-            ret
+            ret,
         )
         # Test repeated run does not have any changes
         ret = self.run_state(
-            'gpg.present',
-            name='754A1A7AE731F165D5E6D4BD0E08A149DE57BFBE',
+            "gpg.present",
+            name="754A1A7AE731F165D5E6D4BD0E08A149DE57BFBE",
             gnupghome=self.gnupghome,
-            trust='fully',
+            trust="fully",
         )
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
         self.assertInSaltComment(
-            'Target file already exists. Not forcing overwrite.', ret,
+            "Target file already exists. Not forcing overwrite.", ret,
         )
 
     def test_03_encrypt_decrypt_from_contents(self):
-        '''
+        """
         Test encrypting and decrypting with data provided through ``contents``
         argument.
-        '''
-        encrypted_file = os.path.join(RUNTIME_VARS.TMP, '03_secret_data.asc')
+        """
+        encrypted_file = os.path.join(RUNTIME_VARS.TMP, "03_secret_data.asc")
         self.addCleanup(salt.utils.files.safe_rm, encrypted_file)
-        decrypted_file = os.path.join(RUNTIME_VARS.TMP, '03_decrypted_data.txt')
+        decrypted_file = os.path.join(RUNTIME_VARS.TMP, "03_decrypted_data.txt")
         self.addCleanup(salt.utils.files.safe_rm, decrypted_file)
         # Ensure key is present
         ret = self.run_state(
-            'gpg.present',
-            name='whoopsiedoodledoo',
+            "gpg.present",
+            name="whoopsiedoodledoo",
             keydata=self.secret_key,
             gnupghome=self.gnupghome,
-            trust='ultimately',
+            trust="ultimately",
         )
         self.assertSaltTrueReturn(ret)
 
         ret = self.run_state(
-            'gpg.data_encrypted',
+            "gpg.data_encrypted",
             name=encrypted_file,
-            contents='very big secret',
+            contents="very big secret",
             gnupghome=self.gnupghome,
-            recipients='salt@saltstack.com',
+            recipients="salt@saltstack.com",
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Encrypted data has been written to {}'.format(encrypted_file), ret
+            "Encrypted data has been written to {}".format(encrypted_file), ret
         )
         self.assertSaltStateChangesEqual(
-            ret, {
-                'old': {encrypted_file: None}, 'new': {encrypted_file: 'encrypted data'}
-            }
+            ret,
+            {"old": {encrypted_file: None}, "new": {encrypted_file: "encrypted data"}},
         )
         # Test no changes on repeated runs (without force)
         ret = self.run_state(
-            'gpg.data_encrypted',
+            "gpg.data_encrypted",
             name=encrypted_file,
-            contents='very big secret',
+            contents="very big secret",
             gnupghome=self.gnupghome,
-            recipients='salt@saltstack.com',
+            recipients="salt@saltstack.com",
         )
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
-        self.assertInSaltComment('File already contains encrypted data', ret)
+        self.assertInSaltComment("File already contains encrypted data", ret)
 
         # Get encrypted data
-        with salt.utils.files.flopen(encrypted_file, 'rb') as _fp:
+        with salt.utils.files.flopen(encrypted_file, "rb") as _fp:
             encrypted_data = _fp.read()
 
         # Test decrypting data
         ret = self.run_state(
-            'gpg.data_decrypted',
+            "gpg.data_decrypted",
             name=decrypted_file,
             contents=encrypted_data,
             passphrase=self.passphrase,
@@ -259,20 +261,21 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Decrypted data has been written to {}'.format(decrypted_file), ret
+            "Decrypted data has been written to {}".format(decrypted_file), ret
         )
         self.assertSaltStateChangesEqual(
-            ret, {
-                'old': {decrypted_file: None}, 'new': {decrypted_file: 'decrypted data'}
-            }
+            ret,
+            {"old": {decrypted_file: None}, "new": {decrypted_file: "decrypted data"}},
         )
         # Verify decrypted data
-        with salt.utils.files.flopen(decrypted_file, 'rb') as _fp:
-            self.assertEqual(b'very big secret', _fp.read(), )
+        with salt.utils.files.flopen(decrypted_file, "rb") as _fp:
+            self.assertEqual(
+                b"very big secret", _fp.read(),
+            )
 
         # Test no changes on repeated runs
         ret = self.run_state(
-            'gpg.data_decrypted',
+            "gpg.data_decrypted",
             name=decrypted_file,
             source=encrypted_file,
             passphrase=self.passphrase,
@@ -281,63 +284,62 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
         self.assertInSaltComment(
-            'Target file already exists. Not forcing overwrite.', ret
+            "Target file already exists. Not forcing overwrite.", ret
         )
 
     def test_04_encrypt_decrypt_from_contents_pillar(self):
-        '''
+        """
         Test encrypting and decrypting with data from pillar.
-        '''
-        self.run_function('saltutil.refresh_pillar')
-        encrypted_file = os.path.join(RUNTIME_VARS.TMP, '04_secret_data.asc')
+        """
+        self.run_function("saltutil.refresh_pillar")
+        encrypted_file = os.path.join(RUNTIME_VARS.TMP, "04_secret_data.asc")
         self.addCleanup(salt.utils.files.safe_rm, encrypted_file)
-        decrypted_file = os.path.join(RUNTIME_VARS.TMP, '04_decrypted_data.txt')
+        decrypted_file = os.path.join(RUNTIME_VARS.TMP, "04_decrypted_data.txt")
         self.addCleanup(salt.utils.files.safe_rm, decrypted_file)
         # Ensure key is present
         ret = self.run_state(
-            'gpg.present',
-            name='whoopsiedoodledoo',
+            "gpg.present",
+            name="whoopsiedoodledoo",
             keydata=self.secret_key,
             gnupghome=self.gnupghome,
-            trust='ultimately',
+            trust="ultimately",
         )
         self.assertSaltTrueReturn(ret)
 
         ret = self.run_state(
-            'gpg.data_encrypted',
+            "gpg.data_encrypted",
             name=encrypted_file,
-            contents_pillar='sneaky_stuff',
+            contents_pillar="sneaky_stuff",
             gnupghome=self.gnupghome,
-            recipients='salt@saltstack.com',
+            recipients="salt@saltstack.com",
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Encrypted data has been written to {}'.format(encrypted_file), ret
+            "Encrypted data has been written to {}".format(encrypted_file), ret
         )
         self.assertSaltStateChangesEqual(
-            ret, {
-                'old': {encrypted_file: None}, 'new': {encrypted_file: 'encrypted data'}
-            }
+            ret,
+            {"old": {encrypted_file: None}, "new": {encrypted_file: "encrypted data"}},
         )
         # Test no changes on repeated runs (without force)
         ret = self.run_state(
-            'gpg.data_encrypted',
+            "gpg.data_encrypted",
             name=encrypted_file,
-            contents_pillar='sneaky_stuff',
+            contents_pillar="sneaky_stuff",
             gnupghome=self.gnupghome,
-            recipients='salt@saltstack.com',
+            recipients="salt@saltstack.com",
         )
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
-        self.assertInSaltComment('File already contains encrypted data', ret)
+        self.assertInSaltComment("File already contains encrypted data", ret)
 
         # Get encrypted data
-        with salt.utils.files.flopen(encrypted_file, 'rb') as _fp:
+        with salt.utils.files.flopen(encrypted_file, "rb") as _fp:
             encrypted_data = _fp.read()
 
         # Test decrypting data
         ret = self.run_state(
-            'gpg.data_decrypted',
+            "gpg.data_decrypted",
             name=decrypted_file,
             contents=encrypted_data,
             passphrase=self.passphrase,
@@ -345,61 +347,61 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Decrypted data has been written to {}'.format(decrypted_file), ret
+            "Decrypted data has been written to {}".format(decrypted_file), ret
         )
         self.assertSaltStateChangesEqual(
-            ret, {
-                'old': {decrypted_file: None}, 'new': {decrypted_file: 'decrypted data'}
-            }
+            ret,
+            {"old": {decrypted_file: None}, "new": {decrypted_file: "decrypted data"}},
         )
         # Verify decrypted data
-        with salt.utils.files.flopen(decrypted_file, 'rb') as _fp:
-            self.assertEqual(b'secret data', _fp.read(), )
+        with salt.utils.files.flopen(decrypted_file, "rb") as _fp:
+            self.assertEqual(
+                b"secret data", _fp.read(),
+            )
 
     def test_05_encrypt_decrypt_from_source(self):
-        '''
+        """
         Test encrypting and decrypting from source argument.
-        '''
-        encrypted_file = os.path.join(RUNTIME_VARS.TMP, '05_secret_data.asc')
+        """
+        encrypted_file = os.path.join(RUNTIME_VARS.TMP, "05_secret_data.asc")
         self.addCleanup(salt.utils.files.safe_rm, encrypted_file)
-        plaintext_file = os.path.join(RUNTIME_VARS.TMP, '05_plaintext.txt')
-        with salt.utils.files.flopen(plaintext_file, 'w') as _fp:
-            _fp.write('plaintext data')
+        plaintext_file = os.path.join(RUNTIME_VARS.TMP, "05_plaintext.txt")
+        with salt.utils.files.flopen(plaintext_file, "w") as _fp:
+            _fp.write("plaintext data")
         self.addCleanup(salt.utils.files.safe_rm, plaintext_file)
-        decrypted_file = os.path.join(RUNTIME_VARS.TMP, '05_decrypted_data.txt')
+        decrypted_file = os.path.join(RUNTIME_VARS.TMP, "05_decrypted_data.txt")
         self.addCleanup(salt.utils.files.safe_rm, decrypted_file)
         # Test encrypting a file
         ret = self.run_state(
-            'gpg.data_encrypted',
+            "gpg.data_encrypted",
             name=encrypted_file,
             source=plaintext_file,
-            recipients='salt@saltstack.com',
+            recipients="salt@saltstack.com",
             gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Encrypted data has been written to {}'.format(encrypted_file), ret
+            "Encrypted data has been written to {}".format(encrypted_file), ret
         )
         self.assertSaltStateChangesEqual(
-            ret, {
-                'old': {encrypted_file: None}, 'new': {encrypted_file: 'encrypted data'}
-            }
+            ret,
+            {"old": {encrypted_file: None}, "new": {encrypted_file: "encrypted data"}},
         )
         # Test no changes on repeated run
         ret = self.run_state(
-            'gpg.data_encrypted',
+            "gpg.data_encrypted",
             name=encrypted_file,
             source=plaintext_file,
-            recipients='salt@saltstack.com',
+            recipients="salt@saltstack.com",
             gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
-        self.assertInSaltComment('File already contains encrypted data', ret)
+        self.assertInSaltComment("File already contains encrypted data", ret)
 
         # Test decrypting the encrypted file
         ret = self.run_state(
-            'gpg.data_decrypted',
+            "gpg.data_decrypted",
             name=decrypted_file,
             source=encrypted_file,
             passphrase=self.passphrase,
@@ -407,20 +409,21 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Decrypted data has been written to {}'.format(decrypted_file), ret
+            "Decrypted data has been written to {}".format(decrypted_file), ret
         )
         self.assertSaltStateChangesEqual(
-            ret, {
-                'old': {decrypted_file: None}, 'new': {decrypted_file: 'decrypted data'}
-            }
+            ret,
+            {"old": {decrypted_file: None}, "new": {decrypted_file: "decrypted data"}},
         )
         # Verify contents of decrypted file
-        with salt.utils.files.flopen(decrypted_file, 'r') as _fp:
-            self.assertEqual('plaintext data', _fp.read(), )
+        with salt.utils.files.flopen(decrypted_file, "r") as _fp:
+            self.assertEqual(
+                "plaintext data", _fp.read(),
+            )
 
         # Test no changes on repeated runs
         ret = self.run_state(
-            'gpg.data_decrypted',
+            "gpg.data_decrypted",
             name=decrypted_file,
             source=encrypted_file,
             passphrase=self.passphrase,
@@ -429,37 +432,37 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
         self.assertInSaltComment(
-            'Target file already exists. Not forcing overwrite.', ret
+            "Target file already exists. Not forcing overwrite.", ret
         )
 
     def test_06_sign_verify_contents(self):
-        '''
+        """
         Test signing and verifying data provided through ``contents``.
-        '''
-        signed_file = os.path.join(RUNTIME_VARS.TMP, '06_signed_data.asc')
+        """
+        signed_file = os.path.join(RUNTIME_VARS.TMP, "06_signed_data.asc")
         self.addCleanup(salt.utils.files.safe_rm, signed_file)
 
         # Test signing
         ret = self.run_state(
-            'gpg.data_signed',
+            "gpg.data_signed",
             name=signed_file,
-            contents='data to sign 06',
+            contents="data to sign 06",
             keyid=self.keyid,
             passphrase=self.passphrase,
             gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Signed data has been written to {}'.format(signed_file), ret
+            "Signed data has been written to {}".format(signed_file), ret
         )
         self.assertSaltStateChangesEqual(
-            ret, {'old': {signed_file: None}, 'new': {signed_file: 'signed data'}}
+            ret, {"old": {signed_file: None}, "new": {signed_file: "signed data"}}
         )
         # Test no changes on repeated run
         ret = self.run_state(
-            'gpg.data_signed',
+            "gpg.data_signed",
             name=signed_file,
-            contents='data to sign 06',
+            contents="data to sign 06",
             keyid=self.keyid,
             passphrase=self.passphrase,
             gnupghome=self.gnupghome,
@@ -467,49 +470,49 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
         self.assertInSaltComment(
-            'Target file already exists. Not forcing overwrite.', ret
+            "Target file already exists. Not forcing overwrite.", ret
         )
 
         # Get signed data
-        with salt.utils.files.flopen(signed_file, 'rb') as _fp:
+        with salt.utils.files.flopen(signed_file, "rb") as _fp:
             signed_data = _fp.read()
         ret = self.run_state(
-            'gpg.data_verified',
-            name='foobar',
+            "gpg.data_verified",
+            name="foobar",
             contents=signed_data,
             gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
-        self.assertInSaltComment('The signature is verified.', ret)
+        self.assertInSaltComment("The signature is verified.", ret)
         self.assertSaltStateChangesEqual(ret, {})
 
     def test_07_sign_verify_contents_from_pillar(self):
-        '''
+        """
         Test signing and verifying data provided through pillar.
-        '''
-        signed_file = os.path.join(RUNTIME_VARS.TMP, '07_signed_data.asc')
+        """
+        signed_file = os.path.join(RUNTIME_VARS.TMP, "07_signed_data.asc")
         self.addCleanup(salt.utils.files.safe_rm, signed_file)
         # Test signing
         ret = self.run_state(
-            'gpg.data_signed',
+            "gpg.data_signed",
             name=signed_file,
-            contents_pillar='data_to_sign',
+            contents_pillar="data_to_sign",
             keyid=self.keyid,
             passphrase=self.passphrase,
             gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Signed data has been written to {}'.format(signed_file), ret
+            "Signed data has been written to {}".format(signed_file), ret
         )
         self.assertSaltStateChangesEqual(
-            ret, {'old': {signed_file: None}, 'new': {signed_file: 'signed data'}}
+            ret, {"old": {signed_file: None}, "new": {signed_file: "signed data"}}
         )
         # Test no changes on repeated run
         ret = self.run_state(
-            'gpg.data_signed',
+            "gpg.data_signed",
             name=signed_file,
-            contents_pillar='data_to_sign',
+            contents_pillar="data_to_sign",
             keyid=self.keyid,
             passphrase=self.passphrase,
             gnupghome=self.gnupghome,
@@ -517,35 +520,35 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
         self.assertInSaltComment(
-            'Target file already exists. Not forcing overwrite.', ret
+            "Target file already exists. Not forcing overwrite.", ret
         )
         # Get signed data
-        with salt.utils.files.flopen(signed_file, 'rb') as _fp:
+        with salt.utils.files.flopen(signed_file, "rb") as _fp:
             signed_data = _fp.read()
         ret = self.run_state(
-            'gpg.data_verified',
-            name='foobar',
+            "gpg.data_verified",
+            name="foobar",
             contents=signed_data,
             gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
-        self.assertInSaltComment('The signature is verified.', ret)
+        self.assertInSaltComment("The signature is verified.", ret)
         self.assertSaltStateChangesEqual(ret, {})
 
     def test_08_sign_verify_source(self):
-        '''
+        """
         Test signing and verifying data provided through ``source``.
-        '''
-        plaintext_file = os.path.join(RUNTIME_VARS.TMP, '08_plaintext.txt')
-        with salt.utils.files.flopen(plaintext_file, 'w') as _fp:
-            _fp.write('data to sign')
+        """
+        plaintext_file = os.path.join(RUNTIME_VARS.TMP, "08_plaintext.txt")
+        with salt.utils.files.flopen(plaintext_file, "w") as _fp:
+            _fp.write("data to sign")
         self.addCleanup(salt.utils.files.safe_rm, plaintext_file)
-        signed_file = os.path.join(RUNTIME_VARS.TMP, '08_signed_data.asc')
+        signed_file = os.path.join(RUNTIME_VARS.TMP, "08_signed_data.asc")
         self.addCleanup(salt.utils.files.safe_rm, signed_file)
 
         # Test signing
         ret = self.run_state(
-            'gpg.data_signed',
+            "gpg.data_signed",
             name=signed_file,
             source=plaintext_file,
             keyid=self.keyid,
@@ -554,14 +557,14 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Signed data has been written to {}'.format(signed_file), ret
+            "Signed data has been written to {}".format(signed_file), ret
         )
         self.assertSaltStateChangesEqual(
-            ret, {'old': {signed_file: None}, 'new': {signed_file: 'signed data'}}
+            ret, {"old": {signed_file: None}, "new": {signed_file: "signed data"}}
         )
         # Test no changes on repeated run
         ret = self.run_state(
-            'gpg.data_signed',
+            "gpg.data_signed",
             name=signed_file,
             source=plaintext_file,
             keyid=self.keyid,
@@ -571,30 +574,30 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
         self.assertInSaltComment(
-            'Target file already exists. Not forcing overwrite.', ret
+            "Target file already exists. Not forcing overwrite.", ret
         )
 
         # Verify signed data
         ret = self.run_state(
-            'gpg.data_verified', name=signed_file, gnupghome=self.gnupghome,
+            "gpg.data_verified", name=signed_file, gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
-        self.assertInSaltComment('The signature is verified.', ret)
+        self.assertInSaltComment("The signature is verified.", ret)
         self.assertSaltStateChangesEqual(ret, {})
 
     def test_09_sign_verify_contents_detached(self):
-        '''
+        """
         Test signing and verifying directly provided contents with detached
         (also directly provided) signature.
-        '''
-        signature_file = os.path.join(RUNTIME_VARS.TMP, '09_signature.asc')
+        """
+        signature_file = os.path.join(RUNTIME_VARS.TMP, "09_signature.asc")
         self.addCleanup(salt.utils.files.safe_rm, signature_file)
 
         # Test signing
         ret = self.run_state(
-            'gpg.data_signed',
+            "gpg.data_signed",
             name=signature_file,
-            contents='data to sign 09',
+            contents="data to sign 09",
             keyid=self.keyid,
             passphrase=self.passphrase,
             gnupghome=self.gnupghome,
@@ -602,16 +605,16 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Signature has been written to {}'.format(signature_file), ret
+            "Signature has been written to {}".format(signature_file), ret
         )
         self.assertSaltStateChangesEqual(
-            ret, {'old': {signature_file: None}, 'new': {signature_file: 'signature'}}
+            ret, {"old": {signature_file: None}, "new": {signature_file: "signature"}}
         )
         # Test no changes on repeated run
         ret = self.run_state(
-            'gpg.data_signed',
+            "gpg.data_signed",
             name=signature_file,
-            contents='data to sign 09',
+            contents="data to sign 09",
             keyid=self.keyid,
             passphrase=self.passphrase,
             gnupghome=self.gnupghome,
@@ -620,36 +623,36 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
         self.assertInSaltComment(
-            'Target file already exists. Not forcing overwrite.', ret
+            "Target file already exists. Not forcing overwrite.", ret
         )
 
         # Get signature data
-        with salt.utils.files.flopen(signature_file, 'rb') as _fp:
+        with salt.utils.files.flopen(signature_file, "rb") as _fp:
             signature = _fp.read()
         ret = self.run_state(
-            'gpg.data_verified',
-            name='foobar',
-            contents='data to sign 09',
+            "gpg.data_verified",
+            name="foobar",
+            contents="data to sign 09",
             signature=signature,
             gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
-        self.assertInSaltComment('The signature is verified.', ret)
+        self.assertInSaltComment("The signature is verified.", ret)
         self.assertSaltStateChangesEqual(ret, {})
 
     def test_10_sign_verify_contents_pillar_detached(self):
-        '''
+        """
         Test signing and verifying pillar-provided contents with detached
         directly provided signature.
-        '''
-        signature_file = os.path.join(RUNTIME_VARS.TMP, '10_signature.asc')
+        """
+        signature_file = os.path.join(RUNTIME_VARS.TMP, "10_signature.asc")
         self.addCleanup(salt.utils.files.safe_rm, signature_file)
 
         # Test signing
         ret = self.run_state(
-            'gpg.data_signed',
+            "gpg.data_signed",
             name=signature_file,
-            contents_pillar='data_to_sign_10',
+            contents_pillar="data_to_sign_10",
             keyid=self.keyid,
             passphrase=self.passphrase,
             gnupghome=self.gnupghome,
@@ -657,16 +660,16 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(
-            'Signature has been written to {}'.format(signature_file), ret
+            "Signature has been written to {}".format(signature_file), ret
         )
         self.assertSaltStateChangesEqual(
-            ret, {'old': {signature_file: None}, 'new': {signature_file: 'signature'}}
+            ret, {"old": {signature_file: None}, "new": {signature_file: "signature"}}
         )
         # Test no changes on repeated run
         ret = self.run_state(
-            'gpg.data_signed',
+            "gpg.data_signed",
             name=signature_file,
-            contents_pillar='data_to_sign_10',
+            contents_pillar="data_to_sign_10",
             keyid=self.keyid,
             passphrase=self.passphrase,
             gnupghome=self.gnupghome,
@@ -675,19 +678,19 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
         self.assertInSaltComment(
-            'Target file already exists. Not forcing overwrite.', ret
+            "Target file already exists. Not forcing overwrite.", ret
         )
 
         # Get signature data
-        with salt.utils.files.flopen(signature_file, 'rb') as _fp:
+        with salt.utils.files.flopen(signature_file, "rb") as _fp:
             signature = _fp.read()
         ret = self.run_state(
-            'gpg.data_verified',
-            name='foobar',
-            contents_pillar='data_to_sign_10',
+            "gpg.data_verified",
+            name="foobar",
+            contents_pillar="data_to_sign_10",
             signature=signature,
             gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
-        self.assertInSaltComment('The signature is verified.', ret)
+        self.assertInSaltComment("The signature is verified.", ret)
         self.assertSaltStateChangesEqual(ret, {})

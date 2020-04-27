@@ -34,15 +34,16 @@ from salt.utils.decorators.jinja import jinja_filter
 
 # Import 3rd-party libs
 from salt.ext import six
+
 # pylint: disable=incompatible-py3-code
 try:
     import gnupg
 
     HAS_GPG_BINDINGS = True
-    GPG_VERSION = '.'.join(map(str, gnupg.GPG().version))
+    GPG_VERSION = ".".join(map(str, gnupg.GPG().version))
 except (ImportError, OSError):
     HAS_GPG_BINDINGS = False
-    GPG_VERSION = '-1'
+    GPG_VERSION = "-1"
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -51,44 +52,48 @@ log = logging.getLogger(__name__)
 __virtualname__ = "gpg"
 
 LETTER_TRUST_DICT = {
-    '-': 'Unknown',
-    'e': 'Expired',
-    'q': 'Unknown',
-    'n': 'Not Trusted',
-    'm': 'Marginally Trusted',
-    'f': 'Fully Trusted',
-    'u': 'Ultimately Trusted',
+    "-": "Unknown",
+    "e": "Expired",
+    "q": "Unknown",
+    "n": "Not Trusted",
+    "m": "Marginally Trusted",
+    "f": "Fully Trusted",
+    "u": "Ultimately Trusted",
 }
 
 NUM_TRUST_DICT = {
-    'expired': '1',
-    'unknown': '2',
-    'not_trusted': '3',
-    'never': '3',
-    'marginally': '4',
-    'fully': '5',
-    'ultimately': '6',
+    "expired": "1",
+    "unknown": "2",
+    "not_trusted": "3",
+    "never": "3",
+    "marginally": "4",
+    "fully": "5",
+    "ultimately": "6",
 }
 
 INV_NUM_TRUST_DICT = {
-    '1': 'Expired',
-    '2': 'Unknown',
-    '3': 'Not Trusted',
-    '4': 'Marginally',
-    '5': 'Fully Trusted',
-    '6': 'Ultimately Trusted',
+    "1": "Expired",
+    "2": "Unknown",
+    "3": "Not Trusted",
+    "4": "Marginally",
+    "5": "Fully Trusted",
+    "6": "Ultimately Trusted",
 }
 
 VERIFY_TRUST_LEVELS = {
-    '0': 'Undefined', '1': 'Never', '2': 'Marginal', '3': 'Fully', '4': 'Ultimate',
+    "0": "Undefined",
+    "1": "Never",
+    "2": "Marginal",
+    "3": "Fully",
+    "4": "Ultimate",
 }
 
 STR_TRUST_LEVELS = {
-    'unknown': 'TRUST_UNDEFINED',
-    'never': 'TRUST_NEVER',
-    'marginally': 'TRUST_MARGINAL',
-    'fully': 'TRUST_FULLY',
-    'ultimately': 'TRUST_ULTIMATE',
+    "unknown": "TRUST_UNDEFINED",
+    "never": "TRUST_NEVER",
+    "marginally": "TRUST_MARGINAL",
+    "fully": "TRUST_FULLY",
+    "ultimately": "TRUST_ULTIMATE",
 }
 
 
@@ -107,15 +112,17 @@ def __virtual__():
     if not _gpg():
         return (
             False,
-            'The gpg execution module cannot be loaded: '
-            'gpg binary is not in the path.',
+            "The gpg execution module cannot be loaded: "
+            "gpg binary is not in the path.",
         )
 
     return (
-        __virtualname__ if HAS_GPG_BINDINGS else (
+        __virtualname__
+        if HAS_GPG_BINDINGS
+        else (
             False,
-            'The gpg execution module cannot be loaded; the '
-            'python-gnupg library is not installed.',
+            "The gpg execution module cannot be loaded; the "
+            "python-gnupg library is not installed.",
         )
     )
 
@@ -136,7 +143,7 @@ def _get_user_info(user=None):
             # if it doesn't exist then fall back to user Salt running as
             userinfo = _get_user_info()
         else:
-            raise SaltInvocationError('User {} does not exist'.format(user))
+            raise SaltInvocationError("User {} does not exist".format(user))
 
     return userinfo
 
@@ -148,14 +155,15 @@ def _get_user_gnupghome(user):
     if user == "salt":
         gnupghome = os.path.join(__salt__["config.get"]("config_dir"), "gpgkeys")
     else:
-        gnupghome = os.path.join(_get_user_info(user)['home'], '.gnupg')
+        gnupghome = os.path.join(_get_user_info(user)["home"], ".gnupg")
     return gnupghome
 
 
 def _restore_ownership(func):
-    '''
+    """
     Wraps gpg function calls to fix permissions of created directories or files.
-    '''
+    """
+
     @functools.wraps(func)
     def func_wrapper(*args, **kwargs):
         """
@@ -211,7 +219,7 @@ def _create_gpg(user=None, gnupghome=None):
             # the user Salt is running as.
             # Since using the gnupg library means we cannot "run as" another user,
             # all gpg-calls are done as the user salt is running as.
-            options.append('--no-permission-warning')
+            options.append("--no-permission-warning")
     except EnvironmentError as exc:
         if exc.errno != errno.ENOENT:
             raise
@@ -233,9 +241,9 @@ def _list_keys(user=None, gnupghome=None, secret=False):
 
 
 def _search_keys(text, keyserver=None, user=None, gnupghome=None):
-    '''
+    """
     Helper function for searching keys from keyserver
-    '''
+    """
     ret = []
     gpg = _create_gpg(user=user, gnupghome=gnupghome)
     if gpg:
@@ -244,29 +252,31 @@ def _search_keys(text, keyserver=None, user=None, gnupghome=None):
 
 
 def _parse_key(gpg_key):
-    '''
+    """
     Helper function to parse a key dict as returned from calling gnupg.
-    '''
-    res = salt.utils.data.filter_falsey({
-        'keyid': gpg_key.get('keyid'),
-        'fingerprint': gpg_key.get('fingerprint'),
-        'uids': gpg_key.get('uids'),
-        'expires': gpg_key.get('expires'),
-        'created': gpg_key.get('date'),
-        'keyLength': gpg_key.get('length'),
-        'ownerTrust': LETTER_TRUST_DICT.get(gpg_key.get('ownertrust')),
-        'trust': LETTER_TRUST_DICT.get(gpg_key.get('trust')),
-    })
+    """
+    res = salt.utils.data.filter_falsey(
+        {
+            "keyid": gpg_key.get("keyid"),
+            "fingerprint": gpg_key.get("fingerprint"),
+            "uids": gpg_key.get("uids"),
+            "expires": gpg_key.get("expires"),
+            "created": gpg_key.get("date"),
+            "keyLength": gpg_key.get("length"),
+            "ownerTrust": LETTER_TRUST_DICT.get(gpg_key.get("ownertrust")),
+            "trust": LETTER_TRUST_DICT.get(gpg_key.get("trust")),
+        }
+    )
     # Translate expires and created
-    for item in ['expires', 'created']:
+    for item in ["expires", "created"]:
         if item in res:
-            res[item] = time.strftime('%Y-%m-%d', time.localtime(float(res[item])))
+            res[item] = time.strftime("%Y-%m-%d", time.localtime(float(res[item])))
     return res
 
 
-@depends('gnupg', version='0.3.5')
-def search_keys(text, keyserver='pool.sks-keyservers.net', user=None, gnupghome=None):
-    '''
+@depends("gnupg", version="0.3.5")
+def search_keys(text, keyserver="pool.sks-keyservers.net", user=None, gnupghome=None):
+    """
     Search keys from keyserver
 
     :param str text: Text to search the keyserver for, e.g. email address, keyID
@@ -299,10 +309,12 @@ def search_keys(text, keyserver='pool.sks-keyservers.net', user=None, gnupghome=
           - keyserver: 'keyserver.ubuntu.com'
           - user: 'username'
 
-    '''
+    """
     return [
-        _parse_key(gpg_key) for gpg_key in
-        _search_keys(text, keyserver=keyserver, user=user, gnupghome=gnupghome)
+        _parse_key(gpg_key)
+        for gpg_key in _search_keys(
+            text, keyserver=keyserver, user=user, gnupghome=gnupghome
+        )
     ]
 
 
@@ -323,7 +335,9 @@ def list_keys(user=None, gnupghome=None):
         salt '*' gpg.list_keys
 
     """
-    return [_parse_key(gpg_key) for gpg_key in _list_keys(user=user, gnupghome=gnupghome)]
+    return [
+        _parse_key(gpg_key) for gpg_key in _list_keys(user=user, gnupghome=gnupghome)
+    ]
 
 
 def list_secret_keys(user=None, gnupghome=None):
@@ -352,10 +366,10 @@ def list_secret_keys(user=None, gnupghome=None):
 
 @_restore_ownership
 def create_key(
-    key_type='RSA',
+    key_type="RSA",
     key_length=1024,
-    name_real='Autogenerated Key',
-    name_comment='Generated by SaltStack',
+    name_real="Autogenerated Key",
+    name_comment="Generated by SaltStack",
     name_email=None,
     subkey_type=None,
     subkey_length=None,
@@ -365,7 +379,7 @@ def create_key(
     user=None,
     gnupghome=None,
 ):
-    '''
+    """
     Create a key in the GPG keychain
 
     .. note::
@@ -409,53 +423,55 @@ def create_key(
 
         salt -t 15 '*' gpg.create_key
 
-    '''
-    ret = {'result': 'changeme', 'message': ''}
+    """
+    ret = {"result": "changeme", "message": ""}
 
     gpg_passphrase = None
     if passphrase_pillar:
-        gpg_passphrase = __salt__['pillar.get'](passphrase_pillar)
+        gpg_passphrase = __salt__["pillar.get"](passphrase_pillar)
         if not gpg_passphrase:
             raise SaltInvocationError(
-                'Passphrase could not be read from pillar. '
-                '{} does not exist.'.format(passphrase_pillar)
+                "Passphrase could not be read from pillar. "
+                "{} does not exist.".format(passphrase_pillar)
             )
     gpg_passphrase = passphrase or gpg_passphrase
 
-    if salt.utils.versions.version_cmp(GPG_VERSION, '2.1') >= 0:
+    if salt.utils.versions.version_cmp(GPG_VERSION, "2.1") >= 0:
         # Passphrase is required for GnuPG >= 2.1
         if not gpg_passphrase:
             raise SaltInvocationError(
-                'No or empty passphrase supplied. '
-                'GnuPG version >= 2.1 requires a password.'
+                "No or empty passphrase supplied. "
+                "GnuPG version >= 2.1 requires a password."
             )
 
-    create_params = salt.utils.data.filter_falsey({
-        'key_type': key_type,
-        'key_length': key_length,
-        'name_real': name_real,
-        'name_comment': name_comment,
-        'name_email': name_email,
-        'subkey_type': subkey_type,
-        'subkey_length': subkey_length,
-        'expire_date': expire_date,
-        'passphrase': gpg_passphrase,
-    })
+    create_params = salt.utils.data.filter_falsey(
+        {
+            "key_type": key_type,
+            "key_length": key_length,
+            "name_real": name_real,
+            "name_comment": name_comment,
+            "name_email": name_email,
+            "subkey_type": subkey_type,
+            "subkey_length": subkey_length,
+            "expire_date": expire_date,
+            "passphrase": gpg_passphrase,
+        }
+    )
 
     gpg = _create_gpg(user=user, gnupghome=gnupghome)
     if not gpg:
-        ret['result'] = False
-        ret['message'] = 'Unable to initialize GPG.'
+        ret["result"] = False
+        ret["message"] = "Unable to initialize GPG."
         return ret
     key = gpg.gen_key(gpg.gen_key_input(**create_params))
-    ret['result'] = bool(key)
-    if ret['result']:
-        ret['fingerprint'] = key.fingerprint
-        ret['message'] = 'GPG key pair successfully generated.'
+    ret["result"] = bool(key)
+    if ret["result"]:
+        ret["fingerprint"] = key.fingerprint
+        ret["message"] = "GPG key pair successfully generated."
     else:
-        ret['message'] = 'Unable to generate GPG key pair.'
+        ret["message"] = "Unable to generate GPG key pair."
 
-    if ret['result'] and not isinstance(ret['result'], bool):
+    if ret["result"] and not isinstance(ret["result"], bool):
         raise salt.exceptions.CheckError(
             'The value of ret["result"] was not updated properly.'
         )
@@ -470,7 +486,7 @@ def delete_key(
     user=None,
     gnupghome=None,
 ):
-    '''
+    """
     Get a key from the GPG keychain
 
     :param str keyid: The keyid of the key to be deleted.
@@ -498,29 +514,31 @@ def delete_key(
 
         salt '*' gpg.delete_key keyid=3FAD9F1E user=username delete_secret=True passphrase='foo'
 
-    '''
-    ret = {'result': 'changeme', 'message': []}
+    """
+    ret = {"result": "changeme", "message": []}
 
     if not salt.utils.data.exactly_one((keyid, fingerprint)):
         raise SaltInvocationError(
-            'Exactly one of either keyid or fingerprint must be specified.'
+            "Exactly one of either keyid or fingerprint must be specified."
         )
 
     gpg = _create_gpg(user=user, gnupghome=gnupghome)
     if not gpg:
-        ret['result'] = False
-        ret['message'] = 'Unable to initialize GPG.'
+        ret["result"] = False
+        ret["message"] = "Unable to initialize GPG."
         return ret
 
-    get_key_kwargs = salt.utils.data.filter_falsey({
-        'keyid': keyid,
-        'fingerprint': fingerprint,
-        'user': user,
-        'gnupghome': gnupghome,
-    })
+    get_key_kwargs = salt.utils.data.filter_falsey(
+        {
+            "keyid": keyid,
+            "fingerprint": fingerprint,
+            "user": user,
+            "gnupghome": gnupghome,
+        }
+    )
     key = get_key(**get_key_kwargs)
     if key:
-        fingerprint = key['fingerprint']
+        fingerprint = key["fingerprint"]
         skey = get_secret_key(
             keyid=keyid, fingerprint=fingerprint, user=user, gnupghome=gnupghome
         )
@@ -529,37 +547,39 @@ def delete_key(
                 res = six.text_type(
                     gpg.delete_keys(fingerprint, secret=True, passphrase=passphrase)
                 )
-                if res == 'ok':
-                    ret['message'].append('Secret key {} deleted.'.format(fingerprint))
+                if res == "ok":
+                    ret["message"].append("Secret key {} deleted.".format(fingerprint))
                 else:
-                    ret['result'] = False
-                    ret['message'] = 'Failed to delete secret key {}: {}'.format(
+                    ret["result"] = False
+                    ret["message"] = "Failed to delete secret key {}: {}".format(
                         fingerprint, res
                     )
             else:
-                ret['result'] = False
-                ret['message'] = 'Secret key exists, delete first or pass delete_secret=True.'
-            if not ret['result']:
+                ret["result"] = False
+                ret[
+                    "message"
+                ] = "Secret key exists, delete first or pass delete_secret=True."
+            if not ret["result"]:
                 return ret
         # Delete the public key
         res = six.text_type(gpg.delete_keys(fingerprint))
-        if res == 'ok':
-            ret['result'] = True
-            ret['message'].append('Public key {} deleted'.format(fingerprint))
+        if res == "ok":
+            ret["result"] = True
+            ret["message"].append("Public key {} deleted".format(fingerprint))
         else:
-            ret['result'] = False
-            ret['message'].append(
-                'Failed to delete public key {}: {}'.format(fingerprint, res)
+            ret["result"] = False
+            ret["message"].append(
+                "Failed to delete public key {}: {}".format(fingerprint, res)
             )
     else:
-        ret['result'] = False
-        ret['message'].append('Key not available in keychain.')
+        ret["result"] = False
+        ret["message"].append("Key not available in keychain.")
 
-    if ret['result'] and not isinstance(ret['result'], bool):
+    if ret["result"] and not isinstance(ret["result"], bool):
         raise salt.exceptions.CheckError(
             'The value of ret["result"] was not updated properly.'
         )
-    ret['message'] = '\n'.join(ret['message'])
+    ret["message"] = "\n".join(ret["message"])
     return ret
 
 
@@ -587,12 +607,15 @@ def get_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
 
     """
     return next(
-        iter([
-            _parse_key(gpg_key)
-            for gpg_key in _list_keys(user=user, gnupghome=gnupghome)
-            if gpg_key['fingerprint'] == fingerprint or gpg_key['keyid'] == keyid
-            or gpg_key['keyid'][8:] == keyid
-        ]),
+        iter(
+            [
+                _parse_key(gpg_key)
+                for gpg_key in _list_keys(user=user, gnupghome=gnupghome)
+                if gpg_key["fingerprint"] == fingerprint
+                or gpg_key["keyid"] == keyid
+                or gpg_key["keyid"][8:] == keyid
+            ]
+        ),
         False,
     )
 
@@ -621,19 +644,22 @@ def get_secret_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
 
     """
     return next(
-        iter([
-            _parse_key(gpg_key)
-            for gpg_key in _list_keys(user=user, gnupghome=gnupghome, secret=True)
-            if gpg_key['fingerprint'] == fingerprint or gpg_key['keyid'] == keyid
-            or gpg_key['keyid'][8:] == keyid
-        ]),
+        iter(
+            [
+                _parse_key(gpg_key)
+                for gpg_key in _list_keys(user=user, gnupghome=gnupghome, secret=True)
+                if gpg_key["fingerprint"] == fingerprint
+                or gpg_key["keyid"] == keyid
+                or gpg_key["keyid"][8:] == keyid
+            ]
+        ),
         False,
     )
 
 
 @_restore_ownership
 def import_key(text=None, filename=None, user=None, gnupghome=None):
-    r'''
+    r"""
     Import a key from text or file
 
     :param str text: The text containing to import.
@@ -651,12 +677,12 @@ def import_key(text=None, filename=None, user=None, gnupghome=None):
         salt '*' gpg.import_key text='-----BEGIN PGP PUBLIC KEY BLOCK-----\n ... -----END PGP PUBLIC KEY BLOCK-----'
         salt '*' gpg.import_key filename='/path/to/public-key-file'
 
-    '''
-    ret = {'result': 'changeme', 'message': 'Unable to import GPG key.'}
+    """
+    ret = {"result": "changeme", "message": "Unable to import GPG key."}
 
     if not salt.utils.data.exactly_one((text, filename)):
         raise SaltInvocationError(
-            'Exactly one of either filename or text must be specified.'
+            "Exactly one of either filename or text must be specified."
         )
 
     if filename:
@@ -668,33 +694,35 @@ def import_key(text=None, filename=None, user=None, gnupghome=None):
 
     gpg = _create_gpg(user=user, gnupghome=gnupghome)
     if not gpg:
-        ret['result'] = False
-        ret['message'] = 'Unable to initialize GPG.'
+        ret["result"] = False
+        ret["message"] = "Unable to initialize GPG."
         return ret
 
     res = gpg.import_keys(text)
     if isinstance(res, gnupg.ImportResult):
         if res.imported or res.imported_rsa:
-            ret['result'] = True
-            ret['message'] = 'Successfully imported key(s).'
-            ret['fingerprints'] = res.fingerprints
+            ret["result"] = True
+            ret["message"] = "Successfully imported key(s)."
+            ret["fingerprints"] = res.fingerprints
         elif res.unchanged or res.sec_dups:
-            ret['result'] = True
-            ret['message'] = 'Key(s) already exist in keychain.'
+            ret["result"] = True
+            ret["message"] = "Key(s) already exist in keychain."
         elif res.not_imported or not res.count:
-            ret['result'] = False
-            ret['message'] = 'Unable to import key'
+            ret["result"] = False
+            ret["message"] = "Unable to import key"
             if res.results:
-                ret['message'] += ': {}'.format(res.results[-1]['text'])
+                ret["message"] += ": {}".format(res.results[-1]["text"])
                 log.error(res.stderr)
         else:
-            ret['result'] = False
-            ret['message'] = 'Unexpected result from gnupg, check salt minion log for details.'
+            ret["result"] = False
+            ret[
+                "message"
+            ] = "Unexpected result from gnupg, check salt minion log for details."
             log.error(res.stderr)
     else:
-        ret['result'] = False
-        ret['message'] = 'No results were returned. No reason given as to why.'
-    if ret['result'] and not isinstance(ret['result'], bool):
+        ret["result"] = False
+        ret["message"] = "No results were returned. No reason given as to why."
+    if ret["result"] and not isinstance(ret["result"], bool):
         raise salt.exceptions.CheckError(
             'The value of ret["result"] was not updated properly.'
         )
@@ -702,7 +730,7 @@ def import_key(text=None, filename=None, user=None, gnupghome=None):
 
 
 def export_key(keyids=None, secret=False, user=None, gnupghome=None, passphrase=None):
-    '''
+    """
     Export a key from the GPG keychain
 
     :param keyids: The key ID(s) of the key(s) to be exported. Can be specified
@@ -728,23 +756,23 @@ def export_key(keyids=None, secret=False, user=None, gnupghome=None, passphrase=
         salt '*' gpg.export_key keyids=3FAD9F1E secret=True
         salt '*' gpg.export_key keyids="['3FAD9F1E','3FBD8F1E']" user=username
 
-    '''
-    ret = {'result': 'changeme', 'message': []}
+    """
+    ret = {"result": "changeme", "message": []}
     gpg = _create_gpg(user=user, gnupghome=gnupghome)
     if not gpg:
-        ret['result'] = False
-        ret['message'] = 'Unable to initialize GPG.'
+        ret["result"] = False
+        ret["message"] = "Unable to initialize GPG."
     else:
         if isinstance(keyids, six.string_types):
-            keyids = keyids.split(',')
-        ret['result'] = True
-        ret['message'] = gpg.export_keys(keyids, secret=secret, passphrase=passphrase)
+            keyids = keyids.split(",")
+        ret["result"] = True
+        ret["message"] = gpg.export_keys(keyids, secret=secret, passphrase=passphrase)
     return ret
 
 
 @_restore_ownership
 def receive_keys(
-    keyserver='pool.sks-keyservers.net', keys=None, user=None, gnupghome=None
+    keyserver="pool.sks-keyservers.net", keys=None, user=None, gnupghome=None
 ):
     """
     Receive key(s) from keyserver and add them to keychain
@@ -769,55 +797,57 @@ def receive_keys(
         salt '*' gpg.receive_keys keys=3FAD9F1E user=username
 
     """
-    ret = {'result': 'changeme', 'message': []}
+    ret = {"result": "changeme", "message": []}
 
     gpg = _create_gpg(user=user, gnupghome=gnupghome)
     if not gpg:
-        ret['result'] = False
-        ret['message'] = 'Unable to initialize GPG.'
+        ret["result"] = False
+        ret["message"] = "Unable to initialize GPG."
         return ret
 
     if isinstance(keys, six.string_types):
-        keys = keys.split(',')
+        keys = keys.split(",")
     res = gpg.recv_keys(keyserver, *keys)
     if isinstance(res, gnupg.ImportResult):
         if res.results:
             for result in res.results:
-                if 'ok' in result:
-                    if result['ok'] == '1':
-                        ret['result'] = True
-                        ret['message'].append(
-                            'Key {} added to keychain'.format(result['fingerprint'])
+                if "ok" in result:
+                    if result["ok"] == "1":
+                        ret["result"] = True
+                        ret["message"].append(
+                            "Key {} added to keychain".format(result["fingerprint"])
                         )
-                    elif result['ok'] == '0':
-                        ret['result'] = True
-                        ret['message'].append(
-                            'Key {} already exists in keychain'.format(
-                                result['fingerprint']
+                    elif result["ok"] == "0":
+                        ret["result"] = True
+                        ret["message"].append(
+                            "Key {} already exists in keychain".format(
+                                result["fingerprint"]
                             )
                         )
-                elif 'problem' in result:
-                    ret['result'] = False
-                    ret['message'].append(
-                        'Unable to receive key: {}'.format(result['text'])
+                elif "problem" in result:
+                    ret["result"] = False
+                    ret["message"].append(
+                        "Unable to receive key: {}".format(result["text"])
                     )
         elif not bool(res):
-            ret['result'] = False
-            ret['message'].append(
-                'Something unexpected went wrong: {}'.format(res.stderr)
+            ret["result"] = False
+            ret["message"].append(
+                "Something unexpected went wrong: {}".format(res.stderr)
             )
     else:
-        ret['result'] = False
-        ret['message'].append('No results were returned. No reason given as to why.')
+        ret["result"] = False
+        ret["message"].append("No results were returned. No reason given as to why.")
 
-    if ret['result'] and not isinstance(ret['result'], bool):
-        raise CheckError('Internal error, result not properly specified.')
-    ret['message'] = '\n'.join(ret['message'])
+    if ret["result"] and not isinstance(ret["result"], bool):
+        raise CheckError("Internal error, result not properly specified.")
+    ret["message"] = "\n".join(ret["message"])
     return ret
 
 
-def trust_key(keyid=None, fingerprint=None, trust_level=None, user=None, gnupghome=None):
-    '''
+def trust_key(
+    keyid=None, fingerprint=None, trust_level=None, user=None, gnupghome=None
+):
+    """
     Set the trust level for a key in GPG keychain
 
     :param str keyid: The keyid of the key to set the trust level for.
@@ -840,17 +870,17 @@ def trust_key(keyid=None, fingerprint=None, trust_level=None, user=None, gnupgho
         salt '*' gpg.trust_key '53C96788253E58416D20BCD352952C84C3252192' trust_level='not_trusted'
         salt '*' gpg.trust_key '3FAD9F1E' trust_level='ultimately' user='username'
 
-    '''
-    ret = {'result': 'changeme', 'message': ''}
+    """
+    ret = {"result": "changeme", "message": ""}
     if not salt.utils.data.exactly_one((keyid, fingerprint)):
         raise SaltInvocationError(
-            'Exactly one of either keyid or fingerprint must be provided.'
+            "Exactly one of either keyid or fingerprint must be provided."
         )
 
     if trust_level not in NUM_TRUST_DICT:
         raise SaltInvocationError(
             'Invalid trust level "{}" specified. Valid trust levels are: {}'
-            ''.format(trust_level, ','.join(NUM_TRUST_DICT.keys()))
+            "".format(trust_level, ",".join(NUM_TRUST_DICT.keys()))
         )
 
     if keyid:
@@ -859,42 +889,42 @@ def trust_key(keyid=None, fingerprint=None, trust_level=None, user=None, gnupgho
         gpg_key = get_key(fingerprint=fingerprint, user=user, gnupghome=gnupghome)
 
     if not gpg_key:
-        ret['result'] = False
-        ret['message'] = 'KeyID or fingerprint {} not in GPG keychain'.format(
+        ret["result"] = False
+        ret["message"] = "KeyID or fingerprint {} not in GPG keychain".format(
             keyid or fingerprint
         )
         return ret
-    if 'fingerprint' not in gpg_key:
-        ret['result'] = False
-        ret['message'] = 'Fingerprint not found for KeyID {}'.format(keyid)
+    if "fingerprint" not in gpg_key:
+        ret["result"] = False
+        ret["message"] = "Fingerprint not found for KeyID {}".format(keyid)
         return ret
-    fingerprint = gpg_key['fingerprint']
+    fingerprint = gpg_key["fingerprint"]
 
-    if salt.utils.versions.version_cmp(gnupg.__version__, '0.4.2') < 0:
+    if salt.utils.versions.version_cmp(gnupg.__version__, "0.4.2") < 0:
         # Use the gpg cli
         homedir = gnupghome if gnupghome else _get_user_gnupghome(user)
-        cmd = [_gpg(), '--import-ownertrust', '--homedir', homedir]
-        run_kwargs = salt.utils.data.filter_falsey({
-            'runas': None if user == 'salt' else user,
-        })
-        ownertrust_string = '{}:{}\n'.format(fingerprint, NUM_TRUST_DICT[trust_level])
+        cmd = [_gpg(), "--import-ownertrust", "--homedir", homedir]
+        run_kwargs = salt.utils.data.filter_falsey(
+            {"runas": None if user == "salt" else user,}
+        )
+        ownertrust_string = "{}:{}\n".format(fingerprint, NUM_TRUST_DICT[trust_level])
 
-        res = __salt__['cmd.run_all'](
+        res = __salt__["cmd.run_all"](
             cmd, stdin=ownertrust_string, python_shell=False, **run_kwargs
         )
 
-        if not res['retcode'] == 0:
-            ret['result'] = False
-            ret['message'] = res['stderr']
-        elif res['stderr']:
-            ret['result'] = True
-            _match = re.findall(r'\d', res['stderr'])
+        if not res["retcode"] == 0:
+            ret["result"] = False
+            ret["message"] = res["stderr"]
+        elif res["stderr"]:
+            ret["result"] = True
+            _match = re.findall(r"\d", res["stderr"])
             if len(_match) == 2:
-                ret['message'] = 'Changing ownership trust from {} to {}.'.format(
+                ret["message"] = "Changing ownership trust from {} to {}.".format(
                     INV_NUM_TRUST_DICT[_match[0]], INV_NUM_TRUST_DICT[_match[1]]
                 )
             else:
-                ret['message'] = 'Setting ownership trust to {}.'.format(
+                ret["message"] = "Setting ownership trust to {}.".format(
                     INV_NUM_TRUST_DICT[_match[0]]
                 )
     else:
@@ -902,22 +932,22 @@ def trust_key(keyid=None, fingerprint=None, trust_level=None, user=None, gnupgho
         gpg = _create_gpg(user=user, gnupghome=gnupghome)
         if gpg:
             res = gpg.trust_keys(fingerprint, STR_TRUST_LEVELS[trust_level])
-            ret['result'] = res.status == 'ok'
-            if not ret['result']:
-                ret['message'] = res.problem_reason
+            ret["result"] = res.status == "ok"
+            if not ret["result"]:
+                ret["message"] = res.problem_reason
             else:
-                ret['message'] = 'Setting ownership trust to {}'.format(
+                ret["message"] = "Setting ownership trust to {}".format(
                     INV_NUM_TRUST_DICT[NUM_TRUST_DICT[trust_level]]
                 )
         else:
-            ret['result'] = False
-            ret['message'] = 'Unable to initialize GPG.'
-    if ret['result'] and not isinstance(ret['result'], bool):
-        raise CheckError('Internal error, result not properly specified.')
+            ret["result"] = False
+            ret["message"] = "Unable to initialize GPG."
+    if ret["result"] and not isinstance(ret["result"], bool):
+        raise CheckError("Internal error, result not properly specified.")
     return ret
 
 
-@depends('gnupg', version='0.3.7')
+@depends("gnupg", version="0.3.7")
 def sign(
     user=None,
     keyid=None,
@@ -930,7 +960,7 @@ def sign(
     gnupghome=None,
     bare=False,
 ):
-    '''
+    """
     Sign message or file.
 
     :param str user: Used to determine the gnupghome location with the user's
@@ -967,81 +997,88 @@ def sign(
           gpg.sign:
           - filename: '/path/to/important.file'
           - passphrase_pillar: gpg_passphrase
-    '''
-    ret = {'result': 'changeme', 'message': ''}
+    """
+    ret = {"result": "changeme", "message": ""}
     if not salt.utils.data.exactly_one((text, filename)):
         raise SaltInvocationError(
-            'Exactly one of either text or filename must be provided.'
+            "Exactly one of either text or filename must be provided."
         )
     gpg = _create_gpg(user=user, gnupghome=gnupghome)
     if not gpg:
-        ret['result'] = False
-        ret['message'] = 'Unable to initialize GPG.'
+        ret["result"] = False
+        ret["message"] = "Unable to initialize GPG."
         return ret
 
     gpg_passphrase = None
     if passphrase_pillar:
-        gpg_passphrase = __salt__['pillar.get'](passphrase_pillar)
+        gpg_passphrase = __salt__["pillar.get"](passphrase_pillar)
         if not gpg_passphrase:
             raise SaltInvocationError(
-                'Passphrase could not be read from pillar. '
-                '{} does not exist or is empty.'.format(passphrase_pillar)
+                "Passphrase could not be read from pillar. "
+                "{} does not exist or is empty.".format(passphrase_pillar)
             )
     gpg_passphrase = passphrase or gpg_passphrase
 
     if keyid is None:
         secret_keys = list_secret_keys(user=user, gnupghome=gnupghome)
         if not secret_keys:
-            raise SaltInvocationError('No keyid provided and no secret keys found.')
-        keyid = secret_keys[0]['keyid']
+            raise SaltInvocationError("No keyid provided and no secret keys found.")
+        keyid = secret_keys[0]["keyid"]
 
-    call_kwargs = salt.utils.data.filter_falsey({
-        'keyid': keyid,
-        'passphrase': gpg_passphrase,
-        'detach': detach,
-        'output':
-            output
-            if salt.utils.versions.version_cmp(gnupg.__version__, '0.3.7') >= 0 else None,
-    })
-    if (salt.utils.versions.version_cmp(gnupg.__version__, '0.4.1') >= 0
-            and salt.utils.versions.version_cmp(GPG_VERSION, '2.1') >= 0):
+    call_kwargs = salt.utils.data.filter_falsey(
+        {
+            "keyid": keyid,
+            "passphrase": gpg_passphrase,
+            "detach": detach,
+            "output": output
+            if salt.utils.versions.version_cmp(gnupg.__version__, "0.3.7") >= 0
+            else None,
+        }
+    )
+    if (
+        salt.utils.versions.version_cmp(gnupg.__version__, "0.4.1") >= 0
+        and salt.utils.versions.version_cmp(GPG_VERSION, "2.1") >= 0
+    ):
         # Avoid getting a popup asking for a password
-        call_kwargs.update({'extra_args': ['--pinentry-mode', 'loopback']})
+        call_kwargs.update({"extra_args": ["--pinentry-mode", "loopback"]})
     if text:
         res = gpg.sign(text, **call_kwargs)
     else:
-        with salt.utils.files.flopen(filename, 'rb') as _fp:
+        with salt.utils.files.flopen(filename, "rb") as _fp:
             res = gpg.sign_file(_fp, **call_kwargs)
     if isinstance(res, gnupg.Sign):
-        if res.status == 'signature created':
-            ret['result'] = True
-            if (salt.utils.versions.version_cmp(gnupg.__version__, '0.3.7') < 0 and output):
-                with salt.utils.files.flopen(output, 'wb') as fout:
+        if res.status == "signature created":
+            ret["result"] = True
+            if (
+                salt.utils.versions.version_cmp(gnupg.__version__, "0.3.7") < 0
+                and output
+            ):
+                with salt.utils.files.flopen(output, "wb") as fout:
                     fout.write(salt.utils.stringutils.to_bytes(res.data))
             if output:
-                ret['message'] = '{} has been written to {}'.format(
-                    'Signature' if detach else 'Signed data', output
+                ret["message"] = "{} has been written to {}".format(
+                    "Signature" if detach else "Signed data", output
                 )
             else:
-                ret['message'] = res.data
+                ret["message"] = res.data
         else:
-            ret['result'] = False
-            ret['message'] = 'Failed to sign data. Check minion log for details.'
+            ret["result"] = False
+            ret["message"] = "Failed to sign data. Check minion log for details."
             log.error(res.stderr)
     else:
-        ret['result'] = False
-        ret['message'] = 'No results were returned. No reason given as to why.'
-    if ret['result'] and not isinstance(ret['result'], bool):
-        raise CheckError('Internal error, result not properly specified.')
+        ret["result"] = False
+        ret["message"] = "No results were returned. No reason given as to why."
+    if ret["result"] and not isinstance(ret["result"], bool):
+        raise CheckError("Internal error, result not properly specified.")
     if bare:
-        ret = res.data if ret['result'] else None
+        ret = res.data if ret["result"] else None
     return ret
 
 
 def verify(
     text=None, user=None, filename=None, gnupghome=None, signature=None, trustmodel=None
 ):
-    '''
+    """
     Verify a message or file.
 
     :param str text: The text to verify.
@@ -1073,17 +1110,17 @@ def verify(
         salt '*' gpg.verify filename='/path/to/important.file'
         salt '*' gpg.verify filename='/path/to/important.file' trustmodel=direct
 
-    '''
-    ret = {'result': 'changeme', 'message': ''}
+    """
+    ret = {"result": "changeme", "message": ""}
     if not salt.utils.data.exactly_one((text, filename)):
         raise SaltInvocationError(
-            'Exactly one of either text or filename must be provided.'
+            "Exactly one of either text or filename must be provided."
         )
 
-    trustmodels = ('pgp', 'classic', 'tofu', 'tofu+pgp', 'direct', 'always', 'auto')
+    trustmodels = ("pgp", "classic", "tofu", "tofu+pgp", "direct", "always", "auto")
 
     if trustmodel and trustmodel not in trustmodels:
-        raise SaltInvocationError('Invalid trustmodel provided: {}.'.format(trustmodel))
+        raise SaltInvocationError("Invalid trustmodel provided: {}.".format(trustmodel))
 
     extra_args = []
     cached_signature = None
@@ -1093,26 +1130,26 @@ def verify(
 
     gpg = _create_gpg(user=user, gnupghome=gnupghome)
     if not gpg:
-        ret['result'] = False
-        ret['message'] = 'Unable to initialize GPG.'
+        ret["result"] = False
+        ret["message"] = "Unable to initialize GPG."
         return ret
     if signature:
-        if signature.startswith('-----BEGIN PGP SIGNATURE-----'):
+        if signature.startswith("-----BEGIN PGP SIGNATURE-----"):
             try:
                 cached_signature = salt.utils.files.mkstemp()
-                with salt.utils.files.flopen(cached_signature, 'w') as _fp:
+                with salt.utils.files.flopen(cached_signature, "w") as _fp:
                     _fp.write(signature)
             except IOError as exc:
-                ret['result'] = False
-                ret['message'] = 'Failed to store signature in tempfile: {}.'.format(
+                ret["result"] = False
+                ret["message"] = "Failed to store signature in tempfile: {}.".format(
                     exc.__str__()
                 )
         else:
-            cached_signature = __salt__['cp.cache_file'](signature)
+            cached_signature = __salt__["cp.cache_file"](signature)
             if not cached_signature:
-                ret['result'] = False
-                ret['message'] = 'Failed to cache source locally.'
-    if not ret['result']:
+                ret["result"] = False
+                ret["message"] = "Failed to cache source locally."
+    if not ret["result"]:
         salt.utils.files.safe_rm(cached_signature)
         return ret
     if text:
@@ -1126,29 +1163,29 @@ def verify(
             res = gpg.verify(text, extra_args=extra_args)
     else:
         if signature:
-            with salt.utils.files.fopen(cached_signature, 'rb') as _fp:
+            with salt.utils.files.fopen(cached_signature, "rb") as _fp:
                 res = gpg.verify_file(_fp, filename, extra_args=extra_args)
         else:
-            with salt.utils.files.fopen(filename, 'rb') as _fp:
+            with salt.utils.files.fopen(filename, "rb") as _fp:
                 res = gpg.verify_file(_fp, extra_args=extra_args)
     if cached_signature:
         salt.utils.files.safe_rm(cached_signature)
 
     if isinstance(res, gnupg.Verify):
         if res and res.trust_level is not None:
-            ret['result'] = True
-            ret['username'] = res.username
-            ret['key_id'] = res.key_id
-            ret['trust_level'] = VERIFY_TRUST_LEVELS[six.text_type(res.trust_level)]
-            ret['message'] = 'The signature is verified.'
+            ret["result"] = True
+            ret["username"] = res.username
+            ret["key_id"] = res.key_id
+            ret["trust_level"] = VERIFY_TRUST_LEVELS[six.text_type(res.trust_level)]
+            ret["message"] = "The signature is verified."
         else:
-            ret['result'] = False
-            ret['message'] = 'The signature could not be verified.'
+            ret["result"] = False
+            ret["message"] = "The signature could not be verified."
     else:
-        ret['result'] = False
-        ret['message'] = 'No results were returned. No reason given as to why.'
-    if ret['result'] and not isinstance(ret['result'], bool):
-        raise CheckError('Internal error, result not properly specified.')
+        ret["result"] = False
+        ret["message"] = "No results were returned. No reason given as to why."
+    if ret["result"] and not isinstance(ret["result"], bool):
+        raise CheckError("Internal error, result not properly specified.")
     return ret
 
 
@@ -1166,7 +1203,7 @@ def encrypt(
     bare=False,
     armor=True,
 ):
-    '''
+    """
     Encrypt a message or file.
 
     :param str user: Used to determine the gnupghome location with the user's
@@ -1215,64 +1252,68 @@ def encrypt(
           - filename: '/path/to/important.file'
           - passphrase: {{ salt['pillar.get']('gpg_passphrase', 'werybigSecret!') }}
 
-    '''
-    ret = {'result': 'changeme', 'message': ''}
+    """
+    ret = {"result": "changeme", "message": ""}
     if not salt.utils.data.exactly_one((text, filename)):
         raise SaltInvocationError(
-            'Exactly one of either text or filename must be provided.'
+            "Exactly one of either text or filename must be provided."
         )
     gpg_passphrase = None
     if passphrase_pillar:
-        gpg_passphrase = __salt__['pillar.get'](passphrase_pillar)
+        gpg_passphrase = __salt__["pillar.get"](passphrase_pillar)
         if not gpg_passphrase:
             raise SaltInvocationError(
-                'Passphrase could not be read from pillar. '
-                '{} does not exist or is empty.'.format(passphrase_pillar)
+                "Passphrase could not be read from pillar. "
+                "{} does not exist or is empty.".format(passphrase_pillar)
             )
     gpg_passphrase = passphrase or gpg_passphrase
     if symmetric and not gpg_passphrase:
         raise SaltInvocationError(
-            'Symmetric encryption specified, but no passphrase supplied.'
+            "Symmetric encryption specified, but no passphrase supplied."
         )
 
-    encrypt_kwargs = salt.utils.data.filter_falsey({
-        'passphrase': gpg_passphrase,
-        'output': output,
-        'symmetric': 'AES256' if symmetric and isinstance(symmetric, bool) else symmetric,
-        'sign': sign,
-        'armor': armor,
-    })
+    encrypt_kwargs = salt.utils.data.filter_falsey(
+        {
+            "passphrase": gpg_passphrase,
+            "output": output,
+            "symmetric": "AES256"
+            if symmetric and isinstance(symmetric, bool)
+            else symmetric,
+            "sign": sign,
+            "armor": armor,
+        }
+    )
 
     gpg = _create_gpg(user=user, gnupghome=gnupghome)
     if not gpg:
-        ret['result'] = False
-        ret['message'] = 'Unable to initialize GPG.'
+        ret["result"] = False
+        ret["message"] = "Unable to initialize GPG."
         return ret
     res = None
     if text:
         res = gpg.encrypt(text, recipients, **encrypt_kwargs)
     else:
-        with salt.utils.files.flopen(filename, 'rb') as _fp:
+        with salt.utils.files.flopen(filename, "rb") as _fp:
             res = gpg.encrypt_file(_fp, recipients, **encrypt_kwargs)
 
     if isinstance(res, gnupg.Crypt):
         if res.ok:
-            ret['result'] = True
+            ret["result"] = True
             if output:
-                ret['message'] = 'Encrypted data has been written to {}'.format(output)
+                ret["message"] = "Encrypted data has been written to {}".format(output)
             else:
-                ret['message'] = res.data
+                ret["message"] = res.data
         elif res.status:
-            ret['result'] = False
-            ret['message'] = '{}.\nPlease check the salt-minion log.'.format(res.status)
+            ret["result"] = False
+            ret["message"] = "{}.\nPlease check the salt-minion log.".format(res.status)
             log.error(res.stderr)
     else:
-        ret['result'] = False
-        ret['message'] = 'No results were returned. No reason given as to why.'
-    if ret['result'] and not isinstance(ret['result'], bool):
-        raise CheckError('Internal error, result not properly specified.')
+        ret["result"] = False
+        ret["message"] = "No results were returned. No reason given as to why."
+    if ret["result"] and not isinstance(ret["result"], bool):
+        raise CheckError("Internal error, result not properly specified.")
     if bare:
-        ret = ret['message'] if ret['result'] else None
+        ret = ret["message"] if ret["result"] else None
     return ret
 
 
@@ -1287,7 +1328,7 @@ def decrypt(
     bare=False,
     always_trust=False,
 ):
-    r'''
+    r"""
     Decrypt a message or file
 
     :param str user: Used to determine the gnupghome location with the user's
@@ -1333,84 +1374,90 @@ def decrypt(
           - passphrase_pillar: gpg_passphrase
           - output: '/path/to/decrypted.file'
 
-    '''
-    ret = {'result': 'changeme', 'message': ''}
+    """
+    ret = {"result": "changeme", "message": ""}
     if not salt.utils.data.exactly_one((text, filename)):
         raise SaltInvocationError(
-            'Exactly one of either text or filename must be provided.'
+            "Exactly one of either text or filename must be provided."
         )
     gpg_passphrase = None
     if passphrase_pillar:
-        gpg_passphrase = __salt__['pillar.get'](passphrase_pillar)
+        gpg_passphrase = __salt__["pillar.get"](passphrase_pillar)
         if not gpg_passphrase:
             raise SaltInvocationError(
-                'Passphrase could not be read from pillar. '
-                '{} does not exist or is empty.'.format(passphrase_pillar)
+                "Passphrase could not be read from pillar. "
+                "{} does not exist or is empty.".format(passphrase_pillar)
             )
     gpg_passphrase = passphrase or gpg_passphrase
 
-    decrypt_kwargs = salt.utils.data.filter_falsey({
-        'always_trust': always_trust,
-        'output': output if filename else None,
-        'passphrase': gpg_passphrase,
-    })
+    decrypt_kwargs = salt.utils.data.filter_falsey(
+        {
+            "always_trust": always_trust,
+            "output": output if filename else None,
+            "passphrase": gpg_passphrase,
+        }
+    )
 
     gpg = _create_gpg(user=user, gnupghome=gnupghome)
     if not gpg:
-        ret['result'] = False
-        ret['message'] = 'Unable to initialize GPG.'
+        ret["result"] = False
+        ret["message"] = "Unable to initialize GPG."
         return ret
     res = None
     if text:
         res = gpg.decrypt(text, **decrypt_kwargs)
     else:
-        with salt.utils.files.flopen(filename, 'rb') as _fp:
+        with salt.utils.files.flopen(filename, "rb") as _fp:
             res = gpg.decrypt_file(_fp, **decrypt_kwargs)
 
     if isinstance(res, gnupg.Crypt):
-        ret['result'] = res.ok
+        ret["result"] = res.ok
         if res.ok:
-            for item in ['username',
-                         'key_id',
-                         'signature_id',
-                         'fingerprint',
-                         'trust_level',
-                         'trust_text', ]:
+            for item in [
+                "username",
+                "key_id",
+                "signature_id",
+                "fingerprint",
+                "trust_level",
+                "trust_text",
+            ]:
                 ret[item] = getattr(res, item, None)
             ret = salt.utils.data.filter_falsey(ret)
             if output:
-                ret['message'] = 'Decrypted data has been written to {}'.format(output)
+                ret["message"] = "Decrypted data has been written to {}".format(output)
                 if not filename:
                     # Write the output ourselves
                     try:
-                        with salt.utils.files.flopen(output, 'wb') as _fp:
+                        with salt.utils.files.flopen(output, "wb") as _fp:
                             _fp.write(res.data)
                     except IOError as exc:
-                        ret['result'] = False
-                        ret['message'] = 'Error writing decrypted data to file "{}".'.format(
-                            output
-                        )
+                        ret["result"] = False
+                        ret[
+                            "message"
+                        ] = 'Error writing decrypted data to file "{}".'.format(output)
             else:
-                ret['message'] = salt.utils.stringutils.to_unicode(res.data)
+                ret["message"] = salt.utils.stringutils.to_unicode(res.data)
         elif res.status:
-            ret['message'] = '{}.\nPlease check the salt-minion log for further details.'.format(
+            ret[
+                "message"
+            ] = "{}.\nPlease check the salt-minion log for further details.".format(
                 res.status
             )
             log.error(res.stderr)
     else:
-        ret['result'] = False
-        ret['message'] = 'No results were returned. No reason given as to why.'
+        ret["result"] = False
+        ret["message"] = "No results were returned. No reason given as to why."
 
-    if ret['result'] and not isinstance(ret['result'], bool):
-        raise CheckError('Internal error, result not properly specified.')
+    if ret["result"] and not isinstance(ret["result"], bool):
+        raise CheckError("Internal error, result not properly specified.")
     if bare:
-        ret = ret['message'] if ret['result'] else None
+        ret = ret["message"] if ret["result"] else None
     return ret
 
 
-@depends(salt.utils.versions.version_cmp(GPG_VERSION or '-1', '2.1') >= 0)
+@depends(salt.utils.versions.version_cmp(GPG_VERSION or "-1", "2.1") >= 0)
 def get_fingerprint_from_data(keydata, secret=False):
-    '''
+    """
     This will return the fingerprint from a GPG key.
 
     :param str keydata: (potentially armored) key data.
@@ -1421,15 +1468,16 @@ def get_fingerprint_from_data(keydata, secret=False):
     Note: If the keydata contains multiple keys, only the fingerprint of the first
     key is returned.
     Note2: This will only work for GNUPG 2.1 or greater.
-    '''
+    """
     try:
         # Note: Sometimes, the user running salt does not have a .gnupg in its
         # homedir. Therefor always make a tempdir to contain the temporary keyring
         # that GPG always seems to create even though this is a dry-run
-        temp_gnupghome = tempfile.mkdtemp(prefix='saltgpg')
-        res = __salt__['cmd.run_stdout'](
-            'gpg --dry-run --homedir {} --import-options import-show --import --with-colons'
-            .format(temp_gnupghome),
+        temp_gnupghome = tempfile.mkdtemp(prefix="saltgpg")
+        res = __salt__["cmd.run_stdout"](
+            "gpg --dry-run --homedir {} --import-options import-show --import --with-colons".format(
+                temp_gnupghome
+            ),
             stdin=keydata,
         )
     finally:
@@ -1441,7 +1489,7 @@ def get_fingerprint_from_data(keydata, secret=False):
             if exc.errno != errno.ENOENT:
                 raise
 
-    fingerprint = re.match('^.*?(?:pub|sec):.*?fpr:{9}([0-9A-F]*):.*$', res, re.DOTALL)
+    fingerprint = re.match("^.*?(?:pub|sec):.*?fpr:{9}([0-9A-F]*):.*$", res, re.DOTALL)
     try:
         fingerprint = fingerprint.group(1)
     except AttributeError:
@@ -1449,7 +1497,7 @@ def get_fingerprint_from_data(keydata, secret=False):
     return fingerprint
 
 
-@jinja_filter('gpg_encrypt')
+@jinja_filter("gpg_encrypt")
 def text_encrypt(
     text,
     recipients=None,
@@ -1460,7 +1508,7 @@ def text_encrypt(
     user=None,
     gnupghome=None,
 ):
-    '''
+    """
     Wrapper function for ``encrypt`` to be used as Jinja filter for encrypting
     text.
 
@@ -1496,7 +1544,7 @@ def text_encrypt(
           file.managed:
             - name: '/path/to/encrypted_file.asc'
             - contents: {{ 'some text' | gpg_encrypt(recipients='salt@saltstack.com') }}
-    '''
+    """
     return encrypt(
         user=user,
         recipients=recipients,
