@@ -343,6 +343,8 @@ def sendline(command, method="cli_show_ascii", **kwargs):
     .. code-block: bash
 
         salt '*' nxos.sendline 'show run | include "^username admin password"'
+        salt '*' nxos.sendline "['show inventory', 'show version']"
+        salt '*' nxos.sendline 'show inventory ; show version'
     """
     smethods = ["cli_show_ascii", "cli_show", "cli_conf"]
     if method not in smethods:

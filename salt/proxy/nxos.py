@@ -392,10 +392,10 @@ def _shutdown_ssh():
     return "Shutdown of ssh proxy minion is not supported"
 
 
-def _sendline_ssh(commands, **kwargs):
+def _sendline_ssh(commands, timeout=None, **kwargs):
     if isinstance(commands, str):
         commands = [commands]
-    command = "; ".join(commands)
+    command = " ; ".join(commands)
     if _ping_ssh() is False:
         _init_ssh()
     out, err = DEVICE_DETAILS[_worker_name()].sendline(command)
@@ -406,7 +406,7 @@ def _sendline_ssh(commands, **kwargs):
     return out
 
 
-def _parse_output_for_errors(data, command, **kwargs):
+def _parse_output_for_errors(data, command, error_pattern=None):
     """
     Helper method to parse command output for error information
     """
@@ -419,8 +419,7 @@ def _parse_output_for_errors(data, command, **kwargs):
                 "cli_error": data.lstrip(),
             }
         )
-    if kwargs.get("error_pattern"):
-        error_pattern = kwargs.get("error_pattern")
+    if error_pattern:
         if isinstance(error_pattern, str):
             error_pattern = [error_pattern]
         for re_line in error_pattern:
