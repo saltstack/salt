@@ -980,6 +980,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         Dispatch local client commands
         """
         # Generate jid and find all minions before triggering a job to subscribe all returns from minions
+        full_return = chunk.pop("full_return", False)
         chunk["jid"] = (
             salt.utils.jid.gen_jid(self.application.opts)
             if not chunk.get("jid", None)
@@ -1105,7 +1106,9 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                         if minion_id not in minions:
                             minions[minion_id] = False
                 else:
-                    chunk_ret[f_result["data"]["id"]] = f_result["data"]["return"]
+                    chunk_ret[f_result["data"]["id"]] = (
+                        f_result if full_return else f_result["data"]["return"]
+                    )
                     # clear finished event future
                     minions[f_result["data"]["id"]] = True
                     # if there are no more minions to wait for, then we are done
