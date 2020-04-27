@@ -16,7 +16,7 @@ from tests.support.unit import TestCase, skipIf
 @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
 class WinTaskTestCase(TestCase):
     """
-        Test cases for salt.modules.win_task
+    Test cases for salt.modules.win_task
     """
 
     def test_repeat_interval(self):

@@ -26,10 +26,6 @@ import uuid
 import warnings
 from errno import EACCES, EPERM
 
-# Extend the default list of supported distros. This will be used for the
-# /etc/DISTRO-release checking that is part of linux_distribution()
-from platform import _supported_dists
-
 # Import salt libs
 import salt.exceptions
 import salt.log
@@ -38,6 +34,7 @@ import salt.log
 # of the modules are loaded and are generally available for any usage.
 import salt.modules.cmdmod
 import salt.modules.smbios
+import salt.utils.args
 import salt.utils.dns
 import salt.utils.files
 import salt.utils.network
@@ -59,29 +56,34 @@ except ImportError:
 __proxyenabled__ = ["*"]
 __FQDN__ = None
 
-
-_supported_dists += (
-    "arch",
-    "mageia",
-    "meego",
-    "vmware",
-    "bluewhite64",
-    "slamd64",
-    "ovs",
-    "system",
-    "mint",
-    "oracle",
-    "void",
-)
-
 # linux_distribution deprecated in py3.7
 try:
     from platform import linux_distribution as _deprecated_linux_distribution
 
+    # Extend the default list of supported distros. This will be used for the
+    # /etc/DISTRO-release checking that is part of linux_distribution()
+    from platform import _supported_dists
+
+    _supported_dists += (
+        "arch",
+        "mageia",
+        "meego",
+        "vmware",
+        "bluewhite64",
+        "slamd64",
+        "ovs",
+        "system",
+        "mint",
+        "oracle",
+        "void",
+    )
+
     def linux_distribution(**kwargs):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            return _deprecated_linux_distribution(**kwargs)
+            return _deprecated_linux_distribution(
+                supported_dists=_supported_dists, **kwargs
+            )
 
 
 except ImportError:
@@ -280,7 +282,7 @@ def _linux_gpu_data():
 
     gpus = []
     for gpu in devs:
-        vendor_strings = gpu["Vendor"].lower().split()
+        vendor_strings = re.split("[^A-Za-z0-9]", gpu["Vendor"].lower())
         # default vendor to 'unknown', overwrite if we match a known one
         vendor = "unknown"
         for name in known_vendors:
@@ -1063,6 +1065,12 @@ def _virtual(osdata):
                         grains["virtual"] = "gce"
                     elif "BHYVE" in output:
                         grains["virtual"] = "bhyve"
+            except UnicodeDecodeError:
+                # Some firmwares provide non-valid 'product_name'
+                # files, ignore them
+                log.debug(
+                    "The content in /sys/devices/virtual/dmi/id/product_name is not valid"
+                )
             except IOError:
                 pass
     elif osdata["kernel"] == "FreeBSD":
@@ -2060,8 +2068,7 @@ def os_data():
             "platform.linux_distribution()"
         )
         (osname, osrelease, oscodename) = [
-            x.strip('"').strip("'")
-            for x in linux_distribution(supported_dists=_supported_dists)
+            x.strip('"').strip("'") for x in linux_distribution()
         ]
         # Try to assign these three names based on the lsb info, they tend to
         # be more accurate than what python gets from /etc/DISTRO-release.
@@ -2427,7 +2434,7 @@ def ip_fqdn():
                 start_time = datetime.datetime.utcnow()
                 info = socket.getaddrinfo(_fqdn, None, socket_type)
                 ret[key] = list(set(item[4][0] for item in info))
-            except socket.error:
+            except (socket.error, UnicodeError):
                 timediff = datetime.datetime.utcnow() - start_time
                 if timediff.seconds > 5 and __opts__["__role"] == "master":
                     log.warning(
@@ -2710,6 +2717,12 @@ def _hw_data(osdata):
                         )
                         if key == "uuid":
                             grains["uuid"] = grains["uuid"].lower()
+                except UnicodeDecodeError:
+                    # Some firmwares provide non-valid 'product_name'
+                    # files, ignore them
+                    log.debug(
+                        "The content in /sys/devices/virtual/dmi/id/product_name is not valid"
+                    )
                 except (IOError, OSError) as err:
                     # PermissionError is new to Python 3, but corresponds to the EACESS and
                     # EPERM error numbers. Use those instead here for PY2 compatibility.
@@ -3048,4 +3061,27 @@ def default_gateway():
                     break
         except Exception:  # pylint: disable=broad-except
             continue
+    return grains
+
+
+def kernelparams():
+    """
+    Return the kernel boot parameters
+    """
+    try:
+        with salt.utils.files.fopen("/proc/cmdline", "r") as fhr:
+            cmdline = fhr.read()
+            grains = {"kernelparams": []}
+            for data in [
+                item.split("=") for item in salt.utils.args.shlex_split(cmdline)
+            ]:
+                value = None
+                if len(data) == 2:
+                    value = data[1].strip('"')
+
+                grains["kernelparams"] += [(data[0], value)]
+    except IOError as exc:
+        grains = {}
+        log.debug("Failed to read /proc/cmdline: %s", exc)
+
     return grains

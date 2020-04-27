@@ -292,11 +292,7 @@ import shutil
 import sys
 import time
 import traceback
-
-# pylint: disable=no-name-in-module
-from collections import Iterable, Mapping, defaultdict
-
-# pylint: enable=no-name-in-module
+from collections import defaultdict
 from datetime import date, datetime  # python3 problem in the making?
 
 # Import salt libs
@@ -322,11 +318,18 @@ from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 from salt.serializers import DeserializationError
 from salt.state import get_accumulator_dir as _get_accumulator_dir
 
+# pylint: disable=no-name-in-module
+try:
+    from collections import Iterable, Mapping
+except ImportError:
+    from collections.abc import Iterable, Mapping
+# pylint: enable=no-name-in-module
+
+
 if salt.utils.platform.is_windows():
     import salt.utils.win_dacl
     import salt.utils.win_functions
     import salt.utils.winapi
-
 
 if salt.utils.platform.is_windows():
     import pywintypes
@@ -1670,7 +1673,7 @@ def symlink(
         will be deleted to make room for the symlink, unless
         backupname is set, when it will be renamed
 
-        .. versionchanged:: 3000
+        .. versionchanged:: Neon
             Force will now remove all types of existing file system entries,
             not just files, directories and symlinks.
 
@@ -2253,6 +2256,7 @@ def managed(
     follow_symlinks=True,
     check_cmd=None,
     skip_verify=False,
+    selinux=None,
     win_owner=None,
     win_perms=None,
     win_deny_perms=None,
@@ -2754,6 +2758,22 @@ def managed(
 
         .. versionadded:: 2016.3.0
 
+    selinux : None
+        Allows setting the selinux user, role, type, and range of a managed file
+
+        .. code-block:: yaml
+
+            /tmp/selinux.test
+              file.managed:
+                - user: root
+                - selinux:
+                    seuser: system_u
+                    serole: object_r
+                    setype: system_conf_t
+                    seranage: s0
+
+        .. versionadded:: Neon
+
     win_owner : None
         The owner of the directory. If this is not passed, user will be used. If
         user is not passed, the account under which Salt is running will be
@@ -2833,6 +2853,17 @@ def managed(
 
     if attrs is not None and salt.utils.platform.is_windows():
         return _error(ret, "The 'attrs' option is not supported on Windows")
+
+    if selinux is not None and not salt.utils.platform.is_linux():
+        return _error(ret, "The 'selinux' option is only supported on Linux")
+
+    if selinux:
+        seuser = selinux.get("seuser", None)
+        serole = selinux.get("serole", None)
+        setype = selinux.get("setype", None)
+        serange = selinux.get("serange", None)
+    else:
+        seuser = serole = setype = serange = None
 
     try:
         keep_mode = mode.lower() == "keep"
@@ -3048,7 +3079,17 @@ def managed(
             )
         else:
             ret, ret_perms = __salt__["file.check_perms"](
-                name, ret, user, group, mode, attrs, follow_symlinks
+                name,
+                ret,
+                user,
+                group,
+                mode,
+                attrs,
+                follow_symlinks,
+                seuser=seuser,
+                serole=serole,
+                setype=setype,
+                serange=serange,
             )
         if __opts__["test"]:
             if (
@@ -3095,6 +3136,10 @@ def managed(
                     contents,
                     skip_verify,
                     keep_mode,
+                    seuser=seuser,
+                    serole=serole,
+                    setype=setype,
+                    serange=serange,
                     **kwargs
                 )
 
@@ -3205,6 +3250,10 @@ def managed(
                 win_perms_reset=win_perms_reset,
                 encoding=encoding,
                 encoding_errors=encoding_errors,
+                seuser=seuser,
+                serole=serole,
+                setype=setype,
+                serange=serange,
                 **kwargs
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -3275,6 +3324,10 @@ def managed(
                 win_perms_reset=win_perms_reset,
                 encoding=encoding,
                 encoding_errors=encoding_errors,
+                seuser=seuser,
+                serole=serole,
+                setype=setype,
+                serange=serange,
                 **kwargs
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -3293,7 +3346,7 @@ def managed(
                     salt.utils.files.remove(sfn)
 
 
-_RECURSE_TYPES = ["user", "group", "mode", "ignore_files", "ignore_dirs"]
+_RECURSE_TYPES = ["user", "group", "mode", "ignore_files", "ignore_dirs", "silent"]
 
 
 def _get_recurse_set(recurse):
@@ -3381,6 +3434,9 @@ def directory(
         ``mode`` is defined, will recurse on both ``file_mode`` and ``dir_mode`` if
         they are defined.  If ``ignore_files`` or ``ignore_dirs`` is included, files or
         directories will be left unchanged respectively.
+        directories will be left unchanged respectively. If ``silent`` is defined,
+        individual file/directory change notifications will be suppressed.
+
         Example:
 
         .. code-block:: yaml
@@ -3817,6 +3873,9 @@ def directory(
         if "mode" not in recurse_set:
             file_mode = None
             dir_mode = None
+
+        if "silent" in recurse_set:
+            ret["changes"] = {"recursion": "Changes silenced"}
 
         check_files = "ignore_files" not in recurse_set
         check_dirs = "ignore_dirs" not in recurse_set
@@ -4581,35 +4640,57 @@ def line(
     file_mode=None,
 ):
     """
-    Line-based editing of a file.
+    Line-focused editing of a file.
 
     .. versionadded:: 2015.8.0
 
-    :param name:
+    .. note::
+
+        ``file.line`` exists for historic reasons, and is not
+        generally recommended. It has a lot of quirks.  You may find
+        ``file.replace`` to be more suitable.
+
+    ``file.line`` is most useful if you have single lines in a file,
+    potentially a config file, that you would like to manage. It can
+    remove, add, and replace lines.
+
+    name
         Filesystem path to the file to be edited.
 
-    :param content:
+    content
         Content of the line. Allowed to be empty if mode=delete.
 
-    :param match:
+    match
         Match the target line for an action by
         a fragment of a string or regular expression.
 
         If neither ``before`` nor ``after`` are provided, and ``match``
-        is also ``None``, match becomes the ``content`` value.
+        is also ``None``, match falls back to the ``content`` value.
 
-    :param mode:
+    mode
         Defines how to edit a line. One of the following options is
         required:
 
         - ensure
-            If line does not exist, it will be added.
+            If line does not exist, it will be added. If ``before``
+            and ``after`` are specified either zero lines, or lines
+            that contain the ``content`` line are allowed to be in between
+            ``before`` and ``after``. If there are lines, and none of
+            them match then it will produce an error.
         - replace
             If line already exists, it will be replaced.
         - delete
-            Delete the line, once found.
+            Delete the line, if found.
         - insert
-            Insert a line.
+            Nearly identical to ``ensure``. If a line does not exist,
+            it will be added.
+
+            The differences are that multiple (and non-matching) lines are
+            alloweed between ``before`` and ``after``, if they are
+            sepcified. The line will always be inserted right before
+            ``before``. ``insert`` also allows the use of ``location`` to
+            specify that the line should be added at the beginning or end of
+            the file.
 
         .. note::
 
@@ -4618,28 +4699,33 @@ def line(
             ``after``. If ``location`` is used, it takes precedence
             over the other two options.
 
-    :param location:
-        Defines where to place content in the line. Note this option is only
-        used when ``mode=insert`` is specified. If a location is passed in, it
-        takes precedence over both the ``before`` and ``after`` kwargs. Valid
-        locations are:
+    location
+        In ``mode=insert`` only, whether to place the ``content`` at the
+        beginning or end of a the file. If ``location`` is provided,
+        ``before`` and ``after`` are ignored. Valid locations:
 
         - start
             Place the content at the beginning of the file.
         - end
             Place the content at the end of the file.
 
-    :param before:
+    before
         Regular expression or an exact case-sensitive fragment of the string.
-        This option is only used when either the ``ensure`` or ``insert`` mode
-        is defined.
+        Will be tried as **both** a regex **and** a part of the line.  Must
+        match **exactly** one line in the file.  This value is only used in
+        ``ensure`` and ``insert`` modes. The ``content`` will be inserted just
+        before this line, matching its ``indent`` unless ``indent=False``.
 
-    :param after:
+    after
         Regular expression or an exact case-sensitive fragment of the string.
-        This option is only used when either the ``ensure`` or ``insert`` mode
-        is defined.
+        Will be tried as **both** a regex **and** a part of the line.  Must
+        match **exactly** one line in the file.  This value is only used in
+        ``ensure`` and ``insert`` modes. The ``content`` will be inserted
+        directly after this line, unless ``before`` is also provided. If
+        ``before`` is not matched, indentation will match this line, unless
+        ``indent=False``.
 
-    :param show_changes:
+    show_changes
         Output a unified diff of the old file and the new file.
         If ``False`` return a boolean if any changes were made.
         Default is ``True``
@@ -4648,36 +4734,36 @@ def line(
             Using this option will store two copies of the file in-memory
             (the original version and the edited version) in order to generate the diff.
 
-    :param backup:
+    backup
         Create a backup of the original file with the extension:
         "Year-Month-Day-Hour-Minutes-Seconds".
 
-    :param quiet:
+    quiet
         Do not raise any exceptions. E.g. ignore the fact that the file that is
         tried to be edited does not exist and nothing really happened.
 
-    :param indent:
+    indent
         Keep indentation with the previous line. This option is not considered when
-        the ``delete`` mode is specified.
+        the ``delete`` mode is specified. Default is ``True``.
 
-    :param create:
-        Create an empty file if doesn't exists.
+    create
+        Create an empty file if doesn't exist.
 
         .. versionadded:: 2016.11.0
 
-    :param user:
+    user
         The user to own the file, this defaults to the user salt is running as
         on the minion.
 
         .. versionadded:: 2016.11.0
 
-    :param group:
+    group
         The group ownership set for the file, this defaults to the group salt
         is running as on the minion On Windows, this is ignored.
 
         .. versionadded:: 2016.11.0
 
-    :param file_mode:
+    file_mode
         The permissions to set on this file, aka 644, 0775, 4664. Not supported
         on Windows.
 
@@ -4697,6 +4783,145 @@ def line(
            - content: my key = my value
            - before: somekey.*?
 
+
+    **Examples:**
+
+    Here's a simple config file.
+
+    .. code-block:: ini
+
+        [some_config]
+        # Some config file
+        # this line will go away
+
+        here=False
+        away=True
+        goodybe=away
+
+    And an sls file:
+
+    .. code-block:: yaml
+
+        remove_lines:
+          file.line:
+            - name: /some/file.conf
+            - mode: delete
+            - match: away
+
+    This will produce:
+
+    .. code-block:: ini
+
+        [some_config]
+        # Some config file
+
+        here=False
+        away=True
+        goodbye=away
+
+    If that state is executed 2 more times, this will be the result:
+
+    .. code-block:: ini
+
+        [some_config]
+        # Some config file
+
+        here=False
+
+    Given that original file with this state:
+
+    .. code-block:: yaml
+
+        replace_things:
+          file.line:
+            - name: /some/file.conf
+            - mode: replace
+            - match: away
+            - content: here
+
+    Three passes will this state will result in this file:
+
+    .. code-block:: ini
+
+        [some_config]
+        # Some config file
+        here
+
+        here=False
+        here
+        here
+
+    Each pass replacing the first line found.
+
+    Given this file:
+
+    .. code-block:: text
+
+        insert after me
+        something
+        insert before me
+
+    The following state:
+
+    .. code-block:: yaml
+
+        insert_a_line:
+          file.line:
+            - name: /some/file.txt
+            - mode: insert
+            - after: insert after me
+            - before: insert before me
+            - content: thrice
+
+    If this state is executed 3 times, the result will be:
+
+    .. code-block:: text
+
+        insert after me
+        something
+        thrice
+        thrice
+        thrice
+        insert before me
+
+    If the mode is ensure instead, it will fail each time. To succeed, we need
+    to remove the incorrect line between before and after:
+
+    .. code-block:: text
+
+        insert after me
+        insert before me
+
+    With an ensure mode, this will insert ``thrice`` the first time and
+    make no changes for subsequent calls. For someting simple this is
+    fine, but if you have instead blocks like this:
+
+    .. code-block:: text
+
+        Begin SomeBlock
+            foo = bar
+        End
+
+        Begin AnotherBlock
+            another = value
+        End
+
+    And given this state:
+
+    .. code-block:: yaml
+
+        ensure_someblock:
+          file.line:
+            - name: /some/file.conf
+            - mode: ensure
+            - after: Begin SomeBlock
+            - content: this = should be my content
+            - before: End
+
+    This will fail because there are multiple ``End`` lines. Without that
+    problem, it still would fail because there is a non-matching line,
+    ``foo = bar``. Ensure **only** allows either zero, or the matching
+    line present to be present in between ``before`` and ``after``.
     """
     name = os.path.expanduser(name)
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
@@ -4949,6 +5174,370 @@ def replace(
     else:
         ret["result"] = True
         ret["comment"] = "No changes needed to be made"
+
+    return ret
+
+
+def keyvalue(
+    name,
+    key=None,
+    value=None,
+    key_values=None,
+    separator="=",
+    append_if_not_found=False,
+    prepend_if_not_found=False,
+    search_only=False,
+    show_changes=True,
+    ignore_if_missing=False,
+    count=1,
+    uncomment=None,
+    key_ignore_case=False,
+    value_ignore_case=False,
+):
+    """
+    Key/Value based editing of a file.
+
+    .. versionadded:: Sodium
+
+    This function differs from ``file.replace`` in that it is able to search for
+    keys, followed by a customizable separator, and replace the value with the
+    given value. Should the value be the same as the one already in the file, no
+    changes will be made.
+
+    Either supply both ``key`` and ``value`` parameters, or supply a dictionary
+    with key / value pairs. It is an error to supply both.
+
+    name
+        Name of the file to search/replace in.
+
+    key
+        Key to search for when ensuring a value. Use in combination with a
+        ``value`` parameter.
+
+    value
+        Value to set for a given key. Use in combination with a ``key``
+        parameter.
+
+    key_values
+        Dictionary of key / value pairs to search for and ensure values for.
+        Used to specify multiple key / values at once.
+
+    separator : "="
+        Separator which separates key from value.
+
+    append_if_not_found : False
+        Append the key/value to the end of the file if not found. Note that this
+        takes precedence over ``prepend_if_not_found``.
+
+    prepend_if_not_found : False
+        Prepend the key/value to the beginning of the file if not found. Note
+        that ``append_if_not_found`` takes precedence.
+
+    show_changes : True
+        Show a diff of the resulting removals and inserts.
+
+    ignore_if_missing : False
+        Return with success even if the file is not found (or not readable).
+
+    count : 1
+        Number of occurences to allow (and correct), default is 1. Set to -1 to
+        replace all, or set to 0 to remove all lines with this key regardsless
+        of its value.
+
+    .. note::
+        Any additional occurences after ``count`` are removed.
+        A count of -1 will only replace all occurences that are currently
+        uncommented already. Lines commented out will be left alone.
+
+    uncomment : None
+        Disregard and remove supplied leading characters when finding keys. When
+        set to None, lines that are commented out are left for what they are.
+
+    .. note::
+        The argument to ``uncomment`` is not a prefix string. Rather; it is a
+        set of characters, each of which are stripped.
+
+    key_ignore_case : False
+        Keys are matched case insensitively. When a value is changed the matched
+        key is kept as-is.
+
+    value_ignore_case : False
+        Values are checked case insensitively, trying to set e.g. 'Yes' while
+        the current value is 'yes', will not result in changes when
+        ``value_ignore_case`` is set to True.
+
+    An example of using ``file.keyvalue`` to ensure sshd does not allow
+    for root to login with a password and at the same time setting the
+    login-gracetime to 1 minute and disabling all forwarding:
+
+    .. code-block:: yaml
+
+        sshd_config_harden:
+            file.keyvalue:
+              - name: /etc/ssh/sshd_config
+              - key_values:
+                  permitrootlogin: 'without-password'
+                  LoginGraceTime: '1m'
+                  DisableForwarding: 'yes'
+              - separator: ' '
+              - uncomment: '# '
+              - key_ignore_case: True
+              - append_if_not_found: True
+
+    The same example, except for only ensuring PermitRootLogin is set correctly.
+    Thus being able to use the shorthand ``key`` and ``value`` parameters
+    instead of ``key_values``.
+
+    .. code-block:: yaml
+
+        sshd_config_harden:
+            file.keyvalue:
+              - name: /etc/ssh/sshd_config
+              - key: PermitRootLogin
+              - value: without-password
+              - separator: ' '
+              - uncomment: '# '
+              - key_ignore_case: True
+              - append_if_not_found: True
+
+    .. note::
+        Notice how the key is not matched case-sensitively, this way it will
+        correctly identify both 'PermitRootLogin' as well as 'permitrootlogin'.
+
+    """
+    name = os.path.expanduser(name)
+
+    # default return values
+    ret = {
+        "name": name,
+        "changes": {},
+        "pchanges": {},
+        "result": None,
+        "comment": "",
+    }
+
+    if not name:
+        return _error(ret, "Must provide name to file.keyvalue")
+    if key is not None and value is not None:
+        if type(key_values) is dict:
+            return _error(
+                ret, "file.keyvalue can not combine key_values with key and value"
+            )
+        key_values = {str(key): value}
+    elif type(key_values) is not dict:
+        return _error(
+            ret, "file.keyvalue key and value not supplied and key_values empty"
+        )
+
+    # try to open the file and only return a comment if ignore_if_missing is
+    # enabled, also mark as an error if not
+    file_contents = []
+    try:
+        with salt.utils.files.fopen(name, "r") as fd:
+            file_contents = fd.readlines()
+    except (OSError, IOError):
+        ret["comment"] = "unable to open {n}".format(n=name)
+        ret["result"] = True if ignore_if_missing else False
+        return ret
+
+    # used to store diff combinations and check if anything has changed
+    diff = []
+    # store the final content of the file in case it needs to be rewritten
+    content = []
+    # target format is templated like this
+    tmpl = "{key}{sep}{value}" + os.linesep
+    # number of lines changed
+    changes = 0
+    # keep track of number of times a key was updated
+    diff_count = {k: count for k in key_values.keys()}
+
+    # read all the lines from the file
+    for line in file_contents:
+        test_line = line.lstrip(uncomment)
+        did_uncomment = True if len(line) > len(test_line) else False
+
+        if key_ignore_case:
+            test_line = test_line.lower()
+
+        for key, value in key_values.items():
+            test_key = key.lower() if key_ignore_case else key
+            # if the line starts with the key
+            if test_line.startswith(test_key):
+                # if the testline got uncommented then the real line needs to
+                # be uncommented too, otherwhise there might be separation on
+                # a character which is part of the comment set
+                working_line = line.lstrip(uncomment) if did_uncomment else line
+
+                # try to separate the line into its' components
+                line_key, line_sep, line_value = working_line.partition(separator)
+
+                # if separation was unsuccessful then line_sep is empty so
+                # no need to keep trying. continue instead
+                if line_sep != separator:
+                    continue
+
+                # start on the premises the key does not match the actual line
+                keys_match = False
+                if key_ignore_case:
+                    if line_key.lower() == test_key:
+                        keys_match = True
+                else:
+                    if line_key == test_key:
+                        keys_match = True
+
+                # if the key was found in the line and separation was successful
+                if keys_match:
+                    # trial and error have shown it's safest to strip whitespace
+                    # from values for the sake of matching
+                    line_value = line_value.strip()
+                    # make sure the value is an actual string at this point
+                    test_value = str(value).strip()
+                    # convert test_value and line_value to lowercase if need be
+                    if value_ignore_case:
+                        line_value = line_value.lower()
+                        test_value = test_value.lower()
+
+                    # values match if they are equal at this point
+                    values_match = True if line_value == test_value else False
+
+                    # in case a line had its comment removed there are some edge
+                    # cases that need considderation where changes are needed
+                    # regardless of values already matching.
+                    needs_changing = False
+                    if did_uncomment:
+                        # irrespective of a value, if it was commented out and
+                        # changes are still to be made, then it needs to be
+                        # commented in
+                        if diff_count[key] > 0:
+                            needs_changing = True
+                        # but if values did not match but there are really no
+                        # changes expected anymore either then leave this line
+                        elif not values_match:
+                            values_match = True
+                    else:
+                        # a line needs to be removed if it has been seen enough
+                        # times and was not commented out, regardless of value
+                        if diff_count[key] == 0:
+                            needs_changing = True
+
+                    # then start checking to see if the value needs replacing
+                    if not values_match or needs_changing:
+                        # the old line always needs to go, so that will be
+                        # reflected in the diff (this is the original line from
+                        # the file being read)
+                        diff.append("- {0}".format(line))
+                        line = line[:0]
+
+                        # any non-zero value means something needs to go back in
+                        # its place. negative values are replacing all lines not
+                        # commented out, positive values are having their count
+                        # reduced by one every replacement
+                        if diff_count[key] != 0:
+                            # rebuild the line using the key and separator found
+                            # and insert the correct value.
+                            line = str(
+                                tmpl.format(key=line_key, sep=line_sep, value=value)
+                            )
+
+                            # display a comment in case a value got converted
+                            # into a string
+                            if not isinstance(value, str):
+                                diff.append(
+                                    "+ {0} (from {1} type){2}".format(
+                                        line.rstrip(), type(value).__name__, os.linesep
+                                    )
+                                )
+                            else:
+                                diff.append("+ {0}".format(line))
+                        changes += 1
+                    # subtract one from the count if it was larger than 0, so
+                    # next lines are removed. if it is less than 0 then count is
+                    # ignored and all lines will be updated.
+                    if diff_count[key] > 0:
+                        diff_count[key] -= 1
+                    # at this point a continue saves going through the rest of
+                    # the keys to see if they match since this line already
+                    # matched the current key
+                    continue
+        # with the line having been checked for all keys (or matched before all
+        # keys needed searching), the line can be added to the content to be
+        # written once the last checks have been performed
+        content.append(line)
+    # finally, close the file
+    fd.close()
+
+    # if append_if_not_found was requested, then append any key/value pairs
+    # still having a count left on them
+    if append_if_not_found:
+        tmpdiff = []
+        for key, value in key_values.items():
+            if diff_count[key] > 0:
+                line = tmpl.format(key=key, sep=separator, value=value)
+                tmpdiff.append("+ {0}".format(line))
+                content.append(line)
+                changes += 1
+        if tmpdiff:
+            tmpdiff.insert(0, "- <EOF>" + os.linesep)
+            tmpdiff.append("+ <EOF>" + os.linesep)
+            diff.extend(tmpdiff)
+    # only if append_if_not_found was not set should prepend_if_not_found be
+    # considered, benefit of this is that the number of counts left does not
+    # mean there might be both a prepend and append happening
+    elif prepend_if_not_found:
+        did_diff = False
+        for key, value in key_values.items():
+            if diff_count[key] > 0:
+                line = tmpl.format(key=key, sep=separator, value=value)
+                if not did_diff:
+                    diff.insert(0, "  <SOF>" + os.linesep)
+                    did_diff = True
+                diff.insert(1, "+ {0}".format(line))
+                content.insert(0, line)
+                changes += 1
+
+    # if a diff was made
+    if changes > 0:
+        # return comment of changes if test
+        if __opts__["test"]:
+            ret["comment"] = "File {n} is set to be changed ({c} lines)".format(
+                n=name, c=changes
+            )
+            if show_changes:
+                # For some reason, giving an actual diff even in test=True mode
+                # will be seen as both a 'changed' and 'unchanged'. this seems to
+                # match the other modules behaviour though
+                ret["pchanges"]["diff"] = "".join(diff)
+
+                # add changes to comments for now as well because of how
+                # stateoutputter seems to handle pchanges etc.
+                # See: https://github.com/saltstack/salt/issues/40208
+                ret["comment"] += "\nPredicted diff:\n\r\t\t"
+                ret["comment"] += "\r\t\t".join(diff)
+                ret["result"] = None
+
+        # otherwise return the actual diff lines
+        else:
+            ret["comment"] = "Changed {c} lines".format(c=changes)
+            if show_changes:
+                ret["changes"]["diff"] = "".join(diff)
+    else:
+        ret["result"] = True
+        return ret
+
+    # if not test=true, try and write the file
+    if not __opts__["test"]:
+        try:
+            with salt.utils.files.fopen(name, "w") as fd:
+                # write all lines to the file which was just truncated
+                fd.writelines(content)
+                fd.close()
+        except (OSError, IOError):
+            # return an error if the file was not writable
+            ret["comment"] = "{n} not writable".format(n=name)
+            ret["result"] = False
+            return ret
+        # if all went well, then set result to true
+        ret["result"] = True
 
     return ret
 
@@ -6949,8 +7538,8 @@ def serialize(
         .. versionadded:: 2015.8.0
 
     formatter
-        Write the data as this format. See the list of :py:mod:`serializer
-        modules <salt.serializers>` for supported output formats.
+        Write the data as this format. See the list of
+        :ref:`all-salt.serializers` for supported output formats.
 
     encoding
         If specified, then the specified encoding will be used. Otherwise, the
@@ -8136,14 +8725,15 @@ def not_cached(name, saltenv="base"):
     """
     .. versionadded:: 2017.7.3
 
-    Ensures that a file is saved to the minion's cache. This state is primarily
-    invoked by other states to ensure that we do not re-download a source file
-    if we do not need to.
+    Ensures that a file is not present in the minion's cache, deleting it
+    if found. This state is primarily invoked by other states to ensure
+    that a fresh copy is fetched.
 
     name
-        The URL of the file to be cached. To cache a file from an environment
-        other than ``base``, either use the ``saltenv`` argument or include the
-        saltenv in the URL (e.g. ``salt://path/to/file.conf?saltenv=dev``).
+        The URL of the file to be removed from cache. To remove a file from
+        cache in an environment other than ``base``, either use the ``saltenv``
+        argument or include the saltenv in the URL (e.g.
+        ``salt://path/to/file.conf?saltenv=dev``).
 
         .. note::
             A list of URLs is not supported, this must be a single URL. If a

@@ -35,7 +35,7 @@ def __virtual__():
     """
     if salt.utils.platform.is_darwin() or salt.utils.platform.is_windows():
         return True
-    return False
+    return (False, "Only Mac OS and Windows supported")
 
 
 def managed(

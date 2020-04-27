@@ -129,7 +129,6 @@ TEST_SUITES_UNORDERED = {
     "proxy": {"display_name": "Proxy", "path": "integration/proxy"},
     "external_api": {"display_name": "ExternalAPIs", "path": "integration/externalapi"},
     "daemons": {"display_name": "Daemon", "path": "integration/daemons"},
-    "scheduler": {"display_name": "Scheduler", "path": "integration/scheduler"},
     "sdb": {"display_name": "Sdb", "path": "integration/sdb"},
     "logging": {"display_name": "Logging", "path": "integration/logging"},
 }
@@ -142,6 +141,7 @@ TEST_SUITES = collections.OrderedDict(
 class SaltTestsuiteParser(SaltCoverageTestingParser):
     support_docker_execution = True
     support_destructive_tests_selection = True
+    support_expensive_tests_selection = True
     source_code_basedir = SALT_ROOT
 
     def _get_suites(

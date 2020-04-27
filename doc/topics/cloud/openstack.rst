@@ -2,4 +2,4 @@
 Getting Started with Openstack
 ==============================
 
-.. automodule:: salt.cloud.clouds.openstack
+See :mod:`salt.cloud.clouds.openstack`

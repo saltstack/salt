@@ -49,7 +49,9 @@ def __virtual__():
     """
     Only load if the lxd module is available in __salt__
     """
-    return __virtualname__ if "lxd.version" in __salt__ else False
+    if "lxd.version" in __salt__:
+        return __virtualname__
+    return (False, "lxd module could not be loaded")
 
 
 def init(
@@ -238,7 +240,7 @@ def authenticate(name, remote_addr, password, cert, key, verify_cert=True):
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
 
     name:
         Ignore this. This is just here for salt.

@@ -193,6 +193,8 @@ def rollback(name, id, **kwargs):
 @resultdecorator
 def diff(name, d_id, **kwargs):
     """
+    .. versionchanged:: Sodium
+
     Gets the difference between the candidate and the current configuration.
 
     .. code-block:: yaml

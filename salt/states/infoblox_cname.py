@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Infoblox CNAME managment.
+Infoblox CNAME management.
 
 functions accept api_opts:
 

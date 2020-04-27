@@ -846,7 +846,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_rollback:
             mock_commit_check.return_value = False
             ret = dict()
-            ret["message"] = "Rollback succesfull but pre-commit check failed."
+            ret["message"] = "Rollback successful but pre-commit check failed."
             ret["out"] = False
             self.assertEqual(junos.rollback(), ret)
 
