@@ -117,15 +117,29 @@ SALT_CRYPTO_REQS = os.path.join(
 SALT_ZEROMQ_REQS = os.path.join(
     os.path.abspath(SETUP_DIRNAME), "requirements", "zeromq.txt"
 )
-SALT_LONG_DESCRIPTION_FILE = os.path.join(os.path.abspath(SETUP_DIRNAME), "README.rst")
 SALT_OSX_REQS = [
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "pkg", "osx", "req.txt"),
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "pkg", "osx", "req_pyobjc.txt"),
+    # OSX packages already defined locked requirements
+    os.path.join(
+        os.path.abspath(SETUP_DIRNAME),
+        "requirements",
+        "static",
+        "pkg",
+        "py{}.{}".format(*sys.version_info),
+        "darwin.txt",
+    )
 ]
 SALT_WINDOWS_REQS = [
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "pkg", "windows", "req.txt"),
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "pkg", "windows", "req_win.txt"),
+    # Windows packages already defined locked requirements
+    os.path.join(
+        os.path.abspath(SETUP_DIRNAME),
+        "requirements",
+        "static",
+        "pkg",
+        "py{}.{}".format(*sys.version_info),
+        "windows.txt",
+    )
 ]
+SALT_LONG_DESCRIPTION_FILE = os.path.join(os.path.abspath(SETUP_DIRNAME), "README.rst")
 
 # Salt SSH Packaging Detection
 PACKAGED_FOR_SALT_SSH_FILE = os.path.join(
