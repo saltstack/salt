@@ -36,9 +36,11 @@ def __virtual__():
     """
     Set the group module if the kernel is Windows
     """
-    if salt.utils.platform.is_windows() and HAS_DEPENDENCIES:
-        return __virtualname__
-    return (False, "Module win_groupadd: module only works on Windows systems")
+    if not salt.utils.platform.is_windows():
+        return False, "win_groupadd: only works on Windows systems"
+    if not HAS_DEPENDENCIES:
+        return False, "win_groupadd: missing dependencies"
+    return __virtualname__
 
 
 def _get_computer_object():
@@ -283,7 +285,7 @@ def adduser(name, username, **kwargs):
             return False
     except pywintypes.com_error as exc:
         msg = "Failed to add {0} to group {1}. {2}".format(
-            username, name, win32api.FormatMessage(exc.excepinfo[5])
+            username, name, exc.excepinfo[2]
         )
         log.error(msg)
         return False
