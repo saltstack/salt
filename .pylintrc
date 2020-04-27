@@ -682,8 +682,8 @@ allowed-3rd-party-modules=msgpack,
                           libcloud,
                           zmq,
                           pytest,
-                          pytestsalt,
-                          setuptools
+                          setuptools,
+                          saltfactories
 
 
 [EXCEPTIONS]

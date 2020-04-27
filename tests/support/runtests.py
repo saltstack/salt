@@ -45,7 +45,6 @@
     .. _`pytest`: http://pytest.org
     .. _`nose`: https://nose.readthedocs.org
     """
-
 from __future__ import absolute_import, print_function
 
 import logging
@@ -61,7 +60,6 @@ try:
     import pwd
 except ImportError:
     import salt.utils.win_functions
-
 
 log = logging.getLogger(__name__)
 

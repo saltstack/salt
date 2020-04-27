@@ -83,8 +83,8 @@ pyopenssl==19.0.0
 pyparsing==2.4.5          # via packaging
 pyserial==3.4             # via junos-eznc
 pytest-helpers-namespace==2019.1.8
+pytest-salt-factories==0.10.0
 pytest-salt-runtests-bridge==2019.12.5
-pytest-salt==2020.1.27
 pytest-subtests==0.3.0
 pytest-tempdir==2019.10.12
 pytest==4.6.9
@@ -105,7 +105,7 @@ salttesting==2017.6.1
 scp==0.13.2               # via junos-eznc
 setproctitle==1.1.10
 setuptools-scm==3.2.0
-six==1.12.0               # via bcrypt, cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, junos-eznc, kazoo, kubernetes, mock, more-itertools, moto, ncclient, packaging, pynacl, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, tempora, vcert, websocket-client
+six==1.12.0               # via bcrypt, cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, junos-eznc, kazoo, kubernetes, mock, more-itertools, moto, ncclient, packaging, pynacl, pyopenssl, pytest, pytest-salt-factories, python-dateutil, python-jose, pyvmomi, responses, salttesting, tempora, vcert, websocket-client
 smmap2==2.0.5             # via gitdb2
 strict-rfc3339==0.7
 tempora==1.14.1           # via portend

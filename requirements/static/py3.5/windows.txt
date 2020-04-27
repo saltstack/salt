@@ -78,8 +78,8 @@ pymysql==0.9.3
 pyopenssl==19.0.0
 pyparsing==2.4.5          # via packaging
 pytest-helpers-namespace==2019.1.8
+pytest-salt-factories==0.10.0
 pytest-salt-runtests-bridge==2019.12.5
-pytest-salt==2020.1.27
 pytest-subtests==0.3.0
 pytest-tempdir==2019.10.12
 pytest==4.6.9
@@ -101,7 +101,7 @@ s3transfer==0.2.0         # via boto3
 salttesting==2017.6.1
 sed==0.3.1
 setproctitle==1.1.10
-six==1.12.0               # via cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, kubernetes, mock, more-itertools, moto, packaging, pathlib2, pygit2, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, tempora, websocket-client
+six==1.12.0               # via cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, kubernetes, mock, more-itertools, moto, packaging, pathlib2, pygit2, pyopenssl, pytest, pytest-salt-factories, python-dateutil, python-jose, pyvmomi, responses, salttesting, tempora, websocket-client
 smmap2==2.0.5
 strict-rfc3339==0.7
 tempora==1.14.1           # via portend
