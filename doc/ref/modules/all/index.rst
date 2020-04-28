@@ -331,6 +331,7 @@ execution modules
     nspawn
     nxos
     nxos_api
+    nxos_upgrade
     omapi
     openbsd_sysctl
     openbsdpkg
