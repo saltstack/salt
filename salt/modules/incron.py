@@ -168,7 +168,7 @@ def raw_system_incron():
 
         salt '*' incron.raw_system_incron
     """
-    log.debug("read_file {0}".format(_read_file(_INCRON_SYSTEM_TAB, "salt")))
+    log.debug("read_file %s", _read_file(_INCRON_SYSTEM_TAB, "salt"))
     return "".join(_read_file(_INCRON_SYSTEM_TAB, "salt"))
 
 
@@ -203,7 +203,7 @@ def list_tab(user):
         data = raw_system_incron()
     else:
         data = raw_incron(user)
-        log.debug("user data {0}".format(data))
+        log.debug("user data %s", data)
     ret = {"crons": [], "pre": []}
     flag = False
     for line in data.splitlines():

@@ -104,7 +104,7 @@ def _enforce_txt_record_maxlen(key, value):
              the maximum permitted length. In case of truncation, '...' is
              appended to indicate that the entire value is not present.
     """
-    # Add 1 for '=' seperator between key and value
+    # Add 1 for '=' separator between key and value
     if len(key) + len(value) + 1 > 255:
         # 255 - 3 ('...') - 1 ('=') = 251
         return value[: 251 - len(key)] + "..."

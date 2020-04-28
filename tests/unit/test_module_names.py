@@ -13,11 +13,11 @@ import os
 # Import Salt libs
 import salt.utils.path
 import salt.utils.stringutils
-from tests.support.paths import list_test_mods
-from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.paths import list_test_mods
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import TestCase, skipIf
 
 EXCLUDED_DIRS = [
     os.path.join("tests", "pkg"),
@@ -51,6 +51,7 @@ EXCLUDED_FILES = [
     os.path.join("tests", "virtualname.py"),
     os.path.join("tests", "committer_parser.py"),
     os.path.join("tests", "zypp_plugin.py"),
+    os.path.join("tests", "unit", "utils", "scheduler", "base.py"),
     os.path.join("tests", "unit", "transport", "mixins.py"),
     os.path.join("tests", "integration", "utils", "testprogram.py"),
 ]
@@ -102,6 +103,10 @@ class BadTestModuleNamesTestCase(TestCase):
         error_msg += "If it is a tests module, then please rename as suggested."
         self.assertEqual([], bad_names, error_msg)
 
+    @skipIf(
+        not os.path.isdir(os.path.join(RUNTIME_VARS.CODE_DIR, "salt")),
+        "Failed to find salt directory in '{}'.".format(RUNTIME_VARS.CODE_DIR),
+    )
     def test_module_name_source_match(self):
         """
         Check all the test mods and check if they correspond to actual files in
@@ -158,13 +163,14 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.reactor.test_reactor",
             "integration.returners.test_noop_return",
             "integration.runners.test_runner_returns",
-            "integration.scheduler.test_error",
-            "integration.scheduler.test_eval",
-            "integration.scheduler.test_postpone",
-            "integration.scheduler.test_skip",
-            "integration.scheduler.test_maxrunning",
-            "integration.scheduler.test_helpers",
-            "integration.scheduler.test_run_job",
+            "unit.utils.scheduler.test_error",
+            "unit.utils.scheduler.test_eval",
+            "unit.utils.scheduler.test_postpone",
+            "unit.utils.scheduler.test_skip",
+            "unit.utils.scheduler.test_maxrunning",
+            "unit.utils.scheduler.test_helpers",
+            "unit.utils.scheduler.test_run_job",
+            "unit.utils.scheduler.test_schedule",
             "integration.setup.test_bdist",
             "integration.setup.test_egg",
             "integration.shell.test_spm",

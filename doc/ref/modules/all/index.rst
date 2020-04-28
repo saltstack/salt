@@ -47,6 +47,7 @@ execution modules
     azurearm_network
     azurearm_resource
     bamboohr
+    baredoc
     bcache
     beacons
     bigip

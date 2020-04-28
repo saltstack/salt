@@ -32,7 +32,7 @@ __virtualname__ = "win_update"
 
 def __virtual__():
     if not salt.utils.platform.is_windows():
-        return False, "win_update: Not available on Windows"
+        return False, "win_update: Only available on Windows"
     if not HAS_PYWIN32:
         return False, "win_update: Missing pywin32"
     return __virtualname__
@@ -43,7 +43,8 @@ class Updates(object):
     Wrapper around the 'Microsoft.Update.UpdateColl' instance
     Adds the list and summary functions. For use by the WindowUpdateAgent class.
 
-    Usage:
+    Code Example:
+
     .. code-block:: python
 
         # Create an instance
@@ -110,24 +111,25 @@ class Updates(object):
 
         .. code-block:: cfg
 
-            List of Updates:
-            {'<GUID>': {'Title': <title>,
-                        'KB': <KB>,
-                        'GUID': <the globally unique identifier for the update>
-                        'Description': <description>,
-                        'Downloaded': <has the update been downloaded>,
-                        'Installed': <has the update been installed>,
-                        'Mandatory': <is the update mandatory>,
-                        'UserInput': <is user input required>,
-                        'EULAAccepted': <has the EULA been accepted>,
-                        'Severity': <update severity>,
-                        'NeedsReboot': <is the update installed and awaiting reboot>,
-                        'RebootBehavior': <will the update require a reboot>,
-                        'Categories': [ '<category 1>',
-                                        '<category 2>',
-                                        ...]
-                        }
-            }
+            Dict of Updates:
+            {'<GUID>': {
+                'Title': <title>,
+                'KB': <KB>,
+                'GUID': <the globally unique identifier for the update>,
+                'Description': <description>,
+                'Downloaded': <has the update been downloaded>,
+                'Installed': <has the update been installed>,
+                'Mandatory': <is the update mandatory>,
+                'UserInput': <is user input required>,
+                'EULAAccepted': <has the EULA been accepted>,
+                'Severity': <update severity>,
+                'NeedsReboot': <is the update installed and awaiting reboot>,
+                'RebootBehavior': <will the update require a reboot>,
+                'Categories': [
+                    '<category 1>',
+                    '<category 2>',
+                    ... ]
+            }}
 
         Code Example:
 
@@ -182,10 +184,12 @@ class Updates(object):
              'Available': <updates that are not downloaded or installed>,
              'Downloaded': <updates that are downloaded but not installed>,
              'Installed': <updates installed (usually 0 unless installed=True)>,
-             'Categories': { <category 1>: <total for that category>,
-                             <category 2>: <total for category 2>,
-                             ... }
+             'Categories': {
+                <category 1>: <total for that category>,
+                <category 2>: <total for category 2>,
+                ... }
             }
+
         Code Example:
 
         .. code-block:: python
@@ -251,7 +255,6 @@ class Updates(object):
 class WindowsUpdateAgent(object):
     """
     Class for working with the Windows update agent
-
     """
 
     # Error codes found at the following site:
@@ -285,11 +288,20 @@ class WindowsUpdateAgent(object):
         -4292607995: "Reboot required: 0x00240005",
     }
 
-    def __init__(self):
+    def __init__(self, online=True):
         """
         Initialize the session and load all updates into the ``_updates``
         collection. This collection is used by the other class functions instead
         of querying Windows update (expensive).
+
+        Args:
+
+            online (bool):
+                Tells the Windows Update Agent go online to update its local
+                update database. ``True`` will go online. ``False`` will use the
+                local update database as is. Default is ``True``
+
+                .. versionadded:: Sodium
 
         Need to look at the possibility of loading this into ``__context__``
         """
@@ -302,7 +314,7 @@ class WindowsUpdateAgent(object):
             # Create Collection for Updates
             self._updates = win32com.client.Dispatch("Microsoft.Update.UpdateColl")
 
-        self.refresh()
+        self.refresh(online=online)
 
     def updates(self):
         """
@@ -310,8 +322,12 @@ class WindowsUpdateAgent(object):
         Updates class to expose the list and summary functions.
 
         Returns:
-            Updates: An instance of the Updates class with all updates for the
-            system.
+
+            Updates:
+                An instance of the Updates class with all updates for the
+                system.
+
+        Code Example:
 
         .. code-block:: python
 
@@ -333,11 +349,20 @@ class WindowsUpdateAgent(object):
 
         return updates
 
-    def refresh(self):
+    def refresh(self, online=True):
         """
         Refresh the contents of the ``_updates`` collection. This gets all
         updates in the Windows Update system and loads them into the collection.
         This is the part that is slow.
+
+        Args:
+
+            online (bool):
+                Tells the Windows Update Agent go online to update its local
+                update database. ``True`` will go online. ``False`` will use the
+                local update database as is. Default is ``True``
+
+                .. versionadded:: Sodium
 
         Code Example:
 
@@ -352,6 +377,7 @@ class WindowsUpdateAgent(object):
 
         # Create searcher object
         searcher = self._session.CreateUpdateSearcher()
+        searcher.Online = online
         self._session.ClientApplicationID = "Salt: Load Updates"
 
         # Load all updates into the updates collection
@@ -373,6 +399,32 @@ class WindowsUpdateAgent(object):
 
         self._updates = results.Updates
 
+    def installed(self):
+        """
+        Gets a list of all updates available on the system that have the
+        ``IsInstalled`` attribute set to ``True``.
+
+        Returns:
+
+            Updates: An instance of Updates with the results.
+
+        Code Example:
+
+        .. code-block:: python
+
+            import salt.utils.win_update
+            wua = salt.utils.win_update.WindowsUpdateAgent(online=False)
+            installed_updates = wua.installed()
+        """
+        # https://msdn.microsoft.com/en-us/library/windows/desktop/aa386099(v=vs.85).aspx
+        updates = Updates()
+
+        for update in self._updates:
+            if salt.utils.data.is_true(update.IsInstalled):
+                updates.updates.Add(update)
+
+        return updates
+
     def available(
         self,
         skip_hidden=True,
@@ -390,23 +442,27 @@ class WindowsUpdateAgent(object):
 
         Args:
 
-            skip_hidden (bool): Skip hidden updates. Default is True
+            skip_hidden (bool):
+                Skip hidden updates. Default is ``True``
 
-            skip_installed (bool): Skip installed updates. Default is True
+            skip_installed (bool):
+                Skip installed updates. Default is ``True``
 
-            skip_mandatory (bool): Skip mandatory updates. Default is False
+            skip_mandatory (bool):
+                Skip mandatory updates. Default is ``False``
 
-            skip_reboot (bool): Skip updates that can or do require reboot.
-            Default is False
+            skip_reboot (bool):
+                Skip updates that can or do require reboot. Default is ``False``
 
-            software (bool): Include software updates. Default is True
+            software (bool):
+                Include software updates. Default is ``True``
 
-            drivers (bool): Include driver updates. Default is True
+            drivers (bool):
+                Include driver updates. Default is ``True``
 
-            categories (list): Include updates that have these categories.
-            Default is none (all categories).
-
-                Categories include the following:
+            categories (list):
+                Include updates that have these categories. Default is none
+                (all categories). Categories include the following:
 
                 * Critical Updates
                 * Definition Updates
@@ -422,16 +478,17 @@ class WindowsUpdateAgent(object):
                 * Windows 8.1 and later drivers
                 * Windows Defender
 
-            severities (list): Include updates that have these severities.
-            Default is none (all severities).
-
-                Severities include the following:
+            severities (list):
+                Include updates that have these severities. Default is none
+                (all severities). Severities include the following:
 
                 * Critical
                 * Important
 
-        .. note:: All updates are either software or driver updates. If both
-        ``software`` and ``drivers`` is False, nothing will be returned.
+        .. note::
+
+            All updates are either software or driver updates. If both
+            ``software`` and ``drivers`` is ``False``, nothing will be returned.
 
         Returns:
 
@@ -445,7 +502,7 @@ class WindowsUpdateAgent(object):
             wua = salt.utils.win_update.WindowsUpdateAgent()
 
             # Gets all updates and shows a summary
-            updates = wua.available
+            updates = wua.available()
             updates.summary()
 
             # Get a list of Critical updates
@@ -502,11 +559,11 @@ class WindowsUpdateAgent(object):
 
         Args:
 
-            search_string (str, list): The search string to use to find the
-            update. This can be the GUID or KB of the update (preferred). It can
-            also be the full Title of the update or any part of the Title. A
-            partial Title search is less specific and can return multiple
-            results.
+            search_string (str, list):
+                The search string to use to find the update. This can be the
+                GUID or KB of the update (preferred). It can also be the full
+                Title of the update or any part of the Title. A partial Title
+                search is less specific and can return multiple results.
 
         Returns:
             Updates: An instance of Updates with the results of the search
@@ -568,8 +625,9 @@ class WindowsUpdateAgent(object):
 
         Args:
 
-            updates (Updates): An instance of the Updates class containing a
-            the updates to be downloaded.
+            updates (Updates):
+                An instance of the Updates class containing a the updates to be
+                downloaded.
 
         Returns:
             dict: A dictionary containing the results of the download
@@ -681,8 +739,9 @@ class WindowsUpdateAgent(object):
 
         Args:
 
-            updates (Updates): An instance of the Updates class containing a
-            the updates to be installed.
+            updates (Updates):
+                An instance of the Updates class containing a the updates to be
+                installed.
 
         Returns:
             dict: A dictionary containing the results of the installation
@@ -789,19 +848,23 @@ class WindowsUpdateAgent(object):
         Uninstall the updates passed in the updates collection. Load the updates
         collection using the ``search`` or ``available`` functions.
 
-        .. note:: Starting with Windows 10 the Windows Update Agent is unable to
-        uninstall updates. An ``Uninstall Not Allowed`` error is returned. If
-        this error is encountered this function will instead attempt to use
-        ``dism.exe`` to perform the uninstallation. ``dism.exe`` may fail to
-        to find the KB number for the package. In that case, removal will fail.
+        .. note::
+
+            Starting with Windows 10 the Windows Update Agent is unable to
+            uninstall updates. An ``Uninstall Not Allowed`` error is returned.
+            If this error is encountered this function will instead attempt to
+            use ``dism.exe`` to perform the un-installation. ``dism.exe`` may
+            fail to to find the KB number for the package. In that case, removal
+            will fail.
 
         Args:
 
-            updates (Updates): An instance of the Updates class containing a
-            the updates to be uninstalled.
+            updates (Updates):
+                An instance of the Updates class containing a the updates to be
+                uninstalled.
 
         Returns:
-            dict: A dictionary containing the results of the uninstallation
+            dict: A dictionary containing the results of the un-installation
 
         Code Example:
 
@@ -825,7 +888,7 @@ class WindowsUpdateAgent(object):
             return ret
 
         installer = self._session.CreateUpdateInstaller()
-        self._session.ClientApplicationID = "Salt: Install Update"
+        self._session.ClientApplicationID = "Salt: Uninstall Update"
         with salt.utils.winapi.Com():
             uninstall_list = win32com.client.Dispatch("Microsoft.Update.UpdateColl")
 
@@ -920,7 +983,7 @@ class WindowsUpdateAgent(object):
                 log.debug("NeedsReboot: %s", ret["NeedsReboot"])
 
                 # Refresh the Updates Table
-                self.refresh()
+                self.refresh(online=False)
 
                 reboot = {0: "Never Reboot", 1: "Always Reboot", 2: "Poss Reboot"}
 
@@ -941,7 +1004,7 @@ class WindowsUpdateAgent(object):
 
                 return ret
 
-            # Found a differenct exception, Raise error
+            # Found a different exception, Raise error
             log.error("Uninstall Failed: %s", failure_code)
             raise CommandExecutionError(failure_code)
 
@@ -984,7 +1047,8 @@ class WindowsUpdateAgent(object):
         Internal function for running commands. Used by the uninstall function.
 
         Args:
-            cmd (str, list): The command to run
+            cmd (str, list):
+                The command to run
 
         Returns:
             str: The stdout of the command
@@ -1012,7 +1076,7 @@ def needs_reboot():
 
     Returns:
 
-        bool: True if the system requires a reboot, False if not
+        bool: ``True`` if the system requires a reboot, ``False`` if not
 
     CLI Examples:
 

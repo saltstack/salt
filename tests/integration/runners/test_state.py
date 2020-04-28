@@ -227,12 +227,12 @@ class StateRunnerTest(ShellCase):
             self.assertIn(result, ret)
 
     @skipIf(True, "SLOWTEST skip")
-    def test_orchestrate_target_doesnt_exist(self):
+    def test_orchestrate_target_does_not_exist(self):
         """
         test orchestration when target doesn't exist
         while using multiple states
         """
-        ret = self.run_run("state.orchestrate orch.target-doesnt-exists")
+        ret = self.run_run("state.orchestrate orch.target-does-not-exist")
 
         first = [
             "No minions matched the target. No command was sent, no jid was assigned.",
@@ -534,7 +534,7 @@ class OrchEventTest(ShellCase):
                     continue
 
                 # if we receive the ret for this job before self.timeout (60),
-                # the test is implicitly sucessful; if it were happening in serial it would be
+                # the test is implicitly successful; if it were happening in serial it would be
                 # atleast 110 seconds.
                 if event["tag"] == "salt/run/{0}/ret".format(jid):
                     received = True

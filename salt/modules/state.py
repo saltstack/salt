@@ -45,6 +45,7 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Import 3rd-party libs
 from salt.ext import six
+from salt.loader import _format_cached_grains
 from salt.runners.state import orchestrate as _orchestrate
 from salt.utils.odict import OrderedDict
 
@@ -60,6 +61,7 @@ __outputter__ = {
     "template": "highstate",
     "template_str": "highstate",
     "apply_": "highstate",
+    "test": "highstate",
     "request": "highstate",
     "check_request": "highstate",
     "run_request": "highstate",
@@ -797,6 +799,21 @@ def apply_(mods=None, **kwargs):
     if mods:
         return sls(mods, **kwargs)
     return highstate(**kwargs)
+
+
+def test(*args, **kwargs):
+    """
+    .. versionadded:: Sodium
+
+    Alias for `state.apply` with the kwarg `test` forced to `True`.
+
+    This is a nicety to avoid the need to type out `test=True` and the possibility of
+    a typo causing changes you do not intend.
+    """
+    kwargs["test"] = True
+    ret = apply_(*args, **kwargs)
+
+    return ret
 
 
 def request(mods=None, **kwargs):
@@ -2009,7 +2026,7 @@ def show_sls(mods, test=None, queue=False, **kwargs):
 
 def sls_exists(mods, test=None, queue=False, **kwargs):
     """
-    Tests for the existance the of a specific SLS or list of SLS files on the
+    Tests for the existence the of a specific SLS or list of SLS files on the
     master. Similar to :py:func:`state.show_sls <salt.modules.state.show_sls>`,
     rather than returning state details, returns True or False. The default
     environment is ``base``, use ``saltenv`` to specify a different environment.
@@ -2246,7 +2263,7 @@ def pkg(pkg_path, pkg_sum, hash_type, test=None, **kwargs):
     roster_grains_json = os.path.join(root, "roster_grains.json")
     if os.path.isfile(roster_grains_json):
         with salt.utils.files.fopen(roster_grains_json, "r") as fp_:
-            roster_grains = salt.utils.json.load(fp_)
+            roster_grains = _format_cached_grains(salt.utils.json.load(fp_))
 
     if os.path.isfile(roster_grains_json):
         popts["grains"] = roster_grains
