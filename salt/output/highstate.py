@@ -213,7 +213,7 @@ def _format_host(host, data, indent_level=1):
         for tname, info in six.iteritems(data):
             if (
                 isinstance(info, dict)
-                and tname is not "changes"
+                and tname != "changes"
                 and info
                 and "__run_num__" not in info
             ):

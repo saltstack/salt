@@ -4934,7 +4934,7 @@ def _parse_pools_caps(doc):
             if options:
                 if "options" not in pool_caps:
                     pool_caps["options"] = {}
-                kind = option_kind if option_kind is not "vol" else "volume"
+                kind = option_kind if option_kind != "vol" else "volume"
                 pool_caps["options"][kind] = options
         return pool_caps
 
