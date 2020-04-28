@@ -163,11 +163,7 @@ def top(num_processes=5, interval=3):
         diff = now - start
         usage.add((diff, process))
 
-    for idx, (diff, process) in enumerate(
-        sorted(usage, key=lambda x: x[0], reverse=True)
-    ):
-        if num_processes and idx >= num_processes:
-            break
+    for diff, process in sorted(usage, key=lambda x: x[0], reverse=True):
         info = {
             "cmd": _get_proc_cmdline(process) or _get_proc_name(process),
             "user": _get_proc_username(process),
@@ -187,7 +183,12 @@ def top(num_processes=5, interval=3):
             # function. Ignore this process and do not include this process in
             # the return data.
             continue
+
         result.append(info)
+
+        # Stop gathering process info since we've reached the desired number
+        if len(result) >= num_processes:
+            break
 
     return result
 
