@@ -206,80 +206,89 @@ class SelinuxModuleTestCase(TestCase, LoaderModuleMockMixin):
         ]
 
         for case in cases:
-            with patch.dict(selinux.__salt__, {'cmd.shell': MagicMock(return_value=case['semanage_out'])}):
-                ret = selinux.port_get_policy(case['name'])
-                self.assertDictEqual(ret, case['expected'])
+            with patch.dict(
+                selinux.__salt__,
+                {"cmd.shell": MagicMock(return_value=case["semanage_out"])},
+            ):
+                ret = selinux.port_get_policy(case["name"])
+                self.assertDictEqual(ret, case["expected"])
 
     def test_fcontext_policy_parsing_new(self):
-        '''
+        """
         Test parsing the stdout response of restorecon used in fcontext_policy_applied, new style.
-        '''
-        restorecon_ret = 'Would relabel /foo/bar from some_u:some_r:some_t:s0 to other_u:other_r:other_t:s0'
-        with \
-                patch.object(selinux, 'fcontext_policy_is_applied', return_value=restorecon_ret), \
-                patch.dict(selinux.__salt__, {'cmd.run_all': MagicMock(return_value={'retcode': 0})}):
+        """
+        restorecon_ret = "Would relabel /foo/bar from some_u:some_r:some_t:s0 to other_u:other_r:other_t:s0"
+        with patch.object(
+            selinux, "fcontext_policy_is_applied", return_value=restorecon_ret
+        ), patch.dict(
+            selinux.__salt__, {"cmd.run_all": MagicMock(return_value={"retcode": 0})}
+        ):
             self.assertEqual(
-                selinux.fcontext_apply_policy('/foo/bar'),
+                selinux.fcontext_apply_policy("/foo/bar"),
                 {
-                    'changes': {
-                       '/foo/bar': {
-                            'old': {
-                                'sel_role': 'some_r',
-                                'sel_type': 'some_t',
-                                'sel_user': 'some_u',
+                    "changes": {
+                        "/foo/bar": {
+                            "old": {
+                                "sel_role": "some_r",
+                                "sel_type": "some_t",
+                                "sel_user": "some_u",
                             },
-                            'new': {
-                                'sel_role': 'other_r',
-                                'sel_type': 'other_t',
-                                'sel_user': 'other_u',
+                            "new": {
+                                "sel_role": "other_r",
+                                "sel_type": "other_t",
+                                "sel_user": "other_u",
                             },
                         },
                     },
-                    'retcode': 0,
+                    "retcode": 0,
                 },
             )
 
     def test_fcontext_policy_parsing_old(self):
-        '''
+        """
         Test parsing the stdout response of restorecon used in fcontext_policy_applied, old style.
-        '''
-        restorecon_ret = 'restorecon reset /foo/bar context some_u:some_r:some_t:s0->other_u:other_r:other_t:s0'
-        with \
-                patch.object(selinux, 'fcontext_policy_is_applied', return_value=restorecon_ret), \
-                patch.dict(selinux.__salt__, {'cmd.run_all': MagicMock(return_value={'retcode': 0})}):
+        """
+        restorecon_ret = "restorecon reset /foo/bar context some_u:some_r:some_t:s0->other_u:other_r:other_t:s0"
+        with patch.object(
+            selinux, "fcontext_policy_is_applied", return_value=restorecon_ret
+        ), patch.dict(
+            selinux.__salt__, {"cmd.run_all": MagicMock(return_value={"retcode": 0})}
+        ):
             self.assertEqual(
-                selinux.fcontext_apply_policy('/foo/bar'),
+                selinux.fcontext_apply_policy("/foo/bar"),
                 {
-                    'changes': {
-                       '/foo/bar': {
-                            'old': {
-                                'sel_role': 'some_r',
-                                'sel_type': 'some_t',
-                                'sel_user': 'some_u',
+                    "changes": {
+                        "/foo/bar": {
+                            "old": {
+                                "sel_role": "some_r",
+                                "sel_type": "some_t",
+                                "sel_user": "some_u",
                             },
-                            'new': {
-                                'sel_role': 'other_r',
-                                'sel_type': 'other_t',
-                                'sel_user': 'other_u',
+                            "new": {
+                                "sel_role": "other_r",
+                                "sel_type": "other_t",
+                                "sel_user": "other_u",
                             },
                         },
                     },
-                    'retcode': 0,
+                    "retcode": 0,
                 },
             )
 
     def test_fcontext_policy_parsing_fail(self):
-        '''
+        """
         Test failure response for invalid restorecon data.
-        '''
-        restorecon_ret = 'And now for something completely different.'
-        with \
-                patch.object(selinux, 'fcontext_policy_is_applied', return_value=restorecon_ret), \
-                patch.dict(selinux.__salt__, {'cmd.run_all': MagicMock(return_value={'retcode': 0})}):
+        """
+        restorecon_ret = "And now for something completely different."
+        with patch.object(
+            selinux, "fcontext_policy_is_applied", return_value=restorecon_ret
+        ), patch.dict(
+            selinux.__salt__, {"cmd.run_all": MagicMock(return_value={"retcode": 0})}
+        ):
             self.assertEqual(
-                selinux.fcontext_apply_policy('/foo/bar'),
+                selinux.fcontext_apply_policy("/foo/bar"),
                 {
-                    'retcode': 1,
-                    'error': 'Unrecognized response from restorecon command.',
-                }
+                    "retcode": 1,
+                    "error": "Unrecognized response from restorecon command.",
+                },
             )
