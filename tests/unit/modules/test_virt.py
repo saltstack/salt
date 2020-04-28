@@ -1125,7 +1125,13 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                     "device": "cdrom",
                     "source_file": None,
                     "model": "ide",
-                }
+                },
+                {
+                    "name": "remote",
+                    "device": "cdrom",
+                    "source_file": "http://myhost:8080/url/to/image?query=foo&filter=bar",
+                    "model": "ide",
+                },
             ],
             "hello",
         )
@@ -1138,6 +1144,19 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(disk.get("type"), "file")
         self.assertEqual(disk.attrib["device"], "cdrom")
         self.assertIsNone(disk.find("source"))
+
+        disk = root.findall(".//disk")[1]
+        self.assertEqual(disk.get("type"), "network")
+        self.assertEqual(disk.attrib["device"], "cdrom")
+        self.assertEqual(
+            {
+                "protocol": "http",
+                "name": "/url/to/image",
+                "query": "query=foo&filter=bar",
+                "host": {"name": "myhost", "port": "8080"},
+            },
+            salt.utils.xmlutil.to_dict(disk.find("source"), True),
+        )
 
     def test_controller_for_esxi(self):
         """

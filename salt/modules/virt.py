@@ -87,6 +87,7 @@ import subprocess
 import sys
 import time
 from xml.etree import ElementTree
+from xml.sax import saxutils
 
 # Import third party libs
 import jinja2
@@ -107,6 +108,7 @@ from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves.urllib.parse import urlparse
 from salt.utils.virt import check_remote, download_remote
 
 try:
@@ -691,8 +693,17 @@ def _gen_xml(
             "index": six.text_type(i),
         }
         if disk.get("source_file"):
-            disk_context["source_file"] = disk["source_file"]
-            disk_context["type"] = "file"
+            url = urlparse(disk["source_file"])
+            if not url.scheme or not url.hostname:
+                disk_context["source_file"] = disk["source_file"]
+                disk_context["type"] = "file"
+            elif url.scheme in ["http", "https", "ftp", "ftps", "tftp"]:
+                disk_context["type"] = "network"
+                disk_context["protocol"] = url.scheme
+                disk_context["volume"] = url.path
+                disk_context["query"] = saxutils.escape(url.query)
+                disk_context["hosts"] = [{"name": url.hostname, "port": url.port}]
+
         elif disk.get("pool"):
             disk_context["volume"] = disk["filename"]
             # If we had no source_file, then we want a volume

@@ -36,7 +36,7 @@
                         <source pool='{{ disk.pool }}' volume='{{ disk.volume }}' />
                         {% endif %}
                         {%- if disk.type == 'network' %}
-                        <source protocol='{{ disk.protocol }}' name='{{ disk.volume }}'>
+                        <source protocol='{{ disk.protocol }}' name='{{ disk.volume }}'{% if disk.get('query') %} query='{{ disk.query }}'{% endif %}>
                           {%- for host in disk.get('hosts') %}
                           <host name='{{ host.name }}'{% if host.get("port") %} port='{{ host.port }}'{% endif %}/>
                           {%- endfor %}
