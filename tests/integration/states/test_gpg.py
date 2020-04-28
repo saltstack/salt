@@ -5,19 +5,17 @@ Tests for gpg state.
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import errno
+import os
 import tempfile
 import textwrap
-import os
 
-# Import Salt Testing libs
-from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
+import salt.utils.files
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
-
-# Import salt libs
-import salt.utils.files
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf
 
 # pylint: disable=incompatible-py3-code
 

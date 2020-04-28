@@ -8,28 +8,24 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
-import os
-import shutil
-import time
-import tempfile
-import shutil
-import textwrap
-import re
 import errno
+import os
+import re
+import shutil
+import tempfile
+import textwrap
+import time
 
-# Import Salt Testing Libs
-from tests.support.helpers import destructiveTest, slowTest
-from tests.support.unit import TestCase, skipIf
-from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.runtests import RUNTIME_VARS
-from tests.support.mock import MagicMock, patch, mock_open
-
-# Import Salt libs
-import salt.utils.platform
-import salt.utils.files
 import salt.modules.gpg as gpg
+import salt.utils.files
 import salt.utils.path
+import salt.utils.platform
 from salt.exceptions import SaltInvocationError
+from tests.support.helpers import destructiveTest, slowTest
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mock import MagicMock, mock_open, patch
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import TestCase, skipIf
 
 try:
     import gnupg  # pylint: disable=import-error,unused-import

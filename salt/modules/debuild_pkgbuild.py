@@ -22,14 +22,11 @@ import tempfile
 import time
 import traceback
 
-# Import salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.vt
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import third-party libs
 from salt.ext import six
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 

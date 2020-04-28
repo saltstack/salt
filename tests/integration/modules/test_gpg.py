@@ -4,20 +4,20 @@
 """
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import errno
+import os
 import shutil
+import sys
 import tempfile
 import textwrap
-import os
-import sys
 
-# Import Salt Testing libs
-import salt.utils.versions
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.versions
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf
 
 # pylint: disable=incompatible-py3-code
 

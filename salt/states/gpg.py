@@ -11,14 +11,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 
-# Import salt libs
-from salt.exceptions import SaltInvocationError, CheckError
-
-# Import 3rd-party libs
-from salt.ext import six
 import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.path
+from salt.exceptions import CheckError, SaltInvocationError
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 

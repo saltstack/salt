@@ -15,25 +15,22 @@ Sign, encrypt and sign plus encrypt text and files.
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import errno
 import functools
 import logging
 import os
 import re
-import time
-import errno
 import tempfile
+import time
 
-# Import salt libs
+import salt.utils.data
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
-import salt.utils.data
-from salt.exceptions import SaltInvocationError, CheckError
+from salt.exceptions import CheckError, SaltInvocationError
+from salt.ext import six
 from salt.utils.decorators import depends
 from salt.utils.decorators.jinja import jinja_filter
-
-# Import 3rd-party libs
-from salt.ext import six
 
 # pylint: disable=incompatible-py3-code
 try:

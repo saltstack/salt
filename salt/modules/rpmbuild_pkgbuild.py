@@ -27,11 +27,7 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.user
 import salt.utils.vt
-
-# Import salt libs
 from salt.exceptions import SaltInvocationError
-
-# Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 
