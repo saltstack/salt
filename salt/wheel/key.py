@@ -27,7 +27,6 @@ The wheel key functions can also be called via a ``salt`` command at the CLI
 using the :mod:`saltutil execution module <salt.modules.saltutil>`.
 """
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import hashlib
@@ -38,8 +37,6 @@ import salt.crypt
 import salt.utils.crypt
 import salt.utils.files
 import salt.utils.platform
-
-# Import salt libs
 from salt.key import get_key
 from salt.utils.sanitizers import clean
 
@@ -352,7 +349,7 @@ def gen(id_=None, keysize=2048):
     r"""
     Generate a key pair. No keys are stored on the master. A key pair is
     returned as a dict containing pub and priv keys. Returns a dictionary
-    containing the the ``pub`` and ``priv`` keys with their generated values.
+    containing the ``pub`` and ``priv`` keys with their generated values.
 
     id\_
         Set a name to generate a key pair for use with salt. If not specified,
