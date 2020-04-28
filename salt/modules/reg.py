@@ -18,7 +18,7 @@ can have a value assigned to them under the (Default)
 
 When passing a key on the CLI it must be quoted correctly depending on the
 backslashes being used (``\`` vs ``\\``). The following are valid methods of
-passing the the key on the CLI:
+passing the key on the CLI:
 
 Using single backslashes:
     ``"SOFTWARE\Python"``
