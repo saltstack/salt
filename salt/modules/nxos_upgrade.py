@@ -18,10 +18,10 @@ Execution module to upgrade Cisco NX-OS Switches.
 .. versionadded:: xxxx.xx.x
 
 This module supports execution using a Proxy Minion or Native Minion:
-1) Proxy Minion: Connect over SSH or NX-API HTTP(S).
-   See :mod:`salt.proxy.nxos <salt.proxy.nxos>` for proxy minion setup details.
-2) Native Minion: Connect over NX-API Unix Domain Socket (UDS).
-   Install the minion inside the GuestShell running on the NX-OS device.
+    1) Proxy Minion: Connect over SSH or NX-API HTTP(S).
+       See :mod:`salt.proxy.nxos <salt.proxy.nxos>` for proxy minion setup details.
+    2) Native Minion: Connect over NX-API Unix Domain Socket (UDS).
+       Install the minion inside the GuestShell running on the NX-OS device.
 
 :maturity:   new
 :platform:   nxos
@@ -87,8 +87,8 @@ def check_upgrade_impact(system_image, kickstart_image=None, issu=True, **kwargs
         Default: None
 
     issu
-        When True: Attempt In Service Software Upgrade. (non-disruptive)
-          The upgrade will abort if issu is not possible.
+        In Service Software Upgrade (non-disruptive). When True,
+        the upgrade will abort if issu is not possible.
         When False: Force (disruptive) Upgrade/Downgrade.
         Default: True
 
