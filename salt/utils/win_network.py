@@ -14,23 +14,18 @@ There are 3 functions in this salt util.
 - get_interface_info_wmi
 - get_interface_info
 The ``get_interface_info`` function will call one of the other two functions
-depending on the the version of Windows this is run on. Once support for Windows
+depending on the version of Windows this is run on. Once support for Windows
 7 is dropped we can remove the WMI stuff and just use .NET.
 :depends: - pythonnet
           - wmi
 """
 # https://docs.microsoft.com/en-us/dotnet/api/system.net.networkinformation.networkinterface.getallnetworkinterfaces?view=netframework-4.7.2
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import ipaddress
 import platform
 
-# Import 3rd party libs
-# I don't understand why I need this import, but the linter fails without it
 from salt.ext.six.moves import range
-
-# Import Salt libs
 from salt.utils.versions import StrictVersion
 
 IS_WINDOWS = platform.system() == "Windows"

@@ -50,7 +50,7 @@ State example
                 This state does not do anything to the system! It is only used by a `proccesser`
                 you can use `requisites` and `order` to move your docs around the rendered file.
 
-    {{sls}} a file we dont want in the doc !doc_skip:
+    {{sls}} a file we don't want in the doc !doc_skip:
         file.managed:
             - name: /root/passwords
             - contents: 'password: sadefgq34y45h56q'
@@ -79,7 +79,7 @@ Run our `makereadme.sls` state to create `/root/README.md`.
     # first ensure `highstate` return without errors or changes
     salt-call state.highstate
     salt-call state.apply makereadme
-    # or if you dont want the extra `make helpfile` state
+    # or if you don't want the extra `make helpfile` state
     salt-call --out=newline_values_only salt.highstate_doc.render > /root/README.md ; chmod 0600 /root/README.md
 
 
@@ -515,7 +515,7 @@ def proccess_lowstates(**kwargs):
             "ERROR: to see details run: [salt-call state.show_lowstate] <-----***-SEE-***"
         )
     else:
-        if len(ls) > 0:
+        if ls:
             if not isinstance(ls[0], dict):
                 raise Exception(
                     "ERROR: to see details run: [salt-call state.show_lowstate] <-----***-SEE-***"
@@ -557,7 +557,7 @@ def _state_data_to_yaml_string(data, whitelist=None, blacklist=None):
         kset &= set(whitelist)
     for k in kset:
         y[k] = data[k]
-    if len(y) == 0:
+    if not y:
         return None
     return salt.utils.yaml.safe_dump(y, default_flow_style=False)
 
@@ -724,7 +724,7 @@ def proccesser_markdown(lowstate_item, config, **kwargs):
         details += _format_markdown_system_file(s["name"], config)
 
     # if no state doc is created use default state as yaml
-    if len(details) == 0:
+    if not details:
         y = _state_data_to_yaml_string(s)
         if y:
             details += "```\n{0}```\n".format(y)

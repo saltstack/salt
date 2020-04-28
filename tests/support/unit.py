@@ -33,8 +33,7 @@ from unittest import TestResult
 from unittest import TestSuite as _TestSuite
 from unittest import TextTestResult as _TextTestResult
 from unittest import TextTestRunner as _TextTestRunner
-from unittest import expectedFailure, skip
-from unittest import skipIf as _skipIf
+from unittest import expectedFailure, skip, skipIf
 from unittest.case import SkipTest, _id
 
 from salt.ext import six
@@ -392,16 +391,6 @@ class TextTestRunner(_TextTestRunner):
     """
 
     resultclass = TextTestResult
-
-
-def skipIf(skip, reason):
-    from tests.support.runtests import RUNTIME_VARS
-
-    if RUNTIME_VARS.PYTEST_SESSION:
-        import pytest
-
-        return pytest.mark.skipif(skip, reason=reason)
-    return _skipIf(skip, reason)
 
 
 __all__ = [

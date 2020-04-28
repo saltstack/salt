@@ -250,7 +250,7 @@ done at the CLI:
 
     caller = salt.client.Caller()
 
-    ret = called.cmd('event.send',
+    ret = caller.cmd('event.send',
                      'myco/event/success'
                      { 'success': True,
                        'message': "It works!" })

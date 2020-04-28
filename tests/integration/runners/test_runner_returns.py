@@ -17,6 +17,7 @@ import salt.utils.jid
 import salt.utils.yaml
 from tests.support.case import ShellCase
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf
 
 
 @pytest.mark.windows_whitelisted
@@ -31,7 +32,7 @@ class RunnerReturnsTest(ShellCase):
         """
         self.job_dir = os.path.join(self.master_opts["cachedir"], "jobs")
         self.hash_type = self.master_opts["hash_type"]
-        self.master_d_dir = os.path.join(self.config_dir, "master.d")
+        self.master_d_dir = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "master.d")
         try:
             os.makedirs(self.master_d_dir)
         except OSError as exc:
@@ -75,6 +76,7 @@ class RunnerReturnsTest(ShellCase):
         self.conf.flush()
         self.conf.close()
 
+    @skipIf(True, "SLOWTEST skip")
     def test_runner_returns_disabled(self):
         """
         Test with runner_returns enabled
@@ -95,6 +97,7 @@ class RunnerReturnsTest(ShellCase):
         )
         self.assertFalse(os.path.isfile(serialized_return))
 
+    @skipIf(True, "SLOWTEST skip")
     def test_runner_returns_enabled(self):
         """
         Test with runner_returns enabled
