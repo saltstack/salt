@@ -2984,7 +2984,7 @@ def blockreplace(
 
     if block_found:
         diff = __utils__["stringutils.get_diff"](orig_file, new_file)
-        has_changes = diff is not ""
+        has_changes = diff != ""
         if has_changes and not dry_run:
             # changes detected
             # backup file attrs
@@ -4166,7 +4166,7 @@ def set_selinux_context(
         fcontext_result = __salt__["selinux.fcontext_add_policy"](
             path, sel_type=type, sel_user=user, sel_level=range
         )
-        if fcontext_result.get("retcode", None) is not 0:
+        if fcontext_result.get("retcode", None) != 0:
             # Problem setting fcontext policy
             raise CommandExecutionError(
                 "Problem setting fcontext: {0}".format(fcontext_result)

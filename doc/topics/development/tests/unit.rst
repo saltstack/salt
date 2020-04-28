@@ -176,7 +176,6 @@ execution of the tests. Additionally, if the ``libcloud`` library is not
 available, since that's not actually part of what's being tested, we mocked that
 import by patching ``sys.modules`` when tests are running.
 
-
 Mocking Filehandles
 -------------------
 
@@ -341,7 +340,7 @@ Multiple File Contents
 
 For cases in which a file is being read more than once, and it is necessary to
 test a function's behavior based on what the file looks like the second (or
-third, etc.) time it is read, just specify the the contents for that file as a
+third, etc.) time it is read, just specify the contents for that file as a
 list. Each time the file is opened, ``mock_open`` will cycle through the list
 and produce a mocked filehandle with the specified contents. For example:
 

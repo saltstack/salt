@@ -139,10 +139,7 @@ def _new_extension(name, value, critical=0, issuer=None, _pyfree=1):
     doesn't support getting the publickeyidentifier from the issuer
     to create the authoritykeyidentifier extension.
     """
-    if (
-        name == "subjectKeyIdentifier"
-        and value.strip("0123456789abcdefABCDEF:") is not ""
-    ):
+    if name == "subjectKeyIdentifier" and value.strip("0123456789abcdefABCDEF:") != "":
         raise salt.exceptions.SaltInvocationError("value must be precomputed hash")
 
     # ensure name and value are bytes
