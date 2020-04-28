@@ -312,12 +312,14 @@ class PsTestCase(TestCase):
 
     def test_top(self):
         """
-        There's no need to do any asserts here. Merely running the function
-        should not raise a traceback. See the following issue:
+        See the following issue:
 
         https://github.com/saltstack/salt/issues/56942
         """
-        ps.top()
+        # Limiting to one process because the test suite might be running as
+        # PID 1 under docker and there may only *be* one process running.
+        result = ps.top(num_processes=1, interval=0)
+        assert len(result) == 1
 
         ## This is commented out pending discussion on https://github.com/saltstack/salt/commit/2e5c3162ef87cca8a2c7b12ade7c7e1b32028f0a
         # @skipIf(not HAS_UTMP, "The utmp module must be installed to run test_get_users_utmp()")
