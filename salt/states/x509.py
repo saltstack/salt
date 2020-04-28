@@ -150,10 +150,6 @@ This state creates a private key then requests a certificate signed by ca accord
         - CN: www.example.com
         - days_remaining: 30
         - backup: True
-        - managed_private_key:
-            name: /etc/pki/www.key
-            bits: 4096
-            backup: True
 
 This other state creates a private key then requests a certificate signed by ca
 according to the www policy but adds a strict date range for the certificate to
@@ -172,10 +168,6 @@ be considered valid.
         - not_before: 2019-05-05 00:00:00
         - not_after: 2020-05-05 14:30:00
         - backup: True
-        - managed_private_key:
-            name: /etc/pki/www-time-limited.key
-            bits: 4096
-            backup: True
 
 """
 
