@@ -231,14 +231,14 @@ class MapConfTest(TestCase):
             }
 
             # what we assert above w.r.t db2 using nj_vcenter:vmware provider:
-            # - url is from the overriden nj_vcenter provider, not nyc_vcenter
+            # - url is from the overridden nj_vcenter provider, not nyc_vcenter
             # - image from provider is still overridden by the nyc-vm profile
             # - password from map override is still overriding both the provider and profile password
             #
             # what we assert above about grain handling ( and provider/profile/map data in general )
             # - provider grains are able to be overridden by profile data
             # - provider grain sare overridden by map data
-            # - profile data is overriden by map data
+            # - profile data is overridden by map data
             # ie, the provider->profile->map inheritance works as expected
             map_data = cloud_map.map_data()
             self.assertEqual(map_data, merged_profile)

@@ -342,7 +342,7 @@ def set_static_dns(iface, *addrs):
         salt -G 'os_family:Windows' ip.set_static_dns 'Local Area Connection' '192.168.1.1'
         salt -G 'os_family:Windows' ip.set_static_dns 'Local Area Connection' '192.168.1.252' '192.168.1.253'
     """
-    if addrs is () or str(addrs[0]).lower() == "none":
+    if not addrs or str(addrs[0]).lower() == "none":
         return {"Interface": iface, "DNS Server": "No Changes"}
     # Clear the list of DNS servers if [] is passed
     if str(addrs[0]).lower() == "[]":

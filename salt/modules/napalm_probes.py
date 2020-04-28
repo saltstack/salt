@@ -228,7 +228,7 @@ def set_probes(
         }
         set_probes(probes)
 
-    CLI Example - to push cahnges on the fly (not recommended):
+    CLI Example - to push changes on the fly (not recommended):
 
     .. code-block:: bash
 

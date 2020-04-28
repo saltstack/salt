@@ -250,7 +250,7 @@ def insert_runner(fun, args=None, kwargs=None, queue=None, backend=None):
         The runner function that is going to be run
 
     args
-        list or comma-seperated string of args to send to fun
+        list or comma-separated string of args to send to fun
 
     kwargs
         dictionary of keyword arguments to send to fun
