@@ -4511,7 +4511,7 @@ class _policy_info(object):
             return "true"
         elif val.upper() == "Run Windows PowerShell scripts last".upper():
             return "false"
-        elif val is "Not Configured":
+        elif val == "Not Configured":
             return None
         else:
             return "Invalid Value"
