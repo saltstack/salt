@@ -24,8 +24,11 @@ from salt.ext.six import string_types
 
 KNOWN_BINARY_NAMES = frozenset(
     [
+        "pyvenv-{0}.{1}".format(*sys.version_info[:2]),
         "virtualenv-{0}.{1}".format(*sys.version_info[:2]),
+        "pyvenv{0}".format(sys.version_info[0]),
         "virtualenv{0}".format(sys.version_info[0]),
+        "pyvenv",
         "virtualenv",
     ]
 )
@@ -101,8 +104,8 @@ def create(
 
     venv_bin
         The name (and optionally path) of the virtualenv command. This can also
-        be set globally in the minion config file as ``virtualenv.venv_bin``.
-        Defaults to ``virtualenv``.
+        be set globally in the pillar data as ``venv_bin``.
+        Defaults to ``pyvenv`` or ``virtualenv``, depending on what is installed.
 
     system_site_packages : False
         Passthrough argument given to virtualenv or pyvenv
@@ -178,7 +181,7 @@ def create(
            - VIRTUALENV_ALWAYS_COPY: 1
     """
     if venv_bin is None:
-        venv_bin = __opts__.get("venv_bin") or __pillar__.get("venv_bin")
+        venv_bin = __pillar__.get("venv_bin") or __opts__.get("venv_bin")
 
     cmd = [venv_bin]
 
