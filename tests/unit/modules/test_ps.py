@@ -310,6 +310,15 @@ class PsTestCase(TestCase):
                 ps.get_users()[0],
             )
 
+    def test_top(self):
+        """
+        There's no need to do any asserts here. Merely running the function
+        should not raise a traceback. See the following issue:
+
+        https://github.com/saltstack/salt/issues/56942
+        """
+        ps.top()
+
         ## This is commented out pending discussion on https://github.com/saltstack/salt/commit/2e5c3162ef87cca8a2c7b12ade7c7e1b32028f0a
         # @skipIf(not HAS_UTMP, "The utmp module must be installed to run test_get_users_utmp()")
         # @patch('salt.utils.psutil_compat.get_users', new=MagicMock(return_value=None))  # This will force the function to use utmp
