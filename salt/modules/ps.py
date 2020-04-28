@@ -168,12 +168,8 @@ def top(num_processes=5, interval=3):
     ):
         if num_processes and idx >= num_processes:
             break
-        if len(_get_proc_cmdline(process)) == 0:
-            cmdline = _get_proc_name(process)
-        else:
-            cmdline = _get_proc_cmdline(process)
         info = {
-            "cmd": cmdline,
+            "cmd": _get_proc_cmdline(process) or _get_proc_name(process),
             "user": _get_proc_username(process),
             "status": _get_proc_status(process),
             "pid": _get_proc_pid(process),
