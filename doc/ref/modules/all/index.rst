@@ -431,6 +431,7 @@ execution modules
     smbios
     smf_service
     smtp
+    snap
     snapper
     solaris_fmadm
     solaris_group
