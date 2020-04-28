@@ -2079,25 +2079,30 @@ def clean_locks(root=None):
 
 def unhold(name=None, pkgs=None, **kwargs):
     """
-    Remove specified package lock.
+    Remove a package hold.
+
+    name
+        A package name, or a comma-separated list of package names.  Specify
+        one of ``name`` or ``pkgs``.
+
+    pkgs
+        A list of packages.  Specify one of ``name`` or ``pkgs``.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' pkg.remove_lock <package name>
-        salt '*' pkg.remove_lock <package1>,<package2>,<package3>
-        salt '*' pkg.remove_lock pkgs='["foo", "bar"]'
+        salt '*' pkg.unhold <package name>
+        salt '*' pkg.unhold <package1>,<package2>,<package3>
+        salt '*' pkg.unhold pkgs='["foo", "bar"]'
     """
     ret = {}
     if (not name and not pkgs) or (name and pkgs):
         raise CommandExecutionError("Name or packages must be specified.")
-    elif name:
-        pkgs = [name]
 
     locks = list_locks()
     try:
-        pkgs = list(__salt__["pkg_resource.parse_targets"](pkgs)[0].keys())
+        pkgs = list(__salt__["pkg_resource.parse_targets"](name, pkgs)[0].keys())
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
@@ -2117,9 +2122,15 @@ def unhold(name=None, pkgs=None, **kwargs):
     return ret
 
 
-def remove_lock(packages, root=None, **kwargs):  # pylint: disable=unused-argument
+def remove_lock(name, root=None, **kwargs):
     """
+    .. deprecated:: 3003
+        This function is deprecated. Please use ``unhold()`` instead.
+
     Remove specified package lock.
+
+    name
+        A package name, or a comma-separated list of package names.
 
     root
         operate on a different root directory.
@@ -2130,15 +2141,14 @@ def remove_lock(packages, root=None, **kwargs):  # pylint: disable=unused-argume
 
         salt '*' pkg.remove_lock <package name>
         salt '*' pkg.remove_lock <package1>,<package2>,<package3>
-        salt '*' pkg.remove_lock pkgs='["foo", "bar"]'
     """
 
     salt.utils.versions.warn_until(
-        "Sodium", "This function is deprecated. Please use unhold() instead."
+        "Phosphorus", "This function is deprecated. Please use unhold() instead."
     )
     locks = list_locks(root)
     try:
-        packages = list(__salt__["pkg_resource.parse_targets"](packages)[0].keys())
+        packages = list(__salt__["pkg_resource.parse_targets"](name)[0].keys())
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
@@ -2158,31 +2168,31 @@ def remove_lock(packages, root=None, **kwargs):  # pylint: disable=unused-argume
 
 def hold(name=None, pkgs=None, **kwargs):
     """
-    Add a package lock. Specify packages to lock by exact name.
+    Add a package hold.  Specify one of ``name`` and ``pkgs``.
+
+    name
+        A package name, or a comma-separated list of package names.  Specify
+        one of ``name`` or ``pkgs``.
+
+    pkgs
+        A list of packages.  Specify one of ``name`` or ``pkgs``.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' pkg.add_lock <package name>
-        salt '*' pkg.add_lock <package1>,<package2>,<package3>
-        salt '*' pkg.add_lock pkgs='["foo", "bar"]'
-
-    :param name:
-    :param pkgs:
-    :param kwargs:
-    :return:
+        salt '*' pkg.hold <package name>
+        salt '*' pkg.hold <package1>,<package2>,<package3>
+        salt '*' pkg.hold pkgs='["foo", "bar"]'
     """
     ret = {}
     if (not name and not pkgs) or (name and pkgs):
         raise CommandExecutionError("Name or packages must be specified.")
-    elif name:
-        pkgs = [name]
 
     locks = list_locks()
     added = []
     try:
-        pkgs = list(__salt__["pkg_resource.parse_targets"](pkgs)[0].keys())
+        pkgs = list(__salt__["pkg_resource.parse_targets"](name, pkgs)[0].keys())
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
@@ -2200,8 +2210,11 @@ def hold(name=None, pkgs=None, **kwargs):
     return ret
 
 
-def add_lock(packages, root=None, **kwargs):  # pylint: disable=unused-argument
+def add_lock(name, root=None, **kwargs):
     """
+    .. deprecated:: 3003
+        This function is deprecated. Please use ``hold()`` instead.
+
     Add a package lock. Specify packages to lock by exact name.
 
     root
@@ -2213,15 +2226,14 @@ def add_lock(packages, root=None, **kwargs):  # pylint: disable=unused-argument
 
         salt '*' pkg.add_lock <package name>
         salt '*' pkg.add_lock <package1>,<package2>,<package3>
-        salt '*' pkg.add_lock pkgs='["foo", "bar"]'
     """
     salt.utils.versions.warn_until(
-        "Sodium", "This function is deprecated. Please use hold() instead."
+        "Phosphorus", "This function is deprecated. Please use hold() instead."
     )
     locks = list_locks(root)
     added = []
     try:
-        packages = list(__salt__["pkg_resource.parse_targets"](packages)[0].keys())
+        packages = list(__salt__["pkg_resource.parse_targets"](name)[0].keys())
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
