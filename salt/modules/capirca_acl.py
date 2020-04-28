@@ -413,8 +413,8 @@ def _lookup_element(lst, key):
     for ele in lst:
         if not ele or not isinstance(ele, dict):
             continue
-        if next(iter(ele)) == key:
-            return next(iter(ele.values()))
+        if key in ele:
+            return ele[key]
     return {}
 
 

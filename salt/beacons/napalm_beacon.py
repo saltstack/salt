@@ -295,8 +295,7 @@ def validate(config):
     if not isinstance(config, list):
         return False, "Configuration for napalm beacon must be a list."
     for mod in config:
-        fun = next(iter(mod))
-        fun_cfg = next(iter(mod.values()))
+        fun, fun_cfg = next(iter(mod.items()))
         if not isinstance(fun_cfg, dict):
             return (
                 False,
@@ -320,8 +319,7 @@ def beacon(config):
         if not mod:
             continue
         event = {}
-        fun = next(iter(mod))
-        fun_cfg = next(iter(mod.values()))
+        fun, fun_cfg = next(iter(mod.items()))
         args = fun_cfg.pop("_args", [])
         kwargs = fun_cfg.pop("_kwargs", {})
         log.debug(

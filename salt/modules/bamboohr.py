@@ -74,10 +74,10 @@ def list_employees(order_by="id"):
         if cat.tag != "employees":
             continue
         for item in cat:
-            emp_id = next(iter(item.items()))[1]
+            emp_id = next(iter(item.values()))
             emp_ret = {"id": emp_id}
             for details in item:
-                emp_ret[next(iter(details.items()))[1]] = details.text
+                emp_ret[next(iter(details.values()))] = details.text
             ret[emp_ret[order_by]] = emp_ret
     return ret
 
@@ -146,7 +146,7 @@ def show_employee(emp_id, fields=None):
 
     ret = {"id": emp_id}
     for item in root:
-        ret[next(iter(item.items()))[1]] = item.text
+        ret[next(iter(item.values()))] = item.text
     return ret
 
 
