@@ -14,6 +14,7 @@
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
+import logging
 import os
 
 import pytest
@@ -21,6 +22,8 @@ import salt.utils.files
 from tests.support.case import ShellCase, SSHCase
 from tests.support.helpers import flaky
 from tests.support.unit import skipIf
+
+log = logging.getLogger(__name__)
 
 
 @pytest.mark.windows_whitelisted
@@ -69,21 +72,15 @@ class GrainsTargetingTest(ShellCase):
         with salt.utils.files.fopen(key_file, "a"):
             pass
 
-        import logging
-
-        log = logging.getLogger(__name__)
         # ping disconnected minion and ensure it times out and returns with correct message
         try:
-            if salt.utils.platform.is_windows():
-                cmd_str = '-t 1 -G "id:disconnected" test.ping'
-            else:
-                cmd_str = "-t 1 -G 'id:disconnected' test.ping"
             ret = ""
             for item in self.run_salt(
                 '-t 1 -G "id:disconnected" test.ping', timeout=40
             ):
                 if item != "disconnected:":
                     ret = item.strip()
+                    break
             assert ret == test_ret
         finally:
             os.unlink(key_file)

@@ -39,6 +39,7 @@ class SaltcheckModuleTest(ModuleCase):
         self.assertDictContainsSubset(
             {"status": "Pass"}, ret[0]["validate-saltcheck"]["echo_test_hello"]
         )
+        self.assertDictContainsSubset({"Failed": 0}, ret[1]["TEST RESULTS"])
 
     @skipIf(True, "SLOWTEST skip")
     def test_topfile_validation(self):

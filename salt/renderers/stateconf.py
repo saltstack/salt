@@ -225,10 +225,10 @@ def render(input, saltenv="base", sls="", argline="", **kws):
             tmplctx = STATE_CONF.copy()
             if tmplctx:
                 prefix = sls + "::"
-                for k in six.iterkeys(tmplctx):  # iterate over a copy of keys
-                    if k.startswith(prefix):
-                        tmplctx[k[len(prefix) :]] = tmplctx[k]
-                        del tmplctx[k]
+                tmplctx = {
+                    k[len(prefix) :] if k.startswith(prefix) else k: v
+                    for k, v in six.iteritems(tmplctx)
+                }
         else:
             tmplctx = {}
 

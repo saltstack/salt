@@ -222,7 +222,7 @@ def dequote(value):
 @jinja_filter("is_hex")
 def is_hex(value):
     """
-    Returns True if value is a hexidecimal string, otherwise returns False
+    Returns True if value is a hexadecimal string, otherwise returns False
     """
     try:
         int(value, 16)
