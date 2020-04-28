@@ -178,10 +178,16 @@ def top(num_processes=5, interval=3):
             "cpu": {},
             "mem": {},
         }
-        for key, value in six.iteritems(process.cpu_times()._asdict()):
-            info["cpu"][key] = value
-        for key, value in six.iteritems(process.memory_info()._asdict()):
-            info["mem"][key] = value
+        try:
+            for key, value in six.iteritems(process.cpu_times()._asdict()):
+                info["cpu"][key] = value
+            for key, value in six.iteritems(process.memory_info()._asdict()):
+                info["mem"][key] = value
+        except psutil.NoSuchProcess:
+            # Process ended since psutil.pids() was run earlier in this
+            # function. Ignore this process and do not include this process in
+            # the return data.
+            continue
         result.append(info)
 
     return result
