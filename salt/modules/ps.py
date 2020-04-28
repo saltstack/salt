@@ -164,7 +164,7 @@ def top(num_processes=5, interval=3):
         usage.add((diff, process))
 
     for idx, (diff, process) in enumerate(
-        sorted(usage, key=lambda x: x[1].pid, reverse=True)
+        sorted(usage, key=lambda x: x[0], reverse=True)
     ):
         if num_processes and idx >= num_processes:
             break
