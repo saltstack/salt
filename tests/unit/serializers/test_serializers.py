@@ -12,6 +12,7 @@ import jinja2
 import salt.serializers.configparser as configparser
 import salt.serializers.json as json
 import salt.serializers.msgpack as msgpack
+import salt.serializers.plist as plist
 import salt.serializers.python as python
 import salt.serializers.toml as toml
 import salt.serializers.yaml as yaml
@@ -366,4 +367,30 @@ class TestSerializers(TestCase):
         assert serialized == 'foo = "bar"\n', serialized
 
         deserialized = toml.deserialize(serialized)
+        assert deserialized == data, deserialized
+
+    @skipIf(not plist.available, SKIP_MESSAGE % "plist")
+    def test_serialize_plist(self):
+        data = {"foo": "bar"}
+        serialized = plist.serialize(data)
+        expected = (
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n'
+            '<plist version="1.0">\n'
+            '<dict>\n'
+            '\t<key>foo</key>\n'
+            '\t<string>bar</string>\n'
+            '</dict>\n'
+            '</plist>\n'.encode("utf-8"))
+        assert serialized == expected, serialized
+
+        deserialized = plist.deserialize(serialized)
+        assert deserialized == data, deserialized
+
+    @skipIf(not plist.available, SKIP_MESSAGE % "plist")
+    def test_serialize_binary_plist(self):
+        data = {"foo": "bar"}
+        serialized = plist.serialize(data, fmt="FMT_BINARY")
+
+        deserialized = plist.deserialize(serialized)
         assert deserialized == data, deserialized
