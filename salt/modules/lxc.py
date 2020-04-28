@@ -1910,7 +1910,7 @@ def create(
             options='{"dist": "centos", "release": "6", "arch": "amd64"}'
 
         For available template options, refer to the lxc template scripts
-        which are ususally located under ``/usr/share/lxc/templates``,
+        which are usually located under ``/usr/share/lxc/templates``,
         or run ``lxc-create -t <template> -h``.
 
     image
@@ -3132,7 +3132,7 @@ def set_dns(name, dnsservers=None, searchdomains=None, path=None):
     # We need to handle that case with care:
     #  - we create the resolv.conf runtime directory (the
     #   linked directory) as anyway it will be shadowed when the real
-    #   runned tmpfs mountpoint will be mounted.
+    #   run tmpfs mountpoint will be mounted.
     #   ( /etc/resolv.conf -> ../run/resolvconf/resolv.conf)
     #   Indeed, it can save us in any other case (running, eg, in a
     #   bare chroot when repairing or preparing the container for

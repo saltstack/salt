@@ -287,7 +287,7 @@ def config_get(key):
 #######################
 def pylxd_client_get(remote_addr=None, cert=None, key=None, verify_cert=True):
     """
-    Get an pyxld client, this is not ment to be runned over the CLI.
+    Get an pyxld client, this is not meant to be run over the CLI.
 
     remote_addr :
         An URL to a remote Server, you also have to give cert and key if you
@@ -312,7 +312,7 @@ def pylxd_client_get(remote_addr=None, cert=None, key=None, verify_cert=True):
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
 
     See the `requests-docs`_ for the SSL stuff.
 
@@ -330,9 +330,7 @@ def pylxd_client_get(remote_addr=None, cert=None, key=None, verify_cert=True):
     )
 
     if pool_key in _connection_pool:
-        log.debug(
-            ('Returning the client "{0}" from our connection pool').format(remote_addr)
-        )
+        log.debug('Returning the client "%s" from our connection pool', remote_addr)
         return _connection_pool[pool_key]
 
     try:
@@ -371,13 +369,12 @@ def pylxd_client_get(remote_addr=None, cert=None, key=None, verify_cert=True):
                     )
 
                 log.debug(
-                    (
-                        'Trying to connecto to "{0}" '
-                        'with cert "{1}", key "{2}" and '
-                        'verify_cert "{3!s}"'.format(
-                            remote_addr, cert, key, verify_cert
-                        )
-                    )
+                    'Trying to connect to "%s" with cert "%s", key "%s" and '
+                    'verify_cert "%s"',
+                    remote_addr,
+                    cert,
+                    key,
+                    verify_cert,
                 )
                 client = pylxd.Client(
                     endpoint=remote_addr, cert=(cert, key,), verify=verify_cert
@@ -445,7 +442,7 @@ def authenticate(remote_addr, password, cert, key, verify_cert=True):
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
 
     CLI Example:
 
@@ -507,11 +504,11 @@ def container_list(
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
 
     CLI Examples:
 
-    Full dict with all available informations:
+    Full dict with all available information:
 
     .. code-block:: bash
 
@@ -635,7 +632,7 @@ def container_create(
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
 
     _raw : False
         Return the raw pyxld object or a dict?
@@ -737,7 +734,7 @@ def container_get(
         verify_cert : True
             Wherever to verify the cert, this is by default True
             but in the most cases you want to set it off as LXD
-            normaly uses self-signed certificates.
+            normally uses self-signed certificates.
 
         _raw :
             Return the pylxd object, this is internal and by states in use.
@@ -793,7 +790,7 @@ def container_delete(name, remote_addr=None, cert=None, key=None, verify_cert=Tr
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
     """
     container = container_get(name, remote_addr, cert, key, verify_cert, _raw=True)
     container.delete(wait=True)
@@ -810,7 +807,7 @@ def container_rename(
         Name of the container to Rename
 
     newname :
-        The new name of the contianer
+        The new name of the container
 
     remote_addr :
         An URL to a remote Server, you also have to give cert and key if
@@ -835,7 +832,7 @@ def container_rename(
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
     """
     container = container_get(name, remote_addr, cert, key, verify_cert, _raw=True)
 
@@ -875,7 +872,7 @@ def container_state(name=None, remote_addr=None, cert=None, key=None, verify_cer
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
     """
     client = pylxd_client_get(remote_addr, cert, key, verify_cert)
 
@@ -941,7 +938,7 @@ def container_start(name, remote_addr=None, cert=None, key=None, verify_cert=Tru
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
     """
     container = container_get(name, remote_addr, cert, key, verify_cert, _raw=True)
     container.start(wait=True)
@@ -986,7 +983,7 @@ def container_stop(
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
     """
     container = container_get(name, remote_addr, cert, key, verify_cert, _raw=True)
     container.stop(timeout, force, wait=True)
@@ -1023,7 +1020,7 @@ def container_restart(name, remote_addr=None, cert=None, key=None, verify_cert=T
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
     """
     container = container_get(name, remote_addr, cert, key, verify_cert, _raw=True)
     container.restart(wait=True)
@@ -1060,7 +1057,7 @@ def container_freeze(name, remote_addr=None, cert=None, key=None, verify_cert=Tr
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
     """
     container = container_get(name, remote_addr, cert, key, verify_cert, _raw=True)
     container.freeze(wait=True)
@@ -1097,7 +1094,7 @@ def container_unfreeze(name, remote_addr=None, cert=None, key=None, verify_cert=
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
     """
     container = container_get(name, remote_addr, cert, key, verify_cert, _raw=True)
     container.unfreeze(wait=True)
@@ -1155,7 +1152,7 @@ def container_migrate(
         verify_cert : True
             Wherever to verify the cert, this is by default True
             but in the most cases you want to set it off as LXD
-            normaly uses self-signed certificates.
+            normally uses self-signed certificates.
 
         CLI Example:
 
@@ -1246,7 +1243,7 @@ def container_config_get(
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
     """
     container = container_get(name, remote_addr, cert, key, verify_cert, _raw=True)
     return _get_property_dict_item(container, "config", config_key)
@@ -1296,7 +1293,7 @@ def container_config_set(
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
     """
     container = container_get(name, remote_addr, cert, key, verify_cert, _raw=True)
 
@@ -1338,7 +1335,7 @@ def container_config_delete(
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
     """
     container = container_get(name, remote_addr, cert, key, verify_cert, _raw=True)
 
@@ -1380,7 +1377,7 @@ def container_device_get(
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
     """
     container = container_get(name, remote_addr, cert, key, verify_cert, _raw=True)
 
@@ -1435,7 +1432,7 @@ def container_device_add(
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
     """
     container = container_get(name, remote_addr, cert, key, verify_cert, _raw=True)
 
@@ -1478,7 +1475,7 @@ def container_device_delete(
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
     """
     container = container_get(name, remote_addr, cert, key, verify_cert, _raw=True)
 
@@ -1550,7 +1547,7 @@ def container_file_put(
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
 
     CLI Example:
 
@@ -1771,7 +1768,7 @@ def container_file_get(
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
 
     """
     # Fix mode. Salt commandline doesn't use octals, so 0600 will be
@@ -1865,7 +1862,7 @@ def container_execute(
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
 
     CLI Example:
 
@@ -1933,7 +1930,7 @@ def profile_list(
         verify_cert : True
             Wherever to verify the cert, this is by default True
             but in the most cases you want to set it off as LXD
-            normaly uses self-signed certificates.
+            normally uses self-signed certificates.
 
         CLI Examples:
 
@@ -2003,7 +2000,7 @@ def profile_create(
         verify_cert : True
             Wherever to verify the cert, this is by default True
             but in the most cases you want to set it off as LXD
-            normaly uses self-signed certificates.
+            normally uses self-signed certificates.
 
         CLI Examples:
 
@@ -2063,7 +2060,7 @@ def profile_get(
         verify_cert : True
             Wherever to verify the cert, this is by default True
             but in the most cases you want to set it off as LXD
-            normaly uses self-signed certificates.
+            normally uses self-signed certificates.
 
         _raw :
             Return the pylxd object, this is internal and by states in use.
@@ -2117,7 +2114,7 @@ def profile_delete(name, remote_addr=None, cert=None, key=None, verify_cert=True
         verify_cert : True
             Wherever to verify the cert, this is by default True
             but in the most cases you want to set it off as LXD
-            normaly uses self-signed certificates.
+            normally uses self-signed certificates.
 
         CLI Example:
 
@@ -2165,7 +2162,7 @@ def profile_config_get(
         verify_cert : True
             Wherever to verify the cert, this is by default True
             but in the most cases you want to set it off as LXD
-            normaly uses self-signed certificates.
+            normally uses self-signed certificates.
 
         CLI Example:
 
@@ -2221,7 +2218,7 @@ def profile_config_set(
         verify_cert : True
             Wherever to verify the cert, this is by default True
             but in the most cases you want to set it off as LXD
-            normaly uses self-signed certificates.
+            normally uses self-signed certificates.
 
         CLI Example:
 
@@ -2268,7 +2265,7 @@ def profile_config_delete(
         verify_cert : True
             Wherever to verify the cert, this is by default True
             but in the most cases you want to set it off as LXD
-            normaly uses self-signed certificates.
+            normally uses self-signed certificates.
 
         CLI Example:
 
@@ -2315,7 +2312,7 @@ def profile_device_get(
         verify_cert : True
             Wherever to verify the cert, this is by default True
             but in the most cases you want to set it off as LXD
-            normaly uses self-signed certificates.
+            normally uses self-signed certificates.
 
         CLI Example:
 
@@ -2369,7 +2366,7 @@ def profile_device_set(
         verify_cert : True
             Wherever to verify the cert, this is by default True
             but in the most cases you want to set it off as LXD
-            normaly uses self-signed certificates.
+            normally uses self-signed certificates.
 
         CLI Example:
 
@@ -2421,7 +2418,7 @@ def profile_device_delete(
         verify_cert : True
             Wherever to verify the cert, this is by default True
             but in the most cases you want to set it off as LXD
-            normaly uses self-signed certificates.
+            normally uses self-signed certificates.
 
         CLI Example:
 
@@ -2471,7 +2468,7 @@ def image_list(
         verify_cert : True
             Wherever to verify the cert, this is by default True
             but in the most cases you want to set it off as LXD
-            normaly uses self-signed certificates.
+            normally uses self-signed certificates.
 
         CLI Examples:
 
@@ -2520,7 +2517,7 @@ def image_get(
         verify_cert : True
             Wherever to verify the cert, this is by default True
             but in the most cases you want to set it off as LXD
-            normaly uses self-signed certificates.
+            normally uses self-signed certificates.
 
         _raw : False
             Return the raw pylxd object or a dict of it?
@@ -2578,7 +2575,7 @@ def image_get_by_alias(
         verify_cert : True
             Wherever to verify the cert, this is by default True
             but in the most cases you want to set it off as LXD
-            normaly uses self-signed certificates.
+            normally uses self-signed certificates.
 
         _raw : False
             Return the raw pylxd object or a dict of it?
@@ -2633,7 +2630,7 @@ def image_delete(image, remote_addr=None, cert=None, key=None, verify_cert=True)
         verify_cert : True
             Wherever to verify the cert, this is by default True
             but in the most cases you want to set it off as LXD
-            normaly uses self-signed certificates.
+            normally uses self-signed certificates.
 
         CLI Examples:
 
@@ -2691,7 +2688,7 @@ def image_from_simplestreams(
         verify_cert : True
             Wherever to verify the cert, this is by default True
             but in the most cases you want to set it off as LXD
-            normaly uses self-signed certificates.
+            normally uses self-signed certificates.
 
         aliases : []
             List of aliases to append to the copied image
@@ -2772,7 +2769,7 @@ def image_from_url(
         verify_cert : True
             Wherever to verify the cert, this is by default True
             but in the most cases you want to set it off as LXD
-            normaly uses self-signed certificates.
+            normally uses self-signed certificates.
 
         aliases : []
             List of aliases to append to the copied image
@@ -2853,7 +2850,7 @@ def image_from_file(
         verify_cert : True
             Wherever to verify the cert, this is by default True
             but in the most cases you want to set it off as LXD
-            normaly uses self-signed certificates.
+            normally uses self-signed certificates.
 
         aliases : []
             List of aliases to append to the copied image
@@ -2939,7 +2936,7 @@ def image_copy_lxd(
     src_verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
 
     remote_addr :
         Address of the destination daemon
@@ -2962,7 +2959,7 @@ def image_copy_lxd(
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
 
     aliases : []
         List of aliases to append to the copied image
@@ -2986,9 +2983,10 @@ def image_copy_lxd(
         aliases = []
 
     log.debug(
-        'Trying to copy the image "{0}" from "{1}" to "{2}"'.format(
-            source, src_remote_addr, remote_addr
-        )
+        'Trying to copy the image "%s" from "%s" to "%s"',
+        source,
+        src_remote_addr,
+        remote_addr,
     )
 
     # This will fail with a SaltInvocationError if
@@ -3064,7 +3062,7 @@ def image_alias_add(
         verify_cert : True
             Wherever to verify the cert, this is by default True
             but in the most cases you want to set it off as LXD
-            normaly uses self-signed certificates.
+            normally uses self-signed certificates.
 
         CLI Examples:
 
@@ -3116,7 +3114,7 @@ def image_alias_delete(
         verify_cert : True
             Wherever to verify the cert, this is by default True
             but in the most cases you want to set it off as LXD
-            normaly uses self-signed certificates.
+            normally uses self-signed certificates.
 
         CLI Examples:
 

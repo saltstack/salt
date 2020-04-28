@@ -154,7 +154,7 @@ def present(
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
     """
     if aliases is None:
         aliases = []
@@ -328,7 +328,7 @@ def absent(name, remote_addr=None, cert=None, key=None, verify_cert=True):
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
     """
     ret = {
         "name": name,

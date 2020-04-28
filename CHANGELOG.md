@@ -7,12 +7,30 @@ This project versioning is _similar_ to [Semantic Versioning](https://semver.org
 Versions are `MAJOR.PATCH`.
 
 ## 3001 - Sodium
+## 3001 - Sodium [yyyy-mm-dd]
 
 ### Removed
 
 ### Deprecated
 
 ### Changed
+
+### Fixed
+
+### Added
+- [#56637](https://github.com/saltstack/salt/pull/56637) - Add ``win_wua.installed`` to the ``win_wua`` execution module
+
+## 3000.1
+
+### Removed
+
+### Deprecated
+
+### Changed
+- [#56751](https://github.com/saltstack/salt/pull/56751) - Backport 49981
+
+- [#56731](https://github.com/saltstack/salt/pull/56731) - Backport #53994
+- [#56753](https://github.com/saltstack/salt/pull/56753) - Backport 51095
 
 ### Fixed
 - [#56237](https://github.com/saltstack/salt/pull/56237) - Fix alphabetical ordering and remove duplicates across all documentation indexes - [@myii](https://github.com/myii)
@@ -29,6 +47,7 @@ Versions are `MAJOR.PATCH`.
 ### Deprecated
 
 ### Changed
+- [#56730](https://github.com/saltstack/salt/pull/56730) - Backport #52992
 
 ### Fixed
 

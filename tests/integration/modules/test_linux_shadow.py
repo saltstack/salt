@@ -3,23 +3,20 @@
 integration tests for shadow linux
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
-import random
-import string
 
-import salt.modules.linux_shadow as shadow
-
-# Import Salt libs
+import salt.modules.linux_shadow
 import salt.utils.files
 import salt.utils.platform
-from salt.ext.six.moves import range
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, flaky, skip_if_not_root
+from tests.support.helpers import (
+    destructiveTest,
+    flaky,
+    random_string,
+    skip_if_not_root,
+)
 from tests.support.unit import skipIf
 
 
@@ -38,20 +35,9 @@ class ShadowModuleTest(ModuleCase):
         if "ERROR" in self._password:
             self.fail("Failed to generate password: {0}".format(self._password))
         super(ShadowModuleTest, self).setUp()
-        os_grain = self.run_function("grains.item", ["kernel"])
-        if os_grain["kernel"] not in "Linux":
-            self.skipTest("Test not applicable to '{kernel}' kernel".format(**os_grain))
-        self._test_user = self.__random_string()
-        self._no_user = self.__random_string()
-        self._password = shadow.gen_password("Password1234")
-
-    def __random_string(self, size=6):
-        """
-        Generates a random username
-        """
-        return "tu-" + "".join(
-            random.choice(string.ascii_lowercase + string.digits) for x in range(size)
-        )
+        self._no_user = random_string("tu-", uppercase=False)
+        self._test_user = random_string("tu-", uppercase=False)
+        self._password = salt.modules.linux_shadow.gen_password("Password1234")
 
     @destructiveTest
     @skipIf(True, "SLOWTEST skip")

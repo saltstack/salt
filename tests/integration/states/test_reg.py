@@ -10,7 +10,7 @@ import pytest
 import salt.utils.platform
 import salt.utils.win_reg as reg
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, generate_random_name
+from tests.support.helpers import destructiveTest, random_string
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 
@@ -20,7 +20,7 @@ UNICODE_VALUE_NAME = "Unicode Key \N{TRADE MARK SIGN}"
 UNICODE_VALUE = (
     "Unicode Value " "\N{COPYRIGHT SIGN},\N{TRADE MARK SIGN},\N{REGISTERED SIGN}"
 )
-FAKE_KEY = "SOFTWARE\\{0}".format(generate_random_name("SaltTesting-"))
+FAKE_KEY = "SOFTWARE\\{0}".format(random_string("SaltTesting-", lowercase=False))
 
 
 @destructiveTest
