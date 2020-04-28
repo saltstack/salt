@@ -7789,7 +7789,7 @@ def serialize(
                     "result": False,
                 }
 
-            with salt.utils.files.fopen(name, "r") as fhr:
+            with salt.utils.files.fopen(name, "rb") as fhr:
                 try:
                     existing_data = __serializers__[deserializer_name](
                         fhr, **deserializer_options.get(deserializer_name, {})
@@ -7821,7 +7821,8 @@ def serialize(
         dataset, **serializer_options.get(serializer_name, {})
     )
 
-    contents += "\n"
+    if isinstance(contents, str):
+        contents += "\n"
 
     # Make sure that any leading zeros stripped by YAML loader are added back
     mode = salt.utils.files.normalize_mode(mode)

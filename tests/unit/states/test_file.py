@@ -6,12 +6,14 @@ import logging
 import os
 import pprint
 import shutil
+import plistlib
 from datetime import datetime
 
 import salt.modules.file as filemod
 import salt.serializers.json as jsonserializer
 import salt.serializers.python as pythonserializer
 import salt.serializers.yaml as yamlserializer
+import salt.serializers.plist as plistserializer
 import salt.states.file as filestate
 import salt.utils.files
 import salt.utils.json
@@ -49,6 +51,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     "yaml.serialize": yamlserializer.serialize,
                     "python.serialize": pythonserializer.serialize,
                     "json.serialize": jsonserializer.serialize,
+                    "plist.serialize": plistserializer.serialize
                 },
                 "__opts__": {"test": False, "cachedir": ""},
                 "__instance_id__": "",
@@ -84,6 +87,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
             filestate.serialize("/tmp", dataset, formatter="json")
             self.assertEqual(salt.utils.json.loads(returner.returned), dataset)
+
+            filestate.serialize("/tmp", dataset, formatter="plist")
+            self.assertEqual(plistlib.loads(returner.returned), dataset)
 
             filestate.serialize("/tmp", dataset, formatter="python")
             self.assertEqual(returner.returned, pprint.pformat(dataset) + "\n")
