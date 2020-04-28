@@ -128,10 +128,10 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
         process = subprocess.Popen(
             cmd, close_fds=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
         )
-        output = process.communicate()[0]
+        output = process.communicate()[0]  # communicate output is a binary string
         log.debug("Output from %s:\n%s", " ".join(cmd), output)
 
-        if process.returncode != 0 and "No such image" not in output:
+        if process.returncode != 0 and b"No such image" not in output:
             raise Exception("Failed to destroy image")
 
     def run_state(self, function, **kwargs):
