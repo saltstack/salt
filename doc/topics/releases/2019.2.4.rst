@@ -35,6 +35,7 @@ This typo breaks the publish module’s runner method.
 Calling runners, for example:
 
 .. code-block:: bash
+
     salt minion publish.runner manage.down
 
 Will not work, and you will receive and empty reply from the salt master.
