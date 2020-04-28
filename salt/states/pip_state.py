@@ -319,6 +319,7 @@ def _check_if_installed(
                 cwd=cwd,
                 index_url=index_url,
                 extra_index_url=extra_index_url,
+                env_vars=env_vars,
             )
             desired_version = ""
             if any(version_spec):
@@ -737,7 +738,7 @@ def installed(
     ret = {"name": ";".join(pkgs), "result": None, "comment": "", "changes": {}}
 
     try:
-        cur_version = __salt__["pip.version"](bin_env)
+        cur_version = __salt__["pip.version"](bin_env, cwd, env_vars)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret["result"] = None
         ret["comment"] = "Error installing '{0}': {1}".format(name, err)
@@ -857,7 +858,9 @@ def installed(
     else:
         # Attempt to pre-cache a the current pip list
         try:
-            pip_list = __salt__["pip.list"](bin_env=bin_env, user=user, cwd=cwd)
+            pip_list = __salt__["pip.list"](
+                bin_env=bin_env, user=user, cwd=cwd, env_vars=env_vars
+            )
         # If we fail, then just send False, and we'll try again in the next function call
         except Exception as exc:  # pylint: disable=broad-except
             log.exception(exc)
@@ -1119,6 +1122,7 @@ def removed(
     user=None,
     cwd=None,
     use_vt=False,
+    env_vars=None,
 ):
     """
     Make sure that a package is not installed.
@@ -1131,11 +1135,17 @@ def removed(
         the pip executable or virtualenenv to use
     use_vt
         Use VT terminal emulation (see output while installing)
+    env_vars
+        Add or modify environment variables. Useful for tweaking build steps,
+        such as specifying INCLUDE or LIBRARY paths in Makefiles, build scripts or
+        compiler calls.  This must be in the form of a dictionary or a mapping.
     """
     ret = {"name": name, "result": None, "comment": "", "changes": {}}
 
     try:
-        pip_list = __salt__["pip.list"](bin_env=bin_env, user=user, cwd=cwd)
+        pip_list = __salt__["pip.list"](
+            bin_env=bin_env, user=user, cwd=cwd, env_vars=env_vars
+        )
     except (CommandExecutionError, CommandNotFoundError) as err:
         ret["result"] = False
         ret["comment"] = "Error uninstalling '{0}': {1}".format(name, err)
@@ -1161,6 +1171,7 @@ def removed(
         user=user,
         cwd=cwd,
         use_vt=use_vt,
+        env_vars=env_vars,
     ):
         ret["result"] = True
         ret["changes"][name] = "Removed"
@@ -1171,7 +1182,7 @@ def removed(
     return ret
 
 
-def uptodate(name, bin_env=None, user=None, cwd=None, use_vt=False):
+def uptodate(name, bin_env=None, user=None, cwd=None, use_vt=False, env_vars=None):
     """
     .. versionadded:: 2015.5.0
 
@@ -1186,11 +1197,17 @@ def uptodate(name, bin_env=None, user=None, cwd=None, use_vt=False):
         the pip executable or virtualenenv to use
     use_vt
         Use VT terminal emulation (see output while installing)
+    env_vars
+        Add or modify environment variables. Useful for tweaking build steps,
+        such as specifying INCLUDE or LIBRARY paths in Makefiles, build scripts or
+        compiler calls.  This must be in the form of a dictionary or a mapping.
     """
     ret = {"name": name, "changes": {}, "result": False, "comment": "Failed to update."}
 
     try:
-        packages = __salt__["pip.list_upgrades"](bin_env=bin_env, user=user, cwd=cwd)
+        packages = __salt__["pip.list_upgrades"](
+            bin_env=bin_env, user=user, cwd=cwd, env_vars=env_vars
+        )
     except Exception as e:  # pylint: disable=broad-except
         ret["comment"] = six.text_type(e)
         return ret
@@ -1205,7 +1222,7 @@ def uptodate(name, bin_env=None, user=None, cwd=None, use_vt=False):
         return ret
 
     updated = __salt__["pip.upgrade"](
-        bin_env=bin_env, user=user, cwd=cwd, use_vt=use_vt
+        bin_env=bin_env, user=user, cwd=cwd, use_vt=use_vt, env_vars=env_vars
     )
 
     if updated.get("result") is False:
