@@ -3,7 +3,6 @@
     :codeauthor: Thomas Jackson <jacksontj.89@gmail.com>
 """
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import ctypes
@@ -13,7 +12,6 @@ import threading
 import time
 from concurrent.futures.thread import ThreadPoolExecutor
 
-# Import Salt libs
 import salt.config
 import salt.exceptions
 import salt.ext.tornado.gen
@@ -23,18 +21,14 @@ import salt.transport.client
 import salt.transport.server
 import salt.utils.platform
 import salt.utils.process
-
-# Import 3rd-party libs
 import zmq.eventloop.ioloop
 from salt.ext import six
 from salt.ext.six.moves import range
 from salt.ext.tornado.testing import AsyncTestCase
 from salt.transport.zeromq import AsyncReqMessageClientPool
-from tests.support.helpers import flaky, get_unused_localhost_port
+from tests.support.helpers import flaky, get_unused_localhost_port, not_runs_on
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
-
-# Import test support libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 from tests.unit.transport.mixins import (
@@ -43,21 +37,9 @@ from tests.unit.transport.mixins import (
     run_loop_in_thread,
 )
 
-# linux_distribution deprecated in py3.7
-try:
-    from platform import linux_distribution
-except ImportError:
-    from distro import linux_distribution
-
-
 # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
 if not hasattr(zmq.eventloop.ioloop, "ZMQIOLoop"):
     zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
-
-
-ON_SUSE = False
-if "SuSE" in linux_distribution(full_distribution_name=False):
-    ON_SUSE = True
 
 
 class BaseZMQReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
@@ -185,8 +167,10 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
 
 
 @flaky
-@skipIf(
-    ON_SUSE, "Skipping until https://github.com/saltstack/salt/issues/32902 gets fixed"
+@not_runs_on(
+    kernel="linux",
+    os_familiy="Suse",
+    reason="Skipping until https://github.com/saltstack/salt/issues/32902 gets fixed",
 )
 class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
     def setUp(self):

@@ -42,9 +42,6 @@ class SchedulerEvalTest(SchedulerTestsBase):
         self.schedule.opts["loop_interval"] = 1
         self.schedule.opts["grains"]["whens"] = {"tea time": "11/29/2017 12:00pm"}
 
-    def tearDown(self):
-        self.schedule.reset()
-
     @skipIf(True, "SLOWTEST skip")
     def test_eval(self):
         """

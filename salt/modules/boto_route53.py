@@ -173,7 +173,7 @@ def describe_hosted_zones(
             else:
                 marker = None
                 ret = None
-                while marker is not "":
+                while marker != "":
                     r = conn.get_all_hosted_zones(start_marker=marker, zone_list=ret)
                     ret = r["ListHostedZonesResponse"]["HostedZones"]
                     marker = r["ListHostedZonesResponse"].get("NextMarker", "")

@@ -135,7 +135,7 @@ may be updating for an ESXi host either via the
 execution module function or via the
 :mod:`esxi.password_present <salt.states.esxi.password_present>` state
 function. This way, after the password is changed, you should not need to
-restart the proxy minion--it should just pick up the the new password
+restart the proxy minion--it should just pick up the new password
 provided in the list. You can then change pillar at will to move that
 password to the front and retire the unused ones.
 
@@ -270,22 +270,18 @@ for standing up an ESXi host from scratch.
 
 """
 
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 
 from salt.config.schemas.esxi import EsxiProxySchema
-
-# Import Salt Libs
 from salt.exceptions import InvalidConfigError, SaltSystemExit
 from salt.utils.dictupdate import merge
 
 # This must be present or the Salt loader won't load this module.
 __proxyenabled__ = ["esxi"]
 
-# External libraries
 try:
     import jsonschema
 
