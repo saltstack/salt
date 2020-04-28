@@ -147,26 +147,22 @@ def top(num_processes=5, interval=3):
     for pid in psutil.pids():
         try:
             process = psutil.Process(pid)
-            user, system = process.cpu_times()
-        except ValueError:
-            user, system, _, _ = process.cpu_times()
         except psutil.NoSuchProcess:
             continue
+        else:
+            user, system = process.cpu_times()[:2]
         start_usage[process] = user + system
     time.sleep(interval)
     usage = set()
     for process, start in six.iteritems(start_usage):
-        try:
-            user, system = process.cpu_times()
-        except ValueError:
-            user, system, _, _ = process.cpu_times()
-        except psutil.NoSuchProcess:
-            continue
+        user, system = process.cpu_times()[:2]
         now = user + system
         diff = now - start
         usage.add((diff, process))
 
-    for idx, (diff, process) in enumerate(reversed(sorted(usage))):
+    for idx, (diff, process) in enumerate(
+        sorted(usage, key=lambda x: x[1].pid, reverse=True)
+    ):
         if num_processes and idx >= num_processes:
             break
         if len(_get_proc_cmdline(process)) == 0:
