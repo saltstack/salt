@@ -582,6 +582,7 @@ repos:
         alias: lint-salt
         name: Lint Salt
         files: ^((setup|noxfile)|(salt|tasks)/.*)\.py$
+        exclude: ^salt/ext/.*\.py$
         args:
           - -e
           - lint-salt-pre-commit
@@ -594,6 +595,7 @@ repos:
         alias: lint-tests
         name: Lint Tests
         files: ^tests/.*\.py$
+        exclude: ^tests/(integration/files/.*|kitchen/tests/.*)\.py
         args:
           - -e
           - lint-tests-pre-commit
