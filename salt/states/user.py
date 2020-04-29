@@ -158,7 +158,7 @@ def _changes(
     elif "shadow.info" in __salt__ and salt.utils.platform.is_windows():
         if (
             expire
-            and expire is not -1
+            and expire != -1
             and salt.utils.dateutils.strftime(lshad["expire"])
             != salt.utils.dateutils.strftime(expire)
         ):

@@ -209,7 +209,7 @@ def set(name, data, **kwargs):
             current is not None
             and [key, args["type"], six.text_type(args["value"])] in current
         ):
-            if ret["comment"] is "":
+            if ret["comment"] == "":
                 ret["comment"] = "Unchanged answers: "
             ret["comment"] += ("{0} ").format(key)
         else:
