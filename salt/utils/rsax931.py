@@ -24,35 +24,35 @@ OPENSSL_INIT_ADD_ALL_DIGESTS = 0x00000008
 OPENSSL_INIT_NO_LOAD_CONFIG = 0x00000080
 
 
-def _load_libcrypto():
+def _find_libcrypto():
     """
-    Load OpenSSL libcrypto
+    Find the path (or return the short name) of libcrypto.
     """
     if sys.platform.startswith("win"):
-        # cdll.LoadLibrary on windows requires an 'str' argument
-        return cdll.LoadLibrary(
-            str("libeay32")
-        )  # future lint: disable=blacklisted-function
+        lib = [str("libeay32")]
     elif getattr(sys, "frozen", False) and salt.utils.platform.is_smartos():
-        return cdll.LoadLibrary(
-            glob.glob(os.path.join(os.path.dirname(sys.executable), "libcrypto.so*"))[0]
-        )
+        lib = glob.glob(os.path.join(os.path.dirname(sys.executable), "libcrypto.so*"))
     else:
         lib = find_library("crypto")
-        if not lib and salt.utils.platform.is_sunos():
-            # Solaris-like distribution that use pkgsrc have
-            # libraries in a non standard location.
-            # (SmartOS, OmniOS, OpenIndiana, ...)
-            # This could be /opt/tools/lib (Global Zone)
-            # or /opt/local/lib (non-Global Zone), thus the
-            # two checks below
-            lib = glob.glob("/opt/local/lib/libcrypto.so*") + glob.glob(
-                "/opt/tools/lib/libcrypto.so*"
-            )
-            lib = lib[0] if len(lib) > 0 else None
+        if not lib:
+            if salt.utils.platform.is_sunos():
+                # Solaris-like distribution that use pkgsrc have libraries
+                # in a non standard location.
+                # (SmartOS, OmniOS, OpenIndiana, ...)
+                # This could be /opt/tools/lib (Global Zone) or
+                # /opt/local/lib (non-Global Zone), thus the two checks
+                # below
+                lib = glob.glob("/opt/local/lib/libcrypto.so*")
+                lib = lib or glob.glob("/opt/tools/lib/libcrypto.so*")
+            elif salt.utils.platform.is_aix():
+                if os.path.isdir("/opt/salt/lib"):
+                    # preference for Salt installed fileset
+                    lib = glob.glob("/opt/salt/lib/libcrypto.so*")
+                else:
+                    lib = glob.glob("/opt/freeware/lib/libcrypto.so*")
         elif salt.utils.platform.is_darwin():
-            # Find versioned libraries in system locations, being careful to
-            # avoid the unversioned stub which is no longer permitted.
+            # Find versioned libraries in system locations, being careful
+            # to avoid the unversioned stub which is no longer permitted.
             lib = glob.glob("/usr/lib/libcrypto.*.dylib")
             if lib:
                 # Sort so as to prefer the newest version.
@@ -61,18 +61,16 @@ def _load_libcrypto():
                 # Find library symlinks in Homebrew locations.
                 lib = glob.glob("/usr/local/opt/openssl/lib/libcrypto.dylib")
                 lib = lib or glob.glob("/usr/local/opt/openssl@*/lib/libcrypto.dylib")
-            lib = lib[0] if lib else None
-        if not lib and salt.utils.platform.is_aix():
-            if os.path.isdir("/opt/salt/lib"):
-                # preference for Salt installed fileset
-                lib = glob.glob("/opt/salt/lib/libcrypto.so*")
-                lib = lib[0] if len(lib) > 0 else None
-            else:
-                lib = glob.glob("/opt/freeware/lib/libcrypto.so*")
-                lib = lib[0] if len(lib) > 0 else None
-        if lib:
-            return cdll.LoadLibrary(lib)
+    if not lib:
         raise OSError("Cannot locate OpenSSL libcrypto")
+    return lib[0]
+
+
+def _load_libcrypto():
+    """
+    Attempt to load libcrypto.
+    """
+    return cdll.LoadLibrary(_find_libcrypto())
 
 
 def _init_libcrypto():
