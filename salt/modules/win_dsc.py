@@ -365,7 +365,7 @@ def apply_config(path, source=None, salt_env="base"):
 
     CLI Example:
 
-    To apply a config that already exists on the the system
+    To apply a config that already exists on the system
 
     .. code-block:: bash
 
