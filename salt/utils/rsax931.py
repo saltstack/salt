@@ -50,6 +50,18 @@ def _load_libcrypto():
                 "/opt/tools/lib/libcrypto.so*"
             )
             lib = lib[0] if len(lib) > 0 else None
+        elif salt.utils.platform.is_darwin():
+            # Find versioned libraries in system locations, being careful to
+            # avoid the unversioned stub which is no longer permitted.
+            lib = glob.glob("/usr/lib/libcrypto.*.dylib")
+            if lib:
+                # Sort so as to prefer the newest version.
+                lib = list(reversed(sorted(lib)))
+            else:
+                # Find library symlinks in Homebrew locations.
+                lib = glob.glob("/usr/local/opt/openssl/lib/libcrypto.dylib")
+                lib = lib or glob.glob("/usr/local/opt/openssl@*/lib/libcrypto.dylib")
+            lib = lib[0] if lib else None
         if not lib and salt.utils.platform.is_aix():
             if os.path.isdir("/opt/salt/lib"):
                 # preference for Salt installed fileset
