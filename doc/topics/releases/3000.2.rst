@@ -39,3 +39,5 @@ Calling runners, for example:
     salt minion publish.runner manage.down
 
 Will not work, and you will receive and empty reply from the salt master.
+
+This will be addressed in the Sodium release of Salt set for mid-June 2020.
