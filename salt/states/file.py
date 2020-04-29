@@ -7336,7 +7336,7 @@ def copy_(
     return ret
 
 
-def rename(name, source, force=False, makedirs=False):
+def rename(name, source, force=False, makedirs=False, **kwargs):
     """
     If the source file exists on the system, rename it to the named file. The
     named file will not be overwritten if it already exists unless the force
