@@ -15,6 +15,7 @@ import hashlib
 
 import requests
 
+PREFIX = "Salt-Minion-"
 REPO = "https://repo.saltstack.com/windows"
 
 
