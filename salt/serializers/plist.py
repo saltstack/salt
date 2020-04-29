@@ -10,6 +10,7 @@
 """
 import logging
 import plistlib
+
 from salt.serializers import DeserializationError, SerializationError
 
 log = logging.getLogger(__name__)
