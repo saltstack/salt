@@ -66,7 +66,13 @@ def _session():
     Create a session to be used when connecting to Zenoss.
     """
 
-    config = __salt__["config.option"]("zenoss")
+    config = __salt__["config.option"]("zenoss") or {}
+
+    if not config.get("hostname", None):
+        raise Exception("zenoss.hostname config option is not set")
+
+    if not config.get('api_key') and not (config.get('username') and config.get('password')):
+        raise Exception("No api_key, nor username and passssword, configured")
 
     if config.get('api_key'):
         return salt.utils.http.session(
@@ -102,12 +108,26 @@ def _router_request(router, method, data=None):
     url = "{}/zport/dmd/{}_router".format(config.get("hostname"), ROUTERS[router])
     response = _session().post(url, data=req_data)
 
+    # zenoss cloud always returns json, so we just display the error message
+    if config.get('api_key') and response.status_code != 200:
+        try:
+            data = salt.utils.json.loads(response.content)
+        except ValueError:
+            pass
+        else:
+            if 'error' in data:
+                raise Exception("API (code {}): {}".format(response.status_code,
+                                                           data['error']))
+
+        log.error("Request failed. Bad authentication")
+        raise Exception("Request failed. Bad authentication")
+
     # The API returns a 200 response code even whe auth is bad.
     # With bad auth, the login page is displayed. Here I search for
     # an element on the login form to determine if auth failed.
-    if re.search('name="__ac_name"', response.content):
-        log.error("Request failed. Bad username/password.")
-        raise Exception("Request failed. Bad username/password.")
+    elif response.status_code == 403 or re.search('name="__ac_name"', response.content):
+        log.error("Request failed. Bad authentication")
+        raise Exception("Request failed. Bad authentication")
 
     return salt.utils.json.loads(response.content).get("result", None)
 
@@ -133,8 +153,18 @@ def find_device(device=None):
 
         salt '*' zenoss.find_device
     """
+    if not device:
+        device = __salt__["grains.get"]("fqdn")
 
-    data = [{"uid": "/zport/dmd/Devices", "params": {}, "limit": None}]
+    data = [{"uid": "/zport/dmd/Devices",
+             "params": {
+                "name": device,
+             },
+             "dir": "DESC",
+             "sort": "name",
+             "start": 0,
+             "limit": 1,
+             }]
     all_devices = _router_request("DeviceRouter", "getDevices", data=data)
     for dev in all_devices["devices"]:
         if dev["name"] == device:
