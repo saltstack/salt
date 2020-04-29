@@ -14,7 +14,7 @@ configuration: Pillar
 
 .. code-block:: none
 
-    # the following defaults can be overrided
+    # the following defaults can be overridden
     highstate_doc.config:
 
         # list of regex of state names to ignore in `highstate_doc.proccess_lowstates`
