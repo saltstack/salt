@@ -7,7 +7,6 @@ tests.integration.master.test_event_return
 
         https://github.com/saltstack/salt/pull/54731
 """
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
@@ -16,19 +15,15 @@ import shutil
 import subprocess
 import time
 
-# Import 3rd-party libs
 import pytest
-
-# Import Salt libs
 import salt.ext.six as six
 from salt.utils.nb_popen import NonBlockingPopen
-
-# Import Salt Testing libs
 from tests.support.case import TestCase
 from tests.support.cli_scripts import ScriptPathMixin
 from tests.support.helpers import get_unused_localhost_port
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.processes import terminate_process
+from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
 
@@ -62,7 +57,13 @@ class TestEventReturn(AdaptedConfigurationTestCaseMixin, ScriptPathMixin, TestCa
 
     def test_master_startup(self):
         proc = NonBlockingPopen(
-            [self.get_script_path("master"), "-c", self.config_dir, "-l", "info"],
+            [
+                self.get_script_path("master"),
+                "-c",
+                RUNTIME_VARS.TMP_CONF_DIR,
+                "-l",
+                "info",
+            ],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
         )
