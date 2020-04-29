@@ -278,7 +278,7 @@ def delete_secret(path):
 
 def destroy_secret(path, *args):
     """
-    Destory specified secret version at the path in vault. The vault policy
+    Destroy specified secret version at the path in vault. The vault policy
     used must allow this. Only supported on Vault KV version 2
 
     .. versionadded:: Sodium
