@@ -2,8 +2,8 @@
 from __future__ import absolute_import, unicode_literals
 
 import datetime
-import os
 import hashlib
+import os
 import textwrap
 
 import salt.utils.files
