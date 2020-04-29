@@ -873,20 +873,26 @@ def _virtual(osdata):
                 break
         elif command == "virt-what":
             try:
-                output = output.splitlines()[-1]
+                lines = output.splitlines()
             except IndexError:
-                pass
-            if output in ("kvm", "qemu", "uml", "xen", "lxc"):
-                grains["virtual"] = output
-                break
-            elif "vmware" in output:
-                grains["virtual"] = "VMware"
-                break
-            elif "parallels" in output:
-                grains["virtual"] = "Parallels"
-                break
-            elif "hyperv" in output:
-                grains["virtual"] = "HyperV"
+                lines = [output]
+            found = True
+            for line in lines:
+                if line in ("kvm", "qemu", "uml", "xen", "lxc"):
+                    grains["virtual"] = line
+                    break
+                elif "vmware" in line:
+                    grains["virtual"] = "VMware"
+                    break
+                elif "parallels" in line:
+                    grains["virtual"] = "Parallels"
+                    break
+                elif "hyperv" in line:
+                    grains["virtual"] = "HyperV"
+                    break
+            else:
+                found = False
+            if found:
                 break
         elif command == "dmidecode":
             # Product Name: VirtualBox
