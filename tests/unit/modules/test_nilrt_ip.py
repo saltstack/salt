@@ -9,9 +9,15 @@ import salt.modules.nilrt_ip as nilrt_ip
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
+
+try:
+    import pyiface
+except ImportError:
+    pyiface = None
 
 
+@skipIf(not pyiface, "The python pyiface package is not installed")
 class NilrtIPTestCase(TestCase, LoaderModuleMockMixin):
     """
     TestCase for salt.modules.nilrt_ip module
