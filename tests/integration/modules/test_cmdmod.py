@@ -571,6 +571,7 @@ class CMDModuleTest(ModuleCase):
         self.assertEqual(out["stdout"], "salt")
 
     @slowTest
+    @skipIf(not salt.utils.platform.is_windows(), "minion is not windows")
     def test_windows_powershell_script_args(self):
         """
         Ensure that powershell processes inline script in args
