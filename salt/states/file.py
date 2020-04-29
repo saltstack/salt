@@ -320,9 +320,9 @@ from salt.state import get_accumulator_dir as _get_accumulator_dir
 
 # pylint: disable=no-name-in-module
 try:
-    from collections import Iterable, Mapping
-except ImportError:
     from collections.abc import Iterable, Mapping
+except ImportError:
+    from collections import Iterable, Mapping
 # pylint: enable=no-name-in-module
 
 
