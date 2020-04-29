@@ -443,7 +443,7 @@ def _make_regex(pem_type):
 
 
 def _valid_pem(pem, pem_type=None):
-    pem_type = '[0-9A-Z ]+' if pem_type is None else pem_type
+    pem_type = "[0-9A-Z ]+" if pem_type is None else pem_type
     _dregex = _make_regex(pem_type)
     for _match in _dregex.finditer(pem):
         if _match:
@@ -452,14 +452,11 @@ def _valid_pem(pem, pem_type=None):
 
 
 def _match_minions(test, minion):
-    if '@' in test:
-        match = __salt__['publish.publish'](
-            tgt=minion,
-            fun='match.compound',
-            arg=test)
+    if "@" in test:
+        match = __salt__["publish.publish"](tgt=minion, fun="match.compound", arg=test)
         return match.get(minion, False)
     else:
-        return __salt__['match.glob'](test, minion)
+        return __salt__["match.glob"](test, minion)
 
 
 def get_pem_entry(text, pem_type=None):
@@ -485,8 +482,11 @@ def get_pem_entry(text, pem_type=None):
     # Replace encoded newlines
     text = text.replace("\\n", "\n")
 
-    if len(text.splitlines()) == 1 and text.startswith(
-            '-----') and text.endswith('-----'):
+    if (
+        len(text.splitlines()) == 1
+        and text.startswith("-----")
+        and text.endswith("-----")
+    ):
         # mine.get returns the PEM on a single line, we fix this
         pem_fixed = []
         pem_temp = text
@@ -1105,7 +1105,8 @@ def sign_remote_certificate(argdic, **kwargs):
             return "minion sending this request could not be identified"
         if not _match_minions(signing_policy["minions"], kwargs["__pub_id"]):
             return "{0} not permitted to use signing policy {1}".format(
-                kwargs["__pub_id"], argdic["signing_policy"])
+                kwargs["__pub_id"], argdic["signing_policy"]
+            )
 
     try:
         return create_certificate(path=None, text=True, **argdic)
@@ -1466,7 +1467,7 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
 
         cert_txt = certs[ca_server]
         if isinstance(cert_txt, str):
-            if not _valid_pem(cert_txt, 'CERTIFICATE'):
+            if not _valid_pem(cert_txt, "CERTIFICATE"):
                 raise salt.exceptions.SaltInvocationError(cert_txt)
 
         if path:

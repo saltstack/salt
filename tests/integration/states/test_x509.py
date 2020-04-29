@@ -62,16 +62,30 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
                     - authorityKeyIdentifier: keyid
                     - days_valid: 730
                     - copypath: {0}/pki
-                     """.format(RUNTIME_VARS.TMP)))
-        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, "top.sls"), "w") as fp:
-            fp.write(textwrap.dedent("""\
+                     """.format(
+                        RUNTIME_VARS.TMP
+                    )
+                )
+            )
+        with salt.utils.files.fopen(
+            os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, "top.sls"), "w"
+        ) as fp:
+            fp.write(
+                textwrap.dedent(
+                    """\
                      base:
                        '*':
                          - signing_policies
-                     """))
+                     """
+                )
+            )
         self.run_function("saltutil.refresh_pillar")
-        self.run_function("grains.set", ["x509_test_grain", "correct_value"], minion_tgt="sub_minion")
-        self.run_function("grains.set", ["x509_test_grain", "not_correct_value"], minion_tgt="minion")
+        self.run_function(
+            "grains.set", ["x509_test_grain", "correct_value"], minion_tgt="sub_minion"
+        )
+        self.run_function(
+            "grains.set", ["x509_test_grain", "not_correct_value"], minion_tgt="minion"
+        )
 
     def tearDown(self):
         os.remove(os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, "signing_policies.sls"))
@@ -145,14 +159,21 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
             pillar={
                 "keyfile": keyfile,
                 "crtfile": crtfile,
-                "tmp_dir": RUNTIME_VARS.TMP})
+                "tmp_dir": RUNTIME_VARS.TMP,
+            },
+        )
         self.assertTrue(ret[ret_key]["result"])
         cert_sum = self.file_checksum(crtfile)
 
         ret = self.run_function(
             "state.apply",
             ["issue-41858.check"],
-            pillar={"keyfile": keyfile, "crtfile": crtfile, "signing_policy": signing_policy})
+            pillar={
+                "keyfile": keyfile,
+                "crtfile": crtfile,
+                "signing_policy": signing_policy,
+            },
+        )
         self.assertFalse(ret[ret_key]["result"])
         # self.assertSaltCommentRegexpMatches(ret[ret_key], "Signing policy {0} does not exist".format(signing_policy))
         self.assertEqual(self.file_checksum(crtfile), cert_sum)
@@ -165,7 +186,8 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function(
             "state.apply",
             ["x509_compound_match.gen_ca"],
-            pillar={"tmp_dir": RUNTIME_VARS.TMP})
+            pillar={"tmp_dir": RUNTIME_VARS.TMP},
+        )
 
         # sub_minion have grain set and CA is on other minion
         # CA minion have same grain with incorrect value
@@ -173,26 +195,44 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
             "state.apply",
             ["x509_compound_match.check"],
             minion_tgt="sub_minion",
-            pillar={"keyfile": keyfile, "crtfile": crtfile, "signing_policy": signing_policy})
+            pillar={
+                "keyfile": keyfile,
+                "crtfile": crtfile,
+                "signing_policy": signing_policy,
+            },
+        )
         self.assertTrue(ret[ret_key]["result"])
 
     @with_tempfile(suffix=".crt", create=False)
     @with_tempfile(suffix=".key", create=False)
     def test_compound_match_ca_have_correct_grain_value(self, keyfile, crtfile):
-        self.run_function("grains.set", ["x509_test_grain", "correct_value"], minion_tgt="minion")
-        self.run_function("grains.set", ["x509_test_grain", "not_correct_value"], minion_tgt="sub_minion")
+        self.run_function(
+            "grains.set", ["x509_test_grain", "correct_value"], minion_tgt="minion"
+        )
+        self.run_function(
+            "grains.set",
+            ["x509_test_grain", "not_correct_value"],
+            minion_tgt="sub_minion",
+        )
 
         ret_key = "x509_|-test_crt_|-{0}_|-certificate_managed".format(crtfile)
         signing_policy = "compound_match"
-        self.run_function("state.apply",
-                          ["x509_compound_match.gen_ca"],
-                          pillar={"tmp_dir": RUNTIME_VARS.TMP})
+        self.run_function(
+            "state.apply",
+            ["x509_compound_match.gen_ca"],
+            pillar={"tmp_dir": RUNTIME_VARS.TMP},
+        )
 
         ret = self.run_function(
             "state.apply",
             ["x509_compound_match.check"],
             minion_tgt="sub_minion",
-            pillar={"keyfile": keyfile, "crtfile": crtfile, "signing_policy": signing_policy})
+            pillar={
+                "keyfile": keyfile,
+                "crtfile": crtfile,
+                "signing_policy": signing_policy,
+            },
+        )
         self.assertFalse(ret[ret_key]["result"])
 
     @with_tempfile(suffix=".crt", create=False)

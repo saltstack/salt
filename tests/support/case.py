@@ -898,7 +898,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
             "ssh.recv_known_host_entries",
             "time.sleep",
             "grains.delkey",
-            "grains.delval"
+            "grains.delval",
         )
         if "f_arg" in kwargs:
             kwargs["arg"] = kwargs.pop("f_arg")
