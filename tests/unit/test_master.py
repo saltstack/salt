@@ -42,9 +42,6 @@ class ClearFuncsTestCase(TestCase):
     def tearDownClass(cls):
         del cls.clear_funcs
 
-    def tearDown(self):
-        del self.clear_funcs
-
     def test_get_method(self):
         assert getattr(self.clear_funcs, "_send_pub", None) is not None
         assert self.clear_funcs.get_method("_send_pub") is None
