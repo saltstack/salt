@@ -587,7 +587,7 @@ class CloudTest(ShellCase):
 
     @classmethod
     def tearDownClass(cls):
-        cls.clean_cloud_dir(cls.TMP_PROVIDER_DIR)
+        cls.clean_cloud_dir(cls.tmp_provider_dir)
 
     @classmethod
     def setUpClass(cls):
@@ -599,7 +599,10 @@ class CloudTest(ShellCase):
             )
 
         # clean up before setup
-        cls.clean_cloud_dir(cls.TMP_PROVIDER_DIR)
+        cls.tmp_provider_dir = os.path.join(
+            RUNTIME_VARS.TMP_CONF_DIR, "cloud.providers.d"
+        )
+        cls.clean_cloud_dir(cls.tmp_provider_dir)
 
         source_file = os.path.join(
             FILES, "conf", "cloud.providers.d", cls.PROVIDER + ".conf"

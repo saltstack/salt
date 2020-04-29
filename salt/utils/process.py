@@ -127,7 +127,7 @@ def dup2(file1, file2):
         try:
             fno1 = file1.fileno()
         except io.UnsupportedOperation:
-            log.warn("Unsupported operation on file: %r", file1)
+            log.warning("Unsupported operation on file: %r", file1)
             return
     if isinstance(file2, int):
         fno2 = file2
@@ -135,7 +135,7 @@ def dup2(file1, file2):
         try:
             fno2 = file2.fileno()
         except io.UnsupportedOperation:
-            log.warn("Unsupported operation on file: %r", file2)
+            log.warning("Unsupported operation on file: %r", file2)
             return
     os.dup2(fno1, fno2)
 
@@ -847,14 +847,14 @@ class SignalHandlingProcess(Process):
                             if child.is_running():
                                 child.terminate()
                         except psutil.NoSuchProcess:
-                            log.warn(
+                            log.warning(
                                 "Unable to kill child of process %d, it does "
                                 "not exist. My pid is %d",
                                 self.pid,
                                 os.getpid(),
                             )
             except psutil.NoSuchProcess:
-                log.warn(
+                log.warning(
                     "Unable to kill children of process %d, it does not exist."
                     "My pid is %d",
                     self.pid,

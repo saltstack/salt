@@ -457,7 +457,7 @@ def _merge_list_of_dict(first, second, prepend=True):
     if first and not second:
         return first
     # Determine overlaps
-    # So we dont change the position of the existing terms/filters
+    # So we don't change the position of the existing terms/filters
     overlaps = []
     merged = []
     appended = []

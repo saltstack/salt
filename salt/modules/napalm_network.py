@@ -704,7 +704,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
         **{"commands": list(commands)}
     )
     # thus we can display the output as is
-    # in case of errors, they'll be catched in the proxy
+    # in case of errors, they'll be caught in the proxy
     if not raw_cli_outputs["result"]:
         # Error -> dispaly the output as-is.
         return raw_cli_outputs
@@ -784,7 +784,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
             log.debug("Processed CLI output:")
             log.debug(processed_cli_output)
             if not processed_cli_output["result"]:
-                log.debug("Apparently this didnt work, returnin the raw output")
+                log.debug("Apparently this did not work, returning the raw output")
                 processed_command_output = command_output
                 processed_cli_outputs[
                     "comment"
@@ -812,7 +812,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
             log.debug("Processed CLI output:")
             log.debug(processed_cli_output)
             if not processed_cli_output["result"]:
-                log.debug("Apparently this didnt work, returning " "the raw output")
+                log.debug("Apparently this did not work, returning the raw output")
                 processed_command_output = command_output
                 processed_cli_outputs[
                     "comment"
@@ -825,7 +825,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
                 processed_command_output = processed_cli_output["out"]
             else:
                 log.debug(
-                    "Processing %s didnt fail, but didnt return"
+                    "Processing %s did not fail, but did not return"
                     " anything either. Dumping raw.",
                     command,
                 )

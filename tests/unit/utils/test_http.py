@@ -129,6 +129,14 @@ class HTTPTestCase(TestCase):
         result = http.query(url, raise_error=False)
         assert result == {"body": None}, result
 
+    def test_query_error_handling(self):
+        ret = http.query("http://127.0.0.1:0")
+        self.assertTrue(isinstance(ret, dict))
+        self.assertTrue(isinstance(ret.get("error", None), str))
+        ret = http.query("http://myfoobardomainthatnotexist")
+        self.assertTrue(isinstance(ret, dict))
+        self.assertTrue(isinstance(ret.get("error", None), str))
+
     def test_requests_multipart_formdata_post(self):
         """
         Test handling of a multipart/form-data POST using the requests backend

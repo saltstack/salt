@@ -2,48 +2,32 @@
 
 from __future__ import absolute_import
 
-import copy
 import logging
-import os
 
-import dateutil.parser as dateutil_parser
-import pytest
-import salt.utils.schedule
-from salt.modules.test import ping
-from tests.support.case import ModuleCase
-from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.mock import MagicMock, patch
-from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
+from tests.unit.utils.scheduler.base import SchedulerTestsBase
+
+try:
+    import dateutil.parser
+
+    HAS_DATEUTIL_PARSER = True
+except ImportError:
+    HAS_DATEUTIL_PARSER = False
 
 log = logging.getLogger(__name__)
-ROOT_DIR = os.path.join(RUNTIME_VARS.TMP, "schedule-unit-tests")
-SOCK_DIR = os.path.join(ROOT_DIR, "test-socks")
-
-DEFAULT_CONFIG = salt.config.minion_config(None)
-DEFAULT_CONFIG["conf_dir"] = ROOT_DIR
-DEFAULT_CONFIG["root_dir"] = ROOT_DIR
-DEFAULT_CONFIG["sock_dir"] = SOCK_DIR
-DEFAULT_CONFIG["pki_dir"] = os.path.join(ROOT_DIR, "pki")
-DEFAULT_CONFIG["cachedir"] = os.path.join(ROOT_DIR, "cache")
 
 
-@pytest.mark.windows_whitelisted
-class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
+@skipIf(
+    HAS_DATEUTIL_PARSER is False, "The 'dateutil.parser' library is not available",
+)
+class SchedulerSkipTest(SchedulerTestsBase):
     """
     Validate the pkg module
     """
 
     def setUp(self):
-        with patch("salt.utils.schedule.clean_proc_dir", MagicMock(return_value=None)):
-            functions = {"test.ping": ping}
-            self.schedule = salt.utils.schedule.Schedule(
-                copy.deepcopy(DEFAULT_CONFIG), functions, returners={}
-            )
+        super(SchedulerSkipTest, self).setUp()
         self.schedule.opts["loop_interval"] = 1
-
-    def tearDown(self):
-        self.schedule.reset()
 
     @skipIf(True, "SLOWTEST skip")
     def test_skip(self):
@@ -63,7 +47,7 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         # Add job to schedule
         self.schedule.opts.update(job)
 
-        run_time = dateutil_parser.parse("11/29/2017 4:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 4:00pm")
         self.schedule.skip_job(
             job_name,
             {
@@ -80,7 +64,7 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["_skipped_time"], run_time)
 
         # Run 11/29/2017 at 5pm
-        run_time = dateutil_parser.parse("11/29/2017 5:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 5:00pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
@@ -108,12 +92,12 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.opts.update(job)
 
         # eval at 1:30pm to prime.
-        run_time = dateutil_parser.parse("11/29/2017 1:30pm")
+        run_time = dateutil.parser.parse("11/29/2017 1:30pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
 
         # eval at 2:30pm, will not run during range.
-        run_time = dateutil_parser.parse("11/29/2017 2:30pm")
+        run_time = dateutil.parser.parse("11/29/2017 2:30pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
         self.assertNotIn("_last_run", ret)
@@ -121,7 +105,7 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["_skipped_time"], run_time)
 
         # eval at 3:30pm, will run.
-        run_time = dateutil_parser.parse("11/29/2017 3:30pm")
+        run_time = dateutil.parser.parse("11/29/2017 3:30pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
@@ -130,7 +114,7 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         """
         verify that scheduled job is not not and returns the right error string
         """
-        run_time = dateutil_parser.parse("11/29/2017 2:30pm")
+        run_time = dateutil.parser.parse("11/29/2017 2:30pm")
 
         job_name1 = "skip_during_range_invalid_datestring1"
         job1 = {
@@ -207,12 +191,12 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.opts.update(job)
 
         # eval at 1:30pm to prime.
-        run_time = dateutil_parser.parse("11/29/2017 1:30pm")
+        run_time = dateutil.parser.parse("11/29/2017 1:30pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
 
         # eval at 2:30pm, will not run during range.
-        run_time = dateutil_parser.parse("11/29/2017 2:30pm")
+        run_time = dateutil.parser.parse("11/29/2017 2:30pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
         self.assertNotIn("_last_run", ret)
@@ -220,7 +204,7 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["_skipped_time"], run_time)
 
         # eval at 3:30pm, will run.
-        run_time = dateutil_parser.parse("11/29/2017 3:30pm")
+        run_time = dateutil.parser.parse("11/29/2017 3:30pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
@@ -249,7 +233,7 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.opts.update(job)
 
         # eval at 2:30pm, will not run during range.
-        run_time = dateutil_parser.parse("11/29/2017 2:30pm")
+        run_time = dateutil.parser.parse("11/29/2017 2:30pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
         self.assertNotIn("_last_run", ret)
@@ -257,7 +241,7 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["_skipped_time"], run_time)
 
         # eval at 3:00:01pm, will run.
-        run_time = dateutil_parser.parse("11/29/2017 3:00:01pm")
+        run_time = dateutil.parser.parse("11/29/2017 3:00:01pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
@@ -274,17 +258,17 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.opts.update(job)
 
         # eval at 2:00pm, to prime the scheduler
-        run_time = dateutil_parser.parse("11/29/2017 2:00pm")
+        run_time = dateutil.parser.parse("11/29/2017 2:00pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
 
         # eval at 2:00:10pm
-        run_time = dateutil_parser.parse("11/29/2017 2:00:10pm")
+        run_time = dateutil.parser.parse("11/29/2017 2:00:10pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
 
         # Skip at 2:00:20pm
-        run_time = dateutil_parser.parse("11/29/2017 2:00:20pm")
+        run_time = dateutil.parser.parse("11/29/2017 2:00:20pm")
         self.schedule.skip_job(
             job_name,
             {
@@ -299,7 +283,7 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["_skipped_time"], run_time)
 
         # Run at 2:00:30pm
-        run_time = dateutil_parser.parse("11/29/2017 2:00:30pm")
+        run_time = dateutil.parser.parse("11/29/2017 2:00:30pm")
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
         self.assertIn("_last_run", ret)
