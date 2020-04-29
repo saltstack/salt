@@ -274,6 +274,8 @@ def _get_serv(ret=None, commit=False):
                 db=_options.get("db"),
                 port=_options.get("port"),
                 ssl=ssl_options,
+                charset="utf8",
+                use_unicode=True,
             )
 
             try:
