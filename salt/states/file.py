@@ -1644,6 +1644,8 @@ def symlink(
     makedirs=False,
     user=None,
     group=None,
+    copy_target_user=False,
+    copy_target_group=False,
     mode=None,
     win_owner=None,
     win_perms=None,
@@ -1699,6 +1701,20 @@ def symlink(
         The group ownership set for the file, this defaults to the group salt
         is running as on the minion. On Windows, this is ignored
 
+    copy_target_user : False
+        If True, set the symlink's owner to that of the target. If ``user`` is
+        also passed, it will be used instead. This option requires the target
+        to exist.
+
+        .. versionadded:: 2019.2.0
+
+    copy_target_group : False
+        If True, set the symlink's group to that of the target. If ``group`` is
+        also passed, it will be used instead. This option requires the target
+        to exist.
+
+        .. versionadded:: 2019.2.0
+
     mode
         The permissions to set on this file, aka 644, 0775, 4664. Not supported
         on Windows.
@@ -1738,6 +1754,23 @@ def symlink(
     if not name:
         return _error(ret, "Must provide name to file.symlink")
 
+    if copy_target_user:
+        if user:
+            log.warning(
+                "`copy_target_user` and `user` are mutually exclusive. Using `user`."
+            )
+        else:
+            try:
+                user = __salt__["file.get_user"](target)
+            except CommandExecutionError:
+                ret["result"] = False
+                ret[
+                    "comment"
+                ] = "`copy_target_user` is set, but target `{0}` does not exist.".format(
+                    target
+                )
+                return ret
+
     if user is None:
         user = __opts__["user"]
 
@@ -1763,7 +1796,32 @@ def symlink(
                 "is a Windows system. Please use the `win_*` parameters to set "
                 "permissions in Windows.".format(name)
             )
+
+        if copy_target_group is not None:
+            log.warning(
+                "The copy_target_group argument for {0} has been ignored as this "
+                "is a Windows system. Please use the `win_*` parameters to set "
+                "permissions in Windows.".format(name)
+            )
+
         group = user
+
+    if copy_target_group:
+        if group:
+            log.warning(
+                "`copy_target_group` and `group` are mutually exclusive. Using `group`."
+            )
+        else:
+            try:
+                group = __salt__["file.get_group"](target)
+            except CommandExecutionError:
+                ret["result"] = False
+                ret[
+                    "comment"
+                ] = "`copy_target_group` is set, but target `{0}` does not exist.".format(
+                    target
+                )
+                return ret
 
     if group is None:
         group = __salt__["file.gid_to_group"](__salt__["user.info"](user).get("gid", 0))
