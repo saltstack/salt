@@ -5240,13 +5240,13 @@ def keyvalue(
         Return with success even if the file is not found (or not readable).
 
     count : 1
-        Number of occurences to allow (and correct), default is 1. Set to -1 to
+        Number of occurrences to allow (and correct), default is 1. Set to -1 to
         replace all, or set to 0 to remove all lines with this key regardsless
         of its value.
 
     .. note::
-        Any additional occurences after ``count`` are removed.
-        A count of -1 will only replace all occurences that are currently
+        Any additional occurrences after ``count`` are removed.
+        A count of -1 will only replace all occurrences that are currently
         uncommented already. Lines commented out will be left alone.
 
     uncomment : None
