@@ -4893,7 +4893,7 @@ def line(
         insert before me
 
     With an ensure mode, this will insert ``thrice`` the first time and
-    make no changes for subsequent calls. For someting simple this is
+    make no changes for subsequent calls. For something simple this is
     fine, but if you have instead blocks like this:
 
     .. code-block:: text
