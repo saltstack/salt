@@ -1378,6 +1378,18 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
 
         The above signing policy can be invoked with ``signing_policy=www``
 
+    not_before:
+        Initial validity date for the certificate. This date must be specified
+        in the format '%Y-%m-%d %H:%M:%S'.
+
+        .. versionadded:: Sodium
+
+    not_after:
+        Final validity date for the certificate. This date must be specified in
+        the format '%Y-%m-%d %H:%M:%S'.
+
+        .. versionadded:: Sodium
+
     CLI Example:
 
     .. code-block:: bash
@@ -1493,12 +1505,58 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
                 serial_number -= int(serial_number / sys.maxsize) * sys.maxsize
     cert.set_serial_number(serial_number)
 
+    # Handle not_before and not_after dates for custom certificate validity
+    fmt = "%Y-%m-%d %H:%M:%S"
+    if "not_before" in kwargs:
+        try:
+            time = datetime.datetime.strptime(kwargs["not_before"], fmt)
+        except:
+            raise salt.exceptions.SaltInvocationError(
+                "not_before: {0} is not in required format {1}".format(
+                    kwargs["not_before"], fmt
+                )
+            )
+
+        # If we do not set an explicit timezone to this naive datetime object,
+        # the M2Crypto code will assume it is from the local machine timezone
+        # and will try to adjust the time shift.
+        time = time.replace(tzinfo=M2Crypto.ASN1.UTC)
+        asn1_not_before = M2Crypto.ASN1.ASN1_UTCTIME()
+        asn1_not_before.set_datetime(time)
+        cert.set_not_before(asn1_not_before)
+
+    if "not_after" in kwargs:
+        try:
+            time = datetime.datetime.strptime(kwargs["not_after"], fmt)
+        except:
+            raise salt.exceptions.SaltInvocationError(
+                "not_after: {0} is not in required format {1}".format(
+                    kwargs["not_after"], fmt
+                )
+            )
+
+        # Forcing the datetime to have an explicit tzinfo here as well.
+        time = time.replace(tzinfo=M2Crypto.ASN1.UTC)
+        asn1_not_after = M2Crypto.ASN1.ASN1_UTCTIME()
+        asn1_not_after.set_datetime(time)
+        cert.set_not_after(asn1_not_after)
+
     # Set validity dates
     # pylint: disable=no-member
+
+    # if no 'not_before' or 'not_after' dates are setup, both of the following
+    # dates will be the date of today. then the days_valid offset makes sense.
+
     not_before = M2Crypto.m2.x509_get_not_before(cert.x509)
     not_after = M2Crypto.m2.x509_get_not_after(cert.x509)
-    M2Crypto.m2.x509_gmtime_adj(not_before, 0)
-    M2Crypto.m2.x509_gmtime_adj(not_after, 60 * 60 * 24 * kwargs["days_valid"])
+
+    # Only process the dynamic dates if start and end are not specified.
+    if "not_before" not in kwargs:
+        M2Crypto.m2.x509_gmtime_adj(not_before, 0)
+    if "not_after" not in kwargs:
+        valid_seconds = 60 * 60 * 24 * kwargs["days_valid"]  # 60s * 60m * 24 * days
+        M2Crypto.m2.x509_gmtime_adj(not_after, valid_seconds)
+
     # pylint: enable=no-member
 
     # If neither public_key or csr are included, this cert is self-signed
