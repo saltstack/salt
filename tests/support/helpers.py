@@ -32,6 +32,7 @@ import threading
 import time
 import types
 
+import pytest
 import salt.ext.tornado.ioloop
 import salt.ext.tornado.web
 import salt.utils.files
@@ -54,6 +55,15 @@ else:
 log = logging.getLogger(__name__)
 
 HAS_SYMLINKS = None
+
+
+PRE_PYTEST_SKIP_OR_NOT = "PRE_PYTEST_DONT_SKIP" not in os.environ
+PRE_PYTEST_SKIP_REASON = (
+    "PRE PYTEST - This test was skipped before running under pytest"
+)
+PRE_PYTEST_SKIP = pytest.mark.skipif(
+    PRE_PYTEST_SKIP_OR_NOT, reason=PRE_PYTEST_SKIP_REASON
+)
 
 
 def no_symlinks():
@@ -1081,21 +1091,24 @@ def runs_on(grains=None, **kwargs):
     def decorator(caller):
         @functools.wraps(caller)
         def wrapper(cls):
+            reason = kwargs.pop("reason", None)
             for kw, value in kwargs.items():
                 if isinstance(value, list):
                     if not any(
                         str(grains.get(kw)).lower() != str(v).lower() for v in value
                     ):
-                        cls.skipTest(
-                            "This test does not run on {}={}".format(kw, grains.get(kw))
-                        )
+                        if reason is None:
+                            reason = "This test does not run on {}={}".format(
+                                kw, grains.get(kw)
+                            )
+                        raise SkipTest(reason)
                 else:
                     if str(grains.get(kw)).lower() != str(value).lower():
-                        cls.skipTest(
-                            "This test runs on {}={}, not {}".format(
+                        if reason is None:
+                            reason = "This test runs on {}={}, not {}".format(
                                 kw, value, grains.get(kw)
                             )
-                        )
+                        raise SkipTest(reason)
             return caller(cls)
 
         return wrapper
@@ -1114,21 +1127,24 @@ def not_runs_on(grains=None, **kwargs):
     def decorator(caller):
         @functools.wraps(caller)
         def wrapper(cls):
+            reason = kwargs.pop("reason", None)
             for kw, value in kwargs.items():
                 if isinstance(value, list):
                     if any(
                         str(grains.get(kw)).lower() == str(v).lower() for v in value
                     ):
-                        cls.skipTest(
-                            "This test does not run on {}={}".format(kw, grains.get(kw))
-                        )
+                        if reason is None:
+                            reason = "This test does not run on {}={}".format(
+                                kw, grains.get(kw)
+                            )
+                        raise SkipTest(reason)
                 else:
                     if str(grains.get(kw)).lower() == str(value).lower():
-                        cls.skipTest(
-                            "This test does not run on {}={}, got {}".format(
+                        if reason is None:
+                            reason = "This test does not run on {}={}, got {}".format(
                                 kw, value, grains.get(kw)
                             )
-                        )
+                        raise SkipTest(reason)
             return caller(cls)
 
         return wrapper

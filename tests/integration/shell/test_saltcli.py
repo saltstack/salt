@@ -20,6 +20,7 @@ import salt.utils.files
 import salt.utils.path
 from tests.integration.utils import testprogram
 from tests.support.case import ShellCase
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
@@ -31,7 +32,6 @@ class SaltTest(testprogram.TestProgramCase):
     Various integration tests for the salt executable.
     """
 
-    # pylint: disable=invalid-name
     @skipIf(True, "SLOWTEST skip")
     def test_exit_status_unknown_argument(self):
         """
@@ -194,7 +194,7 @@ class RetcodeTestCase(ShellCase):
                 fhw.write(fhr.read())
             retcode = self.run_script(
                 "salt",
-                "-c {0} -t 5 minion2 test.ping".format(self.config_dir),
+                "-c {0} -t 5 minion2 test.ping".format(RUNTIME_VARS.TMP_CONF_DIR),
                 with_retcode=True,
                 timeout=60,
             )[1]

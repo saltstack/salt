@@ -270,7 +270,7 @@ class TestProcessCallbacks(TestCase):
         mb.assert_called()
         ma.assert_called()
 
-    def test_callbacks_called_when_run_overriden(self):
+    def test_callbacks_called_when_run_overridden(self):
         "Validate Process sub classes call after fork and finalize methods when run is overridden"
 
         class MyProcess(salt.utils.process.Process):
@@ -449,7 +449,7 @@ class TestSignalHandlingProcessCallbacks(TestCase):
         ma.assert_called()
         mb.assert_called()
 
-    def test_callbacks_called_when_run_overriden(self):
+    def test_callbacks_called_when_run_overridden(self):
         "Validate SignalHandlingProcess sub classes call after fork and finalize methods when run is overridden"
 
         class MyProcess(salt.utils.process.SignalHandlingProcess):
