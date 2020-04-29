@@ -100,8 +100,12 @@ def get_latest_snapshot(
 
     headers = {}
     if username and password:
+        data_string = "{0}:{1}".format(
+            username.replace("\n", ""), password.replace("\n", "")
+        )
+        data_bytes = data_string.encode("utf-8")
         headers["Authorization"] = "Basic {0}".format(
-            base64.encodestring("{0}:{1}".format(username, password)).replace("\n", "")
+            base64.b64encode(data_bytes).decode("utf-8")
         )
     artifact_metadata = _get_artifact_metadata(
         artifactory_url=artifactory_url,
@@ -182,8 +186,12 @@ def get_snapshot(
     )
     headers = {}
     if username and password:
+        data_string = "{0}:{1}".format(
+            username.replace("\n", ""), password.replace("\n", "")
+        )
+        data_bytes = data_string.encode("utf-8")
         headers["Authorization"] = "Basic {0}".format(
-            base64.encodestring("{0}:{1}".format(username, password)).replace("\n", "")
+            base64.b64encode(data_bytes).decode("utf-8")
         )
     snapshot_url, file_name = _get_snapshot_url(
         artifactory_url=artifactory_url,
@@ -251,8 +259,12 @@ def get_latest_release(
     )
     headers = {}
     if username and password:
+        data_string = "{0}:{1}".format(
+            username.replace("\n", ""), password.replace("\n", "")
+        )
+        data_bytes = data_string.encode("utf-8")
         headers["Authorization"] = "Basic {0}".format(
-            base64.encodestring("{0}:{1}".format(username, password)).replace("\n", "")
+            base64.b64encode(data_bytes).decode("utf-8")
         )
     version = __find_latest_version(
         artifactory_url=artifactory_url,
@@ -329,8 +341,12 @@ def get_release(
     )
     headers = {}
     if username and password:
+        data_string = "{0}:{1}".format(
+            username.replace("\n", ""), password.replace("\n", "")
+        )
+        data_bytes = data_string.encode("utf-8")
         headers["Authorization"] = "Basic {0}".format(
-            base64.encodestring("{0}:{1}".format(username, password)).replace("\n", "")
+            base64.b64encode(data_bytes).decode("utf-8")
         )
     release_url, file_name = _get_release_url(
         repository,
@@ -706,6 +722,8 @@ def __save_artifact(artifact_url, target_file, headers):
             checksum_url, headers
         )
         if checksum_success:
+            if isinstance(artifact_sum, bytes):
+                artifact_sum = artifact_sum.decode()
             log.debug("Downloaded SHA1 SUM: %s", artifact_sum)
             file_sum = __salt__["file.get_hash"](path=target_file, form="sha1")
             log.debug("Target file (%s) SHA1 SUM: %s", target_file, file_sum)
