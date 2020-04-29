@@ -87,7 +87,7 @@ import shutil
 import sys
 import tempfile
 
-import pkg_resources
+import pkg_resources  # pylint: disable=3rd-party-module-not-gated
 
 # Import Salt libs
 import salt.utils.data
@@ -150,8 +150,12 @@ def _get_pip_bin(bin_env):
     executable itself, or from searching conventional filesystem locations
     """
     if not bin_env:
-        logger.debug("pip: Using pip from currently-running Python")
-        return [os.path.normpath(sys.executable), "-m", "pip"]
+        if "run" in os.path.normpath(sys.executable):
+            logger.debug("pip: Using pip from run executable")
+            return [os.path.normpath(sys.executable), "pip"]
+        else:
+            logger.debug("pip: Using pip from currently-running Python")
+            return [os.path.normpath(sys.executable), "-m", "pip"]
 
     python_bin = "python.exe" if salt.utils.platform.is_windows() else "python"
 
