@@ -4,16 +4,16 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
+import plistlib
 import pprint
 import shutil
-import plistlib
 from datetime import datetime
 
 import salt.modules.file as filemod
 import salt.serializers.json as jsonserializer
+import salt.serializers.plist as plistserializer
 import salt.serializers.python as pythonserializer
 import salt.serializers.yaml as yamlserializer
-import salt.serializers.plist as plistserializer
 import salt.states.file as filestate
 import salt.utils.files
 import salt.utils.json
@@ -51,7 +51,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     "yaml.serialize": yamlserializer.serialize,
                     "python.serialize": pythonserializer.serialize,
                     "json.serialize": jsonserializer.serialize,
-                    "plist.serialize": plistserializer.serialize
+                    "plist.serialize": plistserializer.serialize,
                 },
                 "__opts__": {"test": False, "cachedir": ""},
                 "__instance_id__": "",
