@@ -17,7 +17,6 @@ Allows for setting a state of minions in Zenoss using the Zenoss API. Currently 
         - prod_state: 1000
 """
 
-
 import logging
 
 log = logging.getLogger(__name__)
@@ -54,7 +53,7 @@ def monitored(name, device_class=None, collector="localhost", prod_state=None):
     device = __salt__["zenoss.find_device"](name)
     if device:
         ret["result"] = True
-        ret["changes"] = None
+        ret["changes"] = {}
         ret["comment"] = "{} is already monitored".format(name)
 
         # if prod_state is set, ensure it matches with the current state
@@ -84,12 +83,18 @@ def monitored(name, device_class=None, collector="localhost", prod_state=None):
         return ret
 
     # Add and check result
-    if __salt__["zenoss.add_device"](name, device_class, collector, prod_state):
+    result = __salt__["zenoss.add_device"](name, device_class, collector, prod_state)
+
+    if result and result["success"]:
         ret["result"] = True
         ret["changes"] = {"old": "monitored == False", "new": "monitored == True"}
         ret["comment"] = "{} has been added to Zenoss".format(name)
     else:
         ret["result"] = False
-        ret["changes"] = None
-        ret["comment"] = "Unable to add {} to Zenoss".format(name)
+        ret["changes"] = {}
+
+        if result:
+            ret["comment"] = "Failed to add {}: {}".format(name, result.get("msg", "unknown error"))
+        else:
+            ret["comment"] = "Failed to add {} to Zenoss".format(name)
     return ret
