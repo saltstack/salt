@@ -5,24 +5,23 @@ tests.support.sminion
 
 SMinion's support functions
 """
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import fnmatch
 import hashlib
 import logging
 import os
 import shutil
 import sys
 
-# Import salt libs
 import salt.minion
 import salt.utils.path
 import salt.utils.stringutils
-
-# Import testing libs
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
+
+DEFAULT_SMINION_ID = "pytest-internal-sminion"
 
 
 def build_minion_opts(
@@ -35,7 +34,7 @@ def build_minion_opts(
     minion_role=None,
 ):
     if minion_id is None:
-        minion_id = "pytest-internal-sminion"
+        minion_id = DEFAULT_SMINION_ID
     if skip_cached_opts is False:
         try:
             opts_cache = build_minion_opts.__cached_opts__
@@ -198,7 +197,7 @@ def create_sminion(
     cache_sminion=True,
 ):
     if minion_id is None:
-        minion_id = "pytest-internal-sminion"
+        minion_id = DEFAULT_SMINION_ID
     if skip_cached_minion is False:
         try:
             minions_cache = create_sminion.__cached_minions__
@@ -224,3 +223,36 @@ def create_sminion(
             minions_cache = create_sminion.__cached_minions__ = {}
         minions_cache[minion_id] = sminion
     return sminion
+
+
+def check_required_sminion_attributes(sminion_attr, required_items):
+    """
+    :param sminion_attr: The name of the sminion attribute to check, such as 'functions' or 'states'
+    :param required_items: The items that must be part of the designated sminion attribute for the decorated test
+    :return The packages that are not available
+    """
+    required_salt_items = set(required_items)
+    sminion = create_sminion(minion_id=DEFAULT_SMINION_ID)
+    available_items = list(getattr(sminion, sminion_attr))
+    not_available_items = set()
+
+    name = "__not_available_{items}s__".format(items=sminion_attr)
+    if not hasattr(sminion, name):
+        setattr(sminion, name, set())
+
+    cached_not_available_items = getattr(sminion, name)
+
+    for not_available_item in cached_not_available_items:
+        if not_available_item in required_salt_items:
+            not_available_items.add(not_available_item)
+            required_salt_items.remove(not_available_item)
+
+    for required_item_name in required_salt_items:
+        search_name = required_item_name
+        if "." not in search_name:
+            search_name += ".*"
+        if not fnmatch.filter(available_items, search_name):
+            not_available_items.add(required_item_name)
+            cached_not_available_items.add(required_item_name)
+
+    return not_available_items

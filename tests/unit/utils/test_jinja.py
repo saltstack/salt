@@ -21,7 +21,7 @@ import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
 import salt.utils.yaml
-from jinja2 import DictLoader, Environment, exceptions
+from jinja2 import DictLoader, Environment, Markup, exceptions
 from salt.exceptions import SaltRenderError
 from salt.ext import six
 from salt.ext.six.moves import builtins
@@ -30,12 +30,13 @@ from salt.utils.jinja import (
     SaltCacheLoader,
     SerializerExtension,
     ensure_sequence_filter,
+    indent,
     tojson,
 )
 from salt.utils.odict import OrderedDict
 from salt.utils.templates import JINJA, render_jinja_tmpl
 from tests.support.case import ModuleCase
-from tests.support.helpers import flaky
+from tests.support.helpers import requires_network
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
@@ -53,8 +54,8 @@ BLINESEP = salt.utils.stringutils.to_bytes(os.linesep)
 class JinjaTestCase(TestCase):
     def test_tojson(self):
         """
-        Test the tojson filter for those using Jinja < 2.9. Non-ascii unicode
-        content should be dumped with ensure_ascii=True.
+        Test the ported tojson filter. Non-ascii unicode content should be
+        dumped with ensure_ascii=True.
         """
         data = {"Non-ascii words": ["süß", "спам", "яйца"]}
         result = tojson(data)
@@ -63,6 +64,16 @@ class JinjaTestCase(TestCase):
             '"\\u0441\\u043f\\u0430\\u043c", '
             '"\\u044f\\u0439\\u0446\\u0430"]}'
         )
+        assert result == expected, result
+
+    def test_indent(self):
+        """
+        Test the indent filter with Markup object as input. Double-quotes
+        should not be URL-encoded.
+        """
+        data = Markup('foo:\n  "bar"')
+        result = indent(data)
+        expected = Markup('foo:\n      "bar"')
         assert result == expected, result
 
 
@@ -1358,7 +1369,7 @@ class TestCustomExtensions(TestCase):
         )
         self.assertEqual(rendered, "16777216")
 
-    @flaky
+    @requires_network()
     def test_http_query(self):
         """
         Test the `http_query` Jinja filter.

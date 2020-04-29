@@ -447,7 +447,7 @@ class DecryptGPGPillarTest(_CommonBase):
         """
         Test recursive decryption of secrets:vault, with the renderer
         explicitly defined, overriding the default. Setting the default to a
-        nonexistant renderer so we can be sure that the override happened.
+        nonexistent renderer so we can be sure that the override happened.
         """
         decrypt_pillar_opts = salt.utils.yaml.safe_load(
             textwrap.dedent(
