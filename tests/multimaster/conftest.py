@@ -540,7 +540,7 @@ def session_mm_secondary_minion_config(
 ):
     """
     This fixture will return the session salt minion configuration options after being
-    overrided with any options passed from ``session_secondary_minion_config_overrides``
+    overridden with any options passed from ``session_secondary_minion_config_overrides``
     """
     return apply_minion_config(
         session_mm_secondary_minion_default_options,
@@ -678,7 +678,7 @@ def session_mm_minion_config(
 ):
     """
     This fixture will return the session salt minion configuration options after being
-    overrided with any options passed from ``session_minion_config_overrides``
+    overridden with any options passed from ``session_minion_config_overrides``
     """
     return apply_minion_config(
         session_mm_minion_default_options,

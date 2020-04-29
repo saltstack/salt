@@ -17,6 +17,7 @@ Versions are `MAJOR.PATCH`.
 
 ### Fixed
 - [#51872](https://github.com/saltstack/salt/issues/51872) - Additional fixes for using cron state with non-root Minion - [@Oloremo](https://github.com/Oloremo)
+- [#40491](https://github.com/saltstack/salt/issues/40491) - Fixed trim_output logic in archive.extracted state - [@Oloremo](https://github.com/Oloremo)
 
 ### Added
 - [#56637](https://github.com/saltstack/salt/pull/56637) - Add ``win_wua.installed`` to the ``win_wua`` execution module

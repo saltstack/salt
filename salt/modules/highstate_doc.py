@@ -14,7 +14,7 @@ configuration: Pillar
 
 .. code-block:: none
 
-    # the following defaults can be overrided
+    # the following defaults can be overridden
     highstate_doc.config:
 
         # list of regex of state names to ignore in `highstate_doc.proccess_lowstates`
@@ -59,7 +59,7 @@ State example
 
 
 To create the help document build a State that uses `highstate_doc.render`.
-For preformance it's advised to not included this state in your `top.sls` file.
+For performance it's advised to not included this state in your `top.sls` file.
 
 .. code-block:: yaml
 

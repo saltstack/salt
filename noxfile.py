@@ -5,7 +5,7 @@ noxfile
 
 Nox configuration script
 """
-# pylint: disable=resource-leakage
+# pylint: disable=resource-leakage,3rd-party-module-not-gated
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -20,8 +20,10 @@ import sys
 import tempfile
 
 # fmt: off
-if __name__ == '__main__':
-    sys.stderr.write('Do not execute this file directly. Use nox instead, it will know how to handle this file\n')
+if __name__ == "__main__":
+    sys.stderr.write(
+        "Do not execute this file directly. Use nox instead, it will know how to handle this file\n"
+    )
     sys.stderr.flush()
     exit(1)
 # fmt: on
@@ -848,7 +850,9 @@ def pytest_cloud(session, coverage):
         "--no-print-logs",
         "-ra",
         "-s",
-        os.path.join("tests", "integration", "cloud", "providers"),
+        "--run-expensive",
+        "-k",
+        "cloud",
     ] + session.posargs
     _pytest(session, coverage, cmd_args)
 
