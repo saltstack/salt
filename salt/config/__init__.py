@@ -94,7 +94,7 @@ def _gather_buffer_space():
         # We need to load up ``mem_total`` grain. Let's mimic required OS data.
         os_data = {"kernel": platform.system()}
         grains = salt.grains.core._memdata(os_data)
-        total_mem = grains["mem_total"]
+        total_mem = grains["mem_total"] * 1024 * 1024
     # Return the higher number between 5% of the system memory and 10MiB
     return max([total_mem * 0.05, 10 << 20])
 
