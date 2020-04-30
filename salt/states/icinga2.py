@@ -36,7 +36,9 @@ def __virtual__():
     """
     Only load if the icinga2 module is available in __salt__
     """
-    return "icinga2.generate_ticket" in __salt__
+    if "icinga2.generate_ticket" in __salt__:
+        return True
+    return (False, "icinga2 module could not be loaded")
 
 
 def generate_ticket(name, output=None, grain=None, key=None, overwrite=True):

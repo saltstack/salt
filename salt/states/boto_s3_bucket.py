@@ -157,7 +157,9 @@ def __virtual__():
     """
     Only load if boto is available.
     """
-    return "boto_s3_bucket" if "boto_s3_bucket.exists" in __salt__ else False
+    if "boto_s3_bucket.exists" in __salt__:
+        return "boto_s3_bucket"
+    return (False, "boto_s3_bucket module could not be loaded")
 
 
 def _normalize_user(user_dict):

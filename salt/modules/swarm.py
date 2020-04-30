@@ -75,7 +75,7 @@ def swarm_tokens():
 
 def swarm_init(advertise_addr=str, listen_addr=int, force_new_cluster=bool):
     """
-    Initalize Docker on Minion as a Swarm Manager
+    Initialize Docker on Minion as a Swarm Manager
 
     advertise_addr
         The ip of the manager
@@ -210,7 +210,7 @@ def service_create(
         The target port on the container
 
     published_port
-        port thats published on the host/os
+        port that's published on the host/os
 
     CLI Example:
 

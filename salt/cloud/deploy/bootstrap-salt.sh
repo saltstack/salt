@@ -349,7 +349,7 @@ __usage() {
         with -c and -k
     -C  Only run the configuration function. Implies -F (forced overwrite).
         To overwrite Master or Syndic configs, -M or -S, respectively, must
-        also be specified. Salt installation will be ommitted, but some of the
+        also be specified. Salt installation will be omitted, but some of the
         dependencies could be installed to write configuration with -j or -J.
     -A  Pass the salt-master DNS name or IP. This will be stored under
         \${BS_SALT_ETC_DIR}/minion.d/99-master-address.conf
@@ -1869,7 +1869,7 @@ if [ "$ITYPE" = "git" ]; then
     if [ "$_POST_NEON_INSTALL" -eq $BS_TRUE ]; then
         echo
         echowarn "Post Neon git based installations will always install salt"
-        echowarn "and it's dependencies using pip which will be upgraded to"
+        echowarn "and its dependencies using pip which will be upgraded to"
         echowarn "at least v${_MINIMUM_PIP_VERSION}, and, in case the setuptools version is also"
         echowarn "too old, it will be upgraded to at least v${_MINIMUM_SETUPTOOLS_VERSION}"
         echo
@@ -2620,7 +2620,7 @@ __install_tornado_pip() {
 #    PARAMETERS:  requirements_file
 #----------------------------------------------------------------------------------------------------------------------
 __install_pip_deps() {
-    # Install virtualenv to system pip before activating virtualenv if thats going to be used
+    # Install virtualenv to system pip before activating virtualenv if that's going to be used
     # We assume pip pkg is installed since that is distro specific
     if [ "$_VIRTUALENV_DIR" != "null" ]; then
         if ! __check_command_exists pip; then
@@ -7222,7 +7222,7 @@ install_macosx_stable_post() {
     set +o nounset
     # shellcheck disable=SC1091
     . /etc/profile
-    # Revert nounset to it's previous state
+    # Revert nounset to its previous state
     set -o nounset
 
     return 0

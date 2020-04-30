@@ -3,24 +3,22 @@
 Integration tests for the saltutil module.
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import textwrap
 import time
 
-# Import Salt Libs
+import pytest
 import salt.utils.files
 import salt.utils.stringutils
 from tests.support.case import ModuleCase
 from tests.support.helpers import flaky
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
 
+@pytest.mark.windows_whitelisted
 class SaltUtilModuleTest(ModuleCase):
     """
     Testcase for the saltutil execution module
@@ -31,6 +29,7 @@ class SaltUtilModuleTest(ModuleCase):
 
     # Tests for the wheel function
 
+    @skipIf(True, "SLOWTEST skip")
     def test_wheel_just_function(self):
         """
         Tests using the saltutil.wheel function when passing only a function.
@@ -41,6 +40,7 @@ class SaltUtilModuleTest(ModuleCase):
         self.assertIn("minion", ret["return"])
         self.assertIn("sub_minion", ret["return"])
 
+    @skipIf(True, "SLOWTEST skip")
     def test_wheel_with_arg(self):
         """
         Tests using the saltutil.wheel function when passing a function and an arg.
@@ -48,6 +48,7 @@ class SaltUtilModuleTest(ModuleCase):
         ret = self.run_function("saltutil.wheel", ["key.list", "minion"])
         self.assertEqual(ret["return"], {})
 
+    @skipIf(True, "SLOWTEST skip")
     def test_wheel_no_arg_raise_error(self):
         """
         Tests using the saltutil.wheel function when passing a function that requires
@@ -55,6 +56,7 @@ class SaltUtilModuleTest(ModuleCase):
         """
         self.assertRaises(TypeError, "saltutil.wheel", ["key.list"])
 
+    @skipIf(True, "SLOWTEST skip")
     def test_wheel_with_kwarg(self):
         """
         Tests using the saltutil.wheel function when passing a function and a kwarg.
@@ -66,12 +68,15 @@ class SaltUtilModuleTest(ModuleCase):
         self.assertIn("priv", ret["return"])
 
 
+@pytest.mark.windows_whitelisted
 class SyncGrainsTest(ModuleCase):
+    @skipIf(True, "SLOWTEST skip")
     def test_sync_grains(self):
         ret = self.run_function("saltutil.sync_grains")
         self.assertEqual(ret, [])
 
 
+@pytest.mark.windows_whitelisted
 class SaltUtilSyncModuleTest(ModuleCase):
     """
     Testcase for the saltutil sync execution module
@@ -86,6 +91,7 @@ class SaltUtilSyncModuleTest(ModuleCase):
     def tearDown(self):
         self.run_function("saltutil.sync_all")
 
+    @skipIf(True, "SLOWTEST skip")
     def test_sync_all(self):
         """
         Test syncing all ModuleCase
@@ -120,6 +126,7 @@ class SaltUtilSyncModuleTest(ModuleCase):
         ret = self.run_function("saltutil.sync_all")
         self.assertEqual(ret, expected_return)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_sync_all_whitelist(self):
         """
         Test syncing all ModuleCase with whitelist
@@ -148,6 +155,7 @@ class SaltUtilSyncModuleTest(ModuleCase):
         )
         self.assertEqual(ret, expected_return)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_sync_all_blacklist(self):
         """
         Test syncing all ModuleCase with blacklist
@@ -188,6 +196,7 @@ class SaltUtilSyncModuleTest(ModuleCase):
         )
         self.assertEqual(ret, expected_return)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_sync_all_blacklist_and_whitelist(self):
         """
         Test syncing all ModuleCase with whitelist and blacklist
@@ -220,6 +229,7 @@ class SaltUtilSyncModuleTest(ModuleCase):
 
 
 @skipIf(True, "Pillar refresh test is flaky. Skipping for now.")
+@pytest.mark.windows_whitelisted
 class SaltUtilSyncPillarTest(ModuleCase):
     """
     Testcase for the saltutil sync pillar module

@@ -2,34 +2,30 @@
 """
 Tests for the Reg State
 """
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
+import pytest
 import salt.utils.platform
 import salt.utils.win_reg as reg
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, generate_random_name
+from tests.support.helpers import destructiveTest, random_string
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
-__testcontext__ = {}
-
 UNICODE_VALUE_NAME = "Unicode Key \N{TRADE MARK SIGN}"
 UNICODE_VALUE = (
     "Unicode Value " "\N{COPYRIGHT SIGN},\N{TRADE MARK SIGN},\N{REGISTERED SIGN}"
 )
-FAKE_KEY = "SOFTWARE\\{0}".format(generate_random_name("SaltTesting-"))
+FAKE_KEY = "SOFTWARE\\{0}".format(random_string("SaltTesting-", lowercase=False))
 
 
 @destructiveTest
 @skipIf(not salt.utils.platform.is_windows(), "Windows Specific Test")
+@pytest.mark.windows_whitelisted
 class RegTest(ModuleCase, SaltReturnAssertsMixin):
     """
     Reg state module tests
@@ -40,6 +36,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
         reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY, use_32bit_registry=True)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_present_reg_sz(self):
         """
         Testing reg.present with REG_SZ
@@ -79,6 +76,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         }
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_present_reg_sz_unicode_value(self):
         """
         Testing reg.present with REG_SZ and a unicode value
@@ -118,6 +116,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         }
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_present_reg_sz_unicode_default_value(self):
         """
         Testing reg.present with REG_SZ and a unicode default value
@@ -155,6 +154,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         }
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_present_reg_sz_unicode_value_name(self):
         """
         Testing reg.present with REG_SZ and a unicode value name
@@ -195,6 +195,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         }
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_present_reg_binary(self):
         """
         Testing reg.present with REG_BINARY
@@ -236,6 +237,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         }
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_present_reg_multi_sz(self):
         """
         Testing reg.present with REG_MULTI_SZ
@@ -276,6 +278,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         }
         self.assertEqual(ret, expected)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_present_32_bit(self):
         """
         Testing reg.present with REG_SZ using 32bit registry

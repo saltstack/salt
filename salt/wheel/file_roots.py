@@ -26,6 +26,8 @@ def find(path, saltenv="base"):
         return ret
     for root in __opts__["file_roots"][saltenv]:
         full = os.path.join(root, path)
+        if not salt.utils.verify.clean_path(root, full):
+            continue
         if os.path.isfile(full):
             # Add it to the dict
             with salt.utils.files.fopen(full, "rb") as fp_:
@@ -108,7 +110,10 @@ def write(data, path, saltenv="base", index=0):
         return (
             "The path passed in {0} is not relative to the environment " "{1}"
         ).format(path, saltenv)
-    dest = os.path.join(__opts__["file_roots"][saltenv][index], path)
+    root = __opts__["file_roots"][saltenv][index]
+    dest = os.path.join(root, path)
+    if not salt.utils.verify.clean_path(root, dest, subdir=True):
+        return "Invalid path: {}".format(path)
     dest_dir = os.path.dirname(dest)
     if not os.path.isdir(dest_dir):
         os.makedirs(dest_dir)

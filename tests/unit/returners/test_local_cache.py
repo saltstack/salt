@@ -6,7 +6,6 @@ tests.unit.returners.local_cache_test
 Unit tests for the Default Job Cache (local_cache).
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
@@ -16,22 +15,18 @@ import tempfile
 import time
 
 import salt.returners.local_cache as local_cache
-
-# Import Salt libs
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.job
 import salt.utils.platform
 from salt.ext import six
-
-# Import Salt Testing libs
 from tests.support.mixins import (
     AdaptedConfigurationTestCaseMixin,
     LoaderModuleMockMixin,
 )
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -43,7 +38,9 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
 
     @classmethod
     def setUpClass(cls):
-        cls.TMP_CACHE_DIR = os.path.join(RUNTIME_VARS.TMP, "salt_test_job_cache")
+        cls.TMP_CACHE_DIR = tempfile.mkdtemp(
+            prefix="salt_test_job_cache", dir=RUNTIME_VARS.TMP
+        )
         cls.TMP_JID_DIR = os.path.join(cls.TMP_CACHE_DIR, "jobs")
 
     def setup_loader_modules(self):
@@ -59,7 +56,7 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         _make_tmp_jid_dirs replaces it.
         """
         if os.path.exists(self.TMP_CACHE_DIR):
-            shutil.rmtree(self.TMP_CACHE_DIR)
+            shutil.rmtree(self.TMP_CACHE_DIR, ignore_errors=True)
 
     def test_clean_old_jobs_no_jid_root(self):
         """
@@ -229,7 +226,9 @@ class Local_CacheTest(
 
     @classmethod
     def setUpClass(cls):
-        cls.TMP_CACHE_DIR = os.path.join(RUNTIME_VARS.TMP, "rootdir", "cache")
+        cls.TMP_CACHE_DIR = tempfile.mkdtemp(
+            prefix="salt_test_local_cache", dir=RUNTIME_VARS.TMP
+        )
         cls.JOBS_DIR = os.path.join(cls.TMP_CACHE_DIR, "jobs")
         cls.JID_DIR = os.path.join(
             cls.JOBS_DIR,
@@ -258,7 +257,7 @@ class Local_CacheTest(
                 attr_instance = getattr(cls, attrname)
                 if isinstance(attr_instance, six.string_types):
                     if os.path.isdir(attr_instance):
-                        shutil.rmtree(attr_instance)
+                        shutil.rmtree(attr_instance, ignore_errors=True)
                     elif os.path.isfile(attr_instance):
                         os.unlink(attr_instance)
                 delattr(cls, attrname)
@@ -305,6 +304,7 @@ class Local_CacheTest(
             "Dir/file does not exist: ", self.JOB_CACHE_DIR_FILES, status="present"
         )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_clean_old_jobs(self):
         """
         test to ensure jobs are removed from job cache
@@ -318,6 +318,7 @@ class Local_CacheTest(
             "job cache was not removed: ", self.JOB_CACHE_DIR_FILES, status="removed"
         )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_not_clean_new_jobs(self):
         """
         test to ensure jobs are not removed when
@@ -332,6 +333,7 @@ class Local_CacheTest(
                 "job cache was removed: ", self.JOB_CACHE_DIR_FILES, status="present"
             )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_empty_jid_dir(self):
         """
         test to ensure removal of empty jid dir

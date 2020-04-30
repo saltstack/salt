@@ -35,6 +35,7 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError, SaltRend
 from salt.ext import six
 from salt.utils.decorators.jinja import JinjaFilter, JinjaGlobal, JinjaTest
 from salt.utils.odict import OrderedDict
+from salt.utils.versions import LooseVersion
 
 if sys.version_info[:2] >= (3, 5):
     import importlib.machinery  # pylint: disable=no-name-in-module,import-error
@@ -361,11 +362,15 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         jinja_env = jinja2.Environment(undefined=jinja2.StrictUndefined, **env_args)
 
     tojson_filter = jinja_env.filters.get("tojson")
+    indent_filter = jinja_env.filters.get("indent")
     jinja_env.tests.update(JinjaTest.salt_jinja_tests)
     jinja_env.filters.update(JinjaFilter.salt_jinja_filters)
     if tojson_filter is not None:
         # Use the existing tojson filter, if present (jinja2 >= 2.9)
         jinja_env.filters["tojson"] = tojson_filter
+    if salt.utils.jinja.JINJA_VERSION >= LooseVersion("2.11"):
+        # Use the existing indent filter on Jinja versions where it's not broken
+        jinja_env.filters["indent"] = indent_filter
     jinja_env.globals.update(JinjaGlobal.salt_jinja_globals)
 
     # globals

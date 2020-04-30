@@ -9,7 +9,9 @@ def __virtual__():
     """
     Load if the module win_dns_client is loaded
     """
-    return "win_dns_client" if "win_dns_client.add_dns" in __salt__ else False
+    if "win_dns_client.add_dns" in __salt__:
+        return "win_dns_client"
+    return (False, "win_dns_client module could not be loaded")
 
 
 def dns_exists(name, servers=None, interface="Local Area Connection", replace=False):
@@ -185,14 +187,14 @@ def primary_suffix(name, suffix=None, updates=False):
         },
     }
 
-    reg_data["suffix"]["old"] = __salt__["reg.read_value"](
+    reg_data["suffix"]["old"] = __utils__["reg.read_value"](
         reg_data["suffix"]["hive"],
         reg_data["suffix"]["key"],
         reg_data["suffix"]["vname"],
     )["vdata"]
 
     reg_data["updates"]["old"] = bool(
-        __salt__["reg.read_value"](
+        __utils__["reg.read_value"](
             reg_data["updates"]["hive"],
             reg_data["updates"]["key"],
             reg_data["updates"]["vname"],
@@ -240,7 +242,7 @@ def primary_suffix(name, suffix=None, updates=False):
                 "new": {"suffix": reg_data["suffix"]["new"]},
             }
 
-    suffix_result = __salt__["reg.set_value"](
+    suffix_result = __utils__["reg.set_value"](
         reg_data["suffix"]["hive"],
         reg_data["suffix"]["key"],
         reg_data["suffix"]["vname"],
@@ -248,7 +250,7 @@ def primary_suffix(name, suffix=None, updates=False):
         reg_data["suffix"]["vtype"],
     )
 
-    updates_result = __salt__["reg.set_value"](
+    updates_result = __utils__["reg.set_value"](
         reg_data["updates"]["hive"],
         reg_data["updates"]["key"],
         reg_data["updates"]["vname"],
