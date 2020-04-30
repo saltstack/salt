@@ -2298,13 +2298,18 @@ def mediatype_get(name=None, mediatypeids=None, **connection_args):
         salt '*' zabbix.mediatype_get mediatypeids="['1', '2', '3']"
     """
     conn_args = _login(**connection_args)
+    zabbix_version = apiinfo_version(**connection_args)
     ret = False
     try:
         if conn_args:
             method = "mediatype.get"
             params = {"output": "extend", "filter": {}}
             if name:
-                params["filter"].setdefault("description", name)
+                # since zabbix API 4.4, mediatype has new attribute: name
+                if _LooseVersion(zabbix_version) >= _LooseVersion("4.4"):
+                    params['filter'].setdefault('name', name)
+                else:
+                    params['filter'].setdefault('description', name)
             if mediatypeids:
                 params.setdefault("mediatypeids", mediatypeids)
             params = _params_extend(params, **connection_args)
@@ -2349,13 +2354,20 @@ def mediatype_create(name, mediatype, **connection_args):
         smtp_server='mailserver.example.com' smtp_helo='zabbix.example.com'
     """
     conn_args = _login(**connection_args)
+    zabbix_version = apiinfo_version(**connection_args)
     ret = False
     try:
         if conn_args:
             method = "mediatype.create"
-            params = {"description": name}
+            # since zabbix 4.4 api, mediatype has new attribute: name
+            if _LooseVersion(zabbix_version) >= _LooseVersion("4.4"):
+                params = {"name": name}
+                _ignore_name=False
+            else:
+                params = {"description": name}
+                _ignore_name=True
             params["type"] = mediatype
-            params = _params_extend(params, _ignore_name=True, **connection_args)
+            params = _params_extend(params, _ignore_name, **connection_args)
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
             return ret["result"]["mediatypeid"]
         else:
