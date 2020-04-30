@@ -2,15 +2,12 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
-import random
-import string
-
 import pytest
 import salt.utils.platform
-from salt.ext.six.moves import range
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
+    random_string,
     requires_system_grains,
     skip_if_not_root,
 )
@@ -28,17 +25,12 @@ class UseraddModuleTestLinux(ModuleCase):
         if os_grain["kernel"] not in ("Linux", "Darwin"):
             self.skipTest("Test not applicable to '{kernel}' kernel".format(**os_grain))
 
-    def __random_string(self, size=6):
-        return "RS-" + "".join(
-            random.choice(string.ascii_uppercase + string.digits) for x in range(size)
-        )
-
     @requires_system_grains
     @skipIf(True, "SLOWTEST skip")
     def test_groups_includes_primary(self, grains):
         # Let's create a user, which usually creates the group matching the
         # name
-        uname = self.__random_string()
+        uname = random_string("RS-", lowercase=False)
         if self.run_function("user.add", [uname]) is not True:
             # Skip because creating is not what we're testing here
             self.run_function("user.delete", [uname, True, True])
@@ -57,7 +49,7 @@ class UseraddModuleTestLinux(ModuleCase):
             self.run_function("user.delete", [uname, True, True])
 
             # Now, a weird group id
-            gname = self.__random_string()
+            gname = random_string("RS-", lowercase=False)
             if self.run_function("group.add", [gname]) is not True:
                 self.run_function("group.delete", [gname, True, True])
                 self.skipTest("Failed to create group")
@@ -105,14 +97,9 @@ class UseraddModuleTestLinux(ModuleCase):
 @skip_if_not_root
 @pytest.mark.windows_whitelisted
 class UseraddModuleTestWindows(ModuleCase):
-    def __random_string(self, size=6):
-        return "RS-" + "".join(
-            random.choice(string.ascii_uppercase + string.digits) for x in range(size)
-        )
-
     def setUp(self):
-        self.user_name = self.__random_string()
-        self.group_name = self.__random_string()
+        self.user_name = random_string("RS-", lowercase=False)
+        self.group_name = random_string("RS-", lowercase=False)
 
     def tearDown(self):
         self.run_function("user.delete", [self.user_name, True, True])
