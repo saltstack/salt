@@ -59,15 +59,13 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
         Test for adding a user
         """
         with patch.dict(useradd.__grains__, {"kernel": "OpenBSD"}):
-            mock_primary = MagicMock(return_value="Salt")
-            with patch.dict(useradd.__salt__, {"file.gid_to_group": mock_primary}):
-                mock = MagicMock(return_value={"retcode": 0})
-                with patch.dict(useradd.__salt__, {"cmd.run_all": mock}):
-                    self.assertTrue(useradd.add("Salt"))
+            mock = MagicMock(return_value={"retcode": 0})
+            with patch.dict(useradd.__salt__, {"cmd.run_all": mock}):
+                self.assertTrue(useradd.add("Salt"))
 
-                mock = MagicMock(return_value={"retcode": 1})
-                with patch.dict(useradd.__salt__, {"cmd.run_all": mock}):
-                    self.assertFalse(useradd.add("Salt"))
+            mock = MagicMock(return_value={"retcode": 1})
+            with patch.dict(useradd.__salt__, {"cmd.run_all": mock}):
+                self.assertFalse(useradd.add("Salt"))
 
     # 'getent' function tests: 2
 
@@ -374,7 +372,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test the user information
         """
-        self.assertEqual(useradd.info("username-that-doesnt-exist"), {})
+        self.assertEqual(useradd.info("username-that-does-not-exist"), {})
 
         mock = MagicMock(
             return_value=pwd.struct_passwd(
@@ -391,7 +389,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
         )
         with patch.object(pwd, "getpwnam", mock):
             self.assertEqual(
-                useradd.info("username-that-doesnt-exist")["name"], "_TEST_GROUP"
+                useradd.info("username-that-does-not-exist")["name"], "_TEST_GROUP"
             )
 
     # 'list_groups' function tests: 1

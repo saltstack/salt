@@ -35,7 +35,7 @@ from tests.support.mock import patch
 
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 # pylint: enable=no-name-in-module,redefined-builtin
 
@@ -125,6 +125,7 @@ class LazyLoaderTest(TestCase):
         del cls.utils
         del cls.proxy
 
+    @skipIf(True, "SLOWTEST skip")
     def test_depends(self):
         """
         Test that the depends decorator works properly
@@ -172,6 +173,7 @@ class LazyLoaderVirtualEnabledTest(TestCase):
         del cls.utils
         del cls.proxy
 
+    @skipIf(True, "SLOWTEST skip")
     def test_basic(self):
         """
         Ensure that it only loads stuff when needed
@@ -196,9 +198,11 @@ class LazyLoaderVirtualEnabledTest(TestCase):
         with self.assertRaises(KeyError):
             self.loader[1]  # pylint: disable=W0104
 
+    @skipIf(True, "SLOWTEST skip")
     def test_disable(self):
         self.assertNotIn("pillar.items", self.loader)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_len_load(self):
         """
         Since LazyLoader is a MutableMapping, if someone asks for len() we have
@@ -208,6 +212,7 @@ class LazyLoaderVirtualEnabledTest(TestCase):
         len(self.loader)  # force a load all
         self.assertNotEqual(self.loader._dict, {})
 
+    @skipIf(True, "SLOWTEST skip")
     def test_iter_load(self):
         """
         Since LazyLoader is a MutableMapping, if someone asks to iterate we have
@@ -262,6 +267,7 @@ class LazyLoaderVirtualEnabledTest(TestCase):
         func_globals = self.loader["test.ping"].__globals__
         self.assertEqual(func_globals["__foo__"], "bar")
 
+    @skipIf(True, "SLOWTEST skip")
     def test_virtual(self):
         self.assertNotIn("test_virtual.ping", self.loader)
 
@@ -302,6 +308,7 @@ class LazyLoaderVirtualDisabledTest(TestCase):
         del cls.funcs
         del cls.proxy
 
+    @skipIf(True, "SLOWTEST skip")
     def test_virtual(self):
         self.assertTrue(inspect.isfunction(self.loader["test_virtual.ping"]))
 
@@ -342,6 +349,7 @@ class LazyLoaderWhitelistTest(TestCase):
         del cls.utils
         del cls.proxy
 
+    @skipIf(True, "SLOWTEST skip")
     def test_whitelist(self):
         self.assertTrue(inspect.isfunction(self.loader["test.ping"]))
         self.assertTrue(inspect.isfunction(self.loader["pillar.get"]))
@@ -360,6 +368,7 @@ class LazyLoaderGrainsBlacklistTest(TestCase):
     def tearDown(self):
         del self.opts
 
+    @skipIf(True, "SLOWTEST skip")
     def test_whitelist(self):
         opts = copy.deepcopy(self.opts)
         opts["grains_blacklist"] = ["master", "os*", "ipv[46]"]
@@ -516,6 +525,7 @@ class LazyLoaderReloadingTest(TestCase):
     def module_path(self):
         return os.path.join(self.tmp_dir, "{0}.py".format(self.module_name))
 
+    @skipIf(True, "SLOWTEST skip")
     def test_alias(self):
         """
         Make sure that you can access alias-d modules
@@ -531,6 +541,7 @@ class LazyLoaderReloadingTest(TestCase):
             )
         )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_clear(self):
         self.assertTrue(inspect.isfunction(self.loader["test.ping"]))
         self.update_module()  # write out out custom module
@@ -544,6 +555,7 @@ class LazyLoaderReloadingTest(TestCase):
         for k, v in six.iteritems(self.loader._dict):
             self.assertTrue(k.startswith(self.module_name))
 
+    @skipIf(True, "SLOWTEST skip")
     def test_load(self):
         # ensure it doesn't exist
         self.assertNotIn(self.module_key, self.loader)
@@ -551,6 +563,7 @@ class LazyLoaderReloadingTest(TestCase):
         self.update_module()
         self.assertTrue(inspect.isfunction(self.loader[self.module_key]))
 
+    @skipIf(True, "SLOWTEST skip")
     def test__load__(self):
         """
         If a module specifies __load__ we should only load/expose those modules
@@ -560,6 +573,7 @@ class LazyLoaderReloadingTest(TestCase):
         # ensure it doesn't exist
         self.assertNotIn(self.module_key + "2", self.loader)
 
+    @skipIf(True, "SLOWTEST skip")
     def test__load__and_depends(self):
         """
         If a module specifies __load__ we should only load/expose those modules
@@ -569,6 +583,8 @@ class LazyLoaderReloadingTest(TestCase):
         self.assertNotIn(self.module_key + "3", self.loader)
         self.assertNotIn(self.module_key + "4", self.loader)
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_reload(self):
         # ensure it doesn't exist
         self.assertNotIn(self.module_key, self.loader)
@@ -657,6 +673,7 @@ class LazyLoaderVirtualAliasTest(TestCase):
     def module_path(self):
         return os.path.join(self.tmp_dir, "{0}.py".format(self.module_name))
 
+    @skipIf(True, "SLOWTEST skip")
     def test_virtual_alias(self):
         """
         Test the __virtual_alias__ feature
@@ -798,6 +815,7 @@ class LazyLoaderSubmodReloadingTest(TestCase):
     def lib_path(self):
         return os.path.join(self.module_dir, "lib.py")
 
+    @skipIf(True, "SLOWTEST skip")
     def test_basic(self):
         # ensure it doesn't exist
         self.assertNotIn(self.module_key, self.loader)
@@ -807,6 +825,8 @@ class LazyLoaderSubmodReloadingTest(TestCase):
         self.loader.clear()
         self.assertIn(self.module_key, self.loader)
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_reload(self):
         # ensure it doesn't exist
         self.assertNotIn(self.module_key, self.loader)
@@ -848,6 +868,7 @@ class LazyLoaderSubmodReloadingTest(TestCase):
         self.loader.clear()
         self.assertNotIn(self.module_key, self.loader)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_reload_missing_lib(self):
         # ensure it doesn't exist
         self.assertNotIn(self.module_key, self.loader)
@@ -941,6 +962,7 @@ class LazyLoaderModulePackageTest(TestCase):
     def rm_module(self, relative_path):
         self.rm_pyfile(os.path.join(self.tmp_dir, relative_path))
 
+    @skipIf(True, "SLOWTEST skip")
     def test_module(self):
         # ensure it doesn't exist
         self.assertNotIn("foo", self.loader)
@@ -950,6 +972,7 @@ class LazyLoaderModulePackageTest(TestCase):
         self.assertIn("foo.test", self.loader)
         self.assertEqual(self.loader["foo.test"](), 1)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_package(self):
         # ensure it doesn't exist
         self.assertNotIn("foo", self.loader)
@@ -959,6 +982,7 @@ class LazyLoaderModulePackageTest(TestCase):
         self.assertIn("foo.test", self.loader)
         self.assertEqual(self.loader["foo.test"](), 2)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_module_package_collision(self):
         # ensure it doesn't exist
         self.assertNotIn("foo", self.loader)
@@ -1085,6 +1109,7 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
         # https://docs.python.org/2/library/sys.html#sys.dont_write_bytecode
         remove_bytecode(path)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_basic(self):
         self.assertIn("{0}.top".format(self.module_name), self.loader)
 
@@ -1097,6 +1122,8 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
                 self.lib_count[lib],
             )
 
+    @skipIf(True, "SLOWTEST skip")
+    @skipIf(True, "SLOWTEST skip")
     def test_reload(self):
         """
         Make sure that we can reload all libraries of arbitrary depth
@@ -1215,6 +1242,7 @@ class LoaderGlobalsTest(ModuleCase):
         """
         self._verify_globals(salt.loader.serializers(self.master_opts))
 
+    @skipIf(True, "SLOWTEST skip")
     def test_states(self):
         """
         Test that states have:
@@ -1254,6 +1282,7 @@ class RawModTest(TestCase):
     def tearDown(self):
         del self.opts
 
+    @skipIf(True, "SLOWTEST skip")
     def test_basic(self):
         testmod = salt.loader.raw_mod(self.opts, "test", None)
         for k, v in six.iteritems(testmod):
@@ -1451,6 +1480,7 @@ class LoaderLoadCachedGrainsTest(TestCase):
         self.opts["grains_cache"] = True
         self.opts["grains"] = salt.loader.grains(self.opts)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_osrelease_info_has_correct_type(self):
         """
         Make sure osrelease_info is tuple after caching

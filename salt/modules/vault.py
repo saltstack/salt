@@ -7,7 +7,7 @@ Functions to interact with Hashicorp Vault.
 :platform:      all
 
 
-:note: If you see the following error, you'll need to upgrade ``requests`` to atleast 2.4.2
+:note: If you see the following error, you'll need to upgrade ``requests`` to at least 2.4.2
 
 .. code-block:: text
 
@@ -278,7 +278,7 @@ def delete_secret(path):
 
 def destroy_secret(path, *args):
     """
-    Destory specified secret version at the path in vault. The vault policy
+    Destroy specified secret version at the path in vault. The vault policy
     used must allow this. Only supported on Vault KV version 2
 
     .. versionadded:: Sodium

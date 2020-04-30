@@ -21,7 +21,7 @@ class EnabledTest(ModuleCase):
     """
 
     cmd = (
-        "printf '%s\n' first second third | wc -l ; "
+        "printf '%s\\n' first second third | wc -l ; "
         "export SALTY_VARIABLE='saltines' && echo $SALTY_VARIABLE ; "
         "echo duh &> /dev/null"
     )
@@ -87,6 +87,7 @@ class EnabledTest(ModuleCase):
             os.remove(state_file)
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
+    @skipIf(True, "SLOWTEST skip")
     def test_template_default_disabled(self):
         """
         test shell disabled output for templates (python_shell=False is the default

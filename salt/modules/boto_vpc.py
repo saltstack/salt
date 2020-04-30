@@ -2948,7 +2948,7 @@ def route_exists(
                 "vpc_peering_connection_id": vpc_peering_connection_id,
             }
             route_comp = set(route_dict.items()) ^ set(route_check.items())
-            if len(route_comp) == 0:
+            if not route_comp:
                 log.info("Route %s exists.", destination_cidr_block)
                 return {"exists": True}
 
@@ -3036,7 +3036,7 @@ def disassociate_route_table(
     association_id, region=None, key=None, keyid=None, profile=None
 ):
     """
-    Dissassociates a route table.
+    Disassociates a route table.
 
     association_id
         The Route Table Association ID to disassociate

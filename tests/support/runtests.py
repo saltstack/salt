@@ -46,21 +46,15 @@
     .. _`nose`: https://nose.readthedocs.org
     """
 
-# Import Python modules
 from __future__ import absolute_import, print_function
 
 import logging
 import os
 import shutil
 
-# Import Salt libs
 import salt.utils.path
 import salt.utils.platform
-
-# Import tests support libs
 import tests.support.paths as paths
-
-# Import 3rd-party libs
 from salt.ext import six
 
 try:
@@ -183,6 +177,7 @@ RUNTIME_VARS = RuntimeVars(
     LOG_HANDLERS_DIR=paths.LOG_HANDLERS_DIR,
     TMP_ROOT_DIR=paths.TMP_ROOT_DIR,
     TMP_CONF_DIR=paths.TMP_CONF_DIR,
+    TMP_MINION_CONF_DIR=paths.TMP_MINION_CONF_DIR,
     TMP_CONF_MASTER_INCLUDES=os.path.join(paths.TMP_CONF_DIR, "master.d"),
     TMP_CONF_MINION_INCLUDES=os.path.join(paths.TMP_CONF_DIR, "minion.d"),
     TMP_CONF_PROXY_INCLUDES=os.path.join(paths.TMP_CONF_DIR, "proxy.d"),
@@ -197,11 +192,14 @@ RUNTIME_VARS = RuntimeVars(
     TMP_SYNDIC_MASTER_CONF_DIR=paths.TMP_SYNDIC_MASTER_CONF_DIR,
     TMP_SYNDIC_MINION_CONF_DIR=paths.TMP_SYNDIC_MINION_CONF_DIR,
     TMP_MM_CONF_DIR=paths.TMP_MM_CONF_DIR,
+    TMP_MM_MINION_CONF_DIR=paths.TMP_MM_MINION_CONF_DIR,
     TMP_MM_SUB_CONF_DIR=paths.TMP_MM_SUB_CONF_DIR,
+    TMP_MM_SUB_MINION_CONF_DIR=paths.TMP_MM_SUB_CONF_DIR,
     TMP_SCRIPT_DIR=paths.TMP_SCRIPT_DIR,
     TMP_STATE_TREE=paths.TMP_STATE_TREE,
     TMP_PILLAR_TREE=paths.TMP_PILLAR_TREE,
     TMP_PRODENV_STATE_TREE=paths.TMP_PRODENV_STATE_TREE,
+    TMP_PRODENV_PILLAR_TREE=paths.TMP_PRODENV_PILLAR_TREE,
     SHELL_TRUE_PATH=salt.utils.path.which("true")
     if not salt.utils.platform.is_windows()
     else "cmd /c exit 0 > nul",

@@ -138,7 +138,7 @@ The following configuration is an example, how a complete syslog-ng configuratio
 
 The :py:func:`syslog_ng.reloaded <salt.states.syslog_ng.reloaded>` function can generate syslog-ng configuration from YAML. If the statement (source, destination, parser,
 etc.) has a name, this function uses the id as the name, otherwise (log
-statement) it's purpose is like a mandatory comment.
+statement) its purpose is like a mandatory comment.
 
 After execution this example the syslog\_ng state will generate this
 file:

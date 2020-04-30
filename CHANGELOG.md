@@ -1,3 +1,4 @@
+# Changelog
 All notable changes to Salt will be documented in this file.
 
 This changelog follows [keepachangelog](https://keepachangelog.com/en/1.0.0/) format, and is intended for human consumption.
@@ -5,9 +6,8 @@ This changelog follows [keepachangelog](https://keepachangelog.com/en/1.0.0/) fo
 This project versioning is _similar_ to [Semantic Versioning](https://semver.org), and is documented in [SEP 14](https://github.com/saltstack/salt-enhancement-proposals/pull/20/files).
 Versions are `MAJOR.PATCH`.
 
-# Changelog
-
 ## 3001 - Sodium
+## 3001 - Sodium [yyyy-mm-dd]
 
 ### Removed
 
@@ -16,11 +16,11 @@ Versions are `MAJOR.PATCH`.
 ### Changed
 
 ### Fixed
-- [#56237](https://github.com/saltstack/salt/pull/56237) - Fix alphabetical ordering and remove duplicates across all documentation indexes - [@myii](https://github.com/myii)
-- [#56325](https://github.com/saltstack/salt/pull/56325) - Fix hyperlinks to `salt.serializers` and other documentation issues - [@myii](https://github.com/myii)
+- [#51872](https://github.com/saltstack/salt/issues/51872) - Additional fixes for using cron state with non-root Minion - [@Oloremo](https://github.com/Oloremo)
+- [#40491](https://github.com/saltstack/salt/issues/40491) - Fixed trim_output logic in archive.extracted state - [@Oloremo](https://github.com/Oloremo)
 
 ### Added
-- [#56627](https://github.com/saltstack/salt/pull/56627) - Add new salt-ssh set_path option
+- [#56637](https://github.com/saltstack/salt/pull/56637) - Add ``win_wua.installed`` to the ``win_wua`` execution module
 
 ## 3000.1
 
@@ -29,6 +29,27 @@ Versions are `MAJOR.PATCH`.
 ### Deprecated
 
 ### Changed
+- [#56751](https://github.com/saltstack/salt/pull/56751) - Backport 49981
+
+- [#56731](https://github.com/saltstack/salt/pull/56731) - Backport #53994
+- [#56753](https://github.com/saltstack/salt/pull/56753) - Backport 51095
+
+### Fixed
+- [#56237](https://github.com/saltstack/salt/pull/56237) - Fix alphabetical ordering and remove duplicates across all documentation indexes - [@myii](https://github.com/myii)
+- [#56325](https://github.com/saltstack/salt/pull/56325) - Fix hyperlinks to `salt.serializers` and other documentation issues - [@myii](https://github.com/myii)
+
+### Added
+- [#56627](https://github.com/saltstack/salt/pull/56627) - Add new salt-ssh set_path option
+- [#51379](https://github.com/saltstack/salt/pull/56792) - Backport 51379 : Adds .set_domain_workgroup to win_system
+
+## 3000.1
+
+### Removed
+
+### Deprecated
+
+### Changed
+- [#56730](https://github.com/saltstack/salt/pull/56730) - Backport #52992
 
 ### Fixed
 
