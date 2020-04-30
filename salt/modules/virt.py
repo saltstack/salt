@@ -4601,7 +4601,7 @@ def cpu_baseline(full=False, migratable=False, out="libvirt", **kwargs):
             "vendor": cpu.find("vendor").text,
             "features": [feature.get("name") for feature in cpu.findall("feature")],
         }
-    return cpu.toxml()
+    return ElementTree.tostring(cpu)
 
 
 def network_define(name, bridge, forward, ipv4_config=None, ipv6_config=None, **kwargs):
@@ -4934,7 +4934,7 @@ def _parse_pools_caps(doc):
             if options:
                 if "options" not in pool_caps:
                     pool_caps["options"] = {}
-                kind = option_kind if option_kind is not "vol" else "volume"
+                kind = option_kind if option_kind != "vol" else "volume"
                 pool_caps["options"][kind] = options
         return pool_caps
 
