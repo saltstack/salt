@@ -18,11 +18,15 @@ from tests.support.unit import TestCase, skipIf
 # Import Conditionals
 try:
     import grp
+
+    HAS_GRP = True
 except ImportError:
     HAS_GRP = False
 
 try:
     import pwd
+
+    HAS_PWD = True
 except ImportError:
     HAS_PWD = False
 
