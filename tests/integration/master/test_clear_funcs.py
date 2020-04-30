@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
 
-import getpass
+import logging
 import os
+import shutil
 import tempfile
 import time
 
@@ -15,40 +16,50 @@ from tests.support.case import TestCase
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.runtests import RUNTIME_VARS
 
-
-def keyuser():
-    user = salt.utils.user.get_specific_user()
-    if user.startswith("sudo_"):
-        user = user[5:].replace("\\", "_")
-    return user
+log = logging.getLogger(__name__)
 
 
-class ClearFuncsAuthTestCase(TestCase):
+class ConfigMixin:
+    @classmethod
+    def setUpClass(cls):
+        cls.master_config = AdaptedConfigurationTestCaseMixin.get_config("master")
+        cls.minion_config = AdaptedConfigurationTestCaseMixin.get_temp_config(
+            "minion",
+            id="root",
+            transport="zeromq",
+            auth_tries=1,
+            auth_timeout=5,
+            master_ip="127.0.0.1",
+            master_port=cls.master_config["ret_port"],
+            master_uri="tcp://127.0.0.1:{}".format(cls.master_config["ret_port"]),
+        )
+
+        if not salt.utils.platform.is_windows():
+            user = cls.master_config["user"]
+        else:
+            user = salt.utils.user.get_specific_user().replace("\\", "_")
+            if user.startswith("sudo_"):
+                user = user.split("sudo_")[-1]
+        cls.user = user
+        cls.keyfile = ".{}_key".format(cls.user)
+        cls.keypath = os.path.join(cls.master_config["cachedir"], cls.keyfile)
+        with salt.utils.files.fopen(cls.keypath) as keyfd:
+            cls.key = keyfd.read()
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.master_config
+        del cls.minion_config
+        del cls.key
+        del cls.keyfile
+        del cls.keypath
+
+
+class ClearFuncsAuthTestCase(ConfigMixin, TestCase):
     def test_auth_info_not_allowed(self):
         assert hasattr(salt.master.ClearFuncs, "_prep_auth_info")
-        master = "127.0.0.1"
-        ret_port = 64506
-        user = getpass.getuser()
-        keyfile = ".{}_key".format(user)
-
-        keypath = os.path.join(RUNTIME_VARS.TMP, "rootdir", "cache", keyfile)
-
-        with salt.utils.files.fopen(keypath) as keyfd:
-            key = keyfd.read()
-
-        minion_config = {
-            "transport": "zeromq",
-            "pki_dir": "/tmp",
-            "id": "root",
-            "master_ip": master,
-            "master_port": ret_port,
-            "auth_timeout": 5,
-            "auth_tries": 1,
-            "master_uri": "tcp://{0}:{1}".format(master, ret_port),
-        }
-
         clear_channel = salt.transport.client.ReqChannel.factory(
-            minion_config, crypt="clear"
+            self.minion_config, crypt="clear"
         )
 
         msg = {"cmd": "_prep_auth_info"}
@@ -56,44 +67,27 @@ class ClearFuncsAuthTestCase(TestCase):
         ret_key = None
         for ret in rets:
             try:
-                ret_key = ret[user]
+                ret_key = ret[self.user]
                 break
             except (TypeError, KeyError):
                 pass
-        assert ret_key != key, "Able to retrieve user key"
+        assert ret_key != self.key, "Able to retrieve user key"
 
 
-class ClearFuncsPubTestCase(TestCase):
+class ClearFuncsPubTestCase(ConfigMixin, TestCase):
     def setUp(self):
-        self.master = "127.0.0.1"
-        self.ret_port = 64506
-        self.tmpfile = os.path.join(tempfile.mkdtemp(), "evil_file")
-        self.master_opts = AdaptedConfigurationTestCaseMixin.get_config("master")
+        tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        self.addCleanup(shutil.rmtree, tempdir, ignore_errors=True)
+        self.tmpfile = os.path.join(tempdir, "evil_file")
 
     def tearDown(self):
-        try:
-            os.remove(self.tmpfile + "x")
-        except OSError:
-            pass
-        delattr(self, "master")
-        delattr(self, "ret_port")
-        delattr(self, "tmpfile")
+        self.tmpfile = None
 
     def test_pub_not_allowed(self):
         assert hasattr(salt.master.ClearFuncs, "_send_pub")
         assert not os.path.exists(self.tmpfile)
-        minion_config = {
-            "transport": "zeromq",
-            "pki_dir": "/tmp",
-            "id": "root",
-            "master_ip": self.master,
-            "master_port": self.ret_port,
-            "auth_timeout": 5,
-            "auth_tries": 1,
-            "master_uri": "tcp://{0}:{1}".format(self.master, self.ret_port),
-        }
         clear_channel = salt.transport.client.ReqChannel.factory(
-            minion_config, crypt="clear"
+            self.minion_config, crypt="clear"
         )
         jid = "202003100000000001"
         msg = {
@@ -109,9 +103,9 @@ class ClearFuncsPubTestCase(TestCase):
         }
         eventbus = salt.utils.event.get_event(
             "master",
-            sock_dir=self.master_opts["sock_dir"],
-            transport=self.master_opts["transport"],
-            opts=self.master_opts,
+            sock_dir=self.master_config["sock_dir"],
+            transport=self.master_config["transport"],
+            opts=self.master_config,
         )
         ret = clear_channel.send(msg, timeout=15)
         if salt.utils.platform.is_windows():
@@ -129,38 +123,18 @@ class ClearFuncsPubTestCase(TestCase):
         assert not os.path.exists(self.tmpfile), "Evil file created"
 
 
-class ClearFuncsConfigTest(TestCase):
+class ClearFuncsConfigTest(ConfigMixin, TestCase):
     def setUp(self):
-        master_opts = AdaptedConfigurationTestCaseMixin.get_config("master")
-        self.conf_dir = os.path.dirname(master_opts["conf_file"])
-        master = "127.0.0.1"
-        ret_port = 64506
-        user = keyuser()
-        keyfile = ".{}_key".format(user)
-        keypath = os.path.join(RUNTIME_VARS.TMP, "rootdir", "cache", keyfile)
-
-        with salt.utils.files.fopen(keypath) as keyfd:
-            self.key = keyfd.read()
-
-        self.minion_config = {
-            "transport": "zeromq",
-            "pki_dir": "/tmp",
-            "id": "root",
-            "master_ip": master,
-            "master_port": ret_port,
-            "auth_timeout": 5,
-            "auth_tries": 1,
-            "master_uri": "tcp://{0}:{1}".format(master, ret_port),
-        }
+        self.evil_file_path = os.path.join(
+            os.path.dirname(self.master_config["conf_file"]), "evil.conf"
+        )
 
     def tearDown(self):
         try:
-            os.remove(os.path.join(self.conf_dir, "evil.conf"))
+            os.remove(self.evil_file_path)
         except OSError:
             pass
-        delattr(self, "conf_dir")
-        delattr(self, "key")
-        delattr(self, "minion_config")
+        self.evil_file_path = None
 
     def test_clearfuncs_config(self):
         clear_channel = salt.transport.client.ReqChannel.factory(
@@ -176,44 +150,20 @@ class ClearFuncsConfigTest(TestCase):
         }
         ret = clear_channel.send(msg, timeout=5)
         assert not os.path.exists(
-            os.path.join(self.conf_dir, "evil.conf")
+            self.evil_file_path
         ), "Wrote file via directory traversal"
 
 
-class ClearFuncsFileRoots(TestCase):
+class ClearFuncsFileRoots(ConfigMixin, TestCase):
     def setUp(self):
-        self.master_opts = AdaptedConfigurationTestCaseMixin.get_config("master")
-        self.target_dir = os.path.dirname(self.master_opts["file_roots"]["base"][0])
-        master = "127.0.0.1"
-        ret_port = 64506
-        user = keyuser()
-        self.keyfile = ".{}_key".format(user)
-        keypath = os.path.join(RUNTIME_VARS.TMP, "rootdir", "cache", self.keyfile)
-
-        with salt.utils.files.fopen(keypath) as keyfd:
-            self.key = keyfd.read()
-
-        self.minion_config = {
-            "transport": "zeromq",
-            "pki_dir": "/tmp",
-            "id": "root",
-            "master_ip": master,
-            "master_port": ret_port,
-            "auth_timeout": 5,
-            "auth_tries": 1,
-            "master_uri": "tcp://{0}:{1}".format(master, ret_port),
-        }
+        self.file_roots_dir = self.master_config["file_roots"]["base"][0]
+        self.target_dir = os.path.dirname(self.file_roots_dir)
 
     def tearDown(self):
         try:
             os.remove(os.path.join(self.target_dir, "pwn.txt"))
         except OSError:
             pass
-        delattr(self, "master_opts")
-        delattr(self, "target_dir")
-        delattr(self, "keyfile")
-        delattr(self, "key")
-        delattr(self, "minion_config")
 
     def test_fileroots_write(self):
         clear_channel = salt.transport.client.ReqChannel.factory(
@@ -234,23 +184,24 @@ class ClearFuncsFileRoots(TestCase):
         ), "Wrote file via directory traversal"
 
     def test_fileroots_read(self):
-        rootdir = self.master_opts["root_dir"]
-        fileroot = self.master_opts["file_roots"]["base"][0]
+        readpath = os.path.relpath(self.keypath, self.file_roots_dir)
+        relative_key_path = os.path.join(self.file_roots_dir, readpath)
+        log.debug("Master root_dir: %s", self.master_config["root_dir"])
+        log.debug("File Root: %s", self.file_roots_dir)
+        log.debug("Key Path: %s", self.keypath)
+        log.debug("Read Path: %s", readpath)
+        log.debug("Relative Key Path: %s", relative_key_path)
+        log.debug("Absolute Read Path: %s", os.path.abspath(relative_key_path))
         # If this asserion fails the test may need to be re-written
-        assert os.path.dirname(os.path.dirname(rootdir)) == os.path.dirname(fileroot)
+        assert os.path.abspath(relative_key_path) == self.keypath
         clear_channel = salt.transport.client.ReqChannel.factory(
             self.minion_config, crypt="clear"
-        )
-        readpath = os.path.join(
-            "..", "salt-tests-tmpdir", "rootdir", "cache", self.keyfile,
         )
         msg = {
             "key": self.key,
             "cmd": "wheel",
             "fun": "file_roots.read",
-            "path": os.path.join(
-                "..", "salt-tests-tmpdir", "rootdir", "cache", self.keyfile,
-            ),
+            "path": readpath,
             "saltenv": "base",
         }
 
@@ -266,30 +217,9 @@ class ClearFuncsFileRoots(TestCase):
         assert ret["data"]["return"] == []
 
 
-class ClearFuncsTokenTest(TestCase):
-    def setUp(self):
-        self.master_opts = AdaptedConfigurationTestCaseMixin.get_config("master")
-        master = "127.0.0.1"
-        ret_port = 64506
-        self.minion_config = {
-            "transport": "zeromq",
-            "pki_dir": "/tmp",
-            "id": "root",
-            "master_ip": master,
-            "master_port": ret_port,
-            "auth_timeout": 5,
-            "auth_tries": 1,
-            "master_uri": "tcp://{0}:{1}".format(master, ret_port),
-        }
-
-    def tearDown(self):
-        delattr(self, "master_opts")
-        delattr(self, "minion_config")
-
+class ClearFuncsTokenTest(ConfigMixin, TestCase):
     def test_token(self):
-        tokensdir = os.path.join(
-            self.master_opts["root_dir"], self.master_opts["cachedir"], "tokens"
-        )
+        tokensdir = os.path.join(self.master_config["cachedir"], "tokens")
         assert os.path.exists(tokensdir), tokensdir
         clear_channel = salt.transport.client.ReqChannel.factory(
             self.minion_config, crypt="clear"
