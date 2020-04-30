@@ -723,6 +723,9 @@ class Pillar(object):
                         states = OrderedDict()
                         orders[saltenv][tgt] = 0
                         ignore_missing = False
+                        # handle a pillar sls target written in shorthand form
+                        if isinstance(ctop[saltenv][tgt], six.string_types):
+                            ctop[saltenv][tgt] = [ctop[saltenv][tgt]]
                         for comp in ctop[saltenv][tgt]:
                             if isinstance(comp, dict):
                                 if "match" in comp:
