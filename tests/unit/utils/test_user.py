@@ -3,9 +3,8 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-import grp
+# Imports Standards
 import os
-import pwd
 
 # Import salt libs
 import salt.utils.platform
@@ -16,8 +15,20 @@ from tests.support.runtests import this_user
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 
+# Import Conditionals
+try:
+    import grp
+except ImportError:
+    HAS_GRP = False
+
+try:
+    import pwd
+except ImportError:
+    HAS_PWD = False
+
 
 class TestUser(TestCase):
+    @skipIf(HAS_GRP is False or HAS_PWD is False, "Module grp or pwd is missing")
     @skipIf(salt.utils.platform.is_windows(), "Module not available on Windows")
     def test_chugid_and_umask(self):
 
