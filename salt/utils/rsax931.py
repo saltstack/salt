@@ -29,9 +29,10 @@ def _find_libcrypto():
     Find the path (or return the short name) of libcrypto.
     """
     if sys.platform.startswith("win"):
-        lib = [str("libeay32")]
+        lib = str("libeay32")
     elif getattr(sys, "frozen", False) and salt.utils.platform.is_smartos():
         lib = glob.glob(os.path.join(os.path.dirname(sys.executable), "libcrypto.so*"))
+        lib = lib[0] if lib else None
     else:
         lib = find_library("crypto")
         if not lib:
@@ -44,12 +45,14 @@ def _find_libcrypto():
                 # below
                 lib = glob.glob("/opt/local/lib/libcrypto.so*")
                 lib = lib or glob.glob("/opt/tools/lib/libcrypto.so*")
+                lib = lib[0] if lib else None
             elif salt.utils.platform.is_aix():
                 if os.path.isdir("/opt/salt/lib"):
                     # preference for Salt installed fileset
                     lib = glob.glob("/opt/salt/lib/libcrypto.so*")
                 else:
                     lib = glob.glob("/opt/freeware/lib/libcrypto.so*")
+                lib = lib[0] if lib else None
         elif salt.utils.platform.is_darwin():
             # Find versioned libraries in system locations, being careful
             # to avoid the unversioned stub which is no longer permitted.
@@ -61,9 +64,10 @@ def _find_libcrypto():
                 # Find library symlinks in Homebrew locations.
                 lib = glob.glob("/usr/local/opt/openssl/lib/libcrypto.dylib")
                 lib = lib or glob.glob("/usr/local/opt/openssl@*/lib/libcrypto.dylib")
+            lib = lib[0] if lib else None
     if not lib:
         raise OSError("Cannot locate OpenSSL libcrypto")
-    return lib[0]
+    return lib
 
 
 def _load_libcrypto():
