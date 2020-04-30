@@ -932,7 +932,7 @@ def _process_multiprocessing_logging_zmq(opts, port, dbg=False):
     # Avoid circular import
     import salt.utils.process
 
-    salt.utils.process.appendproctitle("MultiprocessingLoggingQueue")
+    salt.utils.process.appendproctitle("MultiprocessingLoggingZMQ")
 
     # Assign UID/GID of user to proc if set
     from salt.utils.verify import check_user
@@ -963,15 +963,9 @@ def _process_multiprocessing_logging_zmq(opts, port, dbg=False):
         )
         setup_extended_logging(opts)
 
-    import traceback
-
     context = zmq.Context()
     puller = context.socket(zmq.PULL)
-    try:
-        puller.bind("tcp://127.0.0.1:{}".format(port))
-    except Exception:
-        print("MP LOGGING TB {}".format("\n".join(traceback.format_stack())))
-        raise
+    puller.bind("tcp://127.0.0.1:{}".format(port))
     try:
         while True:
             try:
