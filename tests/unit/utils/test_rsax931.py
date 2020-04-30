@@ -5,23 +5,26 @@ Test the RSA ANSI X9.31 signer and verifier
 
 # python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import ctypes
+import ctypes.util
 import fnmatch
 import glob
+import os
 import sys
 
 # salt libs
 from salt.utils.rsax931 import (
-    _find_libcrypto,
-    _load_libcrypto,
     RSAX931Signer,
     RSAX931Verifier,
+    _find_libcrypto,
+    _load_libcrypto,
 )
 import salt.utils.platform
+from tests.support.mock import patch
 
 # salt testing libs
 from tests.support.unit import TestCase
-from tests.support.mock import patch
 
 
 class RSAX931Test(TestCase):
@@ -153,9 +156,13 @@ class RSAX931Test(TestCase):
             elif salt.utils.platform.is_aix():
                 # For IBM AIX.
                 if os.path.isdir("/opt/salt/lib"):
-                    self.assertTrue(fnmatch.fnmatch("/opt/salt/lib/libcrypto.so*"))
+                    self.assertTrue(
+                        fnmatch.fnmatch(lib_path, "/opt/salt/lib/libcrypto.so*")
+                    )
                 else:
-                    self.assertTrue(fnmatch.fnmatch("/opt/freeware/lib/libcrypto.so*"))
+                    self.assertTrue(
+                        fnmatch.fnmatch(lib_path, "/opt/freeware/lib/libcrypto.so*")
+                    )
         elif salt.utils.platform.is_darwin():
             # For Darwin distributions/macOS.
             passed = False
@@ -171,7 +178,9 @@ class RSAX931Test(TestCase):
         # Test unsupported systems.
         with patch.object(sys, "platform", "unknown"), patch.object(
             glob, "glob", lambda a: []
-        ), self.assertRaises(OSError):
+        ), patch.object(ctypes.util, "find_library", lambda: None), self.assertRaises(
+            OSError
+        ):
             _find_libcrypto()
 
     def test_load_libcrypto(self):
