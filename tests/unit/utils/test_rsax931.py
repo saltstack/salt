@@ -5,12 +5,23 @@ Test the RSA ANSI X9.31 signer and verifier
 
 # python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import ctypes
+import fnmatch
+import glob
+import sys
 
 # salt libs
-from salt.utils.rsax931 import RSAX931Signer, RSAX931Verifier
+from salt.utils.rsax931 import (
+    _find_libcrypto,
+    _load_libcrypto,
+    RSAX931Signer,
+    RSAX931Verifier,
+)
+import salt.utils.platform
 
 # salt testing libs
 from tests.support.unit import TestCase
+from tests.support.mock import patch
 
 
 class RSAX931Test(TestCase):
@@ -108,3 +119,70 @@ class RSAX931Test(TestCase):
 
         msg = verifier.verify(RSAX931Test.hello_world_sig)
         self.assertEqual(RSAX931Test.hello_world, msg)
+
+    def test_find_libcrypto(self):
+        """
+        Test _find_libcrypto.
+        """
+        # Test supported systems.
+        lib_path = _find_libcrypto()
+        self.assertFalse(not lib_path)
+        if sys.platform.startswith("win"):
+            # For Microsoft Windows variants.
+            self.assertEqual(lib_path, "libeay32")
+        elif getattr(sys, "frozen", False) and salt.utils.platform.is_smartos():
+            # For SmartOS.
+            self.assertTrue(
+                fnmatch.fnmatch(
+                    lib_path,
+                    os.path.join(os.path.dirname(sys.executable), "libcrypto*"),
+                )
+            )
+        elif not lib_path:
+            if salt.utils.platform.is_sunos():
+                # For Solaris-like distributions.
+                passed = False
+                for i in (
+                    "/opt/local/lib/libcrypto.so*",
+                    "/opt/tools/lib/libcrypto.so*",
+                ):
+                    if fnmatch.fnmatch(lib_path, i):
+                        passed = True
+                        break
+                self.assertTrue(passed)
+            elif salt.utils.platform.is_aix():
+                # For IBM AIX.
+                if os.path.isdir("/opt/salt/lib"):
+                    self.assertTrue(fnmatch.fnmatch("/opt/salt/lib/libcrypto.so*"))
+                else:
+                    self.assertTrue(fnmatch.fnmatch("/opt/freeware/lib/libcrypto.so*"))
+        elif salt.utils.platform.is_darwin():
+            # For Darwin distributions/macOS.
+            passed = False
+            for i in (
+                "/usr/lib/libcrypto.*.dylib",
+                "/usr/local/opt/openssl/lib/libcrypto.dylib",
+                "/usr/local/opt/openssl@*/lib/libcrypto.dylib",
+            ):
+                if fnmatch.fnmatch(lib_path, i):
+                    passed = True
+                    break
+            self.assertTrue(passed)
+        # Test unsupported systems.
+        with patch.object(sys, "platform", "unknown"), patch.object(
+            glob, "glob", lambda a: []
+        ), self.assertRaises(OSError):
+            _find_libcrypto()
+
+    def test_load_libcrypto(self):
+        """
+        Test _load_libcrypto.
+        """
+        lib = _load_libcrypto()
+        self.assertTrue(isinstance(lib, ctypes.CDLL))
+        # Try to cover both pre and post OpenSSL 1.1.
+        self.assertTrue(
+            hasattr(lib, "OpenSSL_version_num")
+            or hasattr(lib, "OPENSSL_init_crypto")
+            or hasattr(lib, "OPENSSL_no_config")
+        )
