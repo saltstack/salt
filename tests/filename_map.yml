@@ -243,16 +243,6 @@ salt/utils/vt.py:
   - integration.ssh.test_raw
   - integration.ssh.test_state
 
-salt/utils/vt.py:
-  - integration.cli.test_custom_module
-  - integration.cli.test_grains
-  - integration.ssh.test_grains
-  - integration.ssh.test_jinja_filters
-  - integration.ssh.test_mine
-  - integration.ssh.test_pillar
-  - integration.ssh.test_raw
-  - integration.ssh.test_state
-
 salt/wheel/*:
   - integration.wheel.test_client
 
