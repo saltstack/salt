@@ -144,7 +144,12 @@ def _yum():
     """
     contextkey = "yum_bin"
     if contextkey not in __context__:
-        if "fedora" in __grains__["os"].lower() and int(__grains__["osrelease"]) >= 22:
+        if (
+            "fedora" in __grains__["os"].lower() and int(__grains__["osrelease"]) >= 22
+        ) or (
+            __grains__["os"].lower() in ("redhat", "centos")
+            and int(__grains__["osmajorrelease"]) >= 8
+        ):
             __context__[contextkey] = "dnf"
         else:
             __context__[contextkey] = "yum"
@@ -215,7 +220,13 @@ def _check_versionlock():
     Ensure that the appropriate versionlock plugin is present
     """
     if _yum() == "dnf":
-        if int(__grains__.get("osmajorrelease")) >= 26:
+        if (
+            "fedora" in __grains__["os"].lower()
+            and int(__grains__.get("osrelease")) >= 26
+        ) or (
+            __grains__.get("os").lower() in ("redhat", "centos")
+            and int(__grains__.get("osmajorrelease")) >= 8
+        ):
             if six.PY3:
                 vl_plugin = "python3-dnf-plugin-versionlock"
             else:
@@ -1711,7 +1722,7 @@ def install(
             cmd.extend(targets)
             out = _call_yum(cmd, ignore_retcode=False, redirect_stderr=True)
             if out["retcode"] != 0:
-                errors.append(out["stdout"])
+                errors.append(out["stderr"])
 
     targets = []
     with _temporarily_unhold(to_downgrade, targets):
@@ -1722,7 +1733,7 @@ def install(
             cmd.extend(targets)
             out = _call_yum(cmd)
             if out["retcode"] != 0:
-                errors.append(out["stdout"])
+                errors.append(out["stderr"])
 
     targets = []
     with _temporarily_unhold(to_reinstall, targets):
@@ -1733,7 +1744,7 @@ def install(
             cmd.extend(targets)
             out = _call_yum(cmd)
             if out["retcode"] != 0:
-                errors.append(out["stdout"])
+                errors.append(out["stderr"])
 
     __context__.pop("pkg.list_pkgs", None)
     new = (
@@ -1896,7 +1907,7 @@ def upgrade(
         .. versionadded:: 2019.2.0
 
     obsoletes : True
-        Controls wether yum/dnf should take obsoletes into account and remove them.
+        Controls whether yum/dnf should take obsoletes into account and remove them.
         If set to ``False`` yum will use ``update`` instead of ``upgrade``
         and dnf will be run with ``--obsoletes=False``
 
@@ -2442,10 +2453,10 @@ def group_list():
     return ret
 
 
-def group_info(name, expand=False):
+def group_info(name, expand=False, ignore_groups=None):
     """
     .. versionadded:: 2014.1.0
-    .. versionchanged:: 2016.3.0,2015.8.4,2015.5.10
+    .. versionchanged:: Sodium,2016.3.0,2015.8.4,2015.5.10
         The return data has changed. A new key ``type`` has been added to
         distinguish environment groups from package groups. Also, keys for the
         group name and group ID have been added. The ``mandatory packages``,
@@ -2465,6 +2476,13 @@ def group_info(name, expand=False):
         group names.
 
         .. versionadded:: 2016.3.0
+
+    ignore_groups : None
+        This parameter can be used to pass a list of groups to ignore when
+        expanding subgroups. It is used during recursion in order to prevent
+        expanding the same group multiple times.
+
+        .. versionadded:: Sodium
 
     CLI Example:
 
@@ -2500,6 +2518,7 @@ def group_info(name, expand=False):
 
     ret["description"] = g_info.get("description", "")
 
+    completed_groups = ignore_groups or []
     pkgtypes_capturegroup = "(" + "|".join(pkgtypes) + ")"
     for pkgtype in pkgtypes:
         target_found = False
@@ -2519,7 +2538,19 @@ def group_info(name, expand=False):
                     continue
             if target_found:
                 if expand and ret["type"] == "environment group":
-                    expanded = group_info(line, expand=True)
+                    if not line or line in completed_groups:
+                        continue
+                    log.trace(
+                        'Adding group "%s" to completed list: %s',
+                        line,
+                        completed_groups,
+                    )
+                    completed_groups.append(line)
+                    # Using the @ prefix on the group here in order to prevent multiple matches
+                    # being returned, such as with gnome-desktop
+                    expanded = group_info(
+                        "@" + line, expand=True, ignore_groups=completed_groups
+                    )
                     # Don't shadow the pkgtype variable from the outer loop
                     for p_type in pkgtypes:
                         ret[p_type].update(set(expanded[p_type]))
@@ -2773,7 +2804,7 @@ def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
             del filerepos[stanza]["comments"]
         content += "\n[{0}]".format(stanza)
         for line in filerepos[stanza]:
-            # A whitespace is needed at the begining of the new line in order
+            # A whitespace is needed at the beginning of the new line in order
             # to avoid breaking multiple line values allowed on repo files.
             value = filerepos[stanza][line]
             if isinstance(value, six.string_types) and "\n" in value:
@@ -2912,7 +2943,7 @@ def mod_repo(repo, basedir=None, **kwargs):
         )
         content += "[{0}]\n".format(stanza)
         for line in six.iterkeys(filerepos[stanza]):
-            # A whitespace is needed at the begining of the new line in order
+            # A whitespace is needed at the beginning of the new line in order
             # to avoid breaking multiple line values allowed on repo files.
             value = filerepos[stanza][line]
             if isinstance(value, six.string_types) and "\n" in value:

@@ -14,7 +14,7 @@ import salt.utils.http as http
 from tests.support.helpers import MirrorPostHandler, Webserver
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class HTTPTestCase(TestCase):
@@ -112,6 +112,7 @@ class HTTPTestCase(TestCase):
         ret = http._sanitize_url_components(mock_component_list, "foo")
         self.assertEqual(ret, mock_ret)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_query_null_response(self):
         """
         This tests that we get a null response when raise_error=False and the
@@ -127,6 +128,14 @@ class HTTPTestCase(TestCase):
         url = "http://{host}:{port}/".format(host=host, port=port)
         result = http.query(url, raise_error=False)
         assert result == {"body": None}, result
+
+    def test_query_error_handling(self):
+        ret = http.query("http://127.0.0.1:0")
+        self.assertTrue(isinstance(ret, dict))
+        self.assertTrue(isinstance(ret.get("error", None), str))
+        ret = http.query("http://myfoobardomainthatnotexist")
+        self.assertTrue(isinstance(ret, dict))
+        self.assertTrue(isinstance(ret.get("error", None), str))
 
     def test_requests_multipart_formdata_post(self):
         """

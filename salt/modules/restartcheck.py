@@ -88,7 +88,10 @@ def __virtual__():
     """
     Only run this module if the psutil python module is installed (package python-psutil).
     """
-    return HAS_PSUTIL
+    if HAS_PSUTIL:
+        return HAS_PSUTIL
+    else:
+        return (False, "Missing dependency: psutil")
 
 
 def _valid_deleted_file(path):

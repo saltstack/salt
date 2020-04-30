@@ -431,6 +431,11 @@ def _connect(**kwargs):
         __context__["mysql.error"] = err
         log.error(err)
         return None
+    except MySQLdb.err.InternalError as exc:
+        err = "MySQL Error {0}: {1}".format(*exc.args)
+        __context__["mysql.error"] = err
+        log.error(err)
+        return None
 
     dbc.autocommit(True)
     return dbc
@@ -643,7 +648,7 @@ def _execute(cur, qry, args=None):
 
 def _sanitize_comments(content):
     # Remove comments which might affect line by line parsing
-    # Regex should remove any text begining with # (or --) not inside of ' or "
+    # Regex should remove any text beginning with # (or --) not inside of ' or "
     content = re.sub(
         r"""(['"](?:[^'"]+|(?<=\\)['"])*['"])|#[^\n]*""",
         lambda m: m.group(1) or "",
@@ -2243,7 +2248,7 @@ def __grant_generate(
     args = {}
     args["user"] = user
     args["host"] = host
-    if isinstance(ssl_option, list) and ssl_option:
+    if ssl_option and isinstance(ssl_option, list):
         qry += __ssl_option_sanitize(ssl_option)
     if salt.utils.data.is_true(grant_option):
         qry += " WITH GRANT OPTION"
@@ -2659,7 +2664,7 @@ def get_master_status(**connection_args):
     conn.close()
 
     # check for if this minion is not a master
-    if len(rtnv) == 0:
+    if not rtnv:
         rtnv.append([])
 
     log.debug("%s-->%s", mod, len(rtnv[0]))
@@ -2729,7 +2734,7 @@ def get_slave_status(**connection_args):
     conn.close()
 
     # check for if this minion is not a slave
-    if len(rtnv) == 0:
+    if not rtnv:
         rtnv.append([])
 
     log.debug("%s-->%s", mod, len(rtnv[0]))
@@ -2757,7 +2762,7 @@ def showvariables(**connection_args):
         return []
     rtnv = __do_query_into_hash(conn, "SHOW VARIABLES")
     conn.close()
-    if len(rtnv) == 0:
+    if not rtnv:
         rtnv.append([])
 
     log.debug("%s-->%s", mod, len(rtnv[0]))
@@ -2785,7 +2790,7 @@ def showglobal(**connection_args):
         return []
     rtnv = __do_query_into_hash(conn, "SHOW GLOBAL VARIABLES")
     conn.close()
-    if len(rtnv) == 0:
+    if not rtnv:
         rtnv.append([])
 
     log.debug("%s-->%s", mod, len(rtnv[0]))

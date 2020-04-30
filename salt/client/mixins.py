@@ -6,7 +6,6 @@ A collection of mixins useful for the various *Client interfaces
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals, with_statement
 
-import collections
 import copy as pycopy
 import fnmatch
 import logging
@@ -36,6 +35,13 @@ import salt.utils.user
 import salt.utils.versions
 from salt.ext import six
 
+try:
+    from collections.abc import Mapping, MutableMapping
+except ImportError:
+    # pylint: disable=no-name-in-module
+    from collections import Mapping, MutableMapping
+
+
 log = logging.getLogger(__name__)
 
 CLIENT_INTERNAL_KEYWORDS = frozenset(
@@ -58,7 +64,7 @@ CLIENT_INTERNAL_KEYWORDS = frozenset(
 )
 
 
-class ClientFuncsDict(collections.MutableMapping):
+class ClientFuncsDict(MutableMapping):
     """
     Class to make a read-only dict for accessing runner funcs "directly"
     """
@@ -148,7 +154,7 @@ class SyncClientMixin(object):
             self.opts, crypt="clear", usage="master_call"
         ) as channel:
             ret = channel.send(load)
-            if isinstance(ret, collections.Mapping):
+            if isinstance(ret, Mapping):
                 if "error" in ret:
                     salt.utils.error.raise_error(**ret["error"])
             return ret

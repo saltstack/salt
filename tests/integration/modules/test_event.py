@@ -7,25 +7,18 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import python libs
 from __future__ import absolute_import
 
 import threading
 import time
 
-# Import salt libs
+import pytest
 import salt.utils.event as event
-
-# Import 3rd-party libs
-from salt.ext.six.moves.queue import (  # pylint: disable=import-error,no-name-in-module
-    Empty,
-    Queue,
-)
-
-# Import Salt Testing libs
+from salt.ext.six.moves.queue import Empty, Queue
 from tests.support.case import ModuleCase
 
 
+@pytest.mark.windows_whitelisted
 class EventModuleTest(ModuleCase):
     def __test_event_fire_master(self):
         events = Queue()

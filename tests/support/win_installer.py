@@ -45,7 +45,7 @@ def iter_installers(content):
 
 def split_installer(name):
     """
-    Return a tuple of the salt version, python verison and architecture from an
+    Return a tuple of the salt version, python version and architecture from an
     installer name.
     """
     x = name[len(PREFIX) :]
@@ -78,7 +78,7 @@ def latest_installer_name(repo=REPO, **kwargs):
 
 def download_and_verify(fp, name, repo=REPO):
     """
-    Download an installer and verify it's contents.
+    Download an installer and verify its contents.
     """
     md5 = "{}.md5".format(name)
     url = lambda x: "{}/{}".format(repo, x)

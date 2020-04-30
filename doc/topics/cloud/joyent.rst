@@ -161,7 +161,7 @@ included:
 Miscellaneous Configuration
 ===========================
 The following configuration items can be set in either ``provider`` or
-``profile`` confuration files.
+``profile`` configuration files.
 
 use_ssl
 ~~~~~~~

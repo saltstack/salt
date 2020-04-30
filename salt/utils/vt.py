@@ -123,6 +123,8 @@ class Terminal(object):
         # sys.stdXYZ streaming options
         stream_stdout=None,
         stream_stderr=None,
+        # Used for tests
+        force_receive_encoding=__salt_system_encoding__,
     ):
 
         # Let's avoid Zombies!!!
@@ -139,6 +141,7 @@ class Terminal(object):
         self.cwd = cwd
         self.env = env
         self.preexec_fn = preexec_fn
+        self.receive_encoding = force_receive_encoding
 
         # ----- Set the desired terminal size ------------------------------->
         if rows is None and cols is None:
@@ -159,6 +162,9 @@ class Terminal(object):
 
         self.child_fd = None
         self.child_fde = None
+
+        self.partial_data_stdout = b""
+        self.partial_data_stderr = b""
 
         self.closed = True
         self.flag_eof_stdout = False
@@ -604,6 +610,14 @@ class Terminal(object):
                 if not rlist:
                     self.flag_eof_stdout = self.flag_eof_stderr = True
                     log.debug("End of file(EOL). Brain-dead platform.")
+                    if self.partial_data_stdout or self.partial_data_stderr:
+                        # There is data that was received but for which
+                        # decoding failed, attempt decoding again to generate
+                        # relevant exception
+                        return (
+                            salt.utils.stringutils.to_unicode(self.partial_data_stdout),
+                            salt.utils.stringutils.to_unicode(self.partial_data_stderr),
+                        )
                     return None, None
             elif self.__irix_hack:
                 # Irix takes a long time before it realizes a child was
@@ -615,6 +629,14 @@ class Terminal(object):
                 if not rlist:
                     self.flag_eof_stdout = self.flag_eof_stderr = True
                     log.debug("End of file(EOL). Slow platform.")
+                    if self.partial_data_stdout or self.partial_data_stderr:
+                        # There is data that was received but for which
+                        # decoding failed, attempt decoding again to generate
+                        # relevant exception
+                        return (
+                            salt.utils.stringutils.to_unicode(self.partial_data_stdout),
+                            salt.utils.stringutils.to_unicode(self.partial_data_stderr),
+                        )
                     return None, None
 
             stderr = ""
@@ -646,16 +668,56 @@ class Terminal(object):
                     return None, None
             # <---- Nothing to Process!? -------------------------------------
 
-            # ----- Process STDERR ------------------------------------------>
-            if self.child_fde in rlist:
+            # ----- Helper function for processing STDERR and STDOUT -------->
+            def read_and_decode_fd(fd, maxsize, partial_data_attr=None):
+                bytes_read = getattr(self, partial_data_attr, b"")
+                # Only read one byte if we already have some existing data
+                # to try and complete a split multibyte character
+                bytes_read += os.read(fd, maxsize if not bytes_read else 1)
                 try:
-                    stderr = self._translate_newlines(
+                    decoded_data = self._translate_newlines(
                         salt.utils.stringutils.to_unicode(
-                            os.read(self.child_fde, maxsize)
+                            bytes_read, self.receive_encoding
                         )
                     )
+                    if partial_data_attr is not None:
+                        setattr(self, partial_data_attr, b"")
+                    return decoded_data, False
+                except UnicodeDecodeError as ex:
+                    max_multibyte_character_length = 4
+                    if ex.start > (
+                        len(bytes_read) - max_multibyte_character_length
+                    ) and ex.end == len(bytes_read):
+                        # We weren't able to decode the received data possibly
+                        # because it is a multibyte character split across
+                        # blocks. Save what data we have to try and decode
+                        # later. If the error wasn't caused by a multibyte
+                        # character being split then the error start position
+                        # should remain the same each time we get here but the
+                        # length of the bytes_read will increase so we will
+                        # give up and raise an exception instead.
+                        if partial_data_attr is not None:
+                            setattr(self, partial_data_attr, bytes_read)
+                        else:
+                            # We haven't been given anywhere to store partial
+                            # data so raise the exception instead
+                            raise
+                        # No decoded data to return, but indicate that there
+                        # is buffered data
+                        return "", True
+                    else:
+                        raise
 
-                    if not stderr:
+            # <---- Helper function for processing STDERR and STDOUT ---------
+
+            # ----- Process STDERR ------------------------------------------>
+            if self.child_fde in rlist and not self.flag_eof_stderr:
+                try:
+                    stderr, partial_data = read_and_decode_fd(
+                        self.child_fde, maxsize, "partial_data_stderr"
+                    )
+
+                    if not stderr and not partial_data:
                         self.flag_eof_stderr = True
                         stderr = None
                     else:
@@ -682,15 +744,13 @@ class Terminal(object):
             # <---- Process STDERR -------------------------------------------
 
             # ----- Process STDOUT ------------------------------------------>
-            if self.child_fd in rlist:
+            if self.child_fd in rlist and not self.flag_eof_stdout:
                 try:
-                    stdout = self._translate_newlines(
-                        salt.utils.stringutils.to_unicode(
-                            os.read(self.child_fd, maxsize)
-                        )
+                    stdout, partial_data = read_and_decode_fd(
+                        self.child_fd, maxsize, "partial_data_stdout"
                     )
 
-                    if not stdout:
+                    if not stdout and not partial_data:
                         self.flag_eof_stdout = True
                         stdout = None
                     else:

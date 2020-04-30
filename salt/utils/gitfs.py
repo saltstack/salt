@@ -556,7 +556,7 @@ class GitProvider(object):
                 elif self.disable_saltenv_mapping:
                     if per_saltenv_ref is None:
                         log.debug(
-                            "saltenv mapping is diabled for %s remote '%s' "
+                            "saltenv mapping is disabled for %s remote '%s' "
                             "and saltenv '%s' is not explicitly mapped",
                             self.role,
                             self.id,
@@ -1073,6 +1073,22 @@ class GitProvider(object):
                 if candidate is not None:
                     return candidate
 
+        if self.fallback:
+            for ref_type in self.ref_types:
+                try:
+                    func_name = "get_tree_from_{0}".format(ref_type)
+                    func = getattr(self, func_name)
+                except AttributeError:
+                    log.error(
+                        "%s class is missing function '%s'",
+                        self.__class__.__name__,
+                        func_name,
+                    )
+                else:
+                    candidate = func(self.fallback)
+                    if candidate is not None:
+                        return candidate
+
         # No matches found
         return None
 
@@ -1192,12 +1208,18 @@ class GitPython(GitProvider):
 
         # 'origin/' + tgt_ref ==> matches a branch head
         # 'tags/' + tgt_ref + '@{commit}' ==> matches tag's commit
-        for rev_parse_target, checkout_ref in (
-            ("origin/" + tgt_ref, "origin/" + tgt_ref),
-            ("tags/" + tgt_ref, "tags/" + tgt_ref),
-        ):
+        checkout_refs = [
+            ("origin/" + tgt_ref, False),
+            ("tags/" + tgt_ref, False),
+        ]
+        if self.fallback:
+            checkout_refs += [
+                ("origin/" + self.fallback, True),
+                ("tags/" + self.fallback, True),
+            ]
+        for checkout_ref, fallback in checkout_refs:
             try:
-                target_sha = self.repo.rev_parse(rev_parse_target).hexsha
+                target_sha = self.repo.rev_parse(checkout_ref).hexsha
             except Exception:  # pylint: disable=broad-except
                 # ref does not exist
                 continue
@@ -1210,10 +1232,11 @@ class GitPython(GitProvider):
                 with self.gen_lock(lock_type="checkout"):
                     self.repo.git.checkout(checkout_ref)
                     log.debug(
-                        "%s remote '%s' has been checked out to %s",
+                        "%s remote '%s' has been checked out to %s%s",
                         self.role,
                         self.id,
                         checkout_ref,
+                        " as fallback" if fallback else "",
                     )
             except GitLockError as exc:
                 if exc.errno == errno.EEXIST:
@@ -1559,6 +1582,11 @@ class Pygit2(GitProvider):
             return False
 
         try:
+            if remote_ref not in refs and tag_ref not in refs and self.fallback:
+                tgt_ref = self.fallback
+                local_ref = "refs/heads/" + tgt_ref
+                remote_ref = "refs/remotes/origin/" + tgt_ref
+                tag_ref = "refs/tags/" + tgt_ref
             if remote_ref in refs:
                 # Get commit id for the remote ref
                 oid = self.peel(self.repo.lookup_reference(remote_ref)).id
@@ -2890,9 +2918,7 @@ class GitFS(GitBase):
         and send the path to the newly cached file
         """
         fnd = {"path": "", "rel": ""}
-        if os.path.isabs(path) or (
-            not salt.utils.stringutils.is_hex(tgt_env) and tgt_env not in self.envs()
-        ):
+        if os.path.isabs(path):
             return fnd
 
         dest = salt.utils.path.join(self.cache_root, "refs", tgt_env, path)
@@ -2923,6 +2949,12 @@ class GitFS(GitBase):
         for repo in self.remotes:
             if repo.mountpoint(tgt_env) and not path.startswith(
                 repo.mountpoint(tgt_env) + os.sep
+            ):
+                continue
+            if (
+                not salt.utils.stringutils.is_hex(tgt_env)
+                and tgt_env not in self.envs()
+                and not repo.fallback
             ):
                 continue
             repo_path = path[len(repo.mountpoint(tgt_env)) :].lstrip(os.sep)
@@ -3082,11 +3114,12 @@ class GitFS(GitBase):
         if refresh_cache:
             log.trace("Start rebuilding gitfs file_list cache")
             ret = {"files": set(), "symlinks": {}, "dirs": set()}
-            if (
-                salt.utils.stringutils.is_hex(load["saltenv"])
-                or load["saltenv"] in self.envs()
-            ):
-                for repo in self.remotes:
+            for repo in self.remotes:
+                if (
+                    salt.utils.stringutils.is_hex(load["saltenv"])
+                    or load["saltenv"] in self.envs()
+                    or repo.fallback
+                ):
                     start = time.time()
                     repo_files, repo_symlinks = repo.file_list(load["saltenv"])
                     ret["files"].update(repo_files)

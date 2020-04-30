@@ -1,19 +1,16 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
 
-# Import salt libs
+import pytest
 import salt.utils.files
 import salt.utils.user
 from tests.support.case import ModuleCase
 from tests.support.helpers import skip_if_binaries_missing
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 
 
@@ -22,6 +19,7 @@ from tests.support.runtests import RUNTIME_VARS
 # Doesn't work. Why?
 # @requires_salt_modules('acl')
 # @requires_salt_modules('linux_acl')
+@pytest.mark.windows_whitelisted
 class LinuxAclModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
     """
     Validate the linux_acl module
