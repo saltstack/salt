@@ -1,6 +1,6 @@
 '*':
   - unit.test_module_names
-  - unit.test_doc
+  - unit.utils.test_doc
   - unit.test_virtualname
   - integration.modules.test_sysmod
 
