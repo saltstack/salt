@@ -132,7 +132,7 @@ class RecursiveDictDiffer(DictDiffer):
     The class provides access to:
         (1) the added, removed, changes keys and subkeys (using the . notation)
                ``added``, ``removed``, ``changed`` methods
-        (2) the diffs in the format aboce (diff property)
+        (2) the diffs in the format above (diff property)
                 ``diffs`` property
         (3) a dict with the new changed values only (new_values property)
                 ``new_values`` property

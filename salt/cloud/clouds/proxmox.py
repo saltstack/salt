@@ -331,20 +331,39 @@ def get_resources_vms(call=None, resFilter=None, includeConfig=True):
 
         salt-cloud -f get_resources_vms my-proxmox-config
     """
-    log.debug("Getting resource: vms.. (filter: %s)", resFilter)
-    resources = query("get", "cluster/resources")
+    timeoutTime = time.time() + 60
+    while True:
+        log.debug("Getting resource: vms.. (filter: %s)", resFilter)
+        resources = query("get", "cluster/resources")
+        ret = {}
+        badResource = False
+        for resource in resources:
+            if "type" in resource and resource["type"] in ["openvz", "qemu", "lxc"]:
+                try:
+                    name = resource["name"]
+                except KeyError:
+                    badResource = True
+                    log.debug("No name in VM resource %s", repr(resource))
+                    break
 
-    ret = {}
-    for resource in resources:
-        if "type" in resource and resource["type"] in ["openvz", "qemu", "lxc"]:
-            name = resource["name"]
-            ret[name] = resource
+                ret[name] = resource
 
-            if includeConfig:
-                # Requested to include the detailed configuration of a VM
-                ret[name]["config"] = get_vmconfig(
-                    ret[name]["vmid"], ret[name]["node"], ret[name]["type"]
-                )
+                if includeConfig:
+                    # Requested to include the detailed configuration of a VM
+                    ret[name]["config"] = get_vmconfig(
+                        ret[name]["vmid"], ret[name]["node"], ret[name]["type"]
+                    )
+
+        if time.time() > timeoutTime:
+            raise SaltCloudExecutionTimeout(
+                "FAILED to get the proxmox " "resources vms"
+            )
+
+        # Carry on if there wasn't a bad resource return from Proxmox
+        if not badResource:
+            break
+
+        time.sleep(0.5)
 
     if resFilter is not None:
         log.debug("Filter given: %s, returning requested " "resource: nodes", resFilter)
@@ -714,7 +733,7 @@ def create(vm_):
 def _import_api():
     """
     Download https://<url>/pve-docs/api-viewer/apidoc.js
-    Extract content of pveapi var (json formated)
+    Extract content of pveapi var (json formatted)
     Load this json content into global variable "api"
     """
     global api
@@ -904,6 +923,13 @@ def create_node(vm_, newid):
                 "clone_" + prop in vm_
             ):  # if the property is set, use it for the VM request
                 postParams[prop] = vm_["clone_" + prop]
+
+        try:
+            int(vm_["clone_from"])
+        except ValueError:
+            if ":" in vm_["clone_from"]:
+                vmhost = vm_["clone_from"].split(":")[0]
+                vm_["clone_from"] = vm_["clone_from"].split(":")[1]
 
         node = query(
             "post",

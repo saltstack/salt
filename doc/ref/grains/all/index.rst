@@ -30,6 +30,7 @@ grains modules
     nxos
     opts
     panos
+    pending_reboot
     philips_hue
     rest_sample
     smartos

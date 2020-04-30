@@ -518,7 +518,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
         )
         expected = []
         for tablename, engine in sorted(six.iteritems(tablenames)):
-            if engine is "MEMORY":
+            if engine == "MEMORY":
                 expected.append(
                     [
                         {
@@ -553,7 +553,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
         )
         expected = []
         for tablename, engine in sorted(six.iteritems(tablenames)):
-            if engine is "MYISAM":
+            if engine == "MYISAM":
                 expected.append(
                     [
                         {
@@ -589,7 +589,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
 
         expected = []
         for tablename, engine in sorted(six.iteritems(tablenames)):
-            if engine is "MYISAM":
+            if engine == "MYISAM":
                 expected.append(
                     [
                         {
@@ -600,7 +600,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
                         }
                     ]
                 )
-            elif engine is "InnoDB":
+            elif engine == "InnoDB":
                 expected.append(
                     [
                         {
@@ -620,7 +620,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
                         },
                     ]
                 )
-            elif engine is "MEMORY":
+            elif engine == "MEMORY":
                 expected.append(
                     [
                         {

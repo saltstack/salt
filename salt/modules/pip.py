@@ -74,7 +74,7 @@ of the 2015.5 branch:
    back slash is an escape character.
 
    There is a known incompatibility between Python2 pip>=10.* and Salt <=2018.3.0.
-   The issue is decribed here: https://github.com/saltstack/salt/issues/46163
+   The issue is described here: https://github.com/saltstack/salt/issues/46163
 
 """
 from __future__ import absolute_import, print_function, unicode_literals
@@ -504,7 +504,7 @@ def install(
         ``user@proxy.server:port`` then you will be prompted for a password.
 
         .. note::
-            If the the Minion has a globaly configured proxy - it will be used
+            If the Minion has a globaly configured proxy - it will be used
             even if no proxy was set here. To explicitly disable proxy for pip
             you should pass ``False`` as a value.
 
@@ -1050,7 +1050,7 @@ def uninstall(
         ``user@proxy.server:port`` then you will be prompted for a password.
 
         .. note::
-            If the the Minion has a globaly configured proxy - it will be used
+            If the Minion has a globaly configured proxy - it will be used
             even if no proxy was set here. To explicitly disable proxy for pip
             you should pass ``False`` as a value.
 
