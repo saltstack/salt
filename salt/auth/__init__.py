@@ -310,7 +310,7 @@ class LoadAuth(object):
             return False
 
         if load["eauth"] not in self.opts["external_auth"]:
-            log.debug('The eauth system "%s" is not enabled', load["eauth"])
+            log.warning('The eauth system "%s" is not enabled', load["eauth"])
             log.warning('Authentication failure of type "eauth" occurred.')
             return False
 
