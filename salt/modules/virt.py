@@ -2193,7 +2193,7 @@ def update(
     """
     status = {
         "definition": False,
-        "disk": {"attached": [], "detached": []},
+        "disk": {"attached": [], "detached": [], "updated": []},
         "interface": {"attached": [], "detached": []},
     }
     conn = __get_conn(**kwargs)
@@ -2374,6 +2374,53 @@ def update(
                     }
                 )
 
+            # Look for removable device source changes
+            removable_changes = []
+            new_disks = []
+            for new_disk in changes["disk"].get("new", []):
+                device = new_disk.get("device", "disk")
+                if new_disk.get("type") != "file" and device not in ["cdrom", "floppy"]:
+                    new_disks.append(new_disk)
+                    continue
+
+                target_dev = new_disk.find("target").get("dev")
+                matching = [
+                    old_disk
+                    for old_disk in changes["disk"].get("deleted", [])
+                    if old_disk.get("type") == "file"
+                    and old_disk.get("device", "disk") == device
+                    and old_disk.find("target").get("dev") == target_dev
+                ]
+                if not matching:
+                    new_disks.append(new_disk)
+                else:
+                    # libvirt needs to keep the XML exactly as it was before
+                    updated_disk = matching[0]
+                    changes["disk"]["deleted"].remove(updated_disk)
+                    removable_changes.append(updated_disk)
+                    source_node = updated_disk.find("source")
+                    new_source_node = new_disk.find("source")
+                    source_file = (
+                        new_source_node.get("file")
+                        if new_source_node is not None
+                        else None
+                    )
+
+                    if source_node is not None:
+                        if not source_file:
+                            # Detaching device
+                            updated_disk.remove(source_node)
+                        else:
+                            # Changing device
+                            source_node.set("file", source_file)
+                    else:
+                        # Attaching device
+                        ElementTree.SubElement(
+                            updated_disk, "source", attrib={"file": source_file}
+                        )
+
+            changes["disk"]["new"] = new_disks
+
             for dev_type in ["disk", "interface"]:
                 for added in changes[dev_type].get("new", []):
                     commands.append(
@@ -2401,6 +2448,19 @@ def update(
                         }
                     )
 
+        for updated_disk in removable_changes:
+            commands.append(
+                {
+                    "device": "disk",
+                    "cmd": "updateDeviceFlags",
+                    "args": [
+                        salt.utils.stringutils.to_str(
+                            ElementTree.tostring(updated_disk)
+                        )
+                    ],
+                }
+            )
+
         for cmd in commands:
             try:
                 ret = getattr(domain, cmd["cmd"])(*cmd["args"]) if not test else 0
@@ -2408,7 +2468,11 @@ def update(
                 if device_type in ["cpu", "mem"]:
                     status[device_type] = not bool(ret)
                 else:
-                    actions = {"attachDevice": "attached", "detachDevice": "detached"}
+                    actions = {
+                        "attachDevice": "attached",
+                        "detachDevice": "detached",
+                        "updateDeviceFlags": "updated",
+                    }
                     status[device_type][actions[cmd["cmd"]]].append(cmd["args"][0])
 
             except libvirt.libvirtError as err:
