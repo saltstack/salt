@@ -106,21 +106,25 @@ def _get_restartcheck_result(errors):
     return rs_result
 
 
-def _process_restartcheck_result(rs_result):
+def _process_restartcheck_result(rs_result, **kwargs):
     """
     Check restartcheck output to see if system/service restarts were requested
     and take appropriate action.
     """
     if "No packages seem to need to be restarted" in rs_result:
         return
+    reboot_required = False
     for rstr in rs_result:
         if "System restart required" in rstr:
             _update_nilrt_restart_state()
             __salt__["system.set_reboot_required_witnessed"]()
-        else:
-            service = os.path.join("/etc/init.d", rstr)
-            if os.path.exists(service):
-                __salt__["cmd.run"]([service, "restart"])
+            reboot_required = True
+    if kwargs.get("always_restart_services", True) or not reboot_required:
+        for rstr in rs_result:
+            if "System restart required" not in rstr:
+                service = os.path.join("/etc/init.d", rstr)
+                if os.path.exists(service):
+                    __salt__["cmd.run"]([service, "restart"])
 
 
 def __virtual__():
@@ -448,6 +452,9 @@ def install(
 
         .. versionadded:: 2017.7.0
 
+    always_restart_services
+        Whether to restart services even if a reboot is required. Default is True.
+
     Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
@@ -571,7 +578,7 @@ def install(
             info={"errors": errors, "changes": ret},
         )
 
-    _process_restartcheck_result(rs_result)
+    _process_restartcheck_result(rs_result, **kwargs)
 
     return ret
 
@@ -672,7 +679,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
             info={"errors": errors, "changes": ret},
         )
 
-    _process_restartcheck_result(rs_result)
+    _process_restartcheck_result(rs_result, **kwargs)
 
     return ret
 
@@ -754,7 +761,7 @@ def upgrade(refresh=True, **kwargs):  # pylint: disable=unused-argument
             info={"errors": errors, "changes": ret},
         )
 
-    _process_restartcheck_result(rs_result)
+    _process_restartcheck_result(rs_result, **kwargs)
 
     return ret
 
