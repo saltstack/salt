@@ -869,6 +869,12 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             version = core._windows_os_release_grain(caption, 1)
             self.assertEqual(version, "7")
 
+        # Microsoft Hyper-V Server 2019
+        # Issue https://github.com/saltstack/salt/issue/55212
+        caption = "Microsoft Hyper-V Server"
+        version = core._windows_os_release_grain(caption, 1)
+        self.assertEqual(version, "2019Server")
+
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     def test_linux_memdata(self):
         """
