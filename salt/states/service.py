@@ -65,16 +65,15 @@ import time
 # Import Salt libs
 import salt.utils.data
 import salt.utils.platform
+from salt.utils.systemd import HAS_SYSTEMD
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
 from salt.ext import six
-from salt.utils.args import get_function_argspec as _argspec
 
 SYSTEMD_ONLY = ("no_block", "unmask", "unmask_runtime")
 
 __virtualname__ = "service"
-
 
 def __virtual__():
     """
@@ -92,20 +91,15 @@ def __virtual__():
         )
 
 
-# Double-asterisk deliberately not used here
-def _get_systemd_only(func, kwargs):
-    ret = {}
-    warnings = []
-    valid_args = _argspec(func).args
+def _get_systemd_only(kwargs):
+    ret, warnings = {}, []
     for systemd_arg in SYSTEMD_ONLY:
         if systemd_arg in kwargs:
-            if systemd_arg in valid_args:
+            if HAS_SYSTEMD:
                 ret[systemd_arg] = kwargs[systemd_arg]
             else:
-                warnings.append(
-                    "The '{0}' argument is not supported by this "
-                    "platform/action".format(systemd_arg)
-                )
+                warnings.append("The '{0}' argument is not supported by this platform".format(systemd_arg))
+
     return ret, warnings
 
 
@@ -450,13 +444,13 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         ret["comment"] = exc.strerror
         return ret
 
-    status_kwargs, warnings = _get_systemd_only(__salt__["service.status"], kwargs)
+    systemd_kwargs, warnings = _get_systemd_only(kwargs)
     if warnings:
         _add_warnings(ret, warnings)
 
     # lot of custom init script won't or mis implement the status
     # command, so it is just an indicator but can not be fully trusted
-    before_toggle_status = __salt__["service.status"](name, sig, **status_kwargs)
+    before_toggle_status = __salt__["service.status"](name, sig, **systemd_kwargs)
     if "service.enabled" in __salt__:
         before_toggle_enable_status = __salt__["service.enabled"](name)
     else:
@@ -500,10 +494,7 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         return ret
 
     # Conditionally add systemd-specific args to call to service.start
-    start_kwargs, warnings = _get_systemd_only(__salt__["service.start"], kwargs)
-    if warnings:
-        _add_warnings(ret, warnings)
-
+    start_kwargs = systemd_kwargs.copy()
     if salt.utils.platform.is_windows() and kwargs.get("timeout", False):
         start_kwargs.update({"timeout": kwargs.get("timeout")})
 
@@ -527,7 +518,7 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         time.sleep(init_delay)
 
     # only force a change state if we have explicitly detected them
-    after_toggle_status = __salt__["service.status"](name, sig, **status_kwargs)
+    after_toggle_status = __salt__["service.status"](name, sig, **systemd_kwargs)
     if "service.enabled" in __salt__:
         after_toggle_enable_status = __salt__["service.enabled"](name)
     else:
@@ -620,13 +611,13 @@ def dead(name, enable=None, sig=None, init_delay=None, **kwargs):
         ret["comment"] = exc.strerror
         return ret
 
-    status_kwargs, warnings = _get_systemd_only(__salt__["service.status"], kwargs)
+    systemd_kwargs, warnings = _get_systemd_only(kwargs)
     if warnings:
         _add_warnings(ret, warnings)
 
     # lot of custom init script won't or mis implement the status
     # command, so it is just an indicator but can not be fully trusted
-    before_toggle_status = __salt__["service.status"](name, sig, **status_kwargs)
+    before_toggle_status = __salt__["service.status"](name, sig, **systemd_kwargs)
     if "service.enabled" in __salt__:
         if salt.utils.platform.is_windows():
             # service.enabled in Windows returns True for services that are set
@@ -655,9 +646,7 @@ def dead(name, enable=None, sig=None, init_delay=None, **kwargs):
         return ret
 
     # Conditionally add systemd-specific args to call to service.start
-    stop_kwargs, warnings = _get_systemd_only(__salt__["service.stop"], kwargs)
-    if warnings:
-        _add_warnings(ret, warnings)
+    stop_kwargs = systemd_kwargs.copy()
 
     if salt.utils.platform.is_windows() and kwargs.get("timeout", False):
         stop_kwargs.update({"timeout": kwargs.get("timeout")})
@@ -676,7 +665,7 @@ def dead(name, enable=None, sig=None, init_delay=None, **kwargs):
         time.sleep(init_delay)
 
     # only force a change state if we have explicitly detected them
-    after_toggle_status = __salt__["service.status"](name, **status_kwargs)
+    after_toggle_status = __salt__["service.status"](name, **systemd_kwargs)
     if "service.enabled" in __salt__:
         after_toggle_enable_status = __salt__["service.enabled"](name)
     else:
@@ -932,21 +921,21 @@ def mod_watch(
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
     past_participle = None
 
-    status_kwargs, warnings = _get_systemd_only(__salt__["service.status"], kwargs)
+    systemd_kwargs, warnings = _get_systemd_only(kwargs)
     if warnings:
         _add_warnings(ret, warnings)
 
     if sfun == "dead":
         verb = "stop"
         past_participle = verb + "ped"
-        if __salt__["service.status"](name, sig, **status_kwargs):
+        if __salt__["service.status"](name, sig, **systemd_kwargs):
             func = __salt__["service.stop"]
         else:
             ret["result"] = True
             ret["comment"] = "Service is already {0}".format(past_participle)
             return ret
     elif sfun == "running":
-        if __salt__["service.status"](name, sig, **status_kwargs):
+        if __salt__["service.status"](name, sig, **systemd_kwargs):
             if "service.reload" in __salt__ and reload:
                 if "service.force_reload" in __salt__ and force:
                     func = __salt__["service.force_reload"]
@@ -979,10 +968,7 @@ def mod_watch(
         # stop service before start
         __salt__["service.stop"](name)
 
-    func_kwargs, warnings = _get_systemd_only(func, kwargs)
-    if warnings:
-        _add_warnings(ret, warnings)
-
+    func_kwargs = systemd_kwargs.copy()
     try:
         result = func(name, **func_kwargs)
     except CommandExecutionError as exc:
