@@ -1758,7 +1758,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": False,
-                "disk": {"attached": [], "detached": []},
+                "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
             virt.update("my_vm"),
@@ -1768,7 +1768,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": False,
-                "disk": {"attached": [], "detached": []},
+                "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
             virt.update(
@@ -1795,7 +1795,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             {
                 "definition": True,
                 "cpu": True,
-                "disk": {"attached": [], "detached": []},
+                "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
             virt.update("my_vm", cpu=2),
@@ -1824,7 +1824,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "disk": {"attached": [], "detached": []},
+                "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
             virt.update("my_vm", boot=boot),
@@ -1847,7 +1847,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "disk": {"attached": [], "detached": []},
+                "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
             virt.update("my_vm", boot=boot_uefi),
@@ -1874,7 +1874,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             {
                 "definition": True,
                 "mem": True,
-                "disk": {"attached": [], "detached": []},
+                "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
             virt.update("my_vm", mem=2048),
@@ -2005,7 +2005,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "disk": {"attached": [], "detached": []},
+                "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
             virt.update("my_vm", graphics={"type": "vnc"}),
@@ -2040,7 +2040,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": False,
-                "disk": {"attached": [], "detached": []},
+                "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
             virt.update(
@@ -2091,7 +2091,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             {
                 "definition": True,
                 "errors": ["Failed to live change memory"],
-                "disk": {"attached": [], "detached": []},
+                "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
             virt.update("my_vm", mem=2048),
@@ -2103,10 +2103,173 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 "definition": True,
                 "errors": ["Failed to live change memory"],
                 "cpu": True,
-                "disk": {"attached": [], "detached": []},
+                "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
             virt.update("my_vm", cpu=4, mem=2048),
+        )
+
+    def test_update_removables(self):
+        """
+        Test attaching, detaching, changing removable devices
+        """
+        xml = """
+            <domain type='kvm' id='7'>
+              <name>my_vm</name>
+              <memory unit='KiB'>1048576</memory>
+              <currentMemory unit='KiB'>1048576</currentMemory>
+              <vcpu placement='auto'>1</vcpu>
+              <os>
+                <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
+              </os>
+              <devices>
+                <disk type='file' device='cdrom'>
+                  <driver name='qemu' type='raw' cache='none' io='native'/>
+                  <source file='/srv/dvd-image-1.iso'/>
+                  <backingStore/>
+                  <target dev='hda' bus='ide'/>
+                  <readonly/>
+                  <alias name='ide0-0-0'/>
+                  <address type='drive' controller='0' bus='0' target='0' unit='0'/>
+                </disk>
+                <disk type='file' device='cdrom'>
+                  <driver name='qemu' type='raw' cache='none' io='native'/>
+                  <target dev='hdb' bus='ide'/>
+                  <readonly/>
+                  <alias name='ide0-0-1'/>
+                  <address type='drive' controller='0' bus='0' target='0' unit='1'/>
+                </disk>
+                <disk type='file' device='cdrom'>
+                  <driver name='qemu' type='raw' cache='none' io='native'/>
+                  <source file='/srv/dvd-image-2.iso'/>
+                  <backingStore/>
+                  <target dev='hdc' bus='ide'/>
+                  <readonly/>
+                  <alias name='ide0-0-2'/>
+                  <address type='drive' controller='0' bus='0' target='0' unit='2'/>
+                </disk>
+                <disk type='file' device='cdrom'>
+                  <driver name='qemu' type='raw' cache='none' io='native'/>
+                  <source file='/srv/dvd-image-3.iso'/>
+                  <backingStore/>
+                  <target dev='hdd' bus='ide'/>
+                  <readonly/>
+                  <alias name='ide0-0-3'/>
+                  <address type='drive' controller='0' bus='0' target='0' unit='3'/>
+                </disk>
+              </devices>
+            </domain>
+        """
+        domain_mock = self.set_mock_vm("my_vm", xml)
+        domain_mock.OSType.return_value = "hvm"
+        self.mock_conn.defineXML.return_value = True
+        updatedev_mock = MagicMock(return_value=0)
+        domain_mock.updateDeviceFlags = updatedev_mock
+
+        ret = virt.update(
+            "my_vm",
+            disks=[
+                {
+                    "name": "dvd1",
+                    "device": "cdrom",
+                    "source_file": None,
+                    "model": "ide",
+                },
+                {
+                    "name": "dvd2",
+                    "device": "cdrom",
+                    "source_file": "/srv/dvd-image-4.iso",
+                    "model": "ide",
+                },
+                {
+                    "name": "dvd3",
+                    "device": "cdrom",
+                    "source_file": "/srv/dvd-image-2.iso",
+                    "model": "ide",
+                },
+                {
+                    "name": "dvd4",
+                    "device": "cdrom",
+                    "source_file": "/srv/dvd-image-5.iso",
+                    "model": "ide",
+                },
+            ],
+        )
+
+        self.assertTrue(ret["definition"])
+        self.assertFalse(ret["disk"]["attached"])
+        self.assertFalse(ret["disk"]["detached"])
+        self.assertEqual(
+            [
+                {
+                    "type": "file",
+                    "device": "cdrom",
+                    "driver": {
+                        "name": "qemu",
+                        "type": "raw",
+                        "cache": "none",
+                        "io": "native",
+                    },
+                    "backingStore": None,
+                    "target": {"dev": "hda", "bus": "ide"},
+                    "readonly": None,
+                    "alias": {"name": "ide0-0-0"},
+                    "address": {
+                        "type": "drive",
+                        "controller": "0",
+                        "bus": "0",
+                        "target": "0",
+                        "unit": "0",
+                    },
+                },
+                {
+                    "type": "file",
+                    "device": "cdrom",
+                    "driver": {
+                        "name": "qemu",
+                        "type": "raw",
+                        "cache": "none",
+                        "io": "native",
+                    },
+                    "target": {"dev": "hdb", "bus": "ide"},
+                    "readonly": None,
+                    "alias": {"name": "ide0-0-1"},
+                    "address": {
+                        "type": "drive",
+                        "controller": "0",
+                        "bus": "0",
+                        "target": "0",
+                        "unit": "1",
+                    },
+                    "source": {"file": "/srv/dvd-image-4.iso"},
+                },
+                {
+                    "type": "file",
+                    "device": "cdrom",
+                    "driver": {
+                        "name": "qemu",
+                        "type": "raw",
+                        "cache": "none",
+                        "io": "native",
+                    },
+                    "backingStore": None,
+                    "target": {"dev": "hdd", "bus": "ide"},
+                    "readonly": None,
+                    "alias": {"name": "ide0-0-3"},
+                    "address": {
+                        "type": "drive",
+                        "controller": "0",
+                        "bus": "0",
+                        "target": "0",
+                        "unit": "3",
+                    },
+                    "source": {"file": "/srv/dvd-image-5.iso"},
+                },
+            ],
+            [
+                salt.utils.xmlutil.to_dict(ET.fromstring(disk), True)
+                for disk in ret["disk"]["updated"]
+            ],
         )
 
     def test_update_existing_boot_params(self):
@@ -2192,7 +2355,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "disk": {"attached": [], "detached": []},
+                "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
             virt.update("vm_with_boot_param", boot=boot_new),
@@ -2210,7 +2373,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "disk": {"attached": [], "detached": []},
+                "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
             virt.update("vm_with_boot_param", boot=uefi_boot_new),
@@ -2238,7 +2401,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "disk": {"attached": [], "detached": []},
+                "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
             virt.update("vm_with_boot_param", boot=kernel_none),
@@ -2252,7 +2415,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "disk": {"attached": [], "detached": []},
+                "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
             virt.update("vm_with_boot_param", boot=uefi_none),
