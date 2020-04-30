@@ -3,7 +3,7 @@ Function Start_Process_and_test_exitcode {
     # This function is a wrapper for Start-Process that checks the exitcode
     # It receives 3 parameters:
     #    $fun   - the process that shall be started
-    #    $args  - the the arguments of $fun
+    #    $args  - the arguments of $fun
     #    $descr - the short description shown in the case of an error
 
     Param(

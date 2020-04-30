@@ -31,6 +31,7 @@ from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
 # Import Salt Testing libs
+from tests.support.helpers import dedent
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -1911,6 +1912,30 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         loader = virt.get_loader("test-vm")
         self.assertEqual("/foo/bar", loader["path"])
         self.assertEqual("yes", loader["readonly"])
+
+    def test_cpu_baseline(self):
+        """
+        Test virt.cpu_baseline()
+        """
+        capabilities_xml = dedent(
+            """<capabilities>
+                  <host>
+                    <uuid>44454c4c-3400-105a-8033-b3c04f4b344a</uuid>
+                    <cpu>
+                      <arch>x86_64</arch>
+                      <vendor>Intel</vendor>
+                    </cpu>
+                  </host>
+                </capabilities>"""
+        )
+
+        baseline_cpu_xml = b"""<cpu match="exact" mode="custom">
+                                  <vendor>Intel</vendor>
+                                </cpu>"""
+
+        self.mock_conn.getCapabilities.return_value = capabilities_xml
+        self.mock_conn.baselineCPU.return_value = baseline_cpu_xml
+        self.assertMultiLineEqual(str(baseline_cpu_xml), str(virt.cpu_baseline()))
 
     def test_parse_qemu_img_info(self):
         """

@@ -150,6 +150,25 @@ This state creates a private key then requests a certificate signed by ca accord
         - CN: www.example.com
         - days_remaining: 30
         - backup: True
+
+This other state creates a private key then requests a certificate signed by ca
+according to the www policy but adds a strict date range for the certificate to
+be considered valid.
+
+/srv/salt/www-time-limited.sls
+
+.. code-block:: yaml
+
+    /etc/pki/www-time-limited.crt:
+      x509.certificate_managed:
+        - ca_server: ca
+        - signing_policy: www
+        - public_key: /etc/pki/www-time-limited.key
+        - CN: www.example.com
+        - not_before: 2019-05-05 00:00:00
+        - not_after: 2020-05-05 14:30:00
+        - backup: True
+
 """
 
 # Import Python Libs
@@ -530,6 +549,17 @@ def certificate_managed(
         Any arguments supported by :py:func:`x509.create_certificate
         <salt.modules.x509.create_certificate>` or :py:func:`file.managed
         <salt.states.file.managed>` are supported.
+
+    not_before:
+        Initial validity date for the certificate. This date must be specified
+        in the format '%Y-%m-%d %H:%M:%S'.
+
+        .. versionadded:: Sodium
+    not_after:
+        Final validity date for the certificate. This date must be specified in
+        the format '%Y-%m-%d %H:%M:%S'.
+
+        .. versionadded:: Sodium
 
     Examples:
 

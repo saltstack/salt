@@ -59,9 +59,9 @@ from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 from salt.utils.files import HASHES, HASHES_REVMAP
 
 try:
-    from collections import Iterable, Mapping
-except ImportError:
     from collections.abc import Iterable, Mapping
+except ImportError:
+    from collections import Iterable, Mapping
 
 
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
@@ -2044,7 +2044,7 @@ def line(
 
             The differences are that multiple (and non-matching) lines are
             alloweed between ``before`` and ``after``, if they are
-            sepcified. The line will always be inserted right before
+            specified. The line will always be inserted right before
             ``before``. ``insert`` also allows the use of ``location`` to
             specify that the line should be added at the beginning or end of
             the file.
@@ -2984,7 +2984,7 @@ def blockreplace(
 
     if block_found:
         diff = __utils__["stringutils.get_diff"](orig_file, new_file)
-        has_changes = diff is not ""
+        has_changes = diff != ""
         if has_changes and not dry_run:
             # changes detected
             # backup file attrs
@@ -4166,7 +4166,7 @@ def set_selinux_context(
         fcontext_result = __salt__["selinux.fcontext_add_policy"](
             path, sel_type=type, sel_user=user, sel_level=range
         )
-        if fcontext_result.get("retcode", None) is not 0:
+        if fcontext_result.get("retcode", None) != 0:
             # Problem setting fcontext policy
             raise CommandExecutionError(
                 "Problem setting fcontext: {0}".format(fcontext_result)

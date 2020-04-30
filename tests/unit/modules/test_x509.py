@@ -18,6 +18,7 @@
 # Import Salt Testing Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import datetime
 import os
 import tempfile
 
@@ -40,6 +41,62 @@ try:
     HAS_M2CRYPTO = True
 except ImportError:
     HAS_M2CRYPTO = False
+
+
+default_values = {
+    "ca_key": b"""-----BEGIN RSA PRIVATE KEY-----
+MIICWwIBAAKBgQCjdjbgL4kQ8Lu73xeRRM1q3C3K3ptfCLpyfw38LRnymxaoJ6ls
+pNSx2dU1uJ89YKFlYLo1QcEk4rJ2fdIjarV0kuNCY3rC8jYUp9BpAU5Z6p9HKeT1
+2rTPH81JyjbQDR5PyfCyzYOQtpwpB4zIUUK/Go7tTm409xGKbbUFugJNgQIDAQAB
+AoGAF24we34U1ZrMLifSRv5nu3OIFNZHyx2DLDpOFOGaII5edwgIXwxZeIzS5Ppr
+yO568/8jcdLVDqZ4EkgCwRTgoXRq3a1GLHGFmBdDNvWjSTTMLoozuM0t2zjRmIsH
+hUd7tnai9Lf1Bp5HlBEhBU2gZWk+SXqLvxXe74/+BDAj7gECQQDRw1OPsrgTvs3R
+3MNwX6W8+iBYMTGjn6f/6rvEzUs/k6rwJluV7n8ISNUIAxoPy5g5vEYK6Ln/Ttc7
+u0K1KNlRAkEAx34qcxjuswavL3biNGE+8LpDJnJx1jaNWoH+ObuzYCCVMusdT2gy
+kKuq9ytTDgXd2qwZpIDNmscvReFy10glMQJAXebMz3U4Bk7SIHJtYy7OKQzn0dMj
+35WnRV81c2Jbnzhhu2PQeAvt/i1sgEuzLQL9QEtSJ6wLJ4mJvImV0TdaIQJAAYyk
+TcKK0A8kOy0kMp3yvDHmJZ1L7wr7bBGIZPBlQ0Ddh8i1sJExm1gJ+uN2QKyg/XrK
+tDFf52zWnCdVGgDwcQJALW/WcbSEK+JVV6KDJYpwCzWpKIKpBI0F6fdCr1G7Xcwj
+c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
+-----END RSA PRIVATE KEY-----
+""",
+    "x509_args_ca": {
+        "text": True,
+        "CN": "Redacted Root CA",
+        "O": "Redacted",
+        "C": "BE",
+        "ST": "Antwerp",
+        "L": "Local Town",
+        "Email": "certadm@example.org",
+        "basicConstraints": "critical CA:true",
+        "keyUsage": "critical cRLSign, keyCertSign",
+        "subjectKeyIdentifier": "hash",
+        "authorityKeyIdentifier": "keyid,issuer:always",
+        "days_valid": 3650,
+        "days_remaining": 0,
+    },
+    "x509_args_cert": {
+        "text": True,
+        "CN": "Redacted Normal Certificate",
+        "O": "Redacted",
+        "C": "BE",
+        "ST": "Antwerp",
+        "L": "Local Town",
+        "Email": "certadm@example.org",
+        "basicConstraints": "critical CA:false",
+        "keyUsage": "critical keyEncipherment",
+        "subjectKeyIdentifier": "hash",
+        "authorityKeyIdentifier": "keyid,issuer:always",
+    },
+    "crl_args": {
+        "text": False,
+        "signing_private_key_passphrase": None,
+        "revoked": None,
+        "include_expired": False,
+        "days_valid": 100,
+        "digest": "sha512",
+    },
+}
 
 
 @skipIf(not bool(pytest), False)
@@ -74,60 +131,27 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         assert x509.log.debug.call_args[0][1] == list(subj.nid.keys())[0]
         assert isinstance(x509.log.debug.call_args[0][2], TypeError)
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailble")
+    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
     def test_get_pem_entry(self):
         """
         Test private function _parse_subject(subject) it handles a missing fields
         :return:
         """
-        ca_key = b"""-----BEGIN RSA PRIVATE KEY-----
-MIICWwIBAAKBgQCjdjbgL4kQ8Lu73xeRRM1q3C3K3ptfCLpyfw38LRnymxaoJ6ls
-pNSx2dU1uJ89YKFlYLo1QcEk4rJ2fdIjarV0kuNCY3rC8jYUp9BpAU5Z6p9HKeT1
-2rTPH81JyjbQDR5PyfCyzYOQtpwpB4zIUUK/Go7tTm409xGKbbUFugJNgQIDAQAB
-AoGAF24we34U1ZrMLifSRv5nu3OIFNZHyx2DLDpOFOGaII5edwgIXwxZeIzS5Ppr
-yO568/8jcdLVDqZ4EkgCwRTgoXRq3a1GLHGFmBdDNvWjSTTMLoozuM0t2zjRmIsH
-hUd7tnai9Lf1Bp5HlBEhBU2gZWk+SXqLvxXe74/+BDAj7gECQQDRw1OPsrgTvs3R
-3MNwX6W8+iBYMTGjn6f/6rvEzUs/k6rwJluV7n8ISNUIAxoPy5g5vEYK6Ln/Ttc7
-u0K1KNlRAkEAx34qcxjuswavL3biNGE+8LpDJnJx1jaNWoH+ObuzYCCVMusdT2gy
-kKuq9ytTDgXd2qwZpIDNmscvReFy10glMQJAXebMz3U4Bk7SIHJtYy7OKQzn0dMj
-35WnRV81c2Jbnzhhu2PQeAvt/i1sgEuzLQL9QEtSJ6wLJ4mJvImV0TdaIQJAAYyk
-TcKK0A8kOy0kMp3yvDHmJZ1L7wr7bBGIZPBlQ0Ddh8i1sJExm1gJ+uN2QKyg/XrK
-tDFf52zWnCdVGgDwcQJALW/WcbSEK+JVV6KDJYpwCzWpKIKpBI0F6fdCr1G7Xcwj
-c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
------END RSA PRIVATE KEY-----
-"""
-
+        ca_key = default_values["ca_key"]
         ret = x509.get_pem_entry(ca_key)
         self.assertEqual(ret, ca_key)
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailble")
+    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
     def test_get_private_key_size(self):
         """
         Test private function _parse_subject(subject) it handles a missing fields
         :return:
         """
-        ca_key = """
------BEGIN RSA PRIVATE KEY-----
-MIICWwIBAAKBgQCjdjbgL4kQ8Lu73xeRRM1q3C3K3ptfCLpyfw38LRnymxaoJ6ls
-pNSx2dU1uJ89YKFlYLo1QcEk4rJ2fdIjarV0kuNCY3rC8jYUp9BpAU5Z6p9HKeT1
-2rTPH81JyjbQDR5PyfCyzYOQtpwpB4zIUUK/Go7tTm409xGKbbUFugJNgQIDAQAB
-AoGAF24we34U1ZrMLifSRv5nu3OIFNZHyx2DLDpOFOGaII5edwgIXwxZeIzS5Ppr
-yO568/8jcdLVDqZ4EkgCwRTgoXRq3a1GLHGFmBdDNvWjSTTMLoozuM0t2zjRmIsH
-hUd7tnai9Lf1Bp5HlBEhBU2gZWk+SXqLvxXe74/+BDAj7gECQQDRw1OPsrgTvs3R
-3MNwX6W8+iBYMTGjn6f/6rvEzUs/k6rwJluV7n8ISNUIAxoPy5g5vEYK6Ln/Ttc7
-u0K1KNlRAkEAx34qcxjuswavL3biNGE+8LpDJnJx1jaNWoH+ObuzYCCVMusdT2gy
-kKuq9ytTDgXd2qwZpIDNmscvReFy10glMQJAXebMz3U4Bk7SIHJtYy7OKQzn0dMj
-35WnRV81c2Jbnzhhu2PQeAvt/i1sgEuzLQL9QEtSJ6wLJ4mJvImV0TdaIQJAAYyk
-TcKK0A8kOy0kMp3yvDHmJZ1L7wr7bBGIZPBlQ0Ddh8i1sJExm1gJ+uN2QKyg/XrK
-tDFf52zWnCdVGgDwcQJALW/WcbSEK+JVV6KDJYpwCzWpKIKpBI0F6fdCr1G7Xcwj
-c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
------END RSA PRIVATE KEY-----
-"""
-
+        ca_key = default_values["ca_key"]
         ret = x509.get_private_key_size(ca_key)
         self.assertEqual(ret, 1024)
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailble")
+    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
     def test_create_key(self):
         """
         Test that x509.create_key returns a private key
@@ -136,87 +160,197 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
         ret = x509.create_private_key(text=True, passphrase="super_secret_passphrase")
         self.assertIn("BEGIN RSA PRIVATE KEY", ret)
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailble")
+    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
     def test_create_certificate(self):
         """
         Test private function _parse_subject(subject) it handles a missing fields
         :return:
         """
-        ca_key = """
------BEGIN RSA PRIVATE KEY-----
-MIICWwIBAAKBgQCjdjbgL4kQ8Lu73xeRRM1q3C3K3ptfCLpyfw38LRnymxaoJ6ls
-pNSx2dU1uJ89YKFlYLo1QcEk4rJ2fdIjarV0kuNCY3rC8jYUp9BpAU5Z6p9HKeT1
-2rTPH81JyjbQDR5PyfCyzYOQtpwpB4zIUUK/Go7tTm409xGKbbUFugJNgQIDAQAB
-AoGAF24we34U1ZrMLifSRv5nu3OIFNZHyx2DLDpOFOGaII5edwgIXwxZeIzS5Ppr
-yO568/8jcdLVDqZ4EkgCwRTgoXRq3a1GLHGFmBdDNvWjSTTMLoozuM0t2zjRmIsH
-hUd7tnai9Lf1Bp5HlBEhBU2gZWk+SXqLvxXe74/+BDAj7gECQQDRw1OPsrgTvs3R
-3MNwX6W8+iBYMTGjn6f/6rvEzUs/k6rwJluV7n8ISNUIAxoPy5g5vEYK6Ln/Ttc7
-u0K1KNlRAkEAx34qcxjuswavL3biNGE+8LpDJnJx1jaNWoH+ObuzYCCVMusdT2gy
-kKuq9ytTDgXd2qwZpIDNmscvReFy10glMQJAXebMz3U4Bk7SIHJtYy7OKQzn0dMj
-35WnRV81c2Jbnzhhu2PQeAvt/i1sgEuzLQL9QEtSJ6wLJ4mJvImV0TdaIQJAAYyk
-TcKK0A8kOy0kMp3yvDHmJZ1L7wr7bBGIZPBlQ0Ddh8i1sJExm1gJ+uN2QKyg/XrK
-tDFf52zWnCdVGgDwcQJALW/WcbSEK+JVV6KDJYpwCzWpKIKpBI0F6fdCr1G7Xcwj
-c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
------END RSA PRIVATE KEY-----
-"""
-
-        ret = x509.create_certificate(
-            text=True,
-            signing_private_key=ca_key,
-            CN="Redacted Root CA",
-            O="Redacted",
-            C="BE",
-            ST="Antwerp",
-            L="Local Town",
-            Email="certadm@example.org",
-            basicConstraints="critical CA:true",
-            keyUsage="critical cRLSign, keyCertSign",
-            subjectKeyIdentifier="hash",
-            authorityKeyIdentifier="keyid,issuer:always",
-            days_valid=3650,
-            days_remaining=0,
-        )
+        ca_key = default_values["ca_key"]
+        ca_kwargs = default_values["x509_args_ca"].copy()
+        ca_kwargs["signing_private_key"] = ca_key
+        ret = x509.create_certificate(**ca_kwargs)
         self.assertIn("BEGIN CERTIFICATE", ret)
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailble")
-    def test_create_crl(self):
-        ca_key = """
------BEGIN RSA PRIVATE KEY-----
-MIICWwIBAAKBgQCjdjbgL4kQ8Lu73xeRRM1q3C3K3ptfCLpyfw38LRnymxaoJ6ls
-pNSx2dU1uJ89YKFlYLo1QcEk4rJ2fdIjarV0kuNCY3rC8jYUp9BpAU5Z6p9HKeT1
-2rTPH81JyjbQDR5PyfCyzYOQtpwpB4zIUUK/Go7tTm409xGKbbUFugJNgQIDAQAB
-AoGAF24we34U1ZrMLifSRv5nu3OIFNZHyx2DLDpOFOGaII5edwgIXwxZeIzS5Ppr
-yO568/8jcdLVDqZ4EkgCwRTgoXRq3a1GLHGFmBdDNvWjSTTMLoozuM0t2zjRmIsH
-hUd7tnai9Lf1Bp5HlBEhBU2gZWk+SXqLvxXe74/+BDAj7gECQQDRw1OPsrgTvs3R
-3MNwX6W8+iBYMTGjn6f/6rvEzUs/k6rwJluV7n8ISNUIAxoPy5g5vEYK6Ln/Ttc7
-u0K1KNlRAkEAx34qcxjuswavL3biNGE+8LpDJnJx1jaNWoH+ObuzYCCVMusdT2gy
-kKuq9ytTDgXd2qwZpIDNmscvReFy10glMQJAXebMz3U4Bk7SIHJtYy7OKQzn0dMj
-35WnRV81c2Jbnzhhu2PQeAvt/i1sgEuzLQL9QEtSJ6wLJ4mJvImV0TdaIQJAAYyk
-TcKK0A8kOy0kMp3yvDHmJZ1L7wr7bBGIZPBlQ0Ddh8i1sJExm1gJ+uN2QKyg/XrK
-tDFf52zWnCdVGgDwcQJALW/WcbSEK+JVV6KDJYpwCzWpKIKpBI0F6fdCr1G7Xcwj
-c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
------END RSA PRIVATE KEY-----
-"""
+    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    def test_create_certificate_with_not_after(self):
+        ca_key = default_values["ca_key"]
+        ca_kwargs = default_values["x509_args_ca"].copy()
+        ca_kwargs["signing_private_key"] = ca_key
 
-        ca_cert = x509.create_certificate(
-            text=True,
-            signing_private_key=ca_key,
-            CN="Redacted Root CA",
-            O="Redacted",
-            C="BE",
-            ST="Antwerp",
-            L="Local Town",
-            Email="certadm@example.org",
-            basicConstraints="critical CA:true",
-            keyUsage="critical cRLSign, keyCertSign",
-            subjectKeyIdentifier="hash",
-            authorityKeyIdentifier="keyid,issuer:always",
-            days_valid=3650,
-            days_remaining=0,
-        )
+        # Issue the CA certificate (self-signed)
+        ca_cert = x509.create_certificate(**ca_kwargs)
+
+        fmt = "%Y-%m-%d %H:%M:%S"
+        # We also gonna use the current date in UTC format for verification
+        not_after = datetime.datetime.utcnow()
+        # And set the UTC timezone to the naive datetime resulting from parsing
+        not_after = not_after.replace(tzinfo=M2Crypto.ASN1.UTC)
+        not_after_str = datetime.datetime.strftime(not_after, fmt)
+
+        # Sign a new server certificate with the CA
+        ca_key = default_values["ca_key"]
+        cert_kwargs = default_values["x509_args_cert"].copy()
+        cert_kwargs["signing_private_key"] = ca_key
+        cert_kwargs["signing_cert"] = ca_cert
+        cert_kwargs["not_after"] = not_after_str
+        server_cert = x509.create_certificate(**cert_kwargs)
+
+        not_after_from_cert = ""
+        # Save server certificate to disk so we can check its properties
+        with tempfile.NamedTemporaryFile("w+") as server_cert_file:
+            server_cert_file.write(salt.utils.stringutils.to_str(server_cert))
+            server_cert_file.flush()
+
+            # Retrieve not_after property from server certificate
+            server_cert_details = x509.read_certificate(server_cert_file.name)
+            not_after_from_cert = server_cert_details["Not After"]
+
+        # Check if property is the one we've added to the certificate. The
+        # property from the certificate will come as a string with no timezone
+        # information in it.
+        self.assertIn(not_after_str, not_after_from_cert)
+
+    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    def test_create_certificate_with_not_before(self):
+        ca_key = default_values["ca_key"]
+        ca_kwargs = default_values.get("x509_args_ca").copy()
+        ca_kwargs["signing_private_key"] = ca_key
+
+        # Issue the CA certificate (self-signed)
+        ca_cert = x509.create_certificate(**ca_kwargs)
+
+        fmt = "%Y-%m-%d %H:%M:%S"
+        # We also gonna use the current date in UTC format for verification
+        not_before = datetime.datetime.utcnow()
+        # And set the UTC timezone to the naive datetime resulting from parsing
+        not_before = not_before.replace(tzinfo=M2Crypto.ASN1.UTC)
+        not_before_str = datetime.datetime.strftime(not_before, fmt)
+
+        # Sign a new server certificate with the CA
+        ca_key = default_values["ca_key"]
+        cert_kwargs = default_values["x509_args_cert"].copy()
+        cert_kwargs["signing_private_key"] = ca_key
+        cert_kwargs["signing_cert"] = ca_cert
+        cert_kwargs["not_before"] = not_before_str
+        server_cert = x509.create_certificate(**cert_kwargs)
+
+        not_before_from_cert = ""
+        # Save server certificate to disk so we can check its properties
+        with tempfile.NamedTemporaryFile("w+") as server_cert_file:
+            server_cert_file.write(salt.utils.stringutils.to_str(server_cert))
+            server_cert_file.flush()
+            # Retrieve not_after property from server certificate
+            server_cert_details = x509.read_certificate(server_cert_file.name)
+            not_before_from_cert = server_cert_details["Not Before"]
+
+        # Check if property is the one we've added to the certificate. The
+        # property will come from the certificate as a string with no timezone
+        # information in it.
+        self.assertIn(not_before_str, not_before_from_cert)
+
+    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    def test_create_certificate_with_not_before_wrong_date(self):
+        ca_key = default_values["ca_key"]
+        ca_kwargs = default_values.get("x509_args_ca").copy()
+        ca_kwargs["signing_private_key"] = ca_key
+
+        # Issue the CA certificate (self-signed)
+        ca_cert = x509.create_certificate(**ca_kwargs)
+
+        not_before_str = "this is an intentionally wrong format"
+
+        # Try to sign a new server certificate with the wrong date
+        msg = "not_before: this is an intentionally wrong format is not in required format %Y-%m-%d %H:%M:%S"
+        with self.assertRaisesRegex(salt.exceptions.SaltInvocationError, msg):
+            ca_key = default_values["ca_key"]
+            cert_kwargs = default_values["x509_args_cert"].copy()
+            cert_kwargs["signing_private_key"] = ca_key
+            cert_kwargs["signing_cert"] = ca_cert
+            cert_kwargs["not_before"] = not_before_str
+            x509.create_certificate(**cert_kwargs)
+
+    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    def test_create_certificate_with_not_after_wrong_date(self):
+        ca_key = default_values["ca_key"]
+        ca_kwargs = default_values.get("x509_args_ca").copy()
+        ca_kwargs["signing_private_key"] = ca_key
+
+        # Issue the CA certificate (self-signed)
+        ca_cert = x509.create_certificate(**ca_kwargs)
+
+        not_after_str = "this is an intentionally wrong format"
+
+        # Try to sign a new server certificate with the wrong date
+        msg = "not_after: this is an intentionally wrong format is not in required format %Y-%m-%d %H:%M:%S"
+        with self.assertRaisesRegex(salt.exceptions.SaltInvocationError, msg):
+            ca_key = default_values["ca_key"]
+            cert_kwargs = default_values["x509_args_cert"].copy()
+            cert_kwargs["signing_private_key"] = ca_key
+            cert_kwargs["signing_cert"] = ca_cert
+            cert_kwargs["not_after"] = not_after_str
+            x509.create_certificate(**cert_kwargs)
+
+    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    def test_create_certificate_with_not_before_and_not_after(self):
+        ca_key = default_values["ca_key"]
+        ca_kwargs = default_values.get("x509_args_ca").copy()
+        ca_kwargs["signing_private_key"] = ca_key
+
+        # Issue the CA certificate (self-signed)
+        ca_cert = x509.create_certificate(**ca_kwargs)
+
+        fmt = "%Y-%m-%d %H:%M:%S"
+        # Here we gonna use the current date as the not_before date
+        # First we again take the UTC for verification
+        not_before = datetime.datetime.utcnow()
+        # And set the UTC timezone to the naive datetime resulting from parsing
+        not_before = not_before.replace(tzinfo=M2Crypto.ASN1.UTC)
+        not_before_str = datetime.datetime.strftime(not_before, fmt)
+        # And we use the same logic to generate a not_after 5 days in the
+        # future
+        not_after = not_before + datetime.timedelta(days=5)
+        # And set the UTC timezone to the naive datetime resulting from parsing
+        not_after = not_after.replace(tzinfo=M2Crypto.ASN1.UTC)
+        not_after_str = datetime.datetime.strftime(not_after, fmt)
+
+        # Sign a new server certificate with the CA
+        ca_key = default_values["ca_key"]
+        cert_kwargs = default_values["x509_args_cert"].copy()
+        cert_kwargs["signing_private_key"] = ca_key
+        cert_kwargs["signing_cert"] = ca_cert
+        cert_kwargs["not_after"] = not_after_str
+        cert_kwargs["not_before"] = not_before_str
+        server_cert = x509.create_certificate(**cert_kwargs)
+
+        not_after_from_cert = ""
+        not_before_from_cert = ""
+        # Save server certificate to disk so we can check its properties
+        with tempfile.NamedTemporaryFile("w+") as server_cert_file:
+            server_cert_file.write(salt.utils.stringutils.to_str(server_cert))
+            server_cert_file.flush()
+
+            # Retrieve not_after property from server certificate
+            server_cert_details = x509.read_certificate(server_cert_file.name)
+            not_before_from_cert = server_cert_details["Not Before"]
+            not_after_from_cert = server_cert_details["Not After"]
+
+        # Check if property values are the ones we've added to the certificate.
+        # The values will come as strings containing no timezone information in
+        # them.
+        self.assertIn(not_before_str, not_before_from_cert)
+        self.assertIn(not_after_str, not_after_from_cert)
+
+    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    def test_create_crl(self):
+        ca_key = default_values["ca_key"]
+        ca_kwargs = default_values.get("x509_args_ca").copy()
+        ca_kwargs["signing_private_key"] = ca_key
+
+        ca_cert = x509.create_certificate(**ca_kwargs)
 
         with tempfile.NamedTemporaryFile("w+", delete=False) as ca_key_file:
-            ca_key_file.write(ca_key)
+            ca_key_file.write(salt.utils.stringutils.to_str(ca_key))
             ca_key_file.flush()
 
         with tempfile.NamedTemporaryFile("w+", delete=False) as ca_cert_file:
@@ -224,17 +358,11 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
             ca_cert_file.flush()
 
         with tempfile.NamedTemporaryFile("w+", delete=False) as ca_crl_file:
-            x509.create_crl(
-                path=ca_crl_file.name,
-                text=False,
-                signing_private_key=ca_key_file.name,
-                signing_private_key_passphrase=None,
-                signing_cert=ca_cert_file.name,
-                revoked=None,
-                include_expired=False,
-                days_valid=100,
-                digest="sha512",
-            )
+            crl_kwargs = default_values.get("crl_args").copy()
+            crl_kwargs["path"] = ca_crl_file.name
+            crl_kwargs["signing_private_key"] = ca_key_file.name
+            crl_kwargs["signing_cert"] = ca_cert_file.name
+            x509.create_crl(**crl_kwargs)
 
         with salt.utils.files.fopen(ca_crl_file.name, "r") as crl_file:
             crl = crl_file.read()
@@ -246,65 +374,25 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
         # Ensure that a CRL was actually created
         self.assertIn("BEGIN X509 CRL", crl)
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailble")
+    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
     def test_revoke_certificate_with_crl(self):
-        ca_key = """
------BEGIN RSA PRIVATE KEY-----
-MIICWwIBAAKBgQCjdjbgL4kQ8Lu73xeRRM1q3C3K3ptfCLpyfw38LRnymxaoJ6ls
-pNSx2dU1uJ89YKFlYLo1QcEk4rJ2fdIjarV0kuNCY3rC8jYUp9BpAU5Z6p9HKeT1
-2rTPH81JyjbQDR5PyfCyzYOQtpwpB4zIUUK/Go7tTm409xGKbbUFugJNgQIDAQAB
-AoGAF24we34U1ZrMLifSRv5nu3OIFNZHyx2DLDpOFOGaII5edwgIXwxZeIzS5Ppr
-yO568/8jcdLVDqZ4EkgCwRTgoXRq3a1GLHGFmBdDNvWjSTTMLoozuM0t2zjRmIsH
-hUd7tnai9Lf1Bp5HlBEhBU2gZWk+SXqLvxXe74/+BDAj7gECQQDRw1OPsrgTvs3R
-3MNwX6W8+iBYMTGjn6f/6rvEzUs/k6rwJluV7n8ISNUIAxoPy5g5vEYK6Ln/Ttc7
-u0K1KNlRAkEAx34qcxjuswavL3biNGE+8LpDJnJx1jaNWoH+ObuzYCCVMusdT2gy
-kKuq9ytTDgXd2qwZpIDNmscvReFy10glMQJAXebMz3U4Bk7SIHJtYy7OKQzn0dMj
-35WnRV81c2Jbnzhhu2PQeAvt/i1sgEuzLQL9QEtSJ6wLJ4mJvImV0TdaIQJAAYyk
-TcKK0A8kOy0kMp3yvDHmJZ1L7wr7bBGIZPBlQ0Ddh8i1sJExm1gJ+uN2QKyg/XrK
-tDFf52zWnCdVGgDwcQJALW/WcbSEK+JVV6KDJYpwCzWpKIKpBI0F6fdCr1G7Xcwj
-c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
------END RSA PRIVATE KEY-----
-"""
-        # Issue the CA certificate (self-signed)
-        ca_cert = x509.create_certificate(
-            text=True,
-            signing_private_key=ca_key,
-            CN="Redacted Root CA",
-            O="Redacted",
-            C="BE",
-            ST="Antwerp",
-            L="Local Town",
-            Email="certadm@example.org",
-            basicConstraints="critical CA:true",
-            keyUsage="critical cRLSign, keyCertSign",
-            subjectKeyIdentifier="hash",
-            authorityKeyIdentifier="keyid,issuer:always",
-            days_valid=3650,
-            days_remaining=0,
-        )
+        ca_key = default_values["ca_key"]
+        ca_kwargs = default_values.get("x509_args_ca").copy()
+        ca_kwargs["signing_private_key"] = ca_key
 
-        # Sign a client certificate with the CA
-        server_cert = x509.create_certificate(
-            text=True,
-            signing_private_key=ca_key,
-            signing_cert=ca_cert,
-            CN="Redacted Normal Certificate",
-            O="Redacted",
-            C="BE",
-            ST="Antwerp",
-            L="Local Town",
-            Email="certadm@example.org",
-            basicConstraints="critical CA:false",
-            keyUsage="critical keyEncipherment",
-            subjectKeyIdentifier="hash",
-            authorityKeyIdentifier="keyid,issuer:always",
-            days_valid=365,
-            days_remaining=0,
-        )
+        # Issue the CA certificate (self-signed)
+        ca_cert = x509.create_certificate(**ca_kwargs)
+
+        # Sign a new server certificate with the CA
+        ca_key = default_values["ca_key"]
+        cert_kwargs = default_values["x509_args_cert"].copy()
+        cert_kwargs["signing_private_key"] = ca_key
+        cert_kwargs["signing_cert"] = ca_cert
+        server_cert = x509.create_certificate(**cert_kwargs)
 
         # Save CA cert + key and server cert to disk as PEM files
         with tempfile.NamedTemporaryFile("w+", delete=False) as ca_key_file:
-            ca_key_file.write(ca_key)
+            ca_key_file.write(salt.utils.stringutils.to_str(ca_key))
             ca_key_file.flush()
 
         with tempfile.NamedTemporaryFile("w+", delete=False) as ca_cert_file:
@@ -323,17 +411,13 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
             }
         ]
         with tempfile.NamedTemporaryFile("w+", delete=False) as ca_crl_file:
-            x509.create_crl(
-                path=ca_crl_file.name,
-                text=False,
-                signing_private_key=ca_key_file.name,
-                signing_private_key_passphrase=None,
-                signing_cert=ca_cert_file.name,
-                revoked=revoked,
-                include_expired=False,
-                days_valid=100,
-                digest="sha512",
-            )
+            crl_kwargs = default_values.get("crl_args").copy()
+            crl_kwargs["path"] = ca_crl_file.name
+            crl_kwargs["signing_private_key"] = ca_key_file.name
+            crl_kwargs["signing_cert"] = ca_cert_file.name
+            # Add list of revoked certificates
+            crl_kwargs["revoked"] = revoked
+            x509.create_crl(**crl_kwargs)
 
         # Retrieve serial number from server certificate
         server_cert_details = x509.read_certificate(server_cert_file.name)
