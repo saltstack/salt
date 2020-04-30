@@ -978,6 +978,9 @@ def salt_master_config(request, salt_factories, salt_syndic_master_config):
     config_defaults["known_hosts_file"] = tests_known_hosts_file
     config_defaults["syndic_master"] = "localhost"
     config_defaults["transport"] = request.config.getoption("--transport")
+    config_defaults["reactor"] = [
+        {"salt/test/reactor": [os.path.join(RUNTIME_VARS.FILES, "reactor-test.sls")]}
+    ]
 
     config_overrides = {}
     ext_pillar = []
