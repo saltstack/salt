@@ -11,6 +11,7 @@ import os
 # Import salt libs
 import salt.config
 import salt.utils.files
+import salt.utils.verify
 import salt.utils.yaml
 
 # Import 3rd-party libs

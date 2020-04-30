@@ -24,6 +24,114 @@ class TransportMethodsTest(TestCase):
         assert foo.get_method("bar") is not None
         assert foo.get_method("bang") is None
 
+    def test_aes_funcs_white(self):
+        """
+        Validate methods exposed on AESFuncs exist and are callable
+        """
+        opts = salt.config.master_config(None)
+        aes_funcs = salt.master.AESFuncs(opts)
+        for name in aes_funcs.expose_methods:
+            func = getattr(aes_funcs, name, None)
+            assert callable(func)
+
+    def test_aes_funcs_black(self):
+        """
+        Validate methods on AESFuncs that should not be called remotely
+        """
+        opts = salt.config.master_config(None)
+        aes_funcs = salt.master.AESFuncs(opts)
+        # Any callable that should not explicitly be allowed should be added
+        # here.
+        blacklist_methods = [
+            "_AESFuncs__setup_fileserver",
+            "_AESFuncs__verify_load",
+            "_AESFuncs__verify_minion",
+            "_AESFuncs__verify_minion_publish",
+            "__class__",
+            "__delattr__",
+            "__dir__",
+            "__eq__",
+            "__format__",
+            "__ge__",
+            "__getattribute__",
+            "__gt__",
+            "__hash__",
+            "__init__",
+            "__init_subclass__",
+            "__le__",
+            "__lt__",
+            "__ne__",
+            "__new__",
+            "__reduce__",
+            "__reduce_ex__",
+            "__repr__",
+            "__setattr__",
+            "__sizeof__",
+            "__str__",
+            "__subclasshook__",
+            "get_method",
+            "run_func",
+        ]
+        for name in dir(aes_funcs):
+            if name in aes_funcs.expose_methods:
+                continue
+            if not callable(getattr(aes_funcs, name)):
+                continue
+            assert name in blacklist_methods, name
+
+    def test_clear_funcs_white(self):
+        """
+        Validate methods exposed on ClearFuncs exist and are callable
+        """
+        opts = salt.config.master_config(None)
+        clear_funcs = salt.master.ClearFuncs(opts, {})
+        for name in clear_funcs.expose_methods:
+            func = getattr(clear_funcs, name, None)
+            assert callable(func)
+
+    def test_clear_funcs_black(self):
+        """
+        Validate methods on ClearFuncs that should not be called remotely
+        """
+        opts = salt.config.master_config(None)
+        clear_funcs = salt.master.ClearFuncs(opts, {})
+        blacklist_methods = [
+            "__class__",
+            "__delattr__",
+            "__dir__",
+            "__eq__",
+            "__format__",
+            "__ge__",
+            "__getattribute__",
+            "__gt__",
+            "__hash__",
+            "__init__",
+            "__init_subclass__",
+            "__le__",
+            "__lt__",
+            "__ne__",
+            "__new__",
+            "__reduce__",
+            "__reduce_ex__",
+            "__repr__",
+            "__setattr__",
+            "__sizeof__",
+            "__str__",
+            "__subclasshook__",
+            "_prep_auth_info",
+            "_prep_jid",
+            "_prep_pub",
+            "_send_pub",
+            "_send_ssh_pub",
+            "get_method",
+        ]
+        for name in dir(clear_funcs):
+            if name in clear_funcs.expose_methods:
+                continue
+            if not callable(getattr(clear_funcs, name)):
+                continue
+            assert name in blacklist_methods, name
+
 
 class ClearFuncsTestCase(TestCase):
     """

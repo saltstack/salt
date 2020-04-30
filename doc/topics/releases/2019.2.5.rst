@@ -1,0 +1,52 @@
+===========================
+Salt 2019.2.5 Release Notes
+===========================
+
+Version 2019.2.5 is a bug-fix release for :ref:`2019.2.0 <release-2019-2-0>`.
+
+Statistics
+==========
+
+- Total Merges: **2**
+- Total Issue References: **2**
+- Total PR References: **2**
+
+- Contributors: **2** (`dwoz`_, `frogunder`_)
+
+Changelog for v2019.2.4..v2019.2.5
+==================================
+
+*Generated at: 2020-05-05 22:43:12 UTC*
+
+* **PR** `#57096`_: (`frogunder`_) Update man_pages 2019.2.5
+  @ *2020-05-05 22:10:46 UTC*
+
+  * 6877b7259a Merge pull request `#57096`_ from frogunder/man_pages_2019.2.5
+
+  * 58ea351a59 Update man_pages 2019.2.5
+
+* **ISSUE** `#57027`_: (`ecarson`_) [BUG] Master running 2019.2.4 or 3000.2 unable to synchronize files using saltutil.sync_all to 2017.7.1 minion due to CVE fix (refs: `#57090`_)
+
+* **ISSUE** `#57016`_: (`idontwanttosignin`_) [BUG] Requested method not exposed: minion_runner (refs: `#57090`_)
+
+* **PR** `#57090`_: (`dwoz`_) Address Issues in CVE Release
+  @ *2020-05-05 22:09:25 UTC*
+
+  * 8fe0f66f94 Merge pull request `#57090`_ from dwoz/bugs_n_stuff
+
+  * f3e8590bac Describe SEPs
+
+  * aa1a9d340d Update hardening doc to mention 4505/4506
+
+  * ca303f7c0c Add link to salt-announce to documentation
+
+  * c63253ef9c Address issues in cve release
+
+.. _`#57016`: https://github.com/saltstack/salt/issues/57016
+.. _`#57027`: https://github.com/saltstack/salt/issues/57027
+.. _`#57090`: https://github.com/saltstack/salt/pull/57090
+.. _`#57096`: https://github.com/saltstack/salt/pull/57096
+.. _`dwoz`: https://github.com/dwoz
+.. _`ecarson`: https://github.com/ecarson
+.. _`frogunder`: https://github.com/frogunder
+.. _`idontwanttosignin`: https://github.com/idontwanttosignin
