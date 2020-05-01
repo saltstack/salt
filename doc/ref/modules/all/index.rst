@@ -220,6 +220,7 @@ execution modules
     jenkinsmod
     jinja
     jira_mod
+    jsonnet
     junos
     k8s
     kapacitor
