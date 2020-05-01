@@ -1366,7 +1366,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_vm_migrate_no_host_id_or_host_name(self):
         """
-        Tests that a SaltCloudSystemExit is raised when the the host_id and the
+        Tests that a SaltCloudSystemExit is raised when the host_id and the
         host_name args are missing.
         """
         self.assertRaises(

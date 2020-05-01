@@ -427,7 +427,7 @@ def list_sets(family="ipv4"):
     sets = []
     sets.append({})
     for item in _tmp:
-        if len(item) == 0:
+        if not item:
             count = count + 1
             sets.append({})
             continue
@@ -514,7 +514,7 @@ def add(setname=None, entry=None, family="ipv4", **kwargs):
     cmd = "{0} add -exist {1} {2}".format(_ipset_cmd(), setname, cmd)
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
-    if len(out) == 0:
+    if not out:
         return "Success"
     return "Error: {0}".format(out)
 
@@ -543,7 +543,7 @@ def delete(set=None, entry=None, family="ipv4", **kwargs):
     cmd = "{0} del {1} {2}".format(_ipset_cmd(), set, entry)
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
-    if len(out) == 0:
+    if not out:
         return "Success"
     return "Error: {0}".format(out)
 
@@ -664,10 +664,7 @@ def flush(set=None, family="ipv4"):
         cmd = "{0} flush".format(_ipset_cmd())
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
-    if len(out) == 0:
-        return True
-    else:
-        return False
+    return not out
 
 
 def _find_set_members(set):

@@ -4,9 +4,11 @@ Manage LXD images.
 
 .. versionadded:: 2019.2.0
 
+.. link: https://github.com/lxc/pylxd/blob/master/doc/source/installation.rst
+
 .. note:
 
-    - `pylxd`_ version 2 is required to let this work,
+    - :role:`pylxd <link>` version 2 is required to let this work,
       currently only available via pip.
 
         To install on Ubuntu:
@@ -20,7 +22,6 @@ Manage LXD images.
     - for the config_get() and config_get() methods
       you need to have lxd-client installed.
 
-.. _: https://github.com/lxc/pylxd/blob/master/doc/source/installation.rst
 
 :maintainer: René Jochum <rene@jochums.at>
 :maturity: new
@@ -46,7 +47,9 @@ def __virtual__():
     """
     Only load if the lxd module is available in __salt__
     """
-    return __virtualname__ if "lxd.version" in __salt__ else False
+    if "lxd.version" in __salt__:
+        return __virtualname__
+    return (False, "lxd module could not be loaded")
 
 
 def present(
@@ -151,7 +154,7 @@ def present(
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
     """
     if aliases is None:
         aliases = []
@@ -325,7 +328,7 @@ def absent(name, remote_addr=None, cert=None, key=None, verify_cert=True):
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
     """
     ret = {
         "name": name,

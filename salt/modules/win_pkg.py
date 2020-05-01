@@ -2160,7 +2160,7 @@ def remove(name=None, pkgs=None, **kwargs):
         found_chgs = all(name in difference for name in changed)
 
     if not found_chgs:
-        log.warning("Expected changes for package removal may not have occured")
+        log.warning("Expected changes for package removal may not have occurred")
 
     # Compare the software list before and after
     # Add the difference to ret

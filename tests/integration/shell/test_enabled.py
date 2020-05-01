@@ -1,22 +1,19 @@
 # -*- coding: utf-8 -*-
 
-# Import Python Libs
 from __future__ import absolute_import
 
 import os
 import textwrap
 
+import pytest
 import salt.utils.files
-
-# Import Salt Libs
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
 
+@pytest.mark.windows_whitelisted
 class EnabledTest(ModuleCase):
     """
     validate the use of shell processing for cmd.run on the salt command line
@@ -24,7 +21,7 @@ class EnabledTest(ModuleCase):
     """
 
     cmd = (
-        "printf '%s\n' first second third | wc -l ; "
+        "printf '%s\\n' first second third | wc -l ; "
         "export SALTY_VARIABLE='saltines' && echo $SALTY_VARIABLE ; "
         "echo duh &> /dev/null"
     )
@@ -90,6 +87,7 @@ class EnabledTest(ModuleCase):
             os.remove(state_file)
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
+    @skipIf(True, "SLOWTEST skip")
     def test_template_default_disabled(self):
         """
         test shell disabled output for templates (python_shell=False is the default

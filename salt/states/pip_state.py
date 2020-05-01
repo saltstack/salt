@@ -34,7 +34,6 @@ import salt.ext.six as six
 import salt.utils.data
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
-from salt.version import SaltStackVersion as _SaltStackVersion
 
 try:
     import pkg_resources
@@ -49,7 +48,7 @@ except ImportError:
 
 def purge_pip():
     """
-    Purge pip and it's sub-modules
+    Purge pip and its sub-modules
     """
     # Remove references to the loaded pip module above so reloading works
     if "pip" not in sys.modules:
@@ -794,22 +793,6 @@ def installed(
                 "was {1}."
             ).format(min_version, cur_version)
             return ret
-
-    # Deprecation warning for the repo option
-    if repo is not None:
-        msg = (
-            "The 'repo' argument to pip.installed is deprecated and will "
-            "be removed in Salt {version}. Please use 'name' instead. "
-            "The current value for name, '{0}' will be replaced by the "
-            "value of repo, '{1}'".format(
-                name,
-                repo,
-                version=_SaltStackVersion.from_name("Lithium").formatted_version,
-            )
-        )
-        salt.utils.versions.warn_until("Lithium", msg)
-        ret.setdefault("warnings", []).append(msg)
-        name = repo
 
     # Get the packages parsed name and version from the pip library.
     # This only is done when there is no requirements or editable parameter.

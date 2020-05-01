@@ -12,13 +12,114 @@ from datetime import datetime
 # Import Salt Libs
 import salt.modules.win_system as win_system
 import salt.utils.platform
+import salt.utils.stringutils
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, Mock, patch
 from tests.support.unit import TestCase, skipIf
 
+try:
+    import wmi
 
+    HAS_WMI = True
+except ImportError:
+    HAS_WMI = False
+
+
+class MockWMI_ComputerSystem(object):
+    """
+    Mock WMI Win32_ComputerSystem Class
+    """
+
+    BootupState = "Normal boot"
+    Caption = "SALT SERVER"
+    ChassisBootupState = 3
+    ChassisSKUNumber = "3.14159"
+    DNSHostname = "SALT SERVER"
+    Domain = "WORKGROUP"
+    DomainRole = 2
+    Manufacturer = "Dell Inc."
+    Model = "Dell 2980"
+    NetworkServerModeEnabled = True
+    PartOfDomain = False
+    PCSystemType = 4
+    PowerState = 0
+    Status = "OK"
+    SystemType = "x64-based PC"
+    TotalPhysicalMemory = 17078214656
+    ThermalState = 3
+    Workgroup = "WORKGROUP"
+
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def Rename(Name):
+        return Name == Name
+
+    @staticmethod
+    def JoinDomainOrWorkgroup(Name):
+        return [0]
+
+
+class MockWMI_OperatingSystem(object):
+    """
+    Mock WMI Win32_OperatingSystem Class
+    """
+
+    Description = "Because salt goes EVERYWHERE"
+    InstallDate = "20110211131800"
+    LastBootUpTime = "19620612120000"
+    Manufacturer = "Python"
+    Caption = "Salty"
+    NumberOfUsers = 7530000000
+    Organization = "SaltStack"
+    OSArchitecture = "Windows"
+    Primary = True
+    ProductType = 3
+    RegisteredUser = "thatch@saltstack.com"
+    SystemDirectory = "C:\\Windows\\System32"
+    SystemDrive = "C:\\"
+    Version = "10.0.17763"
+    WindowsDirectory = "C:\\Windows"
+
+    def __init__(self):
+        pass
+
+
+class MockWMI_Processor(object):
+    """
+    Mock WMI Win32_Processor Class
+    """
+
+    Manufacturer = "Intel"
+    MaxClockSpeed = 2301
+    NumberOfLogicalProcessors = 8
+    NumberOfCores = 4
+    NumberOfEnabledCore = 4
+
+    def __init__(self):
+        pass
+
+
+class MockWMI_BIOS(object):
+    """
+    Mock WMI Win32_BIOS Class
+    """
+
+    SerialNumber = "SALTY2011"
+    Manufacturer = "Dell Inc."
+    Version = "DELL - 10283849"
+    Caption = "A12"
+    BIOSVersion = [Version, Caption, "ASUS - 3948D"]
+    Description = Caption
+
+    def __init__(self):
+        pass
+
+
+@skipIf(not HAS_WMI, "WMI only available on Windows")
 @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
 class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
     """
@@ -27,6 +128,15 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         modules_globals = {}
+        # wmi and pythoncom modules are platform specific...
+        mock_pythoncom = types.ModuleType(salt.utils.stringutils.to_str("pythoncom"))
+        sys_modules_patcher = patch.dict("sys.modules", {"pythoncom": mock_pythoncom})
+        sys_modules_patcher.start()
+        self.addCleanup(sys_modules_patcher.stop)
+        self.WMI = Mock()
+        self.addCleanup(delattr, self, "WMI")
+        modules_globals["wmi"] = wmi
+
         if win_system.HAS_WIN32NET_MODS is False:
             win32api = types.ModuleType(
                 str("win32api")  # future lint: disable=blacklisted-function
@@ -82,9 +192,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         """
             Test to reboot the system
         """
-        with patch(
-            "salt.modules.win_system.shutdown", MagicMock(return_value=True)
-        ) as shutdown:
+        with patch("salt.modules.win_system.shutdown", MagicMock(return_value=True)):
             self.assertEqual(win_system.reboot(), True)
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
@@ -154,53 +262,21 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         with patch(
             "salt.modules.win_system.windll.kernel32.SetComputerNameExW",
             MagicMock(return_value=True),
+        ), patch.object(
+            win_system, "get_computer_name", MagicMock(return_value="salt")
+        ), patch.object(
+            win_system, "get_pending_computer_name", MagicMock(return_value="salt_new"),
         ):
-            with patch.object(
-                win_system, "get_computer_name", MagicMock(return_value="salt")
-            ):
-                with patch.object(
-                    win_system,
-                    "get_pending_computer_name",
-                    MagicMock(return_value="salt_new"),
-                ):
-                    self.assertDictEqual(
-                        win_system.set_computer_name("salt_new"),
-                        {"Computer Name": {"Current": "salt", "Pending": "salt_new"}},
-                    )
+            self.assertDictEqual(
+                win_system.set_computer_name("salt_new"),
+                {"Computer Name": {"Current": "salt", "Pending": "salt_new"}},
+            )
         # Test set_computer_name failure
         with patch(
             "salt.modules.win_system.windll.kernel32.SetComputerNameExW",
             MagicMock(return_value=False),
         ):
             self.assertFalse(win_system.set_computer_name("salt"))
-
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
-    def test_get_pending_computer_name(self):
-        """
-            Test to get a pending computer name.
-        """
-        with patch.object(
-            win_system, "get_computer_name", MagicMock(return_value="salt")
-        ):
-            reg_mock = MagicMock(return_value={"vdata": "salt"})
-            with patch.dict(win_system.__salt__, {"reg.read_value": reg_mock}):
-                self.assertFalse(win_system.get_pending_computer_name())
-
-            reg_mock = MagicMock(return_value={"vdata": "salt_pending"})
-            with patch.dict(win_system.__salt__, {"reg.read_value": reg_mock}):
-                self.assertEqual(win_system.get_pending_computer_name(), "salt_pending")
-
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
-    def test_get_computer_name(self):
-        """
-            Test to get the Windows computer name
-        """
-        with patch(
-            "salt.modules.win_system.win32api.GetComputerNameEx",
-            MagicMock(side_effect=["computer name", ""]),
-        ):
-            self.assertEqual(win_system.get_computer_name(), "computer name")
-            self.assertFalse(win_system.get_computer_name())
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
     def test_set_computer_desc(self):
@@ -241,24 +317,33 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         """
             Test to join a computer to an Active Directory domain
         """
-        with patch("salt.modules.win_system._join_domain", MagicMock(return_value=0)):
-            with patch(
-                "salt.modules.win_system.get_domain_workgroup",
-                MagicMock(return_value={"Workgroup": "Workgroup"}),
-            ):
-                self.assertDictEqual(
-                    win_system.join_domain("saltstack", "salt", "salt@123"),
-                    {"Domain": "saltstack", "Restart": False},
-                )
+        with patch(
+            "salt.modules.win_system._join_domain", MagicMock(return_value=0)
+        ), patch(
+            "salt.modules.win_system.get_domain_workgroup",
+            MagicMock(return_value={"Workgroup": "Workgroup"}),
+        ):
+            self.assertDictEqual(
+                win_system.join_domain("saltstack", "salt", "salt@123"),
+                {"Domain": "saltstack", "Restart": False},
+            )
 
-            with patch(
-                "salt.modules.win_system.get_domain_workgroup",
-                MagicMock(return_value={"Domain": "saltstack"}),
-            ):
-                self.assertEqual(
-                    win_system.join_domain("saltstack", "salt", "salt@123"),
-                    "Already joined to saltstack",
-                )
+    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    def test_join_domain_already_joined(self):
+        """
+            Test to join a computer to an Active Directory domain when it is
+            already joined
+        """
+        with patch(
+            "salt.modules.win_system._join_domain", MagicMock(return_value=0)
+        ), patch(
+            "salt.modules.win_system.get_domain_workgroup",
+            MagicMock(return_value={"Domain": "saltstack"}),
+        ):
+            self.assertEqual(
+                win_system.join_domain("saltstack", "salt", "salt@123"),
+                "Already joined to saltstack",
+            )
 
     def test_get_system_time(self):
         """
@@ -325,19 +410,38 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         """
             Test setting a new hostname
         """
-        cmd_run_mock = MagicMock(return_value="Method execution successful.")
-        get_hostname = MagicMock(return_value="MINION")
-        with patch.dict(win_system.__salt__, {"cmd.run": cmd_run_mock}):
-            with patch.object(win_system, "get_hostname", get_hostname):
-                win_system.set_hostname("NEW")
+        with patch("salt.utils.winapi.Com", MagicMock()), patch.object(
+            self.WMI, "Win32_ComputerSystem", return_value=[MockWMI_ComputerSystem()]
+        ), patch.object(wmi, "WMI", Mock(return_value=self.WMI)):
+            self.assertTrue(win_system.set_hostname("NEW"))
 
-        cmd_run_mock.assert_called_once_with(
-            cmd="wmic computersystem where name='MINION' call rename name='NEW'"
-        )
+    def test_get_domain_workgroup(self):
+        """
+        Test get_domain_workgroup
+        """
+        with patch.object(wmi, "WMI", Mock(return_value=self.WMI)), patch(
+            "salt.utils.winapi.Com", MagicMock()
+        ), patch.object(
+            self.WMI, "Win32_ComputerSystem", return_value=[MockWMI_ComputerSystem()]
+        ):
+            self.assertDictEqual(
+                win_system.get_domain_workgroup(), {"Workgroup": "WORKGROUP"}
+            )
+
+    def test_set_domain_workgroup(self):
+        """
+        Test set_domain_workgroup
+        """
+        with patch.object(wmi, "WMI", Mock(return_value=self.WMI)), patch(
+            "salt.utils.winapi.Com", MagicMock()
+        ), patch.object(
+            self.WMI, "Win32_ComputerSystem", return_value=[MockWMI_ComputerSystem()]
+        ):
+            self.assertTrue(win_system.set_domain_workgroup("test"))
 
     def test_get_hostname(self):
         """
-            Test setting a new hostname
+            Test getting a new hostname
         """
         cmd_run_mock = MagicMock(return_value="MINION")
         with patch.dict(win_system.__salt__, {"cmd.run": cmd_run_mock}):
@@ -396,7 +500,22 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             "windows_directory",
             "workgroup",
         ]
-        ret = win_system.get_system_info()
+        with patch("salt.utils.win_system.get_computer_name", MagicMock()), patch(
+            "salt.utils.winapi.Com", MagicMock()
+        ), patch.object(
+            self.WMI, "Win32_OperatingSystem", return_value=[MockWMI_OperatingSystem()]
+        ), patch.object(
+            self.WMI, "Win32_ComputerSystem", return_value=[MockWMI_ComputerSystem()]
+        ), patch.object(
+            self.WMI,
+            "Win32_Processor",
+            return_value=[MockWMI_Processor(), MockWMI_Processor()],
+        ), patch.object(
+            self.WMI, "Win32_BIOS", return_value=[MockWMI_BIOS()]
+        ), patch.object(
+            wmi, "WMI", Mock(return_value=self.WMI)
+        ):
+            ret = win_system.get_system_info()
         # Make sure all the fields are in the return
         for field in fields:
             self.assertIn(field, ret)
