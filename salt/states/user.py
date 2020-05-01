@@ -37,7 +37,7 @@ import salt.utils.user
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-from salt.ext.six import iteritems, string_types
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -526,7 +526,7 @@ def present(
     # the comma is used to separate field in GECOS, thus resulting into
     # salt adding the end of fullname each time this function is called
     for gecos_field in [fullname, roomnumber, workphone]:
-        if isinstance(gecos_field, string_types) and "," in gecos_field:
+        if isinstance(gecos_field, six.string_types) and "," in gecos_field:
             ret["comment"] = "Unsupported char ',' in {0}".format(gecos_field)
             ret["result"] = False
             return ret
@@ -614,7 +614,7 @@ def present(
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"] = "The following user attributes are set to be " "changed:\n"
-            for key, val in iteritems(changes):
+            for key, val in six.iteritems(changes):
                 if key == "passwd":
                     val = "XXX-REDACTED-XXX"
                 elif key == "group" and not remove_groups:
@@ -627,65 +627,103 @@ def present(
         if __grains__["kernel"] in ("OpenBSD", "FreeBSD"):
             lcpre = __salt__["user.get_loginclass"](name)
         pre = __salt__["user.info"](name)
-        for key, val in iteritems(changes):
-            if key == "passwd" and not empty_password:
+
+        # Make changes
+
+        if "passwd" in changes:
+            del changes["passwd"]
+            if not empty_password:
                 __salt__["shadow.set_password"](name, password)
-                continue
-            if key == "passwd" and empty_password:
-                log.warning("No password will be set when empty_password=True")
-                continue
-            if key == "empty_password" and val:
-                __salt__["shadow.del_password"](name)
-                continue
-            if key == "date":
-                __salt__["shadow.set_date"](name, date)
-                continue
-            # run chhome once to avoid any possible bad side-effect
-            if key == "home" and "homeDoesNotExist" not in changes:
-                if __grains__["kernel"] in ("Darwin", "Windows"):
-                    __salt__["user.chhome"](name, val)
-                else:
-                    __salt__["user.chhome"](name, val, persist=False)
-                continue
-            if key == "homeDoesNotExist":
-                if __grains__["kernel"] in ("Darwin", "Windows"):
-                    __salt__["user.chhome"](name, val)
-                else:
-                    __salt__["user.chhome"](name, val, persist=True)
-                if not os.path.isdir(val):
-                    __salt__["file.mkdir"](val, pre["uid"], pre["gid"], 0o755)
-                continue
-            if key == "mindays":
-                __salt__["shadow.set_mindays"](name, mindays)
-                continue
-            if key == "maxdays":
-                __salt__["shadow.set_maxdays"](name, maxdays)
-                continue
-            if key == "inactdays":
-                __salt__["shadow.set_inactdays"](name, inactdays)
-                continue
-            if key == "warndays":
-                __salt__["shadow.set_warndays"](name, warndays)
-                continue
-            if key == "expire":
-                __salt__["shadow.set_expire"](name, expire)
-                continue
-            if key == "win_homedrive":
-                __salt__["user.update"](name=name, homedrive=val)
-                continue
-            if key == "win_profile":
-                __salt__["user.update"](name=name, profile=val)
-                continue
-            if key == "win_logonscript":
-                __salt__["user.update"](name=name, logonscript=val)
-                continue
-            if key == "win_description":
-                __salt__["user.update"](name=name, description=val)
-                continue
-            if key == "groups":
-                __salt__["user.ch{0}".format(key)](name, val, not remove_groups)
             else:
-                __salt__["user.ch{0}".format(key)](name, val)
+                log.warning("No password will be set when empty_password=True")
+
+        if changes.pop("empty_password", False) is True:
+            __salt__["shadow.del_password"](name)
+
+        if "date" in changes:
+            del changes["date"]
+            __salt__["shadow.set_date"](name, date)
+
+        def _change_homedir(name, val):
+            if __grains__["kernel"] in ("Darwin", "Windows"):
+                __salt__["user.chhome"](name, val)
+            else:
+                __salt__["user.chhome"](name, val, persist=False)
+
+        _homedir_changed = False
+        if "home" in changes:
+            val = changes.pop("home")
+            if "homeDoesNotExist" not in changes:
+                _change_homedir(name, val)
+                _homedir_changed = True
+
+        if "homeDoesNotExist" in changes:
+            val = changes.pop("homeDoesNotExist")
+            if not _homedir_changed:
+                _change_homedir(name, val)
+            if not os.path.isdir(val):
+                __salt__["file.mkdir"](val, pre["uid"], pre["gid"], 0o755)
+
+        if "mindays" in changes:
+            del changes["mindays"]
+            __salt__["shadow.set_mindays"](name, mindays)
+
+        if "maxdays" in changes:
+            del changes["maxdays"]
+            __salt__["shadow.set_maxdays"](name, maxdays)
+
+        if "inactdays" in changes:
+            del changes["inactdays"]
+            __salt__["shadow.set_inactdays"](name, inactdays)
+
+        if "warndays" in changes:
+            del changes["warndays"]
+            __salt__["shadow.set_warndays"](name, warndays)
+
+        if "expire" in changes:
+            del changes["expire"]
+            __salt__["shadow.set_expire"](name, expire)
+
+        if "win_homedrive" in changes:
+            del changes["win_homedrive"]
+            __salt__["user.update"](name=name, homedrive=changes.pop("win_homedrive"))
+
+        if "win_profile" in changes:
+            del changes["win_profile"]
+            __salt__["user.update"](name=name, profile=changes.pop("win_profile"))
+
+        if "win_logonscript" in changes:
+            del changes["win_logonscript"]
+            __salt__["user.update"](
+                name=name, logonscript=changes.pop("win_logonscript")
+            )
+
+        if "win_description" in changes:
+            del changes["win_description"]
+            __salt__["user.update"](
+                name=name, description=changes.pop("win_description")
+            )
+
+        # Do the changes that have "ch" functions for them, but skip changing
+        # groups for now. Changing groups before changing the chgid could cause
+        # unpredictable results, including failure to set the proper groups.
+        # NOTE: list(changes) required here to avoid modifying dictionary
+        # during iteration.
+        for key in [
+            x
+            for x in list(changes)
+            if x != "groups" and "user.ch{0}".format(x) in __salt__
+        ]:
+            __salt__["user.ch{0}".format(key)](name, changes.pop(key))
+
+        # Do group changes last
+        if "groups" in changes:
+            __salt__["user.chgroups"](name, changes.pop("groups"), not remove_groups)
+
+        if changes:
+            ret.get("warnings", []).append(
+                "Unhandled changes: {0}".format(", ".join(changes))
+            )
 
         post = __salt__["user.info"](name)
         spost = {}
