@@ -494,7 +494,7 @@ def upgrade_available(pkg):
     return pkg in list_upgrades()
 
 
-def upgrade(refresh=True):
+def upgrade(refresh=True, **kwargs):
     """
     Upgrade outdated, unpinned brews.
 
