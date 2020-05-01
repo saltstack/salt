@@ -8,6 +8,7 @@
 import logging
 import re
 import sys
+import traceback
 import types
 
 # Let's define these custom logging levels before importing the salt._logging.mixins
@@ -448,3 +449,55 @@ __all__ = __get_exposed_module_attributes()
 
 # We're done with the function, nuke it
 del __get_exposed_module_attributes
+
+
+def __global_logging_exception_handler(
+    exc_type,
+    exc_value,
+    exc_traceback,
+    _logger=logging.getLogger(__name__),
+    _stderr=sys.__stderr__,
+    _format_exception=traceback.format_exception,
+):
+    """
+    This function will log all un-handled python exceptions.
+    """
+    if exc_type.__name__ == "KeyboardInterrupt":
+        # Do not log the exception or display the traceback on Keyboard Interrupt
+        return
+
+    # Log the exception
+    msg = "An un-handled exception was caught by salt's global exception handler:"
+    try:
+        msg = "{}\n{}: {}\n{}".format(
+            msg,
+            exc_type.__name__,
+            exc_value,
+            "".join(_format_exception(exc_type, exc_value, exc_traceback)).strip(),
+        )
+    except Exception:  # pylint: disable=broad-except
+        msg = "{}\n{}: {}\n(UNABLE TO FORMAT TRACEBACK)".format(
+            msg,
+            exc_type.__name__,
+            exc_value,
+        )
+    try:
+        _logger.error(msg)
+    except Exception:  # pylint: disable=broad-except
+        # Python is shutting down and logging has been set to None already
+        try:
+            _stderr.write(msg + "\n")
+        except Exception:  # pylint: disable=broad-except
+            # We have also lost reference to sys.__stderr__ ?!
+            print(msg)
+
+    # Call the original sys.excepthook
+    try:
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+    except Exception:  # pylint: disable=broad-except
+        # Python is shutting down and sys has been set to None already
+        pass
+
+
+# Set our own exception handler as the one to use
+sys.excepthook = __global_logging_exception_handler
