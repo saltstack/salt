@@ -90,6 +90,13 @@ Functions to interact with Hashicorp Vault.
 
            export VAULT_TOKEN=11111111-1111-1111-1111-1111111111111
 
+        Configuration keys ``uses`` or ``ttl`` may also be specified under auth
+        to configure the tokens generated on behalf of minions to be reused for the
+        defined time length or number of uses. These settings may also be configured
+        on the minion when
+
+            .. versionchanged:: Sodium
+
     policies
         Policies that are assigned to minions when requesting a token. These can
         either be static, eg saltstack/minions, or templated with grain values,
