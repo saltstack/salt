@@ -727,3 +727,14 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
         grainsmod.__salt__["saltutil.refresh_grains"].assert_called_with(
             refresh_pillar=False
         )
+
+    def test_setval_unicode(self):
+        key = "塩"   # salt
+        value = "人生です"  # is life
+
+        # 1: add key to conf grains
+        # 2: update and read key from conf grains
+        for _ in range(2):
+            ret = grainsmod.setvals({key: value})
+            self.assertIn(key, ret)
+            self.assertEqual(ret[key], value)
