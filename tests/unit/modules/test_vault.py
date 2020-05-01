@@ -155,6 +155,14 @@ class VaultDefaultTestCase(TestCase, LoaderModuleMockMixin):
                 "__grains__": {"id": "foo"},
                 "__utils__": {
                     "vault.make_request": MagicMock(side_effect=Exception("FAILED")),
+                    "vault.is_v2": MagicMock(
+                        return_value={
+                            "v2": True,
+                            "data": "secrets/data/mysecret",
+                            "metadata": "secrets/metadata/mysecret",
+                            "type": "kv",
+                        }
+                    ),
                 },
             },
         }
