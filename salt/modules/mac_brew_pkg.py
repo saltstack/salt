@@ -221,8 +221,12 @@ def latest_version(*names, **kwargs):
         refresh_db()
 
     def get_version(pkg_info):
-        # Perhaps this will need an option to pick devel by default
-        return pkg_info["versions"]["stable"] or pkg_info["versions"]["devel"]
+        # return only outdated packages and not pinned packages
+        if pkg_info["outdated"] is True and pkg_info["pinned"] is False:
+            # Perhaps this will need an option to pick devel by default
+            return pkg_info["versions"]["stable"] or pkg_info["versions"]["devel"]
+        else:
+            return ""
 
     versions_dict = dict(
         (key, get_version(val)) for key, val in six.iteritems(_info(*names))
