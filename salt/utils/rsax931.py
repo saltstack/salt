@@ -12,7 +12,7 @@ import sys
 
 # Import 3rd-party libs
 from ctypes import c_char_p, c_int, c_void_p, cdll, create_string_buffer, pointer
-from ctypes.util import find_library
+import ctypes.util
 
 # Import Salt libs
 import salt.utils.platform
@@ -34,7 +34,7 @@ def _find_libcrypto():
         lib = glob.glob(os.path.join(os.path.dirname(sys.executable), "libcrypto.so*"))
         lib = lib[0] if lib else None
     else:
-        lib = find_library("crypto")
+        lib = ctypes.util.find_library("crypto")
         if not lib:
             if salt.utils.platform.is_sunos():
                 # Solaris-like distribution that use pkgsrc have libraries

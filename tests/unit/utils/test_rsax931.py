@@ -178,7 +178,7 @@ class RSAX931Test(TestCase):
         # Test unsupported systems.
         with patch.object(sys, "platform", "unknown"), patch.object(
             glob, "glob", lambda a: []
-        ), patch.object(ctypes.util, "find_library", lambda: None), self.assertRaises(
+        ), patch.object(ctypes.util, "find_library", lambda a: None), self.assertRaises(
             OSError
         ):
             _find_libcrypto()
