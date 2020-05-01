@@ -31,6 +31,7 @@ from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
 # Import Salt Testing libs
+from tests.support.helpers import dedent
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -333,6 +334,16 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         xml_data = virt._gen_xml("hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64")
         root = ET.fromstring(xml_data)
         self.assertIsNone(root.find("devices/graphics"))
+
+    def test_gen_xml_noloader_default(self):
+        """
+        Test virt._gen_xml() with default no loader
+        """
+        diskp = virt._disk_profile("default", "kvm", [], "hello")
+        nicp = virt._nic_profile("default", "kvm")
+        xml_data = virt._gen_xml("hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64")
+        root = ET.fromstring(xml_data)
+        self.assertIsNone(root.find("os/loader"))
 
     def test_gen_xml_vnc_default(self):
         """
@@ -1885,6 +1896,47 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(xml, virt.get_xml("test-vm"))
         self.assertEqual(xml, virt.get_xml(domain))
 
+    def test_get_loader(self):
+        """
+        Test virt.get_loader()
+        """
+        xml = """<domain type='kvm' id='7'>
+              <name>test-vm</name>
+              <os>
+                <loader readonly='yes' type='pflash'>/foo/bar</loader>
+              </os>
+            </domain>
+        """
+        self.set_mock_vm("test-vm", xml)
+
+        loader = virt.get_loader("test-vm")
+        self.assertEqual("/foo/bar", loader["path"])
+        self.assertEqual("yes", loader["readonly"])
+
+    def test_cpu_baseline(self):
+        """
+        Test virt.cpu_baseline()
+        """
+        capabilities_xml = dedent(
+            """<capabilities>
+                  <host>
+                    <uuid>44454c4c-3400-105a-8033-b3c04f4b344a</uuid>
+                    <cpu>
+                      <arch>x86_64</arch>
+                      <vendor>Intel</vendor>
+                    </cpu>
+                  </host>
+                </capabilities>"""
+        )
+
+        baseline_cpu_xml = b"""<cpu match="exact" mode="custom">
+                                  <vendor>Intel</vendor>
+                                </cpu>"""
+
+        self.mock_conn.getCapabilities.return_value = capabilities_xml
+        self.mock_conn.baselineCPU.return_value = baseline_cpu_xml
+        self.assertMultiLineEqual(str(baseline_cpu_xml), str(virt.cpu_baseline()))
+
     def test_parse_qemu_img_info(self):
         """
         Make sure that qemu-img info output is properly parsed
@@ -2658,6 +2710,69 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(expected, caps)
 
+    def test_all_capabilities(self):
+        """
+        Test the virt.domain_capabilities default output
+        """
+        domainXml = """
+<domainCapabilities>
+  <path>/usr/bin/qemu-system-x86_64</path>
+  <domain>kvm</domain>
+  <machine>virt-2.12</machine>
+  <arch>x86_64</arch>
+  <vcpu max='255'/>
+  <iothreads supported='yes'/>
+</domainCapabilities>
+        """
+        hostXml = """
+<capabilities>
+  <host>
+    <uuid>44454c4c-3400-105a-8033-b3c04f4b344a</uuid>
+    <cpu>
+      <arch>x86_64</arch>
+      <model>Nehalem</model>
+      <vendor>Intel</vendor>
+      <microcode version='25'/>
+      <topology sockets='1' cores='4' threads='2'/>
+    </cpu>
+  </host>
+  <guest>
+    <os_type>hvm</os_type>
+    <arch name='x86_64'>
+      <wordsize>64</wordsize>
+      <emulator>/usr/bin/qemu-system-x86_64</emulator>
+      <machine maxCpus='255'>pc-i440fx-2.6</machine>
+      <machine canonical='pc-i440fx-2.6' maxCpus='255'>pc</machine>
+      <machine maxCpus='255'>pc-0.12</machine>
+      <domain type='qemu'/>
+      <domain type='kvm'>
+        <emulator>/usr/bin/qemu-kvm</emulator>
+        <machine maxCpus='255'>pc-i440fx-2.6</machine>
+        <machine canonical='pc-i440fx-2.6' maxCpus='255'>pc</machine>
+        <machine maxCpus='255'>pc-0.12</machine>
+      </domain>
+    </arch>
+  </guest>
+</capabilities>
+        """
+
+        # pylint: disable=no-member
+        self.mock_conn.getCapabilities.return_value = hostXml
+        self.mock_conn.getDomainCapabilities.side_effect = [
+            domainXml,
+            domainXml.replace("<domain>kvm", "<domain>qemu"),
+        ]
+        # pylint: enable=no-member
+
+        caps = virt.all_capabilities()
+        self.assertEqual(
+            "44454c4c-3400-105a-8033-b3c04f4b344a", caps["host"]["host"]["uuid"]
+        )
+        self.assertEqual(
+            set(["qemu", "kvm"]),
+            set([domainCaps["domain"] for domainCaps in caps["domains"]]),
+        )
+
     def test_network_tag(self):
         """
         Test virt._get_net_xml() with VLAN tag
@@ -3295,15 +3410,19 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         # pylint: enable=no-member
         self.assertEqual(names, virt.pool_list_volumes("default"))
 
+    @patch("salt.modules.virt._is_bhyve_hyper", return_value=False)
     @patch("salt.modules.virt._is_kvm_hyper", return_value=True)
     @patch("salt.modules.virt._is_xen_hyper", return_value=False)
-    def test_get_hypervisor(self, isxen_mock, iskvm_mock):
+    def test_get_hypervisor(self, isxen_mock, iskvm_mock, is_bhyve_mock):
         """
         test the virt.get_hypervisor() function
         """
         self.assertEqual("kvm", virt.get_hypervisor())
 
         iskvm_mock.return_value = False
+        self.assertIsNone(virt.get_hypervisor())
+
+        is_bhyve_mock.return_value = False
         self.assertIsNone(virt.get_hypervisor())
 
         isxen_mock.return_value = True

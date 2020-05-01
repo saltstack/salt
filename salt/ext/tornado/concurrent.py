@@ -26,13 +26,13 @@ from __future__ import absolute_import, division, print_function
 
 import functools
 import platform
+import sys
 import textwrap
 import traceback
-import sys
 
 from salt.ext.tornado.log import app_log
 from salt.ext.tornado.stack_context import ExceptionStackContext, wrap
-from salt.ext.tornado.util import raise_exc_info, ArgReplacer, is_finalizing
+from salt.ext.tornado.util import ArgReplacer, is_finalizing, raise_exc_info
 
 try:
     from concurrent import futures
@@ -47,12 +47,15 @@ except ImportError:
 
 # Can the garbage collector handle cycles that include __del__ methods?
 # This is true in cpython beginning with version 3.4 (PEP 442).
-_GC_CYCLE_FINALIZERS = (platform.python_implementation() == 'CPython' and
-                        sys.version_info >= (3, 4))
+_GC_CYCLE_FINALIZERS = platform.python_implementation() == "CPython" and sys.version_info >= (
+    3,
+    4,
+)
 
 
 class ReturnValueIgnoredError(Exception):
     pass
+
 
 # This class and associated code in the future object is derived
 # from the Trollius project, a backport of asyncio to Python 2.x - 3.x
@@ -86,7 +89,7 @@ class _TracebackLogger(object):
     the Future is collected, and the helper is present, the helper
     object is also collected, and its __del__() method will log the
     traceback.  When the Future's result() or exception() method is
-    called (and a helper object is present), it removes the the helper
+    called (and a helper object is present), it removes the helper
     object, after calling its clear() method to prevent it from
     logging.
 
@@ -108,7 +111,7 @@ class _TracebackLogger(object):
     in a discussion about closing files when they are collected.
     """
 
-    __slots__ = ('exc_info', 'formatted_tb')
+    __slots__ = ("exc_info", "formatted_tb")
 
     def __init__(self, exc_info):
         self.exc_info = exc_info
@@ -126,8 +129,10 @@ class _TracebackLogger(object):
 
     def __del__(self, is_finalizing=is_finalizing):
         if not is_finalizing() and self.formatted_tb:
-            app_log.error('Future exception was never retrieved: %s',
-                          ''.join(self.formatted_tb).rstrip())
+            app_log.error(
+                "Future exception was never retrieved: %s",
+                "".join(self.formatted_tb).rstrip(),
+            )
 
 
 class Future(object):
@@ -166,23 +171,28 @@ class Future(object):
        suppress the logging by ensuring that the exception is observed:
        ``f.add_done_callback(lambda f: f.exception())``.
     """
+
     def __init__(self):
         self._done = False
         self._result = None
         self._exc_info = None
 
-        self._log_traceback = False   # Used for Python >= 3.4
-        self._tb_logger = None        # Used for Python <= 3.3
+        self._log_traceback = False  # Used for Python >= 3.4
+        self._tb_logger = None  # Used for Python <= 3.3
 
         self._callbacks = []
 
     # Implement the Python 3.5 Awaitable protocol if possible
     # (we can't use return and yield together until py33).
     if sys.version_info >= (3, 3):
-        exec(textwrap.dedent("""
+        exec(
+            textwrap.dedent(
+                """
         def __await__(self):
             return (yield self)
-        """))
+        """
+            )
+        )
     else:
         # Py2-compatible version for use with cython.
         def __await__(self):
@@ -282,9 +292,8 @@ class Future(object):
     def set_exception(self, exception):
         """Sets the exception of a ``Future.``"""
         self.set_exc_info(
-            (exception.__class__,
-             exception,
-             getattr(exception, '__traceback__', None)))
+            (exception.__class__, exception, getattr(exception, "__traceback__", None))
+        )
 
     def exc_info(self):
         """Returns a tuple in the same format as `sys.exc_info` or None.
@@ -325,14 +334,14 @@ class Future(object):
             try:
                 cb(self)
             except Exception:
-                app_log.exception('Exception in callback %r for %r',
-                                  cb, self)
+                app_log.exception("Exception in callback %r for %r", cb, self)
         self._callbacks = None
 
     # On Python 3.3 or older, objects with a destructor part of a reference
     # cycle are never destroyed. It's no longer the case on Python 3.4 thanks to
     # the PEP 442.
     if _GC_CYCLE_FINALIZERS:
+
         def __del__(self, is_finalizing=is_finalizing):
             if is_finalizing() or not self._log_traceback:
                 # set_exception() was not called, or result() or exception()
@@ -341,8 +350,11 @@ class Future(object):
 
             tb = traceback.format_exception(*self._exc_info)
 
-            app_log.error('Future %r exception was never retrieved: %s',
-                          self, ''.join(tb).rstrip())
+            app_log.error(
+                "Future %r exception was never retrieved: %s",
+                self,
+                "".join(tb).rstrip(),
+            )
 
 
 TracebackFuture = Future
@@ -390,6 +402,7 @@ def run_on_executor(*args, **kwargs):
     .. versionchanged:: 4.2
        Added keyword arguments to use alternative attributes.
     """
+
     def run_on_executor_decorator(fn):
         executor = kwargs.get("executor", "executor")
         io_loop = kwargs.get("io_loop", "io_loop")
@@ -400,9 +413,12 @@ def run_on_executor(*args, **kwargs):
             future = getattr(self, executor).submit(fn, self, *args, **kwargs)
             if callback:
                 getattr(self, io_loop).add_future(
-                    future, lambda future: callback(future.result()))
+                    future, lambda future: callback(future.result())
+                )
             return future
+
         return wrapper
+
     if args and kwargs:
         raise ValueError("cannot combine positional and keyword args")
     if len(args) == 1:
@@ -454,18 +470,19 @@ def return_future(f):
     same function, provided ``@return_future`` appears first.  However,
     consider using ``@gen.coroutine`` instead of this combination.
     """
-    replacer = ArgReplacer(f, 'callback')
+    replacer = ArgReplacer(f, "callback")
 
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
         future = TracebackFuture()
         callback, args, kwargs = replacer.replace(
-            lambda value=_NO_RESULT: future.set_result(value),
-            args, kwargs)
+            lambda value=_NO_RESULT: future.set_result(value), args, kwargs
+        )
 
         def handle_error(typ, value, tb):
             future.set_exc_info((typ, value, tb))
             return True
+
         exc_info = None
         with ExceptionStackContext(handle_error):
             try:
@@ -473,7 +490,8 @@ def return_future(f):
                 if result is not None:
                     raise ReturnValueIgnoredError(
                         "@return_future should not be used with functions "
-                        "that return values")
+                        "that return values"
+                    )
             except:
                 exc_info = sys.exc_info()
                 raise
@@ -490,14 +508,17 @@ def return_future(f):
         # immediate exception, and again when the future resolves and
         # the callback triggers its exception by calling future.result()).
         if callback is not None:
+
             def run_callback(future):
                 result = future.result()
                 if result is _NO_RESULT:
                     callback()
                 else:
                     callback(future.result())
+
             future.add_done_callback(wrap(run_callback))
         return future
+
     return wrapper
 
 
@@ -507,16 +528,20 @@ def chain_future(a, b):
     The result (success or failure) of ``a`` will be copied to ``b``, unless
     ``b`` has already been completed or cancelled by the time ``a`` finishes.
     """
+
     def copy(future):
         assert future is a
         if b.done():
             return
-        if (isinstance(a, TracebackFuture) and
-                isinstance(b, TracebackFuture) and
-                a.exc_info() is not None):
+        if (
+            isinstance(a, TracebackFuture)
+            and isinstance(b, TracebackFuture)
+            and a.exc_info() is not None
+        ):
             b.set_exc_info(a.exc_info())
         elif a.exception() is not None:
             b.set_exception(a.exception())
         else:
             b.set_result(a.result())
+
     a.add_done_callback(copy)

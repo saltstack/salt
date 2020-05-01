@@ -457,7 +457,7 @@ def _merge_list_of_dict(first, second, prepend=True):
     if first and not second:
         return first
     # Determine overlaps
-    # So we dont change the position of the existing terms/filters
+    # So we don't change the position of the existing terms/filters
     overlaps = []
     merged = []
     appended = []
@@ -471,7 +471,7 @@ def _merge_list_of_dict(first, second, prepend=True):
     for ele in second:
         ele_key = ele.keys()[0]
         if _lookup_element(overlaps, ele_key):
-            # If theres an overlap, get the value from the first
+            # If there's an overlap, get the value from the first
             # But inserted into the right position
             ele_val_first = _lookup_element(first, ele_key)
             merged.append({ele_key: ele_val_first})
