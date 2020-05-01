@@ -232,7 +232,6 @@ class VaultTokenAuthTest(TestCase, LoaderModuleMockMixin):
             # Test uses
             num_uses = 6
             result = vault.generate_token("test-minion", "signature", uses=num_uses)
-            print(f"generate result: {result}")
             self.assertTrue("uses" in result)
             self.assertTrue(result["uses"] == num_uses)
             json_request = {
