@@ -6,13 +6,13 @@ Create and verify ANSI X9.31 RSA signatures using OpenSSL libcrypto
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import ctypes.util
 import glob
 import os
 import sys
 
 # Import 3rd-party libs
 from ctypes import c_char_p, c_int, c_void_p, cdll, create_string_buffer, pointer
-import ctypes.util
 
 # Import Salt libs
 import salt.utils.platform
