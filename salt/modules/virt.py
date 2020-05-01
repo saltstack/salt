@@ -4601,7 +4601,7 @@ def cpu_baseline(full=False, migratable=False, out="libvirt", **kwargs):
             "vendor": cpu.find("vendor").text,
             "features": [feature.get("name") for feature in cpu.findall("feature")],
         }
-    return cpu.toxml()
+    return ElementTree.tostring(cpu)
 
 
 def network_define(name, bridge, forward, ipv4_config=None, ipv6_config=None, **kwargs):
