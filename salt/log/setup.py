@@ -19,7 +19,6 @@ import os
 import socket
 import sys
 import time
-import traceback
 import types
 import urllib.parse
 
@@ -876,58 +875,3 @@ def __remove_temp_logging_handler():
         # Python versions >= 2.7 allow warnings to be redirected to the logging
         # system now that it's configured. Let's enable it.
         logging.captureWarnings(True)
-
-
-def __global_logging_exception_handler(
-    exc_type,
-    exc_value,
-    exc_traceback,
-    _logger=logging.getLogger(__name__),
-    _stderr=sys.__stderr__,
-    _format_exception=traceback.format_exception,
-):
-    """
-    This function will log all un-handled python exceptions.
-    """
-    if exc_type.__name__ == "KeyboardInterrupt":
-        # Do not log the exception or display the traceback on Keyboard Interrupt
-        # Stop the logging queue listener thread
-        if is_mp_logging_listener_configured():
-            shutdown_multiprocessing_logging_listener()
-        return
-
-    # Log the exception
-    msg = "An un-handled exception was caught by salt's global exception handler:"
-    try:
-        msg = "{}\n{}: {}\n{}".format(
-            msg,
-            exc_type.__name__,
-            exc_value,
-            "".join(_format_exception(exc_type, exc_value, exc_traceback)).strip(),
-        )
-    except Exception:  # pylint: disable=broad-except
-        msg = "{}\n{}: {}\n(UNABLE TO FORMAT TRACEBACK)".format(
-            msg,
-            exc_type.__name__,
-            exc_value,
-        )
-    try:
-        _logger.error(msg)
-    except Exception:  # pylint: disable=broad-except
-        # Python is shutting down and logging has been set to None already
-        try:
-            _stderr.write(msg + "\n")
-        except Exception:  # pylint: disable=broad-except
-            # We have also lost reference to sys.__stderr__ ?!
-            print(msg)
-
-    # Call the original sys.excepthook
-    try:
-        sys.__excepthook__(exc_type, exc_value, exc_traceback)
-    except Exception:  # pylint: disable=broad-except
-        # Python is shutting down and sys has been set to None already
-        pass
-
-
-# Set our own exception handler as the one to use
-sys.excepthook = __global_logging_exception_handler
