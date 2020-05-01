@@ -73,7 +73,7 @@ def __virtual__():
     return __virtualname__
 
 
-def _absent(name, dataset_type, force=False, recursive=False):
+def _absent(name, dataset_type, force=False, recursive=False, recursive_all=False):
     """
     internal shared function for *_absent
 
@@ -85,6 +85,9 @@ def _absent(name, dataset_type, force=False, recursive=False):
         try harder to destroy the dataset
     recursive : boolean
         also destroy all the child datasets
+    recursive_all : boolean
+        recursively destroy all dependents, including cloned file systems
+        outside the target hierarchy. (-R)
 
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
@@ -101,7 +104,12 @@ def _absent(name, dataset_type, force=False, recursive=False):
         ## NOTE: dataset found with the name and dataset_type
         if not __opts__["test"]:
             mod_res = __salt__["zfs.destroy"](
-                name, **{"force": force, "recursive": recursive}
+                name,
+                **{
+                    "force": force,
+                    "recursive": recursive,
+                    "recursive_all": recursive_all,
+                }
             )
         else:
             mod_res = OrderedDict([("destroyed", True)])
@@ -179,7 +187,7 @@ def volume_absent(name, force=False, recursive=False):
     return ret
 
 
-def snapshot_absent(name, force=False, recursive=False):
+def snapshot_absent(name, force=False, recursive=False, recursive_all=False):
     """
     ensure snapshot is absent on the system
 
@@ -189,6 +197,9 @@ def snapshot_absent(name, force=False, recursive=False):
         try harder to destroy the dataset (zfs destroy -f)
     recursive : boolean
         also destroy all the child datasets (zfs destroy -r)
+    recursive_all : boolean
+        recursively destroy all dependents, including cloned file systems
+        outside the target hierarchy. (-R)
 
     """
     if not __utils__["zfs.is_snapshot"](name):
@@ -199,7 +210,7 @@ def snapshot_absent(name, force=False, recursive=False):
             "comment": "invalid snapshot name: {0}".format(name),
         }
     else:
-        ret = _absent(name, "snapshot", force, recursive)
+        ret = _absent(name, "snapshot", force, recursive, recursive_all)
     return ret
 
 
