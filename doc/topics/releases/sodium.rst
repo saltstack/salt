@@ -147,3 +147,20 @@ A new renderer for toml files has been added.
   txt = "hello"
   [["some id"."test.nop"]]
   "somekey" = "somevalue"
+
+Execution Module updates
+========================
+
+Vault Module
+------------
+
+The :py:func:`vault module <salt.modules.vault>` has been updated with the ability
+to cache generated tokens. By specifying ``ttl`` or ``uses`` the token generated on
+behalf of the minion will be allowed to persist and function for the defined time period
+or number of uses.
+
+.. code-block:: yaml
+
+  vault:
+    auth:
+      uses: 25

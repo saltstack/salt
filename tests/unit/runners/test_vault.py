@@ -215,7 +215,9 @@ class VaultTokenAuthTest(TestCase, LoaderModuleMockMixin):
         """
         Basic tests for test_generate_token: all exits
         """
-        mock = _mock_json_response({"auth": {"client_token": "test"}})
+        mock = _mock_json_response(
+            {"auth": {"client_token": "test", "renewable": False, "lease_duration": 0}}
+        )
         with patch("requests.post", mock):
             result = vault.generate_token("test-minion", "signature")
             log.debug("generate_token result: %s", result)
@@ -225,6 +227,43 @@ class VaultTokenAuthTest(TestCase, LoaderModuleMockMixin):
             self.assertEqual(result["token"], "test")
             mock.assert_called_with(
                 "http://fake_url", headers=ANY, json=ANY, verify=ANY
+            )
+
+            # Test uses
+            num_uses = 6
+            result = vault.generate_token("test-minion", "signature", uses=num_uses)
+            print(f"generate result: {result}")
+            self.assertTrue("uses" in result)
+            self.assertTrue(result["uses"] == num_uses)
+            json_request = {
+                "policies": ["saltstack/minion/test-minion", "saltstack/minions"],
+                "num_uses": num_uses,
+                "meta": {
+                    "saltstack-jid": "<no jid set>",
+                    "saltstack-minion": "test-minion",
+                    "saltstack-user": "<no user set>",
+                },
+            }
+            mock.assert_called_with(
+                "http://fake_url", headers=ANY, json=json_request, verify=ANY
+            )
+
+            # Test ttl
+            expected_ttl = "6h"
+            result = vault.generate_token("test-minion", "signature", ttl=expected_ttl)
+            self.assertTrue(result["uses"] == 1)
+            json_request = {
+                "policies": ["saltstack/minion/test-minion", "saltstack/minions"],
+                "num_uses": 1,
+                "ttl": expected_ttl,
+                "meta": {
+                    "saltstack-jid": "<no jid set>",
+                    "saltstack-minion": "test-minion",
+                    "saltstack-user": "<no user set>",
+                },
+            }
+            mock.assert_called_with(
+                "http://fake_url", headers=ANY, json=json_request, verify=ANY
             )
 
         mock = _mock_json_response({}, status_code=403, reason="no reason")
@@ -279,7 +318,9 @@ class VaultAppRoleAuthTest(TestCase, LoaderModuleMockMixin):
         """
         Basic test for test_generate_token with approle (two vault calls)
         """
-        mock = _mock_json_response({"auth": {"client_token": "test"}})
+        mock = _mock_json_response(
+            {"auth": {"client_token": "test", "renewable": False, "lease_duration": 0}}
+        )
         with patch("requests.post", mock):
             result = vault.generate_token("test-minion", "signature")
             log.debug("generate_token result: %s", result)
