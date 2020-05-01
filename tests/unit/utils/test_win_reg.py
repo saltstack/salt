@@ -731,6 +731,11 @@ class WinFunctionsTestCase(TestCase):
         result = win_reg.cast_vdata(vdata=vdata, vtype="REG_SZ")
         self.assertTrue(isinstance(result, six.text_type))
 
+        vdata = None
+        result = win_reg.cast_vdata(vdata=vdata, vtype="REG_SZ")
+        self.assertTrue(isinstance(result, six.text_type))
+        self.assertEqual(result, "")
+
     @destructiveTest
     def test_delete_value(self):
         """
