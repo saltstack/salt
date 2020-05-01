@@ -149,7 +149,7 @@ def _check_bundled():
     Gather run-time information to indicate if we are running from source or bundled.
     """
     frozen = False
-    if getattr(sys, "frozen") and hasattr(sys, "_MEIPASS"):
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
         frozen = True
     return frozen
 
