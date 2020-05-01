@@ -109,7 +109,6 @@ def generate_token(
             return {"error": "No policies matched minion"}
 
         log.trace("Sending token creation request to Vault")
-        log.error(f"url: {url} headers: {headers} payload: {payload} verify: {verify}")
         response = requests.post(url, headers=headers, json=payload, verify=verify)
 
         if response.status_code != 200:
