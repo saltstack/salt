@@ -1243,7 +1243,7 @@ class AESFuncs(TransportMethods):
         "_handle_minion_event",
         "_return",
         "_syndic_return",
-        "_minion_runner",
+        "minion_runner",
         "pub_ret",
         "minion_pub",
         "minion_publish",
