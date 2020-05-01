@@ -13,6 +13,8 @@ import glob
 import os
 import sys
 
+import salt.utils.platform
+
 # salt libs
 from salt.utils.rsax931 import (
     RSAX931Signer,
@@ -20,7 +22,6 @@ from salt.utils.rsax931 import (
     _find_libcrypto,
     _load_libcrypto,
 )
-import salt.utils.platform
 from tests.support.mock import patch
 
 # salt testing libs
