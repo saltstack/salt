@@ -86,7 +86,6 @@ import re
 import shutil
 import sys
 import tempfile
-from pathlib import Path
 
 import pkg_resources  # pylint: disable=3rd-party-module-not-gated
 
@@ -145,24 +144,30 @@ def _clear_context(bin_env=None):
     __context__.pop(contextkey, None)
 
 
+def _check_bundled():
+    """
+    Gather run-time information to indicate if we are running from source or bundled.
+    """
+    frozen = False
+    if getattr(sys, "frozen") and hasattr(sys, "_MEIPASS"):
+        frozen = True
+    return frozen
+
+
 def _get_pip_bin(bin_env):
     """
     Locate the pip binary, either from `bin_env` as a virtualenv, as the
     executable itself, or from searching conventional filesystem locations
     """
+    bundled = _check_bundled()
+
     if not bin_env:
-        path = Path(sys.executable)
-        if path.name == "python":
+        if bundled:
+            logger.debug("pip: Using pip from bundled app")
+            return [os.path.normpath(sys.executable), "pip"]
+        else:
             logger.debug("pip: Using pip from currently-running Python")
             return [os.path.normpath(sys.executable), "-m", "pip"]
-
-        elif path.name != "python" or path.name == "run" or path.name == "pip":
-            logger.debug("pip: Using pip binary or from unknown executable")
-            return [os.path.normpath(sys.executable), "pip"]
-
-        else:
-            logger.debug("System executable is None")
-            return False
 
     python_bin = "python.exe" if salt.utils.platform.is_windows() else "python"
 
