@@ -38,6 +38,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         ret = pip._pip_bin_env(None, None)
         self.assertIsNone(ret)
 
+    def test__pip_bin_bundled_app(self):
+        sys_info = hasattr(sys, "sys._MEIPASS")
+        ret = pip._check_bundled()
+        self.assertEqual(ret, sys_info)
+
     def test_fix4361(self):
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
