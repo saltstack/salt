@@ -971,8 +971,9 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                 )
                 log.error("Unexpected exception while handling request:", exc_info=True)
 
-        self.write(self.serialize({"return": ret}))
-        self.finish()
+        if not self._finished:
+            self.write(self.serialize({"return": ret}))
+            self.finish()
 
     @salt.ext.tornado.gen.coroutine
     def _disbatch_local(self, chunk):
@@ -1114,7 +1115,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                         raise salt.ext.tornado.gen.Return(chunk_ret)
 
             except TimeoutException:
-                pass
+                break
 
     @salt.ext.tornado.gen.coroutine
     def job_not_running(self, jid, tgt, tgt_type, minions, is_finished):
