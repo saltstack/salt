@@ -934,6 +934,7 @@ class SubprocessList(object):
         with self.lock:
             for proc in self.processes:
                 proc.terminate()
-                proc.join()
                 log.debug("Subprocess %s terminated", proc.name)
+            for proc in self.processes:
+                proc.join()
             self.processes.clear()
