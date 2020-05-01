@@ -309,6 +309,10 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         user_info = self.run_function("user.info", [self.user_name])
         self.assertTrue(os.path.exists(user_info["home"]))
 
+    @skipIf(
+        salt.utils.platform.is_windows() or salt.utils.platform.is_darwin(),
+        "groups/gid not fully supported",
+    )
     def test_user_present_change_gid_but_keep_group(self):
         """
         This tests the case in which the default group is changed at the same

@@ -314,7 +314,7 @@ def present(
         specified here does not exist on the minion, the state will fail.
         If set to the empty list, the user will be removed from all groups
         except the default group. If unset, salt will assume current groups
-        are still wanted (see issue #28706).
+        are still wanted, and will make no changes to them.
 
     optional_groups
         A list of groups to assign the user to, pass a list object. If a group
