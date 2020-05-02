@@ -2362,10 +2362,10 @@ def mediatype_create(name, mediatype, **connection_args):
             # since zabbix 4.4 api, mediatype has new attribute: name
             if _LooseVersion(zabbix_version) >= _LooseVersion("4.4"):
                 params = {"name": name}
-                _ignore_name=False
+                _ignore_name = False
             else:
                 params = {"description": name}
-                _ignore_name=True
+                _ignore_name = True
             params["type"] = mediatype
             params = _params_extend(params, _ignore_name, **connection_args)
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
