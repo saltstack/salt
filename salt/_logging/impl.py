@@ -17,7 +17,6 @@ import sys
 import traceback
 import types
 import urllib.parse
-import weakref
 
 # Let's define these custom logging levels before importing the salt._logging.mixins
 # since they will be used there
@@ -1379,24 +1378,30 @@ def get_log_forwarding_handler():
     Get the log forwarding handler
     """
     try:
-        return setup_log_forwarding.__handlers__[os.getpid()]
+        handler = setup_log_forwarding.__handler__
+        if handler.pid != os.getpid():
+            shutdown_log_forwarding(log_forwarding_handler=handler)
+            handler = None
+        return handler
     except (AttributeError, KeyError):
         return
 
 
-def shutdown_log_forwarding():
+def shutdown_log_forwarding(log_forwarding_handler=None):
     """
     Shutdown the log forwarding handler
     """
-    log_forwarding_handler = get_log_forwarding_handler()
+    if log_forwarding_handler is None:
+        log_forwarding_handler = get_log_forwarding_handler()
+        if log_forwarding_handler is not None:
+            log.debug(
+                "Shutting down log forwarding on process with pid: %s", os.getpid(),
+            )
+
     if log_forwarding_handler is not None:
-        log.debug(
-            "Shutting down log forwarding on process with pid: %s", os.getpid(),
-        )
         log_forwarding_handler.stop()
         logging.root.removeHandler(log_forwarding_handler)
-        setup_log_forwarding.__handlers__.pop(os.getpid())
-        log_forwarding_handler.stop()
+        delattr(setup_log_forwarding, "__handler__")
 
 
 def setup_log_forwarding(log_host=None, log_port=None, log_level=None, log_prefix=None):
@@ -1405,6 +1410,17 @@ def setup_log_forwarding(log_host=None, log_port=None, log_level=None, log_prefi
     """
     if is_log_forwarding_setup():
         return
+        # This scenario happens on platforms which support forking
+        # where the forked process will "inherit" the configured
+        # log forwarding handler from the parent process.
+        # We just make sure that handler is shutdown before
+        # reconfiguring log forwarding:
+        #
+        # handler = get_log_forwarding_handler()
+        # if handler.pid != os.getpid():
+        #    shutdown_log_forwarding(handler)
+        # else:
+        #    return
 
     if log_host is None:
         log_host = get_log_forwarding_host()
@@ -1439,26 +1455,7 @@ def setup_log_forwarding(log_host=None, log_port=None, log_level=None, log_prefi
         # Add it to the root logger
         logging.root.addHandler(handler)
 
-        # The log forwarding handler needs to be cached by pid because the
-        # parent process always has one already running and any new processes,
-        # where forking is available, will inherit that handler.
-        # We don't want that handler.
-        try:
-            log_forwarding_handlers = setup_log_forwarding.__handlers__
-        except AttributeError:
-            log_forwarding_handlers = (
-                setup_log_forwarding.__handlers__
-            ) = weakref.WeakValueDictionary()
-
-        log_forwarding_handlers[os.getpid()] = handler
-
-        # Let's remove any handler which should not be in this process
-        for pid, zmq_handler in log_forwarding_handlers.items():
-            if pid == os.getpid():
-                continue
-            if zmq_handler is handler:
-                continue
-            logging.root.removeHandler(zmq_handler)
+        setup_log_forwarding.__handler__ = handler
 
         # Now, sync stored log messages and shutdown the temporary handler
         temp_handler = get_temp_handler()
