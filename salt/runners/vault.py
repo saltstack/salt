@@ -62,7 +62,7 @@ def generate_token(
         verify = config.get("verify", None)
         # Allow disabling of minion provided values via the master
         allow_minion_override = config.get("minion_auth", {}).get(
-            "allow_minion_override", True
+            "allow_minion_override", False
         )
         # This preserves the previous behavior of default TTL and 1 use
         if not allow_minion_override or uses is None:

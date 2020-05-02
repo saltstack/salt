@@ -96,7 +96,9 @@ def _get_token_and_url_from_master():
         "url": result["url"],
         "token": result["token"],
         "verify": result.get("verify", None),
-        "uses": uses,
+        "uses": result.get("uses", 1),
+        "lease_duration": result["lease_duration"],
+        "issued": result["issued"],
     }
 
 
@@ -146,7 +148,7 @@ def get_vault_connection():
             }
         except KeyError as err:
             errmsg = 'Minion has "vault" config section, but could not find key "{0}" within'.format(
-                err.message
+                err
             )
             raise salt.exceptions.CommandExecutionError(errmsg)
 
@@ -192,7 +194,10 @@ def make_request(
         )
         cur_time = int(round(time.time()))
 
-        if __context__[cache_key].get("uses", 1) <= 0:
+        current_uses = __context__[cache_key].get("uses", 1)
+        if not current_uses:
+            current_uses = 1
+        if current_uses <= 0:
             log.debug(
                 "Cached token has no more uses left {}: DELETING".format(
                     __context__[cache_key]["uses"]
@@ -201,11 +206,7 @@ def make_request(
             del __context__[cache_key]
             _get_new_connection()
         else:
-            log.debug(
-                "Token has {} uses left".format(
-                    __context__[cache_key].get("uses", "infinity")
-                )
-            )
+            log.debug("Token has {} uses left".format(current_uses))
 
         if __context__.get(cache_key, False) and ttl10 < cur_time:
             log.debug(
@@ -221,11 +222,12 @@ def make_request(
     token = __context__[cache_key]["token"] if not token else token
     vault_url = __context__[cache_key]["url"] if not vault_url else vault_url
     args["verify"] = (
-        __opts__["vault"].get("verify", None)
+        __opts__.get("vault", {}).get("verify", None)
         if "verify" not in args
         else args["verify"]
     )
 
+    log.debug("XXXX vault url: %s resource: %s", vault_url, resource)
     url = "{0}/{1}".format(vault_url, resource)
     headers = {"X-Vault-Token": token, "Content-Type": "application/json"}
     response = requests.request(method, url, headers=headers, **args)
