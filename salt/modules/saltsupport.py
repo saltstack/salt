@@ -15,8 +15,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-:codeauthor: :email:`Bo Maryniuk <bo@suse.de>`
-
 Module to run salt-support within Salt.
 """
 # pylint: disable=W0231,W0221
@@ -197,7 +195,7 @@ class SaltSupportModule(SaltSupport):
                 try:
                     os.unlink(archive)
                     ret["files"][archive] = "removed"
-                except Exception as err:
+                except Exception as err:  # pylint: disable=broad-except
                     ret["errors"][archive] = str(err)
                     ret["files"][archive] = "left"
 

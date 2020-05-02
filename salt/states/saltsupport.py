@@ -16,8 +16,6 @@
 # limitations under the License.
 
 r"""
-:codeauthor: :email:`Bo Maryniuk <bo@suse.de>`
-
 Execution of Salt Support from within states
 ============================================
 
@@ -91,7 +89,7 @@ class SaltSupportState(object):
                 out[ref_func] = getattr(self, ref_func)(**self.get_kwargs(ref_kwargs))
                 functions.append("  - {}".format(ref_func))
             ret["comment"] = "\n".join(functions)
-        except Exception as ex:
+        except Exception as ex:  # pylint: disable=broad-except
             ret["comment"] = str(ex)
             ret["result"] = False
         ret["changes"] = out

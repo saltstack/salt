@@ -794,21 +794,21 @@ def ensure_unicode_args(function):
 
 
 def external(func):
-    '''
+    """
     Mark function as external.
 
     :param func:
     :return:
-    '''
+    """
 
     def f(*args, **kwargs):
-        '''
+        """
         Stub.
 
         :param args:
         :param kwargs:
         :return:
-        '''
+        """
         return func(*args, **kwargs)
 
     f.external = True

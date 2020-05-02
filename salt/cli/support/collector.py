@@ -461,7 +461,7 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
             self.out.warning("Terminated earlier, cleaning up")
             try:
                 os.unlink(self.config["support_archive"])
-            except Exception as err:
+            except Exception as err:  # pylint: disable=broad-except
                 log.debug(err)
                 self.out.error("{} while cleaning up.".format(err))
 
@@ -481,7 +481,7 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
                 )
                 try:
                     os.unlink(self.config["support_archive"])
-                except Exception as err:
+                except Exception as err:  # pylint: disable=broad-except
                     log.debug(err)
                     self.out.error(
                         "{} while trying to overwrite existing archive.".format(err)
