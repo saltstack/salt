@@ -2307,9 +2307,9 @@ def mediatype_get(name=None, mediatypeids=None, **connection_args):
             if name:
                 # since zabbix API 4.4, mediatype has new attribute: name
                 if _LooseVersion(zabbix_version) >= _LooseVersion("4.4"):
-                    params['filter'].setdefault('name', name)
+                    params['filter'].setdefault("name", name)
                 else:
-                    params['filter'].setdefault('description', name)
+                    params['filter'].setdefault("description", name)
             if mediatypeids:
                 params.setdefault("mediatypeids", mediatypeids)
             params = _params_extend(params, **connection_args)
