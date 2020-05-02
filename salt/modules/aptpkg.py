@@ -666,7 +666,7 @@ def install(
             cmd_prefix.extend(["-o", "DPkg::Options::=--force-confnew"])
         else:
             cmd_prefix.extend(["-o", "DPkg::Options::=--force-confold"])
-        cmd_prefix += ["-o", "DPkg::Options::=--force-confdef"]
+            cmd_prefix += ["-o", "DPkg::Options::=--force-confdef"]
         if "install_recommends" in kwargs:
             if not kwargs["install_recommends"]:
                 cmd_prefix.append("--no-install-recommends")
@@ -1116,18 +1116,17 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
 
     old = list_pkgs()
     if "force_conf_new" in kwargs and kwargs["force_conf_new"]:
-        force_conf = "--force-confnew"
+        dpkg_options = ["--force-confnew" ]
     else:
-        force_conf = "--force-confold"
+        dpkg_options = ["--force-confold", "--force-confdef"]
     cmd = [
         "apt-get",
         "-q",
         "-y",
-        "-o",
-        "DPkg::Options::={0}".format(force_conf),
-        "-o",
-        "DPkg::Options::=--force-confdef",
     ]
+    for option in dpkg_options:
+        cmd.append("-o")
+        cmd_append("DPkg::Options::={0}".format(option))
 
     if kwargs.get("force_yes", False):
         cmd.append("--force-yes")
