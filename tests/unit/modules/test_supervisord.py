@@ -205,7 +205,7 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
             MockConfig.flag = 0
             self.assertDictEqual(supervisord.options("salt"), {"salt": True})
 
-    # 'status_bool' function tests: 1
+    # 'status_bool' function tests: 4
 
     def test_status_bool_name_correct(self):
         """
