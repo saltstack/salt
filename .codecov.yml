@@ -1,10 +1,11 @@
 codecov:
   ci:
-    - drone.saltstack.com
     - jenkinsci.saltstack.com
-#  max_report_age: 24           # The age you want coverage reports to expire at, or if you
-#                               # want to disable this check. Expired reports will not be processed by codecov.
-#  require_ci_to_pass: yes      # Less spammy. Only notify on passing builds.
+    - github.com
+
+  max_report_age: 24           # The age you want coverage reports to expire at, or if you
+                               # want to disable this check. Expired reports will not be processed by codecov.
+  require_ci_to_pass: yes      # Less spammy. Only notify on passing builds.
 
 
 #  notify:
@@ -25,6 +26,8 @@ coverage:
   range: 70..100
   precision: 2
 
+  notify: {}
+
   status:
       project:                   # measuring the overall project coverage
         default:
@@ -33,7 +36,13 @@ coverage:
                                  # are specified. Informational mode is great to use if you want to expose codecov
                                  # information to other developers in your pull request without necessarily gating
                                  # PRs on that information.
+          target: auto           # will use the coverage from the base commit (pull request base or parent commit) coverage to compare against.
+          base: auto             # will use the pull request base if the commit is on a pull request. If not, the parent commit will be used.
+          flags:
+            - salt
+            - tests
         salt:                    # declare a new status context "salt"
+          informational: true
           paths: "!tests/"       # remove all files in "tests/"
           target: auto           # will use the coverage from the base commit (pull request base or parent commit) coverage to compare against.
           base: auto             # will use the pull request base if the commit is on a pull request. If not, the parent commit will be used.
@@ -41,7 +50,10 @@ coverage:
                                  # options: success, error, failure
           if_not_found: success  # if parent is not found report status as success, error, or failure
           if_ci_failed: error    # if ci fails report status as success, error, or failure
+          flags:
+            - salt
         tests:                   # declare a new status context "tests"
+          informational: true
           #target: 100%          # we always want 100% coverage here
           target: auto           # auto while we get this going
           base: auto             # will use the pull request base if the commit is on a pull request. If not, the parent commit will be used.
@@ -50,6 +62,8 @@ coverage:
                                  # options: success, error, failure
           if_not_found: success  # if parent is not found report status as success, error, or failure
           if_ci_failed: error    # if ci fails report status as success, error, or failure
+          flags:
+            - tests
 
       patch:                     # pull requests only: this commit status will measure the
                                  # entire pull requests Coverage Diff. Checking if the lines
@@ -65,6 +79,9 @@ coverage:
                                  # options: success, error, failure
           if_not_found: success
           if_ci_failed: error
+          flags:
+            - salt
+            - tests
 
       changes:                   # if there are any unexpected changes in coverage
         default:
@@ -76,6 +93,9 @@ coverage:
           if_no_uploads: error
           if_not_found: success
           if_ci_failed: error
+          flags:
+            - salt
+            - tests
 
 flags:
   salt:
