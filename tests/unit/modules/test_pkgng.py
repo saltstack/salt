@@ -14,6 +14,19 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.pkgng as pkgng
 
+class ListPackages(object):
+    def __init__(self):
+        self._iteration = 0
+
+    def __call__(self):
+        pkg_lists = [
+             {'openvpn': '2.4.8_2'},
+             {'gettext-runtime': '0.20.1', 'openvpn': '2.4.8_2', 'p5-Mojolicious': '8.40'}
+        ]
+        pkgs = pkg_lists[self._iteration]
+        self._iteration += 1
+        return pkgs
+
 
 class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
     '''
@@ -171,3 +184,24 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
                 ['pkg', 'upgrade', '--dry-run', '--quiet', '--no-repo-update'],
                 output_loglevel='trace', python_shell=False, ignore_retcode=True
             )
+
+    def test_upgrade(self):
+        '''
+        Test upgrading packages.
+        '''
+        ret = {}
+        pkg_upgrade_stdout = [
+            'Updating FreeBSD repository catalogue...',
+            'FreeBSD repository is up to date.'
+        ]
+        ret['stdout'] = '\n'.join(pkg_upgrade_stdout)
+        ret['retcode'] = 0
+        run_all_mock = MagicMock(return_value=ret)
+        with patch.dict(pkgng.__salt__, {'cmd.run_all': run_all_mock}):
+            with patch('salt.modules.pkgng.list_pkgs', ListPackages()):
+                upgraded = pkgng.upgrade()
+                expected = {
+                    'gettext-runtime': {'new': '0.20.1', 'old': ''},
+                    'p5-Mojolicious': {'new': '8.40', 'old': ''}
+                }
+                self.assertDictEqual(upgraded, expected)
