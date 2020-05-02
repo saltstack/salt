@@ -1114,7 +1114,7 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
 
     old = list_pkgs()
     if "force_conf_new" in kwargs and kwargs["force_conf_new"]:
-        dpkg_options = ["--force-confnew" ]
+        dpkg_options = ["--force-confnew"]
     else:
         dpkg_options = ["--force-confold", "--force-confdef"]
     cmd = [
@@ -1124,7 +1124,7 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
     ]
     for option in dpkg_options:
         cmd.append("-o")
-        cmd_append("DPkg::Options::={0}".format(option))
+        cmd.append("DPkg::Options::={0}".format(option))
 
     if kwargs.get("force_yes", False):
         cmd.append("--force-yes")
