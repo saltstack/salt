@@ -15,12 +15,14 @@ boto3==1.9.132
 boto==2.49.0
 botocore==1.12.132        # via boto3, moto, s3transfer
 cachetools==3.1.0         # via google-auth
+cassandra-driver==3.23.0
 certifi==2019.3.9
 cffi==1.12.2
 chardet==3.0.4            # via requests
 cheetah3==3.1.0
 cheroot==6.5.5            # via cherrypy
 cherrypy==17.4.1
+click==7.1.2              # via geomet
 colorama==0.4.1           # via pytest
 contextlib2==0.5.5        # via cherrypy
 cryptography==2.6.1
@@ -32,6 +34,7 @@ docutils==0.14            # via botocore
 ecdsa==0.13.3             # via python-jose
 future==0.17.1            # via python-jose
 genshi==0.7.3
+geomet==0.1.2             # via cassandra-driver
 gitdb2==2.0.5
 gitpython==2.1.10
 google-auth==1.6.3        # via kubernetes
@@ -98,7 +101,7 @@ s3transfer==0.2.0         # via boto3
 salttesting==2017.6.1
 sed==0.3.1
 setproctitle==1.1.10
-six==1.12.0               # via cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, kubernetes, mock, more-itertools, moto, packaging, pygit2, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, tempora, websocket-client
+six==1.12.0               # via cassandra-driver, cheroot, cherrypy, cryptography, docker, docker-pycreds, geomet, google-auth, kubernetes, mock, more-itertools, moto, packaging, pygit2, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, tempora, websocket-client
 smmap2==2.0.5
 strict-rfc3339==0.7
 tempora==1.14.1           # via portend

@@ -18,7 +18,7 @@ from tests.support.unit import TestCase
 
 class CassandraTestCase(TestCase, LoaderModuleMockMixin):
     """
-    Test cases for salt.modules.cassandra
+    Test cases for salt.modules.cassandra_mod
     """
 
     def setup_loader_modules(self):

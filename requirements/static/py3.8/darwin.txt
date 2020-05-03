@@ -18,6 +18,7 @@ boto3==1.9.132
 boto==2.49.0
 botocore==1.12.132        # via boto3, moto, s3transfer
 cachetools==3.1.0         # via google-auth
+cassandra-driver==3.23.0
 certifi==2019.3.9
 certvalidator==0.11.1     # via vcert
 cffi==1.12.2
@@ -40,6 +41,7 @@ enum34==1.1.6
 filelock==3.0.12          # via virtualenv
 future==0.17.1            # via python-jose
 genshi==0.7.3
+geomet==0.1.2             # via cassandra-driver
 gitdb2==2.0.5             # via gitpython
 gitpython==2.1.15
 google-auth==1.6.3        # via kubernetes
@@ -105,7 +107,7 @@ s3transfer==0.2.0         # via boto3
 salttesting==2017.6.1
 scp==0.13.2               # via junos-eznc
 setproctitle==1.1.10
-six==1.12.0               # via bcrypt, cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, junos-eznc, kubernetes, mock, more-itertools, moto, ncclient, packaging, pynacl, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, tempora, vcert, virtualenv, websocket-client
+six==1.12.0               # via bcrypt, cassandra-driver, cheroot, cherrypy, cryptography, docker, docker-pycreds, geomet, google-auth, junos-eznc, kubernetes, mock, more-itertools, moto, ncclient, packaging, pynacl, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, tempora, vcert, virtualenv, websocket-client
 smmap2==2.0.5             # via gitdb2
 strict-rfc3339==0.7
 tempora==1.14.1           # via portend

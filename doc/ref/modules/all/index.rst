@@ -92,8 +92,8 @@ execution modules
     btrfs
     cabal
     capirca_acl
-    cassandra
     cassandra_cql
+    cassandra_mod
     celery
     ceph
     chassis
