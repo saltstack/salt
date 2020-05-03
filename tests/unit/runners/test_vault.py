@@ -200,7 +200,11 @@ class VaultTokenAuthTest(TestCase, LoaderModuleMockMixin):
                 "__opts__": {
                     "vault": {
                         "url": "http://127.0.0.1",
-                        "auth": {"token": "test", "method": "token"},
+                        "auth": {
+                            "token": "test",
+                            "method": "token",
+                            "allow_minion_override": True,
+                        },
                     }
                 }
             }
@@ -233,7 +237,7 @@ class VaultTokenAuthTest(TestCase, LoaderModuleMockMixin):
             num_uses = 6
             result = vault.generate_token("test-minion", "signature", uses=num_uses)
             self.assertTrue("uses" in result)
-            self.assertTrue(result["uses"] == num_uses)
+            self.assertEqual(result["uses"], num_uses)
             json_request = {
                 "policies": ["saltstack/minion/test-minion", "saltstack/minions"],
                 "num_uses": num_uses,
@@ -254,7 +258,7 @@ class VaultTokenAuthTest(TestCase, LoaderModuleMockMixin):
             json_request = {
                 "policies": ["saltstack/minion/test-minion", "saltstack/minions"],
                 "num_uses": 1,
-                "ttl": expected_ttl,
+                "explicit_max_ttl": expected_ttl,
                 "meta": {
                     "saltstack-jid": "<no jid set>",
                     "saltstack-minion": "test-minion",
