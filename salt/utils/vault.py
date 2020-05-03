@@ -12,6 +12,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import base64
 import logging
+import os
 import time
 
 import requests
@@ -171,70 +172,102 @@ def get_vault_connection():
         return _get_token_and_url_from_master()
 
 
+def get_cache():
+    """
+    Return information from vault cache file
+    """
+    cache_file = os.path.join(__opts__["cachedir"], "salt_vault_token")
+
+    def _write_cache(connection):
+        # TODO only write cache if not single use
+        try:
+            log.debug("Writing vault cache file")
+            # Detect if token was issued without use limit
+            if connection["uses"] == 0:
+                connection["unlimited_use_token"] = True
+            else:
+                connection["unlimited_use_token"] = False
+            with salt.utils.files.fopen(cache_file, "w+") as fp_:
+                fp_.write(salt.utils.json.dumps(connection))
+            return True
+        except (IOError, OSError):
+            log.error(
+                "Failed to cache vault information", exc_info_on_loglevel=logging.DEBUG
+            )
+            return False
+
+    try:
+        with salt.utils.files.fopen(cache_file, "r") as contents:
+            connection = salt.utils.json.loads(contents)
+    except (OSError, IOError):
+        return {}
+
+    if "unlimited_use_token" in connection:
+        log.debug("Found cached vault token")
+        unlimited_uses = connection.get("unlimited_use_token", False)
+
+        # Drop 10 seconds just to be safe
+        ttl10 = connection["issued"] + connection["lease_duration"] - 10
+        cur_time = int(round(time.time()))
+
+        # Determine if ttl still valid
+        if ttl10 < cur_time:
+            log.debug(
+                "Cached token has expired {} < {}: DELETING".format(ttl10, cur_time)
+            )
+            # TODO delete cache info
+            connection = get_vault_connection()
+            write_status = _write_cache(connection)
+            return connection
+        else:
+            log.debug("Token has not expired {} > {}".format(ttl10, cur_time))
+
+        # Determine if token uses have run out
+        if not unlimited_uses:
+            current_uses = connection.get("uses", 1)
+            if not current_uses:
+                current_uses = 1
+            if current_uses <= 0:
+                log.debug(
+                    "Cached token has no more uses left {}: DELETING".format(
+                        connection["uses"]
+                    )
+                )
+                # TODO delete old cache
+                connection = get_vault_connection()
+                write_status = _write_cache(connection)
+                return connection
+            else:
+                log.debug("Token has {} uses left".format(current_uses))
+
+    else:
+        connection = get_vault_connection()
+        write_status = _write_cache(connection)
+        return connection
+
+
 def make_request(
     method, resource, token=None, vault_url=None, get_token_url=False, **args
 ):
     """
     Make a request to Vault
     """
-
-    def _get_new_connection():
-        log.debug("Getting new token")
-        __context__[cache_key] = get_vault_connection()
-
-    cache_key = "salt_vault_token"
-    if cache_key in __context__:
-        log.debug("Found cached vault token")
-
-        # We drop 10 seconds just be safe
-        ttl10 = (
-            __context__[cache_key]["issued"]
-            + __context__[cache_key]["lease_duration"]
-            - 10
-        )
-        cur_time = int(round(time.time()))
-
-        current_uses = __context__[cache_key].get("uses", 1)
-        if not current_uses:
-            current_uses = 1
-        if current_uses <= 0:
-            log.debug(
-                "Cached token has no more uses left {}: DELETING".format(
-                    __context__[cache_key]["uses"]
-                )
-            )
-            del __context__[cache_key]
-            _get_new_connection()
-        else:
-            log.debug("Token has {} uses left".format(current_uses))
-
-        if __context__.get(cache_key, False) and ttl10 < cur_time:
-            log.debug(
-                "Cached token has expired {} < {}: DELETING".format(ttl10, cur_time)
-            )
-            del __context__[cache_key]
-            _get_new_connection()
-        elif __context__.get(cache_key, False):
-            log.debug("Token has not expired {} > {}".format(ttl10, cur_time))
-    else:
-        _get_new_connection()
-
-    token = __context__[cache_key]["token"] if not token else token
-    vault_url = __context__[cache_key]["url"] if not vault_url else vault_url
+    connection = get_cache()
+    token = connection["token"] if not token else token
+    vault_url = connection["url"] if not vault_url else vault_url
     args["verify"] = (
         __opts__.get("vault", {}).get("verify", None)
         if "verify" not in args
         else args["verify"]
     )
 
-    log.debug("XXXX vault url: %s resource: %s", vault_url, resource)
     url = "{0}/{1}".format(vault_url, resource)
     headers = {"X-Vault-Token": token, "Content-Type": "application/json"}
     response = requests.request(method, url, headers=headers, **args)
 
-    if __context__[cache_key].get("uses", None):
+    if not connection["unlimited_use_token"]:
         log.debug("Decrementing Vault uses on limited token")
-        __context__[cache_key]["uses"] -= 1
+        # TODO reduce use count
 
     if get_token_url:
         return response, token, vault_url
