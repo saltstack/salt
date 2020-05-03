@@ -2246,8 +2246,8 @@ def __grant_generate(
     # identifiers cannot be used as values, and same thing for grants
     qry = "GRANT {0} ON {1}.{2} TO %(user)s@%(host)s".format(grant, dbc, table)
     args = {}
-    args["user"] = user
-    args["host"] = host
+    args['user'] = user
+    args['host'] = host
     if ssl_option and isinstance(ssl_option, list):
         qry += __ssl_option_sanitize(ssl_option)
     if salt.utils.data.is_true(grant_option):

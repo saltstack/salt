@@ -41,7 +41,23 @@ import salt.utils.atomicfile  # do not remove, used in imported file.py function
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.user
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.modules.file import (check_hash,  # pylint: disable=W0611
+        directory_exists, get_managed,
+        check_managed, check_managed_changes, source_list,
+        touch, append, contains, contains_regex, get_source_sum,
+        contains_glob, find, psed, get_sum, _get_bkroot, _mkstemp_copy,
+        get_hash, manage_file, file_exists, get_diff, line, list_backups,
+        __clean_tmp, check_file_meta, _binary_replace,
+        _splitlines_preserving_trailing_newline, restore_backup,
+        access, copy, readdir, read, rmdir, truncate, replace, delete_backup,
+        search, _get_flags, extract_hash, _error, _sed_esc, _psed,
+        RE_FLAG_TABLE, blockreplace, prepend, tail, seek_read, seek_write, rename,
+        lstat, path_exists_glob, write, pardir, join, HASHES, HASHES_REVMAP,
+        comment, uncomment, _add_flags, comment_line, _regex_to_static,
+        _set_line_indent, apply_template_on_contents, dirname, basename,
+        list_backups_dir, _assert_occurrence, _starts_till, _set_line_eol, _get_eol,
+        _insert_line_after, _insert_line_before)
+from salt.modules.file import normpath as normpath_
 
 # do not remove, used in imported file.py functions
 from salt.ext import six
@@ -184,7 +200,7 @@ def __virtual__():
             global access, copy, readdir, read, rmdir, truncate, replace, search
             global _binary_replace, _get_bkroot, list_backups, restore_backup
             global _splitlines_preserving_trailing_newline
-            global blockreplace, prepend, seek_read, seek_write, rename, lstat
+            global blockreplace, prepend, tail, seek_read, seek_write, rename, lstat
             global write, pardir, join, _add_flags, apply_template_on_contents
             global path_exists_glob, comment, uncomment, _mkstemp_copy
             global _regex_to_static, _set_line_indent, dirname, basename
@@ -237,6 +253,7 @@ def __virtual__():
             truncate = _namespaced_function(truncate, globals())
             blockreplace = _namespaced_function(blockreplace, globals())
             prepend = _namespaced_function(prepend, globals())
+            tail = _namespaced_function(tail, globals())
             seek_read = _namespaced_function(seek_read, globals())
             seek_write = _namespaced_function(seek_write, globals())
             rename = _namespaced_function(rename, globals())
@@ -940,16 +957,16 @@ def stats(path, hash_type="sha256", follow_symlinks=True):
     # don't need to resolve symlinks again because we've already done that
     ret["uid"] = get_uid(path, follow_symlinks=False)
     # maintain the illusion that group is the same as user as states need this
-    ret["gid"] = ret["uid"]
-    ret["user"] = uid_to_user(ret["uid"])
-    ret["group"] = ret["user"]
-    ret["pgid"] = get_pgid(path, follow_symlinks)
-    ret["pgroup"] = gid_to_group(ret["pgid"])
-    ret["atime"] = pstat.st_atime
-    ret["mtime"] = pstat.st_mtime
-    ret["ctime"] = pstat.st_ctime
-    ret["size"] = pstat.st_size
-    ret["mode"] = salt.utils.files.normalize_mode(oct(stat.S_IMODE(pstat.st_mode)))
+    ret['gid'] = ret['uid']
+    ret['user'] = uid_to_user(ret['uid'])
+    ret['group'] = ret['user']
+    ret['pgid'] = get_pgid(path, follow_symlinks)
+    ret['pgroup'] = gid_to_group(ret['pgid'])
+    ret['atime'] = pstat.st_atime
+    ret['mtime'] = pstat.st_mtime
+    ret['ctime'] = pstat.st_ctime
+    ret['size'] = pstat.st_size
+    ret['mode'] = salt.utils.files.normalize_mode(oct(stat.S_IMODE(pstat.st_mode)))
     if hash_type:
         ret["sum"] = get_sum(path, hash_type)
     ret["type"] = "file"
@@ -1748,20 +1765,22 @@ def check_perms(
 
     path = os.path.expanduser(path)
 
-    return __utils__["dacl.check_perms"](
-        obj_name=path,
-        obj_type="file",
-        ret=ret,
-        owner=owner,
-        grant_perms=grant_perms,
-        deny_perms=deny_perms,
-        inheritance=inheritance,
-        reset=reset,
-    )
+    return __utils__['dacl.check_perms'](obj_name=path,
+                                         obj_type='file',
+                                         ret=ret,
+                                         owner=owner,
+                                         grant_perms=grant_perms,
+                                         deny_perms=deny_perms,
+                                         inheritance=inheritance,
+                                         reset=reset)
 
 
-def set_perms(path, grant_perms=None, deny_perms=None, inheritance=True, reset=False):
-    """
+def set_perms(path,
+              grant_perms=None,
+              deny_perms=None,
+              inheritance=True,
+              reset=False):
+    '''
     Set permissions for the given path
 
     Args:

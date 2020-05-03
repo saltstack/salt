@@ -21,8 +21,7 @@ import salt.utils.platform
 # Import Salt Testing Libs
 from tests.support.helpers import destructiveTest
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.helpers import destructiveTest
 from tests.support.unit import TestCase, skipIf
 
 GPG_TEST_KEY_PASSPHRASE = "testkeypassphrase"
@@ -327,7 +326,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertEqual(ret, _expected_result)
 
     @destructiveTest  # Need to run as root!?
-    @skipIf(not HAS_GPG, "GPG Module Unavailable")
+    @skipIf(not HAS_GPG, 'GPG Module Unavailable')
     def test_delete_key(self):
         """
         Test gpg.delete_key

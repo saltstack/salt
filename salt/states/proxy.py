@@ -125,8 +125,8 @@ def managed(
                 ret["result"] = False
                 ret["comment"] += "Failed to set bypass proxy domains.\n"
 
-        if len(ret["changes"]["new"]) == 0:
-            del ret["changes"]["new"]
+        if not ret['changes']['new']:
+            del ret['changes']['new']
 
         return ret
 

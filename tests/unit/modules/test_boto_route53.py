@@ -20,18 +20,15 @@ from salt.ext import six
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
 
 # import Python Third Party Libs
 # pylint: disable=import-error
 try:
     import boto
-
-    boto.ENDPOINTS_PATH = os.path.join(
-        RUNTIME_VARS.TESTS_DIR, "unit/files/endpoints.json"
-    )
+    boto.ENDPOINTS_PATH = os.path.join(RUNTIME_VARS.TESTS_DIR, 'unit/files/endpoints.json')
     from moto import mock_route53_deprecated
 
     HAS_MOTO = True
@@ -98,8 +95,8 @@ class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         self.opts = salt.config.DEFAULT_MINION_OPTS.copy()
-        self.opts["route53.keyid"] = "GKTADJGHEIQSXMKKRBJ08H"
-        self.opts["route53.key"] = "askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs"
+        self.opts['route53.keyid'] = 'GKTADJGHEIQSXMKKRBJ08H'
+        self.opts['route53.key'] = 'askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs'
         utils = salt.loader.utils(self.opts)
         funcs = salt.loader.minion_mods(
             self.opts, utils=utils, whitelist=["boto_route53", "config"]

@@ -657,7 +657,7 @@ FQDN (for instance, Solaris).
 ``minion_id_remove_domain``
 ---------------------------
 
-.. versionadded:: 3000
+.. versionadded:: Neon
 
 Default: ``False``
 
@@ -813,7 +813,7 @@ matches, and regular expressions are supported.
     Some states and execution modules depend on grains. Filtering may cause
     them to be unavailable or run unreliably.
 
-.. versionadded:: 3000
+.. versionadded:: Neon
 
 .. code-block:: yaml
 

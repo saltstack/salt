@@ -206,15 +206,12 @@ def solo(whyrun=False, logfile=None, **kwargs):
 def _exec_cmd(*args, **kwargs):
 
     # Compile the command arguments
-    cmd_args = " ".join(args)
-    cmd_kwargs = "".join(
-        [
-            " --{0} {1}".format(k, v)
-            for k, v in six.iteritems(kwargs)
-            if not k.startswith("__")
-        ]
-    )
-    cmd_exec = "{0}{1}".format(cmd_args, cmd_kwargs)
-    log.debug("Chef command: %s", cmd_exec)
+    cmd_args = ' '.join(args)
+    cmd_kwargs = ''.join([
+         ' --{0} {1}'.format(k, v)
+         for k, v in six.iteritems(kwargs) if not k.startswith('__')
+    ])
+    cmd_exec = '{0}{1}'.format(cmd_args, cmd_kwargs)
+    log.debug('Chef command: %s', cmd_exec)
 
-    return __salt__["cmd.run_all"](cmd_exec, python_shell=False)
+    return __salt__['cmd.run_all'](cmd_exec, python_shell=False)

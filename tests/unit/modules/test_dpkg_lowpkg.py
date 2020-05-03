@@ -50,20 +50,31 @@ DPKG_L_OUTPUT = {
 class DpkgTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.modules.dpkg
-    """
+    '''
+    dselect_pkg = {
+        'emacs': {'priority': 'optional', 'filename': 'pool/main/e/emacs-defaults/emacs_46.1_all.deb',
+                  'description': 'GNU Emacs editor (metapackage)', 'md5sum': '766eb2cee55ba0122dac64c4cea04445',
+                  'sha256': 'd172289b9a1608820eddad85c7ffc15f346a6e755c3120de0f64739c4bbc44ce',
+                  'description-md5': '21fb7da111336097a2378959f6d6e6a8',
+                  'bugs': 'https://bugs.launchpad.net/springfield/+filebug',
+                  'depends': 'emacs24 | emacs24-lucid | emacs24-nox', 'origin': 'Simpsons', 'version': '46.1',
+                  'task': 'ubuntu-usb, edubuntu-usb', 'original-maintainer': 'Homer Simpson <homer@springfield.org>',
+                  'package': 'emacs', 'architecture': 'all', 'size': '1692',
+                  'sha1': '9271bcec53c1f7373902b1e594d9fc0359616407', 'source': 'emacs-defaults',
+                  'maintainer': 'Simpsons Developers <simpsons-devel-discuss@lists.springfield.org>', 'supported': '9m',
+                  'section': 'editors', 'installed-size': '25'}
+    }
 
-    def setUp(self):
-        dpkg_lowpkg_logger = logging.getLogger("salt.modules.dpkg_lowpkg")
-        self.level = dpkg_lowpkg_logger.level
-        dpkg_lowpkg_logger.setLevel(logging.FATAL)
-
-    def tearDown(self):
-        logging.getLogger("salt.modules.dpkg_lowpkg").setLevel(self.level)
-
-    def dpkg_L_side_effect(self, cmd, **kwargs):
-        self.assertEqual(cmd[:2], ["dpkg", "-L"])
-        package = cmd[2]
-        return DPKG_L_OUTPUT[package]
+    pkgs_info = [
+        {'version': '46.1', 'arch': 'all', 'build_date': '2014-08-07T16:51:48Z', 'install_date_time_t': 1481745778,
+         'section': 'editors', 'description': 'GNU Emacs editor (metapackage)\n GNU Emacs is the extensible '
+                                              'self-documenting text editor.\n This is a metapackage that will always '
+                                              'depend on the latest\n recommended Emacs release.\n',
+         'package': 'emacs', 'source': 'emacs-defaults',
+         'maintainer': 'Simpsons Developers <simpsons-devel-discuss@lists.springfield.org>',
+         'build_date_time_t': 1407430308, 'installed_size': '25', 'install_date': '2016-12-14T20:02:58Z',
+         'status': 'ii'}
+    ]
 
     def setup_loader_modules(self):
         return {dpkg: {}}
@@ -168,126 +179,62 @@ class DpkgTestCase(TestCase, LoaderModuleMockMixin):
     def test_file_dict(self):
         """
         Test if it lists the files that belong to a package, grouped by package
-        """
-        dpkg_query_mock = MagicMock(
-            return_value={"retcode": 0, "stderr": "", "stdout": "installed\thostname"}
-        )
-        dpkg_L_mock = MagicMock(side_effect=self.dpkg_L_side_effect)
-        with patch.dict(
-            dpkg.__salt__, {"cmd.run_all": dpkg_query_mock, "cmd.run": dpkg_L_mock}
-        ):
-            expected = {
-                "errors": [],
-                "packages": {
-                    "hostname": [
-                        "/.",
-                        "/bin",
-                        "/bin/hostname",
-                        "/usr",
-                        "/usr/share",
-                        "/usr/share/doc",
-                        "/usr/share/doc/hostname",
-                        "/usr/share/doc/hostname/changelog.gz",
-                        "/usr/share/doc/hostname/copyright",
-                        "/usr/share/man",
-                        "/usr/share/man/man1",
-                        "/usr/share/man/man1/hostname.1.gz",
-                        "/bin/dnsdomainname",
-                        "/bin/domainname",
-                        "/bin/nisdomainname",
-                        "/bin/ypdomainname",
-                        "/usr/share/man/man1/dnsdomainname.1.gz",
-                        "/usr/share/man/man1/domainname.1.gz",
-                        "/usr/share/man/man1/nisdomainname.1.gz",
-                        "/usr/share/man/man1/ypdomainname.1.gz",
-                    ]
-                },
-            }
-            self.assertDictEqual(dpkg.file_dict("hostname"), expected)
+        '''
+        mock = MagicMock(return_value={'retcode': 0,
+                                       'stderr': '',
+                                       'stdout': 'Salt'})
+        with patch.dict(dpkg.__salt__, {'cmd.run_all': mock}):
+            self.assertDictEqual(dpkg.file_dict('httpd'),
+                                 {'errors': [], 'packages': {}})
 
-        mock = MagicMock(
-            return_value={"retcode": 1, "stderr": DPKG_ERROR_MSG, "stdout": ""}
-        )
-        with patch.dict(dpkg.__salt__, {"cmd.run_all": mock}):
-            self.assertEqual(dpkg.file_dict("httpd"), "Error:  " + DPKG_ERROR_MSG)
+        mock = MagicMock(return_value={'retcode': 1,
+                                       'stderr': 'error',
+                                       'stdout': 'Salt'})
+        with patch.dict(dpkg.__salt__, {'cmd.run_all': mock}):
+            self.assertEqual(dpkg.file_dict('httpd'), 'Error:  error')
 
+    @patch('salt.modules.dpkg_lowpkg._get_pkg_ds_avail', MagicMock(return_value=dselect_pkg))
+    @patch('salt.modules.dpkg_lowpkg._get_pkg_info', MagicMock(return_value=pkgs_info))
+    @patch('salt.modules.dpkg_lowpkg._get_pkg_license', MagicMock(return_value='BSD v3'))
     def test_info(self):
-        """
-        Test package info
-        """
-        mock = MagicMock(
-            return_value={
-                "retcode": 0,
-                "stderr": "",
-                "stdout": os.linesep.join(
-                    [
-                        "package:bash",
-                        "revision:",
-                        "architecture:amd64",
-                        "maintainer:Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>",
-                        "summary:",
-                        "source:bash",
-                        "version:4.4.18-2ubuntu1",
-                        "section:shells",
-                        "installed_size:1588",
-                        "size:",
-                        "MD5:",
-                        "SHA1:",
-                        "SHA256:",
-                        "origin:",
-                        "homepage:http://tiswww.case.edu/php/chet/bash/bashtop.html",
-                        "status:ii ",
-                        "======",
-                        "description:GNU Bourne Again SHell",
-                        " Bash is an sh-compatible command language interpreter that executes",
-                        " commands read from the standard input or from a file.  Bash also",
-                        " incorporates useful features from the Korn and C shells (ksh and csh).",
-                        " .",
-                        " Bash is ultimately intended to be a conformant implementation of the",
-                        " IEEE POSIX Shell and Tools specification (IEEE Working Group 1003.2).",
-                        " .",
-                        " The Programmable Completion Code, by Ian Macdonald, is now found in",
-                        " the bash-completion package.",
-                        "------",
-                    ]
-                ),
-            }
-        )
+        '''
+        Test info
+        :return:
+        '''
+        ret = dpkg.info('emacs')
 
-        with patch.dict(dpkg.__salt__, {"cmd.run_all": mock}), patch.dict(
-            dpkg.__grains__, {"os": "Ubuntu", "osrelease_info": (18, 4)}
-        ), patch("salt.utils.path.which", MagicMock(return_value=False)), patch(
-            "os.path.exists", MagicMock(return_value=False)
-        ), patch(
-            "os.path.getmtime", MagicMock(return_value=1560199259.0)
-        ):
-            self.assertDictEqual(
-                dpkg.info("bash"),
-                {
-                    "bash": {
-                        "architecture": "amd64",
-                        "description": os.linesep.join(
-                            [
-                                "GNU Bourne Again SHell",
-                                " Bash is an sh-compatible command language interpreter that executes",
-                                " commands read from the standard input or from a file.  Bash also",
-                                " incorporates useful features from the Korn and C shells (ksh and csh).",
-                                " .",
-                                " Bash is ultimately intended to be a conformant implementation of the",
-                                " IEEE POSIX Shell and Tools specification (IEEE Working Group 1003.2).",
-                                " .",
-                                " The Programmable Completion Code, by Ian Macdonald, is now found in",
-                                " the bash-completion package." + os.linesep,
-                            ]
-                        ),
-                        "homepage": "http://tiswww.case.edu/php/chet/bash/bashtop.html",
-                        "maintainer": "Ubuntu Developers "
-                        "<ubuntu-devel-discuss@lists.ubuntu.com>",
-                        "package": "bash",
-                        "section": "shells",
-                        "source": "bash",
-                        "status": "ii",
-                        "version": "4.4.18-2ubuntu1",
-                    }
-                },
-            )
+        assert isinstance(ret, dict)
+        assert len(ret.keys()) == 1
+        assert 'emacs' in ret
+
+        pkg_data = ret['emacs']
+
+        assert isinstance(pkg_data, dict)
+        for pkg_section in ['section', 'architecture', 'original-maintainer', 'maintainer', 'package', 'installed-size',
+                            'build_date_time_t', 'sha256', 'origin', 'build_date', 'size', 'source', 'version',
+                            'install_date_time_t', 'license', 'priority', 'description', 'md5sum', 'supported',
+                            'filename', 'sha1', 'install_date', 'arch', "status"]:
+            assert pkg_section in pkg_data
+
+        assert pkg_data['section'] == 'editors'
+        assert pkg_data['maintainer'] == 'Simpsons Developers <simpsons-devel-discuss@lists.springfield.org>'
+        assert pkg_data['license'] == 'BSD v3'
+        assert pkg_data['status'] == 'ii'
+
+    @patch('salt.modules.dpkg_lowpkg._get_pkg_ds_avail', MagicMock(return_value=dselect_pkg))
+    @patch('salt.modules.dpkg_lowpkg._get_pkg_info', MagicMock(return_value=pkgs_info))
+    @patch('salt.modules.dpkg_lowpkg._get_pkg_license', MagicMock(return_value='BSD v3'))
+    def test_info_attr(self):
+        '''
+        Test info with 'attr' parameter
+        :return:
+        '''
+        ret = dpkg.info('emacs', attr='arch,license,version')
+        assert isinstance(ret, dict)
+        assert 'emacs' in ret
+        for attr in ['arch', 'license', 'version']:
+            assert attr in ret['emacs']
+
+        assert ret['emacs']['arch'] == 'all'
+        assert ret['emacs']['license'] == 'BSD v3'
+        assert ret['emacs']['version'] == '46.1'

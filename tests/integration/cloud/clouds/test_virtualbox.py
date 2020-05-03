@@ -9,7 +9,18 @@ import logging
 import os
 import socket
 
-from salt.config import cloud_providers_config, vm_profiles_config
+# Import Salt Testing Libs
+from tests.support.unit import TestCase, skipIf
+from tests.support.runtests import RUNTIME_VARS
+from tests.integration.cloud.helpers.virtualbox import (VirtualboxTestCase,
+                                                        VirtualboxCloudTestCase,
+                                                        CONFIG_NAME,
+                                                        PROVIDER_NAME,
+                                                        PROFILE_NAME,
+                                                        BASE_BOX_NAME,
+                                                        INSTANCE_NAME,
+                                                        BOOTABLE_BASE_BOX_NAME,
+                                                        DEPLOY_PROFILE_NAME)
 
 # Import Salt Libs
 from salt.ext import six
@@ -97,13 +108,19 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
 
         # check if personal access token, ssh_key_file, and ssh_key_names are present
         config_path = os.path.join(
-            RUNTIME_VARS.FILES, "conf", "cloud.providers.d", PROVIDER_NAME + ".conf"
+            RUNTIME_VARS.FILES,
+            'conf',
+            'cloud.providers.d',
+            PROVIDER_NAME + '.conf'
         )
         log.debug("config_path: %s", config_path)
         providers = cloud_providers_config(config_path)
         log.debug("config: %s", providers)
         config_path = os.path.join(
-            RUNTIME_VARS.FILES, "conf", "cloud.profiles.d", PROVIDER_NAME + ".conf"
+            RUNTIME_VARS.FILES,
+            'conf',
+            'cloud.profiles.d',
+            PROVIDER_NAME + '.conf'
         )
         profiles = vm_profiles_config(config_path, providers)
         profile = profiles.get(PROFILE_NAME)
@@ -264,13 +281,19 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
 
         # check if personal access token, ssh_key_file, and ssh_key_names are present
         config_path = os.path.join(
-            RUNTIME_VARS.FILES, "conf", "cloud.providers.d", PROVIDER_NAME + ".conf"
+            RUNTIME_VARS.FILES,
+            'conf',
+            'cloud.providers.d',
+            PROVIDER_NAME + '.conf'
         )
         log.debug("config_path: %s", config_path)
         providers = cloud_providers_config(config_path)
         log.debug("config: %s", providers)
         config_path = os.path.join(
-            RUNTIME_VARS.FILES, "conf", "cloud.profiles.d", PROVIDER_NAME + ".conf"
+            RUNTIME_VARS.FILES,
+            'conf',
+            'cloud.profiles.d',
+            PROVIDER_NAME + '.conf'
         )
         profiles = vm_profiles_config(config_path, providers)
         profile = profiles.get(DEPLOY_PROFILE_NAME)

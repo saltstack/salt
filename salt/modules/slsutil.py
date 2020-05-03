@@ -4,10 +4,9 @@ Utility functions for use with or in SLS files
 """
 
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-import os
+from __future__ import absolute_import, unicode_literals, print_function
 import textwrap
+import os
 
 # Import Salt libs
 import salt.exceptions
@@ -166,9 +165,7 @@ def renderer(path=None, string=None, default_renderer="jinja|yaml", **kwargs):
     renderers = salt.loader.render(__opts__, __salt__)
 
     if path:
-        path_or_string = __salt__["cp.get_url"](
-            path, saltenv=kwargs.get("saltenv", "base")
-        )
+        path_or_string = __salt__['cp.get_url'](path, saltenv=kwargs.get('saltenv', 'base'))
     elif string:
         path_or_string = ":string:"
         kwargs["input_data"] = string
@@ -245,20 +242,13 @@ def deserialize(serializer, stream_or_string, **mod_kwargs):
             '{"foo": "Foo!"}') %}
     """
     kwargs = salt.utils.args.clean_kwargs(**mod_kwargs)
-    return _get_serialize_fn(serializer, "deserialize")(stream_or_string, **kwargs)
+    return _get_serialize_fn(serializer, 'deserialize')(stream_or_string,
+            **kwargs)
 
 
-def banner(
-    width=72,
-    commentchar="#",
-    borderchar="#",
-    blockstart=None,
-    blockend=None,
-    title=None,
-    text=None,
-    newline=False,
-):
-    """
+def banner(width=72, commentchar='#', borderchar='#', blockstart=None, blockend=None,
+           title=None, text=None, newline=False):
+    '''
     Create a standardized comment block to include in a templated file.
 
     A common technique in configuration management is to include a comment
@@ -285,11 +275,13 @@ def banner(
     :param newline: Boolean value to indicate whether the comment block should
         end with a newline. Default is ``False``.
 
-    **Example 1 - the default banner:**
+    This banner can be injected into any templated file, for example:
 
     .. code-block:: jinja
 
-        {{ salt['slsutil.banner']() }}
+        {{ salt['slsutil.banner'](width=120, commentchar='//') }}
+
+    The default banner:
 
     .. code-block:: none
 
@@ -300,74 +292,26 @@ def banner(
         # The contents of this file are managed by Salt. Any changes to this   #
         # file may be overwritten automatically and without warning.           #
         ########################################################################
-
-    **Example 2 - a Javadoc-style banner:**
-
-    .. code-block:: jinja
-
-        {{ salt['slsutil.banner'](commentchar=' *', borderchar='*', blockstart='/**', blockend=' */') }}
-
-    .. code-block:: none
-
-        /**
-         ***********************************************************************
-         *                                                                     *
-         *              THIS FILE IS MANAGED BY SALT - DO NOT EDIT             *
-         *                                                                     *
-         * The contents of this file are managed by Salt. Any changes to this  *
-         * file may be overwritten automatically and without warning.          *
-         ***********************************************************************
-         */
-
-    **Example 3 - custom text:**
-
-    .. code-block:: jinja
-
-        {{ set copyright='This file may not be copied or distributed without permission of SaltStack, Inc.' }}
-        {{ salt['slsutil.banner'](title='Copyright 2019 SaltStack, Inc.', text=copyright, width=60) }}
-
-    .. code-block:: none
-
-        ############################################################
-        #                                                          #
-        #              Copyright 2019 SaltStack, Inc.              #
-        #                                                          #
-        # This file may not be copied or distributed without       #
-        # permission of SaltStack, Inc.                            #
-        ############################################################
-
-    """
+    '''
 
     if title is None:
-        title = "THIS FILE IS MANAGED BY SALT - DO NOT EDIT"
+        title = 'THIS FILE IS MANAGED BY SALT - DO NOT EDIT'
 
     if text is None:
-        text = (
-            "The contents of this file are managed by Salt. "
-            "Any changes to this file may be overwritten "
-            "automatically and without warning."
-        )
+        text = ('The contents of this file are managed by Salt. '
+                'Any changes to this file may be overwritten '
+                'automatically and without warning')
 
     # Set up some typesetting variables
-    ledge = commentchar.rstrip()
-    redge = commentchar.strip()
-    lgutter = ledge + " "
-    rgutter = " " + redge
+    lgutter = commentchar.strip() + ' '
+    rgutter = ' ' + commentchar.strip()
     textwidth = width - len(lgutter) - len(rgutter)
-
-    # Check the width
-    if textwidth <= 0:
-        raise salt.exceptions.ArgumentValueError("Width is too small to render banner")
-
-    # Define the static elements
-    border_line = (
-        commentchar + borderchar[:1] * (width - len(ledge) - len(redge)) + redge
-    )
-    spacer_line = commentchar + " " * (width - len(commentchar) * 2) + commentchar
+    border_line = commentchar + borderchar[:1] * (width - len(commentchar) * 2) + commentchar
+    spacer_line = commentchar + ' ' * (width - len(commentchar) * 2) + commentchar
+    wrapper = textwrap.TextWrapper(width=(width - len(lgutter) - len(rgutter)))
+    block = list()
 
     # Create the banner
-    wrapper = textwrap.TextWrapper(width=textwidth)
-    block = list()
     if blockstart is not None:
         block.append(blockstart)
     block.append(border_line)
@@ -376,7 +320,7 @@ def banner(
         block.append(lgutter + line.center(textwidth) + rgutter)
     block.append(spacer_line)
     for line in wrapper.wrap(text):
-        block.append(lgutter + line + " " * (textwidth - len(line)) + rgutter)
+        block.append(lgutter + line + ' ' * (textwidth - len(line)) + rgutter)
     block.append(border_line)
     if blockend is not None:
         block.append(blockend)
@@ -391,8 +335,8 @@ def banner(
     return result
 
 
-def boolstr(value, true="true", false="false"):
-    """
+def boolstr(value, true='true', false='false'):
+    '''
     Convert a boolean value into a string. This function is
     intended to be used from within file templates to provide
     an easy way to take boolean values stored in Pillars or
@@ -421,7 +365,7 @@ def boolstr(value, true="true", false="false"):
 
         use_tls: yes
 
-    """
+    '''
 
     if value:
         return true

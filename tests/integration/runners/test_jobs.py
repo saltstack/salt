@@ -37,10 +37,10 @@ class ManageTest(ShellCase):
     def test_lookup_jid_invalid(self):
         """
         jobs.lookup_jid
-        """
-        ret = self.run_run_plus("jobs.lookup_jid")
-        expected = "Passed invalid arguments:"
-        self.assertIn(expected, ret["return"])
+        '''
+        ret = self.run_run_plus('jobs.lookup_jid')
+        expected = 'Passed invalid arguments:'
+        self.assertRaises(TypeError, expected)
 
     @skipIf(True, "to be re-enabled when #23623 is merged")
     def test_list_jobs(self):

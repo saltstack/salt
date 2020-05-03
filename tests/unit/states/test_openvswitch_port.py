@@ -34,40 +34,27 @@ class OpenvswitchPortTestCase(TestCase, LoaderModuleMockMixin):
         mock_l = MagicMock(return_value=["salt"])
         mock_n = MagicMock(return_value=[])
 
-        with patch.dict(
-            openvswitch_port.__salt__,
-            {
-                "openvswitch.bridge_exists": mock,
-                "openvswitch.interface_get_type": MagicMock(return_value='""'),
-                "openvswitch.port_list": mock_l,
-            },
-        ):
-            comt = "Port salt already exists."
-            ret.update({"comment": comt, "result": True})
+        with patch.dict(openvswitch_port.__salt__, {'openvswitch.bridge_exists': mock,
+                                                    'openvswitch.interface_get_type': MagicMock(return_value='""'),
+                                                    'openvswitch.port_list': mock_l
+                                                    }):
+            comt = 'Port salt already exists.'
+            ret.update({'comment': comt, 'result': True})
             self.assertDictEqual(openvswitch_port.present(name, bridge), ret)
 
-        with patch.dict(
-            openvswitch_port.__salt__,
-            {
-                "openvswitch.bridge_exists": mock,
-                "openvswitch.interface_get_type": MagicMock(return_value='""'),
-                "openvswitch.port_list": mock_n,
-                "openvswitch.port_add": mock,
-            },
-        ):
-            comt = "Port salt created on bridge br-salt."
-            ret.update(
-                {
-                    "comment": comt,
-                    "result": True,
-                    "changes": {
-                        "salt": {
-                            "new": "Created port salt on bridge br-salt.",
-                            "old": "No port named salt present.",
-                        },
-                    },
-                }
-            )
+        with patch.dict(openvswitch_port.__salt__, {'openvswitch.bridge_exists': mock,
+                                                    'openvswitch.interface_get_type': MagicMock(return_value='""'),
+                                                    'openvswitch.port_list': mock_n,
+                                                    'openvswitch.port_add': mock
+                                                    }):
+            comt = 'Port salt created on bridge br-salt.'
+            ret.update({'comment': comt, 'result': True, 'changes':
+                {'salt':
+                     {'new': 'Created port salt on bridge br-salt.',
+                      'old': 'No port named salt present.',
+                      },
+                 }
+                        })
             self.assertDictEqual(openvswitch_port.present(name, bridge), ret)
         with patch.dict(
             openvswitch_port.__salt__,

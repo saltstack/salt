@@ -26,7 +26,11 @@ from salt.ext import six
 from salt.ext.six.moves import range
 from salt.ext.tornado.testing import AsyncTestCase
 from salt.transport.zeromq import AsyncReqMessageClientPool
-from tests.support.helpers import flaky, get_unused_localhost_port, not_runs_on
+
+# Import test support libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import TestCase, skipIf
+from tests.support.helpers import flaky, get_unused_localhost_port
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -237,9 +241,7 @@ class BaseZMQPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
             }
         )
 
-        cls.minion_config = salt.config.minion_config(
-            os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "minion")
-        )
+        cls.minion_config = salt.config.minion_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'minion'))
         cls.minion_config = cls.get_temp_config(
             "minion",
             **{
@@ -312,8 +314,8 @@ class BaseZMQPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
             if self._start_handlers.get(k) != v:
                 failures.append((k, v))
         del self._start_handlers
-        if len(failures) > 0:
-            raise Exception("FDs still attached to the IOLoop: {0}".format(failures))
+        if failures:
+            raise Exception('FDs still attached to the IOLoop: {0}'.format(failures))
 
 
 @skipIf(True, "Skip until we can devote time to fix this test")

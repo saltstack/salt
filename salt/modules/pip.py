@@ -82,6 +82,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import logging
 import os
+
+try:
+    import pkg_resources
+except ImportError:
+    pkg_resources = None
 import re
 import shutil
 import sys
@@ -117,21 +122,13 @@ def __virtual__():
     There is no way to verify that pip is installed without inspecting the
     entire filesystem.  If it's not installed in a conventional location, the
     user is required to provide the location of pip each time it is used.
-    """
-    return "pip"
+    '''
+    if pkg_resources is None:
+        ret = False, 'Package dependency "pkg_resource" is missing'
+    else:
+        ret = 'pip'
 
-
-def _pip_bin_env(cwd, bin_env):
-    """
-    Binary builds need to have the 'cwd' set when using pip on Windows. This will
-    set cwd if pip is being used in 'bin_env', 'cwd' is None and salt is on windows.
-    """
-
-    if salt.utils.platform.is_windows():
-        if bin_env is not None and cwd is None and "pip" in os.path.basename(bin_env):
-            cwd = os.path.dirname(bin_env)
-
-    return cwd
+    return ret
 
 
 def _clear_context(bin_env=None):
@@ -410,55 +407,53 @@ def _format_env_vars(env_vars):
     return ret
 
 
-def install(
-    pkgs=None,  # pylint: disable=R0912,R0913,R0914
-    requirements=None,
-    bin_env=None,
-    use_wheel=False,
-    no_use_wheel=False,
-    log=None,
-    proxy=None,
-    timeout=None,
-    editable=None,
-    find_links=None,
-    index_url=None,
-    extra_index_url=None,
-    no_index=False,
-    mirrors=None,
-    build=None,
-    target=None,
-    download=None,
-    download_cache=None,
-    source=None,
-    upgrade=False,
-    force_reinstall=False,
-    ignore_installed=False,
-    exists_action=None,
-    no_deps=False,
-    no_install=False,
-    no_download=False,
-    global_options=None,
-    install_options=None,
-    user=None,
-    cwd=None,
-    pre_releases=False,
-    cert=None,
-    allow_all_external=False,
-    allow_external=None,
-    allow_unverified=None,
-    process_dependency_links=False,
-    saltenv="base",
-    env_vars=None,
-    use_vt=False,
-    trusted_host=None,
-    no_cache_dir=False,
-    extra_args=None,
-    cache_dir=None,
-    no_binary=None,
-    disable_version_check=False,
-    **kwargs
-):
-    """
+def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
+            requirements=None,
+            bin_env=None,
+            use_wheel=False,
+            no_use_wheel=False,
+            log=None,
+            proxy=None,
+            timeout=None,
+            editable=None,
+            find_links=None,
+            index_url=None,
+            extra_index_url=None,
+            no_index=False,
+            mirrors=None,
+            build=None,
+            target=None,
+            download=None,
+            download_cache=None,
+            source=None,
+            upgrade=False,
+            force_reinstall=False,
+            ignore_installed=False,
+            exists_action=None,
+            no_deps=False,
+            no_install=False,
+            no_download=False,
+            global_options=None,
+            install_options=None,
+            user=None,
+            cwd=None,
+            pre_releases=False,
+            cert=None,
+            allow_all_external=False,
+            allow_external=None,
+            allow_unverified=None,
+            process_dependency_links=False,
+            saltenv='base',
+            env_vars=None,
+            use_vt=False,
+            trusted_host=None,
+            no_cache_dir=False,
+            cache_dir=None,
+            no_binary=None,
+            user_install=False,
+            extra_args=None,
+            **kwargs):
+    r'''
     Install packages with pip
 
     Install packages individually or from a pip requirements file. Install
@@ -633,6 +628,10 @@ def install(
     no_cache_dir
         Disable the cache.
 
+    user_install
+        Enable install to occur inside the user base's (site.USER_BASE) binary directory,
+        typically ~/.local/, or %APPDATA%\Python on Windows
+
     extra_args
         pip keyword and positional arguments not yet implemented in salt
 
@@ -650,11 +649,6 @@ def install(
     .. code-block:: bash
 
         pip install pandas --latest-pip-kwarg param --latest-pip-arg
-
-    disable_version_check
-        Pip may periodically check PyPI to determine whether a new version of
-        pip is available to download. Passing True for this option disables
-        that check.
 
     CLI Example:
 
@@ -855,6 +849,9 @@ def install(
     if source:
         cmd.extend(["--source", source])
 
+    if user_install:
+        cmd.append('--user')
+
     if upgrade:
         cmd.append("--upgrade")
 
@@ -967,6 +964,24 @@ def install(
 
     if trusted_host:
         cmd.extend(["--trusted-host", trusted_host])
+
+    if extra_args:
+        # These are arguments from the latest version of pip that
+        # have not yet been implemented in salt
+        for arg in extra_args:
+            # It is a keyword argument
+            if isinstance(arg, dict):
+                # There will only ever be one item in this dictionary
+                key, val = arg.popitem()
+                # Don't allow any recursion into keyword arg definitions
+                # Don't allow multiple definitions of a keyword
+                if isinstance(val, (dict, list)):
+                    raise TypeError("Too many levels in: {}".format(key))
+                # This is a a normal one-to-one keyword argument
+                cmd.extend([key, val])
+            # It is a positional argument, append it to the list
+            else:
+                cmd.append(arg)
 
     if extra_args:
         # These are arguments from the latest version of pip that
@@ -1156,8 +1171,14 @@ def uninstall(
                     pass
 
 
-def freeze(bin_env=None, user=None, cwd=None, use_vt=False, env_vars=None, **kwargs):
-    """
+def freeze(bin_env=None,
+           user=None,
+           cwd=None,
+           use_vt=False,
+           env_vars=None,
+           user_install=False,
+           **kwargs):
+    r'''
     Return a list of installed packages either globally or in the specified
     virtualenv
 
@@ -1172,6 +1193,10 @@ def freeze(bin_env=None, user=None, cwd=None, use_vt=False, env_vars=None, **kwa
 
     cwd
         Directory from which to run pip
+
+    user_install
+        Enable output to show inside the user base's (site.USER_BASE) binary directory,
+        typically ~/.local/, or %APPDATA%\Python on Windows
 
     .. note::
         If the version of pip available is older than 8.0.3, the list will not
@@ -1203,6 +1228,9 @@ def freeze(bin_env=None, user=None, cwd=None, use_vt=False, env_vars=None, **kwa
     else:
         cmd.append("--all")
 
+    if user_install:
+        cmd.append('--user')
+
     cmd_kwargs = dict(runas=user, cwd=cwd, use_vt=use_vt, python_shell=False)
     if kwargs:
         cmd_kwargs.update(**kwargs)
@@ -1218,8 +1246,14 @@ def freeze(bin_env=None, user=None, cwd=None, use_vt=False, env_vars=None, **kwa
     return result["stdout"].splitlines()
 
 
-def list_(prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, **kwargs):
-    """
+def list_(prefix=None,
+          bin_env=None,
+          user=None,
+          cwd=None,
+          env_vars=None,
+          user_install=False,
+          **kwargs):
+    r'''
     Filter list of installed apps from ``freeze`` and check to see if
     ``prefix`` exists in the list of packages installed.
 
@@ -1230,6 +1264,11 @@ def list_(prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, **kwarg
         this function even if they are installed. Unlike :py:func:`pip.freeze
         <salt.modules.pip.freeze>`, this function always reports the version of
         pip which is installed.
+
+
+    user_install
+        Enable output to show inside the user base's (site.USER_BASE) binary directory,
+        typically ~/.local/, or %APPDATA%\Python on Windows
 
     CLI Example:
 
@@ -1244,10 +1283,13 @@ def list_(prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, **kwarg
     if prefix is None or "pip".startswith(prefix):
         packages["pip"] = version(bin_env, cwd)
 
-    for line in freeze(
-        bin_env=bin_env, user=user, cwd=cwd, env_vars=env_vars, **kwargs
-    ):
-        if line.startswith("-f") or line.startswith("#"):
+    for line in freeze(bin_env=bin_env,
+                       user=user,
+                       cwd=cwd,
+                       env_vars=env_vars,
+                       user_install=user_install,
+                       **kwargs):
+        if line.startswith('-f') or line.startswith('#'):
             # ignore -f line as it contains --find-links directory
             # ignore comment lines
             continue
@@ -1382,7 +1424,7 @@ def list_upgrades(bin_env=None, user=None, cwd=None):
             if match:
                 name, version_ = match.groups()
             else:
-                logger.error("Can't parse line '{0}'".format(line))
+                logger.error('Can\'t parse line \'%s\'', line)
                 continue
             packages[name] = version_
 

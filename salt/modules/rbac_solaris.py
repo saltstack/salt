@@ -20,8 +20,8 @@ __virtualname__ = "rbac"
 def __virtual__():
     """
     Provides rbac if we are running on a solaris like system
-    """
-    if __grains__["kernel"] == "SunOS" and salt.utils.path.which("profiles"):
+    '''
+    if __grains__.get('kernel') == 'SunOS' and salt.utils.path.which('profiles'):
         return __virtualname__
     return (
         False,
@@ -158,16 +158,15 @@ def profile_add(user, profile):
     )
 
     ## update user profiles
-    if len(valid_profiles) > 0:
-        res = __salt__["cmd.run_all"](
-            'usermod -P "{profiles}" {login}'.format(
-                login=user, profiles=",".join(set(profile_get(user) + valid_profiles)),
-            )
-        )
-        if res["retcode"] > 0:
-            ret["Error"] = {
-                "retcode": res["retcode"],
-                "message": res["stderr"] if "stderr" in res else res["stdout"],
+    if valid_profiles:
+        res = __salt__['cmd.run_all']('usermod -P "{profiles}" {login}'.format(
+            login=user,
+            profiles=','.join(set(profile_get(user) + valid_profiles)),
+        ))
+        if res['retcode'] > 0:
+            ret['Error'] = {
+                'retcode': res['retcode'],
+                'message': res['stderr'] if 'stderr' in res else res['stdout']
             }
             return ret
 
@@ -214,19 +213,15 @@ def profile_rm(user, profile):
     )
 
     ## update user profiles
-    if len(valid_profiles) > 0:
-        res = __salt__["cmd.run_all"](
-            'usermod -P "{profiles}" {login}'.format(
-                login=user,
-                profiles=",".join(
-                    [p for p in profile_get(user) if p not in valid_profiles]
-                ),
-            )
-        )
-        if res["retcode"] > 0:
-            ret["Error"] = {
-                "retcode": res["retcode"],
-                "message": res["stderr"] if "stderr" in res else res["stdout"],
+    if valid_profiles:
+        res = __salt__['cmd.run_all']('usermod -P "{profiles}" {login}'.format(
+            login=user,
+            profiles=','.join([p for p in profile_get(user) if p not in valid_profiles]),
+        ))
+        if res['retcode'] > 0:
+            ret['Error'] = {
+                'retcode': res['retcode'],
+                'message': res['stderr'] if 'stderr' in res else res['stdout']
             }
             return ret
 
@@ -356,16 +351,15 @@ def role_add(user, role):
     )
 
     ## update user roles
-    if len(valid_roles) > 0:
-        res = __salt__["cmd.run_all"](
-            'usermod -R "{roles}" {login}'.format(
-                login=user, roles=",".join(set(role_get(user) + valid_roles)),
-            )
-        )
-        if res["retcode"] > 0:
-            ret["Error"] = {
-                "retcode": res["retcode"],
-                "message": res["stderr"] if "stderr" in res else res["stdout"],
+    if valid_roles:
+        res = __salt__['cmd.run_all']('usermod -R "{roles}" {login}'.format(
+            login=user,
+            roles=','.join(set(role_get(user) + valid_roles)),
+        ))
+        if res['retcode'] > 0:
+            ret['Error'] = {
+                'retcode': res['retcode'],
+                'message': res['stderr'] if 'stderr' in res else res['stdout']
             }
             return ret
 
@@ -412,17 +406,15 @@ def role_rm(user, role):
     )
 
     ## update user roles
-    if len(valid_roles) > 0:
-        res = __salt__["cmd.run_all"](
-            'usermod -R "{roles}" {login}'.format(
-                login=user,
-                roles=",".join([r for r in role_get(user) if r not in valid_roles]),
-            )
-        )
-        if res["retcode"] > 0:
-            ret["Error"] = {
-                "retcode": res["retcode"],
-                "message": res["stderr"] if "stderr" in res else res["stdout"],
+    if valid_roles:
+        res = __salt__['cmd.run_all']('usermod -R "{roles}" {login}'.format(
+            login=user,
+            roles=','.join([r for r in role_get(user) if r not in valid_roles]),
+        ))
+        if res['retcode'] > 0:
+            ret['Error'] = {
+                'retcode': res['retcode'],
+                'message': res['stderr'] if 'stderr' in res else res['stdout']
             }
             return ret
 
@@ -554,16 +546,15 @@ def auth_add(user, auth):
     )
 
     ## update user auths
-    if len(valid_auths) > 0:
-        res = __salt__["cmd.run_all"](
-            'usermod -A "{auths}" {login}'.format(
-                login=user, auths=",".join(set(auth_get(user, False) + valid_auths)),
-            )
-        )
-        if res["retcode"] > 0:
-            ret["Error"] = {
-                "retcode": res["retcode"],
-                "message": res["stderr"] if "stderr" in res else res["stdout"],
+    if valid_auths:
+        res = __salt__['cmd.run_all']('usermod -A "{auths}" {login}'.format(
+            login=user,
+            auths=','.join(set(auth_get(user, False) + valid_auths)),
+        ))
+        if res['retcode'] > 0:
+            ret['Error'] = {
+                'retcode': res['retcode'],
+                'message': res['stderr'] if 'stderr' in res else res['stdout']
             }
             return ret
 
@@ -610,19 +601,15 @@ def auth_rm(user, auth):
     )
 
     ## update user auths
-    if len(valid_auths) > 0:
-        res = __salt__["cmd.run_all"](
-            'usermod -A "{auths}" {login}'.format(
-                login=user,
-                auths=",".join(
-                    [a for a in auth_get(user, False) if a not in valid_auths]
-                ),
-            )
-        )
-        if res["retcode"] > 0:
-            ret["Error"] = {
-                "retcode": res["retcode"],
-                "message": res["stderr"] if "stderr" in res else res["stdout"],
+    if valid_auths:
+        res = __salt__['cmd.run_all']('usermod -A "{auths}" {login}'.format(
+            login=user,
+            auths=','.join([a for a in auth_get(user, False) if a not in valid_auths]),
+        ))
+        if res['retcode'] > 0:
+            ret['Error'] = {
+                'retcode': res['retcode'],
+                'message': res['stderr'] if 'stderr' in res else res['stdout']
             }
             return ret
 

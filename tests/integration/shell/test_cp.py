@@ -12,6 +12,15 @@ from __future__ import absolute_import
 import logging
 import os
 import pipes
+import shutil
+import tempfile
+import logging
+
+# Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.case import ShellCase
+from tests.support.mixins import ShellCaseCommonTestsMixin
+from tests.support.unit import skipIf
 
 import pytest
 import salt.utils.files
@@ -66,15 +75,16 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
             if "localhost" in minion:
                 continue
             ret = self.run_salt(
-                "--out yaml {0} file.directory_exists {1}".format(
+                '--out yaml {0} file.directory_exists {1}'.format(
                     quote(minion), RUNTIME_VARS.TMP
                 )
             )
             data = salt.utils.yaml.safe_load("\n".join(ret))
             if data[minion] is False:
                 ret = self.run_salt(
-                    "--out yaml {0} file.makedirs {1}".format(
-                        quote(minion), RUNTIME_VARS.TMP
+                    '--out yaml {0} file.makedirs {1}'.format(
+                        quote(minion),
+                        RUNTIME_VARS.TMP
                     )
                 )
 
@@ -82,7 +92,7 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
                 self.assertTrue(data[minion])
 
             minion_testfile = os.path.join(
-                RUNTIME_VARS.TMP, "cp_{0}_testfile".format(idx)
+                RUNTIME_VARS.TMP, 'cp_{0}_testfile'.format(idx)
             )
 
             ret = self.run_cp(
@@ -118,3 +128,59 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
             )
             data = salt.utils.yaml.safe_load("\n".join(ret))
             self.assertTrue(data[minion])
+
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
+    def test_issue_7754(self):
+        config_dir = os.path.join(RUNTIME_VARS.TMP, 'issue-7754')
+
+        try:
+            os.makedirs(config_dir)
+        except OSError as exc:
+            if exc.errno != errno.EEXIST:
+                raise
+
+        config_file_name = 'master'
+        with salt.utils.files.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
+            config = salt.utils.yaml.safe_load(fhr)
+            config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
+            with salt.utils.files.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
+                salt.utils.yaml.safe_dump(config, fhw, default_flow_style=False)
+
+        try:
+            fd_, fn_ = tempfile.mkstemp()
+            os.close(fd_)
+
+            with salt.utils.files.fopen(fn_, 'w') as fp_:
+                fp_.write('Hello world!\n')
+
+            ret = self.run_script(
+                self._call_binary_,
+                '--out pprint --config-dir {0} \'*minion\' {1} {0}/{2}'.format(
+                    config_dir,
+                    fn_,
+                    os.path.basename(fn_),
+                ),
+                catch_stderr=True,
+                with_retcode=True
+            )
+
+            self.assertIn('minion', '\n'.join(ret[0]))
+            self.assertIn('sub_minion', '\n'.join(ret[0]))
+            self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
+        except AssertionError:
+            if os.path.exists('/dev/log') and ret[2] != 2:
+                # If there's a syslog device and the exit code was not 2, 'No
+                # such file or directory', raise the error
+                raise
+            self.assertIn(
+                'Failed to setup the Syslog logging handler', '\n'.join(ret[1])
+            )
+            self.assertEqual(ret[2], 2)
+        finally:
+            try:
+                os.remove(fn_)
+            except OSError as exc:
+                if exc.errno != errno.ENOENT:
+                    raise
+            if os.path.isdir(config_dir):
+                shutil.rmtree(config_dir)

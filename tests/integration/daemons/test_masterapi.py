@@ -7,16 +7,16 @@ import os
 import shutil
 import stat
 
+# Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.case import ShellCase
+
+# Import 3rd-party libs
+
 # Import Salt libs
 import salt.utils.files
 import salt.utils.stringutils
 from tests.support.case import ShellCase
-
-# Import Salt Testing libs
-from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
-
-# Import 3rd-party libs
 
 
 class AutosignGrainsTest(ShellCase):
@@ -26,18 +26,14 @@ class AutosignGrainsTest(ShellCase):
 
     def setUp(self):
         # all read, only owner write
-        self.autosign_file_permissions = (
-            stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IWUSR
-        )
+        self.autosign_file_permissions = stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IWUSR
         if RUNTIME_VARS.PYTEST_SESSION:
-            self.autosign_file_path = os.path.join(RUNTIME_VARS.TMP, "autosign_file")
+            self.autosign_file_path = os.path.join(RUNTIME_VARS.TMP, 'autosign_file')
         else:
-            self.autosign_file_path = os.path.join(
-                RUNTIME_VARS.TMP, "rootdir", "autosign_file"
-            )
+            self.autosign_file_path = os.path.join(RUNTIME_VARS.TMP, 'rootdir', 'autosign_file')
         shutil.copyfile(
-            os.path.join(RUNTIME_VARS.FILES, "autosign_grains", "autosign_file"),
-            self.autosign_file_path,
+            os.path.join(RUNTIME_VARS.FILES, 'autosign_grains', 'autosign_file'),
+            self.autosign_file_path
         )
         os.chmod(self.autosign_file_path, self.autosign_file_permissions)
 
@@ -59,7 +55,8 @@ class AutosignGrainsTest(ShellCase):
 
     def tearDown(self):
         shutil.copyfile(
-            os.path.join(RUNTIME_VARS.FILES, "autosign_file"), self.autosign_file_path
+            os.path.join(RUNTIME_VARS.FILES, 'autosign_file'),
+            self.autosign_file_path
         )
         os.chmod(self.autosign_file_path, self.autosign_file_permissions)
 
@@ -73,9 +70,9 @@ class AutosignGrainsTest(ShellCase):
 
     @skipIf(True, "SLOWTEST skip")
     def test_autosign_grains_accept(self):
-        grain_file_path = os.path.join(self.autosign_grains_dir, "test_grain")
-        with salt.utils.files.fopen(grain_file_path, "w") as f:
-            f.write(salt.utils.stringutils.to_str("#invalid_value\ncheese"))
+        grain_file_path = os.path.join(self.autosign_grains_dir, 'test_grain')
+        with salt.utils.files.fopen(grain_file_path, 'w') as f:
+            f.write(salt.utils.stringutils.to_str('#invalid_value\ncheese'))
         os.chmod(grain_file_path, self.autosign_file_permissions)
 
         self.run_call(
@@ -85,13 +82,11 @@ class AutosignGrainsTest(ShellCase):
 
     @skipIf(True, "SLOWTEST skip")
     def test_autosign_grains_fail(self):
-        grain_file_path = os.path.join(self.autosign_grains_dir, "test_grain")
-        with salt.utils.files.fopen(grain_file_path, "w") as f:
-            f.write(salt.utils.stringutils.to_str("#cheese\ninvalid_value"))
+        grain_file_path = os.path.join(self.autosign_grains_dir, 'test_grain')
+        with salt.utils.files.fopen(grain_file_path, 'w') as f:
+            f.write(salt.utils.stringutils.to_str('#cheese\ninvalid_value'))
         os.chmod(grain_file_path, self.autosign_file_permissions)
 
-        self.run_call(
-            "test.ping -l quiet"
-        )  # get minon to try to authenticate itself again
-        self.assertNotIn("minion", self.run_key("-l acc"))
-        self.assertIn("minion", self.run_key("-l un"))
+        self.run_call('test.ping -l quiet')  # get minon to try to authenticate itself again
+        self.assertNotIn('minion', self.run_key('-l acc'))
+        self.assertIn('minion', self.run_key('-l un'))

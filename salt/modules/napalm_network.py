@@ -227,10 +227,10 @@ def _config_logic(
         # if unable to load the config (errors / warnings)
         # or in testing mode,
         # will discard the config
-        if loaded_result["comment"]:
-            loaded_result["comment"] += "\n"
-        if not len(loaded_result.get("diff", "")) > 0:
-            loaded_result["already_configured"] = True
+        if loaded_result['comment']:
+            loaded_result['comment'] += '\n'
+        if not loaded_result.get('diff', ''):
+            loaded_result['already_configured'] = True
         discarded = _safe_dicard_config(loaded_result, napalm_device)
         if not discarded["result"]:
             return loaded_result
@@ -247,9 +247,9 @@ def _config_logic(
         if commit_jid:
             log.info("Committing the JID: %s", str(commit_jid))
             removed = cancel_commit(commit_jid)
-            log.debug("Cleaned up the commit from the schedule")
-            log.debug(removed["comment"])
-        if len(loaded_result.get("diff", "")) > 0:
+            log.debug('Cleaned up the commit from the schedule')
+            log.debug(removed['comment'])
+        if loaded_result.get('diff', ''):
             # if not testing mode
             # and also the user wants to commit (default)
             # and there are changes to commit
@@ -2055,35 +2055,31 @@ def load_template(
             for tpl_index, tpl_name in enumerate(template_name):
                 tpl_hash = template_hash[tpl_index]
                 tpl_hash_name = template_hash_name[tpl_index]
-                _rand_filename = __salt__["random.hash"](tpl_name, "md5")
-                _temp_file = __salt__["file.join"]("/tmp", _rand_filename)
-                _managed = __salt__["file.get_managed"](
-                    name=_temp_file,
-                    source=tpl_name,
-                    source_hash=tpl_hash,
-                    source_hash_name=tpl_hash_name,
-                    user=None,
-                    group=None,
-                    mode=None,
-                    attrs=None,
-                    template=template_engine,
-                    context=context,
-                    defaults=defaults,
-                    saltenv=saltenv,
-                    skip_verify=skip_verify,
-                )
-                if not isinstance(_managed, (list, tuple)) and isinstance(
-                    _managed, six.string_types
-                ):
-                    _loaded["comment"] += _managed
-                    _loaded["result"] = False
-                elif isinstance(_managed, (list, tuple)) and not len(_managed) > 0:
-                    _loaded["result"] = False
-                    _loaded["comment"] += "Error while rendering the template."
-                elif isinstance(_managed, (list, tuple)) and not len(_managed[0]) > 0:
-                    _loaded["result"] = False
-                    _loaded["comment"] += _managed[-1]  # contains the error message
-                if _loaded["result"]:  # all good
+                _rand_filename = __salt__['random.hash'](tpl_name, 'md5')
+                _temp_file = __salt__['file.join']('/tmp', _rand_filename)
+                _managed = __salt__['file.get_managed'](name=_temp_file,
+                                                        source=tpl_name,
+                                                        source_hash=tpl_hash,
+                                                        source_hash_name=tpl_hash_name,
+                                                        user=None,
+                                                        group=None,
+                                                        mode=None,
+                                                        attrs=None,
+                                                        template=template_engine,
+                                                        context=context,
+                                                        defaults=defaults,
+                                                        saltenv=saltenv,
+                                                        skip_verify=skip_verify)
+                if not isinstance(_managed, (list, tuple)) and isinstance(_managed, six.string_types):
+                    _loaded['comment'] += _managed
+                    _loaded['result'] = False
+                elif isinstance(_managed, (list, tuple)) and not _managed:
+                    _loaded['result'] = False
+                    _loaded['comment'] += 'Error while rendering the template.'
+                elif isinstance(_managed, (list, tuple)) and not _managed[0]:
+                    _loaded['result'] = False
+                    _loaded['comment'] += _managed[-1]  # contains the error message
+                if _loaded['result']:  # all good
                     _temp_tpl_file = _managed[0]
                     _temp_tpl_file_exists = __salt__["file.file_exists"](_temp_tpl_file)
                     if not _temp_tpl_file_exists:

@@ -38,8 +38,8 @@ __virtualname__ = "ip"
 def __virtual__():
     """
     Confine this module to RHEL/Fedora based distros
-    """
-    if __grains__["os_family"] == "RedHat":
+    '''
+    if __grains__.get('os_family') == 'RedHat':
         return __virtualname__
     return (
         False,
@@ -119,9 +119,9 @@ def _error_msg_iface(iface, option, expected):
     """
     Build an appropriate error message from a given option and
     a list of expected values.
-    """
-    msg = "Invalid option -- Interface: {0}, Option: {1}, Expected: [{2}]"
-    return msg.format(iface, option, "|".join(str(e) for e in expected))
+    '''
+    msg = 'Invalid option -- Interface: {0}, Option: {1}, Expected: [{2}]'
+    return msg.format(iface, option, '|'.join(str(e) for e in expected))
 
 
 def _error_msg_routes(iface, option, expected):
@@ -143,9 +143,9 @@ def _error_msg_network(option, expected):
     """
     Build an appropriate error message from a given option and
     a list of expected values.
-    """
-    msg = "Invalid network setting -- Setting: {0}, Expected: [{1}]"
-    return msg.format(option, "|".join(str(e) for e in expected))
+    '''
+    msg = 'Invalid network setting -- Setting: {0}, Expected: [{1}]'
+    return msg.format(option, '|'.join(str(e) for e in expected))
 
 
 def _log_default_network(opt, value):
@@ -158,7 +158,7 @@ def _parse_rh_config(path):
     if rh_config:
         for line in rh_config:
             line = line.strip()
-            if len(line) == 0 or line.startswith("!") or line.startswith("#"):
+            if not line or line.startswith('!') or line.startswith('#'):
                 continue
             pair = [p.rstrip() for p in line.split("=", 1)]
             if len(pair) != 2:
@@ -334,14 +334,14 @@ def _parse_settings_bond_0(opts, iface, bond_def):
     bond.update({"mode": "0"})
 
     # ARP targets in n.n.n.n form
-    valid = ["list of ips (up to 16)"]
-    if "arp_ip_target" in opts:
-        if isinstance(opts["arp_ip_target"], list):
-            if 1 <= len(opts["arp_ip_target"]) <= 16:
-                bond.update({"arp_ip_target": ""})
-                for ip in opts["arp_ip_target"]:  # pylint: disable=C0103
-                    if len(bond["arp_ip_target"]) > 0:
-                        bond["arp_ip_target"] = bond["arp_ip_target"] + "," + ip
+    valid = ['list of ips (up to 16)']
+    if 'arp_ip_target' in opts:
+        if isinstance(opts['arp_ip_target'], list):
+            if 1 <= len(opts['arp_ip_target']) <= 16:
+                bond.update({'arp_ip_target': ''})
+                for ip in opts['arp_ip_target']:  # pylint: disable=C0103
+                    if bond['arp_ip_target']:
+                        bond['arp_ip_target'] = bond['arp_ip_target'] + ',' + ip
                     else:
                         bond["arp_ip_target"] = ip
             else:
@@ -409,18 +409,18 @@ def _parse_settings_bond_2(opts, iface, bond_def):
     If an option has a value that is not expected, this
     function will log what the Interface, Setting and what it was
     expecting.
-    """
+    '''
 
-    bond = {"mode": "2"}
+    bond = {'mode': '2'}
 
-    valid = ["list of ips (up to 16)"]
-    if "arp_ip_target" in opts:
-        if isinstance(opts["arp_ip_target"], list):
-            if 1 <= len(opts["arp_ip_target"]) <= 16:
-                bond.update({"arp_ip_target": ""})
-                for ip in opts["arp_ip_target"]:  # pylint: disable=C0103
-                    if len(bond["arp_ip_target"]) > 0:
-                        bond["arp_ip_target"] = bond["arp_ip_target"] + "," + ip
+    valid = ['list of ips (up to 16)']
+    if 'arp_ip_target' in opts:
+        if isinstance(opts['arp_ip_target'], list):
+            if 1 <= len(opts['arp_ip_target']) <= 16:
+                bond.update({'arp_ip_target': ''})
+                for ip in opts['arp_ip_target']:  # pylint: disable=C0103
+                    if bond['arp_ip_target']:
+                        bond['arp_ip_target'] = bond['arp_ip_target'] + ',' + ip
                     else:
                         bond["arp_ip_target"] = ip
             else:
@@ -634,9 +634,9 @@ def _parse_settings_vlan(opts, iface):
         else:
             _raise_error_iface(iface, "vlan_id", "Positive integer")
 
-    if "phys_dev" in opts:
-        if len(opts["phys_dev"]) > 0:
-            vlan.update({"phys_dev": opts["phys_dev"]})
+    if 'phys_dev' in opts:
+        if opts['phys_dev']:
+            vlan.update({'phys_dev': opts['phys_dev']})
         else:
             _raise_error_iface(iface, "phys_dev", "Non-empty string")
 
@@ -1172,15 +1172,15 @@ def build_routes(iface, **settings):
             template = "route_eth.jinja"
     except ValueError:
         pass
-    log.debug("Template name: %s", template)
+    log.debug('Template name: %s', template)
 
     opts = _parse_routes(iface, settings)
-    log.debug("Opts: \n %s", opts)
+    log.debug('Opts: \n %s', opts)
     try:
         template = JINJA.get_template(template)
     except jinja2.exceptions.TemplateNotFound:
-        log.error("Could not load template %s", template)
-        return ""
+        log.error('Could not load template %s', template)
+        return ''
     opts6 = []
     opts4 = []
     for route in opts["routes"]:

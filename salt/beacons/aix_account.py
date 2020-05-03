@@ -20,8 +20,8 @@ __virtualname__ = "aix_account"
 def __virtual__():
     """
     Only load if kernel is AIX
-    """
-    if __grains__["kernel"] == ("AIX"):
+    '''
+    if __grains__.get('kernel') == 'AIX':
         return __virtualname__
 
     return (

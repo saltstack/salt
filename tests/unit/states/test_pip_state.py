@@ -19,15 +19,8 @@ import salt.states.pip_state as pip_state
 import salt.utils.path
 
 # Import salt libs
-import salt.version
-from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
-from tests.support.helpers import VirtualEnv, dedent, requires_network
-
-# Import Salt Testing libs
-from tests.support.mixins import LoaderModuleMockMixin, SaltReturnAssertsMixin
-from tests.support.mock import MagicMock, patch
-from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+import salt.states.pip_state as pip_state
+from salt.utils.odict import OrderedDict
 
 # Import 3rd-party libs
 try:
@@ -496,3 +489,45 @@ class PipStateInstallationErrorTest(TestCase):
                     errors
                 )
             )
+
+    def test_mod_aggregate(self):
+        '''
+        Test to mod_aggregate function
+        '''
+
+        low = OrderedDict([('state', 'pip'),
+                           ('name', 'ipython'),
+                           ('__sls__', 'test.test_pip'),
+                           ('__env__', 'base'),
+                           ('__id__', 'ipython'),
+                           ('order', 10000),
+                           ('fun', 'installed')])
+        chunks = [OrderedDict([('state', 'pip'),
+                               ('name', 'ipython'),
+                               ('__sls__', 'test.test_pip'),
+                               ('__env__', 'base'),
+                               ('__id__', 'ipython'),
+                               ('order', 10000),
+                               ('fun', 'installed')]),
+                  OrderedDict([('state', 'pip'),
+                               ('name', 'pylint'),
+                               ('__sls__', 'test.test_pip'),
+                               ('__env__', 'base'),
+                               ('__id__', 'pylint'),
+                               ('order', 10001),
+                               ('fun', 'installed')])]
+        running = {}
+        expected_low = OrderedDict([('state', 'pip'),
+                                    ('name', 'ipython'),
+                                    ('__sls__', 'test.test_pip'),
+                                    ('__env__', 'base'),
+                                    ('__id__', 'ipython'),
+                                    ('order', 10000),
+                                    ('fun', 'installed'),
+                                    ('pkgs', ['ipython', 'pylint'])])
+
+        mock_tag = MagicMock(side_effect=['pip_|-ipython_|-ipython_|-installed',
+                                          'pip_|-pylint_|-pylint_|-installed'])
+        with patch.dict(pip_state.__utils__, {'state.gen_tag': mock_tag}):
+            self.assertDictEqual(pip_state.mod_aggregate(low, chunks, running),
+                                 expected_low)

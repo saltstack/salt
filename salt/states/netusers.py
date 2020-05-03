@@ -25,6 +25,9 @@ import logging
 # Python std lib
 from copy import deepcopy
 
+# salt lib
+from salt.utils.json import loads, dumps
+from salt.ext import six
 # import NAPALM utils
 import salt.utils.json
 import salt.utils.napalm

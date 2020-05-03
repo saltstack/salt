@@ -34,9 +34,9 @@ def __virtual__():
 def _detect_conf():
     """
     GRUB conf location differs depending on distro
-    """
-    if __grains__["os_family"] == "RedHat":
-        return "/boot/grub/grub.conf"
+    '''
+    if __grains__.get('os_family') == 'RedHat':
+        return '/boot/grub/grub.conf'
     # Defaults for Ubuntu, Debian, Arch, and others
     return "/boot/grub/menu.lst"
 

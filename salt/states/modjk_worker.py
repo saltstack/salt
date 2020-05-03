@@ -62,9 +62,9 @@ def _send_command(cmd, worker, lbn, target, profile="default", tgt_type="glob"):
     if not response:
         ret["msg"] = "no servers answered the published command {0}".format(cmd)
         return ret
-    elif len(errors) > 0:
-        ret["msg"] = "the following minions return False"
-        ret["minions"] = errors
+    elif errors:
+        ret['msg'] = 'the following minions return False'
+        ret['minions'] = errors
         return ret
     else:
         ret["code"] = True

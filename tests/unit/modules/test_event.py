@@ -5,6 +5,17 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+# Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
+    MagicMock,
+    patch,
+    NO_MOCK,
+    NO_MOCK_REASON
+)
+
 # Import Salt Libs
 import salt.modules.event as event
 import salt.utils.event
@@ -24,10 +35,10 @@ class EventTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
             event: {
-                "__opts__": {
-                    "id": "id",
-                    "sock_dir": RUNTIME_VARS.TMP,
-                    "transport": "zeromq",
+                '__opts__': {
+                    'id': 'id',
+                    'sock_dir': RUNTIME_VARS.TMP,
+                    'transport': 'zeromq'
                 }
             }
         }
@@ -40,23 +51,17 @@ class EventTestCase(TestCase, LoaderModuleMockMixin):
             "salt.transport.client.ReqChannel.factory"
         ) as salt_transport_channel_factory:
 
-            preload = {
-                "id": "id",
-                "tag": "tag",
-                "data": "data",
-                "tok": "salt",
-                "cmd": "_minion_event",
-            }
+            preload = {'id': 'id', 'tag': 'tag', 'data': 'data',
+                       'tok': 'salt', 'cmd': '_minion_event'}
 
-            with patch.dict(
-                event.__opts__,
-                {"transport": "A", "master_uri": "localhost", "local": False},
-            ):
-                with patch.object(salt_crypt_sauth, "gen_token", return_value="tok"):
-                    with patch.object(
-                        salt_transport_channel_factory, "send", return_value=None
-                    ):
-                        self.assertTrue(event.fire_master("data", "tag", preload))
+            with patch.dict(event.__opts__, {'transport': 'A',
+                                             'master_uri': 'localhost',
+                                             'local': False}):
+                with patch.object(salt_crypt_sauth, 'gen_token',
+                                  return_value='tok'):
+                    with patch.object(salt_transport_channel_factory, 'send',
+                                      return_value=None):
+                        self.assertTrue(event.fire_master('data', 'tag', preload))
 
             with patch.dict(event.__opts__, {"transport": "A", "local": False}):
                 with patch.object(

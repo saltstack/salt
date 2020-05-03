@@ -17,6 +17,7 @@ import salt.utils.data
 import salt.utils.jid
 import salt.utils.versions
 import salt.utils.yaml
+from salt.utils.odict import OrderedDict
 
 # Import salt libs
 from salt.exceptions import SaltInvocationError
@@ -78,12 +79,8 @@ def condition_input(args, kwargs):
     """
     ret = []
     for arg in args:
-        # pylint: disable=incompatible-py3-code,undefined-variable
-        if (
-            six.PY3
-            and isinstance(arg, six.integer_types)
-            and salt.utils.jid.is_jid(six.text_type(arg))
-        ) or (six.PY2 and isinstance(arg, long)):
+        if (six.PY3 and isinstance(arg, six.integer_types) and salt.utils.jid.is_jid(six.text_type(arg))) or \
+        (six.PY2 and isinstance(arg, long)):  # pylint: disable=incompatible-py3-code,undefined-variable
             ret.append(six.text_type(arg))
         else:
             ret.append(arg)
@@ -97,7 +94,7 @@ def condition_input(args, kwargs):
 
 
 def parse_input(args, kwargs=None, condition=True, no_parse=None):
-    """
+    '''
     Parse out the args and kwargs from a list of input values. Optionally,
     return the args and kwargs without passing them to condition_input().
 
@@ -434,8 +431,8 @@ def format_call(
     """
     ret = initial_ret is not None and initial_ret or {}
 
-    ret["args"] = []
-    ret["kwargs"] = {}
+    ret['args'] = []
+    ret['kwargs'] = OrderedDict()
 
     aspec = get_function_argspec(fun, is_class_method=is_class_method)
 

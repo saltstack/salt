@@ -427,6 +427,10 @@ def extracted(
             If it's not desirable please consider the ``skip_files_list_verify``
             argument.
 
+        Note that this is only checked if the ``source`` value has not changed.
+        If it has (e.g. to increment a version number in the path) then the
+        archive will not be extracted even if the hash has changed.
+
         .. versionadded:: 2016.3.0
 
     skip_files_list_verify : False
@@ -861,11 +865,12 @@ def extracted(
     except AttributeError:
         pass
     if archive_format not in valid_archive_formats:
-        ret["comment"] = (
-            "Invalid archive_format '{0}'. Either set it to a supported "
-            "value ({1}) or remove this argument and the archive format will "
-            "be guessed based on file extension.".format(
-                archive_format, ", ".join(valid_archive_formats),
+        ret['comment'] = (
+            'Invalid archive_format \'{0}\'. Either set it to a supported '
+            'value ({1}) or remove this argument and the archive format will '
+            'be guessed based on file extension.'.format(
+                archive_format,
+                ', '.join(valid_archive_formats),
             )
         )
         return ret
@@ -1128,29 +1133,20 @@ def extracted(
         ret["comment"] = msg
         return ret
 
-    if (
-        enforce_toplevel
-        and contents is not None
-        and (
-            len(contents["top_level_dirs"]) > 1 or len(contents["top_level_files"]) > 0
-        )
-    ):
-        ret["comment"] = (
-            "Archive does not have a single top-level directory. "
-            "To allow this archive to be extracted, set "
-            "'enforce_toplevel' to False. To avoid a "
-            "'{0}-bomb' it may also be advisable to set a "
-            "top-level directory by adding it to the 'name' "
-            "value (for example, setting 'name' to {1} "
-            "instead of {2}).".format(
-                archive_format, os.path.join(name, "some_dir"), name,
-            )
-        )
-        return ret
-
-    if clean and clean_parent:
-        ret["comment"] = "Only one of 'clean' and 'clean_parent' can be set to True"
-        ret["result"] = False
+    if enforce_toplevel and contents is not None \
+            and (len(contents['top_level_dirs']) > 1
+                 or contents['top_level_files']):
+        ret['comment'] = ('Archive does not have a single top-level directory. '
+                          'To allow this archive to be extracted, set '
+                          '\'enforce_toplevel\' to False. To avoid a '
+                          '\'{0}-bomb\' it may also be advisable to set a '
+                          'top-level directory by adding it to the \'name\' '
+                          'value (for example, setting \'name\' to {1} '
+                          'instead of {2}).'.format(
+                              archive_format,
+                              os.path.join(name, 'some_dir'),
+                              name,
+                          ))
         return ret
 
     extraction_needed = overwrite
@@ -1612,7 +1608,7 @@ def extracted(
                             enforce_failed.append(filename)
 
     if extraction_needed:
-        if len(files) > 0:
+        if files:
             if created_destdir:
                 ret["changes"]["directories_created"] = [name]
             ret["changes"]["extracted_files"] = files

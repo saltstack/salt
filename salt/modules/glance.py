@@ -163,21 +163,16 @@ def _auth(profile=None, api_version=2, **connection_args):
         raise SaltInvocationError("No credentials to authenticate with.")
 
     if HAS_KEYSTONE:
-        log.debug(
-            "Calling keystoneclient.v2_0.client.Client(%s, **%s)", ks_endpoint, kwargs
-        )
+        log.debug('Calling keystoneclient.v2_0.client.Client(%s, **%s)',
+                  ks_endpoint, kwargs)
         keystone = kstone.Client(**kwargs)
         kwargs["token"] = keystone.get_token(keystone.session)
         # This doesn't realy prevent the password to show up
         # in the minion log as keystoneclient.session is
         # logging it anyway when in debug-mode
-        kwargs.pop("password")
-        log.debug(
-            "Calling glanceclient.client.Client(%s, %s, **%s)",
-            api_version,
-            g_endpoint_url,
-            kwargs,
-        )
+        kwargs.pop('password')
+        log.debug('Calling glanceclient.client.Client(%s, %s, **%s)',
+                  api_version, g_endpoint_url, kwargs)
         # may raise exc.HTTPUnauthorized, exc.HTTPNotFound
         # but we deal with those elsewhere
         return client.Client(api_version, g_endpoint_url, **kwargs)
@@ -357,12 +352,13 @@ def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
     try:
         image = g_client.images.get(id)
     except exc.HTTPNotFound:
-        return {"result": False, "comment": "No image with ID {0}".format(id)}
-    pformat = pprint.PrettyPrinter(indent=4).pformat
+        return {
+            'result': False,
+            'comment': 'No image with ID {0}'.format(id)
+            }
     log.debug(
-        "Properties of image %s:\n%s",
-        image.name,
-        pprint.PrettyPrinter(indent=4).pformat(image),
+        'Properties of image %s:\n%s',
+        image.name, pprint.PrettyPrinter(indent=4).pformat(image)
     )
 
     schema = image_schema(profile=profile)
@@ -402,7 +398,7 @@ def image_list(id=None, profile=None, name=None):  # pylint: disable=C0103
                         'name "{0}"'.format(name),
                     }
                 _add_image(ret, image)
-    log.debug("Returning images: %s", ret)
+    log.debug('Returning images: %s', ret)
     return ret
 
 
@@ -457,13 +453,13 @@ def image_update(id=None, name=None, profile=None, **kwargs):  # pylint: disable
                 image = img_list[name]
     else:
         raise SaltInvocationError
-    log.debug("Found image:\n%s", image)
+    log.debug('Found image:\n%s', image)
     to_update = {}
     for key, value in kwargs.items():
         if key.startswith("_"):
             continue
         if key not in image or image[key] != value:
-            log.debug("add <%s=%s> to to_update", key, value)
+            log.debug('add <%s=%s> to to_update', key, value)
             to_update[key] = value
     g_client = _auth(profile)
     updated = g_client.images.update(image["id"], **to_update)
@@ -489,9 +485,8 @@ def schema_get(name, profile=None):
     for prop in g_client.schemas.get(name).properties:
         schema_props[prop.name] = prop.description
     log.debug(
-        "Properties of schema %s:\n%s",
-        name,
-        pprint.PrettyPrinter(indent=4).pformat(schema_props),
+        'Properties of schema %s:\n%s',
+        name, pprint.PrettyPrinter(indent=4).pformat(schema_props)
     )
     return {name: schema_props}
 

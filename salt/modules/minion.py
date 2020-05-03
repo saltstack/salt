@@ -32,8 +32,8 @@ def list_():
     .. code-block:: bash
 
         salt 'master' minion.list
-    """
-    pki_dir = __salt__["config.get"]("pki_dir", "")
+    '''
+    pki_dir = __salt__['config.get']('pki_dir', '')
 
     # We have to replace the minion/master directories
     pki_dir = pki_dir.replace("minion", "master")

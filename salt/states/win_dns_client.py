@@ -187,19 +187,15 @@ def primary_suffix(name, suffix=None, updates=False):
         },
     }
 
-    reg_data["suffix"]["old"] = __utils__["reg.read_value"](
-        reg_data["suffix"]["hive"],
-        reg_data["suffix"]["key"],
-        reg_data["suffix"]["vname"],
-    )["vdata"]
+    reg_data['suffix']['old'] = __utils__['reg.read_value'](
+            reg_data['suffix']['hive'],
+            reg_data['suffix']['key'],
+            reg_data['suffix']['vname'],)['vdata']
 
-    reg_data["updates"]["old"] = bool(
-        __utils__["reg.read_value"](
-            reg_data["updates"]["hive"],
-            reg_data["updates"]["key"],
-            reg_data["updates"]["vname"],
-        )["vdata"]
-    )
+    reg_data['updates']['old'] = bool(__utils__['reg.read_value'](
+            reg_data['updates']['hive'],
+            reg_data['updates']['key'],
+            reg_data['updates']['vname'],)['vdata'])
 
     updates_operation = "enabled" if reg_data["updates"]["new"] else "disabled"
 
@@ -236,28 +232,27 @@ def primary_suffix(name, suffix=None, updates=False):
             }
         # No changes to updates policy needed
         else:
-            ret["comment"] = "Updated primary DNS suffix ({0})".format(suffix)
-            ret["changes"] = {
-                "old": {"suffix": reg_data["suffix"]["old"]},
-                "new": {"suffix": reg_data["suffix"]["new"]},
-            }
+            ret['comment'] = 'Updated primary DNS suffix ({0})'.format(suffix)
+            ret['changes'] = {
+                    'old': {
+                        'suffix': reg_data['suffix']['old']},
+                    'new': {
+                        'suffix': reg_data['suffix']['new']}}
 
-    suffix_result = __utils__["reg.set_value"](
-        reg_data["suffix"]["hive"],
-        reg_data["suffix"]["key"],
-        reg_data["suffix"]["vname"],
-        reg_data["suffix"]["new"],
-        reg_data["suffix"]["vtype"],
-    )
+    suffix_result = __utils__['reg.set_value'](
+            reg_data['suffix']['hive'],
+            reg_data['suffix']['key'],
+            reg_data['suffix']['vname'],
+            reg_data['suffix']['new'],
+            reg_data['suffix']['vtype'])
 
-    updates_result = __utils__["reg.set_value"](
-        reg_data["updates"]["hive"],
-        reg_data["updates"]["key"],
-        reg_data["updates"]["vname"],
-        reg_data["updates"]["new"],
-        reg_data["updates"]["vtype"],
-    )
+    updates_result = __utils__['reg.set_value'](
+            reg_data['updates']['hive'],
+            reg_data['updates']['key'],
+            reg_data['updates']['vname'],
+            reg_data['updates']['new'],
+            reg_data['updates']['vtype'])
 
-    ret["result"] = suffix_result & updates_result
+    ret['result'] = suffix_result & updates_result
 
     return ret

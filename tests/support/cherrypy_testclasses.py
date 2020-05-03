@@ -14,6 +14,11 @@ try:
 except ImportError:
     HAS_CHERRYPY = False
 
+import os
+
+import salt.config
+from tests.support.mock import patch
+from tests.support.runtests import RUNTIME_VARS
 
 if HAS_CHERRYPY:
     from tests.support.cptestcase import BaseCherryPyTestCase
@@ -42,7 +47,7 @@ class BaseRestCherryPyTest(BaseCherryPyTestCase):
 
     @classmethod
     def setUpClass(cls):
-        master_conf = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "master")
+        master_conf = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'master')
         cls.config = salt.config.client_config(master_conf)
         cls.base_opts = {}
         cls.base_opts.update(cls.config)
@@ -57,7 +62,7 @@ class BaseRestCherryPyTest(BaseCherryPyTestCase):
         self.app = app
         self.addCleanup(delattr, self, "app")
 
-        master_conf = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "master")
+        master_conf = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'master')
         client_config = salt.config.client_config(master_conf)
         base_opts = {}
         base_opts.update(client_config)

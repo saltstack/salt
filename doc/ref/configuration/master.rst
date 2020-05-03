@@ -920,8 +920,8 @@ Default: False
 
 Turning on the master stats enables runtime throughput and statistics events
 to be fired from the master event bus. These events will report on what
-functions have been run on the master and how long these runs have, on
-average, taken over a given period of time.
+functions have been run on the master along with their average latency and
+duration, taken over a given period of time.
 
 .. conf_master:: master_stats_event_iter
 
@@ -4656,7 +4656,7 @@ Default: ``3600``
 
 If and only if a master has set ``pillar_cache: True``, the cache TTL controls the amount
 of time, in seconds, before the cache is considered invalid by a master and a fresh
-pillar is recompiled and stored.
+pillar is recompiled and stored. A value of 0 will cause the cache to always be valid.
 
 .. conf_master:: pillar_cache_backend
 

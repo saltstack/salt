@@ -99,7 +99,7 @@ def start(url, funs=None, tags=None):
     if __opts__.get("id").endswith("_master"):
         instance = "master"
     else:
-        instance = "minion"
+        instance = 'minion'
     with salt.utils.event.get_event(
         instance,
         sock_dir=__opts__["sock_dir"],
@@ -120,4 +120,4 @@ def start(url, funs=None, tags=None):
                     if not event["data"]["fun"] in funs:
                         publish = False
                 if publish:
-                    _logstash(url, event["data"])
+                    _logstash(url, event['data'])

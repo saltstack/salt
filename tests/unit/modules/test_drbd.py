@@ -66,102 +66,65 @@ class DrbdTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(drbd.overview(), ret)
 
     def test_status(self):
-        """
+        '''
         Test if it shows status of the DRBD resources via drbdadm
-        """
-        ret = [
-            {
-                "local role": "Primary",
-                "local volumes": [{"disk": "UpToDate"}],
-                "peer nodes": [
-                    {
-                        "peer volumes": [
-                            {
-                                "done": "96.47",
-                                "peer-disk": "Inconsistent",
-                                "replication": "SyncSource",
-                            }
-                        ],
-                        "peernode name": "opensuse-node2",
-                        "role": "Secondary",
-                    }
-                ],
-                "resource name": "single",
-            }
-        ]
+        '''
+        ret = [{'local role': 'Primary',
+                'local volumes': [{'disk': 'UpToDate'}],
+                'peer nodes': [{'peer volumes': [{'done': '96.47',
+                    'peer-disk': 'Inconsistent', 'replication': 'SyncSource'}],
+                'peernode name': 'opensuse-node2',
+                'role': 'Secondary'}],
+                'resource name': 'single'}]
 
-        mock = MagicMock(
-            return_value="""
+        mock = MagicMock(return_value='''
 single role:Primary
   disk:UpToDate
   opensuse-node2 role:Secondary
     replication:SyncSource peer-disk:Inconsistent done:96.47
-"""
-        )
+''')
 
-        with patch.dict(drbd.__salt__, {"cmd.run": mock}):
+        with patch.dict(drbd.__salt__, {'cmd.run': mock}):
             try:  # python2
                 self.assertItemsEqual(drbd.status(), ret)
             except AttributeError:  # python3
                 self.assertCountEqual(drbd.status(), ret)
 
-        ret = [
-            {
-                "local role": "Primary",
-                "local volumes": [
-                    {"disk": "UpToDate", "volume": "0"},
-                    {"disk": "UpToDate", "volume": "1"},
-                ],
-                "peer nodes": [
-                    {
-                        "peer volumes": [
-                            {"peer-disk": "UpToDate", "volume": "0"},
-                            {"peer-disk": "UpToDate", "volume": "1"},
-                        ],
-                        "peernode name": "node2",
-                        "role": "Secondary",
-                    },
-                    {
-                        "peer volumes": [
-                            {"peer-disk": "UpToDate", "volume": "0"},
-                            {"peer-disk": "UpToDate", "volume": "1"},
-                        ],
-                        "peernode name": "node3",
-                        "role": "Secondary",
-                    },
-                ],
-                "resource name": "test",
-            },
-            {
-                "local role": "Primary",
-                "local volumes": [
-                    {"disk": "UpToDate", "volume": "0"},
-                    {"disk": "UpToDate", "volume": "1"},
-                ],
-                "peer nodes": [
-                    {
-                        "peer volumes": [
-                            {"peer-disk": "UpToDate", "volume": "0"},
-                            {"peer-disk": "UpToDate", "volume": "1"},
-                        ],
-                        "peernode name": "node2",
-                        "role": "Secondary",
-                    },
-                    {
-                        "peer volumes": [
-                            {"peer-disk": "UpToDate", "volume": "0"},
-                            {"peer-disk": "UpToDate", "volume": "1"},
-                        ],
-                        "peernode name": "node3",
-                        "role": "Secondary",
-                    },
-                ],
-                "resource name": "res",
-            },
-        ]
+        ret = [{'local role': 'Primary',
+                'local volumes': [{'disk': 'UpToDate', 'volume': '0'},
+                                  {'disk': 'UpToDate', 'volume': '1'}
+                                 ],
+                'peer nodes': [{'peer volumes': [{'peer-disk': 'UpToDate', 'volume': '0'},
+                                                 {'peer-disk': 'UpToDate', 'volume': '1'}
+                                                ],
+                                'peernode name': 'node2',
+                                'role': 'Secondary'},
+                               {'peer volumes': [{'peer-disk': 'UpToDate', 'volume': '0'},
+                                                 {'peer-disk': 'UpToDate', 'volume': '1'}
+                                                ],
+                                'peernode name': 'node3',
+                                'role': 'Secondary'}
+                              ],
+                'resource name': 'test'},
+               {'local role': 'Primary',
+                'local volumes': [{'disk': 'UpToDate', 'volume': '0'},
+                                  {'disk': 'UpToDate', 'volume': '1'}
+                                 ],
+                'peer nodes': [{'peer volumes': [{'peer-disk': 'UpToDate', 'volume': '0'},
+                                                 {'peer-disk': 'UpToDate', 'volume': '1'}
+                                                ],
+                                'peernode name': 'node2',
+                                'role': 'Secondary'},
+                               {'peer volumes': [{'peer-disk': 'UpToDate', 'volume': '0'},
+                                                 {'peer-disk': 'UpToDate', 'volume': '1'}
+                                                ],
+                                'peernode name': 'node3',
+                                'role': 'Secondary'}
+                              ],
+                'resource name': 'res'}
+               ]
 
-        mock = MagicMock(
-            return_value="""
+        mock = MagicMock(return_value='''
 res role:Primary
   volume:0 disk:UpToDate
   volume:1 disk:UpToDate
@@ -182,9 +145,8 @@ test role:Primary
     volume:0 peer-disk:UpToDate
     volume:1 peer-disk:UpToDate
 
-"""
-        )
-        with patch.dict(drbd.__salt__, {"cmd.run": mock}):
+''')
+        with patch.dict(drbd.__salt__, {'cmd.run': mock}):
             try:  # python2
                 self.assertItemsEqual(drbd.status(), ret)
             except AttributeError:  # python3

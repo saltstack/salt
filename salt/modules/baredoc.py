@@ -1,250 +1,183 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 Baredoc walks the installed module and state directories and generates
 dictionaries and lists of the function names and their arguments.
 
-.. versionadded:: Sodium
+.. versionadded:: Neon
 
-"""
-from __future__ import absolute_import, print_function, unicode_literals
-
-import ast
+'''
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import logging
 import os
+import re
 
 # Import salt libs
+import salt.loader
+import salt.runner
+import salt.state
+import salt.utils.data
 import salt.utils.files
-from salt.ext.six.moves import zip_longest
+import salt.utils.args
+import salt.utils.schema
 
 # Import 3rd-party libs
+from salt.ext import six
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 
 
-def _get_module_name(tree, filename):
-    """
-    Returns the value of __virtual__ if found.
-    Otherwise, returns filename
-    """
-    module_name = os.path.basename(filename).split(".")[0]
-    assignments = [node for node in tree.body if isinstance(node, ast.Assign)]
-    for assign in assignments:
-        try:
-            if assign.targets[0].id == "__virtualname__":
-                module_name = assign.value.s
-        except AttributeError:
-            pass
-    return module_name
-
-
-def _get_func_aliases(tree):
-    """
-    Get __func_alias__ dict for mapping function names
-    """
-    fun_aliases = {}
-    assignments = [node for node in tree.body if isinstance(node, ast.Assign)]
-    for assign in assignments:
-        try:
-            if assign.targets[0].id == "__func_alias__":
-                for key, value in zip_longest(assign.value.keys, assign.value.values):
-                    fun_aliases.update({key.s: value.s})
-        except AttributeError:
-            pass
-    return fun_aliases
-
-
-def _get_args(function):
-    """
-    Given a function def, returns arguments and defaults
-    """
-    # Generate list of arguments
-    arg_strings = []
-    list_of_arguments = function.args.args
-    if list_of_arguments:
-        for arg in list_of_arguments:
-            arg_strings.append(arg.arg)
-
-    # Generate list of arg defaults
-    # Values are only returned for populated items
-    arg_default_strings = []
-    list_arg_defaults = function.args.defaults
-    if list_arg_defaults:
-        for arg_default in list_arg_defaults:
-            if isinstance(arg_default, ast.NameConstant):
-                arg_default_strings.append(arg_default.value)
-            elif isinstance(arg_default, ast.Str):
-                arg_default_strings.append(arg_default.s)
-            elif isinstance(arg_default, ast.Num):
-                arg_default_strings.append(arg_default.n)
-
-    # Since only some args may have default values, need to zip in reverse order
-    backwards_args = OrderedDict(
-        zip_longest(reversed(arg_strings), reversed(arg_default_strings))
-    )
-    ordered_args = OrderedDict(reversed(list(backwards_args.items())))
-
+def _parse_function_definition(fn_def, modulename, ret):
+    args = []
+    match = re.match(r'def\s+(.*?)\((.*)\):$', fn_def)
+    if match is None:
+        return
+    fn_name = match.group(1)
+    if fn_name.startswith('_'):
+        return
+    if fn_name.endswith('_'):
+        fn_name = fn_name[0:-1]
+    fn_name = fn_name.strip('"')
+    fn_name = fn_name.strip("'")
     try:
-        ordered_args["args"] = function.args.vararg.arg
+        raw_args = match.group(2)
+        raw_args = re.sub(r'(.*)\(.*\)(.*)', r'\1\2', raw_args)
+        raw_args = re.sub(r'(.*)\'.*\'(.*)', r'\1\2', raw_args)
+        individual_args = raw_args.split(',')
+        for a in individual_args:
+            if '*' in a:
+                continue
+            args.append(a.split('=')[0].strip())
     except AttributeError:
         pass
-    try:
-        ordered_args["kwargs"] = function.args.kwarg.arg
-    except AttributeError:
-        pass
+    key = '{}.{}'.format(modulename, fn_name)
+    if key in ret:
+        ret[key].extend(args)
+    else:
+        ret[key] = args
+    ret[key] = list(set(ret[key]))
 
-    return ordered_args
 
-
-def _mods_with_args(module_py, names_only):
-    """
-    Start ast parsing of modules
-    """
+def _mods_with_args(dirs):
     ret = {}
-    with salt.utils.files.fopen(module_py, "r", encoding="utf8") as cur_file:
-        tree = ast.parse(cur_file.read())
-        module_name = _get_module_name(tree, module_py)
-        fun_aliases = _get_func_aliases(tree)
+    for d in dirs:
+        for m in os.listdir(d):
+            if m.endswith('.py'):
+                with salt.utils.files.fopen(os.path.join(d, m), 'r') as f:
+                    in_def = False
+                    fn_def = u''
+                    modulename = m.split('.')[0]
+                    virtualname = None
 
-        functions = [node for node in tree.body if isinstance(node, ast.FunctionDef)]
-        func_list = []
-        for fn in functions:
-            if not fn.name.startswith("_"):
-                function_name = fn.name
-                if fun_aliases:
-                    # Translate name to __func_alias__ version
-                    for k, v in fun_aliases.items():
-                        if fn.name == k:
-                            function_name = v
-                args = _get_args(fn)
-                if names_only:
-                    func_list.append(function_name)
-                else:
-                    fun_entry = {}
-                    fun_entry[function_name] = args
-                    func_list.append(fun_entry)
-        ret[module_name] = func_list
+                    for l in f:
+                        l = salt.utils.data.decode(l, encoding='utf-8').rstrip()
+                        l = re.sub(r'(.*)#(.*)', r'\1', l)
+                        if '__virtualname__ =' in l and not virtualname:
+                            virtualname = l.split()[2].strip("'").strip('"')
+                            continue
+                        if l.startswith(u'def '):
+                            in_def = True
+                            fn_def = l
+                        if ':' in l:
+                            if in_def:
+                                if not l.startswith(u'def '):
+                                    fn_def = fn_def + l
+                                _parse_function_definition(fn_def, virtualname or modulename, ret)
+                                fn_def = u''
+                                in_def = False
+                                continue
+                        if in_def and not l.startswith(u'def '):
+                            fn_def = fn_def + l
     return ret
 
 
-def _modules_and_args(name=False, type="states", names_only=False):
-    """
-    Determine if modules/states directories or files are requested
-    """
-    ret = {}
+def modules_and_args(modules=True, states=False, names_only=False):
+    '''
+    Walk the Salt install tree and return a dictionary or a list
+    of the functions therein as well as their arguments.
+
+    :param modules: Walk the modules directory if True
+    :param states: Walk the states directory if True
+    :param names_only: Return only a list of the callable functions instead of a dictionary with arguments
+    :return: An OrderedDict with callable function names as keys and lists of arguments as
+             values (if ``names_only`` == False) or simply an ordered list of callable
+             function nanes (if ``names_only`` == True).
+
+    CLI Example:
+    (example truncated for brevity)
+
+    .. code-block:: bash
+
+        salt myminion baredoc.modules_and_args
+
+        myminion:
+            ----------
+        [...]
+            at.atrm:
+            at.jobcheck:
+            at.mod_watch:
+                - name
+            at.present:
+                - unique_tag
+                - name
+                - timespec
+                - job
+                - tag
+                - user
+            at.watch:
+                - unique_tag
+                - name
+                - timespec
+                - job
+                - tag
+                - user
+        [...]
+    '''
     dirs = []
+    module_dir = os.path.dirname(os.path.realpath(__file__))
+    state_dir = os.path.join(os.path.dirname(module_dir), 'states')
 
-    if type == "modules":
-        dirs.append(os.path.join(__opts__["extension_modules"], "modules"))
-        dirs.append(os.path.join(__grains__["saltpath"], "modules"))
-    elif type == "states":
-        dirs.append(os.path.join(__opts__["extension_modules"], "states"))
-        dirs.append(os.path.join(__grains__["saltpath"], "states"))
+    if modules:
+        dirs.append(module_dir)
+    if states:
+        dirs.append(state_dir)
 
-    if name:
-        for dir in dirs:
-            # Process custom dirs first so custom results are returned
-            if os.path.exists(os.path.join(dir, name + ".py")):
-                return _mods_with_args(os.path.join(dir, name + ".py"), names_only)
+    ret = _mods_with_args(dirs)
+    if names_only:
+        return sorted(ret.keys())
     else:
-        for dir in reversed(dirs):
-            # Process custom dirs last so they are displayed
-            try:
-                for module_py in os.listdir(dir):
-                    if module_py.endswith(".py") and module_py != "__init__.py":
-                        ret.update(
-                            _mods_with_args(os.path.join(dir, module_py), names_only)
-                        )
-            except FileNotFoundError:
-                pass
-    return ret
+        return OrderedDict(sorted(ret.items()))
 
 
-def list_states(name=False, names_only=False):
-    """
-    Walk the Salt install tree for state modules and return a
-    dictionary or a list of their functions as well as their arguments.
-
-    :param name: specify a specific module to list. If not specified, all modules will be listed.
-    :param names_only: Return only a list of the callable functions instead of a dictionary with arguments
+def modules_with_test():
+    '''
+    Return a list of callable functions that have a ``test=`` flag.
 
     CLI Example:
-    (example truncated for brevity)
+
+    (results trimmed for brevity)
 
     .. code-block:: bash
 
-        salt myminion baredoc.modules_and_args
+        salt myminion baredoc.modules_with_test
 
         myminion:
             ----------
-        [...]
-          at:
-          - present:
-              name: null
-              timespec: null
-              tag: null
-              user: null
-              job: null
-              unique_tag: false
-           - absent:
-              name: null
-              jobid: null
-              kwargs: kwargs
-           - watch:
-              name: null
-              timespec: null
-              tag: null
-              user: null
-              job: null
-              unique_tag: false
-           - mod_watch:
-              name: null
-              kwargs: kwargs
-        [...]
-    """
-    ret = _modules_and_args(name, type="states", names_only=names_only)
-    if names_only:
-        return OrderedDict(sorted(ret.items()))
-    else:
-        return OrderedDict(sorted(ret.items()))
+            - boto_elb.set_instances
+            - netconfig.managed
+            - netconfig.replace_pattern
+            - pkg.install
+            - salt.state
+            - state.high
+            - state.highstate
 
+    '''
+    mods = modules_and_args()
+    testmods = []
+    for module_name, module_args in six.iteritems(mods):
+        if 'test' in module_args:
+            testmods.append(module_name)
 
-def list_modules(name=False, names_only=False):
-    """
-    Walk the Salt install tree for execution modules and return a
-    dictionary or a list of their functions as well as their arguments.
-
-    :param name: specify a specific module to list. If not specified, all modules will be listed.
-    :param names_only: Return only a list of the callable functions instead of a dictionary with arguments
-
-    CLI Example:
-    (example truncated for brevity)
-
-    .. code-block:: bash
-
-        salt myminion baredoc.modules_and_args
-
-        myminion:
-            ----------
-        [...]
-          at:
-        - atq:
-            tag: null
-          - atrm:
-            args: args
-          - at:
-            args: args
-            kwargs: kwargs
-          - atc:
-            jobid: null
-          - jobcheck:
-            kwargs: kwargs
-        [...]
-    """
-    ret = _modules_and_args(name, type="modules", names_only=names_only)
-    if names_only:
-        return OrderedDict(sorted(ret.items()))
-    else:
-        return OrderedDict(sorted(ret.items()))
+    return sorted(testmods)

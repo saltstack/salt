@@ -12,8 +12,16 @@ import textwrap
 import time
 import uuid
 
-import psutil
-import pytest
+# Import Salt Testing libs
+from tests.support.case import ModuleCase
+from tests.support.helpers import (
+    get_unused_localhost_port,
+    skip_if_not_root,
+    with_tempfile)
+from tests.support.unit import skipIf
+from tests.support.runtests import RUNTIME_VARS
+
+# Import 3rd party libs
 import salt.ext.six as six
 import salt.utils.files
 import salt.utils.path
@@ -63,10 +71,15 @@ class CPModuleTest(ModuleCase):
     def test_get_file_to_dir(self):
         """
         cp.get_file
-        """
-        tgt = os.path.join(RUNTIME_VARS.TMP, "")
-        self.run_function("cp.get_file", ["salt://grail/scene33", tgt])
-        with salt.utils.files.fopen(tgt + "scene33", "r") as scene:
+        '''
+        tgt = os.path.join(RUNTIME_VARS.TMP, '')
+        self.run_function(
+                'cp.get_file',
+                [
+                    'salt://grail/scene33',
+                    tgt,
+                ])
+        with salt.utils.files.fopen(tgt + 'scene33', 'r') as scene:
             data = salt.utils.stringutils.to_unicode(scene.read())
         self.assertIn("KNIGHT:  They're nervous, sire.", data)
         self.assertNotIn("bacon", data)
@@ -98,9 +111,9 @@ class CPModuleTest(ModuleCase):
     def test_get_file_gzipped(self, tgt):
         """
         cp.get_file
-        """
-        src = os.path.join(RUNTIME_VARS.FILES, "file", "base", "file.big")
-        with salt.utils.files.fopen(src, "rb") as fp_:
+        '''
+        src = os.path.join(RUNTIME_VARS.FILES, 'file', 'base', 'file.big')
+        with salt.utils.files.fopen(src, 'rb') as fp_:
             hash_str = hashlib.md5(fp_.read()).hexdigest()
 
         self.run_function("cp.get_file", ["salt://file.big", tgt], gzip=5)
@@ -115,13 +128,18 @@ class CPModuleTest(ModuleCase):
     def test_get_file_makedirs(self):
         """
         cp.get_file
-        """
-        tgt = os.path.join(RUNTIME_VARS.TMP, "make", "dirs", "scene33")
-        self.run_function("cp.get_file", ["salt://grail/scene33", tgt], makedirs=True)
-        self.addCleanup(
-            shutil.rmtree, os.path.join(RUNTIME_VARS.TMP, "make"), ignore_errors=True
+        '''
+        tgt = os.path.join(RUNTIME_VARS.TMP, 'make', 'dirs', 'scene33')
+        self.run_function(
+            'cp.get_file',
+            [
+                'salt://grail/scene33',
+                tgt,
+            ],
+            makedirs=True
         )
-        with salt.utils.files.fopen(tgt, "r") as scene:
+        self.addCleanup(shutil.rmtree, os.path.join(RUNTIME_VARS.TMP, 'make'), ignore_errors=True)
+        with salt.utils.files.fopen(tgt, 'r') as scene:
             data = salt.utils.stringutils.to_unicode(scene.read())
         self.assertIn("KNIGHT:  They're nervous, sire.", data)
         self.assertNotIn("bacon", data)
@@ -144,20 +162,24 @@ class CPModuleTest(ModuleCase):
     def test_get_dir(self):
         """
         cp.get_dir
-        """
-        tgt = os.path.join(RUNTIME_VARS.TMP, "many")
-        self.run_function("cp.get_dir", ["salt://grail", tgt])
-        self.assertIn("grail", os.listdir(tgt))
-        self.assertIn("36", os.listdir(os.path.join(tgt, "grail")))
-        self.assertIn("empty", os.listdir(os.path.join(tgt, "grail")))
-        self.assertIn("scene", os.listdir(os.path.join(tgt, "grail", "36")))
+        '''
+        tgt = os.path.join(RUNTIME_VARS.TMP, 'many')
+        self.run_function(
+                'cp.get_dir',
+                [
+                    'salt://grail',
+                    tgt
+                ])
+        self.assertIn('grail', os.listdir(tgt))
+        self.assertIn('36', os.listdir(os.path.join(tgt, 'grail')))
+        self.assertIn('empty', os.listdir(os.path.join(tgt, 'grail')))
+        self.assertIn('scene', os.listdir(os.path.join(tgt, 'grail', '36')))
 
-    @skipIf(True, "SLOWTEST skip")
     def test_get_dir_templated_paths(self):
         """
         cp.get_dir
-        """
-        tgt = os.path.join(RUNTIME_VARS.TMP, "many")
+        '''
+        tgt = os.path.join(RUNTIME_VARS.TMP, 'many')
         self.run_function(
             "cp.get_dir",
             ["salt://{{grains.script}}", tgt.replace("many", "{{grains.alot}}")],
@@ -185,13 +207,18 @@ class CPModuleTest(ModuleCase):
     def test_get_url_makedirs(self):
         """
         cp.get_url
-        """
-        tgt = os.path.join(RUNTIME_VARS.TMP, "make", "dirs", "scene33")
-        self.run_function("cp.get_url", ["salt://grail/scene33", tgt], makedirs=True)
-        self.addCleanup(
-            shutil.rmtree, os.path.join(RUNTIME_VARS.TMP, "make"), ignore_errors=True
-        )
-        with salt.utils.files.fopen(tgt, "r") as scene:
+        '''
+        tgt = os.path.join(RUNTIME_VARS.TMP, 'make', 'dirs', 'scene33')
+        self.run_function(
+                'cp.get_url',
+                [
+                    'salt://grail/scene33',
+                    tgt,
+                ],
+                makedirs=True
+            )
+        self.addCleanup(shutil.rmtree, os.path.join(RUNTIME_VARS.TMP, 'make'), ignore_errors=True)
+        with salt.utils.files.fopen(tgt, 'r') as scene:
             data = salt.utils.stringutils.to_unicode(scene.read())
         self.assertIn("KNIGHT:  They're nervous, sire.", data)
         self.assertNotIn("bacon", data)
@@ -229,10 +256,15 @@ class CPModuleTest(ModuleCase):
     def test_get_url_to_dir(self):
         """
         cp.get_url with salt:// source
-        """
-        tgt = os.path.join(RUNTIME_VARS.TMP, "")
-        self.run_function("cp.get_url", ["salt://grail/scene33", tgt])
-        with salt.utils.files.fopen(tgt + "scene33", "r") as scene:
+        '''
+        tgt = os.path.join(RUNTIME_VARS.TMP, '')
+        self.run_function(
+                'cp.get_url',
+                [
+                    'salt://grail/scene33',
+                    tgt,
+                ])
+        with salt.utils.files.fopen(tgt + 'scene33', 'r') as scene:
             data = salt.utils.stringutils.to_unicode(scene.read())
         self.assertIn("KNIGHT:  They're nervous, sire.", data)
         self.assertNotIn("bacon", data)
@@ -301,11 +333,16 @@ class CPModuleTest(ModuleCase):
     def test_get_url_file(self):
         """
         cp.get_url with file:// source given
-        """
-        tgt = ""
-        src = os.path.join("file://", RUNTIME_VARS.FILES, "file", "base", "file.big")
-        ret = self.run_function("cp.get_url", [src, tgt])
-        with salt.utils.files.fopen(ret, "r") as scene:
+        '''
+        tgt = ''
+        src = os.path.join('file://', RUNTIME_VARS.FILES, 'file', 'base', 'file.big')
+        ret = self.run_function(
+            'cp.get_url',
+            [
+                src,
+                tgt,
+            ])
+        with salt.utils.files.fopen(ret, 'r') as scene:
             data = salt.utils.stringutils.to_unicode(scene.read())
         self.assertIn("KNIGHT:  They're nervous, sire.", data)
         self.assertNotIn("bacon", data)
@@ -316,19 +353,9 @@ class CPModuleTest(ModuleCase):
         cp.get_url with file:// source given and destination set as None
         """
         tgt = None
-        src = os.path.join("file://", RUNTIME_VARS.FILES, "file", "base", "file.big")
-        ret = self.run_function("cp.get_url", [src, tgt])
-        self.assertIn("KNIGHT:  They're nervous, sire.", ret)
-        self.assertNotIn("bacon", ret)
-
-    @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
-    def test_get_url_ftp(self, tgt):
-        """
-        cp.get_url with https:// source given
-        """
-        self.run_function(
-            "cp.get_url",
+        src = os.path.join('file://', RUNTIME_VARS.FILES, 'file', 'base', 'file.big')
+        ret = self.run_function(
+            'cp.get_url',
             [
                 "ftp://ftp.freebsd.org/pub/FreeBSD/releases/amd64/amd64/12.0-RELEASE/MANIFEST",
                 tgt,
@@ -377,11 +404,15 @@ class CPModuleTest(ModuleCase):
     def test_get_file_str_local(self):
         """
         cp.get_file_str with file:// source given
-        """
-        src = os.path.join("file://", RUNTIME_VARS.FILES, "file", "base", "file.big")
-        ret = self.run_function("cp.get_file_str", [src])
-        self.assertIn("KNIGHT:  They're nervous, sire.", ret)
-        self.assertNotIn("bacon", ret)
+        '''
+        src = os.path.join('file://', RUNTIME_VARS.FILES, 'file', 'base', 'file.big')
+        ret = self.run_function(
+            'cp.get_file_str',
+            [
+                src,
+            ])
+        self.assertIn('KNIGHT:  They\'re nervous, sire.', ret)
+        self.assertNotIn('bacon', ret)
 
     # caching tests
 
@@ -424,15 +455,20 @@ class CPModuleTest(ModuleCase):
     def test_cache_local_file(self):
         """
         cp.cache_local_file
-        """
-        src = os.path.join(RUNTIME_VARS.TMP, "random")
-        with salt.utils.files.fopen(src, "w+") as fn_:
-            fn_.write(salt.utils.stringutils.to_str("foo"))
-        ret = self.run_function("cp.cache_local_file", [src])
-        with salt.utils.files.fopen(ret, "r") as cp_:
-            self.assertEqual(salt.utils.stringutils.to_unicode(cp_.read()), "foo")
+        '''
+        src = os.path.join(RUNTIME_VARS.TMP, 'random')
+        with salt.utils.files.fopen(src, 'w+') as fn_:
+            fn_.write(salt.utils.stringutils.to_str('foo'))
+        ret = self.run_function(
+                'cp.cache_local_file',
+                [src])
+        with salt.utils.files.fopen(ret, 'r') as cp_:
+            self.assertEqual(
+                salt.utils.stringutils.to_unicode(cp_.read()),
+                'foo'
+            )
 
-    @skipIf(not salt.utils.path.which("nginx"), "nginx not installed")
+    @skipIf(not salt.utils.path.which('nginx'), 'nginx not installed')
     @skip_if_not_root
     @skipIf(True, "SLOWTEST skip")
     def test_cache_remote_file(self):
@@ -440,7 +476,7 @@ class CPModuleTest(ModuleCase):
         cp.cache_file
         """
         nginx_port = get_unused_localhost_port()
-        url_prefix = "http://localhost:{0}/".format(nginx_port)
+        url_prefix = 'http://localhost:{0}/'.format(nginx_port)
         temp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, temp_dir, ignore_errors=True)
         nginx_root_dir = os.path.join(temp_dir, "root")
@@ -568,8 +604,8 @@ class CPModuleTest(ModuleCase):
     def test_get_file_from_env_predefined(self, tgt):
         """
         cp.get_file
-        """
-        tgt = os.path.join(RUNTIME_VARS.TMP, "cheese")
+        '''
+        tgt = os.path.join(RUNTIME_VARS.TMP, 'cheese')
         try:
             self.run_function("cp.get_file", ["salt://cheese", tgt])
             with salt.utils.files.fopen(tgt, "r") as cheese:
@@ -582,7 +618,7 @@ class CPModuleTest(ModuleCase):
     @with_tempfile()
     @skipIf(True, "SLOWTEST skip")
     def test_get_file_from_env_in_url(self, tgt):
-        tgt = os.path.join(RUNTIME_VARS.TMP, "cheese")
+        tgt = os.path.join(RUNTIME_VARS.TMP, 'cheese')
         try:
             self.run_function("cp.get_file", ["salt://cheese?saltenv=prod", tgt])
             with salt.utils.files.fopen(tgt, "r") as cheese:
@@ -595,22 +631,19 @@ class CPModuleTest(ModuleCase):
     @skipIf(True, "SLOWTEST skip")
     def test_push(self):
         log_to_xfer = os.path.join(RUNTIME_VARS.TMP, uuid.uuid4().hex)
-        open(log_to_xfer, "w").close()  # pylint: disable=resource-leakage
+        open(log_to_xfer, 'w').close()  # pylint: disable=resource-leakage
         try:
             self.run_function("cp.push", [log_to_xfer])
             tgt_cache_file = os.path.join(
-                RUNTIME_VARS.TMP,
-                "master-minion-root",
-                "cache",
-                "minions",
-                "minion",
-                "files",
-                RUNTIME_VARS.TMP,
-                log_to_xfer,
-            )
-            self.assertTrue(
-                os.path.isfile(tgt_cache_file), "File was not cached on the master"
-            )
+                    RUNTIME_VARS.TMP,
+                    'master-minion-root',
+                    'cache',
+                    'minions',
+                    'minion',
+                    'files',
+                    RUNTIME_VARS.TMP,
+                    log_to_xfer)
+            self.assertTrue(os.path.isfile(tgt_cache_file), 'File was not cached on the master')
         finally:
             os.unlink(tgt_cache_file)
 

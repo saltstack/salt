@@ -11,6 +11,9 @@ import salt.utils.virtualbox
 
 # Import Salt Testing libs
 import tests.integration.cloud.helpers
+from tests.support.case import ShellCase
+from tests.support.unit import TestCase, skipIf
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
 from salt.ext import six
@@ -67,8 +70,8 @@ class VirtualboxCloudTestCase(ShellCase):
         @return:
         @rtype: dict
         """
-        config_path = os.path.join(RUNTIME_VARS.FILES, "conf")
-        arg_str = "--out=json -c {0} {1}".format(config_path, arg_str)
+        config_path = os.path.join(RUNTIME_VARS.FILES, 'conf')
+        arg_str = '--out=json -c {0} {1}'.format(config_path, arg_str)
         # arg_str = "{0} --log-level=error".format(arg_str)
         log.debug("running salt-cloud with %s", arg_str)
         output = self.run_script("salt-cloud", arg_str, catch_stderr, timeout=timeout)
@@ -80,7 +83,7 @@ class VirtualboxCloudTestCase(ShellCase):
         # Attempt to clean json output before fix of https://github.com/saltstack/salt/issues/27629
         valid_initial_chars = ["{", "[", '"']
         for line in output[:]:
-            if len(line) == 0 or (line[0] not in valid_initial_chars):
+            if not line or (line[0] not in valid_initial_chars):
                 output.pop(0)
             else:
                 break

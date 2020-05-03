@@ -95,11 +95,6 @@ def present(name, ip, comment="", clean=False):  # pylint: disable=C0103
         The ip addr(s) to apply to the host. Can be a single IP or a list of IP
         addresses.
 
-    comment
-        A comment to include for the host entry
-
-        .. versionadded:: Sodium
-
     clean
         Remove any entries which don't match those configured in the ``ip``
         option. Default is ``False``.

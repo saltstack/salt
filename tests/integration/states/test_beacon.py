@@ -3,11 +3,13 @@
 Integration tests for the beacon states
 """
 from __future__ import absolute_import, print_function, unicode_literals
+import logging
 
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.unit import skipIf
+
+log = logging.getLogger(__name__)
 
 
 class BeaconStateTestCase(ModuleCase, SaltReturnAssertsMixin):
@@ -16,13 +18,10 @@ class BeaconStateTestCase(ModuleCase, SaltReturnAssertsMixin):
     """
 
     def setUp(self):
-        """
-        """
-        self.run_function("beacons.reset", f_timeout=300)
+        self.run_function('beacons.reset', f_timeout=300)
         self.wait_for_all_jobs()
-
-    def tearDown(self):
-        self.run_function("beacons.reset", f_timeout=300)
+        self.addCleanup(self.run_function, 'beacons.reset', f_timeout=300)
+        self.addCleanup(self.wait_for_all_jobs)
 
     @skipIf(True, "SLOWTEST skip")
     def test_present_absent(self):

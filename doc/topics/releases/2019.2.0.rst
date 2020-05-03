@@ -12,6 +12,15 @@ Python 2 will be deprecated from SaltStack no earlier than the Sodium
 release, that is either the Sodium release or a later release.
 This decision is pending further community discussion.
 
+Known Issues
+============
+The following are known issues for the 2019.2.0 release and will be fixed for 2019.2.1:
+
+* `#51699`_
+
+.. _`#51699`: https://github.com/saltstack/salt/issues/51699
+
+
 Non-Backward-Compatible Change to YAML Renderer
 ===============================================
 
@@ -87,7 +96,7 @@ Ansible Playbook State and Execution Modules
 ============================================
 
 Along with the including the :py:mod:`ansible modules
-<salt.module.ansiblegate>` in the Oxygen release, running playbooks has been
+<salt.modules.ansiblegate>` in the Oxygen release, running playbooks has been
 added in 2019.2.0 with the :py:func:`playbooks function
 <salt.modules.ansiblegate.playbooks>`.  This also includes an :py:func:`ansible
 playbooks state module <salt.states.ansiblegate.playbooks>` which can be used
@@ -930,10 +939,10 @@ See the :py:mod:`wtmp beacon documentation <salt.beacons.wtmp>` for more
 information.
 
 
-Deprecated and Removed Options
+Deprecated and removed options
 ==============================
 
-API Removed Arguments
+API removed arguments
 ---------------------
 
 Support for :ref:`LocalClient <local-client>`'s ``expr_form`` argument has
@@ -953,13 +962,13 @@ their code to use ``tgt_type``.
     >>> local.cmd('*', 'cmd.run', ['whoami'], tgt_type='glob')
     {'jerry': 'root'}
 
-Minion Configuration Deprecated Option
+Minion Configuration deprecated option
 --------------------------------------
 
 The :conf_minion:`master_shuffle` configuration option is deprecated as of the
 ``2019.2.0`` release. Please use the :conf_minion:`random_master` option instead.
 
-Module Removed Options
+Module removed options
 ----------------------
 
 - The :py:mod:`napalm_network <salt.modules.napalm_network>` module has been
@@ -1012,7 +1021,7 @@ Module Removed Options
       functions have been removed. Please use :py:func:`win_wua.list
       <salt.modules.win_wua.list_>` instead.
 
-Pillar Removed Option
+Pillar removed option
 ---------------------
 
 - The :py:mod:`vault <salt.pillar.vault>` external pillar has been changed as
@@ -1021,7 +1030,7 @@ Pillar Removed Option
     - Support for the ``profile`` argument was removed. Any options passed up
       until and following the first ``path=`` are discarded.
 
-Roster Removed Option
+Roster removed option
 ---------------------
 
 - The :py:mod:`cache <salt.roster.cache>` roster has been changed as follows:
@@ -1033,7 +1042,7 @@ Roster Removed Option
       ``private``, ``public``, ``global`` or ``local`` settings. The syntax for
       these settings has changed to ``ipv4-*`` or ``ipv6-*``, respectively.
 
-State Removed Modules and Options
+State removed modules and options
 ---------------------------------
 
 - The ``docker`` state module has been removed
@@ -1127,7 +1136,7 @@ State Removed Modules and Options
 - Support for virtual packages has been removed from the
   py:mod:`pkg state <salt.states.pkg>`.
 
-Utils Removed Options
+Utils removed options
 ---------------------
 
 The ``cloud`` utils module had the following changes:

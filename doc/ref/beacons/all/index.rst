@@ -19,10 +19,11 @@ beacon modules
     diskusage
     glxinfo
     haproxy
+    http_status
     inotify
     journald
     load
-    log_beacon
+    logs
     memusage
     napalm_beacon
     network_info

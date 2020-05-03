@@ -60,7 +60,7 @@ state will also run.
 .. note::
     For boolean types, the value should be ``true`` or ``false``, not
     ``'true'`` or ``'false'``.
-"""
+'''
 from __future__ import absolute_import, print_function, unicode_literals
 
 from salt.ext import six
@@ -72,9 +72,9 @@ __virtualname__ = "debconf"
 def __virtual__():
     """
     Confirm this module is on a Debian based system
-    """
-    if __grains__["os_family"] != "Debian":
-        return (False, "debconf state only runs on Debian systems")
+    '''
+    if __grains__.get('os_family') != 'Debian':
+        return False
     # Check that debconf was loaded
     if "debconf.show" not in __salt__:
         return (False, "debconf module could not be loaded")

@@ -83,20 +83,20 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
     def test_chgid_gid_same(self):
         """
         Tests if the group id is the same as argument
-        """
-        mock = MagicMock(return_value={"gid": 10})
-        with patch.object(groupadd, "info", mock):
-            self.assertTrue(groupadd.chgid("test", 10))
+        '''
+        mock = MagicMock(return_value={'gid': 10})
+        with patch.object(groupadd, 'info', mock):
+            self.assertTrue(groupadd.chgid('test', 10))
 
     def test_chgid(self):
         """
         Tests the gid for a named group was changed
-        """
+        '''
         mock = MagicMock(return_value=None)
-        with patch.dict(groupadd.__salt__, {"cmd.run": mock}):
-            mock = MagicMock(side_effect=[{"gid": 10}, {"gid": 500}])
-            with patch.object(groupadd, "info", mock):
-                self.assertTrue(groupadd.chgid("test", 500))
+        with patch.dict(groupadd.__salt__, {'cmd.run': mock}):
+            mock = MagicMock(side_effect=[{'gid': 10}, {'gid': 500}])
+            with patch.object(groupadd, 'info', mock):
+                self.assertTrue(groupadd.chgid('test', 500))
 
     # 'delete' function tests: 1
 

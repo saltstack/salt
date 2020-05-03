@@ -12,25 +12,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 import collections
 
 import salt.utils.context
-import yaml  # pylint: disable=blacklisted-import
+import salt.utils.thread_local_proxy
 from salt.utils.odict import OrderedDict
 
-try:
-    from yaml import CDumper as Dumper
-    from yaml import CSafeDumper as SafeDumper
-except ImportError:
-    from yaml import Dumper
-    from yaml import SafeDumper
-
-
-__all__ = [
-    "OrderedDumper",
-    "SafeOrderedDumper",
-    "IndentedSafeOrderedDumper",
-    "get_dumper",
-    "dump",
-    "safe_dump",
-]
+__all__ = ['OrderedDumper', 'SafeOrderedDumper', 'IndentedSafeOrderedDumper',
+           'get_dumper', 'dump', 'safe_dump']
 
 
 class IndentMixin(Dumper):
@@ -94,8 +80,25 @@ OrderedDumper.add_representer(
     "tag:yaml.org,2002:timestamp", OrderedDumper.represent_scalar
 )
 SafeOrderedDumper.add_representer(
-    "tag:yaml.org,2002:timestamp", SafeOrderedDumper.represent_scalar
-)
+    'tag:yaml.org,2002:timestamp',
+    SafeOrderedDumper.represent_scalar)
+
+
+# DO NOT MOVE THIS FUNCTION! It must be defined after the representers above
+# have been added, so that it has access to the manually-added representers
+# above when it looks for a representer for the proxy object's __class__.
+def represent_thread_local_proxy(dumper, data):
+    if data.__class__ in dumper.yaml_representers:
+        return dumper.yaml_representers[data.__class__](dumper, data)
+    return dumper.represent_undefined(data)
+
+
+OrderedDumper.add_representer(
+    salt.utils.thread_local_proxy.ThreadLocalProxy,
+    represent_thread_local_proxy)
+SafeOrderedDumper.add_representer(
+    salt.utils.thread_local_proxy.ThreadLocalProxy,
+    represent_thread_local_proxy)
 
 
 def get_dumper(dumper_name):

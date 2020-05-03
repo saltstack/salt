@@ -273,15 +273,13 @@ def create_function(
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         if ZipFile:
             if S3Bucket or S3Key or S3ObjectVersion:
-                raise SaltInvocationError(
-                    "Either ZipFile must be specified, or "
-                    "S3Bucket and S3Key must be provided."
-                )
-            if "://" in ZipFile:  # Looks like a remote URL to me...
-                dlZipFile = __salt__["cp.cache_file"](path=ZipFile)
+                raise SaltInvocationError('Either ZipFile must be specified, or '
+                                          'S3Bucket and S3Key must be provided.')
+            if '://' in ZipFile:  # Looks like a remote URL to me...
+                dlZipFile = __salt__['cp.cache_file'](path=ZipFile)
                 if dlZipFile is False:
-                    ret["result"] = False
-                    ret["comment"] = "Failed to cache ZipFile `{0}`.".format(ZipFile)
+                    ret['result'] = False
+                    ret['comment'] = 'Failed to cache ZipFile `{0}`.'.format(ZipFile)
                     return ret
                 ZipFile = dlZipFile
             code = {
@@ -1187,10 +1185,12 @@ def describe_event_source_mapping(
 
         salt myminion boto_lambda.describe_event_source_mapping uuid
 
-    """
-    ids = _get_ids(UUID, EventSourceArn=EventSourceArn, FunctionName=FunctionName)
+    '''
+
+    ids = _get_ids(UUID, EventSourceArn=EventSourceArn,
+                   FunctionName=FunctionName)
     if not ids:
-        return {"event_source_mapping": None}
+        return {'event_source_mapping': None}
 
     UUID = ids[0]
     try:

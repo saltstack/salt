@@ -63,16 +63,15 @@ def _get_proxy_windows(types=None):
     if types is None:
         types = ["http", "https", "ftp"]
 
-    servers = __utils__["reg.read_value"](
-        hive="HKEY_CURRENT_USER",
-        key=r"SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings",
-        vname="ProxyServer",
-    )["vdata"]
+    servers = __utils__['reg.read_value'](
+        hive='HKEY_CURRENT_USER',
+        key=r'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
+        vname='ProxyServer')['vdata']
 
     if servers and "=" in servers:
         split = servers.split(";")
         for s in split:
-            if len(s) == 0:
+            if not s:
                 continue
 
             if ":" in s:
@@ -95,14 +94,10 @@ def _get_proxy_windows(types=None):
                     ret[proxy] = proxies[proxy]
 
     # Return enabled info
-    ret["enabled"] = (
-        __utils__["reg.read_value"](
-            hive="HKEY_CURRENT_USER",
-            key=r"SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings",
-            vname="ProxyEnable",
-        )["vdata"]
-        == 1
-    )
+    ret['enabled'] = __utils__['reg.read_value'](
+        hive='HKEY_CURRENT_USER',
+        key=r'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
+        vname='ProxyEnable')['vdata'] == 1
 
     return ret
 
@@ -115,19 +110,18 @@ def _set_proxy_windows(
 
     server_str = ""
     for t in types:
-        server_str += "{0}={1}:{2};".format(t, server, port)
+        server_str += '{0}={1}:{2};'.format(t, server, port)
 
-    __utils__["reg.set_value"](
-        hive="HKEY_CURRENT_USER",
-        key=r"SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings",
-        vname="ProxyServer",
-        vdata=server_str,
-    )
+    __utils__['reg.set_value'](
+        hive='HKEY_CURRENT_USER',
+        key=r'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
+        vname='ProxyServer',
+        vdata=server_str)
 
-    __utils__["reg.set_value"](
-        hive="HKEY_CURRENT_USER",
-        key=r"SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings",
-        vname="ProxyEnable",
+    __utils__['reg.set_value'](
+        hive='HKEY_CURRENT_USER',
+        key=r'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
+        vname='ProxyEnable',
         vdata=1,
         vtype="REG_DWORD",
     )
@@ -135,12 +129,11 @@ def _set_proxy_windows(
     if bypass_hosts is not None:
         bypass_hosts_str = "<local>;{0}".format(";".join(bypass_hosts))
 
-        __utils__["reg.set_value"](
-            hive="HKEY_CURRENT_USER",
-            key=r"SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings",
-            vname="ProxyOverride",
-            vdata=bypass_hosts_str,
-        )
+        __utils__['reg.set_value'](
+            hive='HKEY_CURRENT_USER',
+            key=r'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
+            vname='ProxyOverride',
+            vdata=bypass_hosts_str)
 
     if import_winhttp:
         cmd = "netsh winhttp import proxy source=ie"
@@ -385,13 +378,12 @@ def get_proxy_bypass(network_service="Ethernet"):
 
         salt '*' proxy.get_proxy_bypass
 
-    """
-    if __grains__["os"] == "Windows":
-        reg_val = __utils__["reg.read_value"](
-            hive="HKEY_CURRENT_USER",
-            key=r"SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings",
-            vname="ProxyOverride",
-        )["vdata"]
+    '''
+    if __grains__['os'] == 'Windows':
+        reg_val = __utils__['reg.read_value'](
+            hive='HKEY_CURRENT_USER',
+            key=r'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
+            vname='ProxyOverride')['vdata']
 
         # `reg.read_value` returns None if the key doesn't exist
         if reg_val is None:

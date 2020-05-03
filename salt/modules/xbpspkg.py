@@ -34,8 +34,8 @@ __virtualname__ = "pkg"
 def __virtual__():
     """
     Set the virtual pkg module if the os is Void and xbps-install found
-    """
-    if __grains__["os"] in ("Void") and _check_xbps():
+    '''
+    if __grains__.get('os', 'None') in ('Void') and _check_xbps():
         return __virtualname__
     return (False, "Missing dependency: xbps-install")
 
@@ -121,8 +121,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
     return ret
 
 
-def list_upgrades(refresh=True):
-    """
+def list_upgrades(refresh=True, **kwargs):
+    '''
     Check whether or not an upgrade is available for all packages
 
     CLI Example:
@@ -198,8 +198,8 @@ def latest_version(*names, **kwargs):
 
     refresh = salt.utils.data.is_true(kwargs.pop("refresh", True))
 
-    if len(names) == 0:
-        return ""
+    if not names:
+        return ''
 
     # Refresh repo index before checking for latest version available
     if refresh:
@@ -241,8 +241,8 @@ def latest_version(*names, **kwargs):
 available_version = latest_version
 
 
-def upgrade_available(name):
-    """
+def upgrade_available(name, **kwargs):
+    '''
     Check whether or not an upgrade is available for a given package
 
     CLI Example:
@@ -254,8 +254,8 @@ def upgrade_available(name):
     return latest_version(name) != ""
 
 
-def refresh_db():
-    """
+def refresh_db(**kwargs):
+    '''
     Update list of available packages from installed repos
 
     CLI Example:
@@ -294,8 +294,8 @@ def version(*names, **kwargs):
     return __salt__["pkg_resource.version"](*names, **kwargs)
 
 
-def upgrade(refresh=True):
-    """
+def upgrade(refresh=True, **kwargs):
+    '''
     Run a full system upgrade
 
     refresh
@@ -396,7 +396,7 @@ def install(name=None, refresh=False, fromrepo=None, pkgs=None, sources=None, **
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     if pkg_type != "repository":
@@ -473,8 +473,8 @@ def remove(name=None, pkgs=None, recursive=True, **kwargs):
     return salt.utils.data.compare_dicts(old, new)
 
 
-def list_repos():
-    """
+def list_repos(**kwargs):
+    '''
     List all repos known by XBPS
 
     CLI Example:
@@ -555,8 +555,8 @@ def _locate_repo_files(repo, rewrite=False):
                 else:
                     write_buff.append(line)
         if rewrite and filename in ret_val:
-            if len(write_buff) > 0:
-                with salt.utils.files.fopen(filename, "w") as rewrite_file:
+            if write_buff:
+                with salt.utils.files.fopen(filename, 'w') as rewrite_file:
                     rewrite_file.writelines(write_buff)
             else:  # Prune empty files
                 os.remove(filename)
@@ -582,7 +582,7 @@ def add_repo(repo, conffile="/usr/share/xbps.d/15-saltstack.conf"):
         salt '*' pkg.add_repo <repo url> [conffile=/path/to/xbps/repo.conf]
     """
 
-    if len(_locate_repo_files(repo)) == 0:
+    if not _locate_repo_files(repo):
         try:
             with salt.utils.files.fopen(conffile, "a+") as conf_file:
                 conf_file.write(
@@ -594,8 +594,8 @@ def add_repo(repo, conffile="/usr/share/xbps.d/15-saltstack.conf"):
     return True
 
 
-def del_repo(repo):
-    """
+def del_repo(repo, **kwargs):
+    '''
     Remove an XBPS repository from the system.
 
     repo

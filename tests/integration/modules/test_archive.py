@@ -8,7 +8,13 @@ import os
 import shutil
 import textwrap
 
-import pytest
+# Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest
+
+# Import salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -32,16 +38,9 @@ except ImportError:
 class ArchiveTest(ModuleCase):
     """
     Validate the archive module
-    """
-
-    @classmethod
-    def setUpClass(cls):
-        # Base path used for test artifacts
-        cls.base_path = os.path.join(RUNTIME_VARS.TMP, "modules", "archive")
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.base_path = None
+    '''
+    # Base path used for test artifacts
+    base_path = os.path.join(RUNTIME_VARS.TMP, 'modules', 'archive')
 
     def _set_artifact_paths(self, arch_fmt):
         """

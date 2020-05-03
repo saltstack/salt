@@ -50,8 +50,8 @@ __virtualname__ = "ip"
 def __virtual__():
     """
     Confine this module to Debian-based distros
-    """
-    if __grains__["os_family"] == "Debian":
+    '''
+    if __grains__.get('os_family') == 'Debian':
         return __virtualname__
     return (False, "The debian_ip module could not be loaded: unsupported OS family")
 
@@ -165,9 +165,9 @@ def _error_msg_iface(iface, option, expected):
     """
     Build an appropriate error message from a given option and
     a list of expected values.
-    """
-    msg = "Invalid option -- Interface: {0}, Option: {1}, Expected: [{2}]"
-    return msg.format(iface, option, "|".join(str(e) for e in expected))
+    '''
+    msg = 'Invalid option -- Interface: {0}, Option: {1}, Expected: [{2}]'
+    return msg.format(iface, option, '|'.join(str(e) for e in expected))
 
 
 def _error_msg_routes(iface, option, expected):
@@ -181,7 +181,8 @@ def _error_msg_routes(iface, option, expected):
 
 def _log_default_iface(iface, opt, value):
     log.info(
-        "Using default option -- Interface: %s Option: %s Value: %s", iface, opt, value
+        'Using default option -- Interface: %s Option: %s Value: %s',
+        iface, opt, value
     )
 
 
@@ -189,13 +190,13 @@ def _error_msg_network(option, expected):
     """
     Build an appropriate error message from a given option and
     a list of expected values.
-    """
-    msg = "Invalid network setting -- Setting: {0}, Expected: [{1}]"
-    return msg.format(option, "|".join(str(e) for e in expected))
+    '''
+    msg = 'Invalid network setting -- Setting: {0}, Expected: [{1}]'
+    return msg.format(option, '|'.join(str(e) for e in expected))
 
 
 def _log_default_network(opt, value):
-    log.info("Using existing setting -- Setting: %s Value: %s", opt, value)
+    log.info('Using existing setting -- Setting: %s Value: %s', opt, value)
 
 
 def _raise_error_iface(iface, option, expected):
@@ -461,10 +462,11 @@ IPV4_ATTR_MAP = {
     #
     "vlan-raw-device": __anything,
     #
-    "network": __anything,  # i don't know what this is
-    "test": __anything,  # TODO
-    "enable_ipv4": __anything,  # TODO
-    "enable_ipv6": __anything,  # TODO
+    'network': __anything,  # i don't know what this is
+
+    'test': __anything,  # TODO
+    'enable_ipv4': __anything,  # TODO
+    'enable_ipv6': __anything,  # TODO
 }
 
 
@@ -502,10 +504,11 @@ IPV6_ATTR_MAP = {
     "dns-nameservers": __space_delimited_list,
     "dns-search": __space_delimited_list,
     #
-    "vlan-raw-device": __anything,
-    "test": __anything,  # TODO
-    "enable_ipv4": __anything,  # TODO
-    "enable_ipv6": __anything,  # TODO
+    'vlan-raw-device': __anything,
+
+    'test': __anything,  # TODO
+    'enable_ipv4': __anything,  # TODO
+    'enable_ipv6': __anything,  # TODO
 }
 
 
@@ -701,14 +704,12 @@ def _parse_interfaces(interface_files=None):
             log.error(msg)
             adapters.pop(iface_name)
             continue
-        for opt in ["ethtool", "bonding", "bridging"]:
-            for inet in ["inet", "inet6"]:
-                if inet in adapters[iface_name]["data"]:
-                    if opt in adapters[iface_name]["data"][inet]:
-                        opt_keys = sorted(
-                            adapters[iface_name]["data"][inet][opt].keys()
-                        )
-                        adapters[iface_name]["data"][inet][opt + "_keys"] = opt_keys
+        for opt in ['ethtool', 'bonding', 'bridging']:
+            for inet in ['inet', 'inet6']:
+                if inet in adapters[iface_name]['data']:
+                    if opt in adapters[iface_name]['data'][inet]:
+                        opt_keys = sorted(adapters[iface_name]['data'][inet][opt].keys())
+                        adapters[iface_name]['data'][inet][opt + '_keys'] = opt_keys
 
     return adapters
 
@@ -833,28 +834,27 @@ def _parse_settings_bond(opts, iface):
         "xmit_hash_policy": "layer2",
     }
 
-    if opts["mode"] in ["balance-rr", "0"]:
-        log.info("Device: %s Bonding Mode: load balancing (round-robin)", iface)
+    if opts['mode'] in ['balance-rr', '0']:
+        log.info('Device: %s Bonding Mode: load balancing (round-robin)', iface)
         return _parse_settings_bond_0(opts, iface, bond_def)
-    elif opts["mode"] in ["active-backup", "1"]:
-        log.info("Device: %s Bonding Mode: fault-tolerance (active-backup)", iface)
+    elif opts['mode'] in ['active-backup', '1']:
+        log.info('Device: %s Bonding Mode: fault-tolerance (active-backup)', iface)
         return _parse_settings_bond_1(opts, iface, bond_def)
-    elif opts["mode"] in ["balance-xor", "2"]:
-        log.info("Device: %s Bonding Mode: load balancing (xor)", iface)
+    elif opts['mode'] in ['balance-xor', '2']:
+        log.info('Device: %s Bonding Mode: load balancing (xor)', iface)
         return _parse_settings_bond_2(opts, iface, bond_def)
-    elif opts["mode"] in ["broadcast", "3"]:
-        log.info("Device: %s Bonding Mode: fault-tolerance (broadcast)", iface)
+    elif opts['mode'] in ['broadcast', '3']:
+        log.info('Device: %s Bonding Mode: fault-tolerance (broadcast)', iface)
         return _parse_settings_bond_3(opts, iface, bond_def)
-    elif opts["mode"] in ["802.3ad", "4"]:
-        log.info(
-            "Device: %s Bonding Mode: IEEE 802.3ad Dynamic link " "aggregation", iface
-        )
+    elif opts['mode'] in ['802.3ad', '4']:
+        log.info('Device: %s Bonding Mode: IEEE 802.3ad Dynamic link '
+                 'aggregation', iface)
         return _parse_settings_bond_4(opts, iface, bond_def)
-    elif opts["mode"] in ["balance-tlb", "5"]:
-        log.info("Device: %s Bonding Mode: transmit load balancing", iface)
+    elif opts['mode'] in ['balance-tlb', '5']:
+        log.info('Device: %s Bonding Mode: transmit load balancing', iface)
         return _parse_settings_bond_5(opts, iface, bond_def)
-    elif opts["mode"] in ["balance-alb", "6"]:
-        log.info("Device: %s Bonding Mode: adaptive load balancing", iface)
+    elif opts['mode'] in ['balance-alb', '6']:
+        log.info('Device: %s Bonding Mode: adaptive load balancing', iface)
         return _parse_settings_bond_6(opts, iface, bond_def)
     else:
         valid = [
@@ -886,14 +886,14 @@ def _parse_settings_bond_0(opts, iface, bond_def):
     bond = {"mode": "0"}
 
     # ARP targets in n.n.n.n form
-    valid = ["list of ips (up to 16)"]
-    if "arp_ip_target" in opts:
-        if isinstance(opts["arp_ip_target"], list):
-            if 1 <= len(opts["arp_ip_target"]) <= 16:
-                bond.update({"arp_ip_target": ""})
-                for ip in opts["arp_ip_target"]:  # pylint: disable=C0103
-                    if len(bond["arp_ip_target"]) > 0:
-                        bond["arp_ip_target"] = bond["arp_ip_target"] + "," + ip
+    valid = ['list of ips (up to 16)']
+    if 'arp_ip_target' in opts:
+        if isinstance(opts['arp_ip_target'], list):
+            if 1 <= len(opts['arp_ip_target']) <= 16:
+                bond.update({'arp_ip_target': ''})
+                for ip in opts['arp_ip_target']:  # pylint: disable=C0103
+                    if bond['arp_ip_target']:
+                        bond['arp_ip_target'] = bond['arp_ip_target'] + ',' + ip
                     else:
                         bond["arp_ip_target"] = ip
             else:
@@ -962,18 +962,18 @@ def _parse_settings_bond_2(opts, iface, bond_def):
     If an option has a value that is not expected, this
     function will log what the Interface, Setting and what it was
     expecting.
-    """
+    '''
 
-    bond = {"mode": "2"}
+    bond = {'mode': '2'}
 
-    valid = ["list of ips (up to 16)"]
-    if "arp_ip_target" in opts:
-        if isinstance(opts["arp_ip_target"], list):
-            if 1 <= len(opts["arp_ip_target"]) <= 16:
-                bond.update({"arp_ip_target": ""})
-                for ip in opts["arp_ip_target"]:  # pylint: disable=C0103
-                    if len(bond["arp_ip_target"]) > 0:
-                        bond["arp_ip_target"] = bond["arp_ip_target"] + "," + ip
+    valid = ['list of ips (up to 16)']
+    if 'arp_ip_target' in opts:
+        if isinstance(opts['arp_ip_target'], list):
+            if 1 <= len(opts['arp_ip_target']) <= 16:
+                bond.update({'arp_ip_target': ''})
+                for ip in opts['arp_ip_target']:  # pylint: disable=C0103
+                    if bond['arp_ip_target']:
+                        bond['arp_ip_target'] = bond['arp_ip_target'] + ',' + ip
                     else:
                         bond["arp_ip_target"] = ip
             else:
@@ -1254,91 +1254,81 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     iface_data["inet6"] = salt.utils.odict.OrderedDict()
 
     if enabled:
-        adapters[iface]["enabled"] = True
+        adapters[iface]['enabled'] = True
 
-    if opts.get("hotplug", False):
-        adapters[iface]["hotplug"] = True
+    if opts.get('hotplug', False):
+        adapters[iface]['hotplug'] = True
 
-    if opts.get("enable_ipv6", None) and opts.get("iface_type", "") == "vlan":
-        iface_data["inet6"]["vlan_raw_device"] = re.sub(r"\.\d*", "", iface)
+    if opts.get('enable_ipv6', None) and opts.get('iface_type', '') == 'vlan':
+        iface_data['inet6']['vlan_raw_device'] = (
+            re.sub(r'\.\d*', '', iface))
 
-    for addrfam in ["inet", "inet6"]:
-        if iface_type not in ["bridge"]:
+    for addrfam in ['inet', 'inet6']:
+        if iface_type not in ['bridge']:
             tmp_ethtool = _parse_ethtool_opts(opts, iface)
             if tmp_ethtool:
                 ethtool = {}
                 for item in tmp_ethtool:
                     ethtool[_ETHTOOL_CONFIG_OPTS[item]] = tmp_ethtool[item]
 
-                iface_data[addrfam]["ethtool"] = ethtool
+                iface_data[addrfam]['ethtool'] = ethtool
                 # return a list of sorted keys to ensure consistent order
-                iface_data[addrfam]["ethtool_keys"] = sorted(ethtool)
+                iface_data[addrfam]['ethtool_keys'] = sorted(ethtool)
 
-        if iface_type == "bridge":
+        if iface_type == 'bridge':
             bridging = _parse_bridge_opts(opts, iface)
             if bridging:
-                iface_data[addrfam]["bridging"] = bridging
-                iface_data[addrfam]["bridging_keys"] = sorted(bridging)
-                iface_data[addrfam]["addrfam"] = addrfam
+                iface_data[addrfam]['bridging'] = bridging
+                iface_data[addrfam]['bridging_keys'] = sorted(bridging)
+                iface_data[addrfam]['addrfam'] = addrfam
 
-        elif iface_type == "bond":
+        elif iface_type == 'bond':
             bonding = _parse_settings_bond(opts, iface)
             if bonding:
-                iface_data[addrfam]["bonding"] = bonding
-                iface_data[addrfam]["bonding"]["slaves"] = opts["slaves"]
-                iface_data[addrfam]["bonding_keys"] = sorted(bonding)
-                iface_data[addrfam]["addrfam"] = addrfam
+                iface_data[addrfam]['bonding'] = bonding
+                iface_data[addrfam]['bonding']['slaves'] = opts['slaves']
+                iface_data[addrfam]['bonding_keys'] = sorted(bonding)
+                iface_data[addrfam]['addrfam'] = addrfam
 
-        elif iface_type == "slave":
-            adapters[iface]["master"] = opts["master"]
+        elif iface_type == 'slave':
+            adapters[iface]['master'] = opts['master']
 
-            opts["proto"] = "manual"
-            iface_data[addrfam]["master"] = adapters[iface]["master"]
-            iface_data[addrfam]["addrfam"] = addrfam
+            opts['proto'] = 'manual'
+            iface_data[addrfam]['master'] = adapters[iface]['master']
+            iface_data[addrfam]['addrfam'] = addrfam
 
-        elif iface_type == "vlan":
-            iface_data[addrfam]["vlan_raw_device"] = re.sub(r"\.\d*", "", iface)
-            iface_data[addrfam]["addrfam"] = addrfam
+        elif iface_type == 'vlan':
+            iface_data[addrfam]['vlan_raw_device'] = re.sub(r'\.\d*', '', iface)
+            iface_data[addrfam]['addrfam'] = addrfam
 
-        elif iface_type == "pppoe":
+        elif iface_type == 'pppoe':
             tmp_ethtool = _parse_ethtool_pppoe_opts(opts, iface)
             if tmp_ethtool:
                 for item in tmp_ethtool:
-                    adapters[iface]["data"][addrfam][
-                        _DEB_CONFIG_PPPOE_OPTS[item]
-                    ] = tmp_ethtool[item]
-            iface_data[addrfam]["addrfam"] = addrfam
+                    adapters[iface]['data'][addrfam][_DEB_CONFIG_PPPOE_OPTS[item]] = tmp_ethtool[item]
+            iface_data[addrfam]['addrfam'] = addrfam
 
-    opts.pop("mode", None)
+    opts.pop('mode', None)
 
     for opt, val in opts.items():
         inet = None
-        if opt.startswith("ipv4"):
+        if opt.startswith('ipv4'):
             opt = opt[4:]
-            inet = "inet"
-            iface_data["inet"]["addrfam"] = "inet"
-        elif opt.startswith("ipv6"):
-            iface_data["inet6"]["addrfam"] = "inet6"
+            inet = 'inet'
+            iface_data['inet']['addrfam'] = 'inet'
+        elif opt.startswith('ipv6'):
+            iface_data['inet6']['addrfam'] = 'inet6'
             opt = opt[4:]
-            inet = "inet6"
-        elif opt in [
-            "ipaddr",
-            "address",
-            "ipaddresses",
-            "addresses",
-            "gateway",
-            "proto",
-        ]:
-            iface_data["inet"]["addrfam"] = "inet"
-            inet = "inet"
+            inet = 'inet6'
+        elif opt in ['ipaddr', 'address', 'ipaddresses', 'addresses', 'gateway', 'proto']:
+            iface_data['inet']['addrfam'] = 'inet'
+            inet = 'inet'
 
         _opt = SALT_ATTR_TO_DEBIAN_ATTR_MAP.get(opt, opt)
-        _debopt = _opt.replace("-", "_")
+        _debopt = _opt.replace('-', '_')
 
-        for addrfam in ["inet", "inet6"]:
-            (valid, value, errmsg) = _validate_interface_option(
-                _opt, val, addrfam=addrfam
-            )
+        for addrfam in ['inet', 'inet6']:
+            (valid, value, errmsg) = _validate_interface_option(_opt, val, addrfam=addrfam)
             if not valid:
                 continue
             if inet is None and _debopt not in iface_data[addrfam]:
@@ -1346,23 +1336,17 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             elif inet == addrfam:
                 iface_data[addrfam][_debopt] = value
 
-    for opt in [
-        "up_cmds",
-        "pre_up_cmds",
-        "post_up_cmds",
-        "down_cmds",
-        "pre_down_cmds",
-        "post_down_cmds",
-    ]:
+    for opt in ['up_cmds', 'pre_up_cmds', 'post_up_cmds',
+                'down_cmds', 'pre_down_cmds', 'post_down_cmds']:
         if opt in opts:
-            iface_data["inet"][opt] = opts[opt]
-            iface_data["inet6"][opt] = opts[opt]
+            iface_data['inet'][opt] = opts[opt]
+            iface_data['inet6'][opt] = opts[opt]
 
     # Remove incomplete/disabled inet blocks
-    for (addrfam, opt) in [("inet", "enable_ipv4"), ("inet6", "enable_ipv6")]:
+    for (addrfam, opt) in [('inet', 'enable_ipv4'), ('inet6', 'enable_ipv6')]:
         if opts.get(opt, None) is False:
             iface_data.pop(addrfam)
-        elif iface_data[addrfam].get("addrfam", "") != addrfam:
+        elif iface_data[addrfam].get('addrfam', '') != addrfam:
             iface_data.pop(addrfam)
 
     return adapters
@@ -1681,10 +1665,10 @@ def build_interface(iface, iface_type, enabled, **settings):
     if iface_type not in _IFACE_TYPES:
         _raise_error_iface(iface, iface_type, _IFACE_TYPES)
 
-    if iface_type == "slave":
-        settings["slave"] = "yes"
-        if "master" not in settings:
-            msg = "master is a required setting for slave interfaces"
+    if iface_type == 'slave':
+        settings['slave'] = 'yes'
+        if 'master' not in settings:
+            msg = 'master is a required setting for slave interfaces'
             log.error(msg)
             raise AttributeError(msg)
 

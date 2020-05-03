@@ -8,7 +8,12 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import shutil
 
-import pytest
+# Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.case import ModuleCase
+from tests.support.helpers import skip_if_binaries_missing
+
+# Import salt libs
 import salt.utils.files
 import salt.utils.platform
 from salt.ext.tornado.httpclient import HTTPClient
@@ -17,7 +22,13 @@ from tests.support.helpers import skip_if_binaries_missing
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
-GITHUB_FINGERPRINT = "9d:38:5b:83:a9:17:52:92:56:1a:5e:c4:d4:81:8e:0a:ca:51:a2:64:f1:74:20:11:2e:f8:8a:c3:a1:39:49:8f"
+# Import 3rd-party libs
+from tornado.httpclient import HTTPClient
+
+SUBSALT_DIR = os.path.join(RUNTIME_VARS.TMP, 'subsalt')
+AUTHORIZED_KEYS = os.path.join(SUBSALT_DIR, 'authorized_keys')
+KNOWN_HOSTS = os.path.join(SUBSALT_DIR, 'known_hosts')
+GITHUB_FINGERPRINT = '9d:38:5b:83:a9:17:52:92:56:1a:5e:c4:d4:81:8e:0a:ca:51:a2:64:f1:74:20:11:2e:f8:8a:c3:a1:39:49:8f'
 
 
 def check_status():
@@ -35,13 +46,12 @@ def check_status():
 class SSHModuleTest(ModuleCase):
     """
     Test the ssh module
-    """
-
+    '''
     @classmethod
     def setUpClass(cls):
-        cls.subsalt_dir = os.path.join(RUNTIME_VARS.TMP, "subsalt")
-        cls.authorized_keys = os.path.join(cls.subsalt_dir, "authorized_keys")
-        cls.known_hosts = os.path.join(cls.subsalt_dir, "known_hosts")
+        cls.subsalt_dir = os.path.join(RUNTIME_VARS.TMP, 'subsalt')
+        cls.authorized_keys = os.path.join(cls.subsalt_dir, 'authorized_keys')
+        cls.known_hosts = os.path.join(cls.subsalt_dir, 'known_hosts')
 
     def setUp(self):
         """
@@ -53,14 +63,14 @@ class SSHModuleTest(ModuleCase):
         if not os.path.isdir(self.subsalt_dir):
             os.makedirs(self.subsalt_dir)
 
-        ssh_raw_path = os.path.join(RUNTIME_VARS.FILES, "ssh", "raw")
+        ssh_raw_path = os.path.join(RUNTIME_VARS.FILES, 'ssh', 'raw')
         with salt.utils.files.fopen(ssh_raw_path) as fd:
             self.key = fd.read().strip()
 
     def tearDown(self):
         """
         Tear down the ssh module tests
-        """
+        '''
         if os.path.isdir(self.subsalt_dir):
             shutil.rmtree(self.subsalt_dir)
         super(SSHModuleTest, self).tearDown()
@@ -72,10 +82,9 @@ class SSHModuleTest(ModuleCase):
         test ssh.auth_keys
         """
         shutil.copyfile(
-            os.path.join(RUNTIME_VARS.FILES, "ssh", "authorized_keys"),
-            self.authorized_keys,
-        )
-        user = "root"
+             os.path.join(RUNTIME_VARS.FILES, 'ssh', 'authorized_keys'),
+             AUTHORIZED_KEYS)
+        user = 'root'
         if salt.utils.platform.is_windows():
             user = "Administrator"
         ret = self.run_function("ssh.auth_keys", [user, self.authorized_keys])
@@ -100,10 +109,9 @@ class SSHModuleTest(ModuleCase):
         invalid key entry in authorized_keys
         """
         shutil.copyfile(
-            os.path.join(RUNTIME_VARS.FILES, "ssh", "authorized_badkeys"),
-            self.authorized_keys,
-        )
-        ret = self.run_function("ssh.auth_keys", ["root", self.authorized_keys])
+             os.path.join(RUNTIME_VARS.FILES, 'ssh', 'authorized_badkeys'),
+             self.authorized_keys)
+        ret = self.run_function('ssh.auth_keys', ['root', self.authorized_keys])
 
         # The authorized_badkeys file contains a key with an invalid ssh key
         # encoding (dsa-sha2-nistp256 instead of ecdsa-sha2-nistp256)
@@ -118,11 +126,11 @@ class SSHModuleTest(ModuleCase):
         Check that known host information is returned from ~/.ssh/config
         """
         shutil.copyfile(
-            os.path.join(RUNTIME_VARS.FILES, "ssh", "known_hosts"), self.known_hosts
-        )
-        arg = ["root", "github.com"]
-        kwargs = {"config": self.known_hosts}
-        ret = self.run_function("ssh.get_known_host_entries", arg, **kwargs)[0]
+             os.path.join(RUNTIME_VARS.FILES, 'ssh', 'known_hosts'),
+             self.known_hosts)
+        arg = ['root', 'github.com']
+        kwargs = {'config': self.known_hosts}
+        ret = self.run_function('ssh.get_known_host_entries', arg, **kwargs)[0]
         try:
             self.assertEqual(ret["enc"], "ssh-rsa")
             self.assertEqual(ret["key"], self.key)
@@ -152,11 +160,11 @@ class SSHModuleTest(ModuleCase):
     def test_check_known_host_add(self):
         """
         Check known hosts by its fingerprint. File needs to be updated
-        """
-        arg = ["root", "github.com"]
-        kwargs = {"fingerprint": GITHUB_FINGERPRINT, "config": self.known_hosts}
-        ret = self.run_function("ssh.check_known_host", arg, **kwargs)
-        self.assertEqual(ret, "add")
+        '''
+        arg = ['root', 'github.com']
+        kwargs = {'fingerprint': GITHUB_FINGERPRINT, 'config': self.known_hosts}
+        ret = self.run_function('ssh.check_known_host', arg, **kwargs)
+        self.assertEqual(ret, 'add')
 
     @skipIf(True, "SLOWTEST skip")
     def test_check_known_host_update(self):
@@ -164,10 +172,10 @@ class SSHModuleTest(ModuleCase):
         ssh.check_known_host update verification
         """
         shutil.copyfile(
-            os.path.join(RUNTIME_VARS.FILES, "ssh", "known_hosts"), self.known_hosts
-        )
-        arg = ["root", "github.com"]
-        kwargs = {"config": self.known_hosts}
+             os.path.join(RUNTIME_VARS.FILES, 'ssh', 'known_hosts'),
+             self.known_hosts)
+        arg = ['root', 'github.com']
+        kwargs = {'config': self.known_hosts}
         # wrong fingerprint
         ret = self.run_function(
             "ssh.check_known_host", arg, **dict(kwargs, fingerprint="aa:bb:cc:dd")
@@ -183,10 +191,10 @@ class SSHModuleTest(ModuleCase):
         Verify check_known_host_exists
         """
         shutil.copyfile(
-            os.path.join(RUNTIME_VARS.FILES, "ssh", "known_hosts"), self.known_hosts
-        )
-        arg = ["root", "github.com"]
-        kwargs = {"config": self.known_hosts}
+             os.path.join(RUNTIME_VARS.FILES, 'ssh', 'known_hosts'),
+             self.known_hosts)
+        arg = ['root', 'github.com']
+        kwargs = {'config': self.known_hosts}
         # wrong fingerprint
         ret = self.run_function(
             "ssh.check_known_host", arg, **dict(kwargs, fingerprint=GITHUB_FINGERPRINT)
@@ -204,15 +212,15 @@ class SSHModuleTest(ModuleCase):
         ssh.rm_known_host
         """
         shutil.copyfile(
-            os.path.join(RUNTIME_VARS.FILES, "ssh", "known_hosts"), self.known_hosts
-        )
-        arg = ["root", "github.com"]
-        kwargs = {"config": self.known_hosts, "key": self.key}
+             os.path.join(RUNTIME_VARS.FILES, 'ssh', 'known_hosts'),
+             self.known_hosts)
+        arg = ['root', 'github.com']
+        kwargs = {'config': self.known_hosts, 'key': self.key}
         # before removal
         ret = self.run_function("ssh.check_known_host", arg, **kwargs)
         self.assertEqual(ret, "exists")
         # remove
-        self.run_function("ssh.rm_known_host", arg, config=self.known_hosts)
+        self.run_function('ssh.rm_known_host', arg, config=self.known_hosts)
         # after removal
         ret = self.run_function("ssh.check_known_host", arg, **kwargs)
         self.assertEqual(ret, "add")
@@ -223,9 +231,8 @@ class SSHModuleTest(ModuleCase):
         ssh.set_known_host
         """
         # add item
-        ret = self.run_function(
-            "ssh.set_known_host", ["root", "github.com"], config=self.known_hosts
-        )
+        ret = self.run_function('ssh.set_known_host', ['root', 'github.com'],
+                                config=self.known_hosts)
         try:
             self.assertEqual(ret["status"], "updated")
             self.assertEqual(ret["old"], None)
@@ -235,11 +242,8 @@ class SSHModuleTest(ModuleCase):
                 "AssertionError: {0}. Function returned: {1}".format(exc, ret)
             )
         # check that item does exist
-        ret = self.run_function(
-            "ssh.get_known_host_entries",
-            ["root", "github.com"],
-            config=self.known_hosts,
-        )[0]
+        ret = self.run_function('ssh.get_known_host_entries', ['root', 'github.com'],
+                                config=self.known_hosts)[0]
         try:
             self.assertEqual(ret["fingerprint"], GITHUB_FINGERPRINT)
         except AssertionError as exc:
@@ -247,9 +251,8 @@ class SSHModuleTest(ModuleCase):
                 "AssertionError: {0}. Function returned: {1}".format(exc, ret)
             )
         # add the same item once again
-        ret = self.run_function(
-            "ssh.set_known_host", ["root", "github.com"], config=self.known_hosts
-        )
+        ret = self.run_function('ssh.set_known_host', ['root', 'github.com'],
+                                config=self.known_hosts)
         try:
             self.assertEqual(ret["status"], "exists")
         except AssertionError as exc:

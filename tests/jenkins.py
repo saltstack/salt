@@ -865,13 +865,11 @@ def parse():
         "--test-git-commit", default=None, help="The testing git commit to track"
     )
     parser.add_option(
-        "--test-transport",
-        default="zeromq",
-        choices=("zeromq", "tcp"),
-        help=(
-            "Select which transport to run the integration tests with, "
-            "zeromq or tcp. Default: %default"
-        ),
+        '--test-transport',
+        default='zeromq',
+        choices=('zeromq', 'tcp'),
+        help=('Select which transport to run the integration tests with, '
+              'zeromq or tcp. Default: %default')
     )
     parser.add_option(
         "--test-without-coverage",

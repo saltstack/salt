@@ -37,9 +37,6 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         self.opts = opts = salt.config.DEFAULT_MINION_OPTS.copy()
-        self.utils_patch = ZFSMockData().get_patched_utils()
-        for key in ("opts", "utils_patch"):
-            self.addCleanup(delattr, self, key)
         utils = salt.loader.utils(
             opts, whitelist=["zfs", "args", "systemd", "path", "platform"]
         )

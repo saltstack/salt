@@ -120,10 +120,10 @@ def present(name, value=None, contains=None, excludes=None):
         contains_set = _make_set(contains)
         excludes_set = _make_set(excludes)
         old_value_set = _make_set(old_value)
-        if len(contains_set.intersection(excludes_set)) > 0:
-            msg = "Variable {0} cannot contain and exclude the same value"
-            ret["comment"] = msg.format(name)
-            ret["result"] = False
+        if contains_set.intersection(excludes_set):
+            msg = 'Variable {0} cannot contain and exclude the same value'
+            ret['comment'] = msg.format(name)
+            ret['result'] = False
         else:
             to_append = set()
             to_trim = set()
@@ -131,15 +131,15 @@ def present(name, value=None, contains=None, excludes=None):
                 to_append = contains_set.difference(old_value_set)
             if excludes is not None:
                 to_trim = excludes_set.intersection(old_value_set)
-            if len(to_append) == 0 and len(to_trim) == 0:
-                msg = "Variable {0} is correct in make.conf"
-                ret["comment"] = msg.format(name)
+            if not to_append and not to_trim:
+                msg = 'Variable {0} is correct in make.conf'
+                ret['comment'] = msg.format(name)
             else:
-                if __opts__["test"]:
-                    msg = "Variable {0} is set to".format(name)
-                    if len(to_append) > 0:
+                if __opts__['test']:
+                    msg = 'Variable {0} is set to'.format(name)
+                    if to_append:
                         msg += ' append "{0}"'.format(list(to_append))
-                    if len(to_trim) > 0:
+                    if to_trim:
                         msg += ' trim "{0}"'.format(list(to_trim))
                     msg += " in make.conf"
                     ret["comment"] = msg

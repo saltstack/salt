@@ -14,6 +14,13 @@ import sys
 # pylint: disable=3rd-party-module-not-gated
 import pkg_resources
 from pkg_resources import DistributionNotFound
+# pylint: enable=3rd-party-module-not-gated
+
+# Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
 import salt.config
@@ -41,10 +48,7 @@ from tests.support.unit import TestCase, skipIf
 # pylint: disable=no-name-in-module,unused-import
 try:
     import boto
-
-    boto.ENDPOINTS_PATH = os.path.join(
-        RUNTIME_VARS.TESTS_DIR, "unit/files/endpoints.json"
-    )
+    boto.ENDPOINTS_PATH = os.path.join(RUNTIME_VARS.TESTS_DIR, 'unit/files/endpoints.json')
     import boto3
     from boto.exception import BotoServerError
 

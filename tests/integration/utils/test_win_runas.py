@@ -1,29 +1,43 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import, unicode_literals
 
-import inspect
+# Import Python libs
+from __future__ import absolute_import, unicode_literals
 import io
+import inspect
 import logging
 import os
-import socket
 import subprocess
-
-# Service manager imports
+import socket
 import sys
 import textwrap
 import threading
 import time
 import traceback
-
-import salt.ext.six
-import salt.utils.files
-import salt.utils.win_runas
 import yaml
+
+# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_system_user
 from tests.support.mock import Mock
-from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
+from tests.support.runtests import RUNTIME_VARS
+
+# Import Salt libs
+from salt.ext import six
+import salt.utils.files
+import salt.utils.win_runas
+
+try:
+    import win32service
+    import win32serviceutil
+    import win32event
+    import servicemanager
+    HAS_WIN32 = True
+except ImportError:
+    # Mock win32serviceutil object to avoid
+    # a stacktrace in the _ServiceManager class
+    win32serviceutil = Mock()
+    HAS_WIN32 = False
 
 try:
     import win32service
@@ -31,7 +45,6 @@ try:
     import win32event
     import servicemanager
     import win32api
-
     CODE_DIR = win32api.GetLongPathName(RUNTIME_VARS.CODE_DIR)
     HAS_WIN32 = True
 except ImportError:
@@ -52,8 +65,8 @@ PRIV_STDOUT = (
     "INFO: No shared open files found.\n"
 )
 if HAS_WIN32:
-    RUNAS_PATH = os.path.abspath(os.path.join(CODE_DIR, "runas.py"))
-    RUNAS_OUT = os.path.abspath(os.path.join(CODE_DIR, "runas.out"))
+    RUNAS_PATH = os.path.abspath(os.path.join(CODE_DIR, 'runas.py'))
+    RUNAS_OUT = os.path.abspath(os.path.join(CODE_DIR, 'runas.out'))
 
 
 def default_target(service, *args, **kwargs):
@@ -192,7 +205,7 @@ def service_class_factory(
 ):
     frm = inspect.stack()[1]
     mod = inspect.getmodule(frm[0])
-    if salt.ext.six.PY2:
+    if six.PY2:
         cls_name = cls_name.encode()
     return type(
         cls_name,

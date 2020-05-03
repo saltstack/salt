@@ -20,19 +20,16 @@ def __virtual__():
     Confine this module to Non-RH/Deb Linux distros
     """
     if salt.utils.platform.is_windows():
-        return (False, "Module linux_ip: Windows systems are not supported.")
-    if __grains__["os_family"] == "RedHat":
-        return (False, "Module linux_ip: RedHat systems are not supported.")
-    if __grains__["os_family"] == "Debian":
-        return (False, "Module linux_ip: Debian systems are not supported.")
-    if __grains__["os_family"] == "NILinuxRT":
-        return (False, "Module linux_ip: NILinuxRT systems are not supported.")
-    if not salt.utils.path.which("ip"):
-        return (
-            False,
-            "The linux_ip execution module cannot be loaded: "
-            "the ip binary is not in the path.",
-        )
+        return (False, 'Module linux_ip: Windows systems are not supported.')
+    if __grains__.get('os_family') == 'RedHat':
+        return (False, 'Module linux_ip: RedHat systems are not supported.')
+    if __grains__.get('os_family') == 'Debian':
+        return (False, 'Module linux_ip: Debian systems are not supported.')
+    if __grains__.get('os_family') == 'NILinuxRT':
+        return (False, 'Module linux_ip: NILinuxRT systems are not supported.')
+    if not salt.utils.path.which('ip'):
+        return (False, 'The linux_ip execution module cannot be loaded: '
+                'the ip binary is not in the path.')
     return __virtualname__
 
 

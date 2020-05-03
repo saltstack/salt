@@ -687,30 +687,15 @@ def rr_present(
                     tag_name = fields[2]
                     tag_value = fields[3]
                     instance_attr = fields[4]
-                    good_states = (
-                        "pending",
-                        "rebooting",
-                        "running",
-                        "stopping",
-                        "stopped",
-                    )
-                    r = __salt__["boto_ec2.find_instances"](
-                        tags={tag_name: tag_value},
-                        return_objs=True,
-                        in_states=good_states,
-                        region=region,
-                        key=key,
-                        keyid=keyid,
-                        profile=profile,
-                    )
-                    if len(r) < 1:
-                        ret[
-                            "comment"
-                        ] = "No EC2 instance with tag {} == {} found".format(
-                            tag_name, tag_value
-                        )
-                        log.error(ret["comment"])
-                        ret["result"] = False
+                    good_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
+                    r = __salt__['boto_ec2.find_instances'](
+                            tags={tag_name: tag_value}, return_objs=True, in_states=good_states,
+                            region=region, key=key, keyid=keyid, profile=profile)
+                    if not r:
+                        ret['comment'] = 'No EC2 instance with tag {} == {} found'.format(tag_name,
+                                tag_value)
+                        log.error(ret['comment'])
+                        ret['result'] = False
                         return ret
                     if len(r) > 1:
                         ret[
@@ -807,10 +792,8 @@ def rr_present(
             if locals().get(u) != rrset.get(u):
                 update = True
                 break
-        if rrset.get("ResourceRecords") is not None:
-            if ResourceRecords != sorted(
-                rrset.get("ResourceRecords"), key=lambda x: x["Value"]
-            ):
+        if rrset.get('ResourceRecords') is not None:
+            if ResourceRecords != sorted(rrset.get('ResourceRecords', {}), key=lambda x: x['Value']):
                 update = True
         elif (AliasTarget is not None) and (rrset.get("AliasTarget") is not None):
             if sorted(AliasTarget) != sorted(rrset.get("AliasTarget")):

@@ -123,25 +123,15 @@ def validate(config):
         if "files" not in _config:
             return False, "Configuration for inotify beacon must include files."
         else:
-            if not isinstance(_config["files"], dict):
-                return (
-                    False,
-                    (
-                        "Configuration for inotify beacon invalid, "
-                        "files must be a dict."
-                    ),
-                )
+            if not isinstance(_config['files'], dict):
+                return False, ('Configuration for inotify beacon invalid, '
+                               'files must be a dict.')
 
-            for path in _config.get("files"):
+            for path in _config.get('files'):
 
-                if not isinstance(_config["files"][path], dict):
-                    return (
-                        False,
-                        (
-                            "Configuration for inotify beacon must "
-                            "be a list of dictionaries."
-                        ),
-                    )
+                if not isinstance(_config['files'][path], dict):
+                    return False, ('Configuration for inotify beacon must '
+                                   'be a list of dictionaries.')
                 else:
                     if not any(
                         j in ["mask", "recurse", "auto_add"]

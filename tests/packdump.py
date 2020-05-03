@@ -21,7 +21,7 @@ def dump(path):
     if not os.path.isfile(path):
         print("Not a file")
         return
-    with open(path, "rb") as fp_:
+    with open(path, 'rb') as fp_:
         data = salt.utils.msgpack.loads(fp_.read())
         pprint.pprint(data)
 

@@ -199,35 +199,21 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
             # New - recurse true
             with patch.dict(linux_acl.__salt__, {"acl.getfacl": mock}):
                 # Update - test=True
-                with patch.dict(linux_acl.__opts__, {"test": True}):
-                    comt = (
-                        "Updated permissions will be applied for {0}: rwx -> {1}"
-                        "".format(acl_name, perms)
-                    )
-                    ret = {
-                        "name": name,
-                        "comment": comt,
-                        "changes": {
-                            "new": {
-                                "acl_name": acl_name,
-                                "acl_type": acl_type,
-                                "perms": perms,
-                            },
-                            "old": {
-                                "acl_name": acl_name,
-                                "acl_type": acl_type,
-                                "perms": "rwx",
-                            },
-                        },
-                        "result": None,
-                    }
+                with patch.dict(linux_acl.__opts__, {'test': True}):
+                    comt = ('Updated permissions will be applied for {0}: rwx -> {1}'
+                            ''.format(acl_name, perms))
+                    ret = {'name': name,
+                           'comment': comt,
+                           'changes': {'new': {'acl_name': acl_name,
+                                               'acl_type': acl_type,
+                                               'perms': perms},
+                                       'old': {'acl_name': acl_name,
+                                               'acl_type': acl_type,
+                                               'perms': 'rwx'}},
+                           'result': None}
 
-                    self.assertDictEqual(
-                        linux_acl.present(
-                            name, acl_type, acl_name, perms, recurse=False
-                        ),
-                        ret,
-                    )
+                    self.assertDictEqual(linux_acl.present(name, acl_type, acl_name,
+                                                           perms, recurse=False), ret)
 
             # New - recurse true - nothing to do
             with patch.dict(linux_acl.__salt__, {"acl.getfacl": mock}):
@@ -333,158 +319,95 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(linux_acl.__salt__, {"acl.getfacl": mock}):
             # Update - test=True
-            with patch.dict(linux_acl.__opts__, {"test": True}):
-                comt = (
-                    "Updated permissions will be applied for {0}: A -> {1}"
-                    "".format(acl_names, perms)
-                )
-                expected = {
-                    "name": name,
-                    "comment": comt,
-                    "changes": {},
-                    "pchanges": {
-                        "new": {
-                            "acl_name": ", ".join(acl_names),
-                            "acl_type": acl_type,
-                            "perms": 7,
-                        },
-                        "old": {
-                            "acl_name": ", ".join(acl_names),
-                            "acl_type": acl_type,
-                            "perms": "A",
-                        },
-                    },
-                    "result": None,
-                }
+            with patch.dict(linux_acl.__opts__, {'test': True}):
+                comt = ('Updated permissions will be applied for {0}: A -> {1}'
+                        ''.format(acl_names, perms))
+                expected = {'name': name,
+                            'comment': comt,
+                            'changes': {'new': {'acl_name': ', '.join(acl_names),
+                                                'acl_type': acl_type,
+                                                'perms': 7},
+                                        'old': {'acl_name': ', '.join(acl_names),
+                                                'acl_type': acl_type,
+                                                'perms': 'A'}},
+                            'result': None}
 
                 ret = linux_acl.list_present(name, acl_type, acl_names, perms)
                 self.assertDictEqual(ret, expected)
 
             # Update - test=False
-            with patch.dict(linux_acl.__salt__, {"acl.modfacl": mock_modfacl}):
-                with patch.dict(linux_acl.__opts__, {"test": False}):
-                    comt = "Applied new permissions for {0}".format(
-                        ", ".join(acl_names)
-                    )
-                    expected = {
-                        "name": name,
-                        "comment": comt,
-                        "changes": {
-                            "new": {
-                                "acl_name": ", ".join(acl_names),
-                                "acl_type": acl_type,
-                                "perms": "rwx",
-                            }
-                        },
-                        "pchanges": {},
-                        "result": True,
-                    }
+            with patch.dict(linux_acl.__salt__, {'acl.modfacl': mock_modfacl}):
+                with patch.dict(linux_acl.__opts__, {'test': False}):
+                    comt = ('Applied new permissions for {0}'.format(', '.join(acl_names)))
+                    expected = {'name': name,
+                                'comment': comt,
+                                'changes': {'new': {'acl_name': ', '.join(acl_names),
+                                                    'acl_type': acl_type,
+                                                    'perms': 'rwx'}},
+                                'result': True}
 
                     ret = linux_acl.list_present(name, acl_type, acl_names, perms)
                     self.assertDictEqual(expected, ret)
 
             # Update - modfacl error
-            with patch.dict(
-                linux_acl.__salt__,
-                {
-                    "acl.modfacl": MagicMock(
-                        side_effect=CommandExecutionError("Custom err")
-                    )
-                },
-            ):
-                with patch.dict(linux_acl.__opts__, {"test": False}):
-                    comt = "Error updating permissions for {0}: Custom err" "".format(
-                        acl_names
-                    )
-                    expected = {
-                        "name": name,
-                        "comment": comt,
-                        "changes": {},
-                        "pchanges": {},
-                        "result": False,
-                    }
+            with patch.dict(linux_acl.__salt__, {'acl.modfacl': MagicMock(
+                    side_effect=CommandExecutionError('Custom err'))}):
+                with patch.dict(linux_acl.__opts__, {'test': False}):
+                    comt = ('Error updating permissions for {0}: Custom err'
+                            ''.format(acl_names))
+                    expected = {'name': name,
+                                'comment': comt,
+                                'changes': {},
+                                'result': False}
 
                     ret = linux_acl.list_present(name, acl_type, acl_names, perms)
                     self.assertDictEqual(expected, ret)
 
             # New - test=True
-            with patch.dict(linux_acl.__salt__, {"acl.modfacl": mock_modfacl}):
-                with patch.dict(linux_acl.__opts__, {"test": True}):
-                    comt = "New permissions will be applied " "for {0}: {1}".format(
-                        acl_names, perms
-                    )
-                    expected = {
-                        "name": name,
-                        "comment": comt,
-                        "changes": {},
-                        "pchanges": {
-                            "new": {
-                                "acl_name": ", ".join(acl_names),
-                                "acl_type": acl_type,
-                                "perms": perms,
-                            }
-                        },
-                        "result": None,
-                    }
+            with patch.dict(linux_acl.__salt__, {'acl.modfacl': mock_modfacl}):
+                with patch.dict(linux_acl.__opts__, {'test': True}):
+                    comt = ('New permissions will be applied '
+                            'for {0}: {1}'.format(acl_names, perms))
+                    expected = {'name': name,
+                                'comment': comt,
+                                'changes': {'new': {'acl_name': ', '.join(acl_names),
+                                                    'acl_type': acl_type,
+                                                    'perms': perms}},
+                                'result': None}
 
                     ret = linux_acl.list_present(name, acl_type, acl_names, perms)
                     self.assertDictEqual(expected, ret)
 
             # New - test=False
-            with patch.dict(linux_acl.__salt__, {"acl.modfacl": mock_modfacl}):
-                with patch.dict(linux_acl.__opts__, {"test": False}):
-                    comt = "Applied new permissions for {0}".format(
-                        ", ".join(acl_names)
-                    )
-                    expected = {
-                        "name": name,
-                        "comment": comt,
-                        "changes": {
-                            "new": {
-                                "acl_name": ", ".join(acl_names),
-                                "acl_type": acl_type,
-                                "perms": perms,
-                            }
-                        },
-                        "pchanges": {},
-                        "result": True,
-                    }
+            with patch.dict(linux_acl.__salt__, {'acl.modfacl': mock_modfacl}):
+                with patch.dict(linux_acl.__opts__, {'test': False}):
+                    comt = ('Applied new permissions for {0}'.format(', '.join(acl_names)))
+                    expected = {'name': name,
+                                'comment': comt,
+                                'changes': {'new': {'acl_name': ', '.join(acl_names),
+                                                    'acl_type': acl_type,
+                                                    'perms': perms}},
+                                'result': True}
                     ret = linux_acl.list_present(name, acl_type, acl_names, perms)
                     self.assertDictEqual(expected, ret)
 
             # New - modfacl error
-            with patch.dict(
-                linux_acl.__salt__,
-                {
-                    "acl.modfacl": MagicMock(
-                        side_effect=CommandExecutionError("Custom err")
-                    )
-                },
-            ):
-                with patch.dict(linux_acl.__opts__, {"test": False}):
-                    comt = "Error updating permissions for {0}: Custom err" "".format(
-                        acl_names
-                    )
-                    expected = {
-                        "name": name,
-                        "comment": comt,
-                        "changes": {},
-                        "pchanges": {},
-                        "result": False,
-                    }
+            with patch.dict(linux_acl.__salt__, {'acl.modfacl': MagicMock(
+                    side_effect=CommandExecutionError('Custom err'))}):
+                with patch.dict(linux_acl.__opts__, {'test': False}):
+                    comt = ('Error updating permissions for {0}: Custom err'
+                            ''.format(acl_names))
+                    expected = {'name': name,
+                                'comment': comt,
+                                'changes': {},
+                                'result': False}
 
                     ret = linux_acl.list_present(name, acl_type, acl_names, perms)
                     self.assertDictEqual(expected, ret)
 
             # No acl type
-            comt = "ACL Type does not exist"
-            expected = {
-                "name": name,
-                "comment": comt,
-                "result": False,
-                "changes": {},
-                "pchanges": {},
-            }
+            comt = ('ACL Type does not exist')
+            expected = {'name': name, 'comment': comt, 'result': False, 'changes': {}}
             ret = linux_acl.list_present(name, acl_type, acl_names, perms)
             self.assertDictEqual(expected, ret)
 

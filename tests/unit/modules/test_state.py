@@ -13,6 +13,19 @@ import tempfile
 import textwrap
 import time
 
+# Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
+    Mock,
+    MagicMock,
+    patch,
+    mock_open,
+    NO_MOCK,
+    NO_MOCK_REASON
+)
+
 # Import Salt Libs
 import salt.config
 import salt.loader
@@ -1357,8 +1370,8 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
             state: {
-                "__opts__": salt.config.minion_config(
-                    os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "minion")
+                '__opts__': salt.config.minion_config(
+                    os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'minion')
                 ),
                 "__salt__": {"saltutil.is_running": MagicMock(return_value=[])},
             },

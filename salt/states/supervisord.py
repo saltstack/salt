@@ -244,8 +244,8 @@ def running(
         ret.update(_check_error(result, comment))
         log.debug(six.text_type(result))
 
-    if ret["result"] and changes:
-        ret["changes"][name] = " ".join(changes)
+    if ret['result'] and changes:
+        ret['changes'][name] = ' '.join(changes)
     return ret
 
 

@@ -4,7 +4,6 @@ Helper functions for transport components to handle message framing
 """
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-
 import salt.utils.msgpack
 from salt.ext import six
 
@@ -17,8 +16,8 @@ def frame_msg(body, header=None, raw_body=False):  # pylint: disable=unused-argu
     if header is None:
         header = {}
 
-    framed_msg["head"] = header
-    framed_msg["body"] = body
+    framed_msg['head'] = header
+    framed_msg['body'] = body
     return salt.utils.msgpack.dumps(framed_msg)
 
 

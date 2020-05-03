@@ -271,7 +271,7 @@ def latest_version(*names, **kwargs):
     cache_valid_time = kwargs.pop("cache_valid_time", 0)
 
     if not names:
-        return ""
+        return ''
     ret = {}
     # Initialize the dict with empty strings
     for name in names:
@@ -346,8 +346,8 @@ def version(*names, **kwargs):
     return __salt__["pkg_resource.version"](*names, **kwargs)
 
 
-def refresh_db(cache_valid_time=0, failhard=False):
-    """
+def refresh_db(cache_valid_time=0, failhard=False, **kwargs):
+    '''
     Updates the APT database to latest packages based upon repositories
 
     Returns a dict, with the keys being package databases and the values being
@@ -1348,24 +1348,29 @@ def list_pkgs(
             ]
         except (ValueError, IndexError):
             continue
-        if __grains__.get("cpuarch", "") == "x86_64":
-            osarch = __grains__.get("osarch", "")
-            if arch != "all" and osarch == "amd64" and osarch != arch:
-                name += ":{0}".format(arch)
+        if __grains__.get('cpuarch', '') == 'x86_64':
+            osarch = __grains__.get('osarch', '')
+            if arch != 'all' and osarch == 'amd64' and osarch != arch:
+                name += ':{0}'.format(arch)
         if cols:
-            if ("install" in linetype or "hold" in linetype) and "installed" in status:
-                __salt__["pkg_resource.add_pkg"](ret["installed"], name, version_num)
-            elif "deinstall" in linetype:
-                __salt__["pkg_resource.add_pkg"](ret["removed"], name, version_num)
-            elif "purge" in linetype and status == "installed":
-                __salt__["pkg_resource.add_pkg"](
-                    ret["purge_desired"], name, version_num
-                )
+            if ('install' in linetype or 'hold' in linetype) and \
+                    'installed' in status:
+                __salt__['pkg_resource.add_pkg'](ret['installed'],
+                                                 name,
+                                                 version_num)
+            elif 'deinstall' in linetype:
+                __salt__['pkg_resource.add_pkg'](ret['removed'],
+                                                 name,
+                                                 version_num)
+            elif 'purge' in linetype and status == 'installed':
+                __salt__['pkg_resource.add_pkg'](ret['purge_desired'],
+                                                 name,
+                                                 version_num)
 
-    for pkglist_type in ("installed", "removed", "purge_desired"):
-        __salt__["pkg_resource.sort_pkglist"](ret[pkglist_type])
+    for pkglist_type in ('installed', 'removed', 'purge_desired'):
+        __salt__['pkg_resource.sort_pkglist'](ret[pkglist_type])
 
-    __context__["pkg.list_pkgs"] = copy.deepcopy(ret)
+    __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
 
     if removed:
         ret = ret["removed"]
@@ -1455,8 +1460,8 @@ def list_upgrades(refresh=True, dist_upgrade=True, **kwargs):
     return _get_upgradable(dist_upgrade, **kwargs)
 
 
-def upgrade_available(name):
-    """
+def upgrade_available(name, **kwargs):
+    '''
     Check whether or not an upgrade is available for a given package
 
     CLI Example:
@@ -1468,8 +1473,8 @@ def upgrade_available(name):
     return latest_version(name) != ""
 
 
-def version_cmp(pkg1, pkg2, ignore_epoch=False):
-    """
+def version_cmp(pkg1, pkg2, ignore_epoch=False, **kwargs):
+    '''
     Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
     pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
     making the comparison.
@@ -1645,8 +1650,29 @@ def list_repo_pkgs(*args, **kwargs):  # pylint: disable=unused-import
     return ret
 
 
-def list_repos():
-    """
+def _skip_source(source):
+    '''
+    Decide to skip source or not.
+
+    :param source:
+    :return:
+    '''
+    if source.invalid:
+        if source.uri and source.type and source.type in ("deb", "deb-src", "rpm", "rpm-src"):
+            pieces = source.mysplit(source.line)
+            if pieces[1].strip()[0] == "[":
+                options = pieces.pop(1).strip("[]").split()
+                if options:
+                    log.debug("Source %s will be included although is marked invalid", source.uri)
+                    return False
+            return True
+        else:
+            return True
+    return False
+
+
+def list_repos(**kwargs):
+    '''
     Lists all repos in the sources.list (and sources.lists.d) files
 
     CLI Example:
@@ -1660,17 +1686,18 @@ def list_repos():
     repos = {}
     sources = sourceslist.SourcesList()
     for source in sources.list:
-        if source.invalid:
+        if _skip_source(source):
             continue
         repo = {}
-        repo["file"] = source.file
-        repo["comps"] = getattr(source, "comps", [])
-        repo["disabled"] = source.disabled
-        repo["dist"] = source.dist
-        repo["type"] = source.type
-        repo["uri"] = source.uri.rstrip("/")
-        repo["line"] = salt.utils.pkg.deb.strip_uri(source.line.strip())
-        repo["architectures"] = getattr(source, "architectures", [])
+        repo['file'] = source.file
+        repo['comps'] = getattr(source, 'comps', [])
+        repo['disabled'] = source.disabled
+        repo['enabled'] = not repo['disabled']  # This is for compatibility with the other modules
+        repo['dist'] = source.dist
+        repo['type'] = source.type
+        repo['uri'] = source.uri.rstrip('/')
+        repo['line'] = salt.utils.pkg.deb.strip_uri(source.line.strip())
+        repo['architectures'] = getattr(source, 'architectures', [])
         repos.setdefault(source.uri, []).append(repo)
     return repos
 
@@ -2412,11 +2439,7 @@ def mod_repo(repo, saltenv="base", **kwargs):
         # and the resulting source line.  The idea here is to ensure
         # we are not returning bogus data because the source line
         # has already been modified on a previous run.
-        repo_matches = (
-            source.type == repo_type
-            and source.uri == repo_uri
-            and source.dist == repo_dist
-        )
+        repo_matches = source.type == repo_type and source.uri.rstrip('/') == repo_uri.rstrip('/') and source.dist == repo_dist
         kw_matches = source.dist == kw_dist and source.type == kw_type
 
         if repo_matches or kw_matches:
@@ -2461,8 +2484,8 @@ def mod_repo(repo, saltenv="base", **kwargs):
     }
 
 
-def file_list(*packages):
-    """
+def file_list(*packages, **kwargs):
+    '''
     List the files that belong to a package. Not specifying any packages will
     return a list of _every_ file on the system's package database (not
     generally recommended).
@@ -2478,8 +2501,8 @@ def file_list(*packages):
     return __salt__["lowpkg.file_list"](*packages)
 
 
-def file_dict(*packages):
-    """
+def file_dict(*packages, **kwargs):
+    '''
     List the files that belong to a package, grouped by package. Not
     specifying any packages will return a list of _every_ file on the system's
     package database (not generally recommended).
@@ -2754,8 +2777,8 @@ def _resolve_deps(name, pkgs, **kwargs):
     return
 
 
-def owner(*paths):
-    """
+def owner(*paths, **kwargs):
+    '''
     .. versionadded:: 2014.7.0
 
     Return the name of the package that owns the file. Multiple file paths can
@@ -2887,6 +2910,15 @@ def info_installed(*names, **kwargs):
 
         .. versionadded:: 2016.11.3
 
+    attr
+        Comma-separated package attributes. If no 'attr' is specified, all available attributes returned.
+
+        Valid attributes are:
+            version, vendor, release, build_date, build_date_time_t, install_date, install_date_time_t,
+            build_host, group, source_rpm, arch, epoch, size, license, signature, packager, url, summary, description.
+
+        .. versionadded:: Neon
+
     CLI example:
 
     .. code-block:: bash
@@ -2896,33 +2928,40 @@ def info_installed(*names, **kwargs):
         salt '*' pkg.info_installed <package1> failhard=false
     """
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
-    failhard = kwargs.pop("failhard", True)
+    failhard = kwargs.pop('failhard', True)
+    kwargs.pop('errors', None)                # Only for compatibility with RPM
+    attr = kwargs.pop('attr', None)           # Package attributes to return
+    all_versions = kwargs.pop('all_versions', False)  # This is for backward compatible structure only
+
     if kwargs:
         salt.utils.args.invalid_kwargs(kwargs)
 
     ret = dict()
-    for pkg_name, pkg_nfo in __salt__["lowpkg.info"](*names, failhard=failhard).items():
+    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, failhard=failhard, attr=attr).items():
         t_nfo = dict()
-        if pkg_nfo.get("status", "ii")[1] != "i":
-            continue  # return only packages that are really installed
+        if pkg_nfo.get('status', 'ii')[1] != 'i':
+            continue    # return only packages that are really installed
         # Translate dpkg-specific keys to a common structure
         for key, value in pkg_nfo.items():
-            if key == "package":
-                t_nfo["name"] = value
-            elif key == "origin":
-                t_nfo["vendor"] = value
-            elif key == "section":
-                t_nfo["group"] = value
-            elif key == "maintainer":
-                t_nfo["packager"] = value
-            elif key == "homepage":
-                t_nfo["url"] = value
-            elif key == "status":
-                continue  # only installed pkgs are returned, no need for status
+            if key == 'package':
+                t_nfo['name'] = value
+            elif key == 'origin':
+                t_nfo['vendor'] = value
+            elif key == 'section':
+                t_nfo['group'] = value
+            elif key == 'maintainer':
+                t_nfo['packager'] = value
+            elif key == 'homepage':
+                t_nfo['url'] = value
+            elif key == 'status':
+                continue    # only installed pkgs are returned, no need for status
             else:
                 t_nfo[key] = value
 
-        ret[pkg_name] = t_nfo
+        if all_versions:
+            ret.setdefault(pkg_name, []).append(t_nfo)
+        else:
+            ret[pkg_name] = t_nfo
 
     return ret
 

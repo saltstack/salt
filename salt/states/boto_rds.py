@@ -455,15 +455,10 @@ def replica_present(
             ret["result"] = False
             ret["comment"] = "Failed to create RDS replica {0}.".format(name)
     else:
-        jmespath = "DBInstances[0].DBParameterGroups[0].DBParameterGroupName"
-        pmg_name = __salt__["boto_rds.describe_db_instances"](
-            name=name,
-            jmespath=jmespath,
-            region=region,
-            key=key,
-            keyid=keyid,
-            profile=profile,
-        )
+        jmespath = 'DBInstances[0].DBParameterGroups[0].DBParameterGroupName'
+        pmg_name = __salt__['boto_rds.describe_db_instances'](name=name,
+              jmespath=jmespath, region=region, key=key, keyid=keyid,
+              profile=profile)
         pmg_name = pmg_name[0] if pmg_name else None
         if pmg_name != db_parameter_group_name:
             modified = __salt__["boto_rds.modify_db_instance"](
@@ -641,15 +636,18 @@ def absent(
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
-    """
-    ret = {"name": name, "result": True, "comment": "", "changes": {}}
+    '''
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
 
-    current = __salt__["boto_rds.describe_db_instances"](
-        name=name, region=region, key=key, keyid=keyid, profile=profile
-    )
+    current = __salt__['boto_rds.describe_db_instances'](
+            name=name, region=region, key=key, keyid=keyid, profile=profile)
     if not current:
-        ret["result"] = True
-        ret["comment"] = "{0} RDS already absent.".format(name)
+        ret['result'] = True
+        ret['comment'] = '{0} RDS already absent.'.format(name)
         return ret
 
     if __opts__["test"]:
@@ -822,17 +820,11 @@ def parameter_present(
                 changed[parameter["ParameterName"]] = params.get(
                     parameter["ParameterName"]
                 )
-        if len(changed) > 0:
-            if __opts__["test"]:
-                ret["comment"] = os.linesep.join(
-                    [
-                        ret["comment"],
-                        "Parameters {0} for group {1} are set to be changed.".format(
-                            changed, name
-                        ),
-                    ]
-                )
-                ret["result"] = None
+                changed[parameter['ParameterName']] = params.get(parameter['ParameterName'])
+        if changed:
+            if __opts__['test']:
+                ret['comment'] = os.linesep.join([ret['comment'], 'Parameters {0} for group {1} are set to be changed.'.format(changed, name)])
+                ret['result'] = None
                 return ret
             update = __salt__["boto_rds.update_parameter_group"](
                 name,

@@ -7,7 +7,7 @@ Decorators for salt.state
 
 # Import Python libs
 from __future__ import absolute_import, unicode_literals
-
+import traceback
 import logging
 
 # Import salt libs
@@ -32,19 +32,15 @@ class OutputUnifier(object):
             for pls in self.policies:
                 try:
                     result = pls(result)
-                except Exception as exc:  # pylint: disable=broad-except
-                    log.debug(
-                        "An exception occurred in this state: %s",
-                        exc,
-                        exc_info_on_loglevel=logging.DEBUG,
-                    )
+                except Exception as exc:
+                    trb = traceback.format_exc()
+                    log.debug('An exception occurred in this state: %s', trb,
+                              exc_info_on_loglevel=logging.DEBUG)
                     result = {
-                        "result": False,
-                        "name": "later",
-                        "changes": {},
-                        "comment": "An exception occurred in this state: {0}".format(
-                            exc
-                        ),
+                        'result': False,
+                        'name': 'later',
+                        'changes': {},
+                        'comment': 'An exception occurred in this state: {0}'.format(trb)
                     }
             return result
 

@@ -10,8 +10,11 @@ import contextlib
 # Import Python libs
 import os
 
-import salt.modules.grains as grainsmod
-import salt.states.grains as grains
+# Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
 import salt.utils.files
@@ -28,27 +31,15 @@ from tests.support.unit import TestCase
 
 class GrainsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
-        grains_test_dir = "__salt_test_state_grains"
+        grains_test_dir = '__salt_test_state_grains'
         if not os.path.exists(os.path.join(RUNTIME_VARS.TMP, grains_test_dir)):
             os.makedirs(os.path.join(RUNTIME_VARS.TMP, grains_test_dir))
         loader_globals = {
-            "__opts__": {
-                "test": False,
-                "conf_file": os.path.join(RUNTIME_VARS.TMP, grains_test_dir, "minion"),
-                "cachedir": os.path.join(RUNTIME_VARS.TMP, grains_test_dir),
-                "local": True,
-            },
-            "__salt__": {
-                "cmd.run_all": MagicMock(
-                    return_value={"pid": 5, "retcode": 0, "stderr": "", "stdout": ""}
-                ),
-                "grains.get": grainsmod.get,
-                "grains.set": grainsmod.set,
-                "grains.setval": grainsmod.setval,
-                "grains.delval": grainsmod.delval,
-                "grains.append": grainsmod.append,
-                "grains.remove": grainsmod.remove,
-                "saltutil.sync_grains": MagicMock(),
+            '__opts__': {
+                'test': False,
+                'conf_file': os.path.join(RUNTIME_VARS.TMP, grains_test_dir, 'minion'),
+                'cachedir':  os.path.join(RUNTIME_VARS.TMP, grains_test_dir),
+                'local': True,
             },
         }
         return {grains: loader_globals, grainsmod: loader_globals}

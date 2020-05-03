@@ -10,8 +10,12 @@ import os
 import salt.utils.cloud
 import salt.utils.files
 import salt.utils.yaml
-import yaml
-from tests.integration.cloud.helpers.cloud_test_base import CloudTest
+
+# Import Salt Testing Libs
+from tests.support.case import ShellCase
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.helpers import expensiveTest, generate_random_name
+from tests.support.unit import skipIf
 from tests.support import win_installer
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
@@ -21,18 +25,17 @@ HAS_WINRM = salt.utils.cloud.HAS_WINRM and salt.utils.cloud.HAS_SMB
 TIMEOUT = 1200
 
 
-class EC2Test(CloudTest):
-    """
+@expensiveTest
+class EC2Test(ShellCase):
+    '''
     Integration tests for the EC2 cloud provider in Salt-Cloud
     """
 
-    PROVIDER = "ec2"
-    REQUIRED_PROVIDER_CONFIG_ITEMS = ("id", "key", "keyname", "private_key", "location")
-
-    @staticmethod
-    def __fetch_installer():
-        # Determine the downloaded installer name by searching the files
-        # directory for the first file that looks like an installer.
+    def _installer_name(self):
+        '''
+        Determine the downloaded installer name by searching the files
+        directory for the firt file that loosk like an installer.
+        '''
         for path, dirs, files in os.walk(RUNTIME_VARS.FILES):
             for file in files:
                 if file.startswith(win_installer.PREFIX):
@@ -41,7 +44,7 @@ class EC2Test(CloudTest):
         # If the installer wasn't found in the previous steps, download the latest Windows installer executable
         name = win_installer.latest_installer_name()
         path = os.path.join(RUNTIME_VARS.FILES, name)
-        with salt.utils.files.fopen(path, "wb") as fp:
+        with salt.utils.files.fopen(path, 'wb') as fp:
             win_installer.download_and_verify(fp, name)
         return name
 
@@ -57,8 +60,37 @@ class EC2Test(CloudTest):
     def setUp(self):
         """
         Sets up the test requirements
-        """
-        group_or_subnet = self.provider_config.get("securitygroup")
+        '''
+        super(EC2Test, self).setUp()
+
+        # check if appropriate cloud provider and profile files are present
+        profile_str = 'ec2-config'
+        providers = self.run_cloud('--list-providers')
+
+        if profile_str + ':' not in providers:
+            self.skipTest(
+                'Configuration file for {0} was not found. Check {0}.conf files '
+                'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
+                .format(PROVIDER_NAME)
+            )
+
+        # check if id, key, keyname, securitygroup, private_key, location,
+        # and provider are present
+        config = cloud_providers_config(
+            os.path.join(
+                RUNTIME_VARS.FILES,
+                'conf',
+                'cloud.providers.d',
+                PROVIDER_NAME + '.conf'
+            )
+        )
+
+        id_ = config[profile_str][PROVIDER_NAME]['id']
+        key = config[profile_str][PROVIDER_NAME]['key']
+        key_name = config[profile_str][PROVIDER_NAME]['keyname']
+        private_key = config[profile_str][PROVIDER_NAME]['private_key']
+        location = config[profile_str][PROVIDER_NAME]['location']
+        group_or_subnet = config[profile_str][PROVIDER_NAME].get('securitygroup', '')
         if not group_or_subnet:
             group_or_subnet = self.provider_config.get("subnetid")
 
@@ -84,11 +116,11 @@ class EC2Test(CloudTest):
         Copy a file from tests/integration/files to a test's temporary
         configuration directory. The path to the file which is created will be
         returned.
-        """
+        '''
         src = os.path.join(RUNTIME_VARS.FILES, name)
-        dst = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, name)
-        with salt.utils.files.fopen(src, "rb") as sfp:
-            with salt.utils.files.fopen(dst, "wb") as dfp:
+        dst = os.path.join(self.config_dir, name)
+        with salt.utils.files.fopen(src, 'rb') as sfp:
+            with salt.utils.files.fopen(dst, 'wb') as dfp:
                 dfp.write(sfp.read())
         return dst
 

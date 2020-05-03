@@ -96,8 +96,10 @@ def _changes(
     attributes supported as integers only.
     """
 
-    if "shadow.info" in __salt__:
-        lshad = __salt__["shadow.info"](name)
+    if 'shadow.info' in __salt__:
+        # We pass the password to the shadow.info function on Windows
+        # 'password' is ignored by other OSs
+        lshad = __salt__['shadow.info'](name, password=password)
 
     lusr = __salt__["user.info"](name)
     if not lusr:
@@ -133,36 +135,31 @@ def _changes(
         change["shell"] = shell
     if "shadow.info" in __salt__ and "shadow.default_hash" in __salt__:
         if password and not empty_password:
-            default_hash = __salt__["shadow.default_hash"]()
-            if (
-                lshad["passwd"] == default_hash
-                or lshad["passwd"] != default_hash
-                and enforce_password
-            ):
-                if lshad["passwd"] != password:
-                    change["passwd"] = password
-        if empty_password and lshad["passwd"] != "":
-            change["empty_password"] = True
-        if date is not None and lshad["lstchg"] != date:
-            change["date"] = date
-        if mindays is not None and lshad["min"] != mindays:
-            change["mindays"] = mindays
-        if maxdays is not None and lshad["max"] != maxdays:
-            change["maxdays"] = maxdays
-        if inactdays is not None and lshad["inact"] != inactdays:
-            change["inactdays"] = inactdays
-        if warndays is not None and lshad["warn"] != warndays:
-            change["warndays"] = warndays
-        if expire and lshad["expire"] != expire:
-            change["expire"] = expire
-    elif "shadow.info" in __salt__ and salt.utils.platform.is_windows():
-        if (
-            expire
-            and expire != -1
-            and salt.utils.dateutils.strftime(lshad["expire"])
-            != salt.utils.dateutils.strftime(expire)
-        ):
-            change["expire"] = expire
+            default_hash = __salt__['shadow.default_hash']()
+            if lshad['passwd'] == default_hash \
+                    or lshad['passwd'] != default_hash and enforce_password:
+                if lshad['passwd'] != password:
+                    change['passwd'] = password
+        if empty_password and lshad['passwd'] != '':
+            change['empty_password'] = True
+        if date is not None and lshad['lstchg'] != date:
+            change['date'] = date
+        if mindays is not None and lshad['min'] != mindays:
+            change['mindays'] = mindays
+        if maxdays is not None and lshad['max'] != maxdays:
+            change['maxdays'] = maxdays
+        if inactdays is not None and lshad['inact'] != inactdays:
+            change['inactdays'] = inactdays
+        if warndays is not None and lshad['warn'] != warndays:
+            change['warndays'] = warndays
+        if expire and lshad['expire'] != expire:
+            change['expire'] = expire
+    elif 'shadow.info' in __salt__ and salt.utils.platform.is_windows():
+        if expire and expire is not -1 and salt.utils.dateutils.strftime(lshad['expire']) != salt.utils.dateutils.strftime(expire):
+            change['expire'] = expire
+        if password:
+            if lshad['passwd'] != password and enforce_password:
+                change['passwd'] = password
 
     # GECOS fields
     fullname = salt.utils.data.decode(fullname)
@@ -227,44 +224,42 @@ def _changes(
     return change
 
 
-def present(
-    name,
-    uid=None,
-    gid=None,
-    usergroup=None,
-    groups=None,
-    optional_groups=None,
-    remove_groups=True,
-    home=None,
-    createhome=True,
-    password=None,
-    hash_password=False,
-    enforce_password=True,
-    empty_password=False,
-    shell=None,
-    unique=True,
-    system=False,
-    fullname=None,
-    roomnumber=None,
-    workphone=None,
-    homephone=None,
-    other=None,
-    loginclass=None,
-    date=None,
-    mindays=None,
-    maxdays=None,
-    inactdays=None,
-    warndays=None,
-    expire=None,
-    win_homedrive=None,
-    win_profile=None,
-    win_logonscript=None,
-    win_description=None,
-    nologinit=False,
-    allow_uid_change=False,
-    allow_gid_change=False,
-):
-    """
+def present(name,
+            uid=None,
+            gid=None,
+            usergroup=None,
+            groups=None,
+            optional_groups=None,
+            remove_groups=True,
+            home=None,
+            createhome=True,
+            password=None,
+            hash_password=False,
+            enforce_password=True,
+            empty_password=False,
+            shell=None,
+            unique=True,
+            system=False,
+            fullname=None,
+            roomnumber=None,
+            workphone=None,
+            homephone=None,
+            other=None,
+            loginclass=None,
+            date=None,
+            mindays=None,
+            maxdays=None,
+            inactdays=None,
+            warndays=None,
+            expire=None,
+            win_homedrive=None,
+            win_profile=None,
+            win_logonscript=None,
+            win_description=None,
+            nologinit=False,
+            allow_uid_change=False,
+            allow_gid_change=False):
+    '''
     Ensure that the named user is present with the specified properties
 
     name
@@ -298,7 +293,7 @@ def present(
         .. note::
             Only supported on GNU/Linux distributions
 
-        .. versionadded:: Sodium
+        .. versionadded:: Fluorine
 
     groups
         A list of groups to assign the user to, pass a list object. If a group
@@ -473,19 +468,11 @@ def present(
             "6": "sha512",
         }
         try:
-            _, algo, shadow_salt, shadow_hash = __salt__["shadow.info"](name)[
-                "passwd"
-            ].split("$", 4)
-            if algo == "1":
-                log.warning("Using MD5 for hashing passwords is considered insecure!")
-            log.debug(
-                "Re-using existing shadow salt for hashing password using {}".format(
-                    algorithms.get(algo)
-                )
-            )
-            password = __salt__["shadow.gen_password"](
-                password, crypt_salt=shadow_salt, algorithm=algorithms.get(algo)
-            )
+            _, algo, shadow_salt, shadow_hash = __salt__['shadow.info'](name)['passwd'].split('$', 4)
+            if algo == '1':
+                log.warning('Using MD5 for hashing passwords is considered insecure!')
+            log.debug('Re-using existing shadow salt for hashing password using %s', algorithms.get(algo))
+            password = __salt__['shadow.gen_password'](password, crypt_salt=shadow_salt, algorithm=algorithms.get(algo))
         except ValueError:
             log.info(
                 "No existing shadow salt found, defaulting to a randomly generated new one"
@@ -558,44 +545,42 @@ def present(
     # If usergroup was specified, we'll also be creating a new
     # group. We should report this change without setting the gid
     # variable.
-    if usergroup and __salt__["file.group_to_gid"](name) != "":
+    if usergroup and __salt__['file.group_to_gid'](name) != '':
         changes_gid = name
     else:
         changes_gid = gid
 
     try:
-        changes = _changes(
-            name,
-            uid,
-            changes_gid,
-            groups,
-            present_optgroups,
-            remove_groups,
-            home,
-            createhome,
-            password,
-            enforce_password,
-            empty_password,
-            shell,
-            fullname,
-            roomnumber,
-            workphone,
-            homephone,
-            other,
-            loginclass,
-            date,
-            mindays,
-            maxdays,
-            inactdays,
-            warndays,
-            expire,
-            win_homedrive,
-            win_profile,
-            win_logonscript,
-            win_description,
-            allow_uid_change,
-            allow_gid_change,
-        )
+        changes = _changes(name,
+                           uid,
+                           changes_gid,
+                           groups,
+                           present_optgroups,
+                           remove_groups,
+                           home,
+                           createhome,
+                           password,
+                           enforce_password,
+                           empty_password,
+                           shell,
+                           fullname,
+                           roomnumber,
+                           workphone,
+                           homephone,
+                           other,
+                           loginclass,
+                           date,
+                           mindays,
+                           maxdays,
+                           inactdays,
+                           warndays,
+                           expire,
+                           win_homedrive,
+                           win_profile,
+                           win_logonscript,
+                           win_description,
+                           allow_uid_change,
+                           allow_gid_change)
     except CommandExecutionError as exc:
         ret["result"] = False
         ret["comment"] = exc.strerror
@@ -613,11 +598,13 @@ def present(
                 ret["comment"] += "{0}: {1}\n".format(key, val)
             return ret
         # The user is present
-        if "shadow.info" in __salt__:
-            lshad = __salt__["shadow.info"](name)
-        if __grains__["kernel"] in ("OpenBSD", "FreeBSD"):
-            lcpre = __salt__["user.get_loginclass"](name)
-        pre = __salt__["user.info"](name)
+        if 'shadow.info' in __salt__:
+            # We pass the password to the shadow.info function on Windows
+            # 'password' is ignored by other OSs
+            lshad = __salt__['shadow.info'](name, password=password)
+        if __grains__['kernel'] in ('OpenBSD', 'FreeBSD'):
+            lcpre = __salt__['user.get_loginclass'](name)
+        pre = __salt__['user.info'](name)
         for key, val in iteritems(changes):
             if key == "passwd" and not empty_password:
                 __salt__["shadow.set_password"](name, password)
@@ -680,10 +667,12 @@ def present(
 
         post = __salt__["user.info"](name)
         spost = {}
-        if "shadow.info" in __salt__ and lshad["passwd"] != password:
-            spost = __salt__["shadow.info"](name)
-        if __grains__["kernel"] in ("OpenBSD", "FreeBSD"):
-            lcpost = __salt__["user.get_loginclass"](name)
+        if 'shadow.info' in __salt__ and lshad['passwd'] != password:
+            # We pass the password to the shadow.info function on Windows
+            # 'password' is ignored by other OSs
+            spost = __salt__['shadow.info'](name, password=password)
+        if __grains__['kernel'] in ('OpenBSD', 'FreeBSD'):
+            lcpost = __salt__['user.get_loginclass'](name)
         # See if anything changed
         for key in post:
             if post[key] != pre[key]:
@@ -755,25 +744,23 @@ def present(
         # Setup params specific to Linux and Windows to be passed to the
         # add.user function
         if not salt.utils.platform.is_windows():
-            params = {
-                "name": name,
-                "uid": uid,
-                "gid": gid,
-                "groups": groups,
-                "home": home,
-                "shell": shell,
-                "unique": unique,
-                "system": system,
-                "fullname": fullname,
-                "roomnumber": roomnumber,
-                "workphone": workphone,
-                "homephone": homephone,
-                "other": other,
-                "createhome": createhome,
-                "nologinit": nologinit,
-                "loginclass": loginclass,
-                "usergroup": usergroup,
-            }
+            params = {'name': name,
+                      'uid': uid,
+                      'gid': gid,
+                      'groups': groups,
+                      'home': home,
+                      'shell': shell,
+                      'unique': unique,
+                      'system': system,
+                      'fullname': fullname,
+                      'roomnumber': roomnumber,
+                      'workphone': workphone,
+                      'homephone': homephone,
+                      'other': other,
+                      'createhome': createhome,
+                      'nologinit': nologinit,
+                      'loginclass': loginclass,
+                      'usergroup': usergroup}
         else:
             params = {
                 "name": name,

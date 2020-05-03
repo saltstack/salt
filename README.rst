@@ -74,10 +74,6 @@ services`_ offerings.
 .. _SaltStack education offerings: http://saltstack.com/training/
 .. _SaltStack Certified Engineer (SSCE): http://saltstack.com/certification/
 .. _SaltStack professional services: http://saltstack.com/services/
-.. _PyCrypto is unmaintained: https://github.com/dlitz/pycrypto/issues/301#issue-551975699
-.. _PyCryptodome: https://pypi.org/project/pycryptodome/
-.. _Issue #52674: https://github.com/saltstack/salt/issues/52674
-.. _Issue #54115: https://github.com/saltstack/salt/issues/54115
 
 License
 =======

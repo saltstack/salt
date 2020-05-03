@@ -10,6 +10,13 @@ import re
 import shutil
 import tempfile
 
+# Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf, TestCase
+from tests.support.case import ShellCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
+
+# Import Salt libs
 import salt.config
 import salt.roster
 import salt.utils.files
@@ -78,7 +85,7 @@ class SSHRosterDefaults(TestCase):
     def test_roster_defaults_flat(self):
         """
         Test Roster Defaults on the flat roster
-        """
+        '''
         tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         expected = {
             "self": {"host": "0.0.0.0", "user": "daniel", "port": 42},
@@ -111,16 +118,16 @@ class SSHRosterDefaults(TestCase):
 class SSHSingleTests(TestCase):
     def setUp(self):
         self.tmp_cachedir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-        self.argv = [
-            "ssh.set_auth_key",
-            "root",
-            "hobn+amNAXSBTiOXEqlBjGB...rsa root@master",
-        ]
-        self.opts = {
-            "argv": self.argv,
-            "__role": "master",
-            "cachedir": self.tmp_cachedir,
-            "extension_modules": os.path.join(self.tmp_cachedir, "extmods"),
+
+    def test_single_opts(self):
+        ''' Sanity check for ssh.Single options
+        '''
+        argv = ['ssh.set_auth_key', 'root', 'hobn+amNAXSBTiOXEqlBjGB...rsa root@master']
+        opts = {
+            'argv': argv,
+            '__role': 'master',
+            'cachedir': self.tmp_cachedir,
+            'extension_modules': os.path.join(self.tmp_cachedir, 'extmods'),
         }
         self.target = {
             "passwd": "abc123",

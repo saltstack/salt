@@ -60,36 +60,6 @@ Requisites typically need two pieces of information for matching:
           - pkg: nginx
           - file: /etc/nginx/nginx.conf
 
-Glob matching in requisites
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. versionadded:: 0.9.8
-
-Glob matching is supported in requisites. This is mostly useful for file
-changes. In the example below, a change in ``/etc/apache2/httpd.conf`` or
-``/etc/apache2/sites-available/default.conf`` will reload/restart the service:
-
-.. code-block:: yaml
-
-    apache2:
-      service.running:
-        - watch:
-          - file: /etc/apache2/*
-
-Omitting state module in requisites
------------------------------------
-
-.. versionadded:: 2016.3.0
-
-In version 2016.3.0, the state module name was made optional. If the state module
-is omitted, all states matching the ID will be required, regardless of which
-module they are using.
-
-.. code-block:: yaml
-
-    - require:
-      - vim
-
 State target matching
 ~~~~~~~~~~~~~~~~~~~~~
 
@@ -151,6 +121,23 @@ so either of the following versions for "Extract server package" is correct:
         - onchanges:
           - file: /usr/local/share/myapp.tar.xz
 
+Glob matching in requisites
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 0.9.8
+
+Glob matching is supported in requisites. This is mostly useful for file
+changes. In the example below, a change in ``/etc/apache2/apache2.conf`` or
+``/etc/apache2/sites-available/000-default.conf`` will reload/restart the
+service:
+
+.. code-block:: yaml
+
+    apache2:
+      service.running:
+        - watch:
+          - file: /etc/apache2/*
+
 Omitting state module in requisites
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -168,17 +155,17 @@ module they are using.
 Requisites Types
 ----------------
 
-All requisite types have a corresponding `<requisite>_in <requisites-in>` form:
+All requisite types have a corresponding :ref:`<requisite>_in <requisites-in>` form:
 
-* `require <requisites-require>`: Requires that a list of target states succeed before execution
-* `onchanges <requisites-onchanges>`: Execute if any target states succeed with changes
-* `watch <requisites-watch>`: Similar to ``onchanges``; modifies state behavior using ``mod_watch``
-* `listen <requisites-listen>`: Similar to ``onchanges``; delays execution to end of state run using ``mod_wait``
-* `prereq <requisites-prereq>`: Execute prior to target state if target state expects to produce changes
-* `onfail <requisites-onfail>`: Execute only if a target state fails
-* `use <requisites-use>`: Copy arguments from another state
+* :ref:`require <requisites-require>`: Requires that a list of target states succeed before execution
+* :ref:`onchanges <requisites-onchanges>`: Execute if any target states succeed with changes
+* :ref:`watch <requisites-watch>`: Similar to ``onchanges``; modifies state behavior using ``mod_watch``
+* :ref:`listen <requisites-listen>`: Similar to ``onchanges``; delays execution to end of state run using ``mod_wait``
+* :ref:`prereq <requisites-prereq>`: Execute prior to target state if target state expects to produce changes
+* :ref:`onfail <requisites-onfail>`: Execute only if a target state fails
+* :ref:`use <requisites-use>`: Copy arguments from another state
 
-Several requisite types have a corresponding `requisite_any <requisites-any>` form:
+Several requisite types have a corresponding :ref:`requisite_any <requisites-any>` form:
 
 * ``require_any``
 * ``watch_any``
@@ -190,7 +177,7 @@ logic is desired instead of the default `OR` logic of onfail/onfail_any (which
 are equivalent).
 
 All requisites define specific relationships and always work with the dependency
-logic defined `above <requisites-matching>`.
+logic defined :ref:`above <requisites-matching>`.
 
 .. _requisites-require:
 
@@ -700,7 +687,7 @@ In the following example, Salt will not try to manage the nginx service or any
 configuration files unless the nginx package is installed because of the ``pkg:
 nginx`` requisite.
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     nginx:
       pkg.installed: []
@@ -709,35 +696,6 @@ nginx`` requisite.
         - reload: True
         - require:
           - pkg: nginx
-
-php.sls
-
-.. code-block:: yaml
-
-    include:
-      - http
-
-    php:
-      pkg.installed:
-        - require_in:
-          - service: httpd
-
-mod_python.sls
-
-.. code-block:: yaml
-
-    include:
-      - http
-
-    mod_python:
-      pkg.installed:
-        - require_in:
-          - service: httpd
-
-Now the httpd server will only start if both php and mod_python are first verified to
-be installed. Thus allowing for a requisite to be defined "after the fact".
-
-.. code-block:: sls
 
     {% for cfile in salt.pillar.get('nginx:config_files') %}
     /etc/nginx/conf.d/{{ cfile }}:
@@ -891,7 +849,7 @@ For example:
 In the above case, ``some_check`` will be run prior to _each_ name -- once for
 ``first_deploy_cmd`` and a second time for ``second_deploy_cmd``.
 
-.. versionchanged:: 3000
+.. versionchanged:: Neon
     The ``unless`` requisite can take a module as a dictionary field in unless.
     The dictionary must contain an argument ``fun`` which is the module that is
     being run, and everything else must be passed in under the args key or will
@@ -959,7 +917,7 @@ concept of ``True`` and ``False``.
 The above example ensures that the stop_volume and delete modules only run
 if the gluster commands return a 0 ret value.
 
-.. versionchanged:: 3000
+.. versionchanged:: Neon
     The ``onlyif`` requisite can take a module as a dictionary field in onlyif.
     The dictionary must contain an argument ``fun`` which is the module that is
     being run, and everything else must be passed in under the args key or will
@@ -992,8 +950,8 @@ if the gluster commands return a 0 ret value.
                 - /etc/crontab
                 - 'entry1'
 
-listen
-~~~~~~
+runas
+~~~~~
 
 .. versionadded:: 2017.7.0
 

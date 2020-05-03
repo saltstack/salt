@@ -19,8 +19,8 @@ __virtualname__ = "sysctl"
 def __virtual__():
     """
     Only run on Darwin (macOS) systems
-    """
-    if __grains__["os"] == "MacOS":
+    '''
+    if __grains__.get('os') == 'MacOS':
         return __virtualname__
     return (
         False,

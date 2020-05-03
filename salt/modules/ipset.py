@@ -498,9 +498,9 @@ def add(setname=None, entry=None, family="ipv4", **kwargs):
         if "comment" not in entry:
             cmd = '{0} comment "{1}"'.format(cmd, kwargs["comment"])
 
-    if len(set(["skbmark", "skbprio", "skbqueue"]) & set(kwargs.keys())) > 0:
-        if "skbinfo" not in setinfo["Header"]:
-            return "Error: Set {0} not created with skbinfo support".format(setname)
+    if set(['skbmark', 'skbprio', 'skbqueue']) & set(kwargs):
+        if 'skbinfo' not in setinfo['Header']:
+            return 'Error: Set {0} not created with skbinfo support'.format(setname)
 
     for item in _ADD_OPTIONS[settype]:
         if item in kwargs:
@@ -515,8 +515,8 @@ def add(setname=None, entry=None, family="ipv4", **kwargs):
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
     if not out:
-        return "Success"
-    return "Error: {0}".format(out)
+        return 'Success'
+    return 'Error: {0}'.format(out)
 
 
 def delete(set=None, entry=None, family="ipv4", **kwargs):
@@ -544,8 +544,8 @@ def delete(set=None, entry=None, family="ipv4", **kwargs):
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
     if not out:
-        return "Success"
-    return "Error: {0}".format(out)
+        return 'Success'
+    return 'Error: {0}'.format(out)
 
 
 def check(set=None, entry=None, family="ipv4"):

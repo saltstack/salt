@@ -42,7 +42,8 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.verify
-import salt.wheel
+import salt.utils.versions
+import salt.utils.master
 from salt.defaults import DEFAULT_TARGET_DELIM
 
 # Import 3rd-party libs
@@ -163,6 +164,42 @@ def clean_old_jobs(opts):
     fstr = "{0}.clean_old_jobs".format(opts["master_job_cache"])
     if fstr in mminion.returners:
         mminion.returners[fstr]()
+
+
+def clean_proc_dir(opts):
+    '''
+    Clean out old tracked jobs running on the master
+
+    Generally, anything tracking a job should remove the job
+    once the job has finished. However, this will remove any
+    jobs that for some reason were not properly removed
+    when finished or errored.
+    '''
+    serial = salt.payload.Serial(opts)
+    proc_dir = os.path.join(opts['cachedir'], 'proc')
+    for fn_ in os.listdir(proc_dir):
+        proc_file = os.path.join(*[proc_dir, fn_])
+        data = salt.utils.master.read_proc_file(proc_file, opts)
+        if not data:
+            try:
+                log.warning(
+                    "Found proc file %s without proper data. Removing from tracked proc files.",
+                    proc_file
+                )
+                os.remove(proc_file)
+            except (OSError, IOError) as err:
+                log.error('Unable to remove proc file: %s.', err)
+            continue
+        if not salt.utils.master.is_pid_healthy(data['pid']):
+            try:
+                log.warning(
+                    "PID %s not owned by salt or no longer running. Removing tracked proc file %s",
+                    data['pid'],
+                    proc_file
+                )
+                os.remove(proc_file)
+            except (OSError, IOError) as err:
+                log.error('Unable to remove proc file: %s.', err)
 
 
 def mk_key(opts, user):
@@ -547,29 +584,31 @@ class RemoteFuncs(object):
             if any(key not in load for key in ("id", "tgt", "fun")):
                 return {}
 
-        if isinstance(load["fun"], six.string_types):
-            functions = list(set(load["fun"].split(",")))
+        if isinstance(load['fun'], six.string_types):
+            functions = list(set(load['fun'].split(',')))
             _ret_dict = len(functions) > 1
-        elif isinstance(load["fun"], list):
-            functions = load["fun"]
+        elif isinstance(load['fun'], list):
+            functions = load['fun']
             _ret_dict = True
         else:
             return {}
 
         functions_allowed = []
 
-        if "mine_get" in self.opts:
+        if 'mine_get' in self.opts:
             # If master side acl defined.
             if not isinstance(self.opts["mine_get"], dict):
                 return {}
             perms = set()
-            for match in self.opts["mine_get"]:
-                if re.match(match, load["id"]):
-                    if isinstance(self.opts["mine_get"][match], list):
-                        perms.update(self.opts["mine_get"][match])
+            for match in self.opts['mine_get']:
+                if re.match(match, load['id']):
+                    if isinstance(self.opts['mine_get'][match], list):
+                        perms.update(self.opts['mine_get'][match])
+
             for fun in functions:
                 if any(re.match(perm, fun) for perm in perms):
                     functions_allowed.append(fun)
+
             if not functions_allowed:
                 return {}
         else:
@@ -595,45 +634,17 @@ class RemoteFuncs(object):
         minions = _res["minions"]
         minion_side_acl = {}  # Cache minion-side ACL
         for minion in minions:
-            mine_data = self.cache.fetch("minions/{0}".format(minion), "mine")
-            if not isinstance(mine_data, dict):
+            fdata = self.cache.fetch('minions/{0}'.format(minion), 'mine')
+
+            if not isinstance(fdata, dict):
                 continue
-            for function in functions_allowed:
-                if function not in mine_data:
-                    continue
-                mine_entry = mine_data[function]
-                mine_result = mine_data[function]
-                if (
-                    isinstance(mine_entry, dict)
-                    and salt.utils.mine.MINE_ITEM_ACL_ID in mine_entry
-                ):
-                    mine_result = mine_entry[salt.utils.mine.MINE_ITEM_ACL_DATA]
-                    # Check and fill minion-side ACL cache
-                    if function not in minion_side_acl.get(minion, {}):
-                        if "allow_tgt" in mine_entry:
-                            # Only determine allowed targets if any have been specified.
-                            # This prevents having to add a list of all minions as allowed targets.
-                            get_minion = checker.check_minions(
-                                mine_entry["allow_tgt"],
-                                mine_entry.get("allow_tgt_type", "glob"),
-                            )["minions"]
-                            # the minion in allow_tgt does not exist
-                            if not get_minion:
-                                continue
-                            salt.utils.dictupdate.set_dict_key_value(
-                                minion_side_acl,
-                                "{}:{}".format(minion, function),
-                                get_minion,
-                            )
-                if salt.utils.mine.minion_side_acl_denied(
-                    minion_side_acl, minion, function, load["id"]
-                ):
-                    continue
-                if _ret_dict:
-                    ret.setdefault(function, {})[minion] = mine_result
-                else:
-                    # There is only one function in functions_allowed.
-                    ret[minion] = mine_result
+
+            if not _ret_dict and functions_allowed and functions_allowed[0] in fdata:
+                ret[minion] = fdata.get(functions_allowed[0])
+            elif _ret_dict:
+                for fun in list(set(functions_allowed) & set(fdata.keys())):
+                    ret.setdefault(fun, {})[minion] = fdata.get(fun)
+
         return ret
 
     def _mine(self, load, skip_verify=False):

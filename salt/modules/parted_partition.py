@@ -86,6 +86,15 @@ VALID_PARTITION_FLAGS = set(
     ]
 )
 
+VALID_DISK_FLAGS = set(['cylinder_alignment', 'pmbr_boot',
+                        'implicit_partition_table'])
+
+VALID_PARTITION_FLAGS = set(['boot', 'root', 'swap', 'hidden', 'raid',
+                             'lvm', 'lba', 'hp-service', 'palo',
+                             'prep', 'msftres', 'bios_grub', 'atvrecv',
+                             'diag', 'legacy_boot', 'msftdata', 'irst',
+                             'esp', 'type'])
+
 
 def __virtual__():
     """
@@ -417,26 +426,9 @@ def _is_fstype(fs_type):
     Check if file system type is supported in module
     :param fs_type: file system type
     :return: True if fs_type is supported in this module, False otherwise
-    """
-    return fs_type in set(
-        [
-            "btrfs",
-            "ext2",
-            "ext3",
-            "ext4",
-            "fat32",
-            "fat16",
-            "linux-swap",
-            "reiserfs",
-            "hfs",
-            "hfs+",
-            "hfsx",
-            "NTFS",
-            "ntfs",
-            "ufs",
-            "xfs",
-        ]
-    )
+    '''
+    return fs_type in set(['ext2', 'ext3', 'ext4', 'fat32', 'fat16', 'fat', 'linux-swap',
+                           'reiserfs', 'hfs', 'hfs+', 'hfsx', 'NTFS', 'ntfs', 'ufs'])
 
 
 def mkfs(device, fs_type):
@@ -721,7 +713,7 @@ def set_(device, minor, flag, state):
         raise CommandExecutionError("Invalid minor number passed to partition.set")
 
     if flag not in VALID_PARTITION_FLAGS:
-        raise CommandExecutionError("Invalid flag passed to partition.set")
+        raise CommandExecutionError('Invalid flag passed to partition.set')
 
     if state not in set(["on", "off"]):
         raise CommandExecutionError("Invalid state passed to partition.set")
@@ -752,15 +744,15 @@ def toggle(device, partition, flag):
         )
 
     if flag not in VALID_PARTITION_FLAGS:
-        raise CommandExecutionError("Invalid flag passed to partition.toggle")
+        raise CommandExecutionError('Invalid flag passed to partition.toggle')
 
-    cmd = "parted -m -s {0} toggle {1} {2}".format(device, partition, flag)
+    cmd = ["parted", "-m", "-s", device, "disk_toggle", flag]
     out = __salt__["cmd.run"](cmd).splitlines()
     return out
 
 
 def disk_set(device, flag, state):
-    """
+    '''
     Changes a flag on selected device.
 
     A flag can be either "on" or "off" (make sure to use proper
@@ -778,22 +770,22 @@ def disk_set(device, flag, state):
     .. code-block:: bash
 
         salt '*' partition.disk_set /dev/sda pmbr_boot '"on"'
-    """
+    '''
     _validate_device(device)
 
     if flag not in VALID_DISK_FLAGS:
-        raise CommandExecutionError("Invalid flag passed to partition.disk_set")
+        raise CommandExecutionError('Invalid flag passed to partition.disk_set')
 
-    if state not in set(["on", "off"]):
-        raise CommandExecutionError("Invalid state passed to partition.disk_set")
+    if state not in set(['on', 'off']):
+        raise CommandExecutionError('Invalid state passed to partition.disk_set')
 
-    cmd = ["parted", "-m", "-s", device, "disk_set", flag, state]
-    out = __salt__["cmd.run"](cmd).splitlines()
+    cmd = ['parted', '-m', '-s', device, 'disk_set', flag, state]
+    out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
 
 def disk_toggle(device, flag):
-    """
+    '''
     Toggle the state of <flag> on <device>. Valid flags are the same
     as the disk_set command.
 
@@ -802,19 +794,19 @@ def disk_toggle(device, flag):
     .. code-block:: bash
 
         salt '*' partition.disk_toggle /dev/sda pmbr_boot
-    """
+    '''
     _validate_device(device)
 
     if flag not in VALID_DISK_FLAGS:
-        raise CommandExecutionError("Invalid flag passed to partition.disk_toggle")
+        raise CommandExecutionError('Invalid flag passed to partition.disk_toggle')
 
-    cmd = ["parted", "-m", "-s", device, "disk_toggle", flag]
-    out = __salt__["cmd.run"](cmd).splitlines()
+    cmd = ['parted', '-m', '-s', device, 'disk_toggle', flag]
+    out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
 
-def exists(device=""):
-    """
+def exists(device=''):
+    '''
     Check to see if the partition exists
 
     CLI Example:

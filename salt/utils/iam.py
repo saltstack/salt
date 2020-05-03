@@ -59,5 +59,7 @@ def _convert_key_to_str(key):
     # properly with hmac.new (see http://bugs.python.org/issue5285)
     #
     # pylint: disable=incompatible-py3-code,undefined-variable
-    return salt.utils.data.encode(key) if six.PY2 and isinstance(key, unicode) else key
+    return salt.utils.data.encode(key) \
+        if six.PY2 and isinstance(key, unicode) \
+        else key
     # pylint: enable=incompatible-py3-code,undefined-variable

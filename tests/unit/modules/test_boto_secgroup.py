@@ -7,7 +7,12 @@ import os.path
 import random
 import string
 import sys
-from copy import deepcopy
+
+# Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
 import salt.config
@@ -27,10 +32,7 @@ from tests.support.unit import TestCase, skipIf
 
 try:
     import boto
-
-    boto.ENDPOINTS_PATH = os.path.join(
-        RUNTIME_VARS.TESTS_DIR, "unit/files/endpoints.json"
-    )
+    boto.ENDPOINTS_PATH = os.path.join(RUNTIME_VARS.TESTS_DIR, 'unit/files/endpoints.json')
     import boto.ec2  # pylint: enable=unused-import
 
     HAS_BOTO = True

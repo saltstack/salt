@@ -5,13 +5,18 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
-import salt.states.beacon as beacon
-
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
+    NO_MOCK,
+    NO_MOCK_REASON,
+    MagicMock,
+    patch
+)
+
+# Import Salt Libs
+import salt.states.beacon as beacon
 
 
 class BeaconTestCase(TestCase, LoaderModuleMockMixin):

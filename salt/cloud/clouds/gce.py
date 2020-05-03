@@ -52,8 +52,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import pprint
-import re
-import sys
+import logging
 from ast import literal_eval
 
 import salt.config as config
@@ -99,6 +98,18 @@ except ImportError:
     HAS_LIBCLOUD = False
 # pylint: enable=import-error
 
+# Import salt libs
+from salt.utils.functools import namespaced_function
+from salt.ext import six
+import salt.utils.cloud
+import salt.utils.files
+import salt.utils.http
+import salt.utils.msgpack
+import salt.config as config
+from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
+from salt.exceptions import (
+    SaltCloudSystemExit,
+)
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -248,6 +259,12 @@ def _expand_address(addy):
     ret = {}
     ret.update(addy.__dict__)
     ret["extra"]["zone"] = addy.region.name
+    return ret
+
+
+def _expand_region(region):
+    ret = {}
+    ret['name'] = region.name
     return ret
 
 
@@ -1181,27 +1198,28 @@ def create_address(kwargs=None, call=None):
     name = kwargs["name"]
     ex_region = kwargs["region"]
     ex_address = kwargs.get("address", None)
+    kwargs['region'] = _expand_region(kwargs['region'])
 
     conn = get_conn()
 
-    __utils__["cloud.fire_event"](
-        "event",
-        "create address",
-        "salt/cloud/address/creating",
-        args=kwargs,
-        sock_dir=__opts__["sock_dir"],
-        transport=__opts__["transport"],
+    __utils__['cloud.fire_event'](
+        'event',
+        'create address',
+        'salt/cloud/address/creating',
+        args=salt.utils.data.simple_types_filter(kwargs),
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
     )
 
     addy = conn.ex_create_address(name, ex_region, ex_address)
 
-    __utils__["cloud.fire_event"](
-        "event",
-        "created address",
-        "salt/cloud/address/created",
-        args=kwargs,
-        sock_dir=__opts__["sock_dir"],
-        transport=__opts__["transport"],
+    __utils__['cloud.fire_event'](
+        'event',
+        'created address',
+        'salt/cloud/address/created',
+        args=salt.utils.data.simple_types_filter(kwargs),
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
     )
 
     log.info("Created GCE Address %s", name)
@@ -2332,15 +2350,21 @@ def request_instance(vm_):
         "external_ip", vm_, __opts__, default="ephemeral"
     )
 
-    if external_ip.lower() == "ephemeral":
-        external_ip = "ephemeral"
-    elif external_ip == "None":
+    if external_ip.lower() == 'ephemeral':
+        external_ip = 'ephemeral'
+        vm_['external_ip'] = external_ip
+    elif external_ip == 'None':
         external_ip = None
+        vm_['external_ip'] = external_ip
     else:
         region = __get_region(conn, vm_)
         external_ip = __create_orget_address(conn, external_ip, region)
-    kwargs["external_ip"] = external_ip
-    vm_["external_ip"] = external_ip
+        vm_['external_ip'] = {
+            'name': external_ip.name,
+            'address': external_ip.address,
+            'region': external_ip.region.name
+        }
+    kwargs['external_ip'] = external_ip
 
     if LIBCLOUD_VERSION_INFO > (0, 15, 1):
 
@@ -2372,8 +2396,32 @@ def request_instance(vm_):
                 "'pd-standard', 'pd-ssd'"
             )
 
-    log.info("Creating GCE instance %s in %s", vm_["name"], kwargs["location"].name)
-    log.debug("Create instance kwargs %s", kwargs)
+    # GCE accelerator options are only supported as of libcloud >= 2.3.0
+    # and Python 3+ is required so that libcloud will detect a type of
+    # 'string' rather than 'unicode'
+    if LIBCLOUD_VERSION_INFO >= (2, 3, 0) and isinstance(u'test', str):
+
+        kwargs.update({
+            'ex_accelerator_type': config.get_cloud_config_value(
+                'ex_accelerator_type', vm_, __opts__, default=None),
+            'ex_accelerator_count': config.get_cloud_config_value(
+                'ex_accelerator_count', vm_, __opts__, default=None)
+        })
+        if kwargs.get('ex_accelerator_type'):
+            log.warning(
+                'An accelerator is being attached to this instance, '
+                'the ex_on_host_maintenance setting is being set to '
+                '\'TERMINATE\' as a result'
+            )
+            kwargs.update({
+                'ex_on_host_maintenance': 'TERMINATE'
+            })
+
+    log.info(
+        'Creating GCE instance %s in %s',
+        vm_['name'], kwargs['location'].name
+    )
+    log.debug('Create instance kwargs %s', kwargs)
 
     __utils__["cloud.fire_event"](
         "event",
@@ -2480,9 +2528,11 @@ def update_pricing(kwargs=None, call=None):
     url = "https://cloudpricingcalculator.appspot.com/static/data/pricelist.json"
     price_json = salt.utils.http.query(url, decode=True, decode_type="json")
 
-    outfile = os.path.join(__opts__["cachedir"], "gce-pricing.p")
-    with salt.utils.files.fopen(outfile, "w") as fho:
-        salt.utils.msgpack.dump(price_json["dict"], fho)
+    outfile = os.path.join(
+        __opts__['cachedir'], 'gce-pricing.p'
+    )
+    with salt.utils.files.fopen(outfile, 'w') as fho:
+        salt.utils.msgpack.dump(price_json['dict'], fho)
 
     return True
 
@@ -2518,7 +2568,7 @@ def show_pricing(kwargs=None, call=None):
     if not os.path.exists(pricefile):
         update_pricing()
 
-    with salt.utils.files.fopen(pricefile, "r") as fho:
+    with salt.utils.files.fopen(pricefile, 'r') as fho:
         sizes = salt.utils.msgpack.load(fho)
 
     per_hour = float(sizes["gcp_price_list"][size][region])

@@ -10,6 +10,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
 
 # Import Salt Testing Libs
+from tests.support.case import ShellCase
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
 try:
@@ -21,9 +23,11 @@ except ImportError:
     HAS_PROFITBRICKS = False
 
 
-@skipIf(HAS_PROFITBRICKS is False, "salt-cloud requires >= profitbricks 4.1.0")
-class ProfitBricksTest(CloudTest):
-    """
+
+@skipIf(HAS_PROFITBRICKS is False, 'salt-cloud requires >= profitbricks 4.1.0')
+@expensiveTest
+class ProfitBricksTest(ShellCase):
+    '''
     Integration tests for the ProfitBricks cloud provider
     """
 
@@ -38,10 +42,13 @@ class ProfitBricksTest(CloudTest):
         # A default username and password must be hard-coded as defaults as per issue #46265
         # If they are 'foo' and 'bar' it is the same as not being set
 
-        self.skipTest(
-            "Conf items are missing that must be provided to run these tests:  username, password"
-            "\nCheck tests/integration/files/conf/cloud.providers.d/{0}.conf".format(
-                self.PROVIDER
+        # check if credentials and datacenter_id present
+        config = cloud_providers_config(
+            os.path.join(
+                RUNTIME_VARS.FILES,
+                'conf',
+                'cloud.providers.d',
+                PROVIDER_NAME + '.conf'
             )
         )
 

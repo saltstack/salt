@@ -67,8 +67,8 @@ def fullversion():
     return ret
 
 
-def pvdisplay(pvname="", real=False, quiet=False):
-    """
+def pvdisplay(pvname='', real=False, quiet=False):
+    '''
     Return information about the physical volume(s)
 
     pvname
@@ -94,7 +94,8 @@ def pvdisplay(pvname="", real=False, quiet=False):
     cmd = ["pvdisplay", "-c"]
     if pvname:
         cmd.append(pvname)
-    cmd_ret = __salt__["cmd.run_all"](cmd, python_shell=False, ignore_retcode=quiet)
+    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False,
+                                      ignore_retcode=quiet)
 
     if cmd_ret["retcode"] != 0:
         return {}
@@ -125,8 +126,8 @@ def pvdisplay(pvname="", real=False, quiet=False):
     return ret
 
 
-def vgdisplay(vgname="", quiet=False):
-    """
+def vgdisplay(vgname='', quiet=False):
+    '''
     Return information about the volume group(s)
 
     vgname
@@ -146,7 +147,8 @@ def vgdisplay(vgname="", quiet=False):
     cmd = ["vgdisplay", "-c"]
     if vgname:
         cmd.append(vgname)
-    cmd_ret = __salt__["cmd.run_all"](cmd, python_shell=False, ignore_retcode=quiet)
+    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False,
+                                      ignore_retcode=quiet)
 
     if cmd_ret["retcode"] != 0:
         return {}
@@ -197,7 +199,8 @@ def lvdisplay(lvname="", quiet=False):
     cmd = ["lvdisplay", "-c"]
     if lvname:
         cmd.append(lvname)
-    cmd_ret = __salt__["cmd.run_all"](cmd, python_shell=False, ignore_retcode=quiet)
+    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False,
+                                      ignore_retcode=quiet)
 
     if cmd_ret["retcode"] != 0:
         return {}
@@ -245,7 +248,7 @@ def pvcreate(devices, override=True, **kwargs):
     cmd = ["pvcreate", "-y"]
     for device in devices:
         if not os.path.exists(device):
-            raise CommandExecutionError("{0} does not exist".format(device))
+            raise CommandExecutionError('{0} does not exist'.format(device))
         if not pvdisplay(device, quiet=True):
             cmd.append(device)
         elif not override:

@@ -129,16 +129,14 @@ def setenv(
             # the value to ''
             def key_exists():
                 if salt.utils.platform.is_windows():
-                    permanent_hive = "HKCU"
-                    permanent_key = "Environment"
-                    if permanent == "HKLM":
-                        permanent_hive = "HKLM"
-                        permanent_key = r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"
+                    permanent_hive = 'HKCU'
+                    permanent_key = 'Environment'
+                    if permanent == 'HKLM':
+                        permanent_hive = 'HKLM'
+                        permanent_key = r'SYSTEM\CurrentControlSet\Control\Session Manager\Environment'
 
-                    out = __utils__["reg.read_value"](
-                        permanent_hive, permanent_key, _norm_key(key)
-                    )
-                    return out["success"] is True
+                    out = __utils__['reg.read_value'](permanent_hive, permanent_key, _norm_key(key))
+                    return out['success'] is True
                 else:
                     return False
 

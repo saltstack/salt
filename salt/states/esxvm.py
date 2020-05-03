@@ -594,12 +594,15 @@ def vm_registered(vm_name, datacenter, placement, vm_file, power_on=False):
     """
     Registers a virtual machine if the machine files are available on
     the main datastore.
-    """
-    result = {"name": vm_name, "result": None, "changes": {}, "comment": ""}
+    '''
+    result = {'name': vm_name,
+              'result': None,
+              'changes': {},
+              'comment': ''}
 
-    vmx_path = "{0}{1}".format(vm_file.folderPath, vm_file.file[0].path)
-    log.trace("Registering virtual machine with vmx file: {0}".format(vmx_path))
-    service_instance = __salt__["vsphere.get_service_instance_via_proxy"]()
+    vmx_path = '{0}{1}'.format(vm_file.folderPath, vm_file.file[0].path)
+    log.trace('Registering virtual machine with vmx file: %s', vmx_path)
+    service_instance = __salt__['vsphere.get_service_instance_via_proxy']()
     try:
         __salt__["vsphere.register_vm"](
             vm_name, datacenter, placement, vmx_path, service_instance=service_instance

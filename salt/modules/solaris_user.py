@@ -40,8 +40,8 @@ __virtualname__ = "user"
 def __virtual__():
     """
     Set the user module if the kernel is SunOS
-    """
-    if __grains__["kernel"] == "SunOS" and HAS_PWD:
+    '''
+    if __grains__.get('kernel') == 'SunOS' and HAS_PWD:
         return __virtualname__
     return (
         False,

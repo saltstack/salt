@@ -34,7 +34,7 @@ touch /tmp/foo if it does not exist:
         - creates: /tmp/foo
 
 ``creates`` also accepts a list of files, in which case this state will
-run if **any** of the files do not exist:
+run if **any** of the files does not exist:
 
 .. code-block:: yaml
 
@@ -339,10 +339,8 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
 
     if onlyif is not None:
         if isinstance(onlyif, six.string_types):
-            cmd = __salt__["cmd.retcode"](
-                onlyif, ignore_retcode=True, python_shell=True, **cmd_kwargs
-            )
-            log.debug("Last command return code: {0}".format(cmd))
+            cmd = __salt__['cmd.retcode'](onlyif, ignore_retcode=True, python_shell=True, **cmd_kwargs)
+            log.debug('Last command return code: %s', cmd)
             if cmd != 0:
                 return {
                     "comment": "onlyif condition is false",
@@ -351,10 +349,8 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
                 }
         elif isinstance(onlyif, list):
             for entry in onlyif:
-                cmd = __salt__["cmd.retcode"](
-                    entry, ignore_retcode=True, python_shell=True, **cmd_kwargs
-                )
-                log.debug("Last command '{0}' return code: {1}".format(entry, cmd))
+                cmd = __salt__['cmd.retcode'](entry, ignore_retcode=True, python_shell=True, **cmd_kwargs)
+                log.debug('Last command \'%s\' return code: %s', entry, cmd)
                 if cmd != 0:
                     return {
                         "comment": "onlyif condition is false: {0}".format(entry),
@@ -372,10 +368,8 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
 
     if unless is not None:
         if isinstance(unless, six.string_types):
-            cmd = __salt__["cmd.retcode"](
-                unless, ignore_retcode=True, python_shell=True, **cmd_kwargs
-            )
-            log.debug("Last command return code: {0}".format(cmd))
+            cmd = __salt__['cmd.retcode'](unless, ignore_retcode=True, python_shell=True, **cmd_kwargs)
+            log.debug('Last command return code: %s', cmd)
             if cmd == 0:
                 return {
                     "comment": "unless condition is true",
@@ -385,12 +379,8 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
         elif isinstance(unless, list):
             cmd = []
             for entry in unless:
-                cmd.append(
-                    __salt__["cmd.retcode"](
-                        entry, ignore_retcode=True, python_shell=True, **cmd_kwargs
-                    )
-                )
-                log.debug("Last command return code: {0}".format(cmd))
+                cmd.append(__salt__['cmd.retcode'](entry, ignore_retcode=True, python_shell=True, **cmd_kwargs))
+                log.debug('Last command return code: %s', cmd)
             if all([c == 0 for c in cmd]):
                 return {
                     "comment": "unless condition is true",
@@ -415,25 +405,25 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
     return True
 
 
-def wait(
-    name,
-    onlyif=None,
-    unless=None,
-    creates=None,
-    cwd=None,
-    root=None,
-    runas=None,
-    shell=None,
-    env=(),
-    stateful=False,
-    umask=None,
-    output_loglevel="debug",
-    hide_output=False,
-    use_vt=False,
-    success_retcodes=None,
-    **kwargs
-):
-    """
+def wait(name,
+         onlyif=None,
+         unless=None,
+         creates=None,
+         cwd=None,
+         root=None,
+         runas=None,
+         shell=None,
+         env=(),
+         stateful=False,
+         umask=None,
+         output_loglevel='debug',
+         hide_output=False,
+         use_vt=False,
+         success_retcodes=None,
+         success_stdout=None,
+         success_stderr=None,
+         **kwargs):
+    '''
     Run the given command only if the watch statement calls it.
 
     .. note::
@@ -517,7 +507,7 @@ def wait(
     creates
         Only run if the file specified by ``creates`` do not exist. If you
         specify a list of files then this state will only run if **any** of
-        the files do not exist.
+        the files does not exist.
 
         .. versionadded:: 2014.7.0
 
@@ -549,33 +539,48 @@ def wait(
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
-    """
+
+    success_stdout: This parameter will be allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
+    success_stderr: This parameter will be allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+    '''
     # Ignoring our arguments is intentional.
     return {"name": name, "changes": {}, "result": True, "comment": ""}
 
 
 # Alias "cmd.watch" to "cmd.wait", as this is a common misconfiguration
-watch = salt.utils.functools.alias_function(wait, "watch")
+watch = salt.utils.functools.alias_function(wait, 'watch')
 
 
-def wait_script(
-    name,
-    source=None,
-    template=None,
-    onlyif=None,
-    unless=None,
-    cwd=None,
-    runas=None,
-    shell=None,
-    env=None,
-    stateful=False,
-    umask=None,
-    use_vt=False,
-    output_loglevel="debug",
-    hide_output=False,
-    **kwargs
-):
-    """
+def wait_script(name,
+                source=None,
+                template=None,
+                onlyif=None,
+                unless=None,
+                cwd=None,
+                runas=None,
+                shell=None,
+                env=None,
+                stateful=False,
+                umask=None,
+                use_vt=False,
+                output_loglevel='debug',
+                hide_output=False,
+                success_retcodes=None,
+                success_stdout=None,
+                success_stderr=None,
+                **kwargs):
+    '''
     Download a script from a remote source and execute it only if a watch
     statement calls it.
 
@@ -687,33 +692,50 @@ def wait_script(
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
-    """
+
+    success_stdout: This parameter will be allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
+    success_stderr: This parameter will be allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+    '''
     # Ignoring our arguments is intentional.
-    return {"name": name, "changes": {}, "result": True, "comment": ""}
+    return {'name': name,
+            'changes': {},
+            'result': True,
+            'comment': ''}
 
 
-def run(
-    name,
-    onlyif=None,
-    unless=None,
-    creates=None,
-    cwd=None,
-    root=None,
-    runas=None,
-    shell=None,
-    env=None,
-    prepend_path=None,
-    stateful=False,
-    umask=None,
-    output_loglevel="debug",
-    hide_output=False,
-    timeout=None,
-    ignore_timeout=False,
-    use_vt=False,
-    success_retcodes=None,
-    **kwargs
-):
-    """
+def run(name,
+        onlyif=None,
+        unless=None,
+        creates=None,
+        cwd=None,
+        root=None,
+        runas=None,
+        shell=None,
+        env=None,
+        prepend_path=None,
+        stateful=False,
+        umask=None,
+        output_loglevel='debug',
+        hide_output=False,
+        timeout=None,
+        ignore_timeout=False,
+        use_vt=False,
+        success_retcodes=None,
+        success_stdout=None,
+        success_stderr=None,
+        **kwargs):
+    '''
     Run a command if certain circumstances are met.  Use ``cmd.wait`` if you
     want to use the ``watch`` requisite.
 
@@ -826,7 +848,7 @@ def run(
     creates
         Only run if the file specified by ``creates`` do not exist. If you
         specify a list of files then this state will only run if **any** of
-        the files do not exist.
+        the files does not exist.
 
         .. versionadded:: 2014.7.0
 
@@ -847,6 +869,20 @@ def run(
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
+
+    success_stdout: This parameter will be allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
+    success_stderr: This parameter will be allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
 
     .. note::
 
@@ -890,21 +926,20 @@ def run(
         return ret
 
     cmd_kwargs = copy.deepcopy(kwargs)
-    cmd_kwargs.update(
-        {
-            "cwd": cwd,
-            "root": root,
-            "runas": runas,
-            "use_vt": use_vt,
-            "shell": shell or __grains__["shell"],
-            "env": env,
-            "prepend_path": prepend_path,
-            "umask": umask,
-            "output_loglevel": output_loglevel,
-            "hide_output": hide_output,
-            "success_retcodes": success_retcodes,
-        }
-    )
+    cmd_kwargs.update({'cwd': cwd,
+                       'root': root,
+                       'runas': runas,
+                       'use_vt': use_vt,
+                       'shell': shell or __grains__['shell'],
+                       'env': env,
+                       'prepend_path': prepend_path,
+                       'umask': umask,
+                       'output_loglevel': output_loglevel,
+                       'hide_output': hide_output,
+                       'quiet': quiet,
+                       'success_retcodes': success_retcodes,
+                       'success_stdout': success_stdout,
+                       'success_stderr': success_stderr})
 
     cret = mod_run_check(cmd_kwargs, onlyif, unless, creates)
     if isinstance(cret, dict):
@@ -924,12 +959,12 @@ def run(
 
     # Wow, we passed the test, run this sucker!
     try:
-        run_cmd = "cmd.run_all" if not root else "cmd.run_chroot"
+        run_cmd = 'cmd.run_all' if not root else 'cmd.run_chroot'
         cmd_all = __salt__[run_cmd](
             cmd=name, timeout=timeout, python_shell=True, **cmd_kwargs
         )
-    except Exception as err:  # pylint: disable=broad-except
-        ret["comment"] = six.text_type(err)
+    except Exception as err:
+        ret['comment'] = six.text_type(err)
         return ret
 
     ret["changes"] = cmd_all
@@ -952,29 +987,29 @@ def run(
     return ret
 
 
-def script(
-    name,
-    source=None,
-    template=None,
-    onlyif=None,
-    unless=None,
-    creates=None,
-    cwd=None,
-    runas=None,
-    shell=None,
-    env=None,
-    stateful=False,
-    umask=None,
-    timeout=None,
-    use_vt=False,
-    output_loglevel="debug",
-    hide_output=False,
-    defaults=None,
-    context=None,
-    success_retcodes=None,
-    **kwargs
-):
-    """
+def script(name,
+           source=None,
+           template=None,
+           onlyif=None,
+           unless=None,
+           creates=None,
+           cwd=None,
+           runas=None,
+           shell=None,
+           env=None,
+           stateful=False,
+           umask=None,
+           timeout=None,
+           use_vt=False,
+           output_loglevel='debug',
+           hide_output=False,
+           defaults=None,
+           context=None,
+           success_retcodes=None,
+           success_stdout=None,
+           success_stderr=None,
+           **kwargs):
+    '''
     Download a script and execute it with specified arguments.
 
     source
@@ -1072,7 +1107,7 @@ def script(
     creates
         Only run if the file specified by ``creates`` do not exist. If you
         specify a list of files then this state will only run if **any** of
-        the files do not exist.
+        the files does not exist.
 
         .. versionadded:: 2014.7.0
 
@@ -1115,7 +1150,20 @@ def script(
 
       .. versionadded:: 2019.2.0
 
-    """
+    success_stdout: This parameter will be allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
+    success_stderr: This parameter will be allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+    '''
     test_name = None
     if not isinstance(stateful, list):
         stateful = stateful is True
@@ -1148,25 +1196,23 @@ def script(
         tmpctx.update(context)
 
     cmd_kwargs = copy.deepcopy(kwargs)
-    cmd_kwargs.update(
-        {
-            "runas": runas,
-            "shell": shell or __grains__["shell"],
-            "env": env,
-            "onlyif": onlyif,
-            "unless": unless,
-            "cwd": cwd,
-            "template": template,
-            "umask": umask,
-            "timeout": timeout,
-            "output_loglevel": output_loglevel,
-            "hide_output": hide_output,
-            "use_vt": use_vt,
-            "context": tmpctx,
-            "saltenv": __env__,
-            "success_retcodes": success_retcodes,
-        }
-    )
+    cmd_kwargs.update({'runas': runas,
+                       'shell': shell or __grains__['shell'],
+                       'env': env,
+                       'onlyif': onlyif,
+                       'unless': unless,
+                       'cwd': cwd,
+                       'template': template,
+                       'umask': umask,
+                       'timeout': timeout,
+                       'output_loglevel': output_loglevel,
+                       'hide_output': hide_output,
+                       'use_vt': use_vt,
+                       'context': tmpctx,
+                       'saltenv': __env__,
+                       'success_retcodes': success_retcodes,
+                       'success_stdout': success_stdout,
+                       'success_stderr': success_stderr})
 
     run_check_cmd_kwargs = {
         "cwd": cwd,

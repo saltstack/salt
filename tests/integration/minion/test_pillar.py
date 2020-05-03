@@ -13,8 +13,13 @@ import shutil
 import subprocess
 import textwrap
 
-import pytest
-import salt.pillar as pillar
+# Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
+from tests.support.helpers import requires_system_grains
+
+# Import salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
@@ -27,7 +32,7 @@ from tests.support.unit import skipIf
 log = logging.getLogger(__name__)
 
 
-TEST_KEY = """\
+TEST_KEY = '''\
 -----BEGIN PGP PRIVATE KEY BLOCK-----
 
 lQOYBFiKrcYBCADAj92+fz20uKxxH0ffMwcryGG9IogkiUi2QrNYilB4hwrY5Qt7
@@ -194,35 +199,34 @@ GPG_PILLAR_DECRYPTED = {
 
 
 class _CommonBase(ModuleCase):
+
     @classmethod
     def setUpClass(cls):
-        cls.pillar_base = os.path.join(
-            RUNTIME_VARS.TMP, "test-decrypt-pillar", "pillar"
-        )
-        cls.top_sls = os.path.join(cls.pillar_base, "top.sls")
-        cls.gpg_sls = os.path.join(cls.pillar_base, "gpg.sls")
+        cls.pillar_base = os.path.join(RUNTIME_VARS.TMP, 'test-decrypt-pillar', 'pillar')
+        cls.top_sls = os.path.join(cls.pillar_base, 'top.sls')
+        cls.gpg_sls = os.path.join(cls.pillar_base, 'gpg.sls')
         cls.default_opts = {
-            "cachedir": os.path.join(RUNTIME_VARS.TMP, "rootdir", "cache"),
-            "optimization_order": [0, 1, 2],
-            "extension_modules": os.path.join(
-                RUNTIME_VARS.TMP, "test-decrypt-pillar", "extmods"
-            ),
-            "pillar_roots": {"base": [cls.pillar_base]},
-            "ext_pillar_first": False,
-            "ext_pillar": [],
-            "decrypt_pillar_default": "gpg",
-            "decrypt_pillar_delimiter": ":",
-            "decrypt_pillar_renderers": ["gpg"],
+            'cachedir': os.path.join(RUNTIME_VARS.TMP, 'rootdir', 'cache'),
+            'optimization_order': [0, 1, 2],
+            'extension_modules': os.path.join(RUNTIME_VARS.TMP,
+                                              'test-decrypt-pillar',
+                                              'extmods'),
+            'pillar_roots': {'base': [cls.pillar_base]},
+            'ext_pillar_first': False,
+            'ext_pillar': [],
+            'decrypt_pillar_default': 'gpg',
+            'decrypt_pillar_delimiter': ':',
+            'decrypt_pillar_renderers': ['gpg'],
         }
         cls.additional_opts = (
-            "conf_file",
-            "file_roots",
-            "state_top",
-            "renderer",
-            "renderer_whitelist",
-            "renderer_blacklist",
+            'conf_file',
+            'file_roots',
+            'state_top',
+            'renderer',
+            'renderer_whitelist',
+            'renderer_blacklist',
         )
-        cls.gpg_homedir = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "gpgkeys")
+        cls.gpg_homedir = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'gpgkeys')
 
     def _build_opts(self, opts):
         ret = copy.deepcopy(self.default_opts)
@@ -232,9 +236,8 @@ class _CommonBase(ModuleCase):
         return ret
 
 
-@pytest.mark.windows_whitelisted
 class BasePillarTest(_CommonBase):
-    """
+    '''
     Tests for pillar decryption
     """
 
@@ -242,10 +245,8 @@ class BasePillarTest(_CommonBase):
     def setUpClass(cls):
         super(BasePillarTest, cls).setUpClass()
         os.makedirs(cls.pillar_base)
-        with salt.utils.files.fopen(cls.top_sls, "w") as fp_:
-            fp_.write(
-                textwrap.dedent(
-                    """\
+        with salt.utils.files.fopen(cls.top_sls, 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
             base:
               'N@mins not L@minion':
                 - ng1
@@ -255,15 +256,11 @@ class BasePillarTest(_CommonBase):
                 )
             )
 
-        with salt.utils.files.fopen(
-            os.path.join(cls.pillar_base, "ng1.sls"), "w"
-        ) as fp_:
-            fp_.write("pillar_from_nodegroup: True")
+        with salt.utils.files.fopen(os.path.join(cls.pillar_base, 'ng1.sls'), 'w') as fp_:
+            fp_.write('pillar_from_nodegroup: True')
 
-        with salt.utils.files.fopen(
-            os.path.join(cls.pillar_base, "ng2.sls"), "w"
-        ) as fp_:
-            fp_.write("pillar_from_nodegroup_with_ghost: True")
+        with salt.utils.files.fopen(os.path.join(cls.pillar_base, 'ng2.sls'), 'w') as fp_:
+            fp_.write('pillar_from_nodegroup_with_ghost: True')
 
     @classmethod
     def tearDownClass(cls):
@@ -301,10 +298,9 @@ class BasePillarTest(_CommonBase):
         self.assertEqual(sub_ret.get("pillar_from_nodegroup"), True)
 
 
-@skipIf(not salt.utils.path.which("gpg"), "GPG is not installed")
-@pytest.mark.windows_whitelisted
+@skipIf(not salt.utils.path.which('gpg'), 'GPG is not installed')
 class DecryptGPGPillarTest(_CommonBase):
-    """
+    '''
     Tests for pillar decryption
     """
 
@@ -315,48 +311,43 @@ class DecryptGPGPillarTest(_CommonBase):
         super(DecryptGPGPillarTest, cls).setUpClass()
         try:
             os.makedirs(cls.gpg_homedir, mode=0o700)
-        except Exception:  # pylint: disable=broad-except
+        except Exception:
             cls.created_gpg_homedir = False
             raise
         else:
             cls.created_gpg_homedir = True
-            cmd_prefix = ["gpg", "--homedir", cls.gpg_homedir]
+            cmd_prefix = ['gpg', '--homedir', cls.gpg_homedir]
 
-            cmd = cmd_prefix + ["--list-keys"]
-            log.debug("Instantiating gpg keyring using: %s", cmd)
-            output = subprocess.Popen(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=False
-            ).communicate()[0]
-            log.debug("Result:\n%s", output)
+            cmd = cmd_prefix + ['--list-keys']
+            log.debug('Instantiating gpg keyring using: %s', cmd)
+            output = subprocess.Popen(cmd,
+                                      stdout=subprocess.PIPE,
+                                      stderr=subprocess.STDOUT,
+                                      shell=False).communicate()[0]
+            log.debug('Result:\n%s', output)
 
-            cmd = cmd_prefix + ["--import", "--allow-secret-key-import"]
-            log.debug("Importing keypair using: %s", cmd)
-            output = subprocess.Popen(
-                cmd,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                shell=False,
-            ).communicate(input=salt.utils.stringutils.to_bytes(TEST_KEY))[0]
-            log.debug("Result:\n%s", output)
+            cmd = cmd_prefix + ['--import', '--allow-secret-key-import']
+            log.debug('Importing keypair using: %s', cmd)
+            output = subprocess.Popen(cmd,
+                                      stdin=subprocess.PIPE,
+                                      stdout=subprocess.PIPE,
+                                      stderr=subprocess.STDOUT,
+                                      shell=False).communicate(input=salt.utils.stringutils.to_bytes(TEST_KEY))[0]
+            log.debug('Result:\n%s', output)
 
             os.makedirs(cls.pillar_base)
-            with salt.utils.files.fopen(cls.top_sls, "w") as fp_:
-                fp_.write(
-                    textwrap.dedent(
-                        """\
+            with salt.utils.files.fopen(cls.top_sls, 'w') as fp_:
+                fp_.write(textwrap.dedent('''\
                 base:
                   '*':
                     - gpg
-                """
-                    )
-                )
-            with salt.utils.files.fopen(cls.gpg_sls, "w") as fp_:
+                '''))
+            with salt.utils.files.fopen(cls.gpg_sls, 'w') as fp_:
                 fp_.write(GPG_PILLAR_YAML)
 
     @classmethod
     def tearDownClass(cls):
-        cmd = ["gpg-connect-agent", "--homedir", cls.gpg_homedir]
+        cmd = ['gpg-connect-agent', '--homedir', cls.gpg_homedir]
         try:
             log.debug("Killing gpg-agent using: %s", cmd)
             output = subprocess.Popen(

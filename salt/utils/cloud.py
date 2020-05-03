@@ -27,9 +27,34 @@ import uuid
 
 import salt.client
 
-# Import salt cloud libs
-import salt.cloud
-import salt.config
+try:
+    import salt.utils.smb
+    HAS_SMB = True
+except ImportError:
+    HAS_SMB = False
+
+try:
+    from pypsexec.client import Client as PsExecClient
+    from pypsexec.scmr import Service as ScmrService
+    from pypsexec.exceptions import SCMRException
+    from smbprotocol.tree import TreeConnect
+    from smbprotocol.exceptions import SMBResponseException
+    logging.getLogger('smbprotocol').setLevel(logging.WARNING)
+    logging.getLogger('pypsexec').setLevel(logging.WARNING)
+    HAS_PSEXEC = True
+except ImportError:
+    HAS_PSEXEC = False
+
+try:
+    import winrm
+    from winrm.exceptions import WinRMTransportError
+    from winrm.exceptions import InvalidCredentialsError
+    from requests.exceptions import ReadTimeout
+    from requests.exceptions import ConnectionError
+
+    HAS_WINRM = True
+except ImportError:
+    HAS_WINRM = False
 
 # Import salt libs
 import salt.crypt
@@ -42,6 +67,7 @@ import salt.utils.event
 import salt.utils.files
 import salt.utils.msgpack
 import salt.utils.path
+import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
@@ -608,12 +634,14 @@ def bootstrap(vm_, opts=None):
     ret["deploy_kwargs"] = event_kwargs
 
     fire_event(
-        "event",
-        "executing deploy script",
-        "salt/cloud/{0}/deploying".format(vm_["name"]),
-        args={"kwargs": event_kwargs},
-        sock_dir=opts.get("sock_dir", os.path.join(__opts__["sock_dir"], "master")),
-        transport=opts.get("transport", "zeromq"),
+        'event',
+        'executing deploy script',
+        'salt/cloud/{0}/deploying'.format(vm_['name']),
+        args={'kwargs': salt.utils.data.simple_types_filter(event_kwargs)},
+        sock_dir=opts.get(
+            'sock_dir',
+            os.path.join(__opts__['sock_dir'], 'master')),
+        transport=opts.get('transport', 'zeromq')
     )
 
     if inline_script_config and deploy_config is False:
@@ -1026,8 +1054,8 @@ def wait_for_psexecsvc(host, port, username, password, timeout=900):
         if time.time() - start > timeout:
             return False
         log.debug(
-            "Retrying psexec connection to host {0} on port {1} "
-            "(try {2})".format(host, port, try_count)
+            'Retrying psexec connection to host %s on port %s (try %s)',
+            host, port, try_count
         )
         time.sleep(1)
 
@@ -1068,7 +1096,25 @@ def wait_for_winrm(
                 return s
             log.debug("Return code was %s", r.status_code)
         except WinRMTransportError as exc:
-            log.debug("Caught exception in wait_for_winrm: %s", exc)
+            log.debug('Caught exception in wait_for_winrm: %s', exc)
+        except InvalidCredentialsError as exc:
+            log.error((
+                'Caught Invalid Credentials error in wait_for_winrm.  '
+                'You may have an incorrect username/password, '
+                'the new minion\'s WinRM configuration is not correct, '
+                'the customization spec has not finished, '
+                'or we are waiting for an account rename policy to take effect.  '
+                'Connection attempts will continue to be made until the WinRM timeout '
+                'has been exceeded.'
+            ))
+        except ReadTimeout as exc:
+            log.error('Caught Read Timeout while waiting for winrm.')
+        except ConnectionError as exc:
+            log.error((
+                'Caught Connection Error while waiting for winrm.  '
+                'Connection attempts will continue to be made until the WinRM timeout '
+                'has been exceeded.'
+            ))
 
         if time.time() - start > timeout:
             log.error("WinRM connection timed out: %s", timeout)
@@ -1534,9 +1580,9 @@ def deploy_script(
                         "Can't create temporary " "directory in {0} !".format(tmp_dir)
                     )
             if sudo:
-                comps = tmp_dir.lstrip("/").rstrip("/").split("/")
-                if len(comps) > 0:
-                    if len(comps) > 1 or comps[0] != "tmp":
+                comps = tmp_dir.lstrip('/').rstrip('/').split('/')
+                if comps:
+                    if len(comps) > 1 or comps[0] != 'tmp':
                         ret = root_cmd(
                             'chown {0} "{1}"'.format(username, tmp_dir),
                             tty,
@@ -2087,10 +2133,8 @@ def filter_event(tag, data, defaults):
 def fire_event(key, msg, tag, sock_dir, args=None, transport="zeromq"):
     """
     Fire deploy action
-    """
-    with salt.utils.event.get_event(
-        "master", sock_dir, transport, listen=False
-    ) as event:
+    '''
+    with salt.utils.event.get_event('master', sock_dir, transport, listen=False, keep_loop=True) as event:
         try:
             event.fire_event(msg, tag)
         except ValueError:
@@ -2400,8 +2444,10 @@ def win_cmd(command, **kwargs):
 def winrm_cmd(session, command, flags, **kwargs):
     """
     Wrapper for commands to be run against Windows boxes using WinRM.
-    """
-    log.debug("Executing WinRM command: %s %s", command, flags)
+    '''
+    log.debug('Executing WinRM command: %s %s', command, flags)
+    # rebuild the session to ensure we haven't timed out
+    session.protocol.transport.build_session()
     r = session.run_cmd(command, flags)
     return r.status_code
 
@@ -2490,8 +2536,8 @@ def check_auth(name, sock_dir=None, queue=None, timeout=300):
     """
     This function is called from a multiprocess instance, to wait for a minion
     to become available to receive salt commands
-    """
-    with salt.utils.event.SaltEvent("master", sock_dir, listen=True) as event:
+    '''
+    with salt.utils.event.SaltEvent('master', sock_dir, listen=True) as event:
         starttime = time.mktime(time.localtime())
         newtimeout = timeout
         log.debug("In check_auth, waiting for %s to become available", name)
@@ -2500,10 +2546,10 @@ def check_auth(name, sock_dir=None, queue=None, timeout=300):
             ret = event.get_event(full=True)
             if ret is None:
                 continue
-            if ret["tag"] == "salt/minion/{0}/start".format(name):
+            if ret['tag'] == 'salt/minion/{0}/start'.format(name):
                 queue.put(name)
                 newtimeout = 0
-                log.debug("Minion %s is ready to receive commands", name)
+                log.debug('Minion %s is ready to receive commands', name)
 
 
 def ip_to_int(ip):
@@ -2743,8 +2789,8 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
         mode = "rb" if six.PY3 else "r"
         with salt.utils.files.fopen(index_file, mode) as fh_:
             index = salt.utils.data.decode(
-                salt.utils.msgpack.msgpack.load(fh_, encoding=MSGPACK_ENCODING)
-            )
+                salt.utils.msgpack.msgpack.load(
+                    fh_, encoding=MSGPACK_ENCODING))
     else:
         index = {}
 
@@ -2781,8 +2827,7 @@ def cachedir_index_del(minion_id, base=None):
         mode = "rb" if six.PY3 else "r"
         with salt.utils.files.fopen(index_file, mode) as fh_:
             index = salt.utils.data.decode(
-                salt.utils.msgpack.load(fh_, encoding=MSGPACK_ENCODING)
-            )
+                salt.utils.msgpack.load(fh_, encoding=MSGPACK_ENCODING))
     else:
         return
 
@@ -2872,14 +2917,13 @@ def change_minion_cachedir(
     fname = "{0}.p".format(minion_id)
     path = os.path.join(base, cachedir, fname)
 
-    with salt.utils.files.fopen(path, "r") as fh_:
+    with salt.utils.files.fopen(path, 'r') as fh_:
         cache_data = salt.utils.data.decode(
-            salt.utils.msgpack.load(fh_, encoding=MSGPACK_ENCODING)
-        )
+            salt.utils.msgpack.load(fh_, encoding=MSGPACK_ENCODING))
 
     cache_data.update(data)
 
-    with salt.utils.files.fopen(path, "w") as fh_:
+    with salt.utils.files.fopen(path, 'w') as fh_:
         salt.utils.msgpack.dump(cache_data, fh_, encoding=MSGPACK_ENCODING)
 
 
@@ -2955,8 +2999,7 @@ def list_cache_nodes_full(opts=None, provider=None, base=None):
                 mode = "rb" if six.PY3 else "r"
                 with salt.utils.files.fopen(fpath, mode) as fh_:
                     minions[driver][prov][minion_id] = salt.utils.data.decode(
-                        salt.utils.msgpack.load(fh_, encoding=MSGPACK_ENCODING)
-                    )
+                        salt.utils.msgpack.load(fh_, encoding=MSGPACK_ENCODING))
 
     return minions
 
@@ -3205,8 +3248,7 @@ def diff_node_cache(prov_dir, node, new_data, opts):
     with salt.utils.files.fopen(path, "r") as fh_:
         try:
             cache_data = salt.utils.data.decode(
-                salt.utils.msgpack.load(fh_, encoding=MSGPACK_ENCODING)
-            )
+                salt.utils.msgpack.load(fh_, encoding=MSGPACK_ENCODING))
         except ValueError:
             log.warning("Cache for %s was corrupt: Deleting", node)
             cache_data = {}

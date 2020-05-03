@@ -10,7 +10,10 @@ import sys
 import tempfile
 import textwrap
 
-import salt.config
+# Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.helpers import with_tempdir
+from tests.support.unit import TestCase
 
 # Import Salt libs
 import salt.loader

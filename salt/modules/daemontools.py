@@ -235,7 +235,7 @@ def enabled(name, **kwargs):
         salt '*' daemontools.enabled <service name>
     """
     if not available(name):
-        log.error("Service %s not found", name)
+        log.error('Service %s not found', name)
         return False
 
     run_file = os.path.join(SERVICE_DIR, name, "run")

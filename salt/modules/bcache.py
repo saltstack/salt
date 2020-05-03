@@ -592,8 +592,8 @@ def device(dev, stats=False, config=False, internals=False, superblock=False):
 
     # ---------------- Internals ----------------
     if internals:
-        interres = result.pop("inter_ro", {})
-        interres.update(result.pop("inter_rw", {}))
+        interres = result.pop('inter_ro', {})
+        interres.update(result.pop('inter_rw', {}))
         if interres:
             for key in interres:
                 if key.startswith("internal"):

@@ -23,7 +23,10 @@ from tests.support.helpers import (
     skip_if_not_root,
 )
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.unit import skipIf
+
+# Import Salt libs
+import salt.utils.files
+import salt.utils.platform
 
 try:
     import grp
@@ -136,12 +139,9 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         else:
             self.assertEqual(group_name, self.user_name)
 
-    @skipIf(
-        salt.utils.platform.is_windows(), "windows minion does not support usergroup"
-    )
-    @skipIf(True, "SLOWTEST skip")
+    @skipIf(salt.utils.platform.is_windows(), 'windows minion does not support usergroup')
     def test_user_present_usergroup_false(self):
-        """
+        '''
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
         This is a unit test, NOT an integration test. We create a group of the
         same name as the user beforehand, so it should all run smoothly.
@@ -150,13 +150,32 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         # user
         ret = self.run_state("group.present", name=self.user_name)
         self.assertSaltTrueReturn(ret)
-        ret = self.run_state(
-            "user.present",
-            name=self.user_name,
-            gid=self.user_name,
-            usergroup=False,
-            home=self.user_home,
-        )
+
+        ret = self.run_state('user.present', name=self.user_name,
+                             gid=self.user_name, usergroup=False,
+                             home=self.user_home)
+        self.assertSaltTrueReturn(ret)
+
+        ret = self.run_function('user.info', [self.user_name])
+        self.assertReturnNonEmptySaltType(ret)
+        group_name = grp.getgrgid(ret['gid']).gr_name
+
+        if not salt.utils.platform.is_darwin():
+            self.assertTrue(os.path.isdir(self.user_home))
+        self.assertEqual(group_name, self.user_name)
+        ret = self.run_state('user.absent', name=self.user_name)
+        self.assertSaltTrueReturn(ret)
+        ret = self.run_state('group.absent', name=self.user_name)
+        self.assertSaltTrueReturn(ret)
+
+    @skipIf(salt.utils.platform.is_windows(), 'windows minion does not support usergroup')
+    def test_user_present_usergroup(self):
+        '''
+        This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
+        This is a unit test, NOT an integration test.
+        '''
+        ret = self.run_state('user.present', name=self.user_name,
+                             usergroup=True, home=self.user_home)
         self.assertSaltTrueReturn(ret)
         ret = self.run_function("user.info", [self.user_name])
         self.assertReturnNonEmptySaltType(ret)
@@ -308,12 +327,41 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         user_info = self.run_function("user.info", [self.user_name])
         self.assertTrue(os.path.exists(user_info["home"]))
 
+    def test_user_present_same_password(self):
+        ret = self.run_state('user.present', name=USER, password='P@ssW0rd')
+        self.assertSaltTrueReturn(ret)
+
+        ret = self.run_state('user.present', name=USER, password='P@ssW0rd')
+        self.assertInSaltComment('up to date', ret)
+
+    def test_user_present_new_password_test_true(self):
+        ret = self.run_state('user.present', name=USER, password='P@ssW0rd')
+        self.assertSaltTrueReturn(ret)
+
+        ret = self.run_state('user.present',
+                             name=USER,
+                             password='P@ssW0rd1!',
+                             test=True)
+        self.assertSaltNoneReturn(ret)
+        self.assertSaltStateChangesEqual(ret, {})
+        self.assertInSaltComment('passwd: XXX-REDACTED-XXX', ret)
+
+    def test_user_present_new_password(self):
+        ret = self.run_state('user.present', name=USER, password='P@ssW0rd')
+        self.assertSaltTrueReturn(ret)
+
+        ret = self.run_state('user.present', name=USER, password='P@ssW0rd1!')
+        self.assertSaltTrueReturn(ret)
+        self.assertSaltStateChangesEqual(ret, {'passwd': 'XXX-REDACTED-XXX'})
+
     def tearDown(self):
         if salt.utils.platform.is_darwin():
             check_user = self.run_function("user.list_users")
             if USER in check_user:
-                del_user = self.run_function("user.delete", [USER], remove=True)
-        self.assertSaltTrueReturn(self.run_state("user.absent", name=self.user_name))
+                self.run_function('user.delete', [USER], remove=True)
+        self.assertSaltTrueReturn(
+            self.run_state('user.absent', name=self.user_name)
+        )
 
 
 @destructiveTest

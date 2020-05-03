@@ -21,19 +21,17 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    """
+    '''
     Only works on OpenBSD and FreeBSD for now; other systems with pf (macOS,
     FreeBSD, etc) need to be tested before enabling them.
-    """
-    tested_oses = ["FreeBSD", "OpenBSD"]
-    if __grains__["os"] in tested_oses and salt.utils.path.which("pfctl"):
+    '''
+    tested_oses = ['FreeBSD', 'OpenBSD']
+    if __grains__.get('os') in tested_oses and salt.utils.path.which('pfctl'):
         return True
 
-    return (
-        False,
-        "The pf execution module cannot be loaded: either the OS ({}) is not "
-        "tested or the pfctl binary was not found".format(__grains__["os"]),
-    )
+    return (False, 'The pf execution module cannot be loaded: either the '
+            'OS (' + __grains__.get('os', 'None') + ') is not tested or the pfctl binary '
+            'was not found')
 
 
 def enable():
@@ -116,20 +114,11 @@ def loglevel(level):
     # always made a change.
     ret = {"changes": True}
 
-    myos = __grains__["os"]
-    if myos == "FreeBSD":
-        all_levels = ["none", "urgent", "misc", "loud"]
+    myos = __grains__['os']
+    if myos == 'FreeBSD':
+        all_levels = ['none', 'urgent', 'misc', 'loud']
     else:
-        all_levels = [
-            "emerg",
-            "alert",
-            "crit",
-            "err",
-            "warning",
-            "notice",
-            "info",
-            "debug",
-        ]
+        all_levels = ['emerg', 'alert', 'crit', 'err', 'warning', 'notice', 'info', 'debug']
     if level not in all_levels:
         raise SaltInvocationError("Unknown loglevel: {0}".format(level))
 

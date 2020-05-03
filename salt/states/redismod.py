@@ -106,9 +106,8 @@ def absent(name, keys=None, **connection_args):
             ret["result"] = False
             ret["comment"] = "`keys` not formed as a list type"
             return ret
-        delete_list = [
-            key for key in keys if __salt__["redis.exists"](key, **connection_args)
-        ]
+        delete_list = [key for key in keys
+                       if __salt__['redis.exists'](key, **connection_args)]
         if not delete_list:
             return ret
         __salt__["redis.delete"](*delete_list, **connection_args)

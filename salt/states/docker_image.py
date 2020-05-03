@@ -276,8 +276,8 @@ def present(
         # Map any if existing args from kwargs into the build_args dictionary
         build_args = dict(list(zip(argspec.args, argspec.defaults)))
         for k in build_args:
-            if k in kwargs.get("kwargs", {}):
-                build_args[k] = kwargs.get("kwargs", {}).get(k)
+            if k in kwargs.get('kwargs', {}):
+                build_args[k] = kwargs.get('kwargs', {}).get(k)
         try:
             # map values passed from the state to the build args
             build_args["path"] = build

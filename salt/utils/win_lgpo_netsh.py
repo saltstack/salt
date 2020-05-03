@@ -120,10 +120,8 @@ def _netsh_file(content):
     ) as fp:
         fp.write(content)
     try:
-        log.debug("{0}:\n{1}".format(fp.name, content))
-        return salt.modules.cmdmod.run(
-            "netsh -f {0}".format(fp.name), python_shell=True
-        )
+        log.debug('%s:\n%s', fp.name, content)
+        return salt.modules.cmdmod.run('netsh -f {0}'.format(fp.name), python_shell=True)
     finally:
         os.remove(fp.name)
 

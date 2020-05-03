@@ -9,7 +9,6 @@ from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 
 
-@pytest.mark.windows_whitelisted
 class StdTest(ModuleCase):
     """
     Test standard client calls
@@ -82,10 +81,13 @@ class StdTest(ModuleCase):
         """
         terrible_yaml_string = 'foo: ""\n# \''
         ret = self.client.cmd_full_return(
-            "minion",
-            "test.arg_type",
-            ["a", 1],
-            kwarg={"outer": {"a": terrible_yaml_string}, "inner": "value"},
+            'minion',
+            'test.arg_type',
+            ['a', 1],
+            kwarg={
+                'outer': {'a': terrible_yaml_string},
+                'inner': 'value'
+            },
             timeout=self.TIMEOUT,
         )
         data = ret["minion"]["ret"]
@@ -97,24 +99,31 @@ class StdTest(ModuleCase):
     @skipIf(True, "SLOWTEST skip")
     def test_full_return_kwarg(self):
         ret = self.client.cmd(
-            "minion", "test.ping", full_return=True, timeout=self.TIMEOUT,
+            'minion', 'test.ping', full_return=True, timeout=self.TIMEOUT,
         )
         for mid, data in ret.items():
             self.assertIn("retcode", data)
 
     @skipIf(True, "SLOWTEST skip")
     def test_cmd_arg_kwarg_parsing(self):
-        ret = self.client.cmd(
-            "minion",
-            "test.arg_clean",
-            arg=["foo", "bar=off", "baz={qux: 123}"],
-            kwarg={"quux": "Quux"},
+        ret = self.client.cmd('minion', 'test.arg_clean',
+            arg=[
+                'foo',
+                'bar=off',
+                'baz={qux: 123}'
+            ],
+            kwarg={
+                'quux': 'Quux',
+            },
             timeout=self.TIMEOUT,
         )
-        self.assertEqual(
-            ret["minion"],
-            {
-                "args": ["foo"],
-                "kwargs": {"bar": False, "baz": {"qux": 123}, "quux": "Quux"},
+        self.assertEqual(ret['minion'], {
+            'args': ['foo'],
+            'kwargs': {
+                'bar': False,
+                'baz': {
+                    'qux': 123,
+                },
+                'quux': 'Quux',
             },
         )

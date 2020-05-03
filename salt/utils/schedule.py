@@ -227,8 +227,9 @@ class Schedule(object):
         # NOTE--jid_include defaults to True, thus if it is missing from the data
         # dict we treat it like it was there and is True
 
-        # Check if we're able to run
-        if "run" not in data or not data["run"]:
+        # Check if we're able to run, default to False
+        # in case the `run` value is not present.
+        if not data['run']:
             return data
         if "jid_include" not in data or data["jid_include"]:
             jobcount = 0
@@ -482,25 +483,27 @@ class Schedule(object):
             func = data["fun"]
         else:
             func = None
-        if func not in self.functions:
-            log.info("Invalid function: %s in scheduled job %s.", func, name)
+        if not isinstance(func, list):
+            func = [func]
+        for _func in func:
+            if _func not in self.functions:
+                log.error(
+                    'Invalid function: %s in scheduled job %s.',
+                    _func, name
+                )
 
-        if "name" not in data:
-            data["name"] = name
-
-        # Assume run should be True until we check max_running
-        if "run" not in data:
-            data["run"] = True
-
-        if not self.standalone:
-            data = self._check_max_running(
-                func, data, self.opts, datetime.datetime.now()
-            )
+        if 'name' not in data:
+            data['name'] = name
+        if 'run' not in data:
+            data['run'] = True
+        log.info('Running Job: %s', name)
 
         # Grab run, assume True
-        if data.get("run"):
-            log.info("Running Job: %s", name)
-            self._run_job(func, data)
+        run = data.get('run', True)
+        if run:
+            now = datetime.datetime.now()
+            self._run_job(_func, data)
+            data['_last_run'] = now
 
     def enable_schedule(self, persist=True):
         """
@@ -509,30 +512,22 @@ class Schedule(object):
         self.opts["schedule"]["enabled"] = True
 
         # Fire the complete event back along with updated list of schedule
-        with salt.utils.event.get_event("minion", opts=self.opts, listen=False) as evt:
-            evt.fire_event(
-                {"complete": True, "schedule": self._get_schedule()},
-                tag="/salt/minion/minion_schedule_enabled_complete",
-            )
+        with salt.utils.event.get_event('minion', opts=self.opts, listen=False) as evt:
+            evt.fire_event({'complete': True,
+                            'schedule': self._get_schedule()},
+                           tag='/salt/minion/minion_schedule_enabled_complete')
 
-        if persist:
-            self.persist()
-
-    def disable_schedule(self, persist=True):
-        """
+    def disable_schedule(self):
+        '''
         Disable the scheduler.
         """
         self.opts["schedule"]["enabled"] = False
 
         # Fire the complete event back along with updated list of schedule
-        with salt.utils.event.get_event("minion", opts=self.opts, listen=False) as evt:
-            evt.fire_event(
-                {"complete": True, "schedule": self._get_schedule()},
-                tag="/salt/minion/minion_schedule_disabled_complete",
-            )
-
-        if persist:
-            self.persist()
+        with salt.utils.event.get_event('minion', opts=self.opts, listen=False) as evt:
+            evt.fire_event({'complete': True,
+                            'schedule': self._get_schedule()},
+                           tag='/salt/minion/minion_schedule_disabled_complete')
 
     def reload(self, schedule):
         """
@@ -658,6 +653,34 @@ class Schedule(object):
 
         schedule = self._get_schedule()
         return schedule.get(name, {})
+
+    def job_running(self, data):
+        '''
+        Return the schedule data structure
+        '''
+        # Check to see if there are other jobs with this
+        # signature running.  If there are more than maxrunning
+        # jobs present then don't start another.
+        # If jid_include is False for this job we can ignore all this
+        # NOTE--jid_include defaults to True, thus if it is missing from the data
+        # dict we treat it like it was there and is True
+
+        # Check if we're able to run, default to False
+        # in case the `run` value is not present.
+        running = False
+        if 'jid_include' not in data or data['jid_include']:
+            if self.opts['__role'] == 'master':
+                current_jobs = salt.utils.master.get_running_jobs(self.opts)
+            else:
+                current_jobs = salt.utils.minion.running(self.opts)
+            for job in current_jobs:
+                if 'schedule' in job:
+                    log.info('=== data %s ===', data)
+                    log.info('=== job %s ===', job)
+                    if data['name'] in job['schedule'] \
+                            and salt.utils.process.os_is_running(job['pid']):
+                        running = True
+        return running
 
     def handle_func(self, multiprocessing_enabled, func, data):
         """
@@ -1020,38 +1043,32 @@ class Schedule(object):
                 log.error(data["_error"])
                 return
 
-            if not isinstance(data["when"], list):
-                _when_data = [data["when"]]
+            if not isinstance(data['when'], list):
+                _when_data = [data['when']]
             else:
-                _when_data = data["when"]
+                _when_data = data['when']
 
             _when = []
             for i in _when_data:
-                if (
-                    "pillar" in self.opts
-                    and "whens" in self.opts["pillar"]
-                    and i in self.opts["pillar"]["whens"]
-                ):
-                    if not isinstance(self.opts["pillar"]["whens"], dict):
-                        data["_error"] = (
-                            'Pillar item "whens" '
-                            "must be a dict. "
-                            "Ignoring job {0}.".format(data["name"])
-                        )
-                        log.error(data["_error"])
+                if ('pillar' in self.opts and 'whens' in self.opts['pillar'] and
+                        i in self.opts['pillar']['whens']):
+                    if not isinstance(self.opts['pillar']['whens'],
+                                      dict):
+                        data['_error'] = ('Pillar item "whens" '
+                                          'must be a dict. '
+                                          'Ignoring job {0}.'.format(data['name']))
+                        log.error(data['_error'])
                         return
-                    when_ = self.opts["pillar"]["whens"][i]
-                elif (
-                    "whens" in self.opts["grains"] and i in self.opts["grains"]["whens"]
-                ):
-                    if not isinstance(self.opts["grains"]["whens"], dict):
-                        data["_error"] = (
-                            'Grain "whens" must be a dict. '
-                            "Ignoring job {0}.".format(data["name"])
-                        )
-                        log.error(data["_error"])
+                    when_ = self.opts['pillar']['whens'][i]
+                elif ('whens' in self.opts['grains'] and
+                      i in self.opts['grains']['whens']):
+                    if not isinstance(self.opts['grains']['whens'],
+                                      dict):
+                        data['_error'] = ('Grain "whens" must be a dict. '
+                                          'Ignoring job {0}.'.format(data['name']))
+                        log.error(data['_error'])
                         return
-                    when_ = self.opts["grains"]["whens"][i]
+                    when_ = self.opts['grains']['whens'][i]
                 else:
                     when_ = i
 
@@ -1059,17 +1076,15 @@ class Schedule(object):
                     try:
                         when_ = dateutil_parser.parse(when_)
                     except ValueError:
-                        data["_error"] = (
-                            "Invalid date string {0}. "
-                            "Ignoring job {1}.".format(i, data["name"])
-                        )
-                        log.error(data["_error"])
+                        data['_error'] = ('Invalid date string {0}. '
+                                          'Ignoring job {1}.'.format(i, data['name']))
+                        log.error(data['_error'])
                         return
 
                 _when.append(when_)
 
-            if data["_splay"]:
-                _when.append(data["_splay"])
+            if data['_splay']:
+                _when.append(data['_splay'])
 
             # Sort the list of "whens" from earlier to later schedules
             _when.sort()
@@ -1087,22 +1102,17 @@ class Schedule(object):
                 # last scheduled time in the past.
                 when = _when[0]
 
-                if (
-                    when < now - loop_interval
-                    and not data.get("_run", False)
-                    and not run
-                    and not data["_splay"]
-                ):
-                    data["_next_fire_time"] = None
-                    data["_continue"] = True
+                if when < now - loop_interval and \
+                        not data.get('_run', False) and \
+                        not data.get('run', False) and \
+                        not data['_splay']:
+                    data['_next_fire_time'] = None
+                    data['_continue'] = True
                     return
 
-                if "_run" not in data:
+                if '_run' not in data:
                     # Prevent run of jobs from the past
-                    data["_run"] = bool(when >= now - loop_interval)
-
-                if not data["_next_fire_time"]:
-                    data["_next_fire_time"] = when
+                    data['_run'] = bool(when >= now - loop_interval)
 
                 data["_next_scheduled_fire_time"] = when
 
@@ -1110,9 +1120,15 @@ class Schedule(object):
                     data["_next_fire_time"] = when
                     data["_run"] = True
 
-            elif not data.get("_run", False):
-                data["_next_fire_time"] = None
-                data["_continue"] = True
+                if data['_next_fire_time'] < when and \
+                        not run and \
+                        not data['_run']:
+                    data['_next_fire_time'] = when
+                    data['_run'] = True
+
+            elif not data.get('_run', False):
+                data['_next_fire_time'] = None
+                data['_continue'] = True
 
         def _handle_cron(data, loop_interval):
             """
@@ -1466,8 +1482,14 @@ class Schedule(object):
                 func = data["fun"]
             else:
                 func = None
-            if func not in self.functions:
-                log.info("Invalid function: %s in scheduled job %s.", func, job_name)
+            if not isinstance(func, list):
+                func = [func]
+            for _func in func:
+                if _func not in self.functions:
+                    log.info(
+                        'Invalid function: %s in scheduled job %s.',
+                        _func, job_name
+                    )
 
             if "_next_fire_time" not in data:
                 data["_next_fire_time"] = None
@@ -1667,6 +1689,15 @@ class Schedule(object):
 
                     run = data["run"]
 
+                # If args is a list and less than the number of functions
+                # run is set to False.
+                if 'args' in data and isinstance(data['args'], list):
+                    if len(data['args']) < len(func):
+                        data['_error'] = ('Number of arguments is less than '
+                                          'the number of functions. Ignoring job.')
+                        log.error(data['_error'])
+                        run = False
+
             # If the job item has continue, then we set run to False
             # so the job does not run but we still get the important
             # information calculated, eg. _next_fire_time
@@ -1773,24 +1804,21 @@ class Schedule(object):
             else:
                 thread_cls = threading.Thread
 
-            if multiprocessing_enabled:
-                with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
-                    proc = thread_cls(
-                        target=self.handle_func,
-                        args=(multiprocessing_enabled, func, data),
-                    )
-                    # Reset current signals before starting the process in
-                    # order not to inherit the current signal handlers
+            for i, _func in enumerate(func):
+                _data = copy.deepcopy(data)
+                if 'args' in _data and isinstance(_data['args'], list):
+                    _data['args'] = _data['args'][i]
+
+                if multiprocessing_enabled:
+                    with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
+                        proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, _func, _data))
+                        # Reset current signals before starting the process in
+                        # order not to inherit the current signal handlers
+                        proc.start()
+                    proc.join()
+                else:
+                    proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, _func, _data))
                     proc.start()
-                    proc.name = "{}-Schedule-{}".format(proc.name, data["name"])
-                    self._subprocess_list.add(proc)
-            else:
-                proc = thread_cls(
-                    target=self.handle_func, args=(multiprocessing_enabled, func, data)
-                )
-                proc.start()
-                proc.name = "{}-Schedule-{}".format(proc.name, data["name"])
-                self._subprocess_list.add(proc)
         finally:
             if multiprocessing_enabled and salt.utils.platform.is_windows():
                 # Restore our function references.

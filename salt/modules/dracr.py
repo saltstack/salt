@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-"""
-Manage Dell DRAC.
+'''
+Manage Dell DRAC
 
 .. versionadded:: 2015.8.2
 """
@@ -15,7 +15,8 @@ import re
 import salt.utils.path
 
 # Import Salt libs
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltException
+import salt.utils.path
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -54,7 +55,7 @@ def __parse_drac(output):
         if i.strip().endswith(":") and "=" not in i:
             section = i[0:-1]
             drac[section] = {}
-        if i.rstrip() and "=" in i:
+        if i.rstrip() and '=' in i:
             if section in drac:
                 drac[section].update(dict([[prop.strip() for prop in i.split("=")]]))
             else:
@@ -147,7 +148,112 @@ def __execute_ret(
     return cmd
 
 
-def get_dns_dracname(host=None, admin_username=None, admin_password=None):
+def get_property(host=None, admin_username=None, admin_password=None, property=None):
+    '''
+    .. versionadded:: Fluorine
+
+    Return specific property
+
+    host
+        The chassis host.
+
+    admin_username
+        The username used to access the chassis.
+
+    admin_password
+        The password used to access the chassis.
+
+    property:
+        The property which should be get.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt dell dracr.get_property property=System.ServerOS.HostName
+    '''
+    if property is None:
+        raise SaltException('No property specified!')
+    ret = __execute_ret('get \'{0}\''.format(property), host=host,
+                        admin_username=admin_username,
+                        admin_password=admin_password)
+    return ret
+
+
+def set_property(host=None, admin_username=None, admin_password=None, property=None, value=None):
+    '''
+    .. versionadded:: Fluorine
+
+    Set specific property
+
+    host
+        The chassis host.
+
+    admin_username
+        The username used to access the chassis.
+
+    admin_password
+        The password used to access the chassis.
+
+    property:
+        The property which should be set.
+
+    value:
+        The value which should be set to property.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt dell dracr.set_property property=System.ServerOS.HostName value=Pretty-server
+    '''
+    if property is None:
+        raise SaltException('No property specified!')
+    elif value is None:
+        raise SaltException('No value specified!')
+    ret = __execute_ret('set \'{0}\' \'{1}\''.format(property, value), host=host,
+                        admin_username=admin_username,
+                        admin_password=admin_password)
+    return ret
+
+
+def ensure_property_set(host=None, admin_username=None, admin_password=None, property=None, value=None):
+    '''
+    .. versionadded:: Fluorine
+
+    Ensure that property is set to specific value
+
+    host
+        The chassis host.
+
+    admin_username
+        The username used to access the chassis.
+
+    admin_password
+        The password used to access the chassis.
+
+    property:
+        The property which should be set.
+
+    value:
+        The value which should be set to property.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt dell dracr.ensure_property_set property=System.ServerOS.HostName value=Pretty-server
+    '''
+    ret = get_property(host, admin_username, admin_password, property)
+    if ret['stdout'] == value:
+        return True
+
+    ret = set_property(host, admin_username, admin_password, property, value)
+    return ret
+
+
+def get_dns_dracname(host=None,
+                     admin_username=None, admin_password=None):
 
     ret = __execute_ret(
         "get iDRAC.NIC.DNSRacName",

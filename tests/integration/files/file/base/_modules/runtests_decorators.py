@@ -10,8 +10,8 @@ import time
 import salt.utils.decorators
 from tests.support.runtests import RUNTIME_VARS
 
-EXIT_CODE_SH = os.path.join(RUNTIME_VARS.BASE_FILES, "exit_code.sh")
-EXIT_CODE_CMD = os.path.join(RUNTIME_VARS.BASE_FILES, "exit_code.cmd")
+EXIT_CODE_SH = os.path.join(RUNTIME_VARS.BASE_FILES, 'exit_code.sh')
+EXIT_CODE_CMD = os.path.join(RUNTIME_VARS.BASE_FILES, 'exit_code.cmd')
 
 
 def _exit_code(code):

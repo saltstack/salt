@@ -251,7 +251,7 @@ class BotoS3BucketStateTestCaseBase(TestCase, LoaderModuleMockMixin):
     @classmethod
     def setUpClass(cls):
         cls.opts = salt.config.DEFAULT_MINION_OPTS.copy()
-        cls.opts["grains"] = salt.loader.grains(cls.opts)
+        cls.opts['grains'] = salt.loader.grains(cls.opts)
 
     @classmethod
     def tearDownClass(cls):

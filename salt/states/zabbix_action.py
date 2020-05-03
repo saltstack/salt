@@ -187,12 +187,8 @@ def present(name, params, **kwargs):
             }
         else:
             # ACTION.CREATE
-            action_create = __salt__["zabbix.run_query"](
-                "action.create", input_params, **kwargs
-            )
-            log.info(
-                "Zabbix Action: action.create result: %s", six.text_type(action_create)
-            )
+            action_create = __salt__['zabbix.run_query']('action.create', input_params, **kwargs)
+            log.info('Zabbix Action: action.create result: %s', action_create)
 
             if action_create:
                 ret["result"] = True

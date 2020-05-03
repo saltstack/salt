@@ -385,7 +385,7 @@ def run(**kwargs):
         "result": None,
     }
 
-    functions = [func for func in kwargs if "." in func]
+    functions = [func for func in kwargs if '.' in func]
     missing = []
     tests = []
     for func in functions:
@@ -454,17 +454,51 @@ def _call_function(name, returner=None, func_args=None, func_kwargs=None):
     """
     Calls a function from the specified module.
 
-    :param str name: module.function of the function to call
-    :param dict returner: Returner specification to use.
-    :param list func_args: List with args and dicts of kwargs (one dict per kwarg)
-        to pass to the function.
-    :return: Result of the function call
-    """
-    if func_args is None:
-        func_args = []
+    :param name:
+    :param kwargs:
+    :return:
+    '''
+    argspec = salt.utils.args.get_function_argspec(__salt__[name])
 
-    if func_kwargs is None:
-        func_kwargs = {}
+    # func_kw is initialized to a dictionary of keyword arguments the function to be run accepts
+    func_kw = dict(zip(argspec.args[-len(argspec.defaults or []):],  # pylint: disable=incompatible-py3-code
+                   argspec.defaults or []))
+
+    # func_args is initialized to a list of positional arguments that the function to be run accepts
+    func_args = argspec.args[:len(argspec.args or []) - len(argspec.defaults or [])]
+    arg_type, kw_to_arg_type, na_type, kw_type = [], {}, {}, False
+    for funcset in reversed(kwargs.get('func_args') or []):
+        if not isinstance(funcset, dict):
+            # We are just receiving a list of args to the function to be run, so just append
+            # those to the arg list that we will pass to the func.
+            arg_type.append(funcset)
+        else:
+            for kwarg_key in six.iterkeys(funcset):
+                # We are going to pass in a keyword argument. The trick here is to make certain
+                # that if we find that in the *args* list that we pass it there and not as a kwarg
+                if kwarg_key in func_args:
+                    kw_to_arg_type[kwarg_key] = funcset[kwarg_key]
+                    continue
+                else:
+                    # Otherwise, we're good and just go ahead and pass the keyword/value pair into
+                    # the kwargs list to be run.
+                    func_kw.update(funcset)
+    arg_type.reverse()
+    for arg in func_args:
+        if arg in kw_to_arg_type:
+            arg_type.append(kw_to_arg_type[arg])
+    _exp_prm = len(argspec.args or []) - len(argspec.defaults or [])
+    _passed_prm = len(arg_type)
+    missing = []
+    if na_type and _exp_prm > _passed_prm:
+        for arg in argspec.args:
+            if arg not in func_kw:
+                missing.append(arg)
+    if missing:
+        raise SaltInvocationError('Missing arguments: {0}'.format(', '.join(missing)))
+    elif _exp_prm > _passed_prm:
+        raise SaltInvocationError('Function expects {0} parameters, got only {1}'.format(
+            _exp_prm, _passed_prm))
 
     mret = salt.utils.functools.call_function(__salt__[name], *func_args, **func_kwargs)
     if returner is not None:

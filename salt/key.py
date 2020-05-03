@@ -6,7 +6,8 @@ used to manage salt keys directly without interfacing with the CLI.
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-
+import os
+import shutil
 import fnmatch
 import logging
 import os
@@ -34,8 +35,6 @@ import salt.utils.user
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves import input, zip_longest
-
-# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -543,7 +542,7 @@ class Key(object):
     def list_keys(self):
         """
         Return a dict of managed keys and what the key status are
-        """
+        '''
         key_dirs = self._check_minions_directories()
 
         ret = {}

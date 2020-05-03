@@ -117,6 +117,11 @@ from salt.ext import six
 from salt.serializers import DeserializationError, SerializationError
 from salt.utils.aggregation import Map, Sequence, aggregate
 from salt.utils.odict import OrderedDict
+from salt.utils.thread_local_proxy import ThreadLocalProxy
+
+# Import 3rd-party libs
+import yaml
+from yaml.nodes import MappingNode
 from yaml.constructor import ConstructorError
 from yaml.nodes import MappingNode
 from yaml.scanner import ScannerError
@@ -411,9 +416,7 @@ Dumper.add_multi_representer(type(None), Dumper.represent_none)
 if six.PY2:
     Dumper.add_multi_representer(six.binary_type, Dumper.represent_str)
     Dumper.add_multi_representer(six.text_type, Dumper.represent_unicode)
-    # pylint: disable=incompatible-py3-code,undefined-variable
-    Dumper.add_multi_representer(long, Dumper.represent_long)
-    # pylint: enable=incompatible-py3-code,undefined-variable
+    Dumper.add_multi_representer(long, Dumper.represent_long)  # pylint: disable=incompatible-py3-code,undefined-variable
 else:
     Dumper.add_multi_representer(six.binary_type, Dumper.represent_binary)
     Dumper.add_multi_representer(six.text_type, Dumper.represent_str)
@@ -429,6 +432,10 @@ Dumper.add_multi_representer(set, Dumper.represent_set)
 Dumper.add_multi_representer(datetime.date, Dumper.represent_date)
 Dumper.add_multi_representer(datetime.datetime, Dumper.represent_datetime)
 Dumper.add_multi_representer(None, Dumper.represent_undefined)
+Dumper.add_representer(
+    ThreadLocalProxy,
+    lambda dumper, proxy:
+        dumper.represent_data(ThreadLocalProxy.unproxy(proxy)))
 
 
 def merge_recursive(obj_a, obj_b, level=False):

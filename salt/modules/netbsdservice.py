@@ -26,8 +26,8 @@ __virtualname__ = "service"
 def __virtual__():
     """
     Only work on NetBSD
-    """
-    if __grains__["os"] == "NetBSD" and os.path.exists("/etc/rc.subr"):
+    '''
+    if __grains__.get('os') == 'NetBSD' and os.path.exists('/etc/rc.subr'):
         return __virtualname__
     return (
         False,

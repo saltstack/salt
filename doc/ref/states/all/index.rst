@@ -31,6 +31,7 @@ state modules
     beacon
     bigip
     blockdev
+    bluecoat_sslv
     boto3_elasticache
     boto3_elasticsearch
     boto3_route53
@@ -77,6 +78,8 @@ state modules
     cloud
     cmd
     composer
+    consul
+    cpan
     cron
     cryptdev
     csf
@@ -90,6 +93,7 @@ state modules
     docker_network
     docker_volume
     drac
+    dracr
     dvs
     elasticsearch
     elasticsearch_index
@@ -102,10 +106,15 @@ state modules
     esxvm
     etcd_mod
     ethtool
+    esxcluster
+    esxdatacenter
+    esxi
+    esxvm
     event
     file
     firewall
     firewalld
+    flatpak
     gem
     git
     github
@@ -222,11 +231,15 @@ state modules
     nexus
     nfs_export
     nftables
+    nova
     npm
     ntp
     nxos
+    nxos_upgrade
+    onyx
     openstack_config
     openvswitch_bridge
+    openvswitch_db
     openvswitch_port
     opsgenie
     pagerduty
@@ -248,6 +261,7 @@ state modules
     ports
     postgres_cluster
     postgres_database
+    postgres_default_privileges
     postgres_extension
     postgres_group
     postgres_initdb
@@ -279,6 +293,7 @@ state modules
     rvm
     salt_proxy
     saltmod
+    saltsupport
     saltutil
     schedule
     selinux
@@ -287,6 +302,7 @@ state modules
     slack
     smartos
     smtp
+    snap
     snapper
     solrcloud
     splunk
@@ -335,6 +351,7 @@ state modules
     win_smtp_server
     win_snmp
     win_system
+    win_task
     win_wua
     win_wusa
     winrepo
@@ -347,6 +364,7 @@ state modules
     zabbix_hostgroup
     zabbix_mediatype
     zabbix_template
+    zabbix_service
     zabbix_user
     zabbix_usergroup
     zabbix_usermacro

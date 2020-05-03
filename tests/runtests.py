@@ -98,39 +98,96 @@ MAX_OPEN_FILES = {
 # Combine info from command line options and test suite directories.  A test
 # suite is a python package of test modules relative to the tests directory.
 TEST_SUITES_UNORDERED = {
-    "unit": {"display_name": "Unit", "path": "unit"},
-    "kitchen": {"display_name": "Kitchen", "path": "kitchen"},
-    "multimaster": {"display_name": "Multimaster", "path": "multimaster"},
-    "module": {"display_name": "Module", "path": "integration/modules"},
-    "state": {"display_name": "State", "path": "integration/states"},
-    "cli": {"display_name": "CLI", "path": "integration/cli"},
-    "client": {"display_name": "Client", "path": "integration/client"},
-    "doc": {"display_name": "Documentation", "path": "integration/doc"},
-    "ext_pillar": {"display_name": "External Pillar", "path": "integration/pillar"},
-    "grains": {"display_name": "Grains", "path": "integration/grains"},
-    "shell": {"display_name": "Shell", "path": "integration/shell"},
-    "runners": {"display_name": "Runners", "path": "integration/runners"},
-    "renderers": {"display_name": "Renderers", "path": "integration/renderers"},
-    "returners": {"display_name": "Returners", "path": "integration/returners"},
-    "setup": {"display_name": "Setup", "path": "integration/setup"},
-    "ssh-int": {"display_name": "SSH Integration", "path": "integration/ssh"},
-    "spm": {"display_name": "SPM", "path": "integration/spm"},
-    "loader": {"display_name": "Loader", "path": "integration/loader"},
-    "outputter": {"display_name": "Outputter", "path": "integration/output"},
-    "fileserver": {"display_name": "Fileserver", "path": "integration/fileserver"},
-    "wheel": {"display_name": "Wheel", "path": "integration/wheel"},
-    "api": {"display_name": "NetAPI", "path": "integration/netapi"},
-    "cloud_provider": {
-        "display_name": "Cloud Provider",
-        "path": "integration/cloud/clouds",
-    },
-    "minion": {"display_name": "Minion", "path": "integration/minion"},
-    "reactor": {"display_name": "Reactor", "path": "integration/reactor"},
-    "proxy": {"display_name": "Proxy", "path": "integration/proxy"},
-    "external_api": {"display_name": "ExternalAPIs", "path": "integration/externalapi"},
-    "daemons": {"display_name": "Daemon", "path": "integration/daemons"},
-    "sdb": {"display_name": "Sdb", "path": "integration/sdb"},
-    "logging": {"display_name": "Logging", "path": "integration/logging"},
+    'unit':
+       {'display_name': 'Unit',
+        'path': 'unit'},
+    'kitchen':
+       {'display_name': 'Kitchen',
+        'path': 'kitchen'},
+    'module':
+       {'display_name': 'Module',
+        'path': 'integration/modules'},
+    'state':
+       {'display_name': 'State',
+        'path': 'integration/states'},
+    'cli':
+       {'display_name': 'CLI',
+        'path': 'integration/cli'},
+    'client':
+       {'display_name': 'Client',
+        'path': 'integration/client'},
+    'doc':
+       {'display_name': 'Documentation',
+        'path': 'integration/doc'},
+    'ext_pillar':
+       {'display_name': 'External Pillar',
+        'path': 'integration/pillar'},
+    'grains':
+       {'display_name': 'Grains',
+        'path': 'integration/grains'},
+    'shell':
+       {'display_name': 'Shell',
+        'path': 'integration/shell'},
+    'runners':
+       {'display_name': 'Runners',
+        'path': 'integration/runners'},
+    'renderers':
+       {'display_name': 'Renderers',
+        'path': 'integration/renderers'},
+    'returners':
+        {'display_name': 'Returners',
+         'path': 'integration/returners'},
+    'ssh-int':
+        {'display_name': 'SSH Integration',
+         'path': 'integration/ssh'},
+    'spm':
+        {'display_name': 'SPM',
+         'path': 'integration/spm'},
+    'loader':
+       {'display_name': 'Loader',
+        'path': 'integration/loader'},
+    'outputter':
+       {'display_name': 'Outputter',
+        'path': 'integration/output'},
+    'fileserver':
+       {'display_name': 'Fileserver',
+        'path': 'integration/fileserver'},
+    'wheel':
+       {'display_name': 'Wheel',
+        'path': 'integration/wheel'},
+    'api':
+       {'display_name': 'NetAPI',
+        'path': 'integration/netapi'},
+    'cloud_provider':
+       {'display_name': 'Cloud Provider',
+        'path': 'integration/cloud/clouds'},
+    'minion':
+        {'display_name': 'Minion',
+         'path': 'integration/minion'},
+    'reactor':
+        {'display_name': 'Reactor',
+         'path': 'integration/reactor'},
+    'proxy':
+        {'display_name': 'Proxy',
+         'path': 'integration/proxy'},
+    'external_api':
+        {'display_name': 'ExternalAPIs',
+         'path': 'integration/externalapi'},
+    'daemons':
+        {'display_name': 'Daemon',
+         'path': 'integration/daemons'},
+    'scheduler':
+        {'display_name': 'Scheduler',
+         'path': 'integration/scheduler'},
+    'sdb':
+        {'display_name': 'Sdb',
+         'path': 'integration/sdb'},
+    'logging':
+        {'display_name': 'Logging',
+         'path': 'integration/logging'},
+    'utils':
+       {'display_name': 'Utils',
+        'path': 'integration/utils'},
 }
 
 TEST_SUITES = collections.OrderedDict(
@@ -221,13 +278,11 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             help="Print some system information.",
         )
         self.add_option(
-            "--transport",
-            default="zeromq",
-            choices=("zeromq", "tcp"),
-            help=(
-                "Select which transport to run the integration tests with, "
-                "zeromq or tcp. Default: %default"
-            ),
+            '--transport',
+            default='zeromq',
+            choices=('zeromq', 'tcp'),
+            help=('Select which transport to run the integration tests with, '
+                  'zeromq or tcp. Default: %default')
         )
         self.add_option(
             "--interactive",
@@ -515,6 +570,13 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             action="store_true",
             default=False,
             help="Start multimaster daemons and run multimaster integration tests",
+        )
+        self.test_selection_group.add_option(
+            '--utils',
+            dest='utils',
+            action='store_true',
+            default=False,
+            help='Run utils integration tests'
         )
 
     def validate_options(self):

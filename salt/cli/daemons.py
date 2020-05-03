@@ -125,7 +125,7 @@ class Master(
     """
 
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
-        if hasattr(self.master, "process_manager"):
+        if hasattr(self.master, 'process_manager'):
             # escalate signal to the process manager processes
             self.master.process_manager.stop_restarting()
             self.master.process_manager.send_signal_to_processes(signum)
@@ -146,20 +146,22 @@ class Master(
         try:
             if self.config["verify_env"]:
                 v_dirs = [
-                    self.config["pki_dir"],
-                    os.path.join(self.config["pki_dir"], "minions"),
-                    os.path.join(self.config["pki_dir"], "minions_pre"),
-                    os.path.join(self.config["pki_dir"], "minions_denied"),
-                    os.path.join(self.config["pki_dir"], "minions_autosign"),
-                    os.path.join(self.config["pki_dir"], "minions_rejected"),
-                    self.config["cachedir"],
-                    os.path.join(self.config["cachedir"], "jobs"),
-                    os.path.join(self.config["cachedir"], "proc"),
-                    self.config["sock_dir"],
-                    self.config["token_dir"],
-                    self.config["syndic_dir"],
-                    self.config["sqlite_queue_dir"],
-                ]
+                        self.config['pki_dir'],
+                        os.path.join(self.config['pki_dir'], 'minions'),
+                        os.path.join(self.config['pki_dir'], 'minions_pre'),
+                        os.path.join(self.config['pki_dir'], 'minions_denied'),
+                        os.path.join(self.config['pki_dir'],
+                                     'minions_autosign'),
+                        os.path.join(self.config['pki_dir'],
+                                     'minions_rejected'),
+                        self.config['cachedir'],
+                        os.path.join(self.config['cachedir'], 'jobs'),
+                        os.path.join(self.config['cachedir'], 'proc'),
+                        self.config['sock_dir'],
+                        self.config['token_dir'],
+                        self.config['syndic_dir'],
+                        self.config['sqlite_queue_dir'],
+                    ]
                 verify_env(
                     v_dirs,
                     self.config["user"],
@@ -178,18 +180,15 @@ class Master(
         self.action_log_info("Setting up")
 
         # TODO: AIO core is separate from transport
-        if not verify_socket(
-            self.config["interface"],
-            self.config["publish_port"],
-            self.config["ret_port"],
-        ):
-            self.shutdown(4, "The ports are not available to bind")
-        self.config["interface"] = ip_bracket(self.config["interface"])
+        if not verify_socket(self.config['interface'],
+                             self.config['publish_port'],
+                             self.config['ret_port']):
+            self.shutdown(4, 'The ports are not available to bind')
+        self.config['interface'] = ip_bracket(self.config['interface'])
         migrations.migrate_paths(self.config)
 
         # Late import so logging works correctly
         import salt.master
-
         self.master = salt.master.Master(self.config)
 
         self.daemonize_if_required()
@@ -270,12 +269,12 @@ class Minion(
                     )
 
                 v_dirs = [
-                    self.config["pki_dir"],
-                    self.config["cachedir"],
-                    self.config["sock_dir"],
-                    self.config["extension_modules"],
-                    confd,
-                ]
+                        self.config['pki_dir'],
+                        self.config['cachedir'],
+                        self.config['sock_dir'],
+                        self.config['extension_modules'],
+                        confd,
+                    ]
 
                 verify_env(
                     v_dirs,
@@ -315,9 +314,8 @@ class Minion(
             self.minion = salt.minion.MinionManager(self.config)
         else:
             log.error(
-                "The transport '%s' is not supported. Please use one of "
-                "the following: tcp, zeromq, or detect.",
-                transport,
+                'The transport \'%s\' is not supported. Please use one of '
+                'the following: tcp, zeromq, or detect.', transport
             )
             self.shutdown(1)
 
@@ -373,10 +371,8 @@ class Minion(
         """
         try:
             self.prepare()
-            if check_user(self.config["user"]):
-                self.minion.opts["__role"] = kinds.APPL_KIND_NAMES[
-                    kinds.applKinds.caller
-                ]
+            if check_user(self.config['user']):
+                self.minion.opts['__role'] = kinds.APPL_KIND_NAMES[kinds.applKinds.caller]
                 self.minion.call_in()
         except (KeyboardInterrupt, SaltSystemExit) as exc:
             self.action_log_info("Stopping")
@@ -493,14 +489,13 @@ class ProxyMinion(
         # TODO: AIO core is separate from transport
         # Late import so logging works correctly
         import salt.minion
-
         # If the minion key has not been accepted, then Salt enters a loop
         # waiting for it, if we daemonize later then the minion could halt
         # the boot process waiting for a key to be accepted on the master.
         # This is the latest safe place to daemonize
         self.daemonize_if_required()
         self.set_pidfile()
-        if self.config.get("master_type") == "func":
+        if self.config.get('master_type') == 'func':
             salt.minion.eval_master_func(self.config)
         self.minion = salt.minion.ProxyMinionManager(self.config)
 

@@ -44,6 +44,10 @@ Here is an example of what the configuration might look like:
       smtp_success_subject: 'success minion {id} on host {host}'
       smtp_failure_subject: 'failure minion {id} on host {host}'
       smtp_server: smtp.example.com
+      smtp_port: 25
+      smtp_tls: False
+      smtp_username: username
+      smtp_password: password
       smtp_recipients: saltusers@example.com, devops@example.com
       smtp_sender: salt@example.com
 
@@ -109,19 +113,23 @@ def _get_options(ret):
     Return options
     """
     attrs = {
-        "report_everything": "report_everything",
-        "report_changes": "report_changes",
-        "report_failures": "report_failures",
-        "failure_function": "failure_function",
-        "success_function": "success_function",
-        "report_format": "report_format",
-        "report_delivery": "report_delivery",
-        "file_output": "file_output",
-        "smtp_sender": "smtp_sender",
-        "smtp_recipients": "smtp_recipients",
-        "smtp_failure_subject": "smtp_failure_subject",
-        "smtp_success_subject": "smtp_success_subject",
-        "smtp_server": "smtp_server",
+        'report_everything': 'report_everything',
+        'report_changes': 'report_changes',
+        'report_failures': 'report_failures',
+        'failure_function': 'failure_function',
+        'success_function': 'success_function',
+        'report_format': 'report_format',
+        'report_delivery': 'report_delivery',
+        'file_output': 'file_output',
+        'smtp_sender': 'smtp_sender',
+        'smtp_recipients': 'smtp_recipients',
+        'smtp_failure_subject': 'smtp_failure_subject',
+        'smtp_success_subject': 'smtp_success_subject',
+        'smtp_server': 'smtp_server',
+        'smtp_port': 'smtp_port',
+        'smtp_tls': 'smtp_tls',
+        'smtp_username': 'smtp_username',
+        'smtp_password': 'smtp_password'
     }
 
     _options = salt.returners.get_returner_options(
@@ -448,6 +456,12 @@ def _produce_output(report, failed, setup):
         sender = setup.get("smtp_sender", "")
         recipients = setup.get("smtp_recipients", "")
 
+        host = setup.get('smtp_server', '')
+        port = int(setup.get('smtp_port', 25))
+        tls = setup.get('smtp_tls')
+        username = setup.get('smtp_username')
+        password = setup.get('smtp_password')
+
         if failed:
             subject = setup.get("smtp_failure_subject", "Installation failure")
         else:
@@ -459,10 +473,22 @@ def _produce_output(report, failed, setup):
         msg["From"] = sender
         msg["To"] = recipients
 
-        smtp = smtplib.SMTP(host=setup.get("smtp_server", ""))
+        log.debug('highstate smtp port: %d', port)
+        smtp = smtplib.SMTP(host=host, port=port)
+
+        if tls is True:
+            smtp.starttls()
+            log.debug('highstate smtp tls enabled')
+
+        if username and password:
+            smtp.login(username, password)
+            log.debug('highstate smtp authenticated')
+
         smtp.sendmail(
-            sender, [x.strip() for x in recipients.split(",")], msg.as_string()
-        )
+            sender,
+            [x.strip() for x in recipients.split(',')], msg.as_string())
+        log.debug('highstate message sent.')
+
         smtp.quit()
 
 

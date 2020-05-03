@@ -33,9 +33,6 @@ def _wrap_module_function(func_name):
             result = None
         return {"name": name, "comment": comment, "result": result, "changes": {}}
 
-    return _module_function_wrapper
-
-
 def _generate_functions():
     try:
         modules_ = [camel_to_snake_case(module_) for module_ in modules.__all__]

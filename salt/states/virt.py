@@ -257,42 +257,34 @@ def powered_off(name, connection=None, username=None, password=None):
 
         domain_name:
           virt.stopped
-    """
-    return _virt_call(
-        name,
-        "stop",
-        "unpowered",
-        "Machine has been powered off",
-        state="shutdown",
-        connection=connection,
-        username=username,
-        password=password,
-    )
+    '''
+
+    return _virt_call(name, 'stop', 'unpowered', 'Machine has been powered off',
+                      connection=connection, username=username, password=password)
 
 
-def defined(
-    name,
-    cpu=None,
-    mem=None,
-    vm_type=None,
-    disk_profile=None,
-    disks=None,
-    nic_profile=None,
-    interfaces=None,
-    graphics=None,
-    seed=True,
-    install=True,
-    pub_key=None,
-    priv_key=None,
-    connection=None,
-    username=None,
-    password=None,
-    os_type=None,
-    arch=None,
-    boot=None,
-    update=True,
-):
-    """
+def running(name,
+            cpu=None,
+            mem=None,
+            image=None,
+            vm_type=None,
+            disk_profile=None,
+            disks=None,
+            nic_profile=None,
+            interfaces=None,
+            graphics=None,
+            loader=None,
+            seed=True,
+            install=True,
+            pub_key=None,
+            priv_key=None,
+            update=False,
+            connection=None,
+            username=None,
+            password=None,
+            os_type=None,
+            arch=None):
+    '''
     Starts an existing guest, or defines and starts a new VM with specified arguments.
 
     .. versionadded:: sodium
@@ -503,7 +495,9 @@ def running(
         .. versionadded:: 2019.2.0
     :param disks:
         List of disk to create for the new virtual machine.
-        See :ref:`init-disk-def` for more details on the items on this list.
+        See the **Disk Definitions** section of the :py:func:`virt.init
+        <salt.modules.virt.init>` function for more details on the items on
+        this list.
 
         .. versionadded:: 2019.2.0
     :param nic_profile:
@@ -512,12 +506,21 @@ def running(
         .. versionadded:: 2019.2.0
     :param interfaces:
         List of network interfaces to create for the new virtual machine.
-        See :ref:`init-nic-def` for more details on the items on this list.
+        See the **Network Interface Definitions** section of the
+        :py:func:`virt.init <salt.modules.virt.init>` function for more details
+        on the items on this list.
 
         .. versionadded:: 2019.2.0
     :param graphics:
         Graphics device to create for the new virtual machine.
-        See :ref:`init-graphics-def` for more details on this dictionary
+        See the **Graphics Definition** section of the :py:func:`virt.init
+        <salt.modules.virt.init>` function for more details on this dictionary.
+
+        .. versionadded:: 2019.2.0
+    :param loader:
+        Firmware loader for the new virtual machine.
+        See the **Loader Definition** section of the :py:func:`virt.init
+        <salt.modules.virt.init>` function for more details on this dictionary.
 
         .. versionadded:: 2019.2.0
     :param saltenv:
@@ -658,27 +661,82 @@ def running(
     if ret["result"] is None or ret["result"]:
         changed = ret["changes"][name].get("definition", False)
         try:
-            domain_state = __salt__["virt.vm_state"](name)
-            if domain_state.get(name) != "running":
-                if not __opts__["test"]:
-                    __salt__["virt.start"](
-                        name,
-                        connection=connection,
-                        username=username,
-                        password=password,
-                    )
-                comment = "Domain {} started".format(name)
-                if not ret["comment"].endswith("unchanged"):
-                    comment = "{} and started".format(ret["comment"])
-                ret["comment"] = comment
-                ret["changes"][name]["started"] = True
-            elif not changed:
-                ret["comment"] = "Domain {0} exists and is running".format(name)
-
-        except libvirt.libvirtError as err:
-            # Something bad happened when starting / updating the VM, report it
-            ret["comment"] = six.text_type(err)
-            ret["result"] = False
+            __salt__['virt.vm_state'](name)
+            if __salt__['virt.vm_state'](name) != 'running':
+                action_msg = 'started'
+                if update:
+                    status = __salt__['virt.update'](name,
+                                                     cpu=cpu,
+                                                     mem=mem,
+                                                     disk_profile=disk_profile,
+                                                     disks=disks,
+                                                     nic_profile=nic_profile,
+                                                     interfaces=interfaces,
+                                                     graphics=graphics,
+                                                     live=False,
+                                                     connection=connection,
+                                                     username=username,
+                                                     password=password)
+                    if status['definition']:
+                        action_msg = 'updated and started'
+                __salt__['virt.start'](name)
+                ret['changes'][name] = 'Domain {0}'.format(action_msg)
+                ret['comment'] = 'Domain {0} {1}'.format(name, action_msg)
+            else:
+                if update:
+                    status = __salt__['virt.update'](name,
+                                                     cpu=cpu,
+                                                     mem=mem,
+                                                     disk_profile=disk_profile,
+                                                     disks=disks,
+                                                     nic_profile=nic_profile,
+                                                     interfaces=interfaces,
+                                                     graphics=graphics,
+                                                     connection=connection,
+                                                     username=username,
+                                                     password=password)
+                    ret['changes'][name] = status
+                    if status.get('errors', None):
+                        ret['comment'] = 'Domain {0} updated, but some live update(s) failed'.format(name)
+                    elif not status['definition']:
+                        ret['comment'] = 'Domain {0} exists and is running'.format(name)
+                    else:
+                        ret['comment'] = 'Domain {0} updated, restart to fully apply the changes'.format(name)
+                else:
+                    ret['comment'] = 'Domain {0} exists and is running'.format(name)
+        except CommandExecutionError:
+            if image:
+                salt.utils.versions.warn_until(
+                    'Sodium',
+                    '\'image\' parameter has been deprecated. Rather use the \'disks\' parameter '
+                    'to override or define the image. \'image\' will be removed in {version}.'
+                )
+            __salt__['virt.init'](name,
+                                  cpu=cpu,
+                                  mem=mem,
+                                  os_type=os_type,
+                                  arch=arch,
+                                  image=image,
+                                  hypervisor=vm_type,
+                                  disk=disk_profile,
+                                  disks=disks,
+                                  nic=nic_profile,
+                                  interfaces=interfaces,
+                                  graphics=graphics,
+                                  loader=loader,
+                                  seed=seed,
+                                  install=install,
+                                  pub_key=pub_key,
+                                  priv_key=priv_key,
+                                  connection=connection,
+                                  username=username,
+                                  password=password)
+            ret['changes'][name] = 'Domain defined and started'
+            ret['comment'] = 'Domain {0} defined and started'.format(name)
+    except libvirt.libvirtError as err:
+        # Something bad happened when starting / updating the VM, report it
+        ret['comment'] = six.text_type(err)
+        ret['result'] = False
 
     return ret
 
@@ -1302,17 +1360,21 @@ def pool_running(
 
     :param ptype: libvirt pool type
     :param target: full path to the target device or folder. (Default: ``None``)
-    :param permissions:
-        target permissions. See :ref:`pool-define-permissions` for more details on this structure.
+    :param permissions: target permissions. See the **Permissions definition**
+        section of the :py:func:`virt.pool_define
+        <salt.module.virt.pool_define>` documentation for more details on this
+        structure.
     :param source:
         dictionary containing keys matching the ``source_*`` parameters in function
-        :func:`salt.modules.virt.pool_define`.
+        :py:func:`virt.pool_define <salt.modules.virt.pool_define>`.
     :param transient:
-        when set to ``True``, the pool will be automatically undefined after being stopped. (Default: ``False``)
+        when set to ``True``, the pool will be automatically undefined after
+        being stopped. (Default: ``False``)
     :param autostart:
         Whether to start the pool when booting the host. (Default: ``True``)
     :param start:
-        When ``True``, define and start the pool, otherwise the pool will be left stopped.
+        When ``True``, define and start the pool, otherwise the pool will be
+        left stopped.
     :param connection: libvirt connection URI, overriding defaults
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults

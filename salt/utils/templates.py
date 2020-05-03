@@ -129,9 +129,10 @@ def wrap_tmpl_func(render_str):
                     template = template[i:]
                 tpldir = os.path.dirname(template).replace("\\", "/")
                 tpldata = {
-                    "tplfile": template,
-                    "tpldir": "." if tpldir == "" else tpldir,
-                    "tpldot": tpldir.replace("/", "."),
+                    'tplfile': template,
+                    'tpldir': '.' if tpldir == '' else tpldir,
+                    'tpldot': tpldir.replace('/', '.'),
+                    'tplroot': tpldir.split('/')[0],
                 }
                 context.update(tpldata)
             context["slsdotpath"] = slspath.replace("/", ".")

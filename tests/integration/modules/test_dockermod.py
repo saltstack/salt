@@ -35,10 +35,10 @@ def _random_name(prefix=""):
 class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
     """
     Test docker_container states
-    """
-
-    def setUp(self):
-        """
+    '''
+    @with_random_name
+    def setUp(self, name):  # pylint: disable=arguments-differ
+        '''
         setup docker.call tests
         """
         # Create temp dir

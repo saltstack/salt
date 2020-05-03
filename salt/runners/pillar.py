@@ -6,6 +6,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
 import salt.pillar
+import salt.loader
 import salt.utils.minions
 
 
@@ -21,13 +22,23 @@ def show_top(minion=None, saltenv="base"):
         salt-run pillar.show_top
     """
     id_, grains, _ = salt.utils.minions.get_minion_data(minion, __opts__)
-    pillar = salt.pillar.Pillar(__opts__, grains, id_, saltenv)
+    if not grains and minion == __opts__['id']:
+        grains = salt.loader.grains(__opts__)
+    pillar = salt.pillar.Pillar(
+        __opts__,
+        grains,
+        id_,
+        saltenv)
 
     top, errors = pillar.get_top()
 
     if errors:
         __jid_event__.fire_event({"data": errors, "outputter": "nested"}, "progress")
         return errors
+
+    # needed because pillar compilation clobbers grains etc via lazyLoader
+    # this resets the masterminion back to known state
+    __salt__['salt.cmd']('sys.reload_modules')
 
     return top
 
@@ -81,6 +92,8 @@ def show_pillar(minion="*", **kwargs):
     pillarenv = None
     saltenv = "base"
     id_, grains, _ = salt.utils.minions.get_minion_data(minion, __opts__)
+    if not grains and minion == __opts__['id']:
+        grains = salt.loader.grains(__opts__)
     if grains is None:
         grains = {"fqdn": minion}
 
@@ -96,4 +109,9 @@ def show_pillar(minion="*", **kwargs):
     pillar = salt.pillar.Pillar(__opts__, grains, id_, saltenv, pillarenv=pillarenv)
 
     compiled_pillar = pillar.compile_pillar()
+
+    # needed because pillar compilation clobbers grains etc via lazyLoader
+    # this resets the masterminion back to known state
+    __salt__['salt.cmd']('sys.reload_modules')
+
     return compiled_pillar

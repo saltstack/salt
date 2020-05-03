@@ -35,6 +35,7 @@ execution modules
     apkpkg
     aptly
     aptpkg
+    aptly
     archive
     arista_pyeapi
     artifactory
@@ -51,6 +52,7 @@ execution modules
     bcache
     beacons
     bigip
+    bluecoat_sslv
     bluez_bluetooth
     boto3_elasticache
     boto3_elasticsearch
@@ -156,6 +158,7 @@ execution modules
     extfs
     file
     firewalld
+    flatpak
     freebsd_sysctl
     freebsd_update
     freebsdjail
@@ -220,6 +223,7 @@ execution modules
     jenkinsmod
     jinja
     jira_mod
+    jsonnet
     junos
     k8s
     kapacitor
@@ -322,6 +326,7 @@ execution modules
     neutron
     neutronng
     nexus
+    nxos_upgrade
     nfs3
     nftables
     nginx
@@ -333,6 +338,7 @@ execution modules
     nxos
     nxos_api
     omapi
+    onyx
     openbsd_sysctl
     openbsdpkg
     openbsdrcctl_service
@@ -411,6 +417,7 @@ execution modules
     salt_version
     saltcheck
     saltcloudmod
+    saltsupport
     saltutil
     schedule
     scp_mod
@@ -447,6 +454,8 @@ execution modules
     ssh
     ssh_pkg
     ssh_service
+    snap
+    snapper
     state
     status
     statuspage
@@ -502,6 +511,7 @@ execution modules
     win_dism
     win_dns_client
     win_dsc
+    win_event_viewer
     win_file
     win_firewall
     win_groupadd
@@ -528,7 +538,6 @@ execution modules
     win_useradd
     win_wua
     win_wusa
-    winrepo
     wordpress
     x509
     xapi_virt

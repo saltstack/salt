@@ -292,40 +292,26 @@ def head(
         https_enable,
     )
 
-    return __utils__["s3.query"](
-        method="HEAD",
-        bucket=bucket,
-        path=path,
-        key=key,
-        keyid=keyid,
-        kms_keyid=kms_keyid,
-        service_url=service_url,
-        verify_ssl=verify_ssl,
-        location=location,
-        full_headers=True,
-        role_arn=role_arn,
-        path_style=path_style,
-        https_enable=https_enable,
-    )
+    return __utils__['s3.query'](method='HEAD',
+                                 bucket=bucket,
+                                 path=path,
+                                 key=key,
+                                 keyid=keyid,
+                                 kms_keyid=kms_keyid,
+                                 service_url=service_url,
+                                 verify_ssl=verify_ssl,
+                                 location=location,
+                                 full_headers=True,
+                                 role_arn=role_arn,
+                                 path_style=path_style,
+                                 https_enable=https_enable)
 
 
-def put(
-    bucket,
-    path=None,
-    return_bin=False,
-    action=None,
-    local_file=None,
-    key=None,
-    keyid=None,
-    service_url=None,
-    verify_ssl=None,
-    kms_keyid=None,
-    location=None,
-    role_arn=None,
-    path_style=None,
-    https_enable=None,
-):
-    """
+def put(bucket, path=None, return_bin=False, action=None, local_file=None,
+        key=None, keyid=None, service_url=None, verify_ssl=None,
+        kms_keyid=None, location=None, role_arn=None, path_style=None,
+        https_enable=None, headers=None, full_headers=False):
+    '''
     Create a new bucket, or upload an object to a bucket.
 
     CLI Example to create a bucket:
@@ -335,18 +321,14 @@ def put(
     CLI Example to upload an object to a bucket:
 
         salt myminion s3.put mybucket remotepath local_file=/path/to/file
-    """
-    (
-        key,
-        keyid,
-        service_url,
-        verify_ssl,
-        kms_keyid,
-        location,
-        role_arn,
-        path_style,
-        https_enable,
-    ) = _get_key(
+    '''
+
+    if not headers:
+        headers = {}
+    else:
+        full_headers = True
+
+    key, keyid, service_url, verify_ssl, kms_keyid, location, role_arn, path_style, https_enable = _get_key(
         key,
         keyid,
         service_url,
@@ -358,37 +340,27 @@ def put(
         https_enable,
     )
 
-    return __utils__["s3.query"](
-        method="PUT",
-        bucket=bucket,
-        path=path,
-        return_bin=return_bin,
-        local_file=local_file,
-        action=action,
-        key=key,
-        keyid=keyid,
-        kms_keyid=kms_keyid,
-        service_url=service_url,
-        verify_ssl=verify_ssl,
-        location=location,
-        role_arn=role_arn,
-        path_style=path_style,
-        https_enable=https_enable,
-    )
+    return __utils__['s3.query'](method='PUT',
+                                 bucket=bucket,
+                                 path=path,
+                                 return_bin=return_bin,
+                                 local_file=local_file,
+                                 action=action,
+                                 key=key,
+                                 keyid=keyid,
+                                 kms_keyid=kms_keyid,
+                                 service_url=service_url,
+                                 verify_ssl=verify_ssl,
+                                 location=location,
+                                 role_arn=role_arn,
+                                 path_style=path_style,
+                                 https_enable=https_enable,
+                                 headers=headers,
+                                 full_headers=full_headers)
 
 
-def _get_key(
-    key,
-    keyid,
-    service_url,
-    verify_ssl,
-    kms_keyid,
-    location,
-    role_arn,
-    path_style,
-    https_enable,
-):
-    """
+def _get_key(key, keyid, service_url, verify_ssl, kms_keyid, location, role_arn, path_style, https_enable):
+    '''
     Examine the keys, and populate as necessary
     """
     if not key and __salt__["config.option"]("s3.key"):

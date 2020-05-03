@@ -340,10 +340,8 @@ class CsvDB(object):
             data = int(data)
         elif type == "float":
             data = float(data)
-        elif type == "long":
-            # pylint: disable=undefined-variable,incompatible-py3-code
-            data = sys.version_info[0] == 2 and long(data) or int(data)
-            # pylint: enable=undefined-variable,incompatible-py3-code
+        elif type == 'long':
+            data = sys.version_info[0] == 2 and long(data) or int(data)  # pylint: disable=incompatible-py3-code,undefined-variable
         else:
             data = str(data)
         return data

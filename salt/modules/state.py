@@ -45,9 +45,6 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Import 3rd-party libs
 from salt.ext import six
-from salt.loader import _format_cached_grains
-from salt.runners.state import orchestrate as _orchestrate
-from salt.utils.odict import OrderedDict
 
 __proxyenabled__ = ["*"]
 
@@ -194,7 +191,7 @@ def _get_pause(jid, state_id=None):
         if state_id not in data:
             data[state_id] = {}
     if os.path.exists(pause_path):
-        with salt.utils.files.fopen(pause_path, "rb") as fp_:
+        with salt.utils.files.fopen(pause_path, 'rb') as fp_:
             data = salt.utils.msgpack.loads(fp_.read())
     return data, pause_path
 
@@ -264,8 +261,8 @@ def soft_kill(jid, state_id=None):
     if state_id is None:
         state_id = "__all__"
     data, pause_path = _get_pause(jid, state_id)
-    data[state_id]["kill"] = True
-    with salt.utils.files.fopen(pause_path, "wb") as fp_:
+    data[state_id]['kill'] = True
+    with salt.utils.files.fopen(pause_path, 'wb') as fp_:
         fp_.write(salt.utils.msgpack.dumps(data))
 
 
@@ -299,8 +296,8 @@ def pause(jid, state_id=None, duration=None):
         state_id = "__all__"
     data, pause_path = _get_pause(jid, state_id)
     if duration:
-        data[state_id]["duration"] = int(duration)
-    with salt.utils.files.fopen(pause_path, "wb") as fp_:
+        data[state_id]['duration'] = int(duration)
+    with salt.utils.files.fopen(pause_path, 'wb') as fp_:
         fp_.write(salt.utils.msgpack.dumps(data))
 
 
@@ -334,7 +331,7 @@ def resume(jid, state_id=None):
         data.pop(state_id)
     if state_id == "__all__":
         data = {}
-    with salt.utils.files.fopen(pause_path, "wb") as fp_:
+    with salt.utils.files.fopen(pause_path, 'wb') as fp_:
         fp_.write(salt.utils.msgpack.dumps(data))
 
 
@@ -2464,21 +2461,20 @@ def event(
     .. code-block:: bash
 
         salt-call --local state.event pretty=True
-    """
+    '''
     with salt.utils.event.get_event(
-        node,
-        sock_dir or __opts__["sock_dir"],
-        __opts__["transport"],
-        opts=__opts__,
-        listen=True,
-    ) as sevent:
+            node,
+            sock_dir or __opts__['sock_dir'],
+            __opts__['transport'],
+            opts=__opts__,
+            listen=True) as sevent:
 
         while True:
             ret = sevent.get_event(full=True, auto_reconnect=True)
             if ret is None:
                 continue
 
-            if salt.utils.stringutils.expr_match(ret["tag"], tagmatch):
+            if salt.utils.stringutils.expr_match(ret['tag'], tagmatch):
                 if not quiet:
                     salt.utils.stringutils.print_cli(
                         str("{0}\t{1}").format(  # future lint: blacklisted-function

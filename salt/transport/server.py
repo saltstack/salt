@@ -33,7 +33,7 @@ class ReqServerChannel(object):
             import salt.transport.zeromq
 
             return salt.transport.zeromq.ZeroMQReqServerChannel(opts)
-        elif ttype == "tcp":
+        elif ttype == 'tcp':
             import salt.transport.tcp
 
             return salt.transport.tcp.TCPReqServerChannel(opts)
@@ -42,7 +42,7 @@ class ReqServerChannel(object):
 
             return salt.transport.local.LocalServerChannel(opts)
         else:
-            raise Exception("Channels are only defined for ZeroMQ and TCP")
+            raise Exception('Channels are only defined for ZeroMQ and TCP')
             # return NewKindOfChannel(opts, **kwargs)
 
     def pre_fork(self, process_manager):
@@ -80,7 +80,7 @@ class PubServerChannel(object):
             import salt.transport.zeromq
 
             return salt.transport.zeromq.ZeroMQPubServerChannel(opts, **kwargs)
-        elif ttype == "tcp":
+        elif ttype == 'tcp':
             import salt.transport.tcp
 
             return salt.transport.tcp.TCPPubServerChannel(opts)
@@ -89,7 +89,7 @@ class PubServerChannel(object):
 
             return salt.transport.local.LocalPubServerChannel(opts, **kwargs)
         else:
-            raise Exception("Channels are only defined for ZeroMQ and TCP")
+            raise Exception('Channels are only defined for ZeroMQ and TCP')
             # return NewKindOfChannel(opts, **kwargs)
 
     def pre_fork(self, process_manager, kwargs=None):

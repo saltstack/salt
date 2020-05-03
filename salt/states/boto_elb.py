@@ -610,9 +610,7 @@ def register_instances(
     ]
     new = [value for value in instances if value not in nodes]
     if not new:
-        msg = "Instance/s {0} already exist.".format(
-            six.text_type(instances).strip("[]")
-        )
+        msg = 'Instance/s {0} already exist.'.format(six.text_type(instances).strip('[]'))
         log.debug(msg)
         ret.update({"comment": msg})
         return ret

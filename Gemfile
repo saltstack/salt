@@ -2,9 +2,8 @@
 
 source 'https://rubygems.org'
 
-# Point this back at the test-kitchen package after >1.2.5 is relased
-gem 'test-kitchen', :git => 'https://github.com/dwoz/test-kitchen.git', :branch => 'keepalive_maxcount'
-gem 'kitchen-salt', :git => 'https://github.com/saltstack/kitchen-salt.git'
+gem 'test-kitchen', '~>1.23.3'
+gem 'kitchen-salt', :git => 'https://github.com/s0undt3ch/kitchen-salt.git', :branch => 'features/nox'
 gem 'kitchen-sync'
 gem 'git'
 
@@ -25,4 +24,11 @@ end
 group :vagrant do
   gem 'vagrant-wrapper'
   gem 'kitchen-vagrant'
+end
+
+group :macos do
+  gem 'rbnacl', '< 5.0', :require => false
+  gem 'rbnacl-libsodium', :require => false
+  gem 'bcrypt_pbkdf', '< 2.0', :require => false
+  gem 'ffi', '= 1.10.0', :require => false
 end

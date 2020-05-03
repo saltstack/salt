@@ -6,8 +6,10 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import shutil
 import stat
-import sys
-import tempfile
+
+# Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf, TestCase
 
 # Import salt libs
 import salt.utils.files

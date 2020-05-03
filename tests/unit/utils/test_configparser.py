@@ -13,7 +13,11 @@ import errno
 import logging
 import os
 
-import salt.utils.configparser
+log = logging.getLogger(__name__)
+
+# Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import TestCase
 
 # Import salt libs
 import salt.utils.files
@@ -62,8 +66,8 @@ class TestGitConfigParser(TestCase):
     """
 
     maxDiff = None
-    orig_config = os.path.join(RUNTIME_VARS.TMP, "test_gitconfig.orig")
-    new_config = os.path.join(RUNTIME_VARS.TMP, "test_gitconfig.new")
+    orig_config = os.path.join(RUNTIME_VARS.TMP, 'test_gitconfig.orig')
+    new_config = os.path.join(RUNTIME_VARS.TMP, 'test_gitconfig.new')
     remote = 'remote "origin"'
 
     def tearDown(self):

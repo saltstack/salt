@@ -298,8 +298,8 @@ def remove(name=None, pkgs=None, **kwargs):
     return ret
 
 
-def refresh_db():
-    """
+def refresh_db(**kwargs):
+    '''
     Update the homebrew package repository.
 
     CLI Example:
@@ -481,8 +481,8 @@ def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
     return ret
 
 
-def upgrade_available(pkg):
-    """
+def upgrade_available(pkg, **kwargs):
+    '''
     Check whether or not an upgrade is available for a given package
 
     CLI Example:
@@ -494,8 +494,8 @@ def upgrade_available(pkg):
     return pkg in list_upgrades()
 
 
-def upgrade(refresh=True):
-    """
+def upgrade(refresh=True, **kwargs):
+    '''
     Upgrade outdated, unpinned brews.
 
     refresh
@@ -540,8 +540,8 @@ def upgrade(refresh=True):
     return ret
 
 
-def info_installed(*names):
-    """
+def info_installed(*names, **kwargs):
+    '''
     Return the information of the named package(s) installed on the system.
 
     .. versionadded:: 2016.3.1

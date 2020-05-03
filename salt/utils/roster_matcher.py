@@ -11,9 +11,6 @@ import functools
 import logging
 import re
 
-# Import Salt libs
-from salt.ext import six
-
 # Try to import range from https://github.com/ytoolshed/range
 HAS_RANGE = False
 try:
@@ -34,12 +31,12 @@ def targets(conditioned_raw, tgt, tgt_type, ipv="ipv4"):
 
 
 def _tgt_set(tgt):
-    """
+    '''
     Return the tgt as a set of literal names
-    """
+    '''
     try:
         # A comma-delimited string
-        return set(tgt.split(","))
+        return set(tgt.split(','))
     except AttributeError:
         # Assume tgt is already a non-string iterable.
         return set(tgt)
@@ -66,9 +63,9 @@ class RosterMatcher(object):
             return {}
 
     def _ret_minions(self, filter_):
-        """
+        '''
         Filter minions by a generic filter.
-        """
+        '''
         minions = {}
         for minion in filter_(self.raw):
             data = self.get_data(minion)
@@ -77,16 +74,16 @@ class RosterMatcher(object):
         return minions
 
     def ret_glob_minions(self):
-        """
+        '''
         Return minions that match via glob
-        """
+        '''
         fnfilter = functools.partial(fnmatch.filter, pat=self.tgt)
         return self._ret_minions(fnfilter)
 
     def ret_pcre_minions(self):
         """
         Return minions that match via pcre
-        """
+        '''
         tgt = re.compile(self.tgt)
         refilter = functools.partial(filter, tgt.match)
         return self._ret_minions(refilter)
@@ -94,7 +91,7 @@ class RosterMatcher(object):
     def ret_list_minions(self):
         """
         Return minions that match via list
-        """
+        '''
         tgt = _tgt_set(self.tgt)
         return self._ret_minions(tgt.intersection)
 
@@ -102,8 +99,8 @@ class RosterMatcher(object):
         """
         Return minions which match the special list-only groups defined by
         ssh_list_nodegroups
-        """
-        nodegroup = __opts__.get("ssh_list_nodegroups", {}).get(self.tgt, [])
+        '''
+        nodegroup = __opts__.get('ssh_list_nodegroups', {}).get(self.tgt, [])
         nodegroup = _tgt_set(nodegroup)
         return self._ret_minions(nodegroup.intersection)
 
@@ -115,7 +112,7 @@ class RosterMatcher(object):
             raise RuntimeError("Python lib 'seco.range' is not available")
 
         minions = {}
-        range_hosts = _convert_range_to_list(self.tgt, __opts__["range_server"])
+        range_hosts = _convert_range_to_list(self.tgt, __opts__['range_server'])
         return self._ret_minions(range_hosts.__contains__)
 
     def get_data(self, minion):

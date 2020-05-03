@@ -70,14 +70,14 @@ class Beacon(object):
                     else:
                         self._remove_list_item(config[mod], "enabled")
 
-            log.trace("Beacon processing: %s", mod)
+            log.trace('Beacon processing: %s', mod)
             beacon_name = None
-            if self._determine_beacon_config(current_beacon_config, "beacon_module"):
-                beacon_name = current_beacon_config["beacon_module"]
+            if self._determine_beacon_config(current_beacon_config, 'beacon_module'):
+                beacon_name = current_beacon_config['beacon_module']
             else:
                 beacon_name = mod
-            fun_str = "{0}.beacon".format(beacon_name)
-            validate_str = "{0}.validate".format(beacon_name)
+            fun_str = '{0}.beacon'.format(beacon_name)
+            validate_str = '{0}.validate'.format(beacon_name)
             if fun_str in self.beacons:
                 runonce = self._determine_beacon_config(
                     current_beacon_config, "run_once"
@@ -106,7 +106,7 @@ class Beacon(object):
                         if re.match("state.*", job["fun"]):
                             is_running = True
                     if is_running:
-                        close_str = "{0}.close".format(beacon_name)
+                        close_str = '{0}.close'.format(beacon_name)
                         if close_str in self.beacons:
                             log.info("Closing beacon %s. State run in progress.", mod)
                             self.beacons[close_str](b_config[mod])
@@ -132,12 +132,14 @@ class Beacon(object):
                 # Fire the beacon!
                 raw = self.beacons[fun_str](b_config[mod])
                 for data in raw:
-                    tag = "salt/beacon/{0}/{1}/".format(self.opts["id"], mod)
-                    if "tag" in data:
-                        tag += data.pop("tag")
-                    if "id" not in data:
-                        data["id"] = self.opts["id"]
-                    ret.append({"tag": tag, "data": data, "beacon_name": beacon_name})
+                    tag = 'salt/beacon/{0}/{1}/'.format(self.opts['id'], mod)
+                    if 'tag' in data:
+                        tag += data.pop('tag')
+                    if 'id' not in data:
+                        data['id'] = self.opts['id']
+                    ret.append({'tag': tag,
+                                'data': data,
+                                'beacon_name': beacon_name})
                 if runonce:
                     self.disable_beacon(mod)
             else:
@@ -192,7 +194,7 @@ class Beacon(object):
         """
 
         indexes = [index for index, item in enumerate(beacon_config) if label in item]
-        if len(indexes) < 1:
+        if not indexes:
             return -1
         else:
             return indexes[0]
@@ -497,15 +499,16 @@ class Beacon(object):
     def reset(self):
         """
         Reset the beacons to defaults
-        """
-        self.opts["beacons"] = {}
-        evt = salt.utils.event.get_event("minion", opts=self.opts)
-        evt.fire_event(
-            {
-                "complete": True,
-                "comment": "Beacons have been reset",
-                "beacons": self.opts["beacons"],
-            },
-            tag="/salt/minion/minion_beacon_reset_complete",
-        )
+        '''
+        self.opts['beacons'] = {}
+
+        comment = 'Beacon Reset'
+        complete = True
+
+        # Fire the complete event back along with updated list of beacons
+        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt.fire_event({'complete': complete, 'comment': comment,
+                        'beacons': self.opts['beacons']},
+                       tag='/salt/minion/minion_beacon_reset_complete')
+
         return True

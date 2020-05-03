@@ -20,6 +20,10 @@ import subprocess
 import types
 from string import ascii_letters, digits
 
+# Import 3rd-party libs
+from salt.ext import six
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+
 # Import salt libs
 import salt.utils.args
 import salt.utils.files
@@ -35,6 +39,11 @@ from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.utils.decorators.jinja import jinja_filter
 from salt.utils.versions import LooseVersion
+# Attempt to import win_network
+try:
+    import salt.utils.win_network
+except ImportError:
+    pass
 
 try:
     import salt.utils.win_network
@@ -173,11 +182,8 @@ def _generate_minion_id():
                 if len(a_nfo) > 3:
                     hosts.append(a_nfo[3])
         except socket.gaierror:
-            log.warning(
-                "Cannot resolve address {addr} info via socket: {message}".format(
-                    addr=hosts.first() or "localhost (N/A)", message=socket.gaierror
-                )
-            )
+            log.warning('Cannot resolve address %s info via socket: %s',
+                        hosts.first() or 'localhost (N/A)', socket.gaierror)
     # Universal method for everywhere (Linux, Slowlaris, Windows etc)
     for f_name in (
         "/etc/hostname",
@@ -232,10 +238,9 @@ def get_socket(addr, type=socket.SOCK_STREAM, proto=0):
 def get_fqhostname():
     """
     Returns the fully qualified hostname
-    """
-    l = [socket.getfqdn()]
-
-    # try socket.getaddrinfo
+    '''
+    # try getaddrinfo()
+    fqdn = None
     try:
         addrinfo = socket.getaddrinfo(
             socket.gethostname(),
@@ -247,12 +252,18 @@ def get_fqhostname():
         )
         for info in addrinfo:
             # info struct [family, socktype, proto, canonname, sockaddr]
-            if len(info) >= 4 and info[3]:
-                l = [info[3]]
+            # On Windows `canonname` can be an empty string
+            # This can cause the function to return `None`
+            if len(info) > 3 and info[3]:
+                fqdn = info[3]
+                break
     except socket.gaierror:
-        pass
-
-    return l and l[0] or None
+        pass  # NOTE: this used to log.error() but it was later disabled
+    except socket.error as err:
+        log.debug('socket.getaddrinfo() failure while finding fqdn: %s', err)
+    if fqdn is None:
+        fqdn = socket.getfqdn()
+    return fqdn
 
 
 def ip_to_host(ip):
@@ -1053,10 +1064,7 @@ def _interfaces_ipconfig(out):
 def win_interfaces():
     """
     Obtain interface information for Windows systems
-    """
-    if WIN_NETWORK_LOADED is False:
-        # Let's throw the ImportException again
-        import salt.utils.win_network as _
+    '''
     return salt.utils.win_network.get_interface_info()
 
 
@@ -1220,7 +1228,7 @@ def _subnets(proto="inet", interfaces_=None):
         subnet = "prefixlen"
         dflt_cidr = 128
     else:
-        log.error("Invalid proto {0} calling subnets()".format(proto))
+        log.error('Invalid proto %s calling subnets()', proto)
         return
 
     for ip_info in six.itervalues(ifaces):
@@ -1298,32 +1306,13 @@ def _filter_interfaces(interface=None, interface_data=None):
     if interface is None:
         ret = ifaces
     else:
-        interface = salt.utils.args.split_input(interface)
-        # pylint: disable=not-an-iterable
-        ret = {
-            k: v
-            for k, v in six.iteritems(ifaces)
-            if any((fnmatch.fnmatch(k, pat) for pat in interface))
-        }
-        # pylint: enable=not-an-iterable
-    return ret
-
-
-def _ip_addrs(
-    interface=None, include_loopback=False, interface_data=None, proto="inet"
-):
-    """
-    Return the full list of IP adresses matching the criteria
-
-    proto = inet|inet6
-    """
-    addrs = _get_ips(_filter_interfaces(interface, interface_data), proto=proto)
-
-    ret = set()
-    for addr in addrs:
-        addr = ipaddress.ip_address(addr.get("address"))
-        if not addr.is_loopback or include_loopback:
-            ret.add(addr)
+        target_ifaces = dict([(k, v) for k, v in six.iteritems(ifaces)
+                              if k == interface])
+        if not target_ifaces:
+            log.error('Interface %s not found.', interface)
+    for ip_info in six.itervalues(target_ifaces):
+        addrs = ip_info.get(proto, [])
+        addrs.extend([addr for addr in ip_info.get('secondary', []) if addr.get('type') == proto])
 
     return [six.text_type(addr) for addr in sorted(ret)]
 
@@ -1443,7 +1432,7 @@ def hex2ip(hex_ip, invert=False):
             else:
                 return address.compressed
         except ipaddress.AddressValueError as ex:
-            log.error("hex2ip - ipv6 address error: {0}".format(ex))
+            log.error('hex2ip - ipv6 address error: %s', ex)
             return hex_ip
 
     try:
@@ -1693,7 +1682,7 @@ def _freebsd_remotes_on(port, which_end):
         cmd = salt.utils.args.shlex_split("sockstat -4 -c -p {0}".format(port))
         data = subprocess.check_output(cmd)  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError as ex:
-        log.error('Failed "sockstat" with returncode = {0}'.format(ex.returncode))
+        log.error('Failed "sockstat" with returncode = %s', ex.returncode)
         raise
 
     lines = salt.utils.stringutils.to_str(data).split("\n")
@@ -1755,7 +1744,7 @@ def _netbsd_remotes_on(port, which_end):
         cmd = salt.utils.args.shlex_split("sockstat -4 -c -n -p {0}".format(port))
         data = subprocess.check_output(cmd)  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError as ex:
-        log.error('Failed "sockstat" with returncode = {0}'.format(ex.returncode))
+        log.error('Failed "sockstat" with returncode = %s', ex.returncode)
         raise
 
     lines = salt.utils.stringutils.to_str(data).split("\n")
@@ -1902,7 +1891,7 @@ def _linux_remotes_on(port, which_end):
             # to locate Internet addresses, and it is not an error in this case.
             log.warning('"lsof" returncode = 1, likely no active TCP sessions.')
             return remotes
-        log.error('Failed "lsof" with returncode = {0}'.format(ex.returncode))
+        log.error('Failed "lsof" with returncode = %s', ex.returncode)
         raise
 
     lines = salt.utils.stringutils.to_str(data).split("\n")
@@ -2041,27 +2030,89 @@ def refresh_dns():
         pass
 
 
-@jinja_filter("dns_check")
-def dns_check(addr, port, safe=False, ipv6=None):
-    """
-    Return an ip address resolved by dns in a format usable in URLs (ipv6 in brackets).
-    Obeys system preference for IPv4/6 address resolution - this can be overridden by
-    the ipv6 flag. Tries to connect to the address before considering it useful. If no
-    address can be reached, the first one resolved is used as a fallback.
-    Does not exit on failure, raises an exception.
-    """
-    ip_addrs = []
-    family = (
-        socket.AF_INET6
-        if ipv6
-        else socket.AF_INET
-        if ipv6 is False
-        else socket.AF_UNSPEC
-    )
+@jinja_filter('connection_check')
+def connection_check(addr, port=80, safe=False, ipv6=None):
+    '''
+    Provides a convenient alias for the dns_check filter.
+    '''
+    return dns_check(addr, port, safe, ipv6)
+
+
+@jinja_filter('dns_check')
+def dns_check(addr, port=80, safe=False, ipv6=None, attempt_connect=True):
+    '''
+    Return the ip resolved by dns, but do not exit on failure, only raise an
+    exception. Obeys system preference for IPv4/6 address resolution - this
+    can be overridden by the ipv6 flag.
+    Tries to connect to the address before considering it useful. If no address
+    can be reached, the first one resolved is used as a fallback.
+    '''
+    error = False
+    lookup = addr
+    seen_ipv6 = False
+    family = socket.AF_INET6 if ipv6 else socket.AF_INET if ipv6 is False else socket.AF_UNSPEC
+
+    hostnames = []
     try:
         refresh_dns()
-        addrinfo = socket.getaddrinfo(addr, port, family, socket.SOCK_STREAM)
-        ip_addrs = _test_addrs(addrinfo, port)
+        hostnames = socket.getaddrinfo(addr, port, family, socket.SOCK_STREAM)
+    except TypeError:
+        err = ('Attempt to resolve address \'{0}\' failed. Invalid or unresolveable address').format(lookup)
+        raise SaltSystemExit(code=42, msg=err)
+    except socket.error:
+        error = True
+
+    # If ipv6 is set to True, attempt another lookup using the IPv4 family,
+    # just in case we're attempting to lookup an IPv4 IP
+    # as an IPv6 hostname.
+    if error and ipv6:
+        try:
+            refresh_dns()
+            hostnames = socket.getaddrinfo(addr, port,
+                                           socket.AF_INET,
+                                           socket.SOCK_STREAM)
+        except TypeError:
+            err = ('Attempt to resolve address \'{0}\' failed. Invalid or unresolveable address').format(lookup)
+            raise SaltSystemExit(code=42, msg=err)
+        except socket.error:
+            error = True
+
+    try:
+        if not hostnames:
+            error = True
+        else:
+            resolved = False
+            candidates = []
+            for h in hostnames:
+                # Input is IP address, passed through unchanged, just return it
+                if h[4][0] == addr:
+                    resolved = salt.utils.zeromq.ip_bracket(addr)
+                    break
+
+                candidate_addr = salt.utils.zeromq.ip_bracket(h[4][0])
+
+                # sometimes /etc/hosts contains ::1 localhost
+                if not ipv6 and candidate_addr == '[::1]':
+                    continue
+
+                candidates.append(candidate_addr)
+
+                if attempt_connect:
+                    try:
+                        s = socket.socket(h[0], socket.SOCK_STREAM)
+                        s.settimeout(2)
+                        s.connect((candidate_addr.strip('[]'), h[4][1]))
+                        s.close()
+
+                        resolved = candidate_addr
+                        break
+                    except socket.error:
+                        pass
+            if not resolved:
+                if candidates:
+                    resolved = candidates[0]
+                else:
+                    error = True
     except TypeError:
         err = (
             "Attempt to resolve address '{0}' failed. Invalid or unresolveable address"
@@ -2166,32 +2217,13 @@ def parse_host_port(host_port):
     return host, port
 
 
-@jinja_filter("filter_by_networks")
-def filter_by_networks(values, networks):
+def is_fqdn(hostname):
     """
-    Returns the list of IPs filtered by the network list.
-    If the network list is an empty sequence, no IPs are returned.
-    If the network list is None, all IPs are returned.
+    Verify if hostname conforms to be a FQDN.
 
-    {% set networks = ['192.168.0.0/24', 'fe80::/64'] %}
-    {{ grains['ip_interfaces'] | filter_by_networks(networks) }}
-    {{ grains['ipv6'] | filter_by_networks(networks) }}
-    {{ grains['ipv4'] | filter_by_networks(networks) }}
+    :param hostname: text string with the name of the host
+    :return: bool, True if hostname is correct FQDN, False otherwise
     """
 
-    _filter = lambda ips, networks: [
-        ip for ip in ips for net in networks if ipaddress.ip_address(ip) in net
-    ]
-
-    if networks is not None:
-        networks = [ipaddress.ip_network(network) for network in networks]
-        if isinstance(values, collections.Mapping):
-            return {
-                interface: _filter(values[interface], networks) for interface in values
-            }
-        elif isinstance(values, collections.Sequence):
-            return _filter(values, networks)
-        else:
-            raise ValueError("Do not know how to filter a {}".format(type(values)))
-    else:
-        return values
+    compliant = re.compile(r"(?!-)[A-Z\d\-\_]{1,63}(?<!-)$", re.IGNORECASE)
+    return "." in hostname and len(hostname) < 0xff and all(compliant.match(x) for x in hostname.rstrip(".").split("."))

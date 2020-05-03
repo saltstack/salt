@@ -287,8 +287,7 @@ class Swarm(object):
 class MinionSwarm(Swarm):
     """
     Create minions
-    """
-
+    '''
     def start_minions(self):
         """
         Iterate over the config files and start up the minions
@@ -339,19 +338,19 @@ class MinionSwarm(Swarm):
                 minion_pub = os.path.join(self.pki, "minion.pub")
                 shutil.copy(minion_pem, minion_pkidir)
                 shutil.copy(minion_pub, minion_pkidir)
-            data["pki_dir"] = minion_pkidir
-        elif self.opts["transport"] == "tcp":
-            data["transport"] = "tcp"
+            data['pki_dir'] = minion_pkidir
+        elif self.opts['transport'] == 'tcp':
+            data['transport'] = 'tcp'
 
-        if self.opts["root_dir"]:
-            data["root_dir"] = self.opts["root_dir"]
+        if self.opts['root_dir']:
+            data['root_dir'] = self.opts['root_dir']
 
-        path = os.path.join(dpath, "minion")
+        path = os.path.join(dpath, 'minion')
 
-        if self.opts["keep"]:
-            keep = self.opts["keep"].split(",")
-            modpath = os.path.join(os.path.dirname(salt.__file__), "modules")
-            fn_prefixes = (fn_.partition(".")[0] for fn_ in os.listdir(modpath))
+        if self.opts['keep']:
+            keep = self.opts['keep'].split(',')
+            modpath = os.path.join(os.path.dirname(salt.__file__), 'modules')
+            fn_prefixes = (fn_.partition('.')[0] for fn_ in os.listdir(modpath))
             ignore = [fn_prefix for fn_prefix in fn_prefixes if fn_prefix not in keep]
             data["disable_modules"] = ignore
 

@@ -25,8 +25,8 @@ import salt.utils.files
 import salt.utils.minions
 import salt.utils.path
 import salt.utils.versions
-import salt.version
 import salt.wheel
+import salt.version
 from salt.exceptions import SaltClientError, SaltSystemExit
 
 # Import 3rd-party libs
@@ -232,7 +232,7 @@ def _show_ip_migration(show_ip, show_ipv4):
 
 
 def list_state(subset=None, show_ip=False, show_ipv4=None):
-    """
+    '''
     .. versionadded:: 2015.8.0
     .. versionchanged:: 2019.2.0
         The 'show_ipv4' argument has been renamed to 'show_ip' as it now
@@ -266,7 +266,7 @@ def list_state(subset=None, show_ip=False, show_ipv4=None):
 
 
 def list_not_state(subset=None, show_ip=False, show_ipv4=None):
-    """
+    '''
     .. versionadded:: 2015.8.0
     .. versionchanged:: 2019.2.0
         The 'show_ipv4' argument has been renamed to 'show_ip' as it now

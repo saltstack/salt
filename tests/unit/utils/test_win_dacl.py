@@ -402,8 +402,8 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
     def test_check_perms_test_true(self):
         """
         Test the check_perms function
-        """
-        with patch.dict(win_dacl.__opts__, {"test": True}):
+        '''
+        with patch.dict(win_dacl.__opts__, {'test': True}):
             result = win_dacl.check_perms(
                 obj_name=self.obj_name,
                 obj_type=self.obj_type,

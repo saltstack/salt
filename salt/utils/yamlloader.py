@@ -5,7 +5,6 @@ Custom YAML loading in Salt
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-
 import warnings
 
 import salt.utils.stringutils
@@ -22,7 +21,7 @@ except Exception:  # pylint: disable=broad-except
     pass
 
 
-__all__ = ["SaltYamlSafeLoader", "load", "safe_load"]
+__all__ = ['SaltYamlSafeLoader', 'load', 'safe_load']
 
 
 class DuplicateKeyWarning(RuntimeWarning):

@@ -828,6 +828,19 @@ def vm_present(name, vmconfig, config=None):
                 ret["result"] = False
                 ret["comment"] = "image {0} not installed".format(disk["image_uuid"])
 
+    # prepare disk.*.image_uuid
+    for disk in vmconfig['disks'] if 'disks' in vmconfig else []:
+        if 'image_uuid' in disk and disk['image_uuid'] not in __salt__['imgadm.list']():
+            if config['auto_import']:
+                if not __opts__['test']:
+                    res = __salt__['imgadm.import'](disk['image_uuid'])
+                    if disk['image_uuid'] not in res:
+                        ret['result'] = False
+                        ret['comment'] = 'failed to import image {0}'.format(disk['image_uuid'])
+            else:
+                ret['result'] = False
+                ret['comment'] = 'image {0} not installed'.format(disk['image_uuid'])
+
     # docker json-array handling
     if "internal_metadata" in vmconfig:
         for var in vmconfig_docker_array:

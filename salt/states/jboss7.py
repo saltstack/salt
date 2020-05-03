@@ -198,21 +198,21 @@ def datasource_exists(
         diff = dictdiffer.diff(ds_new_properties, ds_current_properties)
 
         added = diff.added()
-        if len(added) > 0:
+        if added:
             has_changed = True
             ret["changes"]["added"] = __format_ds_changes(
                 added, ds_current_properties, ds_new_properties
             )
 
         removed = diff.removed()
-        if len(removed) > 0:
+        if removed:
             has_changed = True
             ret["changes"]["removed"] = __format_ds_changes(
                 removed, ds_current_properties, ds_new_properties
             )
 
         changed = diff.changed()
-        if len(changed) > 0:
+        if changed:
             has_changed = True
             ret["changes"]["changed"] = __format_ds_changes(
                 changed, ds_current_properties, ds_new_properties
@@ -418,8 +418,8 @@ def deployed(name, jboss_config, salt_source=None):
         return _error(ret, validate_comment)
 
     resolved_source, get_artifact_comment, changed = __get_artifact(salt_source)
-    log.debug("resolved_source=%s", resolved_source)
-    log.debug("get_artifact_comment=%s", get_artifact_comment)
+    log.debug('resolved_source=%s', resolved_source)
+    log.debug('get_artifact_comment=%s', get_artifact_comment)
 
     comment = __append_comment(
         new_comment=get_artifact_comment, current_comment=comment
@@ -435,51 +435,37 @@ def deployed(name, jboss_config, salt_source=None):
 
     require_deployment = True
 
-    log.debug("deployment=%s", deployment)
+    log.debug('deployment=%s', deployment)
     if deployment is not None:
-        if "undeploy_force" in salt_source:
-            if salt_source["undeploy_force"]:
-                ret["changes"]["undeployed"] = __undeploy(jboss_config, deployment)
+        if 'undeploy_force' in salt_source:
+            if salt_source['undeploy_force']:
+                ret['changes']['undeployed'] = __undeploy(jboss_config, deployment)
             else:
                 if changed:
-                    ret["changes"]["undeployed"] = __undeploy(jboss_config, deployment)
+                    ret['changes']['undeployed'] = __undeploy(jboss_config, deployment)
                 else:
                     require_deployment = False
-                    comment = __append_comment(
-                        new_comment="The artifact {} was already deployed".format(
-                            deployment
-                        ),
-                        current_comment=comment,
-                    )
+                    comment = __append_comment(new_comment='The artifact {} was already deployed'.format(deployment), current_comment=comment)
         else:
-            ret["changes"]["undeployed"] = __undeploy(jboss_config, deployment)
+            ret['changes']['undeployed'] = __undeploy(jboss_config, deployment)
 
     if require_deployment:
-        deploy_result = __salt__["jboss7.deploy"](
-            jboss_config=jboss_config, source_file=resolved_source
-        )
-        log.debug("deploy_result=%s", str(deploy_result))
-        if deploy_result["success"]:
-            comment = __append_comment(
-                new_comment="Deployment completed.", current_comment=comment
-            )
-            ret["changes"]["deployed"] = resolved_source
+        deploy_result = __salt__['jboss7.deploy'](jboss_config=jboss_config, source_file=resolved_source)
+        log.debug('deploy_result=%s', str(deploy_result))
+        if deploy_result['success']:
+            comment = __append_comment(new_comment='Deployment completed.', current_comment=comment)
+            ret['changes']['deployed'] = resolved_source
         else:
-            comment = __append_comment(
-                new_comment="""Deployment failed\nreturn code={retcode}\nstdout='{stdout}'\nstderr='{stderr}""".format(
-                    **deploy_result
-                ),
-                current_comment=comment,
-            )
+            comment = __append_comment(new_comment='''Deployment failed\nreturn code={retcode}\nstdout='{stdout}'\nstderr='{stderr}'''.format(**deploy_result), current_comment=comment)
             _error(ret, comment)
 
-    ret["comment"] = comment
+    ret['comment'] = comment
 
     return ret
 
 
 def __undeploy(jboss_config, deployment):
-    __salt__["jboss7.undeploy"](jboss_config, deployment)
+    __salt__['jboss7.undeploy'](jboss_config, deployment)
     return deployment
 
 
@@ -582,7 +568,10 @@ def __get_artifact(salt_source):
                 if manage_result["changes"]:
                     changed = True
 
-            except Exception as e:  # pylint: disable=broad-except
+                if manage_result['changes']:
+                    changed = True
+
+            except Exception as e:
                 log.debug(traceback.format_exc())
                 comment = "Unable to manage file: {0}".format(e)
 

@@ -30,16 +30,16 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
         return {rh_ip: {}}
 
     def test_error_message_iface_should_process_non_str_expected(self):
-        values = [1, True, False, "no-kaboom"]
-        iface = "ethtest"
-        option = "test"
+        values = [1, True, False, 'no-kaboom']
+        iface = 'ethtest'
+        option = 'test'
         msg = rh_ip._error_msg_iface(iface, option, values)
-        self.assertTrue(msg.endswith("[1|True|False|no-kaboom]"), msg)
+        self.assertTrue(msg.endswith('[1|True|False|no-kaboom]'), msg)
 
     def test_error_message_network_should_process_non_str_expected(self):
-        values = [1, True, False, "no-kaboom"]
-        msg = rh_ip._error_msg_network("fnord", values)
-        self.assertTrue(msg.endswith("[1|True|False|no-kaboom]"), msg)
+        values = [1, True, False, 'no-kaboom']
+        msg = rh_ip._error_msg_network('fnord', values)
+        self.assertTrue(msg.endswith('[1|True|False|no-kaboom]'), msg)
 
     def test_build_bond(self):
         """

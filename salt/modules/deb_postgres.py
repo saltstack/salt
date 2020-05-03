@@ -27,24 +27,19 @@ def __virtual__():
     """
     if salt.utils.path.which("pg_createcluster"):
         return __virtualname__
-    return (
-        False,
-        "postgres execution module not loaded: pg_createcluste command not found.",
-    )
+    return (False, 'postgres execution module not loaded: pg_createcluste command not found.')
 
 
-def cluster_create(
-    version,
-    name="main",
-    port=None,
-    locale=None,
-    encoding=None,
-    datadir=None,
-    allow_group_access=None,
-    data_checksums=None,
-    wal_segsize=None,
-):
-    """
+def cluster_create(version,
+                   name='main',
+                   port=None,
+                   locale=None,
+                   encoding=None,
+                   datadir=None,
+                   allow_group_access=None,
+                   data_checksums=None,
+                   wal_segsize=None):
+    '''
     Adds a cluster to the Postgres server.
 
     .. warning:
@@ -62,9 +57,9 @@ def cluster_create(
         salt '*' postgres.cluster_create '9.3' locale='fr_FR'
 
         salt '*' postgres.cluster_create '11' data_checksums=True wal_segsize='32'
-    """
 
-    cmd = [salt.utils.path.which("pg_createcluster")]
+    '''
+    cmd = [salt.utils.path.which('pg_createcluster')]
     if port:
         cmd += ["--port", six.text_type(port)]
     if locale:
@@ -76,17 +71,17 @@ def cluster_create(
     cmd += [version, name]
     # initdb-specific options are passed after '--'
     if allow_group_access or data_checksums or wal_segsize:
-        cmd += ["--"]
+        cmd += ['--']
     if allow_group_access is True:
-        cmd += ["--allow-group-access"]
+        cmd += ['--allow-group-access']
     if data_checksums is True:
-        cmd += ["--data-checksums"]
+        cmd += ['--data-checksums']
     if wal_segsize:
-        cmd += ["--wal-segsize", wal_segsize]
-    cmdstr = " ".join([pipes.quote(c) for c in cmd])
-    ret = __salt__["cmd.run_all"](cmdstr, python_shell=False)
-    if ret.get("retcode", 0) != 0:
-        log.error("Error creating a Postgresql cluster %s/%s", version, name)
+        cmd += ['--wal-segsize', wal_segsize]
+    cmdstr = ' '.join([pipes.quote(c) for c in cmd])
+    ret = __salt__['cmd.run_all'](cmdstr, python_shell=False)
+    if ret.get('retcode', 0) != 0:
+        log.error('Error creating a Postgresql cluster %s/%s', version, name)
         return False
     return ret
 
@@ -151,8 +146,8 @@ def cluster_remove(version, name="main", stop=False):
     cmdstr = " ".join([pipes.quote(c) for c in cmd])
     ret = __salt__["cmd.run_all"](cmdstr, python_shell=False)
     # FIXME - return Boolean ?
-    if ret.get("retcode", 0) != 0:
-        log.error("Error removing a Postgresql cluster %s/%s", version, name)
+    if ret.get('retcode', 0) != 0:
+        log.error('Error removing a Postgresql cluster %s/%s', version, name)
     else:
         ret["changes"] = ("Successfully removed" " cluster {0}/{1}").format(
             version, name

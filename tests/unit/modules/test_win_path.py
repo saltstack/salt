@@ -47,10 +47,10 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
     def test_get_path(self):
         """
         Test to Returns the system path
-        """
-        mock = MagicMock(return_value={"vdata": "C:\\Salt"})
-        with patch.dict(win_path.__utils__, {"reg.read_value": mock}):
-            self.assertListEqual(win_path.get_path(), ["C:\\Salt"])
+        '''
+        mock = MagicMock(return_value={'vdata': 'C:\\Salt'})
+        with patch.dict(win_path.__utils__, {'reg.read_value': mock}):
+            self.assertListEqual(win_path.get_path(), ['C:\\Salt'])
 
     def test_exists(self):
         """
@@ -84,13 +84,11 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             env = _env(path)
             mock_get = MagicMock(return_value=list(path))
             mock_set = MagicMock(return_value=retval)
-            with patch.object(win_path, "PATHSEP", self.pathsep), patch.object(
-                win_path, "get_path", mock_get
-            ), patch.object(os, "environ", env), patch.dict(
-                win_path.__utils__, {"reg.set_value": mock_set}
-            ), patch.object(
-                win_path, "rehash", MagicMock(return_value=True)
-            ):
+            with patch.object(win_path, 'PATHSEP', self.pathsep), \
+                    patch.object(win_path, 'get_path', mock_get), \
+                    patch.object(os, 'environ', env), \
+                    patch.dict(win_path.__utils__, {'reg.set_value': mock_set}), \
+                    patch.object(win_path, 'rehash', MagicMock(return_value=True)):
                 return win_path.add(name, index), env, mock_set
 
         # Test a successful reg update
@@ -119,6 +117,13 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         # Test adding with a custom index of 0
         ret, env, mock_set = _run("c:\\salt", index=0, retval=True)
         new_path = ("c:\\salt", "C:\\Foo", "C:\\Bar")
+        self.assertTrue(ret)
+        self.assert_call_matches(mock_set, new_path)
+        self.assert_path_matches(env, new_path)
+
+        # Test adding with a custom index of 0
+        ret, env, mock_set = _run('c:\\salt', index=0, retval=True)
+        new_path = ('c:\\salt', 'C:\\Foo', 'C:\\Bar')
         self.assertTrue(ret)
         self.assert_call_matches(mock_set, new_path)
         self.assert_path_matches(env, new_path)
@@ -208,13 +213,11 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             env = _env(path)
             mock_get = MagicMock(return_value=list(path))
             mock_set = MagicMock(return_value=retval)
-            with patch.object(win_path, "PATHSEP", self.pathsep), patch.object(
-                win_path, "get_path", mock_get
-            ), patch.object(os, "environ", env), patch.dict(
-                win_path.__utils__, {"reg.set_value": mock_set}
-            ), patch.object(
-                win_path, "rehash", MagicMock(return_value=True)
-            ):
+            with patch.object(win_path, 'PATHSEP', self.pathsep), \
+                    patch.object(win_path, 'get_path', mock_get), \
+                    patch.object(os, 'environ', env), \
+                    patch.dict(win_path.__utils__, {'reg.set_value': mock_set}), \
+                    patch.object(win_path, 'rehash', MagicMock(return_value=True)):
                 return win_path.remove(name), env, mock_set
 
         # Test a successful reg update

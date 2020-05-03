@@ -40,121 +40,61 @@ def sync_all(saltenv="base", extmod_whitelist=None, extmod_blacklist=None):
     """
     log.debug("Syncing all")
     ret = {}
-    ret["clouds"] = sync_clouds(
-        saltenv=saltenv,
-        extmod_whitelist=extmod_whitelist,
-        extmod_blacklist=extmod_blacklist,
-    )
-    ret["modules"] = sync_modules(
-        saltenv=saltenv,
-        extmod_whitelist=extmod_whitelist,
-        extmod_blacklist=extmod_blacklist,
-    )
-    ret["states"] = sync_states(
-        saltenv=saltenv,
-        extmod_whitelist=extmod_whitelist,
-        extmod_blacklist=extmod_blacklist,
-    )
-    ret["grains"] = sync_grains(
-        saltenv=saltenv,
-        extmod_whitelist=extmod_whitelist,
-        extmod_blacklist=extmod_blacklist,
-    )
-    ret["renderers"] = sync_renderers(
-        saltenv=saltenv,
-        extmod_whitelist=extmod_whitelist,
-        extmod_blacklist=extmod_blacklist,
-    )
-    ret["returners"] = sync_returners(
-        saltenv=saltenv,
-        extmod_whitelist=extmod_whitelist,
-        extmod_blacklist=extmod_blacklist,
-    )
-    ret["output"] = sync_output(
-        saltenv=saltenv,
-        extmod_whitelist=extmod_whitelist,
-        extmod_blacklist=extmod_blacklist,
-    )
-    ret["proxymodules"] = sync_proxymodules(
-        saltenv=saltenv,
-        extmod_whitelist=extmod_whitelist,
-        extmod_blacklist=extmod_blacklist,
-    )
-    ret["runners"] = sync_runners(
-        saltenv=saltenv,
-        extmod_whitelist=extmod_whitelist,
-        extmod_blacklist=extmod_blacklist,
-    )
-    ret["wheel"] = sync_wheel(
-        saltenv=saltenv,
-        extmod_whitelist=extmod_whitelist,
-        extmod_blacklist=extmod_blacklist,
-    )
-    ret["engines"] = sync_engines(
-        saltenv=saltenv,
-        extmod_whitelist=extmod_whitelist,
-        extmod_blacklist=extmod_blacklist,
-    )
-    ret["thorium"] = sync_thorium(
-        saltenv=saltenv,
-        extmod_whitelist=extmod_whitelist,
-        extmod_blacklist=extmod_blacklist,
-    )
-    ret["queues"] = sync_queues(
-        saltenv=saltenv,
-        extmod_whitelist=extmod_whitelist,
-        extmod_blacklist=extmod_blacklist,
-    )
-    ret["pillar"] = sync_pillar(
-        saltenv=saltenv,
-        extmod_whitelist=extmod_whitelist,
-        extmod_blacklist=extmod_blacklist,
-    )
-    ret["utils"] = sync_utils(
-        saltenv=saltenv,
-        extmod_whitelist=extmod_whitelist,
-        extmod_blacklist=extmod_blacklist,
-    )
-    ret["sdb"] = sync_sdb(
-        saltenv=saltenv,
-        extmod_whitelist=extmod_whitelist,
-        extmod_blacklist=extmod_blacklist,
-    )
-    ret["cache"] = sync_cache(
-        saltenv=saltenv,
-        extmod_whitelist=extmod_whitelist,
-        extmod_blacklist=extmod_blacklist,
-    )
-    ret["fileserver"] = sync_fileserver(
-        saltenv=saltenv,
-        extmod_whitelist=extmod_whitelist,
-        extmod_blacklist=extmod_blacklist,
-    )
-    ret["tops"] = sync_tops(
-        saltenv=saltenv,
-        extmod_whitelist=extmod_whitelist,
-        extmod_blacklist=extmod_blacklist,
-    )
-    ret["tokens"] = sync_eauth_tokens(
-        saltenv=saltenv,
-        extmod_whitelist=extmod_whitelist,
-        extmod_blacklist=extmod_blacklist,
-    )
-    ret["serializers"] = sync_serializers(
-        saltenv=saltenv,
-        extmod_whitelist=extmod_whitelist,
-        extmod_blacklist=extmod_blacklist,
-    )
-    ret["executors"] = sync_executors(
-        saltenv=saltenv,
-        extmod_whitelist=extmod_whitelist,
-        extmod_blacklist=extmod_blacklist,
-    )
+    ret['clouds'] = sync_clouds(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
+    ret['modules'] = sync_modules(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
+    ret['states'] = sync_states(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
+    ret['grains'] = sync_grains(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
+    ret['renderers'] = sync_renderers(saltenv=saltenv, extmod_whitelist=extmod_whitelist,
+                                      extmod_blacklist=extmod_blacklist)
+    ret['returners'] = sync_returners(saltenv=saltenv, extmod_whitelist=extmod_whitelist,
+                                      extmod_blacklist=extmod_blacklist)
+    ret['output'] = sync_output(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
+    ret['proxymodules'] = sync_proxymodules(saltenv=saltenv, extmod_whitelist=extmod_whitelist,
+                                            extmod_blacklist=extmod_blacklist)
+    ret['runners'] = sync_runners(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
+    ret['wheel'] = sync_wheel(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
+    ret['engines'] = sync_engines(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
+    ret['thorium'] = sync_thorium(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
+    ret['queues'] = sync_queues(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
+    ret['pillar'] = sync_pillar(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
+    ret['utils'] = sync_utils(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
+    ret['sdb'] = sync_sdb(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
+    ret['cache'] = sync_cache(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
+    ret['fileserver'] = sync_fileserver(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
+    ret['tops'] = sync_tops(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
+    ret['tokens'] = sync_eauth_tokens(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
+    ret['serializers'] = sync_serializers(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
+    ret['auth'] = sync_auth(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
+    ret['executors'] = sync_executors(saltenv=saltenv, extmod_whitelist=extmod_whitelist, extmod_blacklist=extmod_blacklist)
     return ret
 
 
-def sync_modules(saltenv="base", extmod_whitelist=None, extmod_blacklist=None):
-    """
+def sync_auth(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
+    '''
+    Sync execution modules from ``salt://_auth`` to the master
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+    extmod_whitelist : None
+        comma-separated list of modules to sync
+
+    extmod_blacklist : None
+        comma-separated list of modules to blacklist based on type
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run saltutil.sync_auth
+    '''
+    return salt.utils.extmods.sync(__opts__, 'auth', saltenv=saltenv, extmod_whitelist=extmod_whitelist,
+                                   extmod_blacklist=extmod_blacklist)[0]
+
+
+def sync_modules(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
+    '''
     Sync execution modules from ``salt://_modules`` to the master
 
     saltenv : base
@@ -346,14 +286,9 @@ def sync_proxymodules(saltenv="base", extmod_whitelist=None, extmod_blacklist=No
     .. code-block:: bash
 
         salt-run saltutil.sync_proxymodules
-    """
-    return salt.utils.extmods.sync(
-        __opts__,
-        "proxy",
-        saltenv=saltenv,
-        extmod_whitelist=extmod_whitelist,
-        extmod_blacklist=extmod_blacklist,
-    )[0]
+    '''
+    return salt.utils.extmods.sync(__opts__, 'proxy', saltenv=saltenv, extmod_whitelist=extmod_whitelist,
+                                   extmod_blacklist=extmod_blacklist)[0]
 
 
 def sync_runners(saltenv="base", extmod_whitelist=None, extmod_blacklist=None):
@@ -785,29 +720,24 @@ def sync_serializers(saltenv="base", extmod_whitelist=None, extmod_blacklist=Non
         one environment, pass a comma-separated list.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-run saltutil.sync_utils
-    """
-    return salt.utils.extmods.sync(
-        __opts__,
-        "serializers",
-        saltenv=saltenv,
-        extmod_whitelist=extmod_whitelist,
-        extmod_blacklist=extmod_blacklist,
-    )[0]
+    '''
+    return salt.utils.extmods.sync(__opts__, 'serializers', saltenv=saltenv, extmod_whitelist=extmod_whitelist,
+                                   extmod_blacklist=extmod_blacklist)[0]
 
 
-def sync_executors(saltenv="base", extmod_whitelist=None, extmod_blacklist=None):
-    """
-    .. versionadded:: 3000
+def sync_executors(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
+    '''
+    .. versionadded:: 2019.2.1
 
     Sync executor modules from ``salt://_executors`` to the master
 
@@ -826,11 +756,6 @@ def sync_executors(saltenv="base", extmod_whitelist=None, extmod_blacklist=None)
     .. code-block:: bash
 
         salt-run saltutil.sync_executors
-    """
-    return salt.utils.extmods.sync(
-        __opts__,
-        "executors",
-        saltenv=saltenv,
-        extmod_whitelist=extmod_whitelist,
-        extmod_blacklist=extmod_blacklist,
-    )[0]
+    '''
+    return salt.utils.extmods.sync(__opts__, 'executors', saltenv=saltenv, extmod_whitelist=extmod_whitelist,
+                                   extmod_blacklist=extmod_blacklist)[0]

@@ -11,6 +11,12 @@ import sys
 import tempfile
 import textwrap
 import time
+import sys
+
+# Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.case import ModuleCase
+from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt libs
 import salt.utils.files
@@ -66,8 +72,13 @@ class CMDTest(ModuleCase, SaltReturnAssertsMixin):
     def test_run_hide_output(self):
         """
         cmd.run with output hidden
-        """
-        ret = self.run_state("cmd.run", name=self.__cmd, hide_output=True)
+        '''
+
+        cmd = u'dir' if IS_WINDOWS else u'ls'
+        ret = self.run_state(
+            u'cmd.run',
+            name=cmd,
+            hide_output=True)
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
         self.assertEqual(ret["changes"]["stdout"], "")
@@ -80,8 +91,8 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
     """
 
     def setUp(self):
-        self.state_name = "run_redirect"
-        state_filename = self.state_name + ".sls"
+        self.state_name = 'run_redirect'
+        state_filename = self.state_name + '.sls'
         self.state_file = os.path.join(RUNTIME_VARS.TMP_STATE_TREE, state_filename)
 
         # Create the testfile and release the handle
@@ -240,8 +251,8 @@ class CMDRunWatchTest(ModuleCase, SaltReturnAssertsMixin):
     """
 
     def setUp(self):
-        self.state_name = "run_watch"
-        state_filename = self.state_name + ".sls"
+        self.state_name = 'run_watch'
+        state_filename = self.state_name + '.sls'
         self.state_file = os.path.join(RUNTIME_VARS.TMP_STATE_TREE, state_filename)
         super(CMDRunWatchTest, self).setUp()
 

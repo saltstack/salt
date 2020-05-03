@@ -593,76 +593,16 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_query_error(self):
         connect_mock = MagicMock()
-        with patch.object(mysql, "_connect", connect_mock):
-            with patch.dict(mysql.__salt__, {"config.option": MagicMock()}):
+        with patch.object(mysql, '_connect', connect_mock):
+            with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
                 # Use the OperationalError from the salt mysql module because that
                 # exception can come from either MySQLdb or pymysql
-                side_effect = mysql.OperationalError(9999, "Something Went Wrong")
-                with patch.object(
-                    mysql, "_execute", MagicMock(side_effect=side_effect)
-                ):
-                    mysql.query("testdb", "SELECT * FROM testdb")
-            self.assertIn("mysql.error", mysql.__context__)
-            expected = "MySQL Error 9999: Something Went Wrong"
-            self.assertEqual(mysql.__context__["mysql.error"], expected)
-
-    def test_plugin_add(self):
-        """
-        Test the adding/installing a MySQL / MariaDB plugin
-        """
-        with patch.object(mysql, "plugin_status", MagicMock(return_value="")):
-            self._test_call(
-                mysql.plugin_add,
-                'INSTALL PLUGIN auth_socket SONAME "auth_socket.so"',
-                "auth_socket",
-            )
-
-    def test_plugin_remove(self):
-        """
-        Test the removing/uninstalling a MySQL / MariaDB plugin
-        """
-        with patch.object(mysql, "plugin_status", MagicMock(return_value="ACTIVE")):
-            self._test_call(
-                mysql.plugin_remove, "UNINSTALL PLUGIN auth_socket", "auth_socket",
-            )
-
-    def test_plugin_status(self):
-        """
-        Test checking the status of a MySQL / MariaDB plugin
-        """
-        self._test_call(
-            mysql.plugin_status,
-            {
-                "sql": "SELECT PLUGIN_STATUS FROM INFORMATION_SCHEMA.PLUGINS WHERE PLUGIN_NAME = %(name)s",
-                "sql_args": {"name": "auth_socket"},
-            },
-            "auth_socket",
-        )
-
-    def test_sanitize_comment(self):
-        """
-        Test comment sanitization
-        """
-        input_data = """/*
-        multiline
-        comment
-        */
-        CREATE TABLE test_update (a VARCHAR(25)); # end of line comment
-        # example comment
-        insert into test_update values ("some #hash value");            -- ending comment
-        insert into test_update values ("crazy -- not comment"); -- another ending comment
-        -- another comment type
-        """
-        expected_response = """/*
-multiline
-comment
-*/
-CREATE TABLE test_update (a VARCHAR(25));
-insert into test_update values ("some #hash value");
-insert into test_update values ("crazy -- not comment");
-"""
-        output = mysql._sanitize_comments(input_data)
-        self.assertEqual(output, expected_response)
+                side_effect = mysql.OperationalError(9999, 'Something Went Wrong')
+                with patch.object(mysql, '_execute', MagicMock(side_effect=side_effect)):
+                    mysql.query('testdb', 'SELECT * FROM testdb')
+            self.assertIn('mysql.error', mysql.__context__)
+            expected = 'MySQL Error 9999: Something Went Wrong'
+            self.assertEqual(mysql.__context__['mysql.error'], expected)
 
     def _test_call(self, function, expected_sql, *args, **kwargs):
         connect_mock = MagicMock()

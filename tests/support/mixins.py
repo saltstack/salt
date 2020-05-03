@@ -74,15 +74,17 @@ class CheckShellBinaryNameAndVersionMixin(object):
             # Late import
             self._call_binary_expected_version_ = salt.version.__version__
 
-        out = "\n".join(self.run_script(self._call_binary_, "--version"))
+        out = '\n'.join(self.run_script(self._call_binary_, '--version'))
         # Assert that the binary name is in the output
         try:
             self.assertIn(self._call_binary_, out)
         except AssertionError:
             # We might have generated the CLI scripts in which case we replace '-' with '_'
-            alternate_binary_name = self._call_binary_.replace("-", "_")
-            errmsg = "Neither '{}' or '{}' were found as part of the binary name in:\n'{}'".format(
-                self._call_binary_, alternate_binary_name, out
+            alternate_binary_name = self._call_binary_.replace('-', '_')
+            errmsg = 'Neither \'{}\' or \'{}\' were found as part of the binary name in:\n\'{}\''.format(
+                self._call_binary_,
+                alternate_binary_name,
+                out
             )
             self.assertIn(alternate_binary_name, out, msg=errmsg)
 
@@ -118,28 +120,26 @@ class AdaptedConfigurationTestCaseMixin(object):
         if config_for == "minion":
             rdict = salt.config.apply_minion_config(config_overrides, cdict)
 
-        verify_env(
-            [
-                os.path.join(rdict["pki_dir"], "minions"),
-                os.path.join(rdict["pki_dir"], "minions_pre"),
-                os.path.join(rdict["pki_dir"], "minions_rejected"),
-                os.path.join(rdict["pki_dir"], "minions_denied"),
-                os.path.join(rdict["cachedir"], "jobs"),
-                os.path.join(rdict["cachedir"], "tokens"),
-                os.path.join(rdict["root_dir"], "cache", "tokens"),
-                os.path.join(rdict["pki_dir"], "accepted"),
-                os.path.join(rdict["pki_dir"], "rejected"),
-                os.path.join(rdict["pki_dir"], "pending"),
-                os.path.dirname(rdict["log_file"]),
-                rdict["sock_dir"],
-                conf_dir,
-            ],
-            RUNTIME_VARS.RUNNING_TESTS_USER,
-            root_dir=rdict["root_dir"],
-        )
+        verify_env([os.path.join(rdict['pki_dir'], 'minions'),
+                    os.path.join(rdict['pki_dir'], 'minions_pre'),
+                    os.path.join(rdict['pki_dir'], 'minions_rejected'),
+                    os.path.join(rdict['pki_dir'], 'minions_denied'),
+                    os.path.join(rdict['cachedir'], 'jobs'),
+                    os.path.join(rdict['cachedir'], 'tokens'),
+                    os.path.join(rdict['root_dir'], 'cache', 'tokens'),
+                    os.path.join(rdict['pki_dir'], 'accepted'),
+                    os.path.join(rdict['pki_dir'], 'rejected'),
+                    os.path.join(rdict['pki_dir'], 'pending'),
+                    os.path.dirname(rdict['log_file']),
+                    rdict['sock_dir'],
+                    conf_dir
+                   ],
+                   RUNTIME_VARS.RUNNING_TESTS_USER,
+                   root_dir=rdict['root_dir'],
+                   )
 
-        rdict["conf_file"] = os.path.join(conf_dir, config_for)
-        with salt.utils.files.fopen(rdict["conf_file"], "w") as wfh:
+        rdict['conf_file'] = os.path.join(conf_dir, config_for)
+        with salt.utils.files.fopen(rdict['conf_file'], 'w') as wfh:
             salt.utils.yaml.safe_dump(rdict, wfh, default_flow_style=False)
         return rdict
 
@@ -449,9 +449,7 @@ class LoaderModuleMockMixin(
 ):
     """
     This class will setup salt loader dunders.
-
-    Please check `set_up_loader_mocks` above
-    """
+    '''
 
     # Define our setUp function decorator
     @staticmethod
@@ -679,7 +677,7 @@ class SaltReturnAssertsMixin(object):
             for saltret in self.__getWithinSaltReturn(ret, "result"):
                 self.assertTrue(saltret)
         except AssertionError:
-            log.info("Salt Full Return:\n{0}".format(pprint.pformat(ret)))
+            log.info('Salt Full Return:\n%s', pprint.pformat(ret))
             try:
                 raise AssertionError(
                     "{result} is not True. Salt Comment:\n{comment}".format(
@@ -698,7 +696,7 @@ class SaltReturnAssertsMixin(object):
             for saltret in self.__getWithinSaltReturn(ret, "result"):
                 self.assertFalse(saltret)
         except AssertionError:
-            log.info("Salt Full Return:\n{0}".format(pprint.pformat(ret)))
+            log.info('Salt Full Return:\n%s', pprint.pformat(ret))
             try:
                 raise AssertionError(
                     "{result} is not False. Salt Comment:\n{comment}".format(
@@ -715,7 +713,7 @@ class SaltReturnAssertsMixin(object):
             for saltret in self.__getWithinSaltReturn(ret, "result"):
                 self.assertIsNone(saltret)
         except AssertionError:
-            log.info("Salt Full Return:\n{0}".format(pprint.pformat(ret)))
+            log.info('Salt Full Return:\n%s', pprint.pformat(ret))
             try:
                 raise AssertionError(
                     "{result} is not None. Salt Comment:\n{comment}".format(
@@ -807,12 +805,11 @@ class SaltMinionEventAssertsMixin(object):
 
     @classmethod
     def setUpClass(cls):
-        opts = copy.deepcopy(RUNTIME_VARS.RUNTIME_CONFIGS["minion"])
         cls.q = multiprocessing.Queue()
-        cls.fetch_proc = salt.utils.process.SignalHandlingProcess(
+        cls.fetch_proc = salt.utils.process.SignalHandlingMultiprocessingProcess(
             target=_fetch_events,
-            args=(cls.q, opts),
-            name="Process-{}-Queue".format(cls.__name__),
+            args=(cls.q,),
+            name='Process-{}-Queue'.format(cls.__name__)
         )
         cls.fetch_proc.start()
         # Wait for the event bus to be connected

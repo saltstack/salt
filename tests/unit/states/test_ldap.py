@@ -62,11 +62,9 @@ def _dummy_connect(connect_spec):
 def _dummy_search(connect_spec, base, scope):
     if base not in db:
         return {}
-    return {
-        base: dict(
-            ((attr, list(db[base][attr])) for attr in db[base] if len(db[base][attr]))
-        )
-    }
+    return {base: dict(((attr, list(db[base][attr]))
+                        for attr in db[base]
+                        if db[base][attr]))}
 
 
 def _dummy_add(connect_spec, dn, attributes):
@@ -100,20 +98,20 @@ def _dummy_change(connect_spec, dn, before, after):
         if attr not in before:
             assert attr in after
             assert after[attr]
-            directives.append(("add", attr, after[attr]))
+            directives.append(('add', attr, after[attr]))
         elif attr not in after:
             assert attr in before
             assert before[attr]
-            directives.append(("delete", attr, ()))
+            directives.append(('delete', attr, ()))
         else:
             assert before[attr]
             assert after[attr]
             to_del = before[attr] - after[attr]
             if to_del:
-                directives.append(("delete", attr, to_del))
+                directives.append(('delete', attr, to_del))
             to_add = after[attr] - before[attr]
             if to_add:
-                directives.append(("add", attr, to_add))
+                directives.append(('add', attr, to_add))
     return _dummy_modify(connect_spec, dn, directives)
 
 
@@ -121,7 +119,7 @@ def _dummy_modify(connect_spec, dn, directives):
     assert dn in db
     e = db[dn]
     for op, attr, vals in directives:
-        if op == "add":
+        if op == 'add':
             assert vals
             existing_vals = e.setdefault(attr, OrderedSet())
             for val in vals:
@@ -175,7 +173,7 @@ class LDAPTestCase(TestCase, LoaderModuleMockMixin):
                 elif dn in expected_db:
                     new[dn].pop(attr, None)
                     expected_db[dn].pop(attr, None)
-            if not expected_db.get(dn, {}):
+            if not expected_db.get(dn):
                 new.pop(dn, None)
                 expected_db.pop(dn, None)
         if delete_others:

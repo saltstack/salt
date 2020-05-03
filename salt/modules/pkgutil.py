@@ -28,8 +28,8 @@ __virtualname__ = "pkgutil"
 def __virtual__():
     """
     Set the virtual pkg module if the os is Solaris
-    """
-    if __grains__["os_family"] == "Solaris":
+    '''
+    if __grains__.get('os_family') == 'Solaris':
         return __virtualname__
     return (
         False,
@@ -286,7 +286,7 @@ def install(name=None, refresh=False, version=None, pkgs=None, **kwargs):
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     if pkgs is None and version and len(pkg_params) == 1:

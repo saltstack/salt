@@ -4,9 +4,12 @@
 from __future__ import absolute_import
 
 import os
+import shutil
+import logging
 
 # Import salt libs
 import salt.utils.json
+import salt.utils.files
 import salt.utils.stringutils
 
 # Import test support libs
@@ -18,6 +21,8 @@ from salt.ext.six.moves.urllib.parse import (  # pylint: disable=no-name-in-modu
 )
 from tests.support.helpers import flaky
 from tests.support.unit import skipIf
+
+log = logging.getLogger(__name__)
 
 
 class TestAuth(cptc.BaseRestCherryPyTest):
@@ -347,20 +352,33 @@ class TestJobs(cptc.BaseRestCherryPyTest):
         )
         self.assertEqual(response.status, "200 OK")
 
-    @flaky
-    @skipIf(True, "SLOWTEST skip")
+    def _delete_master_local_job_cache(self):
+        job_cache_directory = os.path.join(self.config['cachedir'], 'jobs')
+        if not os.path.exists(job_cache_directory):
+            return
+        for root, dirs, files in salt.utils.files.safe_walk(job_cache_directory, followlinks=False):
+            for name in dirs:
+                try:
+                    directory = os.path.join(root, name)
+                    shutil.rmtree(directory)
+                except OSError:
+                    continue
+
     def test_all_jobs(self):
         """
         test query to /jobs returns job data
-        """
+        '''
+        # We really don't care about any previous job history, just the one job we add next
+        self._delete_master_local_job_cache()
         self._add_job()
 
         request, response = self.request(
-            "/jobs",
-            method="GET",
-            headers={"Accept": "application/json", "X-Auth-Token": self._token()},
+            '/jobs', method='GET',
+            headers={
+                'Accept': 'application/json',
+                'X-Auth-Token': self._token(),
+            }
         )
-
         resp = salt.utils.json.loads(salt.utils.stringutils.to_str(response.body[0]))
         self.assertIn("test.ping", str(resp["return"]))
         self.assertEqual(response.status, "200 OK")

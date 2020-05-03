@@ -2076,13 +2076,13 @@ def saml_provider_absent(name, region=None, key=None, keyid=None, profile=None):
     profile (dict)
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
-    """
-    ret = {"name": name, "result": True, "comment": "", "changes": {}}
-    provider = __salt__["boto_iam.list_saml_providers"](
-        region=region, key=key, keyid=keyid, profile=profile
-    )
-    if len(provider) == 0:
-        ret["comment"] = "SAML provider {0} is absent.".format(name)
+    '''
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    provider = __salt__['boto_iam.list_saml_providers'](region=region,
+                                                        key=key, keyid=keyid,
+                                                        profile=profile)
+    if not provider:
+        ret['comment'] = 'SAML provider {0} is absent.'.format(name)
         return ret
     if __opts__["test"]:
         ret["comment"] = "SAML provider {0} is set to be removed.".format(name)

@@ -40,21 +40,21 @@ from salt.ext.six.moves import input
 
 log = logging.getLogger(__name__)
 
-AUTH_INTERNAL_KEYWORDS = frozenset(
-    [
-        "client",
-        "cmd",
-        "eauth",
-        "fun",
-        "gather_job_timeout",
-        "kwarg",
-        "match",
-        "metadata",
-        "print_event",
-        "raw",
-        "yield_pub_data",
-    ]
-)
+AUTH_INTERNAL_KEYWORDS = frozenset([
+    'client',
+    'cmd',
+    'eauth',
+    'fun',
+    'gather_job_timeout',
+    'kwarg',
+    'match',
+    'metadata',
+    'print_event',
+    'raw',
+    'yield_pub_data',
+    'batch',
+    'batch_delay'
+])
 
 
 class LoadAuth(object):
@@ -309,8 +309,8 @@ class LoadAuth(object):
             log.warning('Authentication failure of type "eauth" occurred.')
             return False
 
-        if load["eauth"] not in self.opts["external_auth"]:
-            log.debug('The eauth system "%s" is not enabled', load["eauth"])
+        if load['eauth'] not in self.opts['external_auth']:
+            log.warning('The eauth system "%s" is not enabled', load['eauth'])
             log.warning('Authentication failure of type "eauth" occurred.')
             return False
 
@@ -513,14 +513,12 @@ class Resolver(object):
         self.auth = salt.loader.auth(opts)
 
     def _send_token_request(self, load):
-        master_uri = "tcp://{}:{}".format(
-            salt.utils.zeromq.ip_bracket(self.opts["interface"]),
-            six.text_type(self.opts["ret_port"]),
-        )
-        with salt.transport.client.ReqChannel.factory(
-            self.opts, crypt="clear", master_uri=master_uri
-        ) as channel:
-            return channel.send(load)
+        master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
+                     ':' + six.text_type(self.opts['ret_port'])
+        channel = salt.transport.client.ReqChannel.factory(self.opts,
+                                                           crypt='clear',
+                                                           master_uri=master_uri)
+        return channel.send(load)
 
     def cli(self, eauth):
         """

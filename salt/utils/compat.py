@@ -8,6 +8,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import importlib
+import types
+import importlib
 import sys
 import types
 

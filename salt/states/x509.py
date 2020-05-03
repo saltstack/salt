@@ -181,7 +181,7 @@ import re
 
 # Import Salt Libs
 import salt.exceptions
-import salt.utils.versions
+import salt.utils.stringutils
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -189,7 +189,7 @@ from salt.ext import six
 try:
     from M2Crypto.RSA import RSAError
 except ImportError:
-    pass
+    RSAError = Exception('RSA Error')
 
 
 def __virtual__():
@@ -199,7 +199,7 @@ def __virtual__():
     if "x509.get_pem_entry" in __salt__:
         return "x509"
     else:
-        return (False, "Could not load x509 state: m2crypto unavailable")
+        return False, 'Could not load x509 state: the x509 is not available'
 
 
 def _revoked_to_list(revs):
@@ -289,9 +289,9 @@ def private_key_managed(
         Cipher for encrypting the private key.
 
     new:
-        Always create a new key. Defaults to ``False``.
-        Combining new with :mod:`prereq <salt.states.requsities.preqreq>`
-        can allow key rotation whenever a new certificate is generated.
+        Always create a new key. Defaults to False.
+        Combining new with :mod:`prereq <salt.states.requsities.preqreq>`, or when used as part of a
+        `managed_private_key` can allow key rotation whenever a new certificiate is generated.
 
     overwrite:
         Overwrite an existing private key if the provided passphrase cannot decrypt it.
@@ -359,6 +359,13 @@ def csr_managed(name, **kwargs):
     kwargs:
         Any arguments supported by :py:func:`file.managed <salt.states.file.managed>` are supported.
 
+    ext_mapping:
+        Provide additional X509v3 extension mappings.  This argument should be
+        in the form of a dictionary and should include both the OID and the
+        friendly name for the extension.
+
+        .. versionadded:: Neon
+
     Example:
 
     .. code-block:: yaml
@@ -371,7 +378,20 @@ def csr_managed(name, **kwargs):
              - ST: Utah
              - L: Salt Lake City
              - keyUsage: 'critical dataEncipherment'
-    """
+
+        /etc/pki/mycert.csr:
+          x509.csr_managed:
+             - private_key: /etc/pki/mycert.key
+             - CN: www.example.com
+             - C: US
+             - ST: Utah
+             - L: Salt Lake City
+             - keyUsage: 'critical dataEncipherment'
+             - DomainController: 'ASN1:UTF8String:SomeOneSomeWhere'
+             - ext_mapping:
+                 '1.3.6.1.4.1.311.20.2': 'DomainController'
+
+    '''
     try:
         old = __salt__["x509.read_csr"](name)
     except salt.exceptions.SaltInvocationError:
@@ -549,16 +569,12 @@ def certificate_managed(
         <salt.modules.x509.create_certificate>` or :py:func:`file.managed
         <salt.states.file.managed>` are supported.
 
-    not_before:
-        Initial validity date for the certificate. This date must be specified
-        in the format '%Y-%m-%d %H:%M:%S'.
+    ext_mapping:
+        Provide additional X509v3 extension mappings.  This argument should be
+        in the form of a dictionary and should include both the OID and the
+        friendly name for the extension.
 
-        .. versionadded:: Sodium
-    not_after:
-        Final validity date for the certificate. This date must be specified in
-        the format '%Y-%m-%d %H:%M:%S'.
-
-        .. versionadded:: Sodium
+        .. versionadded:: Neon
 
     Examples:
 
@@ -592,9 +608,46 @@ def certificate_managed(
             - days_remaining: 30
             - backup: True
 
-    """
-    if "path" in kwargs:
-        name = kwargs.pop("path")
+    '''
+    if 'path' in kwargs:
+        name = kwargs.pop('path')
+
+    file_args, kwargs = _get_file_args(name, **kwargs)
+
+    rotate_private_key = False
+    new_private_key = False
+    if managed_private_key:
+        private_key_args = {
+            'name': name,
+            'new': False,
+            'overwrite': False,
+            'bits': 2048,
+            'passphrase': None,
+            'cipher': 'aes_128_cbc',
+            'verbose': True
+        }
+        private_key_args.update(managed_private_key)
+        kwargs['public_key_passphrase'] = private_key_args['passphrase']
+
+        if private_key_args['new']:
+            rotate_private_key = True
+            private_key_args['new'] = False
+
+        if _check_private_key(private_key_args['name'],
+                              bits=private_key_args['bits'],
+                              passphrase=private_key_args['passphrase'],
+                              new=private_key_args['new'],
+                              overwrite=private_key_args['overwrite']):
+            private_key = __salt__['x509.get_pem_entry'](
+                private_key_args['name'], pem_type='RSA PRIVATE KEY')
+        else:
+            new_private_key = True
+            private_key = __salt__['x509.create_private_key'](text=True, bits=private_key_args['bits'],
+                                                              passphrase=private_key_args['passphrase'],
+                                                              cipher=private_key_args['cipher'],
+                                                              verbose=private_key_args['verbose'])
+
+        kwargs['public_key'] = private_key
 
     if "ca_server" in kwargs and "signing_policy" not in kwargs:
         raise salt.exceptions.SaltInvocationError(
@@ -603,9 +656,49 @@ def certificate_managed(
 
     if "public_key" not in kwargs and "signing_private_key" not in kwargs:
         raise salt.exceptions.SaltInvocationError(
-            "public_key or signing_private_key must be specified."
-        )
+            'signing_policy must be specified if ca_server is.')
 
+    new = __salt__['x509.create_certificate'](testrun=False, text=True, **kwargs)
+    new = __salt__['x509.read_certificate'](certificate=new)
+    newcert = __salt__['x509.create_certificate'](testrun=True, **kwargs)
+
+    if isinstance(new, dict):
+        new_comp = copy.deepcopy(new)
+        if 'serial_number' not in kwargs:
+            new_comp.pop('Serial Number')
+            if 'signing_cert' not in kwargs:
+                try:
+                    new_comp['X509v3 Extensions']['authorityKeyIdentifier'] = (
+                        re.sub(r'serial:([0-9A-F]{2}:)*[0-9A-F]{2}', 'serial:--',
+                               new_comp['X509v3 Extensions']['authorityKeyIdentifier']))
+                except KeyError:
+                    pass
+        new_comp.pop('Not Before')
+        new_comp.pop('Not After')
+        new_comp.pop('MD5 Finger Print')
+        new_comp.pop('SHA1 Finger Print')
+        new_comp.pop('SHA-256 Finger Print')
+        new_issuer_public_key = new_issuer_public_key = newcert.pop('Issuer Public Key')
+    else:
+        new_comp = new
+
+    new_certificate = False
+    if (current_comp == new_comp and
+            current_days_remaining > days_remaining and
+            __salt__['x509.verify_signature'](name, new_issuer_public_key)):
+        certificate = __salt__['x509.get_pem_entry'](
+            name, pem_type='CERTIFICATE')
+    else:
+        if rotate_private_key and not new_private_key:
+            new_private_key = True
+            private_key = __salt__['x509.create_private_key'](
+                text=True, bits=private_key_args['bits'], verbose=private_key_args['verbose'])
+            kwargs['public_key'] = private_key
+        new_certificate = True
+        certificate = __salt__['x509.create_certificate'](text=True, **kwargs)
+
+    file_args['contents'] = ''
+    private_ret = {}
     if managed_private_key:
         salt.utils.versions.warn_until(
             "Aluminium",
@@ -777,20 +870,14 @@ def crl_managed(
         except salt.exceptions.SaltInvocationError:
             current = "{0} is not a valid CRL.".format(name)
     else:
-        current = "{0} does not exist.".format(name)
+        current = '{0} does not exist.'.format(name)
 
-    new_crl = __salt__["x509.create_crl"](
-        text=True,
-        signing_private_key=signing_private_key,
-        signing_private_key_passphrase=signing_private_key_passphrase,
-        signing_cert=signing_cert,
-        revoked=revoked,
-        days_valid=days_valid,
-        digest=digest,
-        include_expired=include_expired,
-    )
+    new_crl = __salt__['x509.create_crl'](text=True, signing_private_key=signing_private_key,
+                                          signing_private_key_passphrase=signing_private_key_passphrase,
+                                          signing_cert=signing_cert, revoked=revoked, days_valid=days_valid,
+                                          digest=digest, include_expired=include_expired)
 
-    new = __salt__["x509.read_crl"](crl=new_crl)
+    new = __salt__['x509.read_crl'](crl=new_crl)
     new_comp = new.copy()
     new_comp.pop("Last Update")
     new_comp.pop("Next Update")
@@ -829,6 +916,6 @@ def pem_managed(name, text, backup=False, **kwargs):
         Any arguments supported by :py:func:`file.managed <salt.states.file.managed>` are supported.
     """
     file_args, kwargs = _get_file_args(name, **kwargs)
-    file_args["contents"] = __salt__["x509.get_pem_entry"](text=text)
+    file_args['contents'] = salt.utils.stringutils.to_str(__salt__['x509.get_pem_entry'](text=text))
 
     return __states__["file.managed"](**file_args)

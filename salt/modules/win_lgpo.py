@@ -5295,33 +5295,28 @@ def _set_advaudit_value(option, value):
 
 
 def _get_netsh_value(profile, option):
-    if "lgpo.netsh_data" not in __context__:
-        __context__["lgpo.netsh_data"] = {}
+    if 'lgpo.netsh_data' not in __context__:
+        __context__['lgpo.netsh_data'] = {}
 
-    if profile not in __context__["lgpo.netsh_data"]:
-        log.debug("LGPO: Loading netsh data for {0} profile".format(profile))
-        settings = salt.utils.win_lgpo_netsh.get_all_settings(
-            profile=profile, store="lgpo"
-        )
-        __context__["lgpo.netsh_data"].update({profile: settings})
-    log.trace(
-        "LGPO: netsh returning value: {0}"
-        "".format(__context__["lgpo.netsh_data"][profile][option])
-    )
-    return __context__["lgpo.netsh_data"][profile][option]
+    if profile not in __context__['lgpo.netsh_data']:
+        log.debug('LGPO: Loading netsh data for %s profile', profile)
+        settings = salt.utils.win_lgpo_netsh.get_all_settings(profile=profile,
+                                                              store='lgpo')
+        __context__['lgpo.netsh_data'].update({profile: settings})
+    log.debug('LGPO: netsh returning value: %s', __context__['lgpo.netsh_data'][profile][option])
+    return __context__['lgpo.netsh_data'][profile][option]
 
 
 def _set_netsh_value(profile, section, option, value):
-    if section not in ("firewallpolicy", "settings", "logging", "state"):
-        raise ValueError("LGPO: Invalid section: {0}".format(section))
-    log.trace(
-        "LGPO: Setting the following\n"
-        "Profile: {0}\n"
-        "Section: {1}\n"
-        "Option: {2}\n"
-        "Value: {3}".format(profile, section, option, value)
-    )
-    if section == "firewallpolicy":
+    if section not in ('firewallpolicy', 'settings', 'logging', 'state'):
+        raise ValueError('LGPO: Invalid section: {0}'.format(section))
+    log.debug('LGPO: Setting the following\n'
+              'Profile: %s\n'
+              'Section: %s\n'
+              'Option: %s\n'
+              'Value: %s',
+              profile, section, option, value)
+    if section == 'firewallpolicy':
         salt.utils.win_lgpo_netsh.set_firewall_settings(
             profile=profile,
             inbound=value if option == "Inbound" else None,
@@ -5455,12 +5450,12 @@ def _validateSetting(value, policy):
     if the 'Settings' key is None, we won't do any validation and just return
         True
     if the Policy has 'Children', we'll validate their settings too
-    """
-    log.debug("validating {0} for policy {1}".format(value, policy))
-    if "Settings" in policy:
-        if policy["Settings"]:
-            if isinstance(policy["Settings"], list):
-                if value not in policy["Settings"]:
+    '''
+    log.debug('validating %s for policy %s', value, policy)
+    if 'Settings' in policy:
+        if policy['Settings']:
+            if isinstance(policy['Settings'], list):
+                if value not in policy['Settings']:
                     return False
             elif isinstance(policy["Settings"], dict):
                 _policydata = _policy_info()
@@ -6271,7 +6266,7 @@ def _checkAllAdmxPolicies(
     admx_policy_definitions = _get_policy_definitions(language=adml_language)
     adml_policy_resources = _get_policy_resources(language=adml_language)
     if policy_file_data:
-        log.trace("POLICY CLASS {0} has file data".format(policy_class))
+        log.debug('POLICY CLASS %s has file data', policy_class)
         policy_filedata_split = re.sub(
             salt.utils.stringutils.to_bytes(r"\]{0}$".format(chr(0))),
             b"",
@@ -6861,26 +6856,13 @@ def _checkAllAdmxPolicies(
                                     policy_file_data,
                                 ):
                                     configured_elements[this_element_name] = "Disabled"
-                                    policy_disabled_elements = (
-                                        policy_disabled_elements + 1
-                                    )
-                                    log.trace(
-                                        "element {0} is disabled".format(
-                                            child_item.attrib["id"]
-                                        )
-                                    )
+                                    policy_disabled_elements = policy_disabled_elements + 1
+                                    log.debug('element %s is disabled', child_item.attrib['id'])
                     if element_only_enabled_disabled:
-                        if len(required_elements.keys()) > 0 and len(
-                            configured_elements.keys()
-                        ) == len(required_elements.keys()):
-                            if policy_disabled_elements == len(
-                                required_elements.keys()
-                            ):
-                                log.trace(
-                                    "{0} is disabled by all enum elements".format(
-                                        this_policyname
-                                    )
-                                )
+                        if required_elements \
+                                    and len(configured_elements) == len(required_elements):
+                            if policy_disabled_elements == len(required_elements):
+                                log.debug('%s is disabled by all enum elements', this_policyname)
                                 if this_policynamespace not in policy_vals:
                                     policy_vals[this_policynamespace] = {}
                                 policy_vals[this_policynamespace][
@@ -6889,14 +6871,8 @@ def _checkAllAdmxPolicies(
                             else:
                                 if this_policynamespace not in policy_vals:
                                     policy_vals[this_policynamespace] = {}
-                                policy_vals[this_policynamespace][
-                                    this_policyname
-                                ] = configured_elements
-                                log.trace(
-                                    "{0} is enabled by enum elements".format(
-                                        this_policyname
-                                    )
-                                )
+                                policy_vals[this_policynamespace][this_policyname] = configured_elements
+                                log.debug('%s is enabled by enum elements', this_policyname)
                     else:
                         if this_policy_setting == "Enabled":
                             if this_policynamespace not in policy_vals:
@@ -7586,227 +7562,166 @@ def _writeAdminTemplateRegPolFile(
                                                 disabled_value_string, existing_data
                                             )
                         else:
-                            log.error(
-                                "policy %s was found but it does not appear to be valid for the class %s",
-                                admPolicy,
-                                registry_class,
-                            )
-                    else:
-                        log.error(
-                            'policy item %s does not have the requried "class" attribute',
-                            this_policy.attrib,
-                        )
-            else:
-                log.trace('time to enable and set the policy "%s"', admPolicy)
-                this_policy = admx_policy_definitions.xpath(
-                    policySearchXpath.format(admPolicy),
-                    namespaces={"ns1": adm_namespace},
-                )
-                log.trace("found this_policy == %s", this_policy)
-                if this_policy:
-                    this_policy = this_policy[0]
-                    if "class" in this_policy.attrib:
-                        if (
-                            this_policy.attrib["class"] == registry_class
-                            or this_policy.attrib["class"] == "Both"
-                        ):
-                            if "key" in this_policy.attrib:
-                                this_key = this_policy.attrib["key"]
-                            else:
-                                log.error(
-                                    'policy item %s does not have the required "key" attribute',
-                                    this_policy.attrib,
-                                )
-                                break
-                            if "valueName" in this_policy.attrib:
-                                this_valuename = this_policy.attrib["valueName"]
+                            log.error('policy item %s does not have the requried "class" attribute',
+                                      this_policy.attrib)
+                else:
+                    log.debug('time to enable and set the policy "%s"',
+                              admPolicy)
+                    this_policy = admx_policy_definitions.xpath(policySearchXpath.format(admPolicy), namespaces={'ns1': adm_namespace})
+                    log.debug('found this_policy == %s', this_policy)
+                    if this_policy:
+                        this_policy = this_policy[0]
+                        if 'class' in this_policy.attrib:
+                            if this_policy.attrib['class'] == registry_class or this_policy.attrib['class'] == 'Both':
+                                if 'key' in this_policy.attrib:
+                                    this_key = this_policy.attrib['key']
+                                else:
+                                    log.error('policy item %s does not have the required "key" attribute',
+                                              this_policy.attrib)
+                                    break
+                                if 'valueName' in this_policy.attrib:
+                                    this_valuename = this_policy.attrib['valueName']
 
-                            if ENABLED_VALUE_XPATH(this_policy):
-                                explicit_enable_disable_value_setting = True
-                                enabled_value_string = _checkValueItemParent(
-                                    this_policy,
-                                    admPolicy,
-                                    this_key,
-                                    this_valuename,
-                                    ENABLED_VALUE_XPATH,
-                                    None,
-                                    check_deleted=False,
-                                    test_item=False,
-                                )
-                                existing_data = _policyFileReplaceOrAppend(
-                                    enabled_value_string, existing_data
-                                )
-                            if ENABLED_LIST_XPATH(this_policy):
-                                explicit_enable_disable_value_setting = True
-                                enabled_list_strings = _checkListItem(
-                                    this_policy,
-                                    admPolicy,
-                                    this_key,
-                                    ENABLED_LIST_XPATH,
-                                    None,
-                                    test_items=False,
-                                )
-                                log.trace(
-                                    "working with enabledList portion of %s", admPolicy
-                                )
-                                existing_data = _policyFileReplaceOrAppendList(
-                                    enabled_list_strings, existing_data
-                                )
-                            if (
-                                not explicit_enable_disable_value_setting
-                                and this_valuename
-                            ):
-                                enabled_value_string = _buildKnownDataSearchString(
-                                    this_key,
-                                    this_valuename,
-                                    "REG_DWORD",
-                                    "1",
-                                    check_deleted=False,
-                                )
-                                existing_data = _policyFileReplaceOrAppend(
-                                    enabled_value_string, existing_data
-                                )
-                            if ELEMENTS_XPATH(this_policy):
-                                for elements_item in ELEMENTS_XPATH(this_policy):
-                                    for child_item in elements_item:
-                                        child_key = this_key
-                                        child_valuename = this_valuename
-                                        if "key" in child_item.attrib:
-                                            child_key = child_item.attrib["key"]
-                                        if "valueName" in child_item.attrib:
-                                            child_valuename = child_item.attrib[
-                                                "valueName"
-                                            ]
-                                        if (
-                                            child_item.attrib["id"]
-                                            in base_policy_settings[adm_namespace][
-                                                admPolicy
-                                            ]
-                                        ):
-                                            if etree.QName(
-                                                child_item
-                                            ).localname == "boolean" and (
-                                                TRUE_LIST_XPATH(child_item)
-                                                or FALSE_LIST_XPATH(child_item)
-                                            ):
-                                                list_strings = []
-                                                if base_policy_settings[adm_namespace][
-                                                    admPolicy
-                                                ][child_item.attrib["id"]]:
-                                                    list_strings = _checkListItem(
-                                                        child_item,
-                                                        admPolicy,
-                                                        child_key,
-                                                        TRUE_LIST_XPATH,
-                                                        None,
-                                                        test_items=False,
-                                                    )
-                                                    log.trace(
-                                                        "working with trueList portion of {0}".format(
-                                                            admPolicy
-                                                        )
-                                                    )
-                                                else:
-                                                    list_strings = _checkListItem(
-                                                        child_item,
-                                                        admPolicy,
-                                                        child_key,
-                                                        FALSE_LIST_XPATH,
-                                                        None,
-                                                        test_items=False,
-                                                    )
-                                                existing_data = _policyFileReplaceOrAppendList(
-                                                    list_strings, existing_data
-                                                )
-                                            elif etree.QName(
-                                                child_item
-                                            ).localname == "boolean" and (
-                                                TRUE_VALUE_XPATH(child_item)
-                                                or FALSE_VALUE_XPATH(child_item)
-                                            ):
-                                                value_string = ""
-                                                if base_policy_settings[adm_namespace][
-                                                    admPolicy
-                                                ][child_item.attrib["id"]]:
-                                                    value_string = _checkValueItemParent(
-                                                        child_item,
-                                                        admPolicy,
-                                                        child_key,
-                                                        child_valuename,
-                                                        TRUE_VALUE_XPATH,
-                                                        None,
-                                                        check_deleted=False,
-                                                        test_item=False,
-                                                    )
-                                                else:
-                                                    value_string = _checkValueItemParent(
-                                                        child_item,
-                                                        admPolicy,
-                                                        child_key,
-                                                        child_valuename,
-                                                        FALSE_VALUE_XPATH,
-                                                        None,
-                                                        check_deleted=False,
-                                                        test_item=False,
-                                                    )
-                                                existing_data = _policyFileReplaceOrAppend(
-                                                    value_string, existing_data
-                                                )
-                                            elif (
-                                                etree.QName(child_item).localname
-                                                == "boolean"
-                                                or etree.QName(child_item).localname
-                                                == "decimal"
-                                                or etree.QName(child_item).localname
-                                                == "text"
-                                                or etree.QName(child_item).localname
-                                                == "longDecimal"
-                                                or etree.QName(child_item).localname
-                                                == "multiText"
-                                            ):
-                                                enabled_value_string = _processValueItem(
-                                                    child_item,
-                                                    child_key,
-                                                    child_valuename,
-                                                    this_policy,
-                                                    elements_item,
-                                                    check_deleted=False,
-                                                    this_element_value=base_policy_settings[
-                                                        adm_namespace
-                                                    ][
-                                                        admPolicy
-                                                    ][
-                                                        child_item.attrib["id"]
-                                                    ],
-                                                )
-                                                log.trace(
-                                                    "I have enabled value string of %s",
-                                                    enabled_value_string,
-                                                )
-                                                existing_data = _policyFileReplaceOrAppend(
-                                                    enabled_value_string, existing_data
-                                                )
-                                            elif (
-                                                etree.QName(child_item).localname
-                                                == "enum"
-                                            ):
-                                                for enum_item in child_item:
-                                                    if (
-                                                        base_policy_settings[
-                                                            adm_namespace
-                                                        ][admPolicy][
-                                                            child_item.attrib["id"]
-                                                        ]
-                                                        == _getAdmlDisplayName(
-                                                            adml_policy_resources,
-                                                            enum_item.attrib[
-                                                                "displayName"
-                                                            ],
-                                                        ).strip()
-                                                    ):
-                                                        enabled_value_string = _checkValueItemParent(
-                                                            enum_item,
-                                                            child_item.attrib["id"],
+                                if ENABLED_VALUE_XPATH(this_policy):
+                                    explicit_enable_disable_value_setting = True
+                                    enabled_value_string = _checkValueItemParent(this_policy,
+                                                                                 admPolicy,
+                                                                                 this_key,
+                                                                                 this_valuename,
+                                                                                 ENABLED_VALUE_XPATH,
+                                                                                 None,
+                                                                                 check_deleted=False,
+                                                                                 test_item=False)
+                                    existing_data = _policyFileReplaceOrAppend(
+                                            enabled_value_string,
+                                            existing_data)
+                                if ENABLED_LIST_XPATH(this_policy):
+                                    explicit_enable_disable_value_setting = True
+                                    enabled_list_strings = _checkListItem(this_policy,
+                                                                          admPolicy,
+                                                                          this_key,
+                                                                          ENABLED_LIST_XPATH,
+                                                                          None,
+                                                                          test_items=False)
+                                    log.debug('working with enabledList portion of %s', admPolicy)
+                                    existing_data = _policyFileReplaceOrAppendList(
+                                            enabled_list_strings,
+                                            existing_data)
+                                if not explicit_enable_disable_value_setting and this_valuename:
+                                    enabled_value_string = _buildKnownDataSearchString(this_key,
+                                                                                       this_valuename,
+                                                                                       'REG_DWORD',
+                                                                                       '1',
+                                                                                       check_deleted=False)
+                                    existing_data = _policyFileReplaceOrAppend(
+                                            enabled_value_string,
+                                            existing_data)
+                                if ELEMENTS_XPATH(this_policy):
+                                    for elements_item in ELEMENTS_XPATH(this_policy):
+                                        for child_item in elements_item.getchildren():
+                                            child_key = this_key
+                                            child_valuename = this_valuename
+                                            if 'key' in child_item.attrib:
+                                                child_key = child_item.attrib['key']
+                                            if 'valueName' in child_item.attrib:
+                                                child_valuename = child_item.attrib['valueName']
+                                            if child_item.attrib['id'] in base_policy_settings[adm_namespace][admPolicy]:
+                                                if etree.QName(child_item).localname == 'boolean' and (
+                                                        TRUE_LIST_XPATH(child_item) or FALSE_LIST_XPATH(child_item)):
+                                                    list_strings = []
+                                                    if base_policy_settings[adm_namespace][admPolicy][child_item.attrib['id']]:
+                                                        list_strings = _checkListItem(child_item,
+                                                                                      admPolicy,
+                                                                                      child_key,
+                                                                                      TRUE_LIST_XPATH,
+                                                                                      None,
+                                                                                      test_items=False)
+                                                        log.debug('working with trueList portion of %s', admPolicy)
+                                                    else:
+                                                        list_strings = _checkListItem(child_item,
+                                                                                      admPolicy,
+                                                                                      child_key,
+                                                                                      FALSE_LIST_XPATH,
+                                                                                      None,
+                                                                                      test_items=False)
+                                                    existing_data = _policyFileReplaceOrAppendList(
+                                                            list_strings,
+                                                            existing_data)
+                                                elif etree.QName(child_item).localname == 'boolean' and (
+                                                        TRUE_VALUE_XPATH(child_item) or FALSE_VALUE_XPATH(child_item)):
+                                                    value_string = ''
+                                                    if base_policy_settings[adm_namespace][admPolicy][child_item.attrib['id']]:
+                                                        value_string = _checkValueItemParent(child_item,
+                                                                                             admPolicy,
+                                                                                             child_key,
+                                                                                             child_valuename,
+                                                                                             TRUE_VALUE_XPATH,
+                                                                                             None,
+                                                                                             check_deleted=False,
+                                                                                             test_item=False)
+                                                    else:
+                                                        value_string = _checkValueItemParent(child_item,
+                                                                                             admPolicy,
+                                                                                             child_key,
+                                                                                             child_valuename,
+                                                                                             FALSE_VALUE_XPATH,
+                                                                                             None,
+                                                                                             check_deleted=False,
+                                                                                             test_item=False)
+                                                    existing_data = _policyFileReplaceOrAppend(
+                                                            value_string,
+                                                            existing_data)
+                                                elif etree.QName(child_item).localname == 'boolean' \
+                                                        or etree.QName(child_item).localname == 'decimal' \
+                                                        or etree.QName(child_item).localname == 'text' \
+                                                        or etree.QName(child_item).localname == 'longDecimal' \
+                                                        or etree.QName(child_item).localname == 'multiText':
+                                                    enabled_value_string = _processValueItem(
+                                                            child_item,
+                                                            child_key,
+                                                            child_valuename,
+                                                            this_policy,
+                                                            elements_item,
+                                                            check_deleted=False,
+                                                            this_element_value=base_policy_settings[adm_namespace][admPolicy][child_item.attrib['id']])
+                                                    log.debug('I have enabled value string of %s', enabled_value_string)
+                                                    existing_data = _policyFileReplaceOrAppend(
+                                                            enabled_value_string,
+                                                            existing_data)
+                                                elif etree.QName(child_item).localname == 'enum':
+                                                    for enum_item in child_item.getchildren():
+                                                        if base_policy_settings[adm_namespace][admPolicy][child_item.attrib['id']] == \
+                                                                _getAdmlDisplayName(adml_policy_resources,
+                                                                                    enum_item.attrib['displayName']
+                                                                                    ).strip():
+                                                            enabled_value_string = _checkValueItemParent(
+                                                                    enum_item,
+                                                                    child_item.attrib['id'],
+                                                                    child_key,
+                                                                    child_valuename,
+                                                                    VALUE_XPATH,
+                                                                    None,
+                                                                    check_deleted=False,
+                                                                    test_item=False)
+                                                            existing_data = _policyFileReplaceOrAppend(
+                                                                    enabled_value_string,
+                                                                    existing_data)
+                                                            if VALUE_LIST_XPATH(enum_item):
+                                                                enabled_list_strings = _checkListItem(enum_item,
+                                                                                                      admPolicy,
+                                                                                                      child_key,
+                                                                                                      VALUE_LIST_XPATH,
+                                                                                                      None,
+                                                                                                      test_items=False)
+                                                                log.debug('working with valueList portion of %s',
+                                                                          child_item.attrib['id'])
+                                                                existing_data = _policyFileReplaceOrAppendList(
+                                                                        enabled_list_strings,
+                                                                        existing_data)
+                                                            break
+                                                elif etree.QName(child_item).localname == 'list':
+                                                    enabled_value_string = _processValueItem(
+                                                            child_item,
                                                             child_key,
                                                             child_valuename,
                                                             VALUE_XPATH,
@@ -8149,17 +8064,9 @@ def _lookup_admin_template(policy_name, policy_class, adml_language="en-US"):
                         registry_class=policy_class,
                     )
                 if admx_search_results:
-                    log.trace(
-                        "processing admx_search_results of {0}".format(
-                            admx_search_results
-                        )
-                    )
-                    log.trace(
-                        "multiple_adml_entries is {0}".format(multiple_adml_entries)
-                    )
-                    if (
-                        len(admx_search_results) == 1 or hierarchy
-                    ) and not multiple_adml_entries:
+                    log.debug('processing admx_search_results of %s', admx_search_results)
+                    log.debug('multiple_adml_entries is %s', multiple_adml_entries)
+                    if (len(admx_search_results) == 1 or hierarchy) and not multiple_adml_entries:
                         found = False
                         for search_result in admx_search_results:
                             found = False
@@ -8534,7 +8441,46 @@ def get(
                         policy_name = policy
             if _pol:
                 vals_key_name = policy_name
-                class_vals[policy_name] = _get_policy_info_setting(_pol)
+                if 'Registry' in _pol:
+                    # get value from registry
+                    class_vals[policy_name] = __utils__['reg.read_value'](
+                        _pol['Registry']['Hive'],
+                        _pol['Registry']['Path'],
+                        _pol['Registry']['Value'])['vdata']
+                    log.debug(
+                        'Value %r found for reg policy %s',
+                        class_vals[policy_name], policy_name
+                    )
+                elif 'Secedit' in _pol:
+                    # get value from secedit
+                    _val = _get_secedit_value(option=_pol['Secedit']['Option'])
+                    class_vals[policy_name] = _val
+                elif 'NetSH' in _pol:
+                    # get value from netsh
+                    class_vals[policy_name] = _get_netsh_value(
+                        profile=_pol['NetSH']['Profile'],
+                        option=_pol['NetSH']['Option'])
+                elif 'AdvAudit' in _pol:
+                    # get value from auditpol
+                    class_vals[policy_name] = _get_advaudit_value(
+                        option=_pol['AdvAudit']['Option'])
+                elif 'NetUserModal' in _pol:
+                    # get value from UserNetMod
+                    if _pol['NetUserModal']['Modal'] not in modal_returns:
+                        modal_returns[_pol['NetUserModal']['Modal']] = win32net.NetUserModalsGet(
+                                None,
+                                _pol['NetUserModal']['Modal'])
+                    class_vals[policy_name] = modal_returns[_pol['NetUserModal']['Modal']][_pol['NetUserModal']['Option']]
+                elif 'LsaRights' in _pol:
+                    class_vals[policy_name] = _getRightsAssignments(_pol['LsaRights']['Option'])
+                elif 'ScriptIni' in _pol:
+                    log.debug('Working with ScriptIni setting %s', policy_name)
+                    class_vals[policy_name] = _getScriptSettingsFromIniFile(_pol)
+                if policy_name in class_vals:
+                    class_vals[policy_name] = _transform_value(
+                        value=class_vals[policy_name],
+                        policy=_policydata.policies[p_class]['policies'][policy_name],
+                        transform_type='Get')
                 if return_full_policy_names:
                     class_vals[_pol["Policy"]] = class_vals.pop(policy_name)
                     vals_key_name = _pol["Policy"]
@@ -10035,29 +9981,23 @@ def set_(
                     for regedit in _regedits:
                         log.trace("%s is a Registry policy", regedit)
                         # if the value setting is None or "(value not set)", we will delete the value from the registry
-                        if (
-                            _regedits[regedit]["value"] is not None
-                            and _regedits[regedit]["value"] != "(value not set)"
-                        ):
-                            _ret = __utils__["reg.set_value"](
-                                _regedits[regedit]["policy"]["Registry"]["Hive"],
-                                _regedits[regedit]["policy"]["Registry"]["Path"],
-                                _regedits[regedit]["policy"]["Registry"]["Value"],
-                                _regedits[regedit]["value"],
-                                _regedits[regedit]["policy"]["Registry"]["Type"],
-                            )
+                        if _regedits[regedit]['value'] is not None and _regedits[regedit]['value'] != '(value not set)':
+                            _ret = __utils__['reg.set_value'](
+                                    _regedits[regedit]['policy']['Registry']['Hive'],
+                                    _regedits[regedit]['policy']['Registry']['Path'],
+                                    _regedits[regedit]['policy']['Registry']['Value'],
+                                    _regedits[regedit]['value'],
+                                    _regedits[regedit]['policy']['Registry']['Type'])
                         else:
-                            _ret = __utils__["reg.read_value"](
-                                _regedits[regedit]["policy"]["Registry"]["Hive"],
-                                _regedits[regedit]["policy"]["Registry"]["Path"],
-                                _regedits[regedit]["policy"]["Registry"]["Value"],
-                            )
-                            if _ret["success"] and _ret["vdata"] != "(value not set)":
-                                _ret = __utils__["reg.delete_value"](
-                                    _regedits[regedit]["policy"]["Registry"]["Hive"],
-                                    _regedits[regedit]["policy"]["Registry"]["Path"],
-                                    _regedits[regedit]["policy"]["Registry"]["Value"],
-                                )
+                            _ret = __utils__['reg.read_value'](
+                                    _regedits[regedit]['policy']['Registry']['Hive'],
+                                    _regedits[regedit]['policy']['Registry']['Path'],
+                                    _regedits[regedit]['policy']['Registry']['Value'])
+                            if _ret['success'] and _ret['vdata'] != '(value not set)':
+                                _ret = __utils__['reg.delete_value'](
+                                        _regedits[regedit]['policy']['Registry']['Hive'],
+                                        _regedits[regedit]['policy']['Registry']['Path'],
+                                        _regedits[regedit]['policy']['Registry']['Value'])
                         if not _ret:
                             msg = (
                                 "Error while attempting to set policy {0} via the registry."
@@ -10130,8 +10070,8 @@ def set_(
                 if _netshs:
                     # we've got netsh settings to make
                     for setting in _netshs:
-                        log.trace("Setting firewall policy: {0}".format(setting))
-                        log.trace(_netshs[setting])
+                        log.debug('Setting firewall policy: %s', setting)
+                        log.debug(_netshs[setting])
                         _set_netsh_value(**_netshs[setting])
 
                 if _advaudits:

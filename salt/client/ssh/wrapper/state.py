@@ -162,17 +162,17 @@ def _cleanup_slsmod_high_data(high_data):
 
 
 def _parse_mods(mods):
-    """
+    '''
     Parse modules.
-    """
+    '''
     if isinstance(mods, six.string_types):
-        mods = [item.strip() for item in mods.split(",") if item.strip()]
+        mods = [item.strip() for item in mods.split(',') if item.strip()]
 
     return mods
 
 
-def sls(mods, saltenv="base", test=None, exclude=None, **kwargs):
-    """
+def sls(mods, saltenv='base', test=None, exclude=None, **kwargs):
+    '''
     Create the seed file for a state.sls run
     """
     st_kwargs = __salt__.kwargs

@@ -394,8 +394,11 @@ def present(
                   applies_to: this_key_subkeys
             - win_inheritance: True
             - win_perms_reset: True
-    """
-    ret = {"name": name, "result": True, "changes": {}, "comment": ""}
+    '''
+    ret = {'name': name,
+           'result': True,
+           'changes': {},
+           'comment': ''}
 
     hive, key = _parse_key(name)
 

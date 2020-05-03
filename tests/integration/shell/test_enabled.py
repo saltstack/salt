@@ -9,11 +9,14 @@ import pytest
 import salt.utils.files
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
+from tests.support.runtests import RUNTIME_VARS
+
+# Import Salt Libs
+import salt.utils.platform
+import salt.utils.files
 
 
-@pytest.mark.windows_whitelisted
 class EnabledTest(ModuleCase):
     """
     validate the use of shell processing for cmd.run on the salt command line
@@ -55,9 +58,9 @@ class EnabledTest(ModuleCase):
         Note: This test used to test that python_shell defaulted to True for templates
         in releases before 2017.7.0. The cmd.run --> cmd.shell aliasing was removed in
         2017.7.0. Templates should now be using cmd.shell.
-        """
-        state_name = "template_shell_enabled"
-        state_filename = state_name + ".sls"
+        '''
+        state_name = 'template_shell_enabled'
+        state_filename = state_name + '.sls'
         state_file = os.path.join(RUNTIME_VARS.BASE_FILES, state_filename)
 
         enabled_ret = "3 saltines"  # the result of running self.cmd in a shell
@@ -92,9 +95,9 @@ class EnabledTest(ModuleCase):
         """
         test shell disabled output for templates (python_shell=False is the default
         beginning with the 2017.7.0 release).
-        """
-        state_name = "template_shell_disabled"
-        state_filename = state_name + ".sls"
+        '''
+        state_name = 'template_shell_disabled'
+        state_filename = state_name + '.sls'
         state_file = os.path.join(RUNTIME_VARS.BASE_FILES, state_filename)
 
         # the result of running self.cmd not in a shell

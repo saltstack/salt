@@ -12,18 +12,16 @@ from __future__ import absolute_import
 import logging
 from collections import OrderedDict
 
-import psutil
-import pytest
-import salt.utils.files
-import salt.utils.platform
-import salt.utils.yaml
-from tests.integration.utils import testprogram
+# Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ShellCase
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.unit import skipIf
 
-log = logging.getLogger(__name__)
+# Import 3rd-party libs
+import pytest
 
+log = logging.getLogger(__name__)
 
 # @pytest.fixture(scope='module', autouse=True)
 def session_salt_syndic(request, session_salt_master_of_masters, session_salt_syndic):
@@ -50,11 +48,45 @@ def session_salt_syndic(request, session_salt_master_of_masters, session_salt_sy
             log.warning("Failed to terminate daemon: %s", daemon.__class__.__name__)
 
 
-@pytest.mark.windows_whitelisted
+@pytest.mark.usefixtures('session_salt_syndic')
 class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
     """
     Test the salt-syndic command
-    """
+    '''
+
+    _call_binary_ = 'salt-syndic'
+
+    def test_issue_7754(self):
+        old_cwd = os.getcwd()
+        config_dir = os.path.join(RUNTIME_VARS.TMP, 'issue-7754')
+        if not os.path.isdir(config_dir):
+            os.makedirs(config_dir)
+
+        os.chdir(config_dir)
+
+        for fname in ('master', 'minion'):
+            pid_path = os.path.join(config_dir, '{0}.pid'.format(fname))
+            with salt.utils.files.fopen(self.get_config_file_path(fname), 'r') as fhr:
+                config = salt.utils.yaml.safe_load(fhr)
+                config['log_file'] = config['syndic_log_file'] = 'file:///tmp/log/LOG_LOCAL3'
+                config['root_dir'] = config_dir
+                if 'ret_port' in config:
+                    config['ret_port'] = int(config['ret_port']) + 10
+                    config['publish_port'] = int(config['publish_port']) + 10
+
+                with salt.utils.files.fopen(os.path.join(config_dir, fname), 'w') as fhw:
+                    salt.utils.yaml.safe_dump(config, fhw, default_flow_style=False)
+
+        self.run_script(
+            self._call_binary_,
+            '--config-dir={0} --pid-file={1} -l debug'.format(
+                config_dir,
+                pid_path
+            ),
+            timeout=5,
+            catch_stderr=True,
+            with_retcode=True
+        )
 
     _call_binary_ = "salt-syndic"
 

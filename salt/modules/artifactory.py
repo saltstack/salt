@@ -702,9 +702,8 @@ def __save_artifact(artifact_url, target_file, headers):
         log.debug("File %s already exists, checking checksum...", target_file)
         checksum_url = artifact_url + ".sha1"
 
-        checksum_success, artifact_sum, checksum_comment = __download(
-            checksum_url, headers
-        )
+        checksum_success, artifact_sum, checksum_comment = __download(checksum_url, headers)
+        artifact_sum = salt.utils.stringutils.to_str(artifact_sum)
         if checksum_success:
             log.debug("Downloaded SHA1 SUM: %s", artifact_sum)
             file_sum = __salt__["file.get_hash"](path=target_file, form="sha1")

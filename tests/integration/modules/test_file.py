@@ -28,6 +28,15 @@ try:
 except ImportError:
     pass
 
+# Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
+
+# Import salt libs
+import salt.utils.files
+import salt.utils.platform
+
 
 def symlink(source, link_name):
     """
@@ -46,18 +55,18 @@ class FileModuleTest(ModuleCase):
     """
 
     def setUp(self):
-        self.myfile = os.path.join(RUNTIME_VARS.TMP, "myfile")
-        with salt.utils.files.fopen(self.myfile, "w+") as fp:
-            fp.write(salt.utils.stringutils.to_str("Hello" + os.linesep))
-        self.mydir = os.path.join(RUNTIME_VARS.TMP, "mydir/isawesome")
+        self.myfile = os.path.join(RUNTIME_VARS.TMP, 'myfile')
+        with salt.utils.files.fopen(self.myfile, 'w+') as fp:
+            fp.write(salt.utils.stringutils.to_str('Hello' + os.linesep))
+        self.mydir = os.path.join(RUNTIME_VARS.TMP, 'mydir/isawesome')
         if not os.path.isdir(self.mydir):
             # left behind... Don't fail because of this!
             os.makedirs(self.mydir)
-        self.mysymlink = os.path.join(RUNTIME_VARS.TMP, "mysymlink")
+        self.mysymlink = os.path.join(RUNTIME_VARS.TMP, 'mysymlink')
         if os.path.islink(self.mysymlink) or os.path.isfile(self.mysymlink):
             os.remove(self.mysymlink)
         symlink(self.myfile, self.mysymlink)
-        self.mybadsymlink = os.path.join(RUNTIME_VARS.TMP, "mybadsymlink")
+        self.mybadsymlink = os.path.join(RUNTIME_VARS.TMP, 'mybadsymlink')
         if os.path.islink(self.mybadsymlink) or os.path.isfile(self.mybadsymlink):
             os.remove(self.mybadsymlink)
         symlink("/nonexistentpath", self.mybadsymlink)
@@ -188,10 +197,11 @@ class FileModuleTest(ModuleCase):
         if not self.run_function("cmd.has_exec", ["patch"]):
             self.skipTest("patch is not installed")
 
-        src_patch = os.path.join(RUNTIME_VARS.FILES, "file", "base", "hello.patch")
-        src_file = os.path.join(RUNTIME_VARS.TMP, "src.txt")
-        with salt.utils.files.fopen(src_file, "w+") as fp:
-            fp.write(salt.utils.stringutils.to_str("Hello\n"))
+        src_patch = os.path.join(
+            RUNTIME_VARS.FILES, 'file', 'base', 'hello.patch')
+        src_file = os.path.join(RUNTIME_VARS.TMP, 'src.txt')
+        with salt.utils.files.fopen(src_file, 'w+') as fp:
+            fp.write(salt.utils.stringutils.to_str('Hello\n'))
 
         # dry-run should not modify src_file
         ret = self.minion_run("file.patch", src_file, src_patch, dry_run=True)
@@ -348,4 +358,16 @@ class FileModuleTest(ModuleCase):
         )
         with salt.utils.files.fopen(self.myfile, "r") as fp:
             content = fp.read()
-        self.assertEqual(content, "Hello" + os.linesep + "Goodbye" + os.linesep)
+        self.assertEqual(content, 'Hello' + os.linesep + 'Goodbye' + os.linesep)
+
+    def test_file_tail(self):
+        """
+        Test file.tail.
+
+        Issue #50578
+        """
+        with salt.utils.files.fopen(self.myfile, 'a') as fp:
+            fp.write(salt.utils.stringutils.to_str('Goodbye' + os.linesep))
+        ret = self.run_function('file.tail', 'file://' + self.myfile, 2)
+
+        self.assertEqual(list(ret), ['file://' + self.myfile])

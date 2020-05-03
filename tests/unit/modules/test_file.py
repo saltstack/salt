@@ -8,6 +8,20 @@ import shutil
 import tempfile
 import textwrap
 
+# Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.helpers import with_tempfile
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import MagicMock, Mock, patch, mock_open, DEFAULT
+
+try:
+    import pytest
+except ImportError:
+    pytest = None
+
+# Import Salt libs
+from salt.ext import six
 import salt.config
 import salt.loader
 import salt.modules.cmdmod as cmdmod
@@ -486,6 +500,39 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                 fp.read(),
             )
 
+    def test_replace_insert_after(self):
+        new_content = "Well, I didn't vote for you."
+
+        self.assertRaises(
+            CommandExecutionError,
+            filemod.blockreplace,
+            self.tfile.name,
+            marker_start='#-- START BLOCK 2',
+            marker_end='#-- END BLOCK 2',
+            content=new_content,
+            insert_after_match='not in the text',
+            backup=False
+        )
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
+            self.assertNotIn(
+                '#-- START BLOCK 2' + "\n" + new_content + '#-- END BLOCK 2',
+                salt.utils.stringutils.to_unicode(fp.read())
+            )
+
+        filemod.blockreplace(self.tfile.name,
+                             marker_start='#-- START BLOCK 2',
+                             marker_end='#-- END BLOCK 2',
+                             content=new_content,
+                             backup=False,
+                             insert_after_match='malesuada')
+
+        with salt.utils.files.fopen(self.tfile.name, 'rb') as fp:
+            self.assertIn(salt.utils.stringutils.to_bytes(
+                os.linesep.join([
+                    '#-- START BLOCK 2',
+                    '{0}#-- END BLOCK 2'.format(new_content)])),
+                fp.read())
+
     def test_replace_append_newline_at_eof(self):
         """
         Check that file.blockreplace works consistently on files with and
@@ -591,6 +638,39 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                     )
                 )
             )
+
+    def test_replace_insert_before(self):
+        new_content = "Well, I didn't vote for you."
+
+        self.assertRaises(
+            CommandExecutionError,
+            filemod.blockreplace,
+            self.tfile.name,
+            marker_start='#-- START BLOCK 2',
+            marker_end='#-- END BLOCK 2',
+            content=new_content,
+            insert_before_match='not in the text',
+            backup=False
+        )
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
+            self.assertNotIn(
+                '#-- START BLOCK 2' + "\n" + new_content + '#-- END BLOCK 2',
+                salt.utils.stringutils.to_unicode(fp.read())
+            )
+
+        filemod.blockreplace(self.tfile.name,
+                             marker_start='#-- START BLOCK 2',
+                             marker_end='#-- END BLOCK 2',
+                             content=new_content,
+                             backup=False,
+                             insert_before_match='malesuada')
+
+        with salt.utils.files.fopen(self.tfile.name, 'rb') as fp:
+            self.assertIn(salt.utils.stringutils.to_bytes(
+                os.linesep.join([
+                    '#-- START BLOCK 2',
+                    '{0}#-- END BLOCK 2'.format(new_content)])),
+                fp.read())
 
     def test_replace_partial_marked_lines(self):
         if salt.utils.platform.is_windows():
@@ -934,7 +1014,9 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             tfile.flush()
         filemod.append(tfile.name, "bar")
         with salt.utils.files.fopen(tfile.name) as tfile2:
-            self.assertEqual(salt.utils.stringutils.to_unicode(tfile2.read()), expected)
+            self.assertEqual(
+                salt.utils.stringutils.to_unicode(tfile2.read()), expected)
+        os.remove(tfile.name)
 
         # A newline should be added in empty files
         with tempfile.NamedTemporaryFile(mode="wb", delete=False) as tfile:
@@ -950,15 +1032,13 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         Check various hash file formats.
         """
         # With file name
-        with tempfile.NamedTemporaryFile(mode="w+b", delete=False) as tfile:
-            tfile.write(
-                salt.utils.stringutils.to_bytes(
-                    "rc.conf ef6e82e4006dee563d98ada2a2a80a27\n"
-                    "ead48423703509d37c4a90e6a0d53e143b6fc268  example.tar.gz\n"
-                    "fe05bcdcdc4928012781a5f1a2a77cbb5398e106 ./subdir/example.tar.gz\n"
-                    "ad782ecdac770fc6eb9a62e44f90873fb97fb26b *foo.tar.bz2\n"
-                )
-            )
+        with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
+            tfile.write(salt.utils.stringutils.to_bytes(
+                'rc.conf ef6e82e4006dee563d98ada2a2a80a27\n'
+                'ead48423703509d37c4a90e6a0d53e143b6fc268  example.tar.gz\n'
+                'fe05bcdcdc4928012781a5f1a2a77cbb5398e106 ./subdir/example.tar.gz\n'
+                'ad782ecdac770fc6eb9a62e44f90873fb97fb26b *foo.tar.bz2\n'
+            ))
             tfile.flush()
 
         result = filemod.extract_hash(tfile.name, "", "/rc.conf")
@@ -1283,6 +1363,14 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             ret = filemod.stats("dummy", None, True)
             self.assertEqual(ret["mode"], "0644")
             self.assertEqual(ret["type"], "file")
+
+    def test_stats(self):
+        with patch('os.path.expanduser', MagicMock(side_effect=lambda path: path)), \
+                patch('os.path.exists', MagicMock(return_value=True)), \
+                patch('os.stat', MagicMock(return_value=DummyStat())):
+            ret = filemod.stats('dummy', None, True)
+            self.assertEqual(ret['mode'], '0644')
+            self.assertEqual(ret['type'], 'file')
 
 
 @skipIf(pytest is None, "PyTest required for this set of tests")
@@ -2178,19 +2266,18 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         """
         for mode in ["delete", "replace"]:
             _log = MagicMock()
-            with patch("salt.utils.files.fopen", mock_open(read_data="")), patch(
-                "os.stat", self._anyattr
-            ), patch("salt.modules.file.log", _log):
-                self.assertFalse(
-                    filemod.line("/dummy/path", content="foo", match="bar", mode=mode)
-                )
-            warning_call = _log.warning.call_args_list[0][0]
-            warning_log_msg = warning_call[0] % warning_call[1:]
-            self.assertIn("Cannot find text to {0}".format(mode), warning_log_msg)
+            with patch('salt.utils.files.fopen', mock_open(read_data='')), \
+                    patch('os.stat', self._anyattr), \
+                    patch('salt.modules.file.log', _log):
+                self.assertFalse(filemod.line('/dummy/path', content='foo', match='bar', mode=mode))
+            assert 'Cannot find text to ' in _log.warning.call_args_list[0][0][0], \
+                _log.warning.call_args_list[0][0][0]
+            assert _log.warning.call_args_list[0][0][1] == mode, \
+                _log.warning.call_args_list[0][0][1]
 
-    @patch("os.path.realpath", MagicMock())
-    @patch("os.path.isfile", MagicMock(return_value=True))
-    @patch("os.stat", MagicMock())
+    @patch('os.path.realpath', MagicMock())
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('os.stat', MagicMock())
     def test_line_delete_no_match(self):
         """
         Tests that when calling file.line with ``mode=delete``,
@@ -3017,10 +3104,10 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
             self.tfile.write("Hi hello! I am a file.")
             self.tfile.close()
         self.addCleanup(os.remove, self.tfile.name)
-        self.addCleanup(delattr, self, "tfile")
-        self.myfile = os.path.join(RUNTIME_VARS.TMP, "myfile")
-        with salt.utils.files.fopen(self.myfile, "w+") as fp:
-            fp.write(salt.utils.stringutils.to_str("Hello\n"))
+        self.addCleanup(delattr, self, 'tfile')
+        self.myfile = os.path.join(RUNTIME_VARS.TMP, 'myfile')
+        with salt.utils.files.fopen(self.myfile, 'w+') as fp:
+            fp.write(salt.utils.stringutils.to_str('Hello\n'))
         self.addCleanup(os.remove, self.myfile)
         self.addCleanup(delattr, self, "myfile")
 
@@ -3290,11 +3377,6 @@ class LsattrTests(TestCase, LoaderModuleMockMixin):
             assert actual == expected, msg
 
 
-# This should create a merge conflict with ChattrVersionTests when
-# a merge forward to develop happens. Develop's changes are made
-# obsolete by this ChattrTests class, and should be removed in favor
-# of this change.
-@skipIf(salt.utils.platform.is_windows(), "Chattr shouldn't be available on Windows")
 class ChattrTests(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
@@ -3493,35 +3575,34 @@ class ChattrTests(TestCase, LoaderModuleMockMixin):
                 attrs=attrs,
                 follow_symlinks=False,
             )
-            self.assertDictEqual(actual_ret["changes"], expected)
+            self.assertDictEqual(actual_ret['changes'], expected)
 
 
-@skipIf(salt.modules.selinux.getenforce() != "Enforcing", "Skip if selinux not enabled")
+@skipIf(salt.modules.selinux.getenforce() != 'Enforcing', 'Skip if selinux not enabled')
 class FileSelinuxTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
             filemod: {
-                "__salt__": {
-                    "cmd.run": cmdmod.run,
-                    "cmd.run_all": cmdmod.run_all,
-                    "cmd.retcode": cmdmod.retcode,
-                    "selinux.fcontext_add_policy": MagicMock(
-                        return_value={"retcode": 0, "stdout": ""}
-                    ),
+                '__salt__': {
+                    'cmd.run': cmdmod.run,
+                    'cmd.retcode': cmdmod.retcode,
+                    'selinux.fcontext_add_policy': MagicMock(return_value={'retcode': 0, 'stdout': ''})
                 },
-                "__opts__": {"test": False},
+                '__opts__': {
+                    'test': False
+                }
             }
         }
 
     def setUp(self):
         # Read copy 1
-        self.tfile1 = tempfile.NamedTemporaryFile(delete=False, mode="w+")
+        self.tfile1 = tempfile.NamedTemporaryFile(delete=False, mode='w+')
 
         # Edit copy 2
-        self.tfile2 = tempfile.NamedTemporaryFile(delete=False, mode="w+")
+        self.tfile2 = tempfile.NamedTemporaryFile(delete=False, mode='w+')
 
         # Edit copy 3
-        self.tfile3 = tempfile.NamedTemporaryFile(delete=False, mode="w+")
+        self.tfile3 = tempfile.NamedTemporaryFile(delete=False, mode='w+')
 
     def tearDown(self):
         os.remove(self.tfile1.name)
@@ -3532,57 +3613,38 @@ class FileSelinuxTestCase(TestCase, LoaderModuleMockMixin):
         del self.tfile3
 
     def test_selinux_getcontext(self):
-        """
+        '''
             Test get selinux context
             Assumes default selinux attributes on temporary files
-        """
+        '''
         result = filemod.get_selinux_context(self.tfile1.name)
         self.assertEqual(result, "unconfined_u:object_r:user_tmp_t:s0")
 
     def test_selinux_setcontext(self):
-        """
+        '''
             Test set selinux context
             Assumes default selinux attributes on temporary files
-        """
+        '''
         result = filemod.set_selinux_context(self.tfile2.name, user="system_u")
         self.assertEqual(result, "system_u:object_r:user_tmp_t:s0")
 
     def test_selinux_setcontext_persist(self):
-        """
+        '''
             Test set selinux context with persist=True
             Assumes default selinux attributes on temporary files
-        """
-        result = filemod.set_selinux_context(
-            self.tfile2.name, user="system_u", persist=True
-        )
+        '''
+        result = filemod.set_selinux_context(self.tfile2.name, user="system_u", persist=True)
         self.assertEqual(result, "system_u:object_r:user_tmp_t:s0")
 
     def test_file_check_perms(self):
-        expected_result = (
-            {
-                "comment": "The file {0} is set to be changed".format(self.tfile3.name),
-                "changes": {
-                    "selinux": {"New": "Type: lost_found_t", "Old": "Type: user_tmp_t"},
-                    "mode": "0644",
-                },
-                "name": self.tfile3.name,
-                "result": True,
-            },
-            {"luser": "root", "lmode": "0600", "lgroup": "root"},
-        )
+        expected_result = {'comment': 'The file {0} is set to be changed'.format(self.tfile3.name),
+                           'changes': {'selinux': {'New': 'Type: lost_found_t', 'Old': 'Type: user_tmp_t'},
+                           'mode': '0644'}, 'name': self.tfile3.name, 'result': True}, {
+                           'luser': 'root', 'lmode': '0600', 'lgroup': 'root'}
 
         # Disable lsattr calls
-        with patch("salt.utils.path.which") as m_which:
+        with patch('salt.utils.path.which') as m_which:
             m_which.return_value = None
-            result = filemod.check_perms(
-                self.tfile3.name,
-                {},
-                "root",
-                "root",
-                644,
-                seuser=None,
-                serole=None,
-                setype="lost_found_t",
-                serange=None,
-            )
+            result = filemod.check_perms(self.tfile3.name, {}, 'root', 'root', 644, seuser=None,
+                                        serole=None, setype='lost_found_t', serange=None)
             self.assertEqual(result, expected_result)

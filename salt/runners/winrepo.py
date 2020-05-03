@@ -9,8 +9,8 @@ Runner to manage Windows software repo
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-import logging
-import os
+# Import third party libs
+from salt.ext import six
 
 import salt.loader
 import salt.minion
@@ -117,8 +117,7 @@ def genrepo(opts=None, fire_event=True):
                     ret.setdefault("repo", {}).update(config)
                     ret.setdefault("name_map", {}).update(revmap)
     with salt.utils.files.fopen(
-        os.path.join(winrepo_dir, winrepo_cachefile), "w+b"
-    ) as repo:
+            os.path.join(winrepo_dir, winrepo_cachefile), 'w+b') as repo:
         repo.write(salt.utils.msgpack.dumps(ret))
     return ret
 

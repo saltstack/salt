@@ -76,39 +76,19 @@ class ConsulPillarTestCase(TestCase, LoaderModuleMockMixin):
                 consul_pillar.get_conn.assert_called_once_with(OPTS, "consul_config")
 
     def test_pillar_data(self):
-        with patch.dict(
-            consul_pillar.__salt__, {"grains.get": MagicMock(return_value=({}))}
-        ):
-            with patch.object(
-                consul_pillar,
-                "consul_fetch",
-                MagicMock(return_value=("2232", PILLAR_DATA)),
-            ):
-                pillar_data = consul_pillar.ext_pillar(
-                    "testminion", {}, "consul_config root=test-shared/"
-                )
-                consul_pillar.consul_fetch.assert_called_once_with(
-                    "consul_connection", "test-shared"
-                )
-                assert sorted(pillar_data) == ["sites", "user"]
-                self.assertNotIn("blankvalue", pillar_data["user"])
+        with patch.dict(consul_pillar.__salt__, {'grains.get': MagicMock(return_value=({}))}):
+            with patch.object(consul_pillar, 'consul_fetch', MagicMock(return_value=('2232', PILLAR_DATA))):
+                pillar_data = consul_pillar.ext_pillar('testminion', {}, 'consul_config root=test-shared/')
+                consul_pillar.consul_fetch.assert_called_once_with('consul_connection', 'test-shared')
+                assert sorted(pillar_data) == ['sites', 'user']
+                self.assertNotIn('blankvalue', pillar_data['user'])
 
     def test_blank_root(self):
-        with patch.dict(
-            consul_pillar.__salt__, {"grains.get": MagicMock(return_value=({}))}
-        ):
-            with patch.object(
-                consul_pillar,
-                "consul_fetch",
-                MagicMock(return_value=("2232", PILLAR_DATA)),
-            ):
-                pillar_data = consul_pillar.ext_pillar(
-                    "testminion", {}, "consul_config"
-                )
-                consul_pillar.consul_fetch.assert_called_once_with(
-                    "consul_connection", ""
-                )
-                assert sorted(pillar_data) == ["test-shared"]
+        with patch.dict(consul_pillar.__salt__, {'grains.get': MagicMock(return_value=({}))}):
+            with patch.object(consul_pillar, 'consul_fetch', MagicMock(return_value=('2232', PILLAR_DATA))):
+                pillar_data = consul_pillar.ext_pillar('testminion', {}, 'consul_config')
+                consul_pillar.consul_fetch.assert_called_once_with('consul_connection', '')
+                assert sorted(pillar_data) == ['test-shared']
 
     def test_pillar_nest(self):
         with patch.dict(
@@ -120,12 +100,10 @@ class ConsulPillarTestCase(TestCase, LoaderModuleMockMixin):
                 MagicMock(return_value=("2232", PILLAR_DATA)),
             ):
                 pillar_data = consul_pillar.ext_pillar(
-                    "testminion",
-                    {},
-                    "consul_config pillar_root=nested-key/ root=test-shared/ ",
+                    'testminion', {}, 'consul_config pillar_root=nested-key/ root=test-shared/ '
                 )
-                assert sorted(pillar_data["nested-key"]) == ["sites", "user"]
-                self.assertNotIn("blankvalue", pillar_data["nested-key"]["user"])
+                assert sorted(pillar_data['nested-key']) == ['sites', 'user']
+                self.assertNotIn('blankvalue', pillar_data['nested-key']['user'])
 
     def test_value_parsing(self):
         with patch.dict(

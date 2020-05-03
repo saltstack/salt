@@ -12,7 +12,7 @@ Dependencies
 ------------
 
 - napalm-yang
-- pyangbing > 0.5.11
+- pyangbind > 0.5.11
 
 To be able to load configuration on network devices,
 it requires NAPALM_ library to be installed:  ``pip install napalm``.
@@ -198,21 +198,21 @@ def managed(name, data, **kwargs):
     )
     log.debug("Loaded config result:")
     log.debug(loaded_changes)
-    __salt__["file.remove"](temp_file)
-    loaded_changes["compliance_report"] = compliance_report
-    return salt.utils.napalm.loaded_ret(
-        ret,
-        loaded_changes,
-        test,
-        debug,
-        opts=__opts__,
-        compliance_report=return_compliance_report,
-    )
+    __salt__['file.remove'](temp_file)
+    loaded_changes['compliance_report'] = compliance_report
+    return salt.utils.napalm.loaded_ret(ret,
+                                        loaded_changes,
+                                        test,
+                                        debug,
+                                        opts=__opts__,
+                                        compliance_report=return_compliance_report)
 
 
-def configured(name, data, **kwargs):
-    """
-    Configure the network device, given the input data strucuted
+def configured(name,
+               data,
+               **kwargs):
+    '''
+    Configure the network device, given the input data structured
     according to the YANG models.
 
     .. note::

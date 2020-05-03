@@ -31,11 +31,8 @@ __virtualname__ = "pkg"
 def __virtual__():
     """
     Set the virtual pkg module if the os is Solaris
-    """
-    if (
-        __grains__["os_family"] == "Solaris"
-        and float(__grains__["kernelrelease"]) <= 5.10
-    ):
+    '''
+    if __grains__.get('os_family') == 'Solaris' and float(__grains__['kernelrelease']) <= 5.10:
         return __virtualname__
     return (
         False,
@@ -176,8 +173,8 @@ available_version = salt.utils.functools.alias_function(
 )
 
 
-def upgrade_available(name):
-    """
+def upgrade_available(name, **kwargs):
+    '''
     Check whether or not an upgrade is available for a given package
 
     CLI Example:
@@ -340,7 +337,7 @@ def install(name=None, sources=None, saltenv="base", **kwargs):
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     if not sources:

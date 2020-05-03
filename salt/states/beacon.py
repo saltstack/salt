@@ -31,9 +31,9 @@ Management of the Salt beacons
               - 0.1
               - 1.0
 
-    .. versionadded:: 3000
+    .. versionadded:: Neon
 
-    Beginning in the 3000 release, multiple copies of a beacon can be configured
+    Beginning in the Neon release, multiple copies of a beacon can be configured
     using the ``beacon_module`` parameter.
 
     inotify_infs:
@@ -67,7 +67,7 @@ Management of the Salt beacons
         - interval: 10
         - beacon_module: inotify
         - disable_during_state_run: True
-"""
+'''
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
@@ -82,10 +82,16 @@ def present(name, save=False, **kwargs):
     """
     Ensure beacon is configured with the included beacon data.
 
-    name
-        The name of the beacon to ensure is configured.
-    save
-        True/False, if True the beacons.conf file be updated too. Default is False.
+    Args:
+
+        name (str):
+            The name of the beacon ensure is configured.
+
+        save (bool):
+            ``True`` updates the beacons.conf. Default is ``False``.
+
+    Returns:
+        dict: A dictionary of information about the results of the state
 
     Example:
 
@@ -99,7 +105,11 @@ def present(name, save=False, **kwargs):
             - services:
                 salt-master: running
                 apache2: stopped
-    """
+    '''
+    ret = {'name': name,
+           'result': True,
+           'changes': {},
+           'comment': []}
 
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
 
@@ -147,8 +157,8 @@ def present(name, save=False, **kwargs):
         if __opts__.get("test"):
             ret["comment"].append("Beacon {0} would be saved".format(name))
         else:
-            __salt__["beacons.save"]()
-            ret["comment"].append("Beacon {0} saved".format(name))
+            __salt__['beacons.save'](**kwargs)
+            ret['comment'].append('Beacon {0} saved'.format(name))
 
     ret["comment"] = "\n".join(ret["comment"])
     return ret
@@ -158,10 +168,16 @@ def absent(name, save=False, **kwargs):
     """
     Ensure beacon is absent.
 
-    name
-        The name of the beacon that is ensured absent.
-    save
-        True/False, if True the beacons.conf file be updated too. Default is False.
+    Args:
+
+        name (str):
+            The name of the beacon ensured absent.
+
+        save (bool):
+            ``True`` updates the beacons.conf file. Default is ``False``.
+
+    Returns:
+        dict: A dictionary containing the results of the state run
 
     Example:
 
@@ -171,8 +187,11 @@ def absent(name, save=False, **kwargs):
           beacon.absent:
             - name: ps
             - save: True
-
-    """
+    '''
+    ret = {'name': name,
+           'result': True,
+           'changes': {},
+           'comment': []}
 
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
 
@@ -197,8 +216,8 @@ def absent(name, save=False, **kwargs):
         if __opts__.get("test"):
             ret["comment"].append("Beacon {0} would be saved".format(name))
         else:
-            __salt__["beacons.save"]()
-            ret["comment"].append("Beacon {0} saved".format(name))
+            __salt__['beacons.save'](**kwargs)
+            ret['comment'].append('Beacon {0} saved'.format(name))
 
     ret["comment"] = "\n".join(ret["comment"])
     return ret
@@ -208,8 +227,13 @@ def enabled(name, **kwargs):
     """
     Enable a beacon.
 
-    name
-        The name of the beacon to enable.
+    Args:
+
+        name (str):
+            The name of the beacon to enable.
+
+    Returns:
+        dict: A dictionary containing the results of the state run
 
     Example:
 
@@ -218,6 +242,11 @@ def enabled(name, **kwargs):
         enable_beacon:
           beacon.enabled:
             - name: ps
+    '''
+    ret = {'name': name,
+           'result': True,
+           'changes': {},
+           'comment': []}
 
     """
 
@@ -248,8 +277,13 @@ def disabled(name, **kwargs):
     """
     Disable a beacon.
 
-    name
-        The name of the beacon to disable.
+    Args:
+
+        name (str):
+            The name of the beacon to disable.
+
+    Returns:
+        dict: A dictionary containing the results of the state run
 
     Example:
 
@@ -257,11 +291,12 @@ def disabled(name, **kwargs):
 
         disable_beacon:
           beacon.disabled:
-            - name: psp
-
-    """
-
-    ret = {"name": name, "result": True, "changes": {}, "comment": []}
+            - name: ps
+    '''
+    ret = {'name': name,
+           'result': True,
+           'changes': {},
+           'comment': []}
 
     current_beacons = __salt__["beacons.list"](return_yaml=False, **kwargs)
     if name in current_beacons:

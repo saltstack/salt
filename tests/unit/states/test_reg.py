@@ -51,22 +51,20 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
         Test to set a registry entry.
         """
         expected = {
-            "comment": "Added {0} to {1}".format(self.vname, self.name),
-            "changes": {
-                "reg": {
-                    "Added": {
-                        "Inheritance": True,
-                        "Perms": {"Deny": None, "Grant": None},
-                        "Value": self.vdata,
-                        "Key": self.name,
-                        "Owner": None,
-                        "Entry": self.vname,
-                    }
-                }
-            },
-            "name": self.name,
-            "result": True,
-        }
+            'comment': 'Added {0} to {0}'.format(self.name),
+            'changes': {
+                'reg': {
+                    'Added': {
+                        'Inheritance': True,
+                        'Perms': {
+                            'Deny': None,
+                            'Grant': None},
+                        'Value': '0.15.3',
+                        'Key': self.name,
+                        'Owner': None,
+                        'Entry': 'version'}}},
+            'name': self.name,
+            'result': True}
         ret = reg.present(self.name, vname=self.vname, vdata=self.vdata)
         self.assertDictEqual(ret, expected)
 
@@ -120,23 +118,21 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_present_test_true(self):
         expected = {
-            "comment": "",
-            "changes": {
-                "reg": {
-                    "Will add": {
-                        "Inheritance": True,
-                        "Perms": {"Deny": None, "Grant": None},
-                        "Value": self.vdata,
-                        "Key": self.name,
-                        "Owner": None,
-                        "Entry": "version",
-                    }
-                }
-            },
-            "name": self.name,
-            "result": None,
-        }
-        with patch.dict(reg.__opts__, {"test": True}):
+            'comment': '',
+            'changes': {
+                'reg': {
+                    'Will add': {
+                        'Inheritance': True,
+                        'Perms': {
+                            'Deny': None,
+                            'Grant': None},
+                        'Value': self.vdata,
+                        'Key': self.name,
+                        'Owner': None,
+                        'Entry': 'version'}}},
+            'name': self.name,
+            'result': None}
+        with patch.dict(reg.__opts__, {'test': True}):
             ret = reg.present(self.name, vname=self.vname, vdata=self.vdata)
         self.assertDictEqual(ret, expected)
 
@@ -147,11 +143,10 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
         )
 
         expected = {
-            "comment": "{0} in {1} is already present".format(self.vname, self.name),
-            "changes": {},
-            "name": self.name,
-            "result": True,
-        }
+            'comment': '{0} in {1} is already present'.format(self.vname, self.name),
+            'changes': {},
+            'name': self.name,
+            'result': True}
         ret = reg.present(self.name, vname=self.vname, vdata=self.vdata)
         self.assertDictEqual(ret, expected)
 
@@ -162,12 +157,11 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
         )
 
         expected = {
-            "comment": "{0} in {1} is already present".format(self.vname, self.name),
-            "changes": {},
-            "name": self.name,
-            "result": True,
-        }
-        with patch.dict(reg.__opts__, {"test": True}):
+            'comment': '{0} in {1} is already present'.format(self.vname, self.name),
+            'changes': {},
+            'name': self.name,
+            'result': True}
+        with patch.dict(reg.__opts__, {'test': True}):
             ret = reg.present(self.name, vname=self.vname, vdata=self.vdata)
         self.assertDictEqual(ret, expected)
 

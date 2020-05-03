@@ -8,8 +8,14 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import shutil
+import logging
 
-import pytest
+# Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.case import ModuleCase
+from tests.support.mixins import SaltReturnAssertsMixin
+
+# Import salt libs
 import salt.utils.files
 import salt.utils.stringutils
 from tests.support.case import ModuleCase
@@ -37,12 +43,22 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         if os.path.isfile(self.hosts_file):
             os.remove(self.hosts_file)
 
+    @classmethod
+    def setUpClass(cls):
+        cls.hosts_file = os.path.join(RUNTIME_VARS.TMP, 'hosts')
+
+    def __clear_hosts(self):
+        '''
+        Delete the tmp hosts file
+        '''
+        if os.path.isfile(self.hosts_file):
+            os.remove(self.hosts_file)
+
     def setUp(self):
-        shutil.copyfile(os.path.join(RUNTIME_VARS.FILES, "hosts"), self.hosts_file)
+        shutil.copyfile(os.path.join(RUNTIME_VARS.FILES, 'hosts'), self.hosts_file)
         self.addCleanup(self.__clear_hosts)
         super(HostTest, self).setUp()
 
-    @skipIf(True, "SLOWTEST skip")
     def test_present(self):
         """
         host.present

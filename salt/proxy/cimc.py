@@ -97,6 +97,16 @@ def __virtual__():
     return __virtualname__
 
 
+def _validate_response_code(response_code_to_check, cookie_to_logout=None):
+    formatted_response_code = str(response_code_to_check)
+    if formatted_response_code not in ['200', '201', '202', '204']:
+        if cookie_to_logout:
+            logout(cookie_to_logout)
+        log.error("Received error HTTP status code: %s", formatted_response_code)
+        raise salt.exceptions.CommandExecutionError(
+            "Did not receive a valid response from host.")
+
+
 def init(opts):
     """
     This function gets called when the proxy starts up.
@@ -143,21 +153,21 @@ def set_config_modify(dn=None, inconfig=None, hierarchical=False):
     if hierarchical is True:
         h = "true"
 
-    payload = (
-        '<configConfMo cookie="{0}" inHierarchical="{1}" dn="{2}">'
-        "<inConfig>{3}</inConfig></configConfMo>".format(cookie, h, dn, inconfig)
-    )
-    r = __utils__["http.query"](
-        DETAILS["url"],
-        data=payload,
-        method="POST",
-        decode_type="plain",
-        decode=True,
-        verify_ssl=False,
-        raise_error=True,
-        headers=DETAILS["headers"],
-    )
-    answer = re.findall(r"(<[\s\S.]*>)", r["text"])[0]
+    payload = '<configConfMo cookie="{0}" inHierarchical="{1}" dn="{2}">' \
+              '<inConfig>{3}</inConfig></configConfMo>'.format(cookie, h, dn, inconfig)
+    r = __utils__['http.query'](DETAILS['url'],
+                                data=payload,
+                                method='POST',
+                                decode_type='plain',
+                                decode=True,
+                                verify_ssl=False,
+                                raise_error=True,
+                                status=True,
+                                headers=DETAILS['headers'])
+
+    _validate_response_code(r['status'], cookie)
+
+    answer = re.findall(r'(<[\s\S.]*>)', r['text'])[0]
     items = ET.fromstring(answer)
     logout(cookie)
     for item in items:
@@ -177,23 +187,23 @@ def get_config_resolver_class(cid=None, hierarchical=False):
     if hierarchical is True:
         h = "true"
 
-    payload = '<configResolveClass cookie="{0}" inHierarchical="{1}" classId="{2}"/>'.format(
-        cookie, h, cid
-    )
-    r = __utils__["http.query"](
-        DETAILS["url"],
-        data=payload,
-        method="POST",
-        decode_type="plain",
-        decode=True,
-        verify_ssl=False,
-        raise_error=True,
-        headers=DETAILS["headers"],
-    )
+    payload = '<configResolveClass cookie="{0}" inHierarchical="{1}" classId="{2}"/>'.format(cookie, h, cid)
+    r = __utils__['http.query'](DETAILS['url'],
+                                data=payload,
+                                method='POST',
+                                decode_type='plain',
+                                decode=True,
+                                verify_ssl=False,
+                                raise_error=True,
+                                status=True,
+                                headers=DETAILS['headers'])
 
-    answer = re.findall(r"(<[\s\S.]*>)", r["text"])[0]
+    _validate_response_code(r['status'], cookie)
+
+    answer = re.findall(r'(<[\s\S.]*>)', r['text'])[0]
     items = ET.fromstring(answer)
     logout(cookie)
+
     for item in items:
         ret[item.tag] = prepare_return(item)
     return ret
@@ -204,20 +214,20 @@ def logon():
     Logs into the cimc device and returns the session cookie.
     """
     content = {}
-    payload = "<aaaLogin inName='{0}' inPassword='{1}'></aaaLogin>".format(
-        DETAILS["username"], DETAILS["password"]
-    )
-    r = __utils__["http.query"](
-        DETAILS["url"],
-        data=payload,
-        method="POST",
-        decode_type="plain",
-        decode=True,
-        verify_ssl=False,
-        raise_error=False,
-        headers=DETAILS["headers"],
-    )
-    answer = re.findall(r"(<[\s\S.]*>)", r["text"])[0]
+    payload = "<aaaLogin inName='{0}' inPassword='{1}'></aaaLogin>".format(DETAILS['username'], DETAILS['password'])
+    r = __utils__['http.query'](DETAILS['url'],
+                                data=payload,
+                                method='POST',
+                                decode_type='plain',
+                                decode=True,
+                                verify_ssl=False,
+                                raise_error=False,
+                                status=True,
+                                headers=DETAILS['headers'])
+
+    _validate_response_code(r['status'])
+
+    answer = re.findall(r'(<[\s\S.]*>)', r['text'])[0]
     items = ET.fromstring(answer)
     for item in items.attrib:
         content[item] = items.attrib[item]
@@ -276,9 +286,11 @@ def grains():
     if not DETAILS.get("grains_cache", {}):
         DETAILS["grains_cache"] = GRAINS_CACHE
         try:
-            compute_rack = get_config_resolver_class("computeRackUnit", False)
-            DETAILS["grains_cache"] = compute_rack["outConfigs"]["computeRackUnit"]
-        except Exception as err:  # pylint: disable=broad-except
+            compute_rack = get_config_resolver_class('computeRackUnit', False)
+            DETAILS['grains_cache'] = compute_rack['outConfigs']['computeRackUnit']
+        except salt.exceptions.CommandExecutionError:
+            pass
+        except Exception as err:
             log.error(err)
     return DETAILS["grains_cache"]
 
@@ -298,7 +310,9 @@ def ping():
     try:
         cookie = logon()
         logout(cookie)
-    except Exception as err:  # pylint: disable=broad-except
+    except salt.exceptions.CommandExecutionError:
+        return False
+    except Exception as err:
         log.debug(err)
         return False
     return True

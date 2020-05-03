@@ -28,18 +28,17 @@ def __virtual__():
     return True
 
 
-def present(
-    version,
-    name,
-    port=None,
-    encoding=None,
-    locale=None,
-    datadir=None,
-    allow_group_access=None,
-    data_checksums=None,
-    wal_segsize=None,
-):
-    """
+def present(version,
+            name,
+            port=None,
+            encoding=None,
+            locale=None,
+            datadir=None,
+            allow_group_access=None,
+            data_checksums=None,
+            wal_segsize=None
+            ):
+    '''
     Ensure that the named cluster is present with the specified properties.
     For more information about all of these options see man pg_createcluster(1)
 
@@ -108,8 +107,7 @@ def present(
         datadir=datadir,
         allow_group_access=allow_group_access,
         data_checksums=data_checksums,
-        wal_segsize=wal_segsize,
-    )
+        wal_segsize=wal_segsize)
     if cluster:
         msg = "The cluster {0}/{1} has been created"
         ret["comment"] = msg.format(version, name)

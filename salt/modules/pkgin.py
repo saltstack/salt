@@ -94,16 +94,10 @@ def _supports_parsing():
 def __virtual__():
     """
     Set the virtual pkg module if the os is supported by pkgin
-    """
-    supported = ["NetBSD", "SunOS", "DragonFly", "Minix", "Darwin", "SmartOS"]
-
-    if __grains__["os"] in supported and _check_pkgin():
-        return __virtualname__
-    return (
-        False,
-        "The pkgin execution module cannot be loaded: only "
-        "available on {0} systems.".format(", ".join(supported)),
-    )
+    '''
+    return (__grains__.get('os_family') == 'Solaris' and _check_pkgin(),
+            'The pkgin execution module cannot be loaded: pkgin was '
+            'not detected on this platform.')
 
 
 def _splitpkg(name):
@@ -115,8 +109,8 @@ def _splitpkg(name):
         return name.split(";", 1)[0].rsplit("-", 1)
 
 
-def search(pkg_name):
-    """
+def search(pkg_name, **kwargs):
+    '''
     Searches for an exact match using pkgin ^package$
 
     CLI Example:
@@ -227,8 +221,8 @@ def version(*names, **kwargs):
     return __salt__["pkg_resource.version"](*names, **kwargs)
 
 
-def refresh_db(force=False):
-    """
+def refresh_db(force=False, **kwargs):
+    '''
     Use pkg update to get latest pkg_summary
 
     force
@@ -640,8 +634,8 @@ def _rehash():
         __salt__["cmd.run"]("rehash", output_loglevel="trace")
 
 
-def file_list(package):
-    """
+def file_list(package, **kwargs):
+    '''
     List the files that belong to a package.
 
     CLI Examples:
@@ -658,8 +652,8 @@ def file_list(package):
     return ret
 
 
-def file_dict(*packages):
-    """
+def file_dict(*packages, **kwargs):
+    '''
     .. versionchanged: 2016.3.0
 
     List the files that belong to a package.
@@ -692,6 +686,18 @@ def file_dict(*packages):
         if not ret[field] or ret[field] == "":
             del ret[field]
     return ret
+
+
+def normalize_name(pkgs, **kwargs):
+    '''
+    Normalize package names
+
+    .. note::
+        Nothing special to do to normalize, just return
+        the original. (We do need it to be comaptible
+        with the pkg_resource provider.)
+    '''
+    return pkgs
 
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

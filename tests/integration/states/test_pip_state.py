@@ -14,6 +14,7 @@ import glob
 import os
 import pprint
 import shutil
+import site
 import sys
 
 import pytest
@@ -33,8 +34,8 @@ from tests.support.helpers import (
     patched_environ,
     requires_system_grains,
     skip_if_not_root,
-    with_system_user,
     with_tempdir,
+    patched_environ
 )
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
@@ -73,8 +74,9 @@ class VirtualEnv(object):
 )
 @pytest.mark.windows_whitelisted
 class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
+
     def _create_virtualenv(self, path, **kwargs):
-        """
+        '''
         The reason why the virtualenv creation is proxied by this function is mostly
         because under windows, we can't seem to properly create a virtualenv off of
         another virtualenv(we can on linux) and also because, we really don't want to
@@ -105,11 +107,11 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                     )
             # We're running off a virtualenv, and we don't want to create a virtualenv off of
             # a virtualenv, let's point to the actual python that created the virtualenv
-            kwargs["python"] = python
+            kwargs['python'] = python
         except AttributeError:
             # We're running off of the system python
             pass
-        return self.run_function("virtualenv.create", [path], **kwargs)
+        return self.run_function('virtualenv.create', [path], **kwargs)
 
     @skipIf(True, "SLOWTEST skip")
     def test_pip_installed_removed(self):
@@ -136,27 +138,66 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state("pip.removed", name=name, bin_env=venv_dir)
             self.assertSaltTrueReturn(ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    def test_pip_installed_user_install_true(self):
+        # TODO: Do we have a salt simple test package? If not, let's make one! -W. Werner, 2019-03-15
+        pkg = 'nose'
+        self.run_state('pip.removed', name=pkg)
+        self.run_state('pip.installed', user_install=True, name=pkg)
+
+        # Check if the path exists instead of adding to sys.paths
+        path = os.path.join(site.USER_SITE, pkg)
+        location = os.path.lexists(path)
+        if location:
+            location = os.path.dirname(path)
+
+        # Check the USER_SITE location outside of a virtualenv
+        # pip list --user has non-expected behavior inside a virtualenv
+        self.assertEqual(location, site.USER_SITE)
+
+    def test_pip_installed_user_install_false(self):
+        venv_dir = os.path.join(
+            RUNTIME_VARS.TMP, 'pip_installed_removed'
+        )
+        site_pkg = os.path.join(venv_dir, 'lib', 'site-packages')
+        with VirtualEnv(self, venv_dir):
+            pkg = 'nose'
+            self.run_state('pip.removed', name=pkg, bin_env=venv_dir)
+            self.run_state('pip.installed', user_install=False, name=pkg, bin_env=venv_dir)
+
+            # Check if the path exists instead of adding to sys.paths
+            path = os.path.join(site_pkg, pkg)
+            location = os.path.lexists(path)
+            if location:
+                location = os.path.dirname(path)
+
+            # Check the USER_SITE relative to the virtualenv location
+            # pip list without a user flag behaves as expected
+            self.assertEqual(location, site_pkg)
+
     def test_pip_installed_errors(self):
-        venv_dir = os.path.join(RUNTIME_VARS.TMP, "pip-installed-errors")
-        self.addCleanup(shutil.rmtree, venv_dir, ignore_errors=True)
+        venv_dir = os.path.join(
+            RUNTIME_VARS.TMP, 'pip-installed-errors'
+        )
         # Since we don't have the virtualenv created, pip.installed will
         # throw an error.
         # Example error strings:
         #  * "Error installing 'pep8': /tmp/pip-installed-errors: not found"
         #  * "Error installing 'pep8': /bin/sh: 1: /tmp/pip-installed-errors: not found"
         #  * "Error installing 'pep8': /bin/bash: /tmp/pip-installed-errors: No such file or directory"
-        with patched_environ(SHELL="/bin/sh"):
-            ret = self.run_function("state.sls", mods="pip-installed-errors")
+        with patched_environ(SHELL='/bin/sh'):
+            ret = self.run_function('state.sls', mods='pip-installed-errors')
             self.assertSaltFalseReturn(ret)
-            self.assertSaltCommentRegexpMatches(ret, "Error installing 'pep8':")
+            self.assertSaltCommentRegexpMatches(
+                ret,
+                'Error installing \'pep8\':'
+            )
 
             # We now create the missing virtualenv
-            ret = self.run_function("virtualenv.create", [venv_dir])
-            self.assertEqual(ret["retcode"], 0)
+            ret = self._create_virtualenv(venv_dir)
+            self.assertEqual(ret['retcode'], 0)
 
             # The state should not have any issues running now
-            ret = self.run_function("state.sls", mods="pip-installed-errors")
+            ret = self.run_function('state.sls', mods='pip-installed-errors')
             self.assertSaltTrueReturn(ret)
 
     @skipIf(six.PY3, "Issue is specific to carbon module, which is PY2-only")
@@ -246,13 +287,11 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
         # Let's remove the pip binary
-        pip_bin = os.path.join(venv_dir, "bin", "pip")
-        site_dir = self.run_function(
-            "virtualenv.get_distribution_path", [venv_dir, "pip"]
-        )
+        pip_bin = os.path.join(venv_dir, 'bin', 'pip')
+        site_dir = self.run_function('virtualenv.get_distribution_path', [venv_dir, 'pip'])
         if salt.utils.platform.is_windows():
-            pip_bin = os.path.join(venv_dir, "Scripts", "pip.exe")
-            site_dir = os.path.join(venv_dir, "lib", "site-packages")
+            pip_bin = os.path.join(venv_dir, 'Scripts', 'pip.exe')
+            site_dir = os.path.join(venv_dir, 'lib', 'site-packages')
         if not os.path.isfile(pip_bin):
             self.skipTest("Failed to find the pip binary to the test virtualenv")
         os.remove(pip_bin)
@@ -424,24 +463,26 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             ret["stdout"],
             msg="Expected STDOUT did not match. Full return dictionary:\n{}".format(
                 pprint.pformat(ret)
-            ),
+            )
         )
 
         # Let's install a fixed version pip over whatever pip was
         # previously installed
         ret = self.run_function(
-            "pip.install", ["pip==8.0"], upgrade=True, bin_env=venv_dir
+            'pip.install', ['pip==8.0'], upgrade=True,
+            bin_env=venv_dir
         )
 
         if not isinstance(ret, dict):
             self.fail(
-                "The 'pip.install' command did not return the excepted dictionary. Output:\n{}".format(
-                    ret
-                )
+                'The \'pip.install\' command did not return the excepted dictionary. Output:\n{}'.format(ret)
             )
 
-        self.assertEqual(ret["retcode"], 0)
-        self.assertIn("Successfully installed pip", ret["stdout"])
+        self.assertEqual(ret['retcode'], 0)
+        self.assertIn(
+            'Successfully installed pip',
+            ret['stdout']
+        )
 
         # Let's make sure we have pip 8.0 installed
         self.assertEqual(

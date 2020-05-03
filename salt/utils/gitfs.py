@@ -286,6 +286,15 @@ class GitProvider(object):
                 )
                 failhard(self.role)
 
+            if self.role == 'git_pillar' \
+                    and self.branch != '__env__' and 'base' in per_remote_conf:
+                log.critical(
+                    'Invalid per-remote configuration for %s remote \'%s\'. '
+                    'base can only be specified if __env__ is specified as the branch name.',
+                    self.role, self.id
+                )
+                failhard(self.role)
+
             per_remote_errors = False
             for param in (
                 x for x in per_remote_conf if x not in valid_per_remote_params

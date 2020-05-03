@@ -220,23 +220,15 @@ def describe(Name, region=None, key=None, keyid=None, profile=None):
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         trails = conn.describe_trails(trailNameList=[Name])
-        if trails and trails.get("trailList"):
-            keys = (
-                "Name",
-                "S3BucketName",
-                "S3KeyPrefix",
-                "SnsTopicName",
-                "IncludeGlobalServiceEvents",
-                "IsMultiRegionTrail",
-                "HomeRegion",
-                "TrailARN",
-                "LogFileValidationEnabled",
-                "CloudWatchLogsLogGroupArn",
-                "CloudWatchLogsRoleArn",
-                "KmsKeyId",
-            )
-            trail = trails["trailList"].pop()
-            return {"trail": dict([(k, trail.get(k)) for k in keys])}
+        if trails and trails.get('trailList'):
+            keys = ('Name', 'S3BucketName', 'S3KeyPrefix',
+                    'SnsTopicName', 'IncludeGlobalServiceEvents',
+                    'IsMultiRegionTrail',
+                    'HomeRegion', 'TrailARN',
+                    'LogFileValidationEnabled', 'CloudWatchLogsLogGroupArn',
+                    'CloudWatchLogsRoleArn', 'KmsKeyId')
+            trail = trails['trailList'].pop()
+            return {'trail': dict([(k, trail.get(k)) for k in keys])}
         else:
             return {"trail": None}
     except ClientError as e:

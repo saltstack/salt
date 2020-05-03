@@ -27,9 +27,8 @@ def install(rootdir):
     return __salt__["cmd.run_all"](
         [
             sys.executable,
-            os.path.join(RUNTIME_VARS.CODE_DIR, "setup.py"),
-            "install",
-            "--root={0}".format(rootdir),
+            os.path.join(RUNTIME_VARS.CODE_DIR, 'setup.py'),
+            'install', '--root={0}'.format(rootdir)
         ],
         redirect_stderr=True,
     )

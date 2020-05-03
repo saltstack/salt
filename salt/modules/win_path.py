@@ -49,7 +49,7 @@ def __virtual__():
 def _normalize_dir(string_):
     """
     Normalize the directory to make comparison possible
-    """
+    '''
     return os.path.normpath(salt.utils.stringutils.to_unicode(string_))
 
 
@@ -85,12 +85,11 @@ def get_path():
         salt '*' win_path.get_path
     """
     ret = salt.utils.stringutils.to_unicode(
-        __utils__["reg.read_value"](
-            "HKEY_LOCAL_MACHINE",
-            "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment",
-            "PATH",
-        )["vdata"]
-    ).split(";")
+        __utils__['reg.read_value'](
+            'HKEY_LOCAL_MACHINE',
+            'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment',
+            'PATH')['vdata']
+    ).split(';')
 
     # Trim ending backslash
     return list(map(_normalize_dir, ret))
@@ -274,8 +273,12 @@ def add(path, index=None, **kwargs):
         return True
 
     # Move forward with registry update
-    result = __utils__["reg.set_value"](
-        HIVE, KEY, VNAME, ";".join(salt.utils.data.decode(system_path)), VTYPE
+    result = __utils__['reg.set_value'](
+        HIVE,
+        KEY,
+        VNAME,
+        ';'.join(salt.utils.data.decode(system_path)),
+        VTYPE
     )
 
     if result and rehash_:
@@ -345,8 +348,12 @@ def remove(path, **kwargs):
         # No changes necessary
         return True
 
-    result = __utils__["reg.set_value"](
-        HIVE, KEY, VNAME, ";".join(salt.utils.data.decode(system_path)), VTYPE
+    result = __utils__['reg.set_value'](
+        HIVE,
+        KEY,
+        VNAME,
+        ';'.join(salt.utils.data.decode(system_path)),
+        VTYPE
     )
 
     if result and rehash_:

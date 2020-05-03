@@ -65,7 +65,7 @@ def _git_version():
     if not git_version:
         log.error("Git not installed")
         return False
-    log.debug("Detected git version %s", git_version)
+    log.debug('Detected git version %s', git_version)
     return LooseVersion(git_version.split()[-1])
 
 

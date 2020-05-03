@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-"""
-Manage groups on Solaris
+'''
+Manage groups on AIX
 
 .. important::
     If you feel that Salt should be using this module to manage groups on a
@@ -28,8 +28,8 @@ __virtualname__ = "group"
 def __virtual__():
     """
     Set the group module if the kernel is AIX
-    """
-    if __grains__["kernel"] == "AIX":
+    '''
+    if __grains__.get('kernel') == 'AIX':
         return __virtualname__
     return (
         False,

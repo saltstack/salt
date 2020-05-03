@@ -131,29 +131,25 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
     def test_primary_suffix(self):
         """
             Test to configure the global primary DNS suffix of a DHCP client.
-        """
-        ret = {"name": "salt", "changes": {}, "result": False, "comment": ""}
-        ret.update({"comment": "'updates' must be a boolean value"})
-        self.assertDictEqual(win_dns_client.primary_suffix("salt", updates="a"), ret)
+        '''
+        ret = {'name': 'salt',
+               'changes': {},
+               'result': False,
+               'comment': ''}
+        ret.update({'comment': "'updates' must be a boolean value"})
+        self.assertDictEqual(win_dns_client.primary_suffix('salt', updates='a'
+                                                           ), ret)
 
-        mock = MagicMock(
-            side_effect=[
-                {"vdata": "a"},
-                {"vdata": False},
-                {"vdata": "b"},
-                {"vdata": False},
-            ]
-        )
-        with patch.dict(win_dns_client.__utils__, {"reg.read_value": mock}):
-            ret.update({"comment": "No changes needed", "result": True})
-            self.assertDictEqual(win_dns_client.primary_suffix("salt", "a"), ret)
+        mock = MagicMock(side_effect=[{'vdata': 'a'}, {'vdata': False}, {'vdata': 'b'}, {'vdata': False}])
+        with patch.dict(win_dns_client.__utils__, {'reg.read_value': mock}):
+            ret.update({'comment': 'No changes needed', 'result': True})
+            self.assertDictEqual(win_dns_client.primary_suffix('salt', 'a'),
+                                 ret)
 
             mock = MagicMock(return_value=True)
-            with patch.dict(win_dns_client.__utils__, {"reg.set_value": mock}):
-                ret.update(
-                    {
-                        "changes": {"new": {"suffix": "a"}, "old": {"suffix": "b"}},
-                        "comment": "Updated primary DNS suffix (a)",
-                    }
-                )
-                self.assertDictEqual(win_dns_client.primary_suffix("salt", "a"), ret)
+            with patch.dict(win_dns_client.__utils__, {'reg.set_value': mock}):
+                ret.update({'changes': {'new': {'suffix': 'a'},
+                                        'old': {'suffix': 'b'}},
+                            'comment': 'Updated primary DNS suffix (a)'})
+                self.assertDictEqual(win_dns_client.primary_suffix('salt',
+                                                                   'a'), ret)

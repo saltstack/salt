@@ -7,10 +7,9 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Python libs
 import os
 
-import salt.utils.stringutils
-
 # Import Salt libs
 from salt.ext import six
+import salt.utils.stringutils
 
 
 def __virtual__():
@@ -209,7 +208,7 @@ def exists(name, index=None):
             "{0} {1} to the PATH{2}.".format(
                 "Added" if ret["result"] else "Failed to add",
                 name,
-                " at index {0}".format(index) if index is not None else "",
+                ' at index {0}'.format(index) if index is not None else ''
             )
         )
 

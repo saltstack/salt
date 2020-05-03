@@ -341,15 +341,10 @@ def create(
             }
 
         while True:
-            jmespath = "DBInstances[*].DBInstanceStatus"
-            status = describe_db_instances(
-                name=name,
-                jmespath=jmespath,
-                region=region,
-                key=key,
-                keyid=keyid,
-                profile=profile,
-            )
+            jmespath = 'DBInstances[*].DBInstanceStatus'
+            status = describe_db_instances(name=name, jmespath=jmespath,
+                                           region=region, key=key, keyid=keyid,
+                                           profile=profile)
             if status:
                 stat = status[0]
             else:
@@ -632,7 +627,7 @@ def update_parameter_group(
         param_list.append(item)
 
     if not param_list:
-        return {"results": False}
+        return {'results': False}
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)

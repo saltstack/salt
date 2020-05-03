@@ -98,6 +98,12 @@ except ImportError:
     HAS_REQUESTS = False
 
 try:
+    import salt.utils.msgpack
+    HAS_MSGPACK = True
+except ImportError:
+    HAS_MSGPACK = False
+
+try:
     import certifi
 
     HAS_CERTIFI = True
@@ -296,13 +302,13 @@ def query(
         # proper cookie jar. Unfortunately, since session cookies do not
         # contain expirations, they can't be stored in a proper cookie jar.
         if os.path.isfile(session_cookie_jar):
-            with salt.utils.files.fopen(session_cookie_jar, "rb") as fh_:
+            with salt.utils.files.fopen(session_cookie_jar, 'rb') as fh_:
                 session_cookies = salt.utils.msgpack.load(fh_)
             if isinstance(session_cookies, dict):
                 header_dict.update(session_cookies)
         else:
-            with salt.utils.files.fopen(session_cookie_jar, "wb") as fh_:
-                salt.utils.msgpack.dump("", fh_)
+            with salt.utils.files.fopen(session_cookie_jar, 'wb') as fh_:
+                salt.utils.msgpack.dump('', fh_)
 
     for header in header_list:
         comps = header.split(":")
@@ -315,8 +321,11 @@ def query(
             auth = (username, password)
 
     if agent == USERAGENT:
-        agent = "{0} http.query()".format(agent)
-    header_dict["User-agent"] = agent
+        user_agent = opts.get('user_agent', None)
+        if user_agent:
+            agent = user_agent
+        agent = '{0} http.query()'.format(agent)
+    header_dict['User-agent'] = agent
 
     if backend == "requests":
         sess = requests.Session()
@@ -517,8 +526,8 @@ def query(
             ):
                 result_text = result_text.decode(res_params["charset"])
         if six.PY3 and isinstance(result_text, bytes):
-            result_text = result_text.decode("utf-8")
-        ret["body"] = result_text
+            result_text = result_text.decode('utf-8')
+        ret['body'] = result_text
     else:
         # Tornado
         req_kwargs = {}
@@ -723,9 +732,9 @@ def query(
             with salt.utils.files.fopen(session_cookie_jar, "wb") as fh_:
                 session_cookies = result_headers.get("set-cookie", None)
                 if session_cookies is not None:
-                    salt.utils.msgpack.dump({"Cookie": session_cookies}, fh_)
+                    salt.utils.msgpack.dump({'Cookie': session_cookies}, fh_)
                 else:
-                    salt.utils.msgpack.dump("", fh_)
+                    salt.utils.msgpack.dump('', fh_)
 
     if status is True:
         ret["status"] = result_status_code
@@ -827,9 +836,12 @@ def get_ca_bundle(opts=None):
 
 
 def update_ca_bundle(
-    target=None, source=None, opts=None, merge_files=None,
-):
-    """
+        target=None,
+        source=None,
+        opts=None,
+        merge_files=None,
+        ):
+    '''
     Attempt to update the CA bundle file from a URL
 
     If not specified, the local location on disk (``target``) will be
@@ -1058,11 +1070,11 @@ def sanitize_url(url, hide_fields):
 def _sanitize_url_components(comp_list, field):
     """
     Recursive function to sanitize each component of the url.
-    """
-    if len(comp_list) == 0:
-        return ""
-    elif comp_list[0].startswith("{0}=".format(field)):
-        ret = "{0}=XXXXXXXXXX&".format(field)
+    '''
+    if not comp_list:
+        return ''
+    elif comp_list[0].startswith('{0}='.format(field)):
+        ret = '{0}=XXXXXXXXXX&'.format(field)
         comp_list.remove(comp_list[0])
         return ret + _sanitize_url_components(comp_list, field)
     else:

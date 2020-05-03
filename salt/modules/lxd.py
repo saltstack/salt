@@ -318,7 +318,7 @@ def pylxd_client_get(remote_addr=None, cert=None, key=None, verify_cert=True):
 
     .. _requests-docs: http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification
 
-    """
+    '''
 
     pool_key = "|".join(
         (
@@ -370,11 +370,7 @@ def pylxd_client_get(remote_addr=None, cert=None, key=None, verify_cert=True):
 
                 log.debug(
                     'Trying to connect to "%s" with cert "%s", key "%s" and '
-                    'verify_cert "%s"',
-                    remote_addr,
-                    cert,
-                    key,
-                    verify_cert,
+                    'verify_cert "%s"', remote_addr, cert, key, verify_cert
                 )
                 client = pylxd.Client(
                     endpoint=remote_addr, cert=(cert, key,), verify=verify_cert
@@ -454,7 +450,7 @@ def authenticate(remote_addr, password, cert, key, verify_cert=True):
 
     .. _requests-docs: http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification
 
-    """
+    '''
     client = pylxd_client_get(remote_addr, cert, key, verify_cert)
 
     if client.trusted:
@@ -524,7 +520,7 @@ def container_list(
 
     .. _container-attributes: https://github.com/lxc/pylxd/blob/master/doc/source/containers.rst#container-attributes
 
-    """
+    '''
 
     client = pylxd_client_get(remote_addr, cert, key, verify_cert)
     containers = client.containers.all()
@@ -647,7 +643,7 @@ def container_create(
 
     .. _rest-api-docs: https://github.com/lxc/lxd/blob/master/doc/rest-api.md#post-1
 
-    """
+    '''
     if profiles is None:
         profiles = ["default"]
 
@@ -1164,7 +1160,7 @@ def container_migrate(
 
             # Migrate phpmyadmin from srv01 to srv02
             salt '*' lxd.container_migrate phpmyadmin stop_and_start=true remote_addr=https://srv02:8443 cert=~/.config/lxc/client.crt key=~/.config/lxc/client.key verify_cert=False src_remote_addr=https://srv01:8443
-    """
+    '''
     if src_cert is None:
         src_cert = cert
 
@@ -2012,7 +2008,7 @@ def profile_create(
         See the `lxd-docs`_ for the details about the config and devices dicts.
 
         .. _lxd-docs: https://github.com/lxc/lxd/blob/master/doc/rest-api.md#post-10
-    """
+    '''
     client = pylxd_client_get(remote_addr, cert, key, verify_cert)
 
     config, devices = normalize_input_values(config, devices)
@@ -2373,10 +2369,17 @@ def profile_device_set(
         .. code-block:: bash
 
             $ salt '*' lxd.profile_device_set autostart eth1 nic nictype=bridged parent=lxdbr0
-    """
-    profile = profile_get(name, remote_addr, cert, key, verify_cert, _raw=True)
+    '''
+    profile = profile_get(
+        name,
+        remote_addr,
+        cert,
+        key,
+        verify_cert,
+        _raw=True
+    )
 
-    kwargs["type"] = device_type
+    kwargs['type'] = device_type
 
     for k, v in six.iteritems(kwargs):
         kwargs[k] = six.text_type(v)
@@ -2426,8 +2429,15 @@ def profile_device_delete(
 
             $ salt '*' lxd.profile_device_delete autostart eth1
 
-    """
-    profile = profile_get(name, remote_addr, cert, key, verify_cert, _raw=True)
+    '''
+    profile = profile_get(
+        name,
+        remote_addr,
+        cert,
+        key,
+        verify_cert,
+        _raw=True
+    )
 
     return _delete_property_dict_item(profile, "devices", device_name)
 
@@ -2707,7 +2717,7 @@ def image_from_simplestreams(
         ..code-block:: bash
 
             $ salt '*' lxd.image_from_simplestreams "https://cloud-images.ubuntu.com/releases" "trusty/amd64" aliases='["t", "trusty/amd64"]' auto_update=True
-    """
+    '''
     if aliases is None:
         aliases = []
 
@@ -2788,7 +2798,7 @@ def image_from_url(
         ..code-block:: bash
 
             $ salt '*' lxd.image_from_url https://dl.stgraber.org/lxd aliases='["busybox-amd64"]'
-    """
+    '''
     if aliases is None:
         aliases = []
 
@@ -2869,7 +2879,7 @@ def image_from_file(
         ..code-block:: bash
 
             $ salt '*' lxd.image_from_file salt://lxd/files/busybox.tar.xz aliases=["busybox-amd64"]
-    """
+    '''
     if aliases is None:
         aliases = []
 
@@ -2978,16 +2988,12 @@ def image_copy_lxd(
     .. code-block:: bash
 
         $ salt '*' lxd.image_copy_lxd xenial/amd64 https://srv01:8443 ~/.config/lxc/client.crt ~/.config/lxc/client.key false https://srv02:8443 ~/.config/lxc/client.crt ~/.config/lxc/client.key false aliases="['xenial/amd64']"
-    """
+    '''
     if aliases is None:
         aliases = []
 
-    log.debug(
-        'Trying to copy the image "%s" from "%s" to "%s"',
-        source,
-        src_remote_addr,
-        remote_addr,
-    )
+    log.debug('Trying to copy the image "%s" from "%s" to "%s"',
+              source, src_remote_addr, remote_addr)
 
     # This will fail with a SaltInvocationError if
     # the image doesn't exists on the source and with a CommandExecutionError
@@ -3069,7 +3075,7 @@ def image_alias_add(
         .. code-block:: bash
 
             $ salt '*' lxd.image_alias_add xenial/amd64 x "Short version of xenial/amd64"
-    """
+    '''
     image = _verify_image(image, remote_addr, cert, key, verify_cert)
 
     for alias_info in image.aliases:
@@ -3121,7 +3127,7 @@ def image_alias_delete(
         .. code-block:: bash
 
             $ salt '*' lxd.image_alias_add xenial/amd64 x "Short version of xenial/amd64"
-    """
+    '''
     image = _verify_image(image, remote_addr, cert, key, verify_cert)
 
     try:

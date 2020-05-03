@@ -26,23 +26,21 @@ import logging
 import re
 import sys
 import types
+import logging
 
-# Import 3rd-party libs
-import salt.ext.six as six
+try:
+    import pkg_resources
+    HAS_PKG_RESOURCES = True
+except ImportError:
+    HAS_PKG_RESOURCES = False
 
 # Import salt libs
 import salt.utils.data
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
-try:
-    import pkg_resources
-
-    HAS_PKG_RESOURCES = True
-except ImportError:
-    HAS_PKG_RESOURCES = False
-
-
+# Import 3rd-party libs
+import salt.ext.six as six
 # pylint: disable=import-error
 
 
@@ -98,18 +96,13 @@ except ImportError:
 
 
 if HAS_PIP is True:
-    if not hasattr(purge_pip, "__pip_ver__"):
-        purge_pip.__pip_ver__ = pip.__version__
-    elif purge_pip.__pip_ver__ != pip.__version__:
-        purge_pip()
-        import pip
-
-        purge_pip.__pip_ver__ = pip.__version__
-    if salt.utils.versions.compare(ver1=pip.__version__, oper=">=", ver2="10.0"):
-        from pip._internal.exceptions import (
-            InstallationError,
-        )  # pylint: disable=E0611,E0401
-    elif salt.utils.versions.compare(ver1=pip.__version__, oper=">=", ver2="1.0"):
+    if salt.utils.versions.compare(ver1=pip.__version__,
+                                   oper='>=',
+                                   ver2='18.1'):
+        from pip._internal.exceptions import InstallationError  # pylint: disable=E0611,E0401
+    elif salt.utils.versions.compare(ver1=pip.__version__,
+                                     oper='>=',
+                                     ver2='1.0'):
         from pip.exceptions import InstallationError  # pylint: disable=E0611,E0401
     else:
         InstallationError = ValueError
@@ -130,7 +123,9 @@ def _from_line(*args, **kwargs):
         import pip._internal.req.constructors  # pylint: disable=E0611,E0401
 
         return pip._internal.req.constructors.install_req_from_line(*args, **kwargs)
-    elif salt.utils.versions.compare(ver1=pip.__version__, oper=">=", ver2="10.0"):
+    elif salt.utils.versions.compare(ver1=pip.__version__,
+                                     oper='>=',
+                                     ver2='10.0'):
         import pip._internal.req  # pylint: disable=E0611,E0401
 
         return pip._internal.req.InstallRequirement.from_line(*args, **kwargs)
@@ -378,56 +373,55 @@ def _pep440_version_cmp(pkg1, pkg2, ignore_epoch=False):
     return None
 
 
-def installed(
-    name,
-    pkgs=None,
-    pip_bin=None,
-    requirements=None,
-    bin_env=None,
-    use_wheel=False,
-    no_use_wheel=False,
-    log=None,
-    proxy=None,
-    timeout=None,
-    repo=None,
-    editable=None,
-    find_links=None,
-    index_url=None,
-    extra_index_url=None,
-    no_index=False,
-    mirrors=None,
-    build=None,
-    target=None,
-    download=None,
-    download_cache=None,
-    source=None,
-    upgrade=False,
-    force_reinstall=False,
-    ignore_installed=False,
-    exists_action=None,
-    no_deps=False,
-    no_install=False,
-    no_download=False,
-    install_options=None,
-    global_options=None,
-    user=None,
-    cwd=None,
-    pre_releases=False,
-    cert=None,
-    allow_all_external=False,
-    allow_external=None,
-    allow_unverified=None,
-    process_dependency_links=False,
-    env_vars=None,
-    use_vt=False,
-    trusted_host=None,
-    no_cache_dir=False,
-    cache_dir=None,
-    no_binary=None,
-    extra_args=None,
-    **kwargs
-):
-    """
+def installed(name,
+              pkgs=None,
+              pip_bin=None,
+              requirements=None,
+              bin_env=None,
+              use_wheel=False,
+              no_use_wheel=False,
+              log=None,
+              proxy=None,
+              timeout=None,
+              repo=None,
+              editable=None,
+              find_links=None,
+              index_url=None,
+              extra_index_url=None,
+              no_index=False,
+              mirrors=None,
+              build=None,
+              target=None,
+              download=None,
+              download_cache=None,
+              source=None,
+              upgrade=False,
+              force_reinstall=False,
+              ignore_installed=False,
+              exists_action=None,
+              no_deps=False,
+              no_install=False,
+              no_download=False,
+              install_options=None,
+              global_options=None,
+              user=None,
+              cwd=None,
+              pre_releases=False,
+              cert=None,
+              allow_all_external=False,
+              allow_external=None,
+              allow_unverified=None,
+              process_dependency_links=False,
+              env_vars=None,
+              use_vt=False,
+              trusted_host=None,
+              no_cache_dir=False,
+              cache_dir=None,
+              no_binary=None,
+              extra_args=None,
+              user_install=False,
+              **kwargs):
+    r'''
     Make sure the package is installed
 
     name
@@ -465,6 +459,10 @@ def installed(
         Force to not use binary packages (requires pip >= 7.0.0)
         Accepts either :all: to disable all binary packages, :none: to empty the set,
         or a list of one or more packages
+
+    user_install
+        Enable install to occur inside the user base's (site.USER_BASE) binary directory,
+        typically ~/.local/, or %APPDATA%\Python on Windows
 
     Example:
 
@@ -958,8 +956,8 @@ def installed(
         use_vt=use_vt,
         trusted_host=trusted_host,
         no_cache_dir=no_cache_dir,
+        user_install=user_install,
         extra_args=extra_args,
-        disable_version_check=True,
         **kwargs
     )
 
@@ -1201,3 +1199,51 @@ def uptodate(name, bin_env=None, user=None, cwd=None, use_vt=False):
         ret["comment"] = "Upgrade failed."
 
     return ret
+
+
+def mod_aggregate(low, chunks, running):
+    '''
+    The mod_aggregate function which looks up all packages in the available
+    low chunks and merges them into a single pkgs ref in the present low data
+    '''
+    pkgs = []
+    pkg_type = None
+    agg_enabled = [
+        'installed',
+        'removed',
+    ]
+    if low.get('fun') not in agg_enabled:
+        return low
+    for chunk in chunks:
+        tag = __utils__['state.gen_tag'](chunk)
+        if tag in running:
+            # Already ran the pkg state, skip aggregation
+            continue
+        if chunk.get('state') == 'pip':
+            if '__agg__' in chunk:
+                continue
+            # Check for the same function
+            if chunk.get('fun') != low.get('fun'):
+                continue
+            # Check first if 'sources' was passed so we don't aggregate pkgs
+            # and sources together.
+            if pkg_type is None:
+                pkg_type = 'pkgs'
+            if pkg_type == 'pkgs':
+                # Pull out the pkg names!
+                if 'pkgs' in chunk:
+                    pkgs.extend(chunk['pkgs'])
+                    chunk['__agg__'] = True
+                elif 'name' in chunk:
+                    version = chunk.pop('version', None)
+                    if version is not None:
+                        pkgs.append({chunk['name']: version})
+                    else:
+                        pkgs.append(chunk['name'])
+                    chunk['__agg__'] = True
+    if pkg_type is not None and pkgs:
+        if pkg_type in low:
+            low[pkg_type].extend(pkgs)
+        else:
+            low[pkg_type] = pkgs
+    return low

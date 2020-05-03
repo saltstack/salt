@@ -24,8 +24,8 @@ _MODULES_RE = r'^(\w+)_load="YES"'
 def __virtual__():
     """
     Only runs on FreeBSD systems
-    """
-    if __grains__["kernel"] == "FreeBSD":
+    '''
+    if __grains__.get('kernel') == 'FreeBSD':
         return __virtualname__
     return (
         False,

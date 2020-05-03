@@ -410,39 +410,25 @@ def _resolve_vpcconfig(conf, region=None, key=None, keyid=None, profile=None):
     return conf
 
 
-def _function_config_present(
-    FunctionName,
-    Role,
-    Handler,
-    Description,
-    Timeout,
-    MemorySize,
-    VpcConfig,
-    Environment,
-    region,
-    key,
-    keyid,
-    profile,
-    RoleRetries,
-):
-    ret = {"result": True, "comment": "", "changes": {}}
-    func = __salt__["boto_lambda.describe_function"](
-        FunctionName, region=region, key=key, keyid=keyid, profile=profile
-    )["function"]
+def _function_config_present(FunctionName, Role, Handler, Description, Timeout,
+                             MemorySize, VpcConfig, Environment, region,
+                             key, keyid, profile, RoleRetries):
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    func = __salt__['boto_lambda.describe_function'](
+        FunctionName, region=region,
+        key=key, keyid=keyid, profile=profile)['function']
     need_update = False
-    options = {
-        "Role": _get_role_arn(Role, region, key, keyid, profile),
-        "Handler": Handler,
-        "Description": Description,
-        "Timeout": Timeout,
-        "MemorySize": MemorySize,
-    }
+    options = {'Role': _get_role_arn(Role, region, key, keyid, profile),
+               'Handler': Handler,
+               'Description': Description,
+               'Timeout': Timeout,
+               'MemorySize': MemorySize}
 
     for key, val in six.iteritems(options):
         if func[key] != val:
             need_update = True
-            ret["changes"].setdefault("old", {})[key] = func[key]
-            ret["changes"].setdefault("new", {})[key] = val
+            ret['changes'].setdefault('old', {})[key] = func[key]
+            ret['changes'].setdefault('new', {})[key] = val
     # VpcConfig returns the extra value 'VpcId' so do a special compare
     oldval = func.get("VpcConfig")
     if oldval is not None:
@@ -505,11 +491,11 @@ def _function_code_present(
     )["function"]
     update = False
     if ZipFile:
-        if "://" in ZipFile:  # Looks like a remote URL to me...
-            dlZipFile = __salt__["cp.cache_file"](path=ZipFile)
+        if '://' in ZipFile:  # Looks like a remote URL to me...
+            dlZipFile = __salt__['cp.cache_file'](path=ZipFile)
             if dlZipFile is False:
-                ret["result"] = False
-                ret["comment"] = "Failed to cache ZipFile `{0}`.".format(ZipFile)
+                ret['result'] = False
+                ret['comment'] = 'Failed to cache ZipFile `{0}`.'.format(ZipFile)
                 return ret
             ZipFile = dlZipFile
         size = os.path.getsize(ZipFile)
@@ -791,13 +777,14 @@ def alias_present(
     )["alias"]
 
     need_update = False
-    options = {"FunctionVersion": FunctionVersion, "Description": Description}
+    options = {'FunctionVersion': FunctionVersion,
+               'Description': Description}
 
     for key, val in six.iteritems(options):
         if _describe[key] != val:
             need_update = True
-            ret["changes"].setdefault("old", {})[key] = _describe[key]
-            ret["changes"].setdefault("new", {})[key] = val
+            ret['changes'].setdefault('old', {})[key] = _describe[key]
+            ret['changes'].setdefault('new', {})[key] = val
     if need_update:
         ret["comment"] = os.linesep.join(
             [ret["comment"], "Alias config to be modified"]
@@ -1030,13 +1017,13 @@ def event_source_mapping_present(
     )["event_source_mapping"]
 
     need_update = False
-    options = {"BatchSize": BatchSize}
+    options = {'BatchSize': BatchSize}
 
     for key, val in six.iteritems(options):
         if _describe[key] != val:
             need_update = True
-            ret["changes"].setdefault("old", {})[key] = _describe[key]
-            ret["changes"].setdefault("new", {})[key] = val
+            ret['changes'].setdefault('old', {})[key] = _describe[key]
+            ret['changes'].setdefault('new', {})[key] = val
     # verify FunctionName against FunctionArn
     function_arn = _get_function_arn(
         FunctionName, region=region, key=key, keyid=keyid, profile=profile

@@ -5,6 +5,7 @@ DRBD administration module
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
+from salt.ext import six
 
 from salt.ext import six
 
@@ -12,9 +13,9 @@ log = logging.getLogger(__name__)
 
 
 def _analyse_overview_field(content):
-    """
+    '''
     Split the field in drbd-overview
-    """
+    '''
     if "(" in content:
         # Output like "Connected(2*)" or "UpToDate(2*)"
         return content.split("(")[0], content.split("(")[0]
@@ -26,10 +27,10 @@ def _analyse_overview_field(content):
 
 
 def _count_spaces_startswith(line):
-    """
+    '''
     Count the number of spaces before the first character
-    """
-    if line.split("#")[0].strip() == "":
+    '''
+    if line.split('#')[0].strip() == "":
         return None
 
     spaces = 0
@@ -41,21 +42,21 @@ def _count_spaces_startswith(line):
 
 
 def _analyse_status_type(line):
-    """
+    '''
     Figure out the sections in drbdadm status
-    """
+    '''
     spaces = _count_spaces_startswith(line)
 
     if spaces is None:
-        return ""
+        return ''
 
     switch = {
-        0: "RESOURCE",
-        2: {" disk:": "LOCALDISK", " role:": "PEERNODE", " connection:": "PEERNODE"},
-        4: {" peer-disk:": "PEERDISK"},
+        0: 'RESOURCE',
+        2: {' disk:': 'LOCALDISK', ' role:': 'PEERNODE', ' connection:': 'PEERNODE'},
+        4: {' peer-disk:': 'PEERDISK'}
     }
 
-    ret = switch.get(spaces, "UNKNOWN")
+    ret = switch.get(spaces, 'UNKNOWN')
 
     # isinstance(ret, str) only works when run directly, calling need unicode(six)
     if isinstance(ret, six.text_type):
@@ -65,13 +66,13 @@ def _analyse_status_type(line):
         if x in line:
             return ret[x]
 
-    return "UNKNOWN"
+    return 'UNKNOWN'
 
 
 def _add_res(line):
-    """
+    '''
     Analyse the line of local resource of ``drbdadm status``
-    """
+    '''
     global resource
     fields = line.strip().split()
 
@@ -86,34 +87,34 @@ def _add_res(line):
 
 
 def _add_volume(line):
-    """
+    '''
     Analyse the line of volumes of ``drbdadm status``
-    """
+    '''
     section = _analyse_status_type(line)
     fields = line.strip().split()
 
     volume = {}
     for field in fields:
-        volume[field.split(":")[0]] = field.split(":")[1]
+        volume[field.split(':')[0]] = field.split(':')[1]
 
-    if section == "LOCALDISK":
-        resource["local volumes"].append(volume)
+    if section == 'LOCALDISK':
+        resource['local volumes'].append(volume)
     else:
         # 'PEERDISK'
         lastpnodevolumes.append(volume)
 
 
 def _add_peernode(line):
-    """
+    '''
     Analyse the line of peer nodes of ``drbdadm status``
-    """
+    '''
     global lastpnodevolumes
 
     fields = line.strip().split()
 
     peernode = {}
     peernode["peernode name"] = fields[0]
-    # Could be role or connection:
+    #Could be role or connection:
     peernode[fields[1].split(":")[0]] = fields[1].split(":")[1]
     peernode["peer volumes"] = []
     resource["peer nodes"].append(peernode)
@@ -121,32 +122,33 @@ def _add_peernode(line):
 
 
 def _empty(dummy):
-    """
+    '''
     Action of empty line of ``drbdadm status``
-    """
+    '''
+    pass
 
 
 def _unknown_parser(line):
-    """
+    '''
     Action of unsupported line of ``drbdadm status``
-    """
+    '''
     global ret
     ret = {"Unknown parser": line}
 
 
 def _line_parser(line):
-    """
+    '''
     Call action for different lines
-    """
+    '''
     section = _analyse_status_type(line)
     fields = line.strip().split()
 
     switch = {
-        "": _empty,
-        "RESOURCE": _add_res,
-        "PEERNODE": _add_peernode,
-        "LOCALDISK": _add_volume,
-        "PEERDISK": _add_volume,
+        '': _empty,
+        'RESOURCE': _add_res,
+        'PEERNODE': _add_peernode,
+        'LOCALDISK': _add_volume,
+        'PEERDISK': _add_volume,
     }
 
     func = switch.get(section, _unknown_parser)
@@ -234,8 +236,8 @@ resource = {}
 lastpnodevolumes = None
 
 
-def status(name="all"):
-    """
+def status(name='all'):
+    '''
     Using drbdadm to show status of the DRBD devices,
     available in the latest drbd9.
     Support multiple nodes, multiple volumes.
@@ -253,7 +255,7 @@ def status(name="all"):
 
         salt '*' drbd.status
         salt '*' drbd.status name=<resource name>
-    """
+    '''
 
     # Initialize for multiple times test cases
     global ret
@@ -261,11 +263,11 @@ def status(name="all"):
     ret = []
     resource = {}
 
-    cmd = ["drbdadm", "status"]
+    cmd = ['drbdadm', 'status']
     cmd.append(name)
 
-    # One possible output: (number of resource/node/vol are flexible)
-    # resource role:Secondary
+    #One possible output: (number of resource/node/vol are flexible)
+    #resource role:Secondary
     #  volume:0 disk:Inconsistent
     #  volume:1 disk:Inconsistent
     #  drbd-node1 role:Primary
@@ -274,7 +276,7 @@ def status(name="all"):
     #  drbd-node2 role:Secondary
     #    volume:0 peer-disk:Inconsistent resync-suspended:peer
     #    volume:1 peer-disk:Inconsistent resync-suspended:peer
-    for line in __salt__["cmd.run"](cmd).splitlines():
+    for line in __salt__['cmd.run'](cmd).splitlines():
         _line_parser(line)
 
     if resource:

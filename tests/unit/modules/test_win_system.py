@@ -9,47 +9,50 @@ from __future__ import absolute_import, print_function, unicode_literals
 import types
 from datetime import datetime
 
-# Import Salt Libs
-import salt.modules.win_system as win_system
-import salt.utils.platform
-import salt.utils.stringutils
-
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, Mock, patch
 from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
+    MagicMock,
+    patch,
+    Mock,
+    NO_MOCK,
+    NO_MOCK_REASON
+)
+
+# Import Salt Libs
+import salt.modules.win_system as win_system
+import salt.utils.stringutils
 
 try:
     import wmi
-
     HAS_WMI = True
 except ImportError:
     HAS_WMI = False
 
 
 class MockWMI_ComputerSystem(object):
-    """
+    '''
     Mock WMI Win32_ComputerSystem Class
-    """
-
-    BootupState = "Normal boot"
-    Caption = "SALT SERVER"
+    '''
+    BootupState = 'Normal boot'
+    Caption = 'SALT SERVER'
     ChassisBootupState = 3
-    ChassisSKUNumber = "3.14159"
-    DNSHostname = "SALT SERVER"
-    Domain = "WORKGROUP"
+    ChassisSKUNumber = '3.14159'
+    DNSHostname = 'SALT SERVER'
+    Domain = 'WORKGROUP'
     DomainRole = 2
-    Manufacturer = "Dell Inc."
-    Model = "Dell 2980"
+    Manufacturer = 'Dell Inc.'
+    Model = 'Dell 2980'
     NetworkServerModeEnabled = True
     PartOfDomain = False
     PCSystemType = 4
     PowerState = 0
-    Status = "OK"
-    SystemType = "x64-based PC"
+    Status = 'OK'
+    SystemType = 'x64-based PC'
     TotalPhysicalMemory = 17078214656
     ThermalState = 3
-    Workgroup = "WORKGROUP"
+    Workgroup = 'WORKGROUP'
 
     def __init__(self):
         pass
@@ -64,36 +67,34 @@ class MockWMI_ComputerSystem(object):
 
 
 class MockWMI_OperatingSystem(object):
-    """
+    '''
     Mock WMI Win32_OperatingSystem Class
-    """
-
-    Description = "Because salt goes EVERYWHERE"
-    InstallDate = "20110211131800"
-    LastBootUpTime = "19620612120000"
-    Manufacturer = "Python"
-    Caption = "Salty"
+    '''
+    Description = 'Because salt goes EVERYWHERE'
+    InstallDate = '20110211131800'
+    LastBootUpTime = '19620612120000'
+    Manufacturer = 'Python'
+    Caption = 'Salty'
     NumberOfUsers = 7530000000
-    Organization = "SaltStack"
-    OSArchitecture = "Windows"
+    Organization = 'SaltStack'
+    OSArchitecture = 'Windows'
     Primary = True
     ProductType = 3
-    RegisteredUser = "thatch@saltstack.com"
-    SystemDirectory = "C:\\Windows\\System32"
-    SystemDrive = "C:\\"
-    Version = "10.0.17763"
-    WindowsDirectory = "C:\\Windows"
+    RegisteredUser = 'thatch@saltstack.com'
+    SystemDirectory = 'C:\\Windows\\System32'
+    SystemDrive = 'C:\\'
+    Version = '10.0.17763'
+    WindowsDirectory = 'C:\\Windows'
 
     def __init__(self):
         pass
 
 
 class MockWMI_Processor(object):
-    """
+    '''
     Mock WMI Win32_Processor Class
-    """
-
-    Manufacturer = "Intel"
+    '''
+    Manufacturer = 'Intel'
     MaxClockSpeed = 2301
     NumberOfLogicalProcessors = 8
     NumberOfCores = 4
@@ -104,23 +105,48 @@ class MockWMI_Processor(object):
 
 
 class MockWMI_BIOS(object):
-    """
+    '''
     Mock WMI Win32_BIOS Class
-    """
-
-    SerialNumber = "SALTY2011"
-    Manufacturer = "Dell Inc."
-    Version = "DELL - 10283849"
-    Caption = "A12"
-    BIOSVersion = [Version, Caption, "ASUS - 3948D"]
+    '''
+    SerialNumber = 'SALTY2011'
+    Manufacturer = 'Dell Inc.'
+    Version = 'DELL - 10283849'
+    Caption = 'A12'
+    BIOSVersion = [Version, Caption, 'ASUS - 3948D']
     Description = Caption
 
     def __init__(self):
         pass
 
 
-@skipIf(not HAS_WMI, "WMI only available on Windows")
-@skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
+class Mockwinapi(object):
+    '''
+    Mock winapi class
+    '''
+    def __init__(self):
+        pass
+
+    class winapi(object):
+        '''
+        Mock winapi class
+        '''
+        def __init__(self):
+            pass
+
+        @staticmethod
+        def Com():
+            '''
+            Mock Com method
+            '''
+            return True
+
+# Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mock import MagicMock, Mock, patch
+from tests.support.unit import TestCase, skipIf
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_WMI, 'WMI only available on Windows')
 class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
     """
         Test cases for salt.modules.win_system
@@ -129,13 +155,16 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         modules_globals = {}
         # wmi and pythoncom modules are platform specific...
-        mock_pythoncom = types.ModuleType(salt.utils.stringutils.to_str("pythoncom"))
-        sys_modules_patcher = patch.dict("sys.modules", {"pythoncom": mock_pythoncom})
+        mock_pythoncom = types.ModuleType(
+            salt.utils.stringutils.to_str('pythoncom')
+        )
+        sys_modules_patcher = patch.dict('sys.modules',
+                                         {'pythoncom': mock_pythoncom})
         sys_modules_patcher.start()
         self.addCleanup(sys_modules_patcher.stop)
         self.WMI = Mock()
-        self.addCleanup(delattr, self, "WMI")
-        modules_globals["wmi"] = wmi
+        self.addCleanup(delattr, self, 'WMI')
+        modules_globals['wmi'] = wmi
 
         if win_system.HAS_WIN32NET_MODS is False:
             win32api = types.ModuleType(
@@ -278,7 +307,33 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertFalse(win_system.set_computer_name("salt"))
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
+    def test_get_pending_computer_name(self):
+        '''
+            Test to get a pending computer name.
+        '''
+        with patch.object(win_system, 'get_computer_name',
+                          MagicMock(return_value='salt')):
+            reg_mock = MagicMock(return_value={'vdata': 'salt'})
+            with patch.dict(win_system.__utils__, {'reg.read_value': reg_mock}):
+                self.assertFalse(win_system.get_pending_computer_name())
+
+            reg_mock = MagicMock(return_value={'vdata': 'salt_pending'})
+            with patch.dict(win_system.__utils__, {'reg.read_value': reg_mock}):
+                self.assertEqual(win_system.get_pending_computer_name(),
+                                 'salt_pending')
+
+    @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
+    def test_get_computer_name(self):
+        '''
+            Test to get the Windows computer name
+        '''
+        with patch('salt.modules.win_system.win32api.GetComputerNameEx',
+                   MagicMock(side_effect=['computer name', ''])):
+            self.assertEqual(win_system.get_computer_name(), 'computer name')
+            self.assertFalse(win_system.get_computer_name())
+
+    @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_set_computer_desc(self):
         """
             Test to set the Windows computer description
@@ -409,40 +464,41 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
     def test_set_hostname(self):
         """
             Test setting a new hostname
-        """
-        with patch("salt.utils.winapi.Com", MagicMock()), patch.object(
-            self.WMI, "Win32_ComputerSystem", return_value=[MockWMI_ComputerSystem()]
-        ), patch.object(wmi, "WMI", Mock(return_value=self.WMI)):
+        '''
+        with patch('salt.utils', Mockwinapi), \
+                patch('salt.utils.winapi.Com', MagicMock()), \
+                patch.object(self.WMI, 'Win32_ComputerSystem',
+                             return_value=[MockWMI_ComputerSystem()]), \
+                patch.object(wmi, 'WMI', Mock(return_value=self.WMI)):
             self.assertTrue(win_system.set_hostname("NEW"))
 
     def test_get_domain_workgroup(self):
-        """
+        '''
         Test get_domain_workgroup
-        """
-        with patch.object(wmi, "WMI", Mock(return_value=self.WMI)), patch(
-            "salt.utils.winapi.Com", MagicMock()
-        ), patch.object(
-            self.WMI, "Win32_ComputerSystem", return_value=[MockWMI_ComputerSystem()]
-        ):
-            self.assertDictEqual(
-                win_system.get_domain_workgroup(), {"Workgroup": "WORKGROUP"}
-            )
+        '''
+        with patch('salt.utils', Mockwinapi), \
+                patch.object(wmi, 'WMI', Mock(return_value=self.WMI)), \
+                patch('salt.utils.winapi.Com', MagicMock()), \
+                patch.object(self.WMI, 'Win32_ComputerSystem',
+                             return_value=[MockWMI_ComputerSystem()]):
+            self.assertDictEqual(win_system.get_domain_workgroup(),
+                                 {'Workgroup': 'WORKGROUP'})
 
     def test_set_domain_workgroup(self):
-        """
+        '''
         Test set_domain_workgroup
-        """
-        with patch.object(wmi, "WMI", Mock(return_value=self.WMI)), patch(
-            "salt.utils.winapi.Com", MagicMock()
-        ), patch.object(
-            self.WMI, "Win32_ComputerSystem", return_value=[MockWMI_ComputerSystem()]
-        ):
-            self.assertTrue(win_system.set_domain_workgroup("test"))
+        '''
+        with patch('salt.utils', Mockwinapi), \
+                patch.object(wmi, 'WMI', Mock(return_value=self.WMI)), \
+                patch('salt.utils.winapi.Com', MagicMock()), \
+                patch.object(self.WMI, 'Win32_ComputerSystem',
+                          return_value=[MockWMI_ComputerSystem()]):
+            self.assertTrue(win_system.set_domain_workgroup('test'))
 
     def test_get_hostname(self):
-        """
+        '''
             Test getting a new hostname
-        """
+        '''
         cmd_run_mock = MagicMock(return_value="MINION")
         with patch.dict(win_system.__salt__, {"cmd.run": cmd_run_mock}):
             ret = win_system.get_hostname()
@@ -451,70 +507,35 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
     def test_get_system_info(self):
-        fields = [
-            "bios_caption",
-            "bios_description",
-            "bios_details",
-            "bios_manufacturer",
-            "bios_version",
-            "bootup_state",
-            "caption",
-            "chassis_bootup_state",
-            "chassis_sku_number",
-            "description",
-            "dns_hostname",
-            "domain",
-            "domain_role",
-            "hardware_manufacturer",
-            "hardware_model",
-            "hardware_serial",
-            "install_date",
-            "last_boot",
-            "name",
-            "network_server_mode_enabled",
-            "organization",
-            "os_architecture",
-            "os_manufacturer",
-            "os_name",
-            "os_type",
-            "os_version",
-            "part_of_domain",
-            "pc_system_type",
-            "power_state",
-            "primary",
-            "processor_cores",
-            "processor_cores_enabled",
-            "processor_manufacturer",
-            "processor_max_clock_speed",
-            "processors",
-            "processors_logical",
-            "registered_user",
-            "status",
-            "system_directory",
-            "system_drive",
-            "system_type",
-            "thermal_state",
-            "total_physical_memory",
-            "total_physical_memory_raw",
-            "users",
-            "windows_directory",
-            "workgroup",
-        ]
-        with patch("salt.utils.win_system.get_computer_name", MagicMock()), patch(
-            "salt.utils.winapi.Com", MagicMock()
-        ), patch.object(
-            self.WMI, "Win32_OperatingSystem", return_value=[MockWMI_OperatingSystem()]
-        ), patch.object(
-            self.WMI, "Win32_ComputerSystem", return_value=[MockWMI_ComputerSystem()]
-        ), patch.object(
-            self.WMI,
-            "Win32_Processor",
-            return_value=[MockWMI_Processor(), MockWMI_Processor()],
-        ), patch.object(
-            self.WMI, "Win32_BIOS", return_value=[MockWMI_BIOS()]
-        ), patch.object(
-            wmi, "WMI", Mock(return_value=self.WMI)
-        ):
+        fields = ['bios_caption', 'bios_description', 'bios_details',
+                  'bios_manufacturer', 'bios_version', 'bootup_state',
+                  'caption', 'chassis_bootup_state', 'chassis_sku_number',
+                  'description', 'dns_hostname', 'domain', 'domain_role',
+                  'hardware_manufacturer', 'hardware_model', 'hardware_serial',
+                  'install_date', 'last_boot', 'name',
+                  'network_server_mode_enabled', 'organization',
+                  'os_architecture', 'os_manufacturer', 'os_name', 'os_type',
+                  'os_version', 'part_of_domain', 'pc_system_type',
+                  'power_state', 'primary', 'processor_cores',
+                  'processor_cores_enabled', 'processor_manufacturer',
+                  'processor_max_clock_speed', 'processors',
+                  'processors_logical', 'registered_user', 'status',
+                  'system_directory', 'system_drive', 'system_type',
+                  'thermal_state', 'total_physical_memory',
+                  'total_physical_memory_raw', 'users', 'windows_directory',
+                  'workgroup']
+        with patch('salt.utils', Mockwinapi), \
+                patch('salt.utils.winapi.Com', MagicMock()), \
+                patch.object(self.WMI, 'Win32_OperatingSystem',
+                             return_value=[MockWMI_OperatingSystem()]), \
+                patch.object(self.WMI, 'Win32_ComputerSystem',
+                             return_value=[MockWMI_ComputerSystem()]), \
+                patch.object(self.WMI, 'Win32_Processor',
+                             return_value=[MockWMI_Processor(),
+                                           MockWMI_Processor()]), \
+                patch.object(self.WMI, 'Win32_BIOS',
+                             return_value=[MockWMI_BIOS()]), \
+                patch.object(wmi, 'WMI', Mock(return_value=self.WMI)):
             ret = win_system.get_system_info()
         # Make sure all the fields are in the return
         for field in fields:

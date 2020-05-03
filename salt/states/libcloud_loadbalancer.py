@@ -97,10 +97,10 @@ def balancer_present(
 
     :param members: An optional list of members to create on deployment
     :type  members: ``list`` of ``dict`` (ip, port)
-    """
-    balancers = __salt__["libcloud_loadbalancer.list_balancers"](profile)
-    match = [z for z in balancers if z["name"] == name]
-    if len(match) > 0:
+    '''
+    balancers = __salt__['libcloud_loadbalancer.list_balancers'](profile)
+    match = [z for z in balancers if z['name'] == name]
+    if match:
         return state_result(True, "Balancer already exists", name)
     else:
         starting_members = None
@@ -129,10 +129,10 @@ def balancer_absent(name, profile, **libcloud_kwargs):
 
     :param profile: The profile key
     :type  profile: ``str``
-    """
-    balancers = __salt__["libcloud_loadbalancer.list_balancers"](profile)
-    match = [z for z in balancers if z["name"] == name]
-    if len(match) == 0:
+    '''
+    balancers = __salt__['libcloud_loadbalancer.list_balancers'](profile)
+    match = [z for z in balancers if z['name'] == name]
+    if not match:
         return state_result(True, "Balancer already absent", name)
     else:
         result = __salt__["libcloud_loadbalancer.destroy_balancer"](

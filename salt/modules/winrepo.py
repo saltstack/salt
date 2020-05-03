@@ -27,10 +27,16 @@ from salt.exceptions import CommandExecutionError, SaltRenderError
 
 # All the "unused" imports here are needed for the imported winrepo runner code
 # pylint: disable=unused-import
-from salt.runners.winrepo import GLOBAL_ONLY, PER_REMOTE_ONLY, PER_REMOTE_OVERRIDES
-from salt.runners.winrepo import genrepo as _genrepo
-from salt.runners.winrepo import update_git_repos as _update_git_repos
-
+from salt.runners.winrepo import (
+    genrepo as _genrepo,
+    update_git_repos as _update_git_repos,
+    PER_REMOTE_OVERRIDES,
+    PER_REMOTE_ONLY,
+    GLOBAL_ONLY
+)
+from salt.ext import six
+import salt.utils.gitfs
+import salt.utils.msgpack
 # pylint: enable=unused-import
 
 log = logging.getLogger(__name__)

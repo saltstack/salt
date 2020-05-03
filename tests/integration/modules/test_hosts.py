@@ -7,8 +7,13 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import shutil
+import logging
 
-import pytest
+# Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.case import ModuleCase
+
+# Import Salt libs
 import salt.utils.files
 import salt.utils.stringutils
 from tests.support.case import ModuleCase
@@ -28,14 +33,18 @@ class HostsModuleTest(ModuleCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.hosts_file = os.path.join(RUNTIME_VARS.TMP, "hosts")
+        cls.hosts_file = os.path.join(RUNTIME_VARS.TMP, 'hosts')
 
     def __clear_hosts(self):
         """
         Delete the tmp hosts file
-        """
+        '''
         if os.path.isfile(self.hosts_file):
             os.remove(self.hosts_file)
+
+    def setUp(self):
+        shutil.copyfile(os.path.join(RUNTIME_VARS.FILES, 'hosts'), self.hosts_file)
+        self.addCleanup(self.__clear_hosts)
 
     def setUp(self):
         shutil.copyfile(os.path.join(RUNTIME_VARS.FILES, "hosts"), self.hosts_file)
@@ -45,8 +54,8 @@ class HostsModuleTest(ModuleCase):
     def test_list_hosts(self):
         """
         hosts.list_hosts
-        """
-        hosts = self.run_function("hosts.list_hosts")
+        '''
+        hosts = self.run_function('hosts.list_hosts')
         self.assertEqual(len(hosts), 10)
         self.assertEqual(hosts["::1"], {"aliases": ["ip6-localhost", "ip6-loopback"]})
         self.assertEqual(hosts["127.0.0.1"], {"aliases": ["localhost", "myname"]})
@@ -56,19 +65,21 @@ class HostsModuleTest(ModuleCase):
         """
         hosts.list_hosts
         without a hosts file
-        """
+        '''
         if os.path.isfile(self.hosts_file):
             os.remove(self.hosts_file)
-        hosts = self.run_function("hosts.list_hosts")
+        hosts = self.run_function('hosts.list_hosts')
         self.assertEqual(hosts, {})
 
     @skipIf(True, "SLOWTEST skip")
     def test_get_ip(self):
         """
         hosts.get_ip
-        """
-        self.assertEqual(self.run_function("hosts.get_ip", ["myname"]), "127.0.0.1")
-        self.assertEqual(self.run_function("hosts.get_ip", ["othername"]), "")
+        '''
+        self.assertEqual(
+            self.run_function('hosts.get_ip', ['myname']), '127.0.0.1'
+        )
+        self.assertEqual(self.run_function('hosts.get_ip', ['othername']), '')
         self.__clear_hosts()
         self.assertEqual(self.run_function("hosts.get_ip", ["othername"]), "")
 
@@ -76,7 +87,11 @@ class HostsModuleTest(ModuleCase):
     def test_get_alias(self):
         """
         hosts.get_alias
-        """
+        '''
+        self.assertEqual(
+            self.run_function('hosts.get_alias', ['127.0.0.1']),
+            ['localhost', 'myname']
+        )
         self.assertEqual(
             self.run_function("hosts.get_alias", ["127.0.0.1"]), ["localhost", "myname"]
         )
@@ -88,8 +103,10 @@ class HostsModuleTest(ModuleCase):
     def test_has_pair(self):
         """
         hosts.has_pair
-        """
-        self.assertTrue(self.run_function("hosts.has_pair", ["127.0.0.1", "myname"]))
+        '''
+        self.assertTrue(
+            self.run_function('hosts.has_pair', ['127.0.0.1', 'myname'])
+        )
         self.assertFalse(
             self.run_function("hosts.has_pair", ["127.0.0.1", "othername"])
         )
@@ -98,11 +115,17 @@ class HostsModuleTest(ModuleCase):
     def test_set_host(self):
         """
         hosts.set_hosts
-        """
-        self.assertTrue(self.run_function("hosts.set_host", ["192.168.1.123", "newip"]))
-        self.assertTrue(self.run_function("hosts.has_pair", ["192.168.1.123", "newip"]))
-        self.assertTrue(self.run_function("hosts.set_host", ["127.0.0.1", "localhost"]))
-        self.assertEqual(len(self.run_function("hosts.list_hosts")), 11)
+        '''
+        self.assertTrue(
+            self.run_function('hosts.set_host', ['192.168.1.123', 'newip'])
+        )
+        self.assertTrue(
+            self.run_function('hosts.has_pair', ['192.168.1.123', 'newip'])
+        )
+        self.assertTrue(
+            self.run_function('hosts.set_host', ['127.0.0.1', 'localhost'])
+        )
+        self.assertEqual(len(self.run_function('hosts.list_hosts')), 11)
         self.assertFalse(
             self.run_function("hosts.has_pair", ["127.0.0.1", "myname"]),
             "should remove second entry",
@@ -112,10 +135,14 @@ class HostsModuleTest(ModuleCase):
     def test_add_host(self):
         """
         hosts.add_host
-        """
-        self.assertTrue(self.run_function("hosts.add_host", ["192.168.1.123", "newip"]))
-        self.assertTrue(self.run_function("hosts.has_pair", ["192.168.1.123", "newip"]))
-        self.assertEqual(len(self.run_function("hosts.list_hosts")), 11)
+        '''
+        self.assertTrue(
+            self.run_function('hosts.add_host', ['192.168.1.123', 'newip'])
+        )
+        self.assertTrue(
+            self.run_function('hosts.has_pair', ['192.168.1.123', 'newip'])
+        )
+        self.assertEqual(len(self.run_function('hosts.list_hosts')), 11)
         self.assertTrue(
             self.run_function("hosts.add_host", ["127.0.0.1", "othernameip"])
         )
@@ -123,10 +150,18 @@ class HostsModuleTest(ModuleCase):
 
     @skipIf(True, "SLOWTEST skip")
     def test_rm_host(self):
-        self.assertTrue(self.run_function("hosts.has_pair", ["127.0.0.1", "myname"]))
-        self.assertTrue(self.run_function("hosts.rm_host", ["127.0.0.1", "myname"]))
-        self.assertFalse(self.run_function("hosts.has_pair", ["127.0.0.1", "myname"]))
-        self.assertTrue(self.run_function("hosts.rm_host", ["127.0.0.1", "unknown"]))
+        self.assertTrue(
+            self.run_function('hosts.has_pair', ['127.0.0.1', 'myname'])
+        )
+        self.assertTrue(
+            self.run_function('hosts.rm_host', ['127.0.0.1', 'myname'])
+        )
+        self.assertFalse(
+            self.run_function('hosts.has_pair', ['127.0.0.1', 'myname'])
+        )
+        self.assertTrue(
+            self.run_function('hosts.rm_host', ['127.0.0.1', 'unknown'])
+        )
 
     @skipIf(True, "SLOWTEST skip")
     def test_add_host_formatting(self):
@@ -138,7 +173,7 @@ class HostsModuleTest(ModuleCase):
         # use an empty one so we can prove the syntax of the entries
         # being added by the hosts module
         self.__clear_hosts()
-        with salt.utils.files.fopen(self.hosts_file, "w"):
+        with salt.utils.files.fopen(self.hosts_file, 'w'):
             pass
 
         self.assertTrue(
@@ -163,7 +198,7 @@ class HostsModuleTest(ModuleCase):
         )
 
         # now read the lines and ensure they're formatted correctly
-        with salt.utils.files.fopen(self.hosts_file, "r") as fp_:
+        with salt.utils.files.fopen(self.hosts_file, 'r') as fp_:
             lines = salt.utils.stringutils.to_unicode(fp_.read()).splitlines()
         self.assertEqual(
             lines,

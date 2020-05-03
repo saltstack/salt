@@ -26,15 +26,15 @@ def resultdecorator(function):
     @wraps(function)
     def wrapper(*args, **kwargs):
         ret = function(*args, **kwargs)
-        ret["result"] = ret["changes"]["out"]
+        ret['result'] = ret['changes']['out']
         return ret
 
     return wrapper
 
 
 @resultdecorator
-def rpc(name, dest=None, format="xml", args=None, **kwargs):
-    """
+def rpc(name, dest=None, **kwargs):
+    '''
     Executes the given rpc. The returned data can be stored in a file
     by specifying the destination path with dest as an argument
 
@@ -70,12 +70,9 @@ def rpc(name, dest=None, format="xml", args=None, **kwargs):
               Amount of information you want.
             * interface_name:
               Name of the interface whose information you want.
-    """
-    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
-    if args is not None:
-        ret["changes"] = __salt__["junos.rpc"](name, dest, format, *args, **kwargs)
-    else:
-        ret["changes"] = __salt__["junos.rpc"](name, dest, format, **kwargs)
+    '''
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+    ret['changes'] = __salt__['junos.rpc'](name, dest, **kwargs)
     return ret
 
 
@@ -158,8 +155,8 @@ def commit(name, **kwargs):
 
 
 @resultdecorator
-def rollback(name, id, **kwargs):
-    """
+def rollback(name, **kwargs):
+    '''
     Rollbacks the committed changes.
 
     .. code-block:: yaml
@@ -186,15 +183,15 @@ def rollback(name, id, **kwargs):
             * diffs_file:
               Path to the file where any diffs will be written. (default = None)
 
-    """
-    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
-    ret["changes"] = __salt__["junos.rollback"](id, **kwargs)
+    '''
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+    ret['changes'] = __salt__['junos.rollback'](**kwargs)
     return ret
 
 
 @resultdecorator
-def diff(name, d_id):
-    """
+def diff(name, **kwargs):
+    '''
     Gets the difference between the candidate and the current configuration.
 
     .. code-block:: yaml
@@ -208,15 +205,15 @@ def diff(name, d_id):
       Optional
         * id:
           The rollback id value [0-49]. (default = 0)
-    """
-    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
-    ret["changes"] = __salt__["junos.diff"](d_id)
+    '''
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+    ret['changes'] = __salt__['junos.diff'](**kwargs)
     return ret
 
 
 @resultdecorator
-def cli(name, **kwargs):
-    """
+def cli(name, format='text', **kwargs):
+    '''
     Executes the CLI commands and reuturns the text output.
 
     .. code-block:: yaml
@@ -231,19 +228,19 @@ def cli(name, **kwargs):
         * command:
           The command that need to be executed on Junos CLI. (default = None)
       Optional
+        * format:
+          Format in which to get the CLI output. (text or xml, \
+            default = 'text')
         * kwargs: Keyworded arguments which can be provided like-
-            * format:
-              Format in which to get the CLI output. (text or xml, \
-                default = 'text')
             * timeout:
               Set NETCONF RPC timeout. Can be used for commands which
               take a while to execute. (default = 30 seconds)
             * dest:
               The destination file where the CLI output can be stored.\
                (default = None)
-    """
-    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
-    ret["changes"] = __salt__["junos.cli"](name, **kwargs)
+    '''
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+    ret['changes'] = __salt__['junos.cli'](name, format, **kwargs)
     return ret
 
 
@@ -537,4 +534,49 @@ def commit_check(name):
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
     ret["changes"] = __salt__["junos.commit_check"]()
+    return ret
+
+
+@resultdecorator
+def get_table(name, table, table_file, **kwargs):
+    '''
+    Retrieve data from a Junos device using Tables/Views
+
+    name (required)
+        task definition
+
+    table (required)
+        Name of PyEZ Table
+
+    file
+        YAML file that has the table specified in table parameter
+
+    path:
+        Path of location of the YAML file.
+        defaults to op directory in jnpr.junos.op
+
+    target:
+        if command need to run on FPC, can specify fpc target
+
+    key:
+        To overwrite key provided in YAML
+
+    key_items:
+        To select only given key items
+
+    filters:
+        To select only filter for the dictionary from columns
+
+    template_args:
+        key/value pair which should render Jinja template command
+
+    .. code-block:: yaml
+
+        get route details:
+          junos.get_table:
+            - table: RouteTable
+            - file: routes.yml
+    '''
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+    ret['changes'] = __salt__['junos.get_table'](table, table_file, **kwargs)
     return ret

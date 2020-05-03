@@ -54,9 +54,9 @@ def __virtual__():
         if not salt.utils.path.which(cmd):
             return (False, cmd + " is not in the path")
     # SELinux only makes sense on Linux *obviously*
-    if __grains__["kernel"] == "Linux":
-        return "selinux"
-    return (False, "Module only works on Linux with selinux installed")
+    if __grains__.get('kernel') == 'Linux':
+        return 'selinux'
+    return (False, 'Module only works on Linux with selinux installed')
 
 
 # Cache the SELinux directory to not look it up over and over
@@ -748,12 +748,10 @@ def fcontext_apply_policy(name, recursive=False):
     cmd += re.escape(name)
     apply_ret = __salt__["cmd.run_all"](cmd)
     ret.update(apply_ret)
-    if apply_ret["retcode"] == 0:
-        changes_list = re.findall(
-            "restorecon reset (.*) context (.*)->(.*)$", changes_text, re.M
-        )
-        if len(changes_list) > 0:
-            ret.update({"changes": {}})
+    if apply_ret['retcode'] == 0:
+        changes_list = re.findall('restorecon reset (.*) context (.*)->(.*)$', changes_text, re.M)
+        if changes_list:
+            ret.update({'changes': {}})
         for item in changes_list:
             filespec = item[0]
             old = _context_string_to_dict(item[1])

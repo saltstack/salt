@@ -8,7 +8,12 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-import re
+# Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+import salt.utils.files
 
 # Import salt libs
 import salt.modules.portage_config as portage_config
@@ -49,7 +54,6 @@ class PortageConfigTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         try:
             import portage  # pylint: disable=unused-import
-
             return {}
         except ImportError:
             dummy_atom = self.DummyAtom()
@@ -96,7 +100,7 @@ class PortageConfigTestCase(TestCase, LoaderModuleMockMixin):
             ("use", ["apple", "-banana", "ananas", "orange"]),
         ]
 
-        base_path = RUNTIME_VARS.TMP + "/package.{0}"
+        base_path = RUNTIME_VARS.TMP + '/package.{0}'
 
         def make_line(atom, addition):
             return atom + (" " + addition if addition != "" else "") + "\n"

@@ -9,6 +9,12 @@ import errno
 import logging
 import os
 
+# Import Salt Testing libs
+from tests.support.case import ModuleCase
+from tests.support.helpers import skip_if_not_root, Webserver
+from tests.support.mixins import SaltReturnAssertsMixin
+from tests.support.runtests import RUNTIME_VARS
+
 # Import Salt libs
 import salt.utils.files
 import salt.utils.platform
@@ -27,14 +33,11 @@ ARCHIVE_DIR = (
     os.path.join("c:/", "tmp") if salt.utils.platform.is_windows() else "/tmp/archive"
 )
 
-ARCHIVE_NAME = "custom.tar.gz"
-ARCHIVE_TAR_SOURCE = "http://localhost:{0}/{1}".format(9999, ARCHIVE_NAME)
-ARCHIVE_TAR_HASH = "md5=7643861ac07c30fe7d2310e9f25ca514"
-ARCHIVE_TAR_SHA_HASH = (
-    "sha256=9591159d86f0a180e4e0645b2320d0235e23e66c66797df61508bf185e0ac1d2"
-)
-ARCHIVE_TAR_BAD_HASH = "md5=d41d8cd98f00b204e9800998ecf8427e"
-ARCHIVE_TAR_HASH_UPPER = "md5=7643861AC07C30FE7D2310E9F25CA514"
+ARCHIVE_NAME = 'custom.tar.gz'
+ARCHIVE_TAR_SOURCE = 'http://localhost:{0}/{1}'.format(9999, ARCHIVE_NAME)
+ARCHIVE_TAR_HASH = 'md5=7643861ac07c30fe7d2310e9f25ca514'
+ARCHIVE_TAR_BAD_HASH = 'md5=d41d8cd98f00b204e9800998ecf8427e'
+ARCHIVE_TAR_HASH_UPPER = 'md5=7643861AC07C30FE7D2310E9F25CA514'
 
 
 class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
@@ -46,11 +49,9 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
     def setUpClass(cls):
         cls.webserver = Webserver()
         cls.webserver.start()
-        cls.archive_tar_source = cls.webserver.url("custom.tar.gz")
-        cls.archive_local_tar_source = "file://{0}".format(
-            os.path.join(RUNTIME_VARS.BASE_FILES, ARCHIVE_NAME)
-        )
-        cls.untar_file = os.path.join(ARCHIVE_DIR, "custom/README")
+        cls.archive_tar_source = cls.webserver.url('custom.tar.gz')
+        cls.archive_local_tar_source = 'file://{0}'.format(os.path.join(RUNTIME_VARS.BASE_FILES, ARCHIVE_NAME))
+        cls.untar_file = os.path.join(ARCHIVE_DIR, 'custom/README')
 
     @classmethod
     def tearDownClass(cls):
@@ -226,13 +227,9 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
     def test_local_archive_extracted(self):
         """
         test archive.extracted with local file
-        """
-        ret = self.run_state(
-            "archive.extracted",
-            name=ARCHIVE_DIR,
-            source=self.archive_local_tar_source,
-            archive_format="tar",
-        )
+        '''
+        ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
+                             source=self.archive_local_tar_source, archive_format='tar')
 
         self.assertSaltTrueReturn(ret)
 
@@ -241,15 +238,10 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
     def test_local_archive_extracted_skip_verify(self):
         """
         test archive.extracted with local file, bad hash and skip_verify
-        """
-        ret = self.run_state(
-            "archive.extracted",
-            name=ARCHIVE_DIR,
-            source=self.archive_local_tar_source,
-            archive_format="tar",
-            source_hash=ARCHIVE_TAR_BAD_HASH,
-            skip_verify=True,
-        )
+        '''
+        ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
+                             source=self.archive_local_tar_source, archive_format='tar',
+                             source_hash=ARCHIVE_TAR_BAD_HASH, skip_verify=True)
 
         self.assertSaltTrueReturn(ret)
 
@@ -259,14 +251,10 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
     def test_local_archive_extracted_with_source_hash(self):
         """
         test archive.extracted with local file and valid hash
-        """
-        ret = self.run_state(
-            "archive.extracted",
-            name=ARCHIVE_DIR,
-            source=self.archive_local_tar_source,
-            archive_format="tar",
-            source_hash=ARCHIVE_TAR_HASH,
-        )
+        '''
+        ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
+                             source=self.archive_local_tar_source, archive_format='tar',
+                             source_hash=ARCHIVE_TAR_HASH)
 
         self.assertSaltTrueReturn(ret)
 
@@ -276,28 +264,20 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
     def test_local_archive_extracted_with_bad_source_hash(self):
         """
         test archive.extracted with local file and bad hash
-        """
-        ret = self.run_state(
-            "archive.extracted",
-            name=ARCHIVE_DIR,
-            source=self.archive_local_tar_source,
-            archive_format="tar",
-            source_hash=ARCHIVE_TAR_BAD_HASH,
-        )
+        '''
+        ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
+                             source=self.archive_local_tar_source, archive_format='tar',
+                             source_hash=ARCHIVE_TAR_BAD_HASH)
 
         self.assertSaltFalseReturn(ret)
 
     def test_local_archive_extracted_with_uppercase_source_hash(self):
         """
         test archive.extracted with local file and bad hash
-        """
-        ret = self.run_state(
-            "archive.extracted",
-            name=ARCHIVE_DIR,
-            source=self.archive_local_tar_source,
-            archive_format="tar",
-            source_hash=ARCHIVE_TAR_HASH_UPPER,
-        )
+        '''
+        ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
+                             source=self.archive_local_tar_source, archive_format='tar',
+                             source_hash=ARCHIVE_TAR_HASH_UPPER)
 
         self.assertSaltTrueReturn(ret)
 
@@ -375,9 +355,4 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
         self.assertSaltTrueReturn(ret)
-        self._check_extracted(self.untar_file)
-        state_ret = ret["archive_|-/tmp/archive_|-/tmp/archive_|-extracted"]
-        self.assertTrue(
-            state_ret["comment"].endswith("Output was trimmed to 1 number of lines")
-        )
-        self.assertEqual(state_ret["changes"], expected_changes)
+        self._check_extracted(os.path.join(ARCHIVE_DIR, self.untar_file))

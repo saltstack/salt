@@ -72,21 +72,19 @@ def setval(key, val, false_unsets=False, permanent=False):
             )
 
     if not isinstance(key, six.string_types):
-        log.debug("%s: 'key' argument is not a string type: '%s'", __name__, key)
+        log.debug('%s: \'key\' argument is not a string type: \'%s\'', __name__, key)
     if val is False:
         if false_unsets is True:
             try:
                 os.environ.pop(key, None)
                 if permanent and is_windows:
-                    __utils__["reg.delete_value"](permanent_hive, permanent_key, key)
-                    __utils__["win_functions.broadcast_setting_change"]()
+                    __utils__['reg.delete_value'](permanent_hive, permanent_key, key)
+                    __utils__['win_functions.broadcast_setting_change']()
                 return None
             except Exception as exc:  # pylint: disable=broad-except
                 log.error(
-                    "%s: Exception occurred when unsetting " "environ key '%s': '%s'",
-                    __name__,
-                    key,
-                    exc,
+                    '%s: Exception occurred when unsetting '
+                    'environ key \'%s\': \'%s\'', __name__, key, exc
                 )
                 return False
         else:
@@ -95,23 +93,19 @@ def setval(key, val, false_unsets=False, permanent=False):
         try:
             os.environ[key] = val
             if permanent and is_windows:
-                __utils__["reg.set_value"](permanent_hive, permanent_key, key, val)
-                __utils__["win_functions.broadcast_setting_change"]()
+                __utils__['reg.set_value'](permanent_hive, permanent_key, key, val)
+                __utils__['win_functions.broadcast_setting_change']()
             return os.environ[key]
         except Exception as exc:  # pylint: disable=broad-except
             log.error(
-                "%s: Exception occurred when setting" "environ key '%s': '%s'",
-                __name__,
-                key,
-                exc,
+                '%s: Exception occurred when setting'
+                'environ key \'%s\': \'%s\'', __name__, key, exc
             )
             return False
     else:
         log.debug(
-            "%s: 'val' argument for key '%s' is not a string " "or False: '%s'",
-            __name__,
-            key,
-            val,
+            '%s: \'val\' argument for key \'%s\' is not a string '
+            'or False: \'%s\'', __name__, key, val
         )
         return False
 
@@ -167,7 +161,10 @@ def setenv(
     """
     ret = {}
     if not isinstance(environ, dict):
-        log.debug("%s: 'environ' argument is not a dict: '%s'", __name__, environ)
+        log.debug(
+            '%s: \'environ\' argument is not a dict: \'%s\'',
+            __name__, environ
+        )
         return False
     if clear_all is True:
         # Unset any keys not defined in 'environ' dict supplied by user
@@ -181,10 +178,8 @@ def setenv(
             ret[key] = setval(key, val, false_unsets, permanent=permanent)
         else:
             log.debug(
-                "%s: 'val' argument for key '%s' is not a string " "or False: '%s'",
-                __name__,
-                key,
-                val,
+                '%s: \'val\' argument for key \'%s\' is not a string '
+                'or False: \'%s\'', __name__, key, val
             )
             return False
 
@@ -221,7 +216,7 @@ def get(key, default=""):
         salt '*' environ.get baz default=False
     """
     if not isinstance(key, six.string_types):
-        log.debug("%s: 'key' argument is not a string type: '%s'", __name__, key)
+        log.debug('%s: \'key\' argument is not a string type: \'%s\'', __name__, key)
         return False
     return os.environ.get(key, default)
 
@@ -246,7 +241,7 @@ def has_value(key, value=None):
         salt '*' environ.has_value foo
     """
     if not isinstance(key, six.string_types):
-        log.debug("%s: 'key' argument is not a string type: '%s'", __name__, key)
+        log.debug('%s: \'key\' argument is not a string type: \'%s\'', __name__, key)
         return False
     try:
         cur_val = os.environ[key]
@@ -288,7 +283,8 @@ def item(keys, default=""):
         key_list = keys
     else:
         log.debug(
-            "%s: 'keys' argument is not a string or list type: '%s'", __name__, keys
+            '%s: \'keys\' argument is not a string or list type: \'%s\'',
+            __name__, keys
         )
     for key in key_list:
         ret[key] = os.environ.get(key, default)

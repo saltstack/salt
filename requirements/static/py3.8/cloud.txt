@@ -109,7 +109,7 @@ pywinrm==0.3.0
 requests-ntlm==1.1.0      # via pywinrm
 requests-oauthlib==1.2.0  # via msrest
 requests==2.21.0          # via adal, azure-cosmosdb-table, azure-datalake-store, azure-keyvault, azure-servicebus, azure-servicemanagement-legacy, azure-storage-common, msrest, profitbricks, pywinrm, requests-ntlm, requests-oauthlib
-six==1.12.0               # via cryptography, isodate, profitbricks, pypsexec, python-dateutil, pywinrm, smbprotocol
-smbprotocol==0.1.1        # via pypsexec
-urllib3==1.24.2           # via requests
+six==1.12.0               # via cryptography, isodate, profitbricks, python-dateutil, pywinrm
+typing==3.6.6             # via msrest
+urllib3==1.24.3           # via requests
 xmltodict==0.12.0         # via pywinrm

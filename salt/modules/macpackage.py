@@ -103,8 +103,8 @@ def install_app(app, target="/Applications/"):
         salt '*' macpackage.install_app /tmp/tmp.app /Applications/
     """
 
-    if target[-4:] != ".app":
-        if app[-1:] == "/":
+    if target[-4:] != '.app':
+        if app[-1:] == '/':
             base_app = os.path.basename(app[:-1])
         else:
             base_app = os.path.basename(app)

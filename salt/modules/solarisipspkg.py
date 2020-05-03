@@ -58,12 +58,10 @@ log = logging.getLogger(__name__)
 def __virtual__():
     """
     Set the virtual pkg module if the os is Solaris 11
-    """
-    if (
-        __grains__["os_family"] == "Solaris"
-        and float(__grains__["kernelrelease"]) > 5.10
-        and salt.utils.path.which("pkg")
-    ):
+    '''
+    if __grains__.get('os_family') == 'Solaris' \
+            and float(__grains__['kernelrelease']) > 5.10 \
+            and salt.utils.path.which('pkg'):
         return __virtualname__
     return (
         False,
@@ -109,8 +107,8 @@ def _ips_get_pkgversion(line):
     return line.split()[0].split("@")[1].strip()
 
 
-def refresh_db(full=False):
-    """
+def refresh_db(full=False, **kwargs):
+    '''
     Updates the remote repos database.
 
     full : False
@@ -133,8 +131,8 @@ def refresh_db(full=False):
         return __salt__["cmd.retcode"]("/bin/pkg refresh") == 0
 
 
-def upgrade_available(name):
-    """
+def upgrade_available(name, **kwargs):
+    '''
     Check if there is an upgrade available for a certain package
     Accepts full or partial FMRI. Returns all matches found.
 
@@ -304,9 +302,9 @@ def version(*names, **kwargs):
         salt '*' pkg.version foo bar baz
         salt '*' pkg_resource.version pkg://solaris/entire
 
-    """
-    if len(names) == 0:
-        return ""
+    '''
+    if not names:
+        return ''
 
     cmd = ["/bin/pkg", "list", "-Hv"]
     cmd.extend(names)
@@ -353,8 +351,8 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version postfix sendmail
     """
 
-    if len(names) == 0:
-        return ""
+    if not names:
+        return ''
 
     cmd = ["/bin/pkg", "list", "-Hnv"]
     cmd.extend(names)
@@ -367,7 +365,7 @@ def latest_version(*names, **kwargs):
 
     if len(names) == 1:
         # Convert back our result in a dict if only one name is passed
-        installed = {list(ret)[0] if len(ret) > 0 else names[0]: installed}
+        installed = {list(ret)[0] if ret else names[0]: installed}
 
     for name in ret:
         if name not in installed:

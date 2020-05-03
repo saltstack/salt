@@ -11,13 +11,10 @@ import salt.utils.path
 def __virtual__():
     """
     Only work on Gentoo systems with layman installed
-    """
-    if __grains__["os"] == "Gentoo" and salt.utils.path.which("layman"):
-        return "layman"
-    return (
-        False,
-        "layman execution module cannot be loaded: only available on Gentoo with layman installed.",
-    )
+    '''
+    if __grains__.get('os_family') == 'Gentoo' and salt.utils.path.which('layman'):
+        return 'layman'
+    return (False, 'layman execution module cannot be loaded: only available on Gentoo with layman installed.')
 
 
 def _get_makeconf():
@@ -59,7 +56,7 @@ def add(overlay):
     # a new one. We need to ensure the make.conf is sourcing layman's
     # make.conf so emerge can see the overlays
     if not old_overlays and new_overlays:
-        srcline = "source /var/lib/layman/make.conf"
+        srcline = 'source /var/lib/layman/make.conf'
         makeconf = _get_makeconf()
         if not __salt__["file.contains"](makeconf, "layman"):
             __salt__["file.append"](makeconf, srcline)
@@ -92,7 +89,7 @@ def delete(overlay):
     # If we now have no overlays added, We need to ensure that the make.conf
     # does not source layman's make.conf, as it will break emerge
     if not new_overlays:
-        srcline = "source /var/lib/layman/make.conf"
+        srcline = 'source /var/lib/layman/make.conf'
         makeconf = _get_makeconf()
         if __salt__["file.contains"](makeconf, "layman"):
             __salt__["file.sed"](makeconf, srcline, "")

@@ -98,7 +98,7 @@ def recursive_copytree(source, destination, overwrite=False):
                 destination, src_path.replace(source, "").lstrip(os.sep)
             )
             if not os.path.exists(dst_path):
-                log.debug("Creating directory: %s", dst_path)
+                log.debug('Creating directory: %s', dst_path)
                 os.makedirs(dst_path)
         for item in files:
             src_path = os.path.join(root, item)
@@ -107,13 +107,13 @@ def recursive_copytree(source, destination, overwrite=False):
             )
             if os.path.exists(dst_path) and not overwrite:
                 if os.stat(src_path).st_mtime > os.stat(dst_path).st_mtime:
-                    log.debug("Copying %s to %s", src_path, dst_path)
+                    log.debug('Copying %s to %s', src_path, dst_path)
                     shutil.copy2(src_path, dst_path)
             else:
                 if not os.path.isdir(os.path.dirname(dst_path)):
-                    log.debug("Creating directory: %s", os.path.dirname(dst_path))
+                    log.debug('Creating directory: %s', os.path.dirname(dst_path))
                     os.makedirs(os.path.dirname(dst_path))
-                log.debug("Copying %s to %s", src_path, dst_path)
+                log.debug('Copying %s to %s', src_path, dst_path)
                 shutil.copy2(src_path, dst_path)
 
 
@@ -213,5 +213,7 @@ RUNTIME_VARS = RuntimeVars(
     PROD_FILES=paths.PROD_FILES,
     TESTS_DIR=paths.TESTS_DIR,
     PYTEST_SESSION=False,
+    SHELL_TRUE_PATH=salt.utils.path.which('true'),
+    SHELL_FALSE_PATH=salt.utils.path.which('false'),
 )
 # <---- Tests Runtime Variables --------------------------------------------------------------------------------------

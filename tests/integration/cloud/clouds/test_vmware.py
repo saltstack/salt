@@ -9,26 +9,81 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Libs
 from salt.ext import six
 
+# Import Salt Testing LIbs
+from tests.support.case import ShellCase
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.helpers import expensiveTest, generate_random_name
+
+
 # Create the cloud instance name to be used throughout the tests
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
 
 
-class VMWareTest(CloudTest):
-    """
+@expensiveTest
+class VMWareTest(ShellCase):
+    '''
     Integration tests for the vmware cloud provider in Salt-Cloud
-    """
+    '''
 
-    PROVIDER = "vmware"
-    REQUIRED_PROVIDER_CONFIG_ITEMS = ("password", "user", "url")
+    def setUp(self):
+        '''
+        Sets up the test requirements
+        '''
+
+        # check if appropriate cloud provider and profile files are present
+        profile_str = 'vmware-config'
+        providers = self.run_cloud('--list-providers')
+
+        if profile_str + ':' not in providers:
+            self.skipTest(
+                'Configuration file for {0} was not found. Check {0}.conf files '
+                'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
+                .format(PROVIDER_NAME)
+            )
+
+        # check if user, password, url and provider are present
+        config = cloud_providers_config(
+            os.path.join(
+                RUNTIME_VARS.FILES,
+                'conf',
+                'cloud.providers.d',
+                PROVIDER_NAME + '.conf'
+            )
+        )
+
+        user = config[profile_str][PROVIDER_NAME]['user']
+        password = config[profile_str][PROVIDER_NAME]['password']
+        url = config[profile_str][PROVIDER_NAME]['url']
+
+        conf_items = [user, password, url]
+        missing_conf_item = []
+
+        for item in conf_items:
+            if item == '':
+                missing_conf_item.append(item)
+
+        if missing_conf_item:
+            self.skipTest(
+                'A user, password, and url must be provided to run these tests.'
+                'One or more of these elements is missing. Check'
+                'tests/integration/files/conf/cloud.providers.d/{0}.conf'
+                .format(PROVIDER_NAME)
+            )
 
     def test_instance(self):
         """
         Tests creating and deleting an instance on vmware and installing salt
         """
         # create the instance
-        disk_datastore = self.config["vmware-test"]["devices"]["disk"]["Hard disk 2"][
-            "datastore"
-        ]
+        profile = os.path.join(
+                RUNTIME_VARS.FILES,
+                'conf',
+                'cloud.profiles.d',
+                PROVIDER_NAME + '.conf'
+            )
+
+        profile_config = cloud_config(profile)
+        disk_datastore = profile_config['vmware-test']['devices']['disk']['Hard disk 2']['datastore']
 
         ret_val = self.run_cloud(
             "-p vmware-test {0}".format(self.instance_name), timeout=TIMEOUT

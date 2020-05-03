@@ -9,14 +9,44 @@ from __future__ import absolute_import, print_function, unicode_literals
 import time
 
 # Import Salt Testing Libs
-from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
+from tests.support.case import ShellCase
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.helpers import expensiveTest, generate_random_name
 from tests.support.unit import skipIf
 
 
-class VultrTest(CloudTest):
-    """
+@expensiveTest
+class VultrTest(ShellCase):
+    '''
     Integration tests for the Vultr cloud provider in Salt-Cloud
-    """
+    '''
+
+    @expensiveTest
+    def setUp(self):
+        '''
+        Sets up the test requirements
+        '''
+        super(VultrTest, self).setUp()
+
+        # check if appropriate cloud provider and profile files are present
+        profile_str = 'vultr-config'
+        providers = self.run_cloud('--list-providers')
+        if profile_str + ':' not in providers:
+            self.skipTest(
+                'Configuration file for {0} was not found. Check {0}.conf files '
+                'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
+                .format(PROVIDER_NAME)
+            )
+
+        # check if api_key, ssh_key_file, and ssh_key_names are present
+        config = cloud_providers_config(
+            os.path.join(
+                RUNTIME_VARS.FILES,
+                'conf',
+                'cloud.providers.d',
+                PROVIDER_NAME + '.conf'
+            )
+        )
 
     PROVIDER = "vultr"
     REQUIRED_PROVIDER_CONFIG_ITEMS = ("api_key", "ssh_key_file", "ssh_key_name")

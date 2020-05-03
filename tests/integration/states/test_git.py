@@ -14,6 +14,12 @@ import socket
 import string
 import tempfile
 
+# Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.case import ModuleCase
+from tests.support.helpers import with_tempdir
+from tests.support.mixins import SaltReturnAssertsMixin
+
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
@@ -93,8 +99,8 @@ def uses_git_opts(caller):
 class WithGitMirror(object):
     def __init__(self, repo_url, **kwargs):
         self.repo_url = repo_url
-        if "dir" not in kwargs:
-            kwargs["dir"] = RUNTIME_VARS.TMP
+        if 'dir' not in kwargs:
+            kwargs['dir'] = RUNTIME_VARS.TMP
         self.kwargs = kwargs
 
     def __call__(self, func):

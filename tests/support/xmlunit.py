@@ -72,12 +72,12 @@ try:
 
     class _XMLTestResult(xmlrunner.result._XMLTestResult):
         def startTest(self, test):
-            log.debug(">>>>> START >>>>> %s", test.id())
+            log.debug('>>>>> START >>>>> %s', test.id())
             # xmlrunner classes are NOT new-style classes
             xmlrunner.result._XMLTestResult.startTest(self, test)
 
         def stopTest(self, test):
-            log.debug("<<<<< END <<<<<<< %s", test.id())
+            log.debug('<<<<< END <<<<<<< %s', test.id())
             # xmlrunner classes are NOT new-style classes
             return xmlrunner.result._XMLTestResult.stopTest(self, test)
 

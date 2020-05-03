@@ -425,8 +425,9 @@ class SSDPDiscoveryClient(SSDPBase):
                     response[addr].append(data)
                 else:
                     break
-            except Exception as err:  # pylint: disable=broad-except
-                self.log.error("Discovery master collection failure: %s", err)
+            except Exception as err:
+                if not response:
+                    self.log.error('Discovery master collection failure: %s', err)
                 break
 
     def discover(self):

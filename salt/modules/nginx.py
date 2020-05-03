@@ -44,10 +44,10 @@ def version():
     .. code-block:: bash
 
         salt '*' nginx.version
-    """
-    cmd = "{0} -v".format(__detect_os())
-    out = __salt__["cmd.run"](cmd).splitlines()
-    ret = out[0].split(": ")
+    '''
+    cmd = '{0} -v'.format(__detect_os())
+    out = __salt__['cmd.run'](cmd).splitlines()
+    ret = out[0].split(': ')[-1].split('/')
     return ret[-1]
 
 

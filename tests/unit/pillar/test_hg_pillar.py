@@ -16,12 +16,12 @@ import salt.utils.files
 import salt.utils.yaml
 
 # Import Salt Testing libs
-from tests.support.mixins import (
-    AdaptedConfigurationTestCaseMixin,
-    LoaderModuleMockMixin,
-)
 from tests.support.runtests import RUNTIME_VARS
+from tests.integration import AdaptedConfigurationTestCaseMixin
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON
+
 
 COMMIT_USER_NAME = "test_user"
 # file contents

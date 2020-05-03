@@ -103,11 +103,11 @@ def exists(Name, region=None, key=None, keyid=None, profile=None):
     try:
         events = conn.list_rules(NamePrefix=Name)
         if not events:
-            return {"exists": False}
-        for rule in events.get("Rules", []):
-            if rule.get("Name", None) == Name:
-                return {"exists": True}
-        return {"exists": False}
+            return {'exists': False}
+        for rule in events.get('Rules', []):
+            if rule.get('Name', None) == Name:
+                return {'exists': True}
+        return {'exists': False}
     except ClientError as e:
         err = __utils__["boto3.get_error"](e)
         return {"error": err}

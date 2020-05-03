@@ -41,13 +41,8 @@ _DEFAULT_VER = "7.0.0"
 def __virtual__():
     """
     Only work on Debian and when systemd isn't running
-    """
-    if __grains__["os"] in (
-        "Debian",
-        "Raspbian",
-        "Devuan",
-        "NILinuxRT",
-    ) and not salt.utils.systemd.booted(__context__):
+    '''
+    if __grains__.get('os') in ('Debian', 'Raspbian', 'Devuan', 'NILinuxRT') and not salt.utils.systemd.booted(__context__):
         return __virtualname__
     else:
         return (

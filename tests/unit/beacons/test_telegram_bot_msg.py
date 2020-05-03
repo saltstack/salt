@@ -91,16 +91,19 @@ class TelegramBotMsgBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_call_telegram_return_no_updates_for_user(self):
         with patch("salt.beacons.telegram_bot_msg.telegram") as telegram_api:
-            token = "abc"
-            username = "tester"
-            config = [{"token": token, "accept_from": [username]}]
-            inst = MagicMock(name="telegram.Bot()")
-            telegram_api.Bot = MagicMock(name="telegram", return_value=inst)
+            token = 'abc'
+            username = 'tester'
+            config = [{
+                'token': token,
+                'accept_from': [username]
+            }]
+            inst = MagicMock(name='telegram.Bot()')
+            telegram_api.Bot = MagicMock(name='telegram', return_value=inst)
 
-            log.debug("telegram {}".format(telegram))
-            username = "different_user"
-            user = telegram.user.User(id=1, first_name="", username=username)
-            chat = telegram.chat.Chat(1, "private", username=username)
+            log.debug('telegram %s', telegram)
+            username = 'different_user'
+            user = telegram.user.User(id=1, first_name='', username=username)
+            chat = telegram.chat.Chat(1, 'private', username=username)
             date = datetime.datetime(2016, 12, 18, 0, 0)
             message = telegram.message.Message(1, user, date=date, chat=chat)
             update = telegram.update.Update(update_id=1, message=message)

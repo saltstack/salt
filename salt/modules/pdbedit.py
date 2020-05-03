@@ -370,12 +370,9 @@ def modify(
                     val = val[1:-1]
                 new = []
                 for f in val.upper():
-                    if f not in ["N", "D", "H", "L", "X"]:
-                        log.warning(
-                            "pdbedit.modify - unknown {f} flag for account_control, ignored".format(
-                                f=f
-                            )
-                        )
+                    if f not in ['N', 'D', 'H', 'L', 'X']:
+                        logmsg = 'pdbedit.modify - unknown {} flag for account_control, ignored'.format(f)
+                        log.warning(logmsg)
                     else:
                         new.append(f)
                 changes[key] = "[{flags}]".format(flags="".join(new))
@@ -384,7 +381,7 @@ def modify(
                 changes[key] = val
 
     # apply changes
-    if len(changes) > 0 or reset_login_hours or reset_bad_password_count:
+    if changes or reset_login_hours or reset_bad_password_count:
         cmds = []
         for change in changes:
             cmds.append(

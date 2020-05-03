@@ -52,13 +52,14 @@ import fnmatch
 import glob
 import os
 import re
+import fnmatch
 
 # Import salt libs
 import salt.modules.cmdmod
 import salt.utils.files
 import salt.utils.path
 import salt.utils.systemd
-from salt.ext.six.moves import filter  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import filter
 
 __func_alias__ = {"reload_": "reload"}
 
@@ -72,14 +73,11 @@ def __virtual__():
     """
     # Disable on these platforms, specific service modules exist:
     if salt.utils.systemd.booted(__context__):
-        return (
-            False,
-            "The upstart execution module failed to load: this system was booted with systemd.",
-        )
-    elif __grains__["os"] in ("Ubuntu", "Linaro", "elementary OS", "Mint"):
+        return (False, 'The upstart execution module failed to load: this system was booted with systemd.')
+    elif __grains__.get('os') in ('Ubuntu', 'Linaro', 'elementary OS', 'Mint'):
         return __virtualname__
-    elif __grains__["os"] in ("Debian", "Raspbian"):
-        debian_initctl = "/sbin/initctl"
+    elif __grains__.get('os') in ('Debian', 'Raspbian'):
+        debian_initctl = '/sbin/initctl'
         if os.path.isfile(debian_initctl):
             initctl_version = salt.modules.cmdmod._run_quiet(
                 debian_initctl + " version"
@@ -196,8 +194,8 @@ def _upstart_is_disabled(name):
     placed in /etc/init/[name].override.
     NOTE: An Upstart service can also be disabled by placing "manual"
     in /etc/init/[name].conf.
-    """
-    files = ["/etc/init/{0}.conf".format(name), "/etc/init/{0}.override".format(name)]
+    '''
+    files = ['/etc/init/{0}.conf'.format(name), '/etc/init/{0}.override'.format(name)]
     for file_name in filter(os.path.isfile, files):
         with salt.utils.files.fopen(file_name) as fp_:
             if re.search(
@@ -527,16 +525,20 @@ def _upstart_enable(name):
     """
     if _upstart_is_enabled(name):
         return _upstart_is_enabled(name)
-    override = "/etc/init/{0}.override".format(name)
-    files = ["/etc/init/{0}.conf".format(name), override]
+    override = '/etc/init/{0}.override'.format(name)
+    files = ['/etc/init/{0}.conf'.format(name), override]
     for file_name in filter(os.path.isfile, files):
-        with salt.utils.files.fopen(file_name, "r+") as fp_:
-            new_text = re.sub(
-                r"^\s*manual\n?",
-                "",
-                salt.utils.stringutils.to_unicode(fp_.read()),
-                0,
-                re.MULTILINE,
+        with salt.utils.files.fopen(file_name, 'r+') as fp_:
+            new_text = re.sub(r'^\s*manual\n?',
+                              '',
+                              salt.utils.stringutils.to_unicode(fp_.read()),
+                              0,
+                              re.MULTILINE)
+            fp_.seek(0)
+            fp_.write(
+                salt.utils.stringutils.to_str(
+                    new_text
+                )
             )
             fp_.seek(0)
             fp_.write(salt.utils.stringutils.to_str(new_text))

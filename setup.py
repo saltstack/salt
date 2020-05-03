@@ -110,30 +110,13 @@ try:
 except ImportError:
     HAS_ESKY = False
 
-SALT_VERSION = os.path.join(os.path.abspath(SETUP_DIRNAME), "salt", "version.py")
-SALT_VERSION_HARDCODED = os.path.join(
-    os.path.abspath(SETUP_DIRNAME), "salt", "_version.py"
-)
-SALT_SYSPATHS_HARDCODED = os.path.join(
-    os.path.abspath(SETUP_DIRNAME), "salt", "_syspaths.py"
-)
-SALT_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "base.txt")
-SALT_CRYPTO_REQS = os.path.join(
-    os.path.abspath(SETUP_DIRNAME), "requirements", "crypto.txt"
-)
-SALT_ZEROMQ_REQS = os.path.join(
-    os.path.abspath(SETUP_DIRNAME), "requirements", "zeromq.txt"
-)
-SALT_LONG_DESCRIPTION_FILE = os.path.join(os.path.abspath(SETUP_DIRNAME), "README.rst")
-SALT_OSX_REQS = [
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "pkg", "osx", "req.txt"),
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "pkg", "osx", "req_ext.txt"),
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "pkg", "osx", "req_pyobjc.txt"),
-]
-SALT_WINDOWS_REQS = [
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "pkg", "windows", "req.txt"),
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "pkg", "windows", "req_win.txt"),
-]
+SALT_VERSION = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', 'version.py')
+SALT_VERSION_HARDCODED = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', '_version.py')
+SALT_SYSPATHS_HARDCODED = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', '_syspaths.py')
+SALT_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'base.txt')
+SALT_ZEROMQ_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'zeromq.txt')
+SALT_WINDOWS_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'pkg', 'windows', 'req.txt')
+SALT_LONG_DESCRIPTION_FILE = os.path.join(os.path.abspath(SETUP_DIRNAME), 'README.rst')
 
 # Salt SSH Packaging Detection
 PACKAGED_FOR_SALT_SSH_FILE = os.path.join(
@@ -476,7 +459,7 @@ class DownloadWindowsDlls(Command):
         url = "https://repo.saltstack.com/windows/dependencies/{bits}/{fname}.dll"
         dest = os.path.join(os.path.dirname(sys.executable), "{fname}.dll")
         with indent_log():
-            for fname in ("libeay32", "ssleay32", "msvcr120"):
+            for fname in ('libeay32', 'ssleay32', 'msvcr120'):
                 # See if the library is already on the system
                 if find_library(fname):
                     continue
@@ -885,69 +868,45 @@ class SaltDistribution(distutils.dist.Distribution):
             * salt-run
 
     Under *nix, all scripts should be installed
-    """
-
-    global_options = (
-        distutils.dist.Distribution.global_options
-        + [
-            ("ssh-packaging", None, "Run in SSH packaging mode"),
-            (
-                "salt-transport=",
-                None,
-                "The transport to prepare salt for. Currently, the only choice "
-                "is 'zeromq'. This may be expanded in the future. Defaults to "
-                "'zeromq'",
-                "zeromq",
-            ),
-        ]
-        + [
-            (
-                "with-salt-version=",
-                None,
-                "Set a fixed version for Salt instead calculating it",
-            ),
-            # Salt's Paths Configuration Settings
-            ("salt-root-dir=", None, "Salt's pre-configured root directory"),
-            ("salt-share-dir=", None, "Salt's pre-configured share directory"),
-            ("salt-config-dir=", None, "Salt's pre-configured configuration directory"),
-            ("salt-cache-dir=", None, "Salt's pre-configured cache directory"),
-            ("salt-sock-dir=", None, "Salt's pre-configured socket directory"),
-            ("salt-srv-root-dir=", None, "Salt's pre-configured service directory"),
-            (
-                "salt-base-file-roots-dir=",
-                None,
-                "Salt's pre-configured file roots directory",
-            ),
-            (
-                "salt-base-pillar-roots-dir=",
-                None,
-                "Salt's pre-configured pillar roots directory",
-            ),
-            (
-                "salt-base-master-roots-dir=",
-                None,
-                "Salt's pre-configured master roots directory",
-            ),
-            ("salt-logs-dir=", None, "Salt's pre-configured logs directory"),
-            ("salt-pidfile-dir=", None, "Salt's pre-configured pidfiles directory"),
-            (
-                "salt-spm-formula-dir=",
-                None,
-                "Salt's pre-configured SPM formulas directory",
-            ),
-            (
-                "salt-spm-pillar-dir=",
-                None,
-                "Salt's pre-configured SPM pillar directory",
-            ),
-            (
-                "salt-spm-reactor-dir=",
-                None,
-                "Salt's pre-configured SPM reactor directory",
-            ),
-            ("salt-home-dir=", None, "Salt's pre-configured user home directory"),
-        ]
-    )
+    '''
+    global_options = distutils.dist.Distribution.global_options + [
+        ('ssh-packaging', None, 'Run in SSH packaging mode'),
+        ('salt-transport=', None, 'The transport to prepare salt for. Currently, the only choice '
+                                  'is \'zeromq\'. This may be expanded in the future. Defaults to '
+                                  '\'zeromq\'', 'zeromq')] + [
+        ('with-salt-version=', None, 'Set a fixed version for Salt instead calculating it'),
+        # Salt's Paths Configuration Settings
+        ('salt-root-dir=', None,
+         'Salt\'s pre-configured root directory'),
+        ('salt-share-dir=', None,
+         'Salt\'s pre-configured share directory'),
+        ('salt-config-dir=', None,
+         'Salt\'s pre-configured configuration directory'),
+        ('salt-cache-dir=', None,
+         'Salt\'s pre-configured cache directory'),
+        ('salt-sock-dir=', None,
+         'Salt\'s pre-configured socket directory'),
+        ('salt-srv-root-dir=', None,
+         'Salt\'s pre-configured service directory'),
+        ('salt-base-file-roots-dir=', None,
+         'Salt\'s pre-configured file roots directory'),
+        ('salt-base-pillar-roots-dir=', None,
+         'Salt\'s pre-configured pillar roots directory'),
+        ('salt-base-master-roots-dir=', None,
+         'Salt\'s pre-configured master roots directory'),
+        ('salt-logs-dir=', None,
+         'Salt\'s pre-configured logs directory'),
+        ('salt-pidfile-dir=', None,
+         'Salt\'s pre-configured pidfiles directory'),
+        ('salt-spm-formula-dir=', None,
+         'Salt\'s pre-configured SPM formulas directory'),
+        ('salt-spm-pillar-dir=', None,
+         'Salt\'s pre-configured SPM pillar directory'),
+        ('salt-spm-reactor-dir=', None,
+         'Salt\'s pre-configured SPM reactor directory'),
+        ('salt-home-dir=', None,
+         'Salt\'s pre-configured user home directory'),
+    ]
 
     def __init__(self, attrs=None):
         distutils.dist.Distribution.__init__(self, attrs)
@@ -1109,16 +1068,13 @@ class SaltDistribution(distutils.dist.Distribution):
             return data_files
 
         if IS_WINDOWS_PLATFORM:
-            data_files[0][1].extend(
-                [
-                    "doc/man/salt-cp.1",
-                    "doc/man/salt-key.1",
-                    "doc/man/salt-minion.1",
-                    "doc/man/salt-syndic.1",
-                    "doc/man/salt-unity.1",
-                    "doc/man/spm.1",
-                ]
-            )
+            data_files[0][1].extend(['doc/man/salt-api.1',
+                                     'doc/man/salt-cp.1',
+                                     'doc/man/salt-key.1',
+                                     'doc/man/salt-master.1',
+                                     'doc/man/salt-minion.1',
+                                     'doc/man/salt-proxy.1',
+                                     'doc/man/salt-unity.1'])
             return data_files
 
         # *nix, so, we need all man pages
@@ -1143,24 +1099,14 @@ class SaltDistribution(distutils.dist.Distribution):
     @property
     def _property_install_requires(self):
 
-        if IS_OSX_PLATFORM:
-            install_requires = []
-            for reqfile in SALT_OSX_REQS:
-                install_requires += _parse_requirements_file(reqfile)
-            return install_requires
+        if self.salt_transport == 'zeromq':
+            install_requires += _parse_requirements_file(SALT_ZEROMQ_REQS)
 
         if IS_WINDOWS_PLATFORM:
             install_requires = []
             for reqfile in SALT_WINDOWS_REQS:
                 install_requires += _parse_requirements_file(reqfile)
             return install_requires
-
-        install_requires = _parse_requirements_file(SALT_REQS)
-
-        if self.salt_transport == "zeromq":
-            install_requires += _parse_requirements_file(SALT_CRYPTO_REQS)
-            install_requires += _parse_requirements_file(SALT_ZEROMQ_REQS)
-        return install_requires
 
     @property
     def _property_scripts(self):
@@ -1174,35 +1120,30 @@ class SaltDistribution(distutils.dist.Distribution):
             return scripts
 
         if IS_WINDOWS_PLATFORM:
-            scripts.extend(
-                [
-                    "scripts/salt-cp",
-                    "scripts/salt-key",
-                    "scripts/salt-minion",
-                    "scripts/salt-syndic",
-                    "scripts/salt-unity",
-                    "scripts/spm",
-                ]
-            )
+            scripts.extend(['scripts/salt',
+                            'scripts/salt-api',
+                            'scripts/salt-cp',
+                            'scripts/salt-key',
+                            'scripts/salt-master',
+                            'scripts/salt-minion',
+                            'scripts/salt-proxy',
+                            'scripts/salt-unity'])
             return scripts
 
         # *nix, so, we need all scripts
-        scripts.extend(
-            [
-                "scripts/salt",
-                "scripts/salt-api",
-                "scripts/salt-cloud",
-                "scripts/salt-cp",
-                "scripts/salt-key",
-                "scripts/salt-master",
-                "scripts/salt-minion",
-                "scripts/salt-proxy",
-                "scripts/salt-ssh",
-                "scripts/salt-syndic",
-                "scripts/salt-unity",
-                "scripts/spm",
-            ]
-        )
+        scripts.extend(['scripts/salt',
+                        'scripts/salt-api',
+                        'scripts/salt-cloud',
+                        'scripts/salt-cp',
+                        'scripts/salt-key',
+                        'scripts/salt-master',
+                        'scripts/salt-minion',
+                        'scripts/salt-support',
+                        'scripts/salt-ssh',
+                        'scripts/salt-syndic',
+                        'scripts/salt-unity',
+                        'scripts/salt-proxy',
+                        'scripts/spm'])
         return scripts
 
     @property
@@ -1220,36 +1161,30 @@ class SaltDistribution(distutils.dist.Distribution):
             return {"console_scripts": scripts}
 
         if IS_WINDOWS_PLATFORM:
-            scripts.extend(
-                [
-                    "salt-cp = salt.scripts:salt_cp",
-                    "salt-key = salt.scripts:salt_key",
-                    "salt-minion = salt.scripts:salt_minion",
-                    "salt-syndic = salt.scripts:salt_syndic",
-                    "salt-unity = salt.scripts:salt_unity",
-                    "spm = salt.scripts:salt_spm",
-                ]
-            )
-            return {"console_scripts": scripts}
+            scripts.extend(['salt = salt.scripts:salt_main',
+                            'salt-api = salt.scripts:salt_api',
+                            'salt-cp = salt.scripts:salt_cp',
+                            'salt-key = salt.scripts:salt_key',
+                            'salt-master = salt.scripts:salt_master',
+                            'salt-minion = salt.scripts:salt_minion',
+                            'salt-unity = salt.scripts:salt_unity',
+                            'spm = salt.scripts:salt_spm'])
+            return {'console_scripts': scripts}
 
         # *nix, so, we need all scripts
-        scripts.extend(
-            [
-                "salt = salt.scripts:salt_main",
-                "salt-api = salt.scripts:salt_api",
-                "salt-cloud = salt.scripts:salt_cloud",
-                "salt-cp = salt.scripts:salt_cp",
-                "salt-key = salt.scripts:salt_key",
-                "salt-master = salt.scripts:salt_master",
-                "salt-minion = salt.scripts:salt_minion",
-                "salt-ssh = salt.scripts:salt_ssh",
-                "salt-syndic = salt.scripts:salt_syndic",
-                "salt-unity = salt.scripts:salt_unity",
-                "spm = salt.scripts:salt_spm",
-            ]
-        )
-        return {"console_scripts": scripts}
-
+        scripts.extend(['salt = salt.scripts:salt_main',
+                        'salt-api = salt.scripts:salt_api',
+                        'salt-cloud = salt.scripts:salt_cloud',
+                        'salt-cp = salt.scripts:salt_cp',
+                        'salt-key = salt.scripts:salt_key',
+                        'salt-master = salt.scripts:salt_master',
+                        'salt-minion = salt.scripts:salt_minion',
+                        'salt-support = salt.scripts:salt_support',
+                        'salt-ssh = salt.scripts:salt_ssh',
+                        'salt-syndic = salt.scripts:salt_syndic',
+                        'salt-unity = salt.scripts:salt_unity',
+                        'spm = salt.scripts:salt_spm'])
+        return {'console_scripts': scripts}
     # <---- Dynamic Data ---------------------------------------------------------------------------------------------
 
     # ----- Esky Setup ---------------------------------------------------------------------------------------------->
@@ -1368,10 +1303,12 @@ class SaltDistribution(distutils.dist.Distribution):
         elif self.salt_transport is None:
             self.salt_transport = "zeromq"
 
-        if self.salt_transport not in ("zeromq", "both", "ssh", "none"):
+        if self.salt_transport not in ('zeromq', 'both', 'ssh', 'none'):
             raise DistutilsArgError(
-                "The value of --salt-transport needs be 'zeromq', "
-                "'both', 'ssh', or 'none' not '{0}'".format(self.salt_transport)
+                'The value of --salt-transport needs be \'zeromq\', '
+                '\'both\', \'ssh\', or \'none\' not \'{0}\''.format(
+                    self.salt_transport
+                )
             )
 
         # Setup our property functions after class initialization and

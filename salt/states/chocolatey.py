@@ -23,25 +23,14 @@ from salt.exceptions import SaltInvocationError
 def __virtual__():
     """
     Load only if chocolatey is loaded
-    """
-    if "chocolatey.install" in __salt__:
-        return "chocolatey"
-    return (False, "chocolatey module could not be loaded")
+    '''
+    return 'chocolatey' if 'chocolatey.install' in __salt__ else False
 
 
-def installed(
-    name,
-    version=None,
-    source=None,
-    force=False,
-    pre_versions=False,
-    install_args=None,
-    override_args=False,
-    force_x86=False,
-    package_args=None,
-    allow_multiple=False,
-):
-    """
+def installed(name, version=None, source=None, force=False, pre_versions=False,
+              install_args=None, override_args=False, force_x86=False,
+              package_args=None, allow_multiple=False, execution_timeout=None):
+    '''
     Installs a package if not already installed
 
     Args:
@@ -86,6 +75,10 @@ def installed(
             with ``force``. Does not work with all packages. Default is False.
 
             .. versionadded:: 2017.7.0
+
+        execution_timeout (str):
+            Chocolatey execution timeout value you want to pass to the
+            installation process. Default is None.
 
     .. code-block:: yaml
 
@@ -181,21 +174,20 @@ def installed(
         return ret
 
     # Install the package
-    result = __salt__["chocolatey.install"](
-        name=name,
-        version=version,
-        source=source,
-        force=force,
-        pre_versions=pre_versions,
-        install_args=install_args,
-        override_args=override_args,
-        force_x86=force_x86,
-        package_args=package_args,
-        allow_multiple=allow_multiple,
-    )
+    result = __salt__['chocolatey.install'](name=name,
+                                            version=version,
+                                            source=source,
+                                            force=force,
+                                            pre_versions=pre_versions,
+                                            install_args=install_args,
+                                            override_args=override_args,
+                                            force_x86=force_x86,
+                                            package_args=package_args,
+                                            allow_multiple=allow_multiple,
+                                            execution_timeout=execution_timeout)
 
-    if "Running chocolatey failed" not in result:
-        ret["result"] = True
+    if 'Running chocolatey failed' not in result:
+        ret['result'] = True
     else:
         ret["result"] = False
 

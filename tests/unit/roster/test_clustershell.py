@@ -47,9 +47,8 @@ class ClusterShellTestCase(TestCase):
                 # pylint: disable=unused-import
                 import socket
                 from ClusterShell.NodeSet import NodeSet
-
                 # pylint: enable=unused-import
-                ret = salt.roster.clustershell.targets("foo")
-                mock_socket.gethostbyname.assert_any_call("foo")
-                self.assertTrue("foo" in ret)
-                self.assertTrue(ret["foo"]["port"] == 3)
+                ret = salt.roster.clustershell.targets('foo')
+                mock_socket.gethostbyname.assert_any_call('foo')
+                self.assertTrue('foo' in ret)
+                self.assertTrue(ret['foo']['port'] == 3)

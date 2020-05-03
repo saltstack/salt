@@ -15,7 +15,6 @@ from salt.ext import six
 # Import 3rd party libs
 try:
     import hjson
-
     HAS_LIBS = True
 except ImportError:
     HAS_LIBS = False

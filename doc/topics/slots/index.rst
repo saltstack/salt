@@ -5,7 +5,7 @@ Slots
 =====
 
 .. versionadded:: 2018.3.0
-.. versionchanged:: 3000
+.. versionchanged:: Neon
 
 .. note:: This functionality is under development and could be changed in the
     future releases
@@ -34,7 +34,7 @@ Slot syntax looks close to the simple python function call.
 
     __slot__:salt:<module>.<function>(<args>, ..., <kwargs...>, ...)
 
-For the 3000 release, this syntax has been updated to support parsing functions
+For the Neon release, this syntax has been updated to support parsing functions
 which return dictionaries and for appending text to the slot result.
 
 .. code-block:: text

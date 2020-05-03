@@ -7,7 +7,15 @@ import shutil
 import tempfile
 import textwrap
 
-import pytest
+# Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.case import ShellCase
+from tests.support.mixins import ShellCaseCommonTestsMixin
+
+# Import 3rd-party libs
+from salt.ext import six
+
+# Import Salt libs
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.yaml
@@ -116,12 +124,12 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         expect = None
         if self.master_opts["transport"] in ("zeromq", "tcp"):
             expect = [
-                "Accepted Keys:",
-                "minion",
-                "sub_minion",
-                "Denied Keys:",
-                "Unaccepted Keys:",
-                "Rejected Keys:",
+                'Accepted Keys:',
+                'minion',
+                'sub_minion',
+                'Denied Keys:',
+                'Unaccepted Keys:',
+                'Rejected Keys:'
             ]
         self.assertEqual(data, expect)
 
@@ -140,13 +148,11 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
             pass
 
         expect = None
-        if self.master_opts["transport"] in ("zeromq", "tcp"):
-            expect = {
-                "minions_rejected": [],
-                "minions_denied": [],
-                "minions_pre": [],
-                "minions": ["minion", "sub_minion"],
-            }
+        if self.master_opts['transport'] in ('zeromq', 'tcp'):
+            expect = {'minions_rejected': [],
+                      'minions_denied': [],
+                      'minions_pre': [],
+                      'minions': ['minion', 'sub_minion']}
         self.assertEqual(ret, expect)
 
     @skipIf(True, "SLOWTEST skip")
@@ -164,13 +170,11 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
             pass
 
         expect = []
-        if self.master_opts["transport"] in ("zeromq", "tcp"):
-            expect = {
-                "minions_rejected": [],
-                "minions_denied": [],
-                "minions_pre": [],
-                "minions": ["minion", "sub_minion"],
-            }
+        if self.master_opts['transport'] in ('zeromq', 'tcp'):
+            expect = {'minions_rejected': [],
+                      'minions_denied': [],
+                      'minions_pre': [],
+                      'minions': ['minion', 'sub_minion']}
         self.assertEqual(ret, expect)
 
     @skipIf(True, "SLOWTEST skip")
@@ -190,13 +194,11 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
             pass
 
         expect = None
-        if self.master_opts["transport"] in ("zeromq", "tcp"):
-            expect = {
-                "minions_rejected": [],
-                "minions_denied": [],
-                "minions_pre": [],
-                "minions": ["minion", "sub_minion"],
-            }
+        if self.master_opts['transport'] in ('zeromq', 'tcp'):
+            expect = {'minions_rejected': [],
+                      'minions_denied': [],
+                      'minions_pre': [],
+                      'minions': ['minion', 'sub_minion']}
         self.assertEqual(ret, expect)
 
     @skipIf(True, "SLOWTEST skip")
@@ -267,12 +269,12 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
     @skipIf(True, "SLOWTEST skip")
     def test_keys_generation(self):
         tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-        arg_str = "--gen-keys minibar --gen-keys-dir {0}".format(tempdir)
+        arg_str = '--gen-keys minibar --gen-keys-dir {0}'.format(tempdir)
         self.run_key(arg_str)
         try:
             key_names = None
-            if self.master_opts["transport"] in ("zeromq", "tcp"):
-                key_names = ("minibar.pub", "minibar.pem")
+            if self.master_opts['transport'] in ('zeromq', 'tcp'):
+                key_names = ('minibar.pub', 'minibar.pem')
             for fname in key_names:
                 self.assertTrue(os.path.isfile(os.path.join(tempdir, fname)))
         finally:
@@ -284,16 +286,46 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
     @skipIf(True, "SLOWTEST skip")
     def test_keys_generation_keysize_minmax(self):
         tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-        arg_str = "--gen-keys minion --gen-keys-dir {0}".format(tempdir)
+        arg_str = '--gen-keys minion --gen-keys-dir {0}'.format(tempdir)
         try:
             data, error = self.run_key(arg_str + " --keysize=1024", catch_stderr=True)
             self.assertIn(
-                "error: The minimum value for keysize is 2048", "\n".join(error)
+                'error: The minimum value for keysize is 2048', '\n'.join(error)
             )
 
             data, error = self.run_key(arg_str + " --keysize=32769", catch_stderr=True)
             self.assertIn(
-                "error: The maximum value for keysize is 32768", "\n".join(error)
+                'error: The maximum value for keysize is 32768',
+                '\n'.join(error)
             )
         finally:
             shutil.rmtree(tempdir)
+
+    def test_issue_7754(self):
+        old_cwd = os.getcwd()
+        config_dir = os.path.join(RUNTIME_VARS.TMP, 'issue-7754')
+        if not os.path.isdir(config_dir):
+            os.makedirs(config_dir)
+
+        os.chdir(config_dir)
+
+        config_file_name = 'master'
+        with salt.utils.files.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
+            config = salt.utils.yaml.safe_load(fhr)
+            config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
+            with salt.utils.files.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
+                salt.utils.yaml.safe_dump(config, fhw, default_flow_style=False)
+        ret = self.run_script(
+            self._call_binary_,
+            '--config-dir {0} -L'.format(
+                config_dir
+            ),
+            timeout=60
+        )
+        try:
+            self.assertIn('minion', '\n'.join(ret))
+            self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
+        finally:
+            self.chdir(old_cwd)
+            if os.path.isdir(config_dir):
+                shutil.rmtree(config_dir)

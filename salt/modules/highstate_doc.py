@@ -6,8 +6,8 @@ This module renders highstate configuration into a more human readable format.
 
 How it works:
 
-`highstate or lowstate` data is parsed with a `processor` this defaults to `highstate_doc.processor_markdown`.
-The processed data is passed to a `jinja` template that builds up the document content.
+`highstate or lowstate` data is parsed with a `proccesser` this defaults to `highstate_doc.proccesser_markdown`.
+The proccessed data is passed to a `jinja` template that builds up the document content.
 
 
 configuration: Pillar
@@ -457,7 +457,7 @@ def render(
         highstate_doc.markdown_default_jinja_template
         highstate_doc.markdown_full_jinja_template
 
-    """
+    '''
     config = _get_config(**kwargs)
     lowstates = process_lowstates(**kwargs)
     # TODO: __env__,
@@ -661,10 +661,10 @@ def processor_markdown(lowstate_item, config, **kwargs):
         requisites += "after changes, run or update:\n"
         for w in s.get("watch_in", []):
             requisites += _format_markdown_requisite(w.items()[0][0], w.items()[0][1])
-        requisites += "\n"
-    if s.get("require") and len(s.get("require")) > 0:
-        requisites += "require:\n"
-        for w in s.get("require", []):
+        requisites += '\n'
+    if s.get('require') and s.get('require'):
+        requisites += 'require:\n'
+        for w in s.get('require', []):
             requisites += _format_markdown_requisite(w.items()[0][0], w.items()[0][1])
         requisites += "\n"
     if s.get("require_in"):

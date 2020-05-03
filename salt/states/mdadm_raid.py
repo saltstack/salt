@@ -38,11 +38,11 @@ __virtualname__ = "raid"
 def __virtual__():
     """
     mdadm provides raid functions for Linux
-    """
-    if __grains__["kernel"] != "Linux":
-        return (False, "Only supported on Linux")
-    if not salt.utils.path.which("mdadm"):
-        return (False, "Unable to locate command: mdadm")
+    '''
+    if __grains__.get('kernel') != 'Linux':
+        return False
+    if not salt.utils.path.which('mdadm'):
+        return False
     return __virtualname__
 
 
@@ -93,7 +93,7 @@ def present(name, level, devices, **kwargs):
         if dev == "missing" or not __salt__["file.access"](dev, "f"):
             missing.append(dev)
             continue
-        superblock = __salt__["raid.examine"](dev, quiet=True)
+        superblock = __salt__['raid.examine'](dev, quiet=True)
 
         if "MD_UUID" in superblock:
             uuid = superblock["MD_UUID"]
@@ -129,14 +129,14 @@ def present(name, level, devices, **kwargs):
     if present:
         do_assemble = False
         do_create = False
-    elif len(devices_with_superblock) > 0:
+    elif devices_with_superblock:
         do_assemble = True
         do_create = False
         verb = "assembled"
     else:
-        if len(new_devices) == 0:
-            ret["comment"] = "All devices are missing: {0}.".format(missing)
-            ret["result"] = False
+        if not new_devices:
+            ret['comment'] = 'All devices are missing: {0}.'.format(missing)
+            ret['result'] = False
             return ret
         do_assemble = False
         do_create = True
@@ -164,12 +164,12 @@ def present(name, level, devices, **kwargs):
             ret["comment"] = "Raid will be {0} with: {1}".format(verb, res)
             ret["result"] = None
 
-        if (do_assemble or present) and len(new_devices) > 0:
-            ret["comment"] += " New devices will be added: {0}".format(new_devices)
-            ret["result"] = None
+        if (do_assemble or present) and new_devices:
+            ret['comment'] += ' New devices will be added: {0}'.format(new_devices)
+            ret['result'] = None
 
-        if len(missing) > 0:
-            ret["comment"] += " Missing devices: {0}".format(missing)
+        if missing:
+            ret['comment'] += ' Missing devices: {0}'.format(missing)
 
         return ret
 
@@ -195,7 +195,7 @@ def present(name, level, devices, **kwargs):
     else:
         ret["comment"] = "Raid {0} already present.".format(name)
 
-    if (do_assemble or present) and len(new_devices) > 0 and ret["result"]:
+    if (do_assemble or present) and new_devices and ret['result']:
         for d in new_devices:
             res = __salt__["raid.add"](name, d)
             if not res:
@@ -206,8 +206,8 @@ def present(name, level, devices, **kwargs):
         if ret["result"]:
             ret["changes"]["added"] = new_devices
 
-    if len(missing) > 0:
-        ret["comment"] += " Missing devices: {0}".format(missing)
+    if missing:
+        ret['comment'] += ' Missing devices: {0}'.format(missing)
 
     return ret
 

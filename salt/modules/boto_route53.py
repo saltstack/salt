@@ -109,13 +109,12 @@ def _get_split_zone(zone, _conn, private_zone):
 
 
 def _is_retryable_error(exception):
-    return exception.code not in ["SignatureDoesNotMatch"]
+    return exception.code not in ['SignatureDoesNotMatch']
 
 
-def describe_hosted_zones(
-    zone_id=None, domain_name=None, region=None, key=None, keyid=None, profile=None
-):
-    """
+def describe_hosted_zones(zone_id=None, domain_name=None, region=None,
+                          key=None, keyid=None, profile=None):
+    '''
     Return detailed info about one, or all, zones in the bound account.
     If neither zone_id nor domain_name is provided, return all zones.
     Note that the return format is slightly different between the 'all'
@@ -302,13 +301,11 @@ def zone_exists(
 
         except DNSServerError as e:
             if retry_on_errors and _is_retryable_error(e):
-                if "Throttling" == e.code:
-                    log.debug("Throttled by AWS API.")
-                elif "PriorRequestNotComplete" == e.code:
-                    log.debug(
-                        "The request was rejected by AWS API.\
-                              Route 53 was still processing a prior request"
-                    )
+                if 'Throttling' == e.code:
+                    log.debug('Throttled by AWS API.')
+                elif 'PriorRequestNotComplete' == e.code:
+                    log.debug('The request was rejected by AWS API.\
+                              Route 53 was still processing a prior request')
                 time.sleep(3)
                 error_retries -= 1
                 continue
@@ -483,13 +480,11 @@ def create_healthcheck(
         except DNSServerError as exc:
             log.debug(exc)
             if retry_on_errors and _is_retryable_error(exc):
-                if "Throttling" == exc.code:
-                    log.debug("Throttled by AWS API.")
-                elif "PriorRequestNotComplete" == exc.code:
-                    log.debug(
-                        "The request was rejected by AWS API.\
-                              Route 53 was still processing a prior request"
-                    )
+                if 'Throttling' == exc.code:
+                    log.debug('Throttled by AWS API.')
+                elif 'PriorRequestNotComplete' == exc.code:
+                    log.debug('The request was rejected by AWS API.\
+                              Route 53 was still processing a prior request')
                 time.sleep(3)
                 error_retries -= 1
                 continue
@@ -603,13 +598,11 @@ def get_record(
 
         except DNSServerError as e:
             if retry_on_errors and _is_retryable_error(e):
-                if "Throttling" == e.code:
-                    log.debug("Throttled by AWS API.")
-                elif "PriorRequestNotComplete" == e.code:
-                    log.debug(
-                        "The request was rejected by AWS API.\
-                              Route 53 was still processing a prior request"
-                    )
+                if 'Throttling' == e.code:
+                    log.debug('Throttled by AWS API.')
+                elif 'PriorRequestNotComplete' == e.code:
+                    log.debug('The request was rejected by AWS API.\
+                              Route 53 was still processing a prior request')
                 time.sleep(3)
                 error_retries -= 1
                 continue
@@ -703,13 +696,11 @@ def add_record(
 
         except DNSServerError as e:
             if retry_on_errors and _is_retryable_error(e):
-                if "Throttling" == e.code:
-                    log.debug("Throttled by AWS API.")
-                elif "PriorRequestNotComplete" == e.code:
-                    log.debug(
-                        "The request was rejected by AWS API.\
-                              Route 53 was still processing a prior request"
-                    )
+                if 'Throttling' == e.code:
+                    log.debug('Throttled by AWS API.')
+                elif 'PriorRequestNotComplete' == e.code:
+                    log.debug('The request was rejected by AWS API.\
+                              Route 53 was still processing a prior request')
                 time.sleep(3)
                 error_retries -= 1
                 continue
@@ -726,13 +717,11 @@ def add_record(
 
         except DNSServerError as e:
             if retry_on_errors and _is_retryable_error(e):
-                if "Throttling" == e.code:
-                    log.debug("Throttled by AWS API.")
-                elif "PriorRequestNotComplete" == e.code:
-                    log.debug(
-                        "The request was rejected by AWS API.\
-                              Route 53 was still processing a prior request"
-                    )
+                if 'Throttling' == e.code:
+                    log.debug('Throttled by AWS API.')
+                elif 'PriorRequestNotComplete' == e.code:
+                    log.debug('The request was rejected by AWS API.\
+                              Route 53 was still processing a prior request')
                 time.sleep(3)
                 error_retries -= 1
                 continue
@@ -814,13 +803,11 @@ def update_record(
 
         except DNSServerError as e:
             if retry_on_errors and _is_retryable_error(e):
-                if "Throttling" == e.code:
-                    log.debug("Throttled by AWS API.")
-                elif "PriorRequestNotComplete" == e.code:
-                    log.debug(
-                        "The request was rejected by AWS API.\
-                              Route 53 was still processing a prior request"
-                    )
+                if 'Throttling' == e.code:
+                    log.debug('Throttled by AWS API.')
+                elif 'PriorRequestNotComplete' == e.code:
+                    log.debug('The request was rejected by AWS API.\
+                              Route 53 was still processing a prior request')
                 time.sleep(3)
                 error_retries -= 1
                 continue
@@ -902,13 +889,11 @@ def delete_record(
 
         except DNSServerError as e:
             if retry_on_errors and _is_retryable_error(e):
-                if "Throttling" == e.code:
-                    log.debug("Throttled by AWS API.")
-                elif "PriorRequestNotComplete" == e.code:
-                    log.debug(
-                        "The request was rejected by AWS API.\
-                              Route 53 was still processing a prior request"
-                    )
+                if 'Throttling' == e.code:
+                    log.debug('Throttled by AWS API.')
+                elif 'PriorRequestNotComplete' == e.code:
+                    log.debug('The request was rejected by AWS API.\
+                              Route 53 was still processing a prior request')
                 time.sleep(3)
                 error_retries -= 1
                 continue

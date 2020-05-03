@@ -48,32 +48,27 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = inotify.validate(config)
 
-        self.assertEqual(
-            ret, (False, "Configuration for inotify beacon must be a list.")
-        )
+        self.assertEqual(ret, (False, 'Configuration for inotify beacon must'
+                                      ' be a list.'))
 
     def test_empty_config(self):
         config = [{}]
         ret = inotify.validate(config)
-        _expected = (False, "Configuration for inotify beacon must include files.")
+        _expected = (False, 'Configuration for inotify beacon must include files.')
         self.assertEqual(ret, _expected)
 
     def test_files_none_config(self):
-        config = [{"files": None}]
+        config = [{'files': None}]
         ret = inotify.validate(config)
-        _expected = (
-            False,
-            "Configuration for inotify beacon invalid, files must be a dict.",
-        )
+        _expected = (False, 'Configuration for inotify beacon invalid, '
+                            'files must be a dict.')
         self.assertEqual(ret, _expected)
 
     def test_files_list_config(self):
-        config = [{"files": [{u"/importantfile": {u"mask": [u"modify"]}}]}]
+        config = [{'files': [{u'/importantfile': {u'mask': [u'modify']}}]}]
         ret = inotify.validate(config)
-        _expected = (
-            False,
-            "Configuration for inotify beacon invalid, files must be a dict.",
-        )
+        _expected = (False, 'Configuration for inotify beacon invalid, '
+                            'files must be a dict.')
         self.assertEqual(ret, _expected)
 
     def test_file_open(self):

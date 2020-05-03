@@ -21,16 +21,8 @@ __monitor__ = [
 log = logging.getLogger(__name__)
 
 
-def query(
-    name,
-    match=None,
-    match_type="string",
-    status=None,
-    status_type="string",
-    wait_for=None,
-    **kwargs
-):
-    """
+def query(name, match=None, match_type='string', status=None, status_type='string', wait_for=None, **kwargs):
+    '''
     Perform an HTTP query and statefully return the result
 
     Passes through all the parameters described in the
@@ -67,6 +59,19 @@ def query(
         statuses is given, the type ``list`` can be used.
 
         .. versionadded:: 3000
+
+        .. note::
+
+            Despite the name of ``match_type`` for this argument, this setting
+            actually uses Python's ``re.search()`` function rather than Python's
+            ``re.match()`` function.
+
+    status_type
+        Specifies the type of pattern matching to use for status. Default is ``string``, but
+        can also be set to ``pcre`` to use regular expression matching if a more
+        complex pattern matching is required.
+
+        .. versionadded:: Neon
 
         .. note::
 
@@ -129,64 +134,50 @@ def query(
         data = __salt__["http.query"](name, **kwargs)
 
     if match is not None:
-        if match_type == "string":
-            if str(match) in data.get("text", ""):
-                ret["result"] = True
-                ret["comment"] += ' Match text "{0}" was found.'.format(match)
+        if match_type == 'string':
+            if str(match) in data.get('text', ''):
+                ret['result'] = True
+                ret['comment'] += ' Match text "{0}" was found.'.format(match)
             else:
-                ret["result"] = False
-                ret["comment"] += ' Match text "{0}" was not found.'.format(match)
-        elif match_type == "pcre":
-            if re.search(str(match), str(data.get("text", ""))):
-                ret["result"] = True
-                ret["comment"] += ' Match pattern "{0}" was found.'.format(match)
+                ret['result'] = False
+                ret['comment'] += ' Match text "{0}" was not found.'.format(match)
+        elif match_type == 'pcre':
+            if re.search(str(match), str(data.get('text', ''))):
+                ret['result'] = True
+                ret['comment'] += ' Match pattern "{0}" was found.'.format(match)
             else:
                 ret["result"] = False
                 ret["comment"] += ' Match pattern "{0}" was not found.'.format(match)
 
     if status is not None:
-        # Deals with case of status_type as a list of strings representing statuses
-        if status_type == "list":
-            for stat in status:
-                if str(data.get("status", "")) == str(stat):
-                    ret["comment"] += " Status {0} was found.".format(stat)
-                    if ret["result"] is None:
-                        ret["result"] = True
-            if ret["result"] is not True:
-                ret["comment"] += " Statuses {0} were not found.".format(status)
-                ret["result"] = False
-
-        # Deals with the case of status_type representing a regex
-        elif status_type == "pcre":
-            if re.search(str(status), str(data.get("status", ""))):
-                ret["comment"] += ' Status pattern "{0}" was found.'.format(status)
-                if ret["result"] is None:
-                    ret["result"] = True
+        if status_type == 'string':
+            if str(data.get('status', '')) == str(status):
+                ret['comment'] += ' Status {0} was found.'.format(status)
+                if ret['result'] is None:
+                    ret['result'] = True
             else:
-                ret["comment"] += ' Status pattern "{0}" was not found.'.format(status)
-                ret["result"] = False
-
-        # Deals with the case of status_type as a single string representing a status
-        elif status_type == "string":
-            if str(data.get("status", "")) == str(status):
-                ret["comment"] += " Status {0} was found.".format(status)
-                if ret["result"] is None:
-                    ret["result"] = True
+                ret['comment'] += ' Status {0} was not found.'.format(status)
+                ret['result'] = False
+        elif status_type == 'pcre':
+            if re.search(str(status), str(data.get('status', ''))):
+                ret['comment'] += ' Status pattern "{0}" was found.'.format(status)
+                if ret['result'] is None:
+                    ret['result'] = True
             else:
-                ret["comment"] += " Status {0} was not found.".format(status)
-                ret["result"] = False
+                ret['comment'] += ' Status pattern "{0}" was not found.'.format(status)
+                ret['result'] = False
 
     # cleanup spaces in comment
-    ret["comment"] = ret["comment"].strip()
+    ret['comment'] = ret['comment'].strip()
 
-    if __opts__["test"] is True:
-        ret["result"] = None
-        ret["comment"] += " (TEST MODE"
-        if "test_url" in kwargs:
-            ret["comment"] += ", TEST URL WAS: {0}".format(kwargs["test_url"])
-        ret["comment"] += ")"
+    if __opts__['test'] is True:
+        ret['result'] = None
+        ret['comment'] += ' (TEST MODE'
+        if 'test_url' in kwargs:
+            ret['comment'] += ', TEST URL WAS: {0}'.format(kwargs['test_url'])
+        ret['comment'] += ')'
 
-    ret["data"] = data
+    ret['data'] = data
     return ret
 
 

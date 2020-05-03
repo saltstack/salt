@@ -46,16 +46,9 @@ try:
     import jnpr.junos.utils
     import jnpr.junos.utils.config
     import jnpr.junos.utils.sw
-    from jnpr.junos.exception import (
-        RpcTimeoutError,
-        ConnectClosedError,
-        RpcError,
-        ConnectError,
-        ProbeError,
-        ConnectAuthError,
-        ConnectRefusedError,
-        ConnectTimeoutError,
-    )
+    from jnpr.junos.exception import RpcTimeoutError, ConnectClosedError,\
+        RpcError, ConnectError, ProbeError, ConnectAuthError,\
+        ConnectRefusedError, ConnectTimeoutError
     from ncclient.operations.errors import TimeoutExpiredError
 except ImportError:
     HAS_JUNOS = False
@@ -116,39 +109,34 @@ def init(opts):
         if arg in proxy_keys:
             args[arg] = opts["proxy"][arg]
 
-    thisproxy["conn"] = jnpr.junos.Device(**args)
+    thisproxy['conn'] = jnpr.junos.Device(**args)
     try:
-        thisproxy["conn"].open()
-    except (
-        ProbeError,
-        ConnectAuthError,
-        ConnectRefusedError,
-        ConnectTimeoutError,
-        ConnectError,
-    ) as ex:
+        thisproxy['conn'].open()
+    except (ProbeError, ConnectAuthError, ConnectRefusedError, ConnectTimeoutError,
+            ConnectError) as ex:
         log.error("{} : not able to initiate connection to the device".format(str(ex)))
-        thisproxy["initialized"] = False
+        thisproxy['initialized'] = False
         return
 
-    if "timeout" in proxy_keys:
-        timeout = int(opts["proxy"]["timeout"])
+    if 'timeout' in proxy_keys:
+        timeout = int(opts['proxy']['timeout'])
         try:
-            thisproxy["conn"].timeout = timeout
-        except Exception as ex:  # pylint: disable=broad-except
-            log.error("Not able to set timeout due to: %s", str(ex))
+            thisproxy['conn'].timeout = timeout
+        except Exception as ex:
+            log.error('Not able to set timeout due to: %s', str(ex))
         else:
-            log.debug("RPC timeout set to %d seconds", timeout)
+            log.debug('RPC timeout set to %d seconds', timeout)
 
     try:
-        thisproxy["conn"].bind(cu=jnpr.junos.utils.config.Config)
-    except Exception as ex:  # pylint: disable=broad-except
-        log.error("Bind failed with Config class due to: {}".format(str(ex)))
+        thisproxy['conn'].bind(cu=jnpr.junos.utils.config.Config)
+    except Exception as ex:
+        log.error('Bind failed with Config class due to: {}'.format(str(ex)))
 
     try:
-        thisproxy["conn"].bind(sw=jnpr.junos.utils.sw.SW)
-    except Exception as ex:  # pylint: disable=broad-except
-        log.error("Bind failed with SW class due to: {}".format(str(ex)))
-    thisproxy["initialized"] = True
+        thisproxy['conn'].bind(sw=jnpr.junos.utils.sw.SW)
+    except Exception as ex:
+        log.error('Bind failed with SW class due to: {}'.format(str(ex)))
+    thisproxy['initialized'] = True
 
 
 def initialized():
@@ -168,19 +156,18 @@ def alive(opts):
 
     dev = conn()
 
-    thisproxy["conn"].connected = ping()
+    thisproxy['conn'].connected = ping()
 
     if not dev.connected:
-        __salt__["event.fire_master"](
-            {}, "junos/proxy/{}/stop".format(opts["proxy"]["host"])
-        )
+        __salt__['event.fire_master']({}, 'junos/proxy/{}/stop'.format(
+            opts['proxy']['host']))
     return dev.connected
 
 
 def ping():
-    """
+    '''
     Ping?  Pong!
-    """
+    '''
 
     dev = conn()
     # Check that the underlying netconf connection still exists.
@@ -193,10 +180,11 @@ def ping():
         if dev._conn._session._transport.is_active():
             # there is no on going rpc call. buffer tell can be 1 as it stores
             # remaining char after "]]>]]>" which can be a new line char
-            if dev._conn._session._buffer.tell() <= 1 and dev._conn._session._q.empty():
+            if dev._conn._session._buffer.tell() <= 1 and \
+                    dev._conn._session._q.empty():
                 return _rpc_file_list(dev)
             else:
-                log.debug("skipped ping() call as proxy already getting data")
+                log.debug('skipped ping() call as proxy already getting data')
                 return True
         else:
             # ssh connection is lost
@@ -208,7 +196,7 @@ def ping():
 
 def _rpc_file_list(dev):
     try:
-        dev.rpc.file_list(path="/dev/null", dev_timeout=5)
+        dev.rpc.file_list(path='/dev/null', dev_timeout=5)
         return True
     except (RpcTimeoutError, ConnectClosedError):
         try:
@@ -217,7 +205,7 @@ def _rpc_file_list(dev):
         except (RpcError, ConnectError, TimeoutExpiredError):
             return False
     except AttributeError as ex:
-        if "'NoneType' object has no attribute 'timeout'" in str(ex):
+        if "'NoneType' object has no attribute 'timeout'" in ex:
             return False
 
 

@@ -36,7 +36,7 @@ def __parse_drac(output):
     section = ""
 
     for i in output.splitlines():
-        if i.rstrip() and "=" in i:
+        if i.rstrip() and '=' in i:
             if section in drac:
                 drac[section].update(dict([[prop.strip() for prop in i.split("=")]]))
         else:
@@ -53,8 +53,8 @@ def __execute_cmd(command):
     """
     cmd = __salt__["cmd.run_all"]("racadm {0}".format(command))
 
-    if cmd["retcode"] != 0:
-        log.warning("racadm return an exit code '%s'.", cmd["retcode"])
+    if cmd['retcode'] != 0:
+        log.warning('racadm return an exit code \'%s\'.', cmd['retcode'])
         return False
 
     return True
@@ -72,8 +72,8 @@ def system_info():
     """
     cmd = __salt__["cmd.run_all"]("racadm getsysinfo")
 
-    if cmd["retcode"] != 0:
-        log.warning("racadm return an exit code '%s'.", cmd["retcode"])
+    if cmd['retcode'] != 0:
+        log.warning('racadm return an exit code \'%s\'.', cmd['retcode'])
 
     return __parse_drac(cmd["stdout"])
 
@@ -91,8 +91,8 @@ def network_info():
 
     cmd = __salt__["cmd.run_all"]("racadm getniccfg")
 
-    if cmd["retcode"] != 0:
-        log.warning("racadm return an exit code '%s'.", cmd["retcode"])
+    if cmd['retcode'] != 0:
+        log.warning('racadm return an exit code \'%s\'.', cmd['retcode'])
 
     return __parse_drac(cmd["stdout"])
 
@@ -189,18 +189,14 @@ def list_users():
     _username = ""
 
     for idx in range(1, 17):
-        cmd = __salt__["cmd.run_all"](
-            "racadm getconfig -g \
-                cfgUserAdmin -i {0}".format(
-                idx
-            )
-        )
+        cmd = __salt__['cmd.run_all']('racadm getconfig -g \
+                cfgUserAdmin -i {0}'.format(idx))
 
-        if cmd["retcode"] != 0:
-            log.warning("racadm return an exit code '%s'.", cmd["retcode"])
+        if cmd['retcode'] != 0:
+            log.warning('racadm return an exit code \'%s\'.', cmd['retcode'])
 
-        for user in cmd["stdout"].splitlines():
-            if not user.startswith("cfg"):
+        for user in cmd['stdout'].splitlines():
+            if not user.startswith('cfg'):
                 continue
 
             (key, val) = user.split("=")
@@ -242,7 +238,7 @@ def delete_user(username, uid=None):
         )
 
     else:
-        log.warning("'%s' does not exist", username)
+        log.warning('\'%s\' does not exist', username)
         return False
 
     return True
@@ -271,7 +267,7 @@ def change_password(username, password, uid=None):
             )
         )
     else:
-        log.warning("'%s' does not exist", username)
+        log.warning('\'%s\' does not exist', username)
         return False
 
     return True
@@ -305,7 +301,7 @@ def create_user(username, password, permissions, users=None):
         users = list_users()
 
     if username in users:
-        log.warning("'%s' already exists", username)
+        log.warning('\'%s\' already exists', username)
         return False
 
     for idx in six.iterkeys(users):

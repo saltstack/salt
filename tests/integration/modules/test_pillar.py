@@ -2,10 +2,9 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
-import pytest
-from tests.support.case import ModuleCase
+# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
+from tests.support.case import ModuleCase
 
 
 @pytest.mark.windows_whitelisted
@@ -38,7 +37,7 @@ class PillarModuleTest(ModuleCase):
         """
         self.assertIn(
             RUNTIME_VARS.TMP_STATE_TREE,
-            self.run_function("pillar.data")["master"]["file_roots"]["base"],
+            self.run_function('pillar.data')['master']['file_roots']['base']
         )
 
     @skipIf(True, "SLOWTEST skip")
@@ -52,7 +51,7 @@ class PillarModuleTest(ModuleCase):
     def test_issue_5951_actual_file_roots_in_opts(self):
         self.assertIn(
             RUNTIME_VARS.TMP_STATE_TREE,
-            self.run_function("pillar.data")["ext_pillar_opts"]["file_roots"]["base"],
+            self.run_function('pillar.data')['ext_pillar_opts']['file_roots']['base']
         )
 
     @skipIf(True, "SLOWTEST skip")

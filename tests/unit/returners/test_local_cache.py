@@ -14,7 +14,19 @@ import shutil
 import tempfile
 import time
 
-import salt.returners.local_cache as local_cache
+# Import Salt Testing libs
+from tests.integration import AdaptedConfigurationTestCaseMixin
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
+    MagicMock,
+    NO_MOCK,
+    NO_MOCK_REASON,
+    patch
+)
+
+# Import Salt libs
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.job
@@ -31,22 +43,18 @@ from tests.support.unit import TestCase, skipIf
 log = logging.getLogger(__name__)
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
     """
     Tests for the local_cache.clean_old_jobs function.
-    """
-
+    '''
     @classmethod
     def setUpClass(cls):
-        cls.TMP_CACHE_DIR = tempfile.mkdtemp(
-            prefix="salt_test_job_cache", dir=RUNTIME_VARS.TMP
-        )
-        cls.TMP_JID_DIR = os.path.join(cls.TMP_CACHE_DIR, "jobs")
+        cls.TMP_CACHE_DIR = os.path.join(RUNTIME_VARS.TMP, 'salt_test_job_cache')
+        cls.TMP_JID_DIR = os.path.join(cls.TMP_CACHE_DIR, 'jobs')
 
     def setup_loader_modules(self):
-        return {
-            local_cache: {"__opts__": {"cachedir": self.TMP_CACHE_DIR, "keep_jobs": 1}}
-        }
+        return {local_cache: {'__opts__': {'cachedir': self.TMP_CACHE_DIR, 'keep_jobs': 1}}}
 
     def tearDown(self):
         """
@@ -54,9 +62,9 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
 
         Note that a setUp function is not used in this TestCase because the
         _make_tmp_jid_dirs replaces it.
-        """
+        '''
         if os.path.exists(self.TMP_CACHE_DIR):
-            shutil.rmtree(self.TMP_CACHE_DIR, ignore_errors=True)
+            shutil.rmtree(self.TMP_CACHE_DIR)
 
     def test_clean_old_jobs_no_jid_root(self):
         """
@@ -226,17 +234,11 @@ class Local_CacheTest(
 
     @classmethod
     def setUpClass(cls):
-        cls.TMP_CACHE_DIR = tempfile.mkdtemp(
-            prefix="salt_test_local_cache", dir=RUNTIME_VARS.TMP
-        )
-        cls.JOBS_DIR = os.path.join(cls.TMP_CACHE_DIR, "jobs")
-        cls.JID_DIR = os.path.join(
-            cls.JOBS_DIR,
-            "31",
-            "c56eed380a4e899ae12bc42563cfdfc53066fb4a6b53e2378a08ac49064539",
-        )
-        cls.JID_FILE = os.path.join(cls.JID_DIR, "jid")
-        cls.JID_MINION_DIR = os.path.join(cls.JID_DIR, "minion", "return.p")
+        cls.TMP_CACHE_DIR = os.path.join(RUNTIME_VARS.TMP, 'rootdir', 'cache')
+        cls.JOBS_DIR = os.path.join(cls.TMP_CACHE_DIR, 'jobs')
+        cls.JID_DIR = os.path.join(cls.JOBS_DIR, '31', 'c56eed380a4e899ae12bc42563cfdfc53066fb4a6b53e2378a08ac49064539')
+        cls.JID_FILE = os.path.join(cls.JID_DIR, 'jid')
+        cls.JID_MINION_DIR = os.path.join(cls.JID_DIR, 'minion', 'return.p')
         cls.JOB_CACHE_DIR_FILES = [cls.JID_FILE, cls.JID_MINION_DIR]
         cls.KEEP_JOBS = 0.0000000010
         cls.EMPTY_JID_DIR = []

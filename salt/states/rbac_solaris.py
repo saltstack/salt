@@ -34,12 +34,10 @@ __virtualname__ = "rbac"
 def __virtual__():
     """
     Provides rbac on Solaris like platforms
-    """
-    if (
-        "rbac.profile_list" in __salt__
-        and "user.list_users" in __salt__
-        and __grains__["kernel"] == "SunOS"
-    ):
+    '''
+    if 'rbac.profile_list' in __salt__ and \
+        'user.list_users' in __salt__ and \
+         __grains__.get('kernel') == 'SunOS':
         return True
     else:
         return (
@@ -103,21 +101,19 @@ def managed(name, roles=None, profiles=None, authorizations=None):
 
         # execute and verify changes
         if roles_add:
-            res_roles_add = __salt__["rbac.role_add"](name, ",".join(roles_add).strip())
-            roles_current = __salt__["rbac.role_get"](name)
+            res_roles_add = __salt__['rbac.role_add'](name, ','.join(roles_add).strip())
+            roles_current = __salt__['rbac.role_get'](name)
             for role in roles_add:
-                if "roles" not in ret["changes"]:
-                    ret["changes"]["roles"] = {}
-                ret["changes"]["roles"][role] = (
-                    "Added" if role in roles_current else "Failed"
-                )
-                if ret["changes"]["roles"][role] == "Failed":
-                    ret["result"] = False
+                if 'roles' not in ret['changes']:
+                    ret['changes']['roles'] = {}
+                ret['changes']['roles'][role] = 'Added' if role in roles_current else 'Failed'
+                if ret['changes']['roles'][role] == 'Failed':
+                    ret['result'] = False
 
         if roles_rm:
-            res_roles_rm = __salt__["rbac.role_rm"](name, ",".join(roles_rm).strip())
+            res_roles_rm = __salt__['rbac.role_rm'](name, ','.join(roles_rm).strip())
 
-            roles_current = __salt__["rbac.role_get"](name)
+            roles_current = __salt__['rbac.role_get'](name)
             for role in roles_rm:
                 if "roles" not in ret["changes"]:
                     ret["changes"]["roles"] = {}
@@ -136,23 +132,17 @@ def managed(name, roles=None, profiles=None, authorizations=None):
 
         # execute and verify changes
         if profiles_add:
-            res_profiles_add = __salt__["rbac.profile_add"](
-                name, ",".join(profiles_add).strip()
-            )
-            profiles_current = __salt__["rbac.profile_get"](name)
+            res_profiles_add = __salt__['rbac.profile_add'](name, ','.join(profiles_add).strip())
+            profiles_current = __salt__['rbac.profile_get'](name)
             for profile in profiles_add:
-                if "profiles" not in ret["changes"]:
-                    ret["changes"]["profiles"] = {}
-                ret["changes"]["profiles"][profile] = (
-                    "Added" if profile in profiles_current else "Failed"
-                )
-                if ret["changes"]["profiles"][profile] == "Failed":
-                    ret["result"] = False
+                if 'profiles' not in ret['changes']:
+                    ret['changes']['profiles'] = {}
+                ret['changes']['profiles'][profile] = 'Added' if profile in profiles_current else 'Failed'
+                if ret['changes']['profiles'][profile] == 'Failed':
+                    ret['result'] = False
 
         if profiles_rm:
-            res_profiles_rm = __salt__["rbac.profile_rm"](
-                name, ",".join(profiles_rm).strip()
-            )
+            res_profiles_rm = __salt__['rbac.profile_rm'](name, ','.join(profiles_rm).strip())
 
             profiles_current = __salt__["rbac.profile_get"](name)
             for profile in profiles_rm:
@@ -173,21 +163,19 @@ def managed(name, roles=None, profiles=None, authorizations=None):
 
         # execute and verify changes
         if auths_add:
-            res_auths_add = __salt__["rbac.auth_add"](name, ",".join(auths_add).strip())
-            auths_current = __salt__["rbac.auth_get"](name)
+            res_auths_add = __salt__['rbac.auth_add'](name, ','.join(auths_add).strip())
+            auths_current = __salt__['rbac.auth_get'](name)
             for auth in auths_add:
-                if "authorizations" not in ret["changes"]:
-                    ret["changes"]["authorizations"] = {}
-                ret["changes"]["authorizations"][auth] = (
-                    "Added" if auth in auths_current else "Failed"
-                )
-                if ret["changes"]["authorizations"][auth] == "Failed":
-                    ret["result"] = False
+                if 'authorizations' not in ret['changes']:
+                    ret['changes']['authorizations'] = {}
+                ret['changes']['authorizations'][auth] = 'Added' if auth in auths_current else 'Failed'
+                if ret['changes']['authorizations'][auth] == 'Failed':
+                    ret['result'] = False
 
         if auths_rm:
-            res_auths_rm = __salt__["rbac.auth_rm"](name, ",".join(auths_rm).strip())
+            res_auths_rm = __salt__['rbac.auth_rm'](name, ','.join(auths_rm).strip())
 
-            auths_current = __salt__["rbac.auth_get"](name)
+            auths_current = __salt__['rbac.auth_get'](name)
             for auth in auths_rm:
                 if "authorizations" not in ret["changes"]:
                     ret["changes"]["authorizations"] = {}

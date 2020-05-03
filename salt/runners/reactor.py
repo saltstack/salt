@@ -20,6 +20,8 @@ import logging
 
 # Import salt libs
 import salt.config
+import salt.utils.master
+import salt.utils.reactor
 import salt.syspaths
 import salt.utils.event
 import salt.utils.master
@@ -54,7 +56,9 @@ def list_(saltenv="base", test=None):
 
     master_key = salt.utils.master.get_master_key("root", __opts__)
 
-    __jid_event__.fire_event({"key": master_key}, "salt/reactors/manage/list")
+    master_key = salt.utils.master.get_master_key('root', __opts__)
+
+    __jid_event__.fire_event({'key': master_key}, 'salt/reactors/manage/list')
 
     results = sevent.get_event(wait=30, tag="salt/reactors/manage/list-results")
     reactors = results["reactors"]
@@ -82,7 +86,12 @@ def add(event, reactors, saltenv="base", test=None):
         listen=True,
     )
 
-    master_key = salt.utils.master.get_master_key("root", __opts__)
+    master_key = salt.utils.master.get_master_key('root', __opts__)
+
+    __jid_event__.fire_event({'event': event,
+                              'reactors': reactors,
+                              'key': master_key},
+                             'salt/reactors/manage/add')
 
     __jid_event__.fire_event(
         {"event": event, "reactors": reactors, "key": master_key},
@@ -117,12 +126,16 @@ def delete(event, saltenv="base", test=None):
         {"event": event, "key": master_key}, "salt/reactors/manage/delete"
     )
 
-    res = sevent.get_event(wait=30, tag="salt/reactors/manage/delete-complete")
-    return res["result"]
+    master_key = salt.utils.master.get_master_key('root', __opts__)
+
+    __jid_event__.fire_event({'event': event, 'key': master_key}, 'salt/reactors/manage/delete')
+
+    res = sevent.get_event(wait=30, tag='salt/reactors/manage/delete-complete')
+    return res['result']
 
 
 def is_leader():
-    """
+    '''
     Return whether the running reactor is acting as a leader (responding to events).
 
     CLI Example:
@@ -130,25 +143,24 @@ def is_leader():
     .. code-block:: bash
 
         salt-run reactor.is_leader
-    """
+    '''
     sevent = salt.utils.event.get_event(
-        "master",
-        __opts__["sock_dir"],
-        __opts__["transport"],
-        opts=__opts__,
-        listen=True,
-    )
+            'master',
+            __opts__['sock_dir'],
+            __opts__['transport'],
+            opts=__opts__,
+            listen=True)
 
-    master_key = salt.utils.master.get_master_key("root", __opts__)
+    master_key = salt.utils.master.get_master_key('root', __opts__)
 
-    __jid_event__.fire_event({"key": master_key}, "salt/reactors/manage/is_leader")
+    __jid_event__.fire_event({'key': master_key}, 'salt/reactors/manage/is_leader')
 
-    res = sevent.get_event(wait=30, tag="salt/reactors/manage/leader/value")
-    return res["result"]
+    res = sevent.get_event(wait=30, tag='salt/reactors/manage/leader/value')
+    return res['result']
 
 
 def set_leader(value=True):
-    """
+    '''
     Set the current reactor to act as a leader (responding to events). Defaults to True
 
     CLI Example:
@@ -156,21 +168,17 @@ def set_leader(value=True):
     .. code-block:: bash
 
         salt-run reactor.set_leader True
-    """
+    '''
     sevent = salt.utils.event.get_event(
-        "master",
-        __opts__["sock_dir"],
-        __opts__["transport"],
-        opts=__opts__,
-        listen=True,
-    )
+            'master',
+            __opts__['sock_dir'],
+            __opts__['transport'],
+            opts=__opts__,
+            listen=True)
 
-    master_key = salt.utils.master.get_master_key("root", __opts__)
+    master_key = salt.utils.master.get_master_key('root', __opts__)
 
-    __jid_event__.fire_event(
-        {"id": __opts__["id"], "value": value, "key": master_key},
-        "salt/reactors/manage/set_leader",
-    )
+    __jid_event__.fire_event({'id': __opts__['id'], 'value': value, 'key': master_key}, 'salt/reactors/manage/set_leader')
 
-    res = sevent.get_event(wait=30, tag="salt/reactors/manage/leader/value")
-    return res["result"]
+    res = sevent.get_event(wait=30, tag='salt/reactors/manage/leader/value')
+    return res['result']

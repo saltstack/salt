@@ -12,7 +12,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import functools
-import logging
 import os
 
 # Import salt libs
@@ -45,7 +44,7 @@ def __virtual__():
     Set the user module if the kernel is Linux, OpenBSD, NetBSD or AIX
     """
 
-    if HAS_PWD and __grains__["kernel"] in ("Linux", "OpenBSD", "NetBSD", "AIX"):
+    if HAS_PWD and __grains__.get('kernel') in ('Linux', 'OpenBSD', 'NetBSD', 'AIX'):
         return __virtualname__
     return (
         False,
@@ -64,16 +63,15 @@ def _quote_username(name):
 
 
 def _get_gecos(name, root=None):
-    """
+    '''
     Retrieve GECOS field info and return it in dictionary form
-    """
-    if root is not None and __grains__["kernel"] != "AIX":
+    '''
+    if root is not None and __grains__['kernel'] != 'AIX':
         getpwnam = functools.partial(_getpwnam, root=root)
     else:
         getpwnam = functools.partial(pwd.getpwnam)
     gecos_field = salt.utils.stringutils.to_unicode(
-        getpwnam(_quote_username(name)).pw_gecos
-    ).split(",", 4)
+        getpwnam(_quote_username(name)).pw_gecos).split(',', 4)
 
     if not gecos_field:
         return {}
@@ -122,36 +120,34 @@ def _update_gecos(name, key, value, root=None):
     gecos_data = copy.deepcopy(pre_info)
     gecos_data[key] = value
 
-    cmd = ["usermod"]
-    if root is not None and __grains__["kernel"] != "AIX":
-        cmd.extend(("-R", root))
-    cmd.extend(("-c", _build_gecos(gecos_data), name))
+    cmd = ['usermod']
+    if root is not None and __grains__['kernel'] != 'AIX':
+        cmd.extend(('-R', root))
+    cmd.extend(('-c', _build_gecos(gecos_data), name))
 
-    __salt__["cmd.run"](cmd, python_shell=False)
+    __salt__['cmd.run'](cmd, python_shell=False)
     return _get_gecos(name, root=root).get(key) == value
 
 
-def add(
-    name,
-    uid=None,
-    gid=None,
-    groups=None,
-    home=None,
-    shell=None,
-    unique=True,
-    system=False,
-    fullname="",
-    roomnumber="",
-    workphone="",
-    homephone="",
-    other="",
-    createhome=True,
-    loginclass=None,
-    nologinit=False,
-    root=None,
-    usergroup=None,
-):
-    """
+def add(name,
+        uid=None,
+        gid=None,
+        groups=None,
+        home=None,
+        shell=None,
+        unique=True,
+        system=False,
+        fullname='',
+        roomnumber='',
+        workphone='',
+        homephone='',
+        other='',
+        createhome=True,
+        loginclass=None,
+        nologinit=False,
+        root=None,
+        usergroup=None):
+    '''
     Add a user to the minion
 
     name
@@ -216,14 +212,14 @@ def add(
     """
     cmd = ["useradd"]
     if shell:
-        cmd.extend(["-s", shell])
-    if uid not in (None, ""):
-        cmd.extend(["-u", uid])
-    if gid not in (None, ""):
-        cmd.extend(["-g", gid])
+        cmd.extend(['-s', shell])
+    if uid not in (None, ''):
+        cmd.extend(['-u', uid])
+    if gid not in (None, ''):
+        cmd.extend(['-g', gid])
     elif usergroup:
-        cmd.append("-U")
-        if __grains__["kernel"] != "Linux":
+        cmd.append('-U')
+        if __grains__['kernel'] != 'Linux':
             log.warning("'usergroup' is only supported on GNU/Linux hosts.")
     elif groups is not None and name in groups:
         defs_file = "/etc/login.defs"
@@ -241,9 +237,8 @@ def add(
                         # We found what we wanted, let's break out of the loop
                         break
             except OSError:
-                log.debug(
-                    "Error reading %s", defs_file, exc_info_on_loglevel=logging.DEBUG
-                )
+                log.debug('Error reading %s', defs_file,
+                          exc_info_on_loglevel=logging.DEBUG)
         else:
             usermgmt_file = "/etc/usermgmt.conf"
             try:
@@ -260,6 +255,11 @@ def add(
             except OSError:
                 # /etc/usermgmt.conf not present: defaults will be used
                 pass
+    # Setting usergroup to False adds the -N command argument. If
+    # usergroup is None, no arguments are added to allow useradd to go
+    # with the defaults defined for the OS.
+    if usergroup is False:
+        cmd.append('-N')
 
     # Setting usergroup to False adds the -N command argument. If
     # usergroup is None, no arguments are added to allow useradd to go
@@ -385,7 +385,7 @@ def delete(name, remove=False, force=False, root=None):
 
 
 def getent(refresh=False, root=None):
-    """
+    '''
     Return the list of all info for all users
 
     refresh
@@ -404,7 +404,7 @@ def getent(refresh=False, root=None):
         return __context__["user.getent"]
 
     ret = []
-    if root is not None and __grains__["kernel"] != "AIX":
+    if root is not None and __grains__['kernel'] != 'AIX':
         getpwall = functools.partial(_getpwall, root=root)
     else:
         getpwall = functools.partial(pwd.getpwall)
@@ -416,32 +416,32 @@ def getent(refresh=False, root=None):
 
 
 def _chattrib(name, key, value, param, persist=False, root=None):
-    """
+    '''
     Change an attribute for a named user
-    """
+    '''
     pre_info = info(name, root=root)
     if not pre_info:
-        raise CommandExecutionError("User '{0}' does not exist".format(name))
+        raise CommandExecutionError('User \'{0}\' does not exist'.format(name))
 
     if value == pre_info[key]:
         return True
 
-    cmd = ["usermod"]
+    cmd = ['usermod']
 
-    if root is not None and __grains__["kernel"] != "AIX":
-        cmd.extend(("-R", root))
+    if root is not None and __grains__['kernel'] != 'AIX':
+        cmd.extend(('-R', root))
 
-    if persist and __grains__["kernel"] != "OpenBSD":
-        cmd.append("-m")
+    if persist and __grains__['kernel'] != 'OpenBSD':
+        cmd.append('-m')
 
     cmd.extend((param, value, name))
 
-    __salt__["cmd.run"](cmd, python_shell=False)
+    __salt__['cmd.run'](cmd, python_shell=False)
     return info(name, root=root).get(key) == value
 
 
 def chuid(name, uid, root=None):
-    """
+    '''
     Change the uid for a named user
 
     name
@@ -458,8 +458,8 @@ def chuid(name, uid, root=None):
     .. code-block:: bash
 
         salt '*' user.chuid foo 4376
-    """
-    return _chattrib(name, "uid", uid, "-u", root=root)
+    '''
+    return _chattrib(name, 'uid', uid, '-u', root=root)
 
 
 def chgid(name, gid, root=None):
@@ -480,8 +480,8 @@ def chgid(name, gid, root=None):
     .. code-block:: bash
 
         salt '*' user.chgid foo 4376
-    """
-    return _chattrib(name, "gid", gid, "-g", root=root)
+    '''
+    return _chattrib(name, 'gid', gid, '-g', root=root)
 
 
 def chshell(name, shell, root=None):
@@ -502,8 +502,8 @@ def chshell(name, shell, root=None):
     .. code-block:: bash
 
         salt '*' user.chshell foo /bin/zsh
-    """
-    return _chattrib(name, "shell", shell, "-s", root=root)
+    '''
+    return _chattrib(name, 'shell', shell, '-s', root=root)
 
 
 def chhome(name, home, persist=False, root=None):
@@ -517,7 +517,7 @@ def chhome(name, home, persist=False, root=None):
     home
         New home directory for the user account
 
-    persist
+    presist
         Move contents of the home directory to the new location
 
     root
@@ -528,8 +528,8 @@ def chhome(name, home, persist=False, root=None):
     .. code-block:: bash
 
         salt '*' user.chhome foo /home/users/foo True
-    """
-    return _chattrib(name, "home", home, "-d", persist=persist, root=root)
+    '''
+    return _chattrib(name, 'home', home, '-d', persist=persist, root=root)
 
 
 def chgroups(name, groups, append=False, root=None):
@@ -596,7 +596,7 @@ def chgroups(name, groups, append=False, root=None):
 
 
 def chfullname(name, fullname, root=None):
-    """
+    '''
     Change the user's Full Name
 
     name
@@ -613,12 +613,12 @@ def chfullname(name, fullname, root=None):
     .. code-block:: bash
 
         salt '*' user.chfullname foo "Foo Bar"
-    """
-    return _update_gecos(name, "fullname", fullname, root=root)
+    '''
+    return _update_gecos(name, 'fullname', fullname, root=root)
 
 
 def chroomnumber(name, roomnumber, root=None):
-    """
+    '''
     Change the user's Room Number
 
     CLI Example:
@@ -626,12 +626,12 @@ def chroomnumber(name, roomnumber, root=None):
     .. code-block:: bash
 
         salt '*' user.chroomnumber foo 123
-    """
-    return _update_gecos(name, "roomnumber", roomnumber, root=root)
+    '''
+    return _update_gecos(name, 'roomnumber', roomnumber, root=root)
 
 
 def chworkphone(name, workphone, root=None):
-    """
+    '''
     Change the user's Work Phone
 
     name
@@ -648,12 +648,12 @@ def chworkphone(name, workphone, root=None):
     .. code-block:: bash
 
         salt '*' user.chworkphone foo 7735550123
-    """
-    return _update_gecos(name, "workphone", workphone, root=root)
+    '''
+    return _update_gecos(name, 'workphone', workphone, root=root)
 
 
 def chhomephone(name, homephone, root=None):
-    """
+    '''
     Change the user's Home Phone
 
     name
@@ -670,12 +670,12 @@ def chhomephone(name, homephone, root=None):
     .. code-block:: bash
 
         salt '*' user.chhomephone foo 7735551234
-    """
-    return _update_gecos(name, "homephone", homephone, root=root)
+    '''
+    return _update_gecos(name, 'homephone', homephone, root=root)
 
 
 def chother(name, other, root=None):
-    """
+    '''
     Change the user's other GECOS attribute
 
     name
@@ -692,8 +692,8 @@ def chother(name, other, root=None):
     .. code-block:: bash
 
         salt '*' user.chother foobar
-    """
-    return _update_gecos(name, "other", other, root=root)
+    '''
+    return _update_gecos(name, 'other', other, root=root)
 
 
 def chloginclass(name, loginclass, root=None):
@@ -726,15 +726,15 @@ def chloginclass(name, loginclass, root=None):
 
     cmd = ["usermod", "-L", loginclass, name]
 
-    if root is not None and __grains__["kernel"] != "AIX":
-        cmd.extend(("-R", root))
+    if root is not None and __grains__['kernel'] != 'AIX':
+        cmd.extend(('-R', root))
 
     __salt__["cmd.run"](cmd, python_shell=False)
     return get_loginclass(name) == loginclass
 
 
 def info(name, root=None):
-    """
+    '''
     Return user information
 
     name
@@ -748,7 +748,7 @@ def info(name, root=None):
     .. code-block:: bash
 
         salt '*' user.info root
-    """
+    '''
     # If root is provided, we use a less portable solution that
     # depends on analyzing /etc/passwd manually. Of course we cannot
     # find users from NIS nor LDAP, but in those cases do not makes
@@ -756,7 +756,7 @@ def info(name, root=None):
     #
     # Please, note that if the non-root /etc/passwd file is long the
     # iteration can be slow.
-    if root is not None and __grains__["kernel"] != "AIX":
+    if root is not None and __grains__['kernel'] != 'AIX':
         getpwnam = functools.partial(_getpwnam, root=root)
     else:
         getpwnam = functools.partial(pwd.getpwnam)
@@ -862,7 +862,7 @@ def list_groups(name):
 
 
 def list_users(root=None):
-    """
+    '''
     Return a list of all users
 
     root
@@ -873,8 +873,8 @@ def list_users(root=None):
     .. code-block:: bash
 
         salt '*' user.list_users
-    """
-    if root is not None and __grains__["kernel"] != "AIX":
+    '''
+    if root is not None and __grains__['kernel'] != 'AIX':
         getpwall = functools.partial(_getpwall, root=root)
     else:
         getpwall = functools.partial(pwd.getpwall)
@@ -900,23 +900,23 @@ def rename(name, new_name, root=None):
     .. code-block:: bash
 
         salt '*' user.rename name new_name
-    """
+    '''
     if info(new_name, root=root):
-        raise CommandExecutionError("User '{0}' already exists".format(new_name))
+        raise CommandExecutionError('User \'{0}\' already exists'.format(new_name))
 
-    return _chattrib(name, "name", new_name, "-l", root=root)
+    return _chattrib(name, 'name', new_name, '-l', root=root)
 
 
 def _getpwnam(name, root=None):
-    """
+    '''
     Alternative implementation for getpwnam, that use only /etc/passwd
-    """
-    root = "/" if not root else root
-    passwd = os.path.join(root, "etc/passwd")
+    '''
+    root = '/' if not root else root
+    passwd = os.path.join(root, 'etc/passwd')
     with salt.utils.files.fopen(passwd) as fp_:
         for line in fp_:
             line = salt.utils.stringutils.to_unicode(line)
-            comps = line.strip().split(":")
+            comps = line.strip().split(':')
             if comps[0] == name:
                 # Generate a getpwnam compatible output
                 comps[2], comps[3] = int(comps[2]), int(comps[3])
@@ -925,15 +925,123 @@ def _getpwnam(name, root=None):
 
 
 def _getpwall(root=None):
-    """
+    '''
     Alternative implemetantion for getpwall, that use only /etc/passwd
-    """
-    root = "/" if not root else root
-    passwd = os.path.join(root, "etc/passwd")
+    '''
+    root = '/' if not root else root
+    passwd = os.path.join(root, 'etc/passwd')
     with salt.utils.files.fopen(passwd) as fp_:
         for line in fp_:
             line = salt.utils.stringutils.to_unicode(line)
-            comps = line.strip().split(":")
+            comps = line.strip().split(':')
             # Generate a getpwall compatible output
             comps[2], comps[3] = int(comps[2]), int(comps[3])
             yield pwd.struct_passwd(comps)
+
+
+def add_subuids(name, first=100000, last=110000):
+    '''
+    Add a range of subordinate uids to the user
+
+    name
+        User to modify
+
+    first
+        Begin of the range
+
+    last
+        End of the range
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' user.add_subuids foo
+        salt '*' user.add_subuids foo first=105000
+        salt '*' user.add_subuids foo first=600000000 last=600100000
+    '''
+    if __grains__['kernel'] != 'Linux':
+        log.warning("'subuids' are only supported on GNU/Linux hosts.")
+
+    return __salt__['cmd.run'](['usermod', '-v', '-'.join(str(x) for x in (first, last)), name])
+
+
+def del_subuids(name, first=100000, last=110000):
+    '''
+    Remove a range of subordinate uids to the user
+
+    name
+        User to modify
+
+    first
+        Begin of the range
+
+    last
+        End of the range
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' user.del_subuids foo
+        salt '*' user.del_subuids foo first=105000
+        salt '*' user.del_subuids foo first=600000000 last=600100000
+    '''
+    if __grains__['kernel'] != 'Linux':
+        log.warning("'subuids' are only supported on GNU/Linux hosts.")
+
+    return __salt__['cmd.run'](['usermod', '-V', '-'.join(str(x) for x in (first, last)), name])
+
+
+def add_subgids(name, first=100000, last=110000):
+    '''
+    Add a range of subordinate gids to the user
+
+    name
+        User to modify
+
+    first
+        Begin of the range
+
+    last
+        End of the range
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' user.add_subgids foo
+        salt '*' user.add_subgids foo first=105000
+        salt '*' user.add_subgids foo first=600000000 last=600100000
+    '''
+    if __grains__['kernel'] != 'Linux':
+        log.warning("'subgids' are only supported on GNU/Linux hosts.")
+
+    return __salt__['cmd.run'](['usermod', '-w', '-'.join(str(x) for x in (first, last)), name])
+
+
+def del_subgids(name, first=100000, last=110000):
+    '''
+    Remove a range of subordinate gids to the user
+
+    name
+        User to modify
+
+    first
+        Begin of the range
+
+    last
+        End of the range
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' user.del_subgids foo
+        salt '*' user.del_subgids foo first=105000
+        salt '*' user.del_subgids foo first=600000000 last=600100000
+    '''
+    if __grains__['kernel'] != 'Linux':
+        log.warning("'subgids' are only supported on GNU/Linux hosts.")
+
+    return __salt__['cmd.run'](['usermod', '-W', '-'.join(str(x) for x in (first, last)), name])

@@ -184,9 +184,9 @@ def default_keychain(name, domain="user", user=None):
         if name in out:
             ret["comment"] += "{0} was already the default keychain.".format(name)
         else:
-            out = __salt__["keychain.set_default_keychain"](name, domain, user)
-            if len(out) == 0:
-                ret["changes"]["default"] = name
+            out = __salt__['keychain.set_default_keychain'](name, domain, user)
+            if not out:
+                ret['changes']['default'] = name
             else:
                 ret["result"] = False
                 ret["comment"] = "Failed to install keychain. {0}".format(out)

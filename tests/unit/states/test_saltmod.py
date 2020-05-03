@@ -7,7 +7,17 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import tempfile
-import time
+
+# Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
+    NO_MOCK,
+    NO_MOCK_REASON,
+    MagicMock,
+    patch
+)
 
 # Import Salt Libs
 import salt.config
@@ -34,12 +44,12 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
         )
         return {
             saltmod: {
-                "__env__": "base",
-                "__opts__": {
-                    "__role": "master",
-                    "file_client": "remote",
-                    "sock_dir": tempfile.mkdtemp(dir=RUNTIME_VARS.TMP),
-                    "transport": "tcp",
+                '__env__': 'base',
+                '__opts__': {
+                    '__role': 'master',
+                    'file_client': 'remote',
+                    'sock_dir': tempfile.mkdtemp(dir=RUNTIME_VARS.TMP),
+                    'transport': 'tcp'
                 },
                 "__salt__": {"saltutil.cmd": MagicMock()},
                 "__orchestration_jid__": salt.utils.jid.gen_jid({}),

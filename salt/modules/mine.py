@@ -296,6 +296,8 @@ def get(tgt, fun, tgt_type="glob", exclude_minion=False):
     .. code-block:: bash
 
         salt '*' mine.get '*' network.interfaces
+        salt '*' mine.get '*' network.interfaces,network.ipaddrs
+        salt '*' mine.get '*' '["network.interfaces", "network.ipaddrs"]'
         salt '*' mine.get 'os:Fedora' network.interfaces grain
         salt '*' mine.get 'G@os:Fedora and S@192.168.5.0/24' network.ipaddrs compound
 
@@ -318,46 +320,36 @@ def get(tgt, fun, tgt_type="glob", exclude_minion=False):
     # Load from local minion's cache
     if __opts__["file_client"] == "local":
         ret = {}
-        is_target = {
-            "glob": __salt__["match.glob"],
-            "pcre": __salt__["match.pcre"],
-            "list": __salt__["match.list"],
-            "grain": __salt__["match.grain"],
-            "grain_pcre": __salt__["match.grain_pcre"],
-            "ipcidr": __salt__["match.ipcidr"],
-            "compound": __salt__["match.compound"],
-            "pillar": __salt__["match.pillar"],
-            "pillar_pcre": __salt__["match.pillar_pcre"],
-        }[tgt_type](tgt)
-        if not is_target:
-            return ret
+        is_target = {'glob': __salt__['match.glob'],
+                     'pcre': __salt__['match.pcre'],
+                     'list': __salt__['match.list'],
+                     'grain': __salt__['match.grain'],
+                     'grain_pcre': __salt__['match.grain_pcre'],
+                     'ipcidr': __salt__['match.ipcidr'],
+                     'compound': __salt__['match.compound'],
+                     'pillar': __salt__['match.pillar'],
+                     'pillar_pcre': __salt__['match.pillar_pcre'],
+                     }[tgt_type](tgt)
+        if is_target:
+            data = __salt__['data.get']('mine_cache')
 
-        data = __salt__["data.get"]("mine_cache")
-        if not isinstance(data, dict):
-            return ret
+            if isinstance(data, dict):
+                if isinstance(fun, six.string_types):
+                    functions = list(set(fun.split(',')))
+                    _ret_dict = len(functions) > 1
+                elif isinstance(fun, list):
+                    functions = fun
+                    _ret_dict = True
+                else:
+                    return {}
 
-        if isinstance(fun, six.string_types):
-            functions = list(set(fun.split(",")))
-            _ret_dict = len(functions) > 1
-        elif isinstance(fun, list):
-            functions = fun
-            _ret_dict = True
-        else:
-            return ret
+                if not _ret_dict and functions and functions[0] in data:
+                    ret[__opts__['id']] = data.get(functions)
+                elif _ret_dict:
+                    for fun in functions:
+                        if fun in data:
+                            ret.setdefault(fun, {})[__opts__['id']] = data.get(fun)
 
-        for function in functions:
-            if function not in data:
-                continue
-            # If this is a mine item with minion_side_ACL, get its data
-            if salt.utils.mine.MINE_ITEM_ACL_ID in data[function]:
-                res = data[function][salt.utils.mine.MINE_ITEM_ACL_DATA]
-            else:
-                # Backwards compatibility with non-ACL mine data.
-                res = data[function]
-            if _ret_dict:
-                ret.setdefault(function, {})[__opts__["id"]] = res
-            else:
-                ret[__opts__["id"]] = res
         return ret
 
     # Load from master

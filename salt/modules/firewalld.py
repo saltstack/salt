@@ -15,6 +15,7 @@ import salt.utils.path
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -552,7 +553,7 @@ def get_masquerade(zone=None, permanent=True):
     """
     zone_info = list_all(zone, permanent)
 
-    if "no" in [zone_info[i]["masquerade"][0] for i in zone_info]:
+    if 'no' in [zone_info[i]['masquerade'][0] for i in zone_info]:
         return False
 
     return True
@@ -618,8 +619,8 @@ def remove_masquerade(zone=None, permanent=True):
     return __firewall_cmd(cmd)
 
 
-def add_port(zone, port, permanent=True, force_masquerade=False):
-    """
+def add_port(zone, port, permanent=True):
+    '''
     Allow specific ports in a zone.
 
     .. versionadded:: 2015.8.0
@@ -629,15 +630,8 @@ def add_port(zone, port, permanent=True, force_masquerade=False):
     .. code-block:: bash
 
         salt '*' firewalld.add_port internal 443/tcp
-
-    force_masquerade
-        when a zone is created ensure masquerade is also enabled
-        on that zone.
-    """
-    if force_masquerade and not get_masquerade(zone):
-        add_masquerade(zone)
-
-    cmd = "--zone={0} --add-port={1}".format(zone, port)
+    '''
+    cmd = '--zone={0} --add-port={1}'.format(zone, port)
 
     if permanent:
         cmd += " --permanent"
@@ -685,10 +679,8 @@ def list_ports(zone, permanent=True):
     return __firewall_cmd(cmd).split()
 
 
-def add_port_fwd(
-    zone, src, dest, proto="tcp", dstaddr="", permanent=True, force_masquerade=False
-):
-    """
+def add_port_fwd(zone, src, dest, proto='tcp', dstaddr='', permanent=True):
+    '''
     Add port forwarding.
 
     .. versionadded:: 2015.8.0
@@ -698,16 +690,13 @@ def add_port_fwd(
     .. code-block:: bash
 
         salt '*' firewalld.add_port_fwd public 80 443 tcp
-
-    force_masquerade
-        when a zone is created ensure masquerade is also enabled
-        on that zone.
-    """
-    if force_masquerade and not get_masquerade(zone):
-        add_masquerade(zone)
-
-    cmd = "--zone={0} --add-forward-port=port={1}:proto={2}:toport={3}:toaddr={4}".format(
-        zone, src, proto, dest, dstaddr
+    '''
+    cmd = '--zone={0} --add-forward-port=port={1}:proto={2}:toport={3}:toaddr={4}'.format(
+        zone,
+        src,
+        proto,
+        dest,
+        dstaddr
     )
 
     if permanent:

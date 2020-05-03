@@ -140,8 +140,8 @@ def present(name, attributes, region=None, key=None, keyid=None, profile=None):
     create_or_update_alarm_args.update(attributes)
     if alarm_details:  # alarm is present.  update, or do nothing
         # check to see if attributes matches is_present. If so, do nothing.
-        if len(difference) == 0:
-            ret["comment"] = "alarm {0} present and matching".format(name)
+        if not difference:
+            ret['comment'] = "alarm {0} present and matching".format(name)
             return ret
         if __opts__["test"]:
             msg = "alarm {0} is to be created/updated.".format(name)

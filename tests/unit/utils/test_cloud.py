@@ -16,14 +16,57 @@ import os
 import shutil
 import tempfile
 
+# Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import TestCase, skipIf
+
 # Import salt libs
 import salt.utils.cloud as cloud
 import salt.utils.platform
 from salt.ext import six
 
-# Import Salt Testing libs
-from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import SkipTest, TestCase, skipIf
+GPG_KEYDIR = os.path.join(RUNTIME_VARS.TMP, 'gpg-keydir')
+
+# The keyring library uses `getcwd()`, let's make sure we in a good directory
+# before importing keyring
+if not os.path.isdir(GPG_KEYDIR):
+    os.makedirs(GPG_KEYDIR)
+
+os.chdir(GPG_KEYDIR)
+
+# Import external deps
+try:
+    import keyring
+    import keyring.backend
+
+    class TestKeyring(keyring.backend.KeyringBackend):
+        '''
+        A test keyring which always outputs same password
+        '''
+        def __init__(self):
+            self.__storage = {}
+
+        def supported(self):
+            return 0
+
+        def set_password(self, servicename, username, password):
+            self.__storage.setdefault(servicename, {}).update({username: password})
+            return 0
+
+        def get_password(self, servicename, username):
+            return self.__storage.setdefault(servicename, {}).get(username, None)
+
+        def delete_password(self, servicename, username):
+            self.__storage.setdefault(servicename, {}).pop(username, None)
+            return 0
+
+    # set the keyring for keyring lib
+    keyring.set_keyring(TestKeyring())
+    HAS_KEYRING = True
+except ImportError:
+    HAS_KEYRING = False
+finally:
+    os.chdir(RUNTIME_VARS.CODE_DIR)
 
 
 class CloudUtilsTestCase(TestCase):

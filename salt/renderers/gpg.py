@@ -52,7 +52,7 @@ your application. Be sure to back up the ``gpgkeys`` directory someplace safe!
     be achieved by installing the ``rng-tools`` package.
 
 Import keys to a master
-***********************
+************************
 
 If the keys already exist and need to be imported to the salt master, run the
 following to import them.
@@ -91,7 +91,7 @@ Type ``trust`` to be able to set the trust level for the key and then select ``5
 Different GPG Location
 **********************
 
-In some cases, it's preferable to have gpg keys stored on removable media or
+In some cases, it's preferable to have gpg keys stored on removeable media or
 other non-standard locations. This can be done using the ``gpg_keydir`` option
 on the salt master. This will also require using a different path to ``--homedir``,
 as mentioned in the `GPG Homedir <gpg-homedir>` section.

@@ -103,10 +103,10 @@ def _conf(family="ipv4"):
         if family == "ipv6":
             return "/etc/iptables/rules.v6"
         else:
-            return "/etc/iptables/rules.v4"
-    elif __grains__["os"] == "Gentoo":
-        if family == "ipv6":
-            return "/var/lib/ip6tables/rules-save"
+            return '/etc/iptables/rules.v4'
+    elif __grains__['os_family'] == 'Gentoo':
+        if family == 'ipv6':
+            return '/var/lib/ip6tables/rules-save'
         else:
             return "/var/lib/iptables/rules-save"
     elif __grains__["os_family"] == "Suse":
@@ -167,7 +167,7 @@ def _regex_iptables_save(cmd_output, filters=None):
                 log.warning("Skipping regex rule: '%s': %s", pattern, e)
                 continue
 
-    if __context__["iptables.save_filters"]:
+    if __context__['iptables.save_filters']:
         # line by line get rid of any regex matches
         _filtered_cmd_output = [
             line
@@ -898,10 +898,9 @@ def append(table="filter", chain=None, rule=None, family="ipv4"):
     returnCheck = check(table, chain, rule, family)
     if isinstance(returnCheck, bool) and returnCheck:
         return False
-    cmd = "{0} {1} -t {2} -A {3} {4}".format(
-        _iptables_cmd(family), wait, table, chain, rule
-    )
-    out = __salt__["cmd.run"](cmd)
+    cmd = '{0} {1} -t {2} -A {3} {4}'.format(
+            _iptables_cmd(family), wait, table, chain, rule)
+    out = __salt__['cmd.run'](cmd)
     return not out
 
 

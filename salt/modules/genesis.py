@@ -171,11 +171,11 @@ def bootstrap(
         __salt__["cmd.run"](("fallocate", "-l", img_size, root), python_shell=False)
         _mkpart(root, fs_format, fs_opts, mount_dir)
 
-        loop1 = __salt__["cmd.run"]("losetup -f")
-        log.debug("First loop device is %s", loop1)
-        __salt__["cmd.run"]("losetup {0} {1}".format(loop1, root))
-        loop2 = __salt__["cmd.run"]("losetup -f")
-        log.debug("Second loop device is %s", loop2)
+        loop1 = __salt__['cmd.run']('losetup -f')
+        log.debug('First loop device is %s', loop1)
+        __salt__['cmd.run']('losetup {0} {1}'.format(loop1, root))
+        loop2 = __salt__['cmd.run']('losetup -f')
+        log.debug('Second loop device is %s', loop2)
         start = six.text_type(2048 * 2048)
         __salt__["cmd.run"]("losetup -o {0} {1} {2}".format(start, loop2, loop1))
         __salt__["mount.mount"](mount_dir, loop2)
@@ -228,21 +228,21 @@ def _mkpart(root, fs_format, fs_opts, mount_dir):
     Make a partition, and make it bootable
 
     .. versionadded:: Beryllium
-    """
-    __salt__["partition.mklabel"](root, "msdos")
-    loop1 = __salt__["cmd.run"]("losetup -f")
-    log.debug("First loop device is %s", loop1)
-    __salt__["cmd.run"]("losetup {0} {1}".format(loop1, root))
-    part_info = __salt__["partition.list"](loop1)
-    start = six.text_type(2048 * 2048) + "B"
-    end = part_info["info"]["size"]
-    __salt__["partition.mkpart"](loop1, "primary", start=start, end=end)
-    __salt__["partition.set"](loop1, "1", "boot", "on")
-    part_info = __salt__["partition.list"](loop1)
-    loop2 = __salt__["cmd.run"]("losetup -f")
-    log.debug("Second loop device is %s", loop2)
-    start = start.rstrip("B")
-    __salt__["cmd.run"]("losetup -o {0} {1} {2}".format(start, loop2, loop1))
+    '''
+    __salt__['partition.mklabel'](root, 'msdos')
+    loop1 = __salt__['cmd.run']('losetup -f')
+    log.debug('First loop device is %s', loop1)
+    __salt__['cmd.run']('losetup {0} {1}'.format(loop1, root))
+    part_info = __salt__['partition.list'](loop1)
+    start = six.text_type(2048 * 2048) + 'B'
+    end = part_info['info']['size']
+    __salt__['partition.mkpart'](loop1, 'primary', start=start, end=end)
+    __salt__['partition.set'](loop1, '1', 'boot', 'on')
+    part_info = __salt__['partition.list'](loop1)
+    loop2 = __salt__['cmd.run']('losetup -f')
+    log.debug('Second loop device is %s', loop2)
+    start = start.rstrip('B')
+    __salt__['cmd.run']('losetup -o {0} {1} {2}'.format(start, loop2, loop1))
     _mkfs(loop2, fs_format, fs_opts)
     __salt__["mount.mount"](mount_dir, loop2)
     __salt__["cmd.run"](
@@ -415,7 +415,7 @@ def _bootstrap_deb(
         return False
 
     if static_qemu and not salt.utils.validate.path.is_executable(static_qemu):
-        log.error("Required tool qemu not present/readable at: %s", static_qemu)
+        log.error('Required tool qemu not present/readable at: %s', static_qemu)
         return False
 
     if isinstance(pkgs, (list, tuple)):

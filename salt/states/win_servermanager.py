@@ -17,22 +17,17 @@ import salt.utils.data
 def __virtual__():
     """
     Load only if win_servermanager is loaded
-    """
-    if "win_servermanager.install" in __salt__:
-        return "win_servermanager"
-    return (False, "win_servermanager module could not be loaded")
+    '''
+    return 'win_servermanager' if 'win_servermanager.install' in __salt__ else False
 
 
-def installed(
-    name,
-    features=None,
-    recurse=False,
-    restart=False,
-    source=None,
-    exclude=None,
-    **kwargs
-):
-    """
+def installed(name,
+              features=None,
+              recurse=False,
+              restart=False,
+              source=None,
+              exclude=None):
+    '''
     Install the windows feature. To install a single feature, use the ``name``
     parameter. To install multiple features, use the ``features`` parameter.
 
@@ -118,11 +113,11 @@ def installed(
               - SNMP-Service
             - exclude:
               - Web-Server
-    """
-    if "force" in kwargs:
-        kwargs.pop("force")
-
-    ret = {"name": name, "result": True, "changes": {}, "comment": ""}
+    '''
+    ret = {'name': name,
+           'result': True,
+           'changes': {},
+           'comment': ''}
 
     # Check if features is not passed, use name. Split commas
     if features is None:

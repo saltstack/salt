@@ -6,7 +6,10 @@ lack of support for reading NTFS links.
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-
+try:
+    from collections.abc import Iterable
+except ImportError:
+    from collections import Iterable
 import errno
 import logging
 import os
@@ -20,6 +23,7 @@ import salt.utils.args
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandNotFoundError
+from salt.utils.decorators.jinja import jinja_filter
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -210,25 +214,25 @@ def _get_reparse_data(path):
 def which(exe=None):
     """
     Python clone of /usr/bin/which
-    """
+    '''
 
     if not exe:
-        log.error("No executable was passed to be searched by salt.utils.path.which()")
+        log.error('No executable was passed to be searched by salt.utils.path.which()')
         return None
 
     ## define some utilities (we use closures here because our predecessor used them)
     def is_executable_common(path):
-        """
+        '''
         This returns truth if posixy semantics (which python simulates on
         windows) states that this is executable.
-        """
+        '''
         return os.path.isfile(path) and os.access(path, os.X_OK)
 
     def resolve(path):
-        """
+        '''
         This will take a path and recursively follow the link until we get to a
         real file.
-        """
+        '''
         while os.path.islink(path):
             res = os.readlink(path)
 
@@ -242,34 +246,27 @@ def which(exe=None):
 
     # windows-only
     def has_executable_ext(path, ext_membership):
-        """
+        '''
         Extract the extension from the specified path, lowercase it so we
         can be insensitive, and then check it against the available exts.
-        """
+        '''
         p, ext = os.path.splitext(path)
         return ext.lower() in ext_membership
 
     ## prepare related variables from the environment
-    res = salt.utils.stringutils.to_unicode(os.environ.get("PATH", ""))
+    res = salt.utils.stringutils.to_unicode(os.environ.get('PATH', ''))
     system_path = res.split(os.pathsep)
 
     # add some reasonable defaults in case someone's PATH is busted
     if not salt.utils.platform.is_windows():
         res = set(system_path)
-        extended_path = [
-            "/sbin",
-            "/bin",
-            "/usr/sbin",
-            "/usr/bin",
-            "/usr/local/sbin",
-            "/usr/local/bin",
-        ]
+        extended_path = ['/sbin', '/bin', '/usr/sbin', '/usr/bin', '/usr/local/sbin', '/usr/local/bin']
         system_path.extend([p for p in extended_path if p not in res])
 
     ## now to define the semantics of what's considered executable on a given platform
     if salt.utils.platform.is_windows():
         # executable semantics on windows requires us to search PATHEXT
-        res = salt.utils.stringutils.to_str(os.environ.get("PATHEXT", str(".EXE")))
+        res = salt.utils.stringutils.to_str(os.environ.get('PATHEXT', str('.EXE')))
 
         # generate two variables, one of them for O(n) searches (but ordered)
         # and another for O(1) searches. the previous guy was trying to use
@@ -281,20 +278,18 @@ def which(exe=None):
         # check if our caller already specified a valid extension as then we don't need to match it
         _, ext = os.path.splitext(exe)
         if ext.lower() in res:
-            pathext = [""]
+            pathext = ['']
 
             is_executable = is_executable_common
 
         # The specified extension isn't valid, so we just assume it's part of the
         # filename and proceed to walk the pathext list
         else:
-            is_executable = lambda path, membership=res: is_executable_common(
-                path
-            ) and has_executable_ext(path, membership)
+            is_executable = lambda path, membership=res: is_executable_common(path) and has_executable_ext(path, membership)
 
     else:
         # in posix, there's no such thing as file extensions..only zuul
-        pathext = [""]
+        pathext = ['']
 
         # executable semantics are pretty simple on reasonable platforms...
         is_executable = is_executable_common
@@ -321,7 +316,8 @@ def which(exe=None):
 
     ## if something was executable, we should've found it already...
     log.trace(
-        "'%s' could not be found in the following search path: '%s'", exe, system_path
+        '\'%s\' could not be found in the following search path: \'%s\'',
+        exe, system_path
     )
     return None
 
@@ -329,7 +325,7 @@ def which(exe=None):
 def which_bin(exes):
     """
     Scan over some possible executables and return the first one that is found
-    """
+    '''
     if not isinstance(exes, Iterable):
         return None
     for exe in exes:

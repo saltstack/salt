@@ -26,9 +26,20 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, mock_open, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.mock import (
+    mock_open,
+    Mock,
+    MagicMock,
+    NO_MOCK,
+    NO_MOCK_REASON,
+    patch
+)
 
-DEFAULT_SHELL = "foo/bar"
-MOCK_SHELL_FILE = "# List of acceptable shells\n" "\n" "/bin/bash\n"
+DEFAULT_SHELL = 'foo/bar'
+MOCK_SHELL_FILE = '# List of acceptable shells\n' \
+                  '\n'\
+                  '/bin/bash\n'
 
 
 class MockTimedProc(object):
@@ -452,19 +463,20 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         else:
             raise RuntimeError
 
-    @skipIf(salt.utils.platform.is_windows(), "Do not run on Windows")
-    @skipIf(salt.utils.platform.is_darwin(), "Do not run on MacOS")
+    @skipIf(salt.utils.platform.is_windows(), 'Do not run on Windows')
+    @skipIf(salt.utils.platform.is_darwin(), 'Do not run on MacOS')
     def test_run_cwd_in_combination_with_runas(self):
-        """
+        '''
         cmd.run executes command in the cwd directory
         when the runas parameter is specified
-        """
-        cmd = "pwd"
-        cwd = "/tmp"
-        runas = os.getlogin()
+        '''
+        cmd = 'pwd'
+        cwd = '/tmp'
+        runas = 'foobar'
 
-        with patch.dict(cmdmod.__grains__, {"os": "Darwin", "os_family": "Solaris"}):
-            stdout = cmdmod._run(cmd, cwd=cwd, runas=runas).get("stdout")
+        with patch('pwd.getpwnam') as getpwnam_mock, \
+                patch.dict(cmdmod.__grains__, {'os': 'Darwin', 'os_family': 'Solaris'}):
+            stdout = cmdmod._run(cmd, cwd=cwd, runas=runas).get('stdout')
         self.assertEqual(stdout, cwd)
 
     def test_run_all_binary_replace(self):
@@ -474,8 +486,8 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         /dev/stdout.
         """
         # Since we're using unicode_literals, read the random bytes from a file
-        rand_bytes_file = os.path.join(RUNTIME_VARS.BASE_FILES, "random_bytes")
-        with salt.utils.files.fopen(rand_bytes_file, "rb") as fp_:
+        rand_bytes_file = os.path.join(RUNTIME_VARS.BASE_FILES, 'random_bytes')
+        with salt.utils.files.fopen(rand_bytes_file, 'rb') as fp_:
             stdout_bytes = fp_.read()
 
         # kitchen-salt uses unix2dos on all the files before copying them over

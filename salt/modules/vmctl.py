@@ -29,8 +29,8 @@ log = logging.getLogger(__name__)
 def __virtual__():
     """
     Only works on OpenBSD with vmctl(8) present.
-    """
-    if __grains__["os"] == "OpenBSD" and salt.utils.path.which("vmctl"):
+    '''
+    if __grains__.get('os') == 'OpenBSD' and salt.utils.path.which('vmctl'):
         return True
 
     return (
@@ -248,14 +248,14 @@ def start(
     if local_iface:
         cmd.append("-L")
 
-    if disk and (disks and len(disks) > 0):
+    if disk and disks:
         raise SaltInvocationError('Must provide either "disks" or "disk"')
 
     if disk:
         cmd.extend(["-d", disk])
 
-    if disks and len(disks) > 0:
-        cmd.extend(["-d", x] for x in disks)
+    if disks:
+        cmd.extend(['-d', x] for x in disks)
 
     # Before attempting to define a new VM, make sure it doesn't already exist.
     # Otherwise return to indicate nothing was changed.

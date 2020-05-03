@@ -12,6 +12,14 @@ import pprint
 import re
 import tempfile
 
+# Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf, TestCase
+from tests.support.case import ModuleCase
+from tests.support.helpers import flaky
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, Mock
+
+# Import Salt libs
 import salt.config
 import salt.loader
 
@@ -48,6 +56,12 @@ try:
 except ImportError:
     HAS_TIMELIB = False
 
+try:
+    import jmespath  # pylint: disable=W0611
+    HAS_JMESPATH = True
+except ImportError:
+    HAS_JMESPATH = False
+
 BLINESEP = salt.utils.stringutils.to_bytes(os.linesep)
 
 
@@ -59,21 +73,9 @@ class JinjaTestCase(TestCase):
         """
         data = {"Non-ascii words": ["süß", "спам", "яйца"]}
         result = tojson(data)
-        expected = (
-            '{"Non-ascii words": ["s\\u00fc\\u00df", '
-            '"\\u0441\\u043f\\u0430\\u043c", '
-            '"\\u044f\\u0439\\u0446\\u0430"]}'
-        )
-        assert result == expected, result
-
-    def test_indent(self):
-        """
-        Test the indent filter with Markup object as input. Double-quotes
-        should not be URL-encoded.
-        """
-        data = Markup('foo:\n  "bar"')
-        result = indent(data)
-        expected = Markup('foo:\n      "bar"')
+        expected = ('{"Non-ascii words": ["s\\u00fc\\u00df", '
+                    '"\\u0441\\u043f\\u0430\\u043c", '
+                    '"\\u044f\\u0439\\u0446\\u0430"]}')
         assert result == expected, result
 
 
@@ -118,7 +120,8 @@ class TestSaltCacheLoader(TestCase):
         self.tempdir = tempfile.mkdtemp()
         self.template_dir = os.path.join(self.tempdir, "files", "test")
         _setup_test_dir(
-            os.path.join(RUNTIME_VARS.BASE_FILES, "templates"), self.template_dir
+            os.path.join(RUNTIME_VARS.BASE_FILES, 'templates'),
+            self.template_dir
         )
         self.opts = {
             "file_buffer_size": 1048576,
@@ -157,9 +160,9 @@ class TestSaltCacheLoader(TestCase):
         self.assertEqual(six.text_type(res[0]), "world" + os.linesep)
         tmpl_dir = os.path.join(self.template_dir, "hello_simple")
         self.assertEqual(res[1], tmpl_dir)
-        assert res[2](), "Template up to date?"
+        assert res[2](), 'Template up to date?'
         assert loader._file_client.requests
-        self.assertEqual(loader._file_client.requests[0]["path"], "salt://hello_simple")
+        self.assertEqual(loader._file_client.requests[0]['path'], 'salt://hello_simple')
 
     def get_loader(self, opts=None, saltenv="base"):
         """
@@ -270,7 +273,8 @@ class TestGetTemplate(TestCase):
         self.tempdir = tempfile.mkdtemp()
         self.template_dir = os.path.join(self.tempdir, "files", "test")
         _setup_test_dir(
-            os.path.join(RUNTIME_VARS.BASE_FILES, "templates"), self.template_dir
+            os.path.join(RUNTIME_VARS.BASE_FILES, 'templates'),
+            self.template_dir
         )
         self.local_opts = {
             "file_buffer_size": 1048576,
@@ -616,19 +620,28 @@ class TestGetTemplate(TestCase):
 
 
 class TestJinjaDefaultOptions(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.local_opts = {
-            "cachedir": os.path.join(RUNTIME_VARS.TMP, "jinja-template-cache"),
-            "file_buffer_size": 1048576,
-            "file_client": "local",
-            "file_ignore_regex": None,
-            "file_ignore_glob": None,
-            "file_roots": {
-                "test": [os.path.join(RUNTIME_VARS.BASE_FILES, "templates")]
+
+    def __init__(self, *args, **kws):
+        TestCase.__init__(self, *args, **kws)
+        self.local_opts = {
+            'cachedir': os.path.join(RUNTIME_VARS.TMP, 'jinja-template-cache'),
+            'file_client': 'local',
+            'file_ignore_regex': None,
+            'file_ignore_glob': None,
+            'file_roots': {
+                'test': [os.path.join(RUNTIME_VARS.BASE_FILES, 'templates')]
             },
-            "pillar_roots": {
-                "test": [os.path.join(RUNTIME_VARS.BASE_FILES, "templates")]
+            'pillar_roots': {
+                'test': [os.path.join(RUNTIME_VARS.BASE_FILES, 'templates')]
+            },
+            'fileserver_backend': ['roots'],
+            'hash_type': 'md5',
+            'extension_modules': os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                'extmods'),
+            'jinja_env': {
+                'line_comment_prefix': '##',
+                'line_statement_prefix': '%',
             },
             "fileserver_backend": ["roots"],
             "hash_type": "md5",
@@ -680,19 +693,19 @@ class TestJinjaDefaultOptions(TestCase):
 
 
 class TestCustomExtensions(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.local_opts = {
-            "cachedir": os.path.join(RUNTIME_VARS.TMP, "jinja-template-cache"),
-            "file_buffer_size": 1048576,
-            "file_client": "local",
-            "file_ignore_regex": None,
-            "file_ignore_glob": None,
-            "file_roots": {
-                "test": [os.path.join(RUNTIME_VARS.BASE_FILES, "templates")]
+
+    def __init__(self, *args, **kws):
+        super(TestCustomExtensions, self).__init__(*args, **kws)
+        self.local_opts = {
+            'cachedir': os.path.join(RUNTIME_VARS.TMP, 'jinja-template-cache'),
+            'file_client': 'local',
+            'file_ignore_regex': None,
+            'file_ignore_glob': None,
+            'file_roots': {
+                'test': [os.path.join(RUNTIME_VARS.BASE_FILES, 'templates')]
             },
-            "pillar_roots": {
-                "test": [os.path.join(RUNTIME_VARS.BASE_FILES, "templates")]
+            'pillar_roots': {
+                'test': [os.path.join(RUNTIME_VARS.BASE_FILES, 'templates')]
             },
             "fileserver_backend": ["roots"],
             "hash_type": "md5",
@@ -807,26 +820,21 @@ class TestCustomExtensions(TestCase):
         self.assertEqual(rendered, "it works")
 
         with self.assertRaises((TypeError, exceptions.TemplateRuntimeError)):
-            env.from_string(
-                "{% set document = document|load_yaml %}" "{{ document.foo }}"
-            ).render(document={"foo": "it works"})
+            env.from_string('{% set document = document|load_yaml %}'
+                            '{{ document.foo }}').render(document={"foo": "it works"})
 
     def test_load_tag(self):
         env = Environment(extensions=[SerializerExtension])
 
-        source = (
-            "{{ bar }}, "
-            + "{% load_yaml as docu %}{foo: it works, {{ bar }}: baz}{% endload %}"
-            + "{{ docu.foo }}"
-        )
+        source = '{{ bar }}, ' + \
+                 '{% load_yaml as docu %}{foo: it works, {{ bar }}: baz}{% endload %}' + \
+                 '{{ docu.foo }}'
 
         rendered = env.from_string(source).render(bar="barred")
         self.assertEqual(rendered, "barred, it works")
 
-        source = (
-            '{{ bar }}, {% load_json as docu %}{"foo": "it works", "{{ bar }}": "baz"}{% endload %}'
-            + "{{ docu.foo }}"
-        )
+        source = '{{ bar }}, {% load_json as docu %}{"foo": "it works", "{{ bar }}": "baz"}{% endload %}' + \
+                 '{{ docu.foo }}'
 
         rendered = env.from_string(source).render(bar="barred")
         self.assertEqual(rendered, "barred, it works")
@@ -953,80 +961,12 @@ class TestCustomExtensions(TestCase):
         rendered = env.from_string("{{ data }}").render(data="foo")
         self.assertEqual(rendered, "foo")
 
-        data = OrderedDict([("foo", OrderedDict([("bar", "baz"), ("qux", 42)]))])
-
-        rendered = env.from_string("{{ data }}").render(data=data)
-        self.assertEqual(
-            rendered, "{'foo': {'bar': 'baz', 'qux': 42}}",
-        )
-
-        rendered = env.from_string("{{ data }}").render(
-            data=[OrderedDict(foo="bar",), OrderedDict(baz=42,)]
-        )
-        self.assertEqual(
-            rendered, "[{'foo': 'bar'}, {'baz': 42}]",
-        )
-
-    def test_set_dict_key_value(self):
-        """
-        Test the `set_dict_key_value` Jinja filter.
-        """
-        rendered = render_jinja_tmpl(
-            "{{ {} | set_dict_key_value('foo:bar:baz', 42) }}",
-            dict(opts=self.local_opts, saltenv="test", salt=self.local_salt),
-        )
-        self.assertEqual(rendered, "{'foo': {'bar': {'baz': 42}}}")
-
-        rendered = render_jinja_tmpl(
-            "{{ {} | set_dict_key_value('foo.bar.baz', 42, delimiter='.') }}",
-            dict(opts=self.local_opts, saltenv="test", salt=self.local_salt),
-        )
-        self.assertEqual(rendered, "{'foo': {'bar': {'baz': 42}}}")
-
-    def test_update_dict_key_value(self):
-        """
-        Test the `update_dict_key_value` Jinja filter.
-        """
-        # Use OrderedDicts to avoid random key-order-switches in the rendered string.
-        expected = OrderedDict(
-            [("bar", OrderedDict([("baz", OrderedDict([("qux", 1), ("quux", 3)]))]))]
-        )
-        dataset = OrderedDict(
-            [("bar", OrderedDict([("baz", OrderedDict([("qux", 1)]))]))]
-        )
-        dataset_exp = OrderedDict([("quux", 3)])
-        rendered = render_jinja_tmpl(
-            "{{ foo | update_dict_key_value('bar:baz', exp) }}",
-            dict(
-                foo=dataset,
-                exp=dataset_exp,
-                opts=self.local_opts,
-                saltenv="test",
-                salt=self.local_salt,
-            ),
-        )
-        self.assertEqual(
-            rendered, "{'bar': {'baz': {'qux': 1, 'quux': 3}}}",
-        )
-
-        # Test incorrect usage
-        for update_with in [42, "foo", [42]]:
-            template = "{{ {} | update_dict_key_value('bar:baz', update_with) }}"
-            expected = r"Cannot update {} with a {}.".format(
-                type({}), type(update_with)
-            )
-            self.assertRaisesRegex(
-                SaltRenderError,
-                expected,
-                render_jinja_tmpl,
-                template,
-                dict(
-                    update_with=update_with,
-                    opts=self.local_opts,
-                    saltenv="test",
-                    salt=self.local_salt,
-                ),
-            )
+        data = OrderedDict([
+            ('foo', OrderedDict([
+                        ('bar', 'baz'),
+                        ('qux', 42)
+            ]))
+        ])
 
     def test_append_dict_key_value(self):
         """
@@ -1048,43 +988,122 @@ class TestCustomExtensions(TestCase):
             ),
         )
         self.assertEqual(
-            rendered, "{'bar': {'baz': [1, 2, 42]}}",
+            rendered,
+            "{u'foo': {u'bar': u'baz', u'qux': 42}}" if six.PY2
+            else "{'foo': {'bar': 'baz', 'qux': 42}}"
+        )
+
+        rendered = env.from_string('{{ data }}').render(data=[
+                                                            OrderedDict(
+                                                                foo='bar',
+                                                            ),
+                                                            OrderedDict(
+                                                                baz=42,
+                                                            )
+                                                        ])
+        self.assertEqual(
+            rendered,
+            "[{'foo': u'bar'}, {'baz': 42}]" if six.PY2
+            else "[{'foo': 'bar'}, {'baz': 42}]"
+        )
+
+    def test_set_dict_key_value(self):
+        '''
+        Test the `set_dict_key_value` Jinja filter.
+        '''
+        rendered = render_jinja_tmpl("{{ {} | set_dict_key_value('foo:bar:baz', 42) }}",
+                                     dict(opts=self.local_opts,
+                                          saltenv='test',
+                                          salt=self.local_salt))
+        self.assertEqual(rendered, "{'foo': {'bar': {'baz': 42}}}")
+
+        rendered = render_jinja_tmpl("{{ {} | set_dict_key_value('foo.bar.baz', 42, delimiter='.') }}",
+                                     dict(opts=self.local_opts,
+                                          saltenv='test',
+                                          salt=self.local_salt))
+        self.assertEqual(rendered, "{'foo': {'bar': {'baz': 42}}}")
+
+    def test_update_dict_key_value(self):
+        '''
+        Test the `update_dict_key_value` Jinja filter.
+        '''
+        # Use OrderedDicts to avoid random key-order-switches in the rendered string.
+        expected = OrderedDict([('bar', OrderedDict([('baz', OrderedDict([('qux', 1), ('quux', 3)]))]))])
+        dataset = OrderedDict([('bar', OrderedDict([('baz', OrderedDict([('qux', 1)]))]))])
+        dataset_exp = OrderedDict([('quux', 3)])
+        rendered = render_jinja_tmpl("{{ foo | update_dict_key_value('bar:baz', exp) }}",
+                                     dict(foo=dataset,
+                                          exp=dataset_exp,
+                                          opts=self.local_opts,
+                                          saltenv='test',
+                                          salt=self.local_salt))
+        self.assertEqual(
+            rendered,
+            "{u'bar': {u'baz': {u'qux': 1, u'quux': 3}}}" if six.PY2
+            else "{'bar': {'baz': {'qux': 1, 'quux': 3}}}")
+
+        # Test incorrect usage
+        for update_with in [42, 'foo', [42]]:
+            template = "{{ {} | update_dict_key_value('bar:baz', update_with) }}"
+            expected = r"Cannot update {} with a {}.".format(type({}), type(update_with))
+            self.assertRaisesRegex(
+                SaltRenderError,
+                expected,
+                render_jinja_tmpl,
+                template,
+                dict(update_with=update_with,
+                     opts=self.local_opts,
+                     saltenv='test',
+                     salt=self.local_salt)
+            )
+
+    def test_append_dict_key_value(self):
+        '''
+        Test the `append_dict_key_value` Jinja filter.
+        '''
+        rendered = render_jinja_tmpl("{{ {} | append_dict_key_value('foo:bar:baz', 42) }}",
+                                     dict(opts=self.local_opts,
+                                          saltenv='test',
+                                          salt=self.local_salt))
+        self.assertEqual(rendered, "{'foo': {'bar': {'baz': [42]}}}")
+
+        rendered = render_jinja_tmpl("{{ foo | append_dict_key_value('bar:baz', 42) }}",
+                                     dict(foo={'bar': {'baz': [1, 2]}},
+                                          opts=self.local_opts,
+                                          saltenv='test',
+                                          salt=self.local_salt))
+        self.assertEqual(
+            rendered,
+            "{u'bar': {u'baz': [1, 2, 42]}}" if six.PY2
+            else "{'bar': {'baz': [1, 2, 42]}}"
         )
 
     def test_extend_dict_key_value(self):
-        """
+        '''
         Test the `extend_dict_key_value` Jinja filter.
-        """
-        rendered = render_jinja_tmpl(
-            "{{ {} | extend_dict_key_value('foo:bar:baz', [42]) }}",
-            dict(opts=self.local_opts, saltenv="test", salt=self.local_salt),
-        )
+        '''
+        rendered = render_jinja_tmpl("{{ {} | extend_dict_key_value('foo:bar:baz', [42]) }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
         self.assertEqual(rendered, "{'foo': {'bar': {'baz': [42]}}}")
 
-        rendered = render_jinja_tmpl(
-            "{{ foo | extend_dict_key_value('bar:baz', [42, 43]) }}",
-            dict(
-                foo={"bar": {"baz": [1, 2]}},
-                opts=self.local_opts,
-                saltenv="test",
-                salt=self.local_salt,
-            ),
-        )
+        rendered = render_jinja_tmpl("{{ foo | extend_dict_key_value('bar:baz', [42, 43]) }}",
+                                     dict(foo={'bar': {'baz': [1, 2]}},
+                                          opts=self.local_opts,
+                                          saltenv='test',
+                                          salt=self.local_salt))
         self.assertEqual(
-            rendered, "{'bar': {'baz': [1, 2, 42, 43]}}",
+            rendered,
+            "{u'bar': {u'baz': [1, 2, 42, 43]}}" if six.PY2
+            else "{'bar': {'baz': [1, 2, 42, 43]}}"
         )
         # Edge cases
-        rendered = render_jinja_tmpl(
-            "{{ {} | extend_dict_key_value('foo:bar:baz', 'quux') }}",
-            dict(opts=self.local_opts, saltenv="test", salt=self.local_salt),
-        )
+        rendered = render_jinja_tmpl("{{ {} | extend_dict_key_value('foo:bar:baz', 'quux') }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
         self.assertEqual(rendered, "{'foo': {'bar': {'baz': ['q', 'u', 'u', 'x']}}}")
         # Beware! When supplying a dict, the list gets extended with the dict coerced to a list,
         # which will only contain the keys of the dict.
-        rendered = render_jinja_tmpl(
-            "{{ {} | extend_dict_key_value('foo:bar:baz', {'foo': 'bar'}) }}",
-            dict(opts=self.local_opts, saltenv="test", salt=self.local_salt),
-        )
+        rendered = render_jinja_tmpl("{{ {} | extend_dict_key_value('foo:bar:baz', {'foo': 'bar'}) }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
         self.assertEqual(rendered, "{'foo': {'bar': {'baz': ['foo']}}}")
 
         # Test incorrect usage
@@ -1095,7 +1114,7 @@ class TestCustomExtensions(TestCase):
             expected,
             render_jinja_tmpl,
             template,
-            dict(opts=self.local_opts, saltenv="test", salt=self.local_salt),
+            dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
         )
 
     def test_sequence(self):
@@ -1150,6 +1169,26 @@ class TestCustomExtensions(TestCase):
             dict(opts=self.local_opts, saltenv="test", salt=self.local_salt),
         )
         self.assertEqual(rendered, "TheFoxJumpedOverTheLazyDog")
+
+    def test_camel_to_snake_case(self):
+        '''
+        Test the `to_snake_case` Jinja filter.
+        '''
+        rendered = render_jinja_tmpl('{{ \'abcdEfghhIjkLmnoP\' | to_snake_case }}',
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, 'abcd_efghh_ijk_lmno_p')
+
+    def test_snake_to_camel_case(self):
+        '''
+        Test the `to_camelcase` Jinja filter.
+        '''
+        rendered = render_jinja_tmpl('{{ \'the_fox_jumped_over_the_lazy_dog\' | to_camelcase }}',
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, 'theFoxJumpedOverTheLazyDog')
+
+        rendered = render_jinja_tmpl('{{ \'the_fox_jumped_over_the_lazy_dog\' | to_camelcase(uppercamel=True) }}',
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, 'TheFoxJumpedOverTheLazyDog')
 
     def test_is_ip(self):
         """
@@ -1581,6 +1620,33 @@ class TestCustomExtensions(TestCase):
         )
         self.assertEqual(rendered, "None")
 
+    def test_method_call(self):
+        '''
+        Test the `method_call` Jinja filter.
+        '''
+        rendered = render_jinja_tmpl("{{ 6|method_call('bit_length') }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "3")
+        rendered = render_jinja_tmpl("{{ 6.7|method_call('is_integer') }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "False")
+        rendered = render_jinja_tmpl("{{ 'absaltba'|method_call('strip', 'ab') }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "salt")
+        rendered = render_jinja_tmpl("{{ [1, 2, 1, 3, 4]|method_call('index', 1, 1, 3) }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "2")
+
+        # have to use `dictsort` to keep test result deterministic
+        rendered = render_jinja_tmpl("{{ {}|method_call('fromkeys', ['a', 'b', 'c'], 0)|dictsort }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "[('a', 0), ('b', 0), ('c', 0)]")
+
+        # missing object method test
+        rendered = render_jinja_tmpl("{{ 6|method_call('bit_width') }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "None")
+
     def test_md5(self):
         """
         Test the `md5` Jinja filter.
@@ -1670,6 +1736,17 @@ class TestCustomExtensions(TestCase):
         )
         self.assertEqual(rendered, "2")
 
+    @skipIf(HAS_JMESPATH is False, 'The `jmespath` library is not installed.')
+    def test_json_query(self):
+        '''
+        Test the `json_query` Jinja filter.
+        '''
+        rendered = render_jinja_tmpl(
+            "{{ [1, 2, 3] | json_query('[1]')}}",
+            dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
+        )
+        self.assertEqual(rendered, '2')
+
     # def test_print(self):
     #     env = Environment(extensions=[SerializerExtension])
     #     source = '{% import_yaml "toto.foo" as docu %}'
@@ -1692,9 +1769,7 @@ class TestDotNotationLookup(ModuleCase):
             "mocktest.ping": lambda: True,
             "mockgrains.get": lambda x: "jerry",
         }
-        minion_opts = salt.config.minion_config(
-            os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "minion")
-        )
+        minion_opts = salt.config.minion_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'minion'))
         render = salt.loader.render(minion_opts, functions)
         self.jinja = render.get("jinja")
 

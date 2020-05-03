@@ -20,9 +20,9 @@ import salt.utils.files
 import salt.utils.platform
 import salt.utils.yaml
 import tests.integration.utils
-from salt.ext import six
-from tests.integration.utils import testprogram
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ShellCase
+from tests.support.unit import skipIf
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
@@ -44,6 +44,49 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
         "minion",
         "subminion",
     )
+
+    @skipIf(salt.utils.platform.is_darwin(), 'Test is flaky on macosx')
+    def test_issue_7754(self):
+        old_cwd = os.getcwd()
+        config_dir = os.path.join(RUNTIME_VARS.TMP, 'issue-7754')
+        if not os.path.isdir(config_dir):
+            os.makedirs(config_dir)
+
+        os.chdir(config_dir)
+
+        config_file_name = 'minion'
+        pid_path = os.path.join(config_dir, '{0}.pid'.format(config_file_name))
+        with salt.utils.files.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
+            config = salt.utils.yaml.safe_load(fhr)
+            config['log_file'] = 'file:///tmp/log/LOG_LOCAL3'
+
+            with salt.utils.files.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
+                salt.utils.yaml.safe_dump(config, fhw, default_flow_style=False)
+
+        ret = self.run_script(
+            self._call_binary_,
+            '--disable-keepalive --config-dir {0} --pid-file {1} -l debug'.format(
+                config_dir,
+                pid_path
+            ),
+            timeout=5,
+            catch_stderr=True,
+            with_retcode=True
+        )
+
+        # Now kill it if still running
+        if os.path.exists(pid_path):
+            with salt.utils.files.fopen(pid_path) as fhr:
+                try:
+                    os.kill(int(fhr.read()), signal.SIGKILL)
+                except OSError:
+                    pass
+        try:
+            self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
+        finally:
+            self.chdir(old_cwd)
+            if os.path.isdir(config_dir):
+                shutil.rmtree(config_dir)
 
     def _run_initscript(
         self, init_script, minions, minion_running, action, exitstatus=None, message=""
@@ -69,10 +112,10 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
         )
 
         for line in ret[0]:
-            log.debug("script: salt-minion: stdout: {0}".format(line))
+            log.debug('script: salt-minion: stdout: %s', line)
         for line in ret[1]:
-            log.debug("script: salt-minion: stderr: {0}".format(line))
-        log.debug("exit status: {0}".format(ret[2]))
+            log.debug('script: salt-minion: stderr: %s', line)
+        log.debug('exit status: %s', ret[2])
 
         if six.PY3:
             std_out = b"\nSTDOUT:".join(ret[0])
@@ -156,8 +199,8 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
             defaults.write("TIMEOUT=60\n" "TICK=1\n")
 
         init_script = testprogram.TestProgram(
-            name="init:salt-minion",
-            program=os.path.join(RUNTIME_VARS.CODE_DIR, "pkg", "rpm", "salt-minion"),
+            name='init:salt-minion',
+            program=os.path.join(RUNTIME_VARS.CODE_DIR, 'pkg', 'rpm', 'salt-minion'),
             env=cmd_env,
         )
 

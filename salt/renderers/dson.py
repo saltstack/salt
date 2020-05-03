@@ -31,7 +31,7 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     if dson is None:
-        return (False, "The dogeon Python package is not installed")
+        return (False, 'The dogeon Python package is not installed')
     return True
 
 

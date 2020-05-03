@@ -595,10 +595,28 @@ class VMwareVmCreationError(VMwareSaltError):
 class MissingSmb(SaltException):
     """
     Raised when no smb library is found.
-    """
+    '''
 
 
-class LoggingRuntimeError(RuntimeError):
-    """
-    Raised when we encounter an error while logging
-    """
+class NxosError(SaltException):
+    '''
+    NX-OS Base Exception class
+    '''
+
+
+class NxosCliError(NxosError):
+    '''
+    NX-OS Cli Error raised when Cli command rejected by the NX-OS device
+    '''
+
+
+class NxosClientError(NxosError):
+    '''
+    NX-OS Client Error raised for problems connecting to the NX-OS device
+    '''
+
+
+class NxosRequestNotSupported(NxosError):
+    '''
+    Raised for unsupported client requests
+    '''

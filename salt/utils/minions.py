@@ -899,7 +899,7 @@ class CkMinions(object):
         # if we take out all the allowed minions, and there are any left, then
         # the target includes minions that are not allowed by eauth
         # so we can give up here.
-        if len(minions - allowed_minions_from_auth_list) > 0:
+        if minions - allowed_minions_from_auth_list:
             return False
 
         try:
@@ -1154,3 +1154,42 @@ class CkMinions(object):
             if good:
                 return True
         return False
+
+
+def mine_get(tgt, fun, tgt_type='glob', opts=None):
+    '''
+    Gathers the data from the specified minions' mine, pass in the target,
+    function to look up and the target type
+    '''
+    ret = {}
+    serial = salt.payload.Serial(opts)
+    checker = CkMinions(opts)
+    _res = checker.check_minions(
+            tgt,
+            tgt_type)
+    minions = _res['minions']
+    cache = salt.cache.factory(opts)
+
+    if isinstance(fun, six.string_types):
+        functions = list(set(fun.split(',')))
+        _ret_dict = len(functions) > 1
+    elif isinstance(fun, list):
+        functions = fun
+        _ret_dict = True
+    else:
+        return {}
+
+    for minion in minions:
+        mdata = cache.fetch('minions/{0}'.format(minion), 'mine')
+
+        if not isinstance(mdata, dict):
+            continue
+
+        if not _ret_dict and functions and functions[0] in mdata:
+            ret[minion] = mdata.get(functions)
+        elif _ret_dict:
+            for fun in functions:
+                if fun in mdata:
+                    ret.setdefault(fun, {})[minion] = mdata.get(fun)
+
+    return ret

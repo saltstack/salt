@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 Send events based on a script's stdout
+
+.. versionadded:: Neon
 
 Example Config
 
@@ -18,55 +20,55 @@ Script engine configs:
     output: Any available saltstack deserializer
     interval: How often in seconds to execute the command
 
-"""
+'''
 
 from __future__ import absolute_import, print_function
-
 import logging
 import shlex
-import subprocess
 import time
-
-import salt.loader
+import subprocess
 
 # import salt libs
 import salt.utils.event
 import salt.utils.process
+import salt.loader
 from salt.exceptions import CommandExecutionError
+
 from salt.ext import six
+
 
 log = logging.getLogger(__name__)
 
 
 def _read_stdout(proc):
-    """
+    '''
     Generator that returns stdout
-    """
+    '''
     for line in iter(proc.stdout.readline, ""):
         yield line
 
 
 def _get_serializer(output):
-    """
+    '''
     Helper to return known serializer based on
     pass output argument
-    """
+    '''
     serializers = salt.loader.serializers(__opts__)
     try:
         return getattr(serializers, output)
     except AttributeError:
         raise CommandExecutionError(
-            "Unknown serializer `{}` found for output option".format(output)
+            "Unknown serializer '{0}' found for output option".format(output)
         )
 
 
-def start(cmd, output="json", interval=1):
-    """
+def start(cmd, output='json', interval=1):
+    '''
     Parse stdout of a command and generate an event
 
     The script engine will scrap stdout of the
     given script and generate an event based on the
-    presence of the 'tag' key and its value.
+    presence of the 'tag' key and it's value.
 
     If there is a data obj available, that will also
     be fired along with the tag.
@@ -87,7 +89,7 @@ def start(cmd, output="json", interval=1):
     :param cmd: The command to execute
     :param output: How to deserialize stdout of the script
     :param interval: How often to execute the script
-    """
+    '''
     try:
         cmd = shlex.split(cmd)
     except AttributeError:
@@ -96,19 +98,19 @@ def start(cmd, output="json", interval=1):
 
     serializer = _get_serializer(output)
 
-    if __opts__.get("__role") == "master":
+    if __opts__.get('__role') == 'master':
         fire_master = salt.utils.event.get_master_event(
-            __opts__, __opts__["sock_dir"]
-        ).fire_event
+            __opts__,
+            __opts__['sock_dir']).fire_event
     else:
-        fire_master = __salt__["event.send"]
+        fire_master = __salt__['event.send']
 
     while True:
 
         try:
-            proc = subprocess.Popen(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
-            )
+            proc = subprocess.Popen(cmd,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT)
 
             log.debug("Starting script with pid %d", proc.pid)
 
@@ -116,11 +118,11 @@ def start(cmd, output="json", interval=1):
                 log.debug(raw_event)
 
                 event = serializer.deserialize(raw_event)
-                tag = event.get("tag", None)
-                data = event.get("data", {})
+                tag = event.get('tag', None)
+                data = event.get('data', {})
 
-                if data and "id" not in data:
-                    data["id"] = __opts__["id"]
+                if data and 'id' not in data:
+                    data['id'] = __opts__['id']
 
                 if tag:
                     log.info("script engine firing event with tag %s", tag)

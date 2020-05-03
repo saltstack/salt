@@ -164,18 +164,17 @@ def present(
     # If a list is passed in for value, change it to a comma-separated string
     # So it will work with subsequent boto module calls and string functions
     if isinstance(value, list):
-        value = ",".join(value)
-    elif value.startswith("private:") or value.startswith("public:"):
-        name_tag = value.split(":", 1)[1]
-        in_states = ("pending", "rebooting", "running", "stopping", "stopped")
-        r = __salt__["boto_ec2.find_instances"](
-            name=name_tag, return_objs=True, in_states=in_states, profile=profile
-        )
-        if len(r) < 1:
-            ret["comment"] = "Error: instance with Name tag {0} not found".format(
-                name_tag
-            )
-            ret["result"] = False
+        value = ','.join(value)
+    elif value.startswith('private:') or value.startswith('public:'):
+        name_tag = value.split(':', 1)[1]
+        in_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
+        r = __salt__['boto_ec2.find_instances'](name=name_tag,
+                                                return_objs=True,
+                                                in_states=in_states,
+                                                profile=profile)
+        if not r:
+            ret['comment'] = 'Error: instance with Name tag {0} not found'.format(name_tag)
+            ret['result'] = False
             return ret
         if len(r) > 1:
             ret[
@@ -531,8 +530,9 @@ def hosted_zone_present(
             create = True
         else:
             if private_zone:
-                for v, d in deets.get("VPCs", {}).items():
-                    if d["VPCId"] == vpc_id and d["VPCRegion"] == vpc_region:
+                for d in deets.get('VPCs', {}):
+                    if (d['VPCId'] == vpc_id
+                            and d['VPCRegion'] == vpc_region):
                         create = False
                         break
                     else:

@@ -39,6 +39,7 @@ pillar modules
     netbox
     neutron
     nodegroups
+    nsot
     pepa
     pillar_ldap
     postgres

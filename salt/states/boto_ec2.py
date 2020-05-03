@@ -869,14 +869,9 @@ def instance_present(
         if not exists:
             _create = True
     else:
-        instances = __salt__["boto_ec2.find_instances"](
-            name=instance_name if instance_name else name,
-            region=region,
-            key=key,
-            keyid=keyid,
-            profile=profile,
-            in_states=running_states,
-        )
+        instances = __salt__['boto_ec2.find_instances'](name=instance_name if instance_name else name,
+                                                        region=region, key=key, keyid=keyid, profile=profile,
+                                                        in_states=running_states)
         if not instances:
             _create = True
         elif len(instances) > 1:
@@ -893,14 +888,9 @@ def instance_present(
             ret["result"] = None
             return ret
         if image_name:
-            args = {
-                "ami_name": image_name,
-                "region": region,
-                "key": key,
-                "keyid": keyid,
-                "profile": profile,
-            }
-            image_ids = __salt__["boto_ec2.find_images"](**args)
+            args = {'ami_name': image_name, 'region': region, 'key': key,
+                    'keyid': keyid, 'profile': profile}
+            image_ids = __salt__['boto_ec2.find_images'](**args)
             if image_ids:
                 image_id = image_ids[0]
             else:
@@ -1241,18 +1231,12 @@ def instance_absent(
             )
             return ret
 
-    instances = __salt__["boto_ec2.find_instances"](
-        instance_id=instance_id,
-        region=region,
-        key=key,
-        keyid=keyid,
-        profile=profile,
-        return_objs=True,
-        filters=filters,
-    )
+    instances = __salt__['boto_ec2.find_instances'](instance_id=instance_id, region=region,
+                                                    key=key, keyid=keyid, profile=profile,
+                                                    return_objs=True, filters=filters)
     if not instances:
-        ret["result"] = True
-        ret["comment"] = "Instance {0} is already gone.".format(instance_id)
+        ret['result'] = True
+        ret['comment'] = 'Instance {0} is already gone.'.format(instance_id)
         return ret
     instance = instances[0]
 
@@ -1305,11 +1289,11 @@ def instance_absent(
             public_ip = None
             alloc_id = None
             assoc_id = None
-            if getattr(instance, "vpc_id", None):
-                r = __salt__["boto_ec2.get_eip_address_info"](addresses=ip, **base_args)
-                if r and "allocation_id" in r[0]:
-                    alloc_id = r[0]["allocation_id"]
-                    assoc_id = r[0].get("association_id")
+            if getattr(instance, 'vpc_id', None):
+                r = __salt__['boto_ec2.get_eip_address_info'](addresses=ip, **base_args)
+                if r and 'allocation_id' in r[0]:
+                    alloc_id = r[0]['allocation_id']
+                    assoc_id = r[0].get('association_id')
                 else:
                     # I /believe/ this situation is impossible but let's hedge our bets...
                     ret["result"] = False
@@ -1436,9 +1420,9 @@ def volume_absent(
 
     args = {"region": region, "key": key, "keyid": keyid, "profile": profile}
 
-    vols = __salt__["boto_ec2.get_all_volumes"](filters=filters, **args)
-    if len(vols) < 1:
-        ret["comment"] = "Volume matching criteria not found, assuming already absent"
+    vols = __salt__['boto_ec2.get_all_volumes'](filters=filters, **args)
+    if not vols:
+        ret['comment'] = 'Volume matching criteria not found, assuming already absent'
         return ret
     if len(vols) > 1:
         msg = "More than one volume matched criteria, can't continue in state {0}".format(
@@ -1684,13 +1668,11 @@ def volume_present(
                 volume_name, name
             )
             raise SaltInvocationError(msg)
-        if len(vols) < 1:
-            if __opts__["test"]:
-                ret["comment"] = (
-                    "The volume with name {0} is set to be created and attached"
-                    " on {1}({2}).".format(volume_name, instance_id, device)
-                )
-                ret["result"] = None
+        if not vols:
+            if __opts__['test']:
+                ret['comment'] = ('The volume with name {0} is set to be created and attached'
+                                  ' on {1}({2}).'.format(volume_name, instance_id, device))
+                ret['result'] = None
                 return ret
             _rt = __salt__["boto_ec2.create_volume"](
                 zone_name=instance.placement,
@@ -1729,11 +1711,9 @@ def volume_present(
             new_dict["volume_id"] = volume_id
         else:
             volume_id = vols[0]
-    vols = __salt__["boto_ec2.get_all_volumes"](
-        volume_ids=[volume_id], return_objs=True, **args
-    )
-    if len(vols) < 1:
-        raise SaltInvocationError("Volume {0} do not exist".format(volume_id))
+    vols = __salt__['boto_ec2.get_all_volumes'](volume_ids=[volume_id], return_objs=True, **args)
+    if not vols:
+        raise SaltInvocationError('Volume {0} do not exist'.format(volume_id))
     vol = vols[0]
     if vol.zone != instance.placement:
         raise SaltInvocationError(

@@ -16,6 +16,8 @@ import re
 import sys
 import tempfile
 import threading
+import functools
+import threading
 import time
 import traceback
 import types
@@ -23,6 +25,7 @@ from zipimport import zipimporter
 
 # Import salt libs
 import salt.config
+import salt.defaults.events
 import salt.defaults.exitcodes
 import salt.syspaths
 import salt.utils.args
@@ -36,7 +39,11 @@ import salt.utils.odict
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
+import salt.utils.stringutils
 from salt.exceptions import LoaderError
+from salt.template import check_render_pipe_str
+from salt.utils.decorators import Depends
+from salt.utils.thread_local_proxy import ThreadLocalProxy
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -288,8 +295,9 @@ def minion_mods(
                         ret[f_key] = funcs[func]
 
     if notify:
-        with salt.utils.event.get_event("minion", opts=opts, listen=False) as evt:
-            evt.fire_event({"complete": True}, tag="/salt/minion/minion_mod_complete")
+        with salt.utils.event.get_event('minion', opts=opts, listen=False) as evt:
+            evt.fire_event({'complete': True},
+                           tag=salt.defaults.events.MINION_MOD_COMPLETE)
 
     return ret
 
@@ -323,11 +331,15 @@ def raw_mod(opts, name, functions, mod="modules"):
 
 
 def metaproxy(opts):
-    """
+    '''
     Return functions used in the meta proxy
-    """
+    '''
 
-    return LazyLoader(_module_dirs(opts, "metaproxy"), opts, tag="metaproxy")
+    return LazyLoader(
+        _module_dirs(opts, 'metaproxy'),
+        opts,
+        tag='metaproxy'
+    )
 
 
 def matchers(opts):
@@ -522,10 +534,8 @@ def thorium(opts, functions, runners):
     return ret
 
 
-def states(
-    opts, functions, utils, serializers, whitelist=None, proxy=None, context=None
-):
-    """
+def states(opts, functions, utils, serializers, whitelist=None, proxy=None, context=None):
+    '''
     Returns the state modules
 
     :param dict opts: The Salt options dictionary
@@ -539,7 +549,7 @@ def states(
 
         __opts__ = salt.config.minion_config('/etc/salt/minion')
         statemods = salt.loader.states(__opts__, None, None)
-    """
+    '''
     if context is None:
         context = {}
 
@@ -550,10 +560,10 @@ def states(
         pack={"__salt__": functions, "__proxy__": proxy or {}},
         whitelist=whitelist,
     )
-    ret.pack["__states__"] = ret
-    ret.pack["__utils__"] = utils
-    ret.pack["__serializers__"] = serializers
-    ret.pack["__context__"] = context
+    ret.pack['__states__'] = ret
+    ret.pack['__utils__'] = utils
+    ret.pack['__serializers__'] = serializers
+    ret.pack['__context__'] = context
     return ret
 
 
@@ -615,17 +625,15 @@ def ssh_wrapper(opts, functions=None, context=None):
 
 
 def render(opts, functions, states=None, proxy=None, context=None):
-    """
+    '''
     Returns the render modules
-    """
+    '''
     if context is None:
         context = {}
 
-    pack = {
-        "__salt__": functions,
-        "__grains__": opts.get("grains", {}),
-        "__context__": context,
-    }
+    pack = {'__salt__': functions,
+            '__grains__': opts.get('grains', {}),
+            '__context__': context}
 
     if states:
         pack["__states__"] = states
@@ -661,25 +669,19 @@ def grain_funcs(opts, proxy=None):
 
           __opts__ = salt.config.minion_config('/etc/salt/minion')
           grainfuncs = salt.loader.grain_funcs(__opts__)
-    """
+    '''
     ret = LazyLoader(
-        _module_dirs(opts, "grains", "grain", ext_type_dirs="grains_dirs",),
+        _module_dirs(
+            opts,
+            'grains',
+            'grain',
+            ext_type_dirs='grains_dirs',
+        ),
         opts,
         tag="grains",
     )
-    ret.pack["__utils__"] = utils(opts, proxy=proxy)
+    ret.pack['__utils__'] = utils(opts, proxy=proxy)
     return ret
-
-
-def _format_cached_grains(cached_grains):
-    """
-    Returns cached grains with fixed types, like tuples.
-    """
-    if cached_grains.get("osrelease_info"):
-        osrelease_info = cached_grains["osrelease_info"]
-        if isinstance(osrelease_info, list):
-            cached_grains["osrelease_info"] = tuple(osrelease_info)
-    return cached_grains
 
 
 def _load_cached_grains(opts, cfn):
@@ -783,7 +785,7 @@ def grains(opts, force_refresh=False, proxy=None):
         opts["grains"] = {}
 
     grains_data = {}
-    blist = opts.get("grains_blacklist", [])
+    blist = opts.get('grains_blacklist', [])
     funcs = grain_funcs(opts, proxy=proxy)
     if force_refresh:  # if we refresh, lets reload grain modules
         funcs.clear()
@@ -800,7 +802,7 @@ def grains(opts, force_refresh=False, proxy=None):
                 for block in blist:
                     if salt.utils.stringutils.expr_match(key, block):
                         del ret[key]
-                        log.trace("Filtering %s grain", key)
+                        log.trace('Filtering %s grain', key)
             if not ret:
                 continue
         if grains_deep_merge:
@@ -847,7 +849,7 @@ def grains(opts, force_refresh=False, proxy=None):
                 for block in blist:
                     if salt.utils.stringutils.expr_match(key, block):
                         del ret[key]
-                        log.trace("Filtering %s grain", key)
+                        log.trace('Filtering %s grain', key)
             if not ret:
                 continue
         if grains_deep_merge:
@@ -1089,6 +1091,75 @@ def _mod_type(module_path):
     return "ext"
 
 
+def _inject_into_mod(mod, name, value, force_lock=False):
+    '''
+    Inject a variable into a module. This is used to inject "globals" like
+    ``__salt__``, ``__pillar``, or ``grains``.
+
+    Instead of injecting the value directly, a ``ThreadLocalProxy`` is created.
+    If such a proxy is already present under the specified name, it is updated
+    with the new value. This update only affects the current thread, so that
+    the same name can refer to different values depending on the thread of
+    execution.
+
+    This is important for data that is not truly global. For example, pillar
+    data might be dynamically overriden through function parameters and thus
+    the actual values available in pillar might depend on the thread that is
+    calling a module.
+
+    mod:
+        module object into which the value is going to be injected.
+
+    name:
+        name of the variable that is injected into the module.
+
+    value:
+        value that is injected into the variable. The value is not injected
+        directly, but instead set as the new reference of the proxy that has
+        been created for the variable.
+
+    force_lock:
+        whether the lock should be acquired before checking whether a proxy
+        object for the specified name has already been injected into the
+        module. If ``False`` (the default), this function checks for the
+        module's variable without acquiring the lock and only acquires the lock
+        if a new proxy has to be created and injected.
+    '''
+    old_value = getattr(mod, name, None)
+    # We use a double-checked locking scheme in order to avoid taking the lock
+    # when a proxy object has already been injected.
+    # In most programming languages, double-checked locking is considered
+    # unsafe when used without explicit memory barriers because one might read
+    # an uninitialized value. In CPython it is safe due to the global
+    # interpreter lock (GIL). In Python implementations that do not have the
+    # GIL, it could be unsafe, but at least Jython also guarantees that (for
+    # Python objects) memory is not corrupted when writing and reading without
+    # explicit synchronization
+    # (http://www.jython.org/jythonbook/en/1.0/Concurrency.html).
+    # Please note that in order to make this code safe in a runtime environment
+    # that does not make this guarantees, it is not sufficient. The
+    # ThreadLocalProxy must also be created with fallback_to_shared set to
+    # False or a lock must be added to the ThreadLocalProxy.
+    if force_lock:
+        with _inject_into_mod.lock:
+            if isinstance(old_value, ThreadLocalProxy):
+                ThreadLocalProxy.set_reference(old_value, value)
+            else:
+                setattr(mod, name, ThreadLocalProxy(value, True))
+    else:
+        if isinstance(old_value, ThreadLocalProxy):
+            ThreadLocalProxy.set_reference(old_value, value)
+        else:
+            _inject_into_mod(mod, name, value, True)
+
+
+# Lock used when injecting globals. This is needed to avoid a race condition
+# when two threads try to load the same module concurrently. This must be
+# outside the loader because there might be more than one loader for the same
+# namespace.
+_inject_into_mod.lock = threading.RLock()
+
+
 # TODO: move somewhere else?
 class FilterDictWrapper(MutableMapping):
     """
@@ -1185,10 +1256,13 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         for k, v in six.iteritems(self.pack):
             if v is None:  # if the value of a pack is None, lets make an empty dict
-                self.context_dict.setdefault(k, {})
-                self.pack[k] = salt.utils.context.NamespacedDictWrapper(
-                    self.context_dict, k
-                )
+                value = self.context_dict.get(k, {})
+
+                if isinstance(value, ThreadLocalProxy):
+                    value = ThreadLocalProxy.unproxy(value)
+
+                self.context_dict[k] = value
+                self.pack[k] = salt.utils.context.NamespacedDictWrapper(self.context_dict, k)
 
         self.whitelist = whitelist
         self.virtual_enable = virtual_enable
@@ -1466,18 +1540,24 @@ class LazyLoader(salt.utils.lazy.LazyDict):
     def __prep_mod_opts(self, opts):
         """
         Strip out of the opts any logger instance
-        """
-        if "__grains__" not in self.pack:
-            self.context_dict["grains"] = opts.get("grains", {})
-            self.pack["__grains__"] = salt.utils.context.NamespacedDictWrapper(
-                self.context_dict, "grains"
-            )
+        '''
+        if '__grains__' not in self.pack:
+            grains = opts.get('grains', {})
 
-        if "__pillar__" not in self.pack:
-            self.context_dict["pillar"] = opts.get("pillar", {})
-            self.pack["__pillar__"] = salt.utils.context.NamespacedDictWrapper(
-                self.context_dict, "pillar"
-            )
+            if isinstance(grains, ThreadLocalProxy):
+                grains = ThreadLocalProxy.unproxy(grains)
+
+            self.context_dict['grains'] = grains
+            self.pack['__grains__'] = salt.utils.context.NamespacedDictWrapper(self.context_dict, 'grains')
+
+        if '__pillar__' not in self.pack:
+            pillar = opts.get('pillar', {})
+
+            if isinstance(pillar, ThreadLocalProxy):
+                pillar = ThreadLocalProxy.unproxy(pillar)
+
+            self.context_dict['pillar'] = pillar
+            self.pack['__pillar__'] = salt.utils.context.NamespacedDictWrapper(self.context_dict, 'pillar')
 
         mod_opts = {}
         for key, val in list(opts.items()):
@@ -1670,7 +1750,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         # pack whatever other globals we were asked to
         for p_name, p_value in six.iteritems(self.pack):
-            setattr(mod, p_name, p_value)
+            _inject_into_mod(mod, p_name, p_value)
 
         module_name = mod.__name__.rsplit(".", 1)[-1]
 
@@ -1750,9 +1830,11 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             ((x, self.loaded_modules.get(x, self.mod_dict_class())) for x in mod_names)
         )
 
-        for attr in getattr(mod, "__load__", dir(mod)):
-            if attr.startswith("_"):
-                # private functions are skipped
+        for attr in getattr(mod, '__load__', dir(mod)):
+            if attr.startswith('_') and attr != '__call__':
+                # private functions are skipped,
+                # except __call__ which is default entrance
+                # for multi-function batch-like state syntax
                 continue
             func = getattr(mod, attr)
             if not inspect.isfunction(func) and not isinstance(func, functools.partial):
@@ -1953,7 +2035,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 if virtual is not True and module_name != virtual:
                     # The module is renaming itself. Updating the module name
                     # with the new name
-                    log.trace("Loaded %s as virtual %s", module_name, virtual)
+                    log.trace('Loaded %s as virtual %s', module_name, virtual)
 
                     if virtualname != virtual:
                         # The __virtualname__ attribute does not match what's

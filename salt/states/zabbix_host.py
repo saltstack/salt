@@ -7,7 +7,7 @@ Management of Zabbix hosts.
 
 """
 from __future__ import absolute_import, print_function, unicode_literals
-
+from salt.utils.json import loads, dumps
 from copy import deepcopy
 
 import salt.utils.json
@@ -129,37 +129,22 @@ def present(host, groups, interfaces, **kwargs):
 
         for key, value in interfaces_dict.items():
             # Load interface values or default values
-            interface_type = interface_ports[value["type"].lower()][0]
-            main = (
-                "1"
-                if six.text_type(value.get("main", "true")).lower() == "true"
-                else "0"
-            )
-            useip = (
-                "1"
-                if six.text_type(value.get("useip", "true")).lower() == "true"
-                else "0"
-            )
-            interface_ip = value.get("ip", "")
-            dns = value.get("dns", key)
-            port = six.text_type(
-                value.get("port", interface_ports[value["type"].lower()][1])
-            )
+            interface_type = interface_ports[value['type'].lower()][0]
+            main = '1' if six.text_type(value.get('main', 'true')).lower() == 'true' else '0'
+            useip = '1' if six.text_type(value.get('useip', 'true')).lower() == 'true' else '0'
+            interface_ip = value.get('ip', '')
+            dns = value.get('dns', key)
+            port = six.text_type(value.get('port', interface_ports[value['type'].lower()][1]))
 
-            interfaces_list.append(
-                {
-                    "type": interface_type,
-                    "main": main,
-                    "useip": useip,
-                    "ip": interface_ip,
-                    "dns": dns,
-                    "port": port,
-                }
-            )
+            interfaces_list.append({'type': interface_type,
+                                    'main': main,
+                                    'useip': useip,
+                                    'ip': interface_ip,
+                                    'dns': dns,
+                                    'port': port})
 
-        interfaces_list_sorted = sorted(
-            interfaces_list, key=lambda k: k["main"], reverse=True
-        )
+        interfaces_list = interfaces_list
+        interfaces_list_sorted = sorted(interfaces_list, key=lambda k: k['main'], reverse=True)
 
         return interfaces_list_sorted
 

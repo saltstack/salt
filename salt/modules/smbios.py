@@ -203,7 +203,7 @@ def _dmi_parse(data, clean=True, fields=None):
         # log.debug('%s record contains %s', record, dmi_raw)
         dmi_data = _dmi_data(dmi_raw, clean, fields)
         if dmi_data:
-            record["data"] = dmi_data
+            record['data'] = dmi_data
             dmi.append(record)
         elif not clean:
             dmi.append(record)
@@ -283,8 +283,8 @@ def _dmi_cast(key, val, clean=True):
 def _dmi_isclean(key, val):
     """
     Clean out well-known bogus values
-    """
-    if val is None or not val or re.match("none", val, flags=re.IGNORECASE):
+    '''
+    if not val or re.match('none', val, flags=re.IGNORECASE):
         # log.debug('DMI {0} value {1} seems invalid or empty'.format(key, val))
         return False
     elif "uuid" in key:

@@ -233,7 +233,7 @@ def _csf_to_list(option):
 
 
 def split_option(option):
-    return re.split(r"(?: +)?\=(?: +)?", option)
+    return re.split(r'(?: +)?\=(?: +)?', option)
 
 
 def get_option(option):

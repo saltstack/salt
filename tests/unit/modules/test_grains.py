@@ -6,8 +6,16 @@ from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import os
 
-import salt.modules.grains as grainsmod
-import salt.utils.dictupdate as dictupdate
+# Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
+    MagicMock,
+    patch,
+    NO_MOCK,
+    NO_MOCK_REASON
+)
 
 # Import Salt libs
 from salt.exceptions import SaltException
@@ -24,8 +32,8 @@ from tests.support.unit import TestCase
 
 class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
-        conf_file = os.path.join(RUNTIME_VARS.TMP, "__salt_test_grains")
-        cachedir = os.path.join(RUNTIME_VARS.TMP, "__salt_test_grains_cache_dir")
+        conf_file = os.path.join(RUNTIME_VARS.TMP, '__salt_test_grains')
+        cachedir = os.path.join(RUNTIME_VARS.TMP, '__salt_test_grains_cache_dir')
         if not os.path.isdir(cachedir):
             os.makedirs(cachedir)
         return {

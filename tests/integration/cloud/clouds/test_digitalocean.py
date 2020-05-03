@@ -6,8 +6,10 @@ Integration tests for DigitalOcean APIv2
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-import base64
-import hashlib
+# Import Salt Testing Libs
+from tests.support.case import ShellCase
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.helpers import expensiveTest, generate_random_name
 
 import salt.crypt
 
@@ -20,17 +22,49 @@ from salt.ext.six.moves import range
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
 
 
-class DigitalOceanTest(CloudTest):
-    """
+@expensiveTest
+class DigitalOceanTest(ShellCase):
+    '''
     Integration tests for the DigitalOcean cloud provider in Salt-Cloud
-    """
+    '''
 
-    PROVIDER = "digitalocean"
-    REQUIRED_PROVIDER_CONFIG_ITEMS = (
-        "personal_access_token",
-        "ssh_key_file",
-        "ssh_key_name",
-    )
+    def setUp(self):
+        '''
+        Sets up the test requirements
+        '''
+        super(DigitalOceanTest, self).setUp()
+
+        # check if appropriate cloud provider and profile files are present
+        profile_str = 'digitalocean-config'
+        providers = self.run_cloud('--list-providers')
+        if profile_str + ':' not in providers:
+            self.skipTest(
+                'Configuration file for {0} was not found. Check {0}.conf files '
+                'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
+                .format(PROVIDER_NAME)
+            )
+
+        # check if personal access token, ssh_key_file, and ssh_key_names are present
+        config = cloud_providers_config(
+            os.path.join(
+                RUNTIME_VARS.FILES,
+                'conf',
+                'cloud.providers.d',
+                PROVIDER_NAME + '.conf'
+            )
+        )
+
+        personal_token = config[profile_str][PROVIDER_NAME]['personal_access_token']
+        ssh_file = config[profile_str][PROVIDER_NAME]['ssh_key_file']
+        ssh_name = config[profile_str][PROVIDER_NAME]['ssh_key_name']
+
+        if personal_token == '' or ssh_file == '' or ssh_name == '':
+            self.skipTest(
+                'A personal access token, an ssh key file, and an ssh key name '
+                'must be provided to run these tests. Check '
+                'tests/integration/files/conf/cloud.providers.d/{0}.conf'
+                .format(PROVIDER_NAME)
+            )
 
     def test_list_images(self):
         """

@@ -22,8 +22,8 @@ __virtualname__ = "jail"
 def __virtual__():
     """
     Only runs on FreeBSD systems
-    """
-    if __grains__["os"] == "FreeBSD":
+    '''
+    if __grains__.get('os') == 'FreeBSD':
         return __virtualname__
     return (
         False,

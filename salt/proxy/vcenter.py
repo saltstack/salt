@@ -180,7 +180,7 @@ against the local machine. If you wanted, you could run functions from this
 module on any host where an appropriate version of ``pyVmomi`` is installed,
 and that host would reach out over the network and communicate with the ESXi
 host.
-"""
+'''
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals

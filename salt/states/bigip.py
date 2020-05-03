@@ -2706,7 +2706,7 @@ def delete_virtual(hostname, username, password, name):
 
 
 def list_monitor(hostname, username, password, monitor_type, name):
-    """
+    '''
     A function to list an existing monitor.
 
     hostname

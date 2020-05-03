@@ -376,10 +376,10 @@ def managed(name, ppa=None, **kwargs):
             else salt.utils.data.is_true(disabled)
         )
 
-    elif __grains__["os_family"] in ("RedHat", "Suse"):
-        if "humanname" in kwargs:
-            kwargs["name"] = kwargs.pop("humanname")
-        if "name" not in kwargs:
+    elif __grains__['os_family'] in ('RedHat', 'Suse', 'VMware Photon'):
+        if 'humanname' in kwargs:
+            kwargs['name'] = kwargs.pop('humanname')
+        if 'name' not in kwargs:
             # Fall back to the repo name if humanname not provided
             kwargs["name"] = repo
 
@@ -401,7 +401,7 @@ def managed(name, ppa=None, **kwargs):
         kwargs.pop(kwarg, None)
 
     try:
-        pre = __salt__["pkg.get_repo"](repo=repo, **kwargs)
+        pre = __salt__['pkg.get_repo'](repo=repo, **kwargs)
     except CommandExecutionError as exc:
         ret["result"] = False
         ret["comment"] = "Failed to examine repo '{0}': {1}".format(name, exc)
@@ -430,14 +430,14 @@ def managed(name, ppa=None, **kwargs):
                     # not explicitly set, so we don't need to update the repo
                     # if it's desired to be enabled and the 'enabled' key is
                     # missing from the repo definition
-                    if __grains__["os_family"] == "RedHat":
+                    if __grains__['os_family'] in ('RedHat', 'VMware Photon'):
                         if not salt.utils.data.is_true(sanitizedkwargs[kwarg]):
                             break
                     else:
                         break
                 else:
                     break
-            elif kwarg in ("comps", "key_url"):
+            elif kwarg in ('comps', 'key_url'):
                 if sorted(sanitizedkwargs[kwarg]) != sorted(pre[kwarg]):
                     break
             elif kwarg == "line" and __grains__["os_family"] == "Debian":
@@ -457,7 +457,7 @@ def managed(name, ppa=None, **kwargs):
                     )
                     if pre_comments != post_comments:
                         break
-            elif kwarg == "comments" and __grains__["os_family"] == "RedHat":
+            elif kwarg == 'comments' and __grains__['os_family'] in ('RedHat', 'VMware Photon'):
                 precomments = salt.utils.pkg.rpm.combine_comments(pre[kwarg])
                 kwargcomments = salt.utils.pkg.rpm.combine_comments(
                     sanitizedkwargs[kwarg]
@@ -468,9 +468,9 @@ def managed(name, ppa=None, **kwargs):
                 if set(sanitizedkwargs[kwarg]) != set(pre[kwarg]):
                     break
             else:
-                if __grains__["os_family"] in ("RedHat", "Suse") and any(
-                    isinstance(x, bool) for x in (sanitizedkwargs[kwarg], pre[kwarg])
-                ):
+                if __grains__['os_family'] in ('RedHat', 'Suse', 'VMware Photon') \
+                        and any(isinstance(x, bool) for x in
+                                (sanitizedkwargs[kwarg], pre[kwarg])):
                     # This check disambiguates 1/0 from True/False
                     if salt.utils.data.is_true(
                         sanitizedkwargs[kwarg]
@@ -522,7 +522,7 @@ def managed(name, ppa=None, **kwargs):
         return ret
 
     try:
-        post = __salt__["pkg.get_repo"](repo=repo, **kwargs)
+        post = __salt__['pkg.get_repo'](repo=repo, **kwargs)
         if pre:
             for kwarg in sanitizedkwargs:
                 if post.get(kwarg) != pre.get(kwarg):
@@ -611,7 +611,7 @@ def absent(name, **kwargs):
         return ret
 
     try:
-        repo = __salt__["pkg.get_repo"](name, **kwargs)
+        repo = __salt__['pkg.get_repo'](name, **kwargs)
     except CommandExecutionError as exc:
         ret["result"] = False
         ret["comment"] = "Failed to configure repo '{0}': {1}".format(name, exc)

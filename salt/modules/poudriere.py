@@ -20,9 +20,9 @@ log = logging.getLogger(__name__)
 def __virtual__():
     """
     Module load on freebsd only and if poudriere installed
-    """
-    if __grains__["os"] == "FreeBSD" and salt.utils.path.which("poudriere"):
-        return "poudriere"
+    '''
+    if __grains__.get('os') == 'FreeBSD' and salt.utils.path.which('poudriere'):
+        return 'poudriere'
     else:
         return (
             False,

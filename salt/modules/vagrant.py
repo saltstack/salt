@@ -211,10 +211,10 @@ def list_domains():
     up-to-date.
     """
     vms = []
-    cmd = "vagrant global-status"
-    reply = __salt__["cmd.shell"](cmd)
-    log.debug("--->\n%s", reply)
-    for line in reply.split("\n"):  # build a list of the text reply
+    cmd = 'vagrant global-status'
+    reply = __salt__['cmd.shell'](cmd)
+    log.info('--->\n%s', reply)
+    for line in reply.split('\n'):  # build a list of the text reply
         tokens = line.strip().split()
         try:
             _ = int(tokens[0], 16)  # valid id numbers are hexadecimal
@@ -240,10 +240,10 @@ def list_active_vms(cwd=None):
         salt '*' vagrant.list_active_vms  cwd=/projects/project_1
     """
     vms = []
-    cmd = "vagrant status"
-    reply = __salt__["cmd.shell"](cmd, cwd=cwd)
-    log.info("--->\n%s", reply)
-    for line in reply.split("\n"):  # build a list of the text reply
+    cmd = 'vagrant status'
+    reply = __salt__['cmd.shell'](cmd, cwd=cwd)
+    log.info('--->\n%s', reply)
+    for line in reply.split('\n'):  # build a list of the text reply
         tokens = line.strip().split()
         if len(tokens) > 1:
             if tokens[1] == "running":
@@ -264,10 +264,10 @@ def list_inactive_vms(cwd=None):
         salt '*' virt.list_inactive_vms cwd=/projects/project_1
     """
     vms = []
-    cmd = "vagrant status"
-    reply = __salt__["cmd.shell"](cmd, cwd=cwd)
-    log.info("--->\n%s", reply)
-    for line in reply.split("\n"):  # build a list of the text reply
+    cmd = 'vagrant status'
+    reply = __salt__['cmd.shell'](cmd, cwd=cwd)
+    log.info('--->\n%s', reply)
+    for line in reply.split('\n'):  # build a list of the text reply
         tokens = line.strip().split()
         if len(tokens) > 1 and tokens[-1].endswith(")"):
             if tokens[1] != "running":
@@ -318,10 +318,10 @@ def vm_state(name="", cwd=None):
         machine = ""
 
     info = []
-    cmd = "vagrant status {}".format(machine)
-    reply = __salt__["cmd.shell"](cmd, cwd)
-    log.info("--->\n%s", reply)
-    for line in reply.split("\n"):  # build a list of the text reply
+    cmd = 'vagrant status {}'.format(machine)
+    reply = __salt__['cmd.shell'](cmd, cwd)
+    log.info('--->\n%s', reply)
+    for line in reply.split('\n'):  # build a list of the text reply
         tokens = line.strip().split()
         if len(tokens) > 1 and tokens[-1].endswith(")"):
             try:
@@ -597,17 +597,18 @@ def get_ssh_config(name, network_mask="", get_private_key=False):
 
     if network_mask:
         #  ask the new VM to report its network address
-        command = (
-            "ssh -i {IdentityFile} -p {Port} "
-            "-oStrictHostKeyChecking={StrictHostKeyChecking} "
-            "-oUserKnownHostsFile={UserKnownHostsFile} "
-            "-oControlPath=none "
-            "{User}@{HostName} ifconfig".format(**ssh_config)
-        )
+        command = 'ssh -i {IdentityFile} -p {Port} ' \
+                  '-oStrictHostKeyChecking={StrictHostKeyChecking} ' \
+                  '-oUserKnownHostsFile={UserKnownHostsFile} ' \
+                  '-oControlPath=none ' \
+                  '{User}@{HostName} ifconfig'.format(**ssh_config)
 
-        log.info("Trying ssh -p {Port} {User}@{HostName} ifconfig".format(**ssh_config))
-        reply = __salt__["cmd.shell"](command)
-        log.info("--->\n%s", reply)
+        log.info(
+            'Trying ssh -p %s %s@%s ifconfig',
+            ssh_config['Port'], ssh_config['User'], ssh_config['HostName']
+        )
+        reply = __salt__['cmd.shell'](command)
+        log.info('--->\n%s', reply)
         target_network_range = ipaddress.ip_network(network_mask, strict=False)
 
         for line in reply.split("\n"):

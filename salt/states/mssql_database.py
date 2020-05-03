@@ -27,7 +27,7 @@ def __virtual__():
 
 def _normalize_options(options):
     if type(options) in [dict, collections.OrderedDict]:
-        return ["{0}={1}".format(k, v) for k, v in options.items()]
+        return ['{0}={1}'.format(k, v) for k, v in options.items()]
     if type(options) is list and (not options or type(options[0]) is str):
         return options
     # Invalid options

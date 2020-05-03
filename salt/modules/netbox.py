@@ -97,8 +97,8 @@ def _add(app, endpoint, payload):
     nb = _nb_obj(auth_required=True)
     try:
         return getattr(getattr(nb, app), endpoint).create(**payload)
-    except pynetbox.RequestError as e:
-        log.error("{}, {}, {}".format(e.req.request.headers, e.request_body, e.error))
+    except RequestError as e:
+        log.error('%s, %s, %s', e.req.request.headers, e.request_body, e.error)
         return False
 
 
@@ -376,9 +376,9 @@ def create_device(name, role, model, manufacturer, site):
         if not nb_site:
             return False
 
-        status = {"label": "Active", "value": 1}
-    except pynetbox.RequestError as e:
-        log.error("{}, {}, {}".format(e.req.request.headers, e.request_body, e.error))
+        status = {'label': "Active", 'value': 1}
+    except RequestError as e:
+        log.error('%s, %s, %s', e.req.request.headers, e.request_body, e.error)
         return False
 
     payload = {
@@ -419,9 +419,9 @@ def update_device(name, **kwargs):
         setattr(nb_device, k, v)
     try:
         nb_device.save()
-        return {"dcim": {"devices": kwargs}}
-    except pynetbox.RequestError as e:
-        log.error("{}, {}, {}".format(e.req.request.headers, e.request_body, e.error))
+        return {'dcim': {'devices': kwargs}}
+    except RequestError as e:
+        log.error('%s, %s, %s', e.req.request.headers, e.request_body, e.error)
         return False
 
 
@@ -802,11 +802,9 @@ def update_interface(device_name, interface_name, **kwargs):
             setattr(nb_interface, k, v)
         try:
             nb_interface.save()
-            return {"dcim": {"interfaces": {nb_interface.id: dict(nb_interface)}}}
-        except pynetbox.RequestError as e:
-            log.error(
-                "{}, {}, {}".format(e.req.request.headers, e.request_body, e.error)
-            )
+            return {'dcim': {'interfaces': {nb_interface.id: dict(nb_interface)}}}
+        except RequestError as e:
+            log.error('%s, %s, %s', e.req.request.headers, e.request_body, e.error)
             return False
 
 

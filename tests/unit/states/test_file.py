@@ -212,117 +212,112 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 )
                 ret = return_val({"comment": comt, "name": name})
             self.assertDictEqual(
-                filestate.symlink(name, target, user=user, group=group), ret
-            )
+                filestate.symlink(name, target, user=user, group=group),
+                ret)
 
-        with patch.dict(
-            filestate.__salt__,
-            {
-                "config.manage_mode": mock_t,
-                "file.user_to_uid": mock_uid,
-                "file.group_to_gid": mock_gid,
-                "file.is_link": mock_f,
-                "user.info": mock_empty,
-                "user.current": mock_user,
-            },
-        ), patch.dict(filestate.__opts__, {"test": True}), patch.object(
-            os.path, "exists", mock_f
-        ):
+        with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
+                                             'file.user_to_uid': mock_uid,
+                                             'file.group_to_gid': mock_gid,
+                                             'file.is_link': mock_f,
+                                             'user.info': mock_empty,
+                                             'user.current': mock_user}),\
+                patch.dict(filestate.__opts__, {'test': True}),\
+                patch.object(os.path, 'exists', mock_f):
             if salt.utils.platform.is_windows():
                 comt = "User {0} does not exist".format(user)
                 ret = return_val(
                     {"comment": comt, "result": False, "name": name, "changes": {}}
                 )
             else:
-                comt = "Symlink {0} to {1} is set for creation".format(name, target)
-                ret = return_val(
-                    {"comment": comt, "result": None, "changes": {"new": name}}
-                )
-            self.assertDictEqual(
-                filestate.symlink(name, target, user=user, group=group), ret
-            )
+                comt = 'Symlink {0} to {1} is set for creation'.format(name, target)
+                ret = return_val({'comment': comt,
+                                  'result': None,
+                                  'changes': {'new': name}})
+            self.assertDictEqual(filestate.symlink(name, target, user=user,
+                                                   group=group), ret)
 
-        with patch.dict(
-            filestate.__salt__,
-            {
-                "config.manage_mode": mock_t,
-                "file.user_to_uid": mock_uid,
-                "file.group_to_gid": mock_gid,
-                "file.is_link": mock_f,
-                "user.info": mock_empty,
-                "user.current": mock_user,
-            },
-        ), patch.dict(filestate.__opts__, {"test": False}), patch.object(
-            os.path, "isdir", mock_f
-        ), patch.object(
-            os.path, "exists", mock_f
-        ):
+        with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
+                                             'file.user_to_uid': mock_uid,
+                                             'file.group_to_gid': mock_gid,
+                                             'file.is_link': mock_f,
+                                             'user.info': mock_empty,
+                                             'user.current': mock_user}),\
+                patch.dict(filestate.__opts__, {'test': False}),\
+                patch.object(os.path, 'isdir', mock_f),\
+                patch.object(os.path, 'exists', mock_f):
             if salt.utils.platform.is_windows():
                 comt = "User {0} does not exist".format(user)
                 ret = return_val(
                     {"comment": comt, "result": False, "name": name, "changes": {}}
                 )
             else:
-                comt = "Directory {0} for symlink is not present".format(test_dir)
-                ret = return_val({"comment": comt, "result": False, "changes": {}})
-            self.assertDictEqual(
-                filestate.symlink(name, target, user=user, group=group), ret
-            )
+                comt = 'Directory {0} for symlink is not present'.format(test_dir)
+                ret = return_val({'comment': comt,
+                                  'result': False,
+                                  'changes': {}})
+            self.assertDictEqual(filestate.symlink(name, target,
+                                                   user=user,
+                                                   group=group), ret)
 
-        with patch.dict(
-            filestate.__salt__,
-            {
-                "config.manage_mode": mock_t,
-                "file.user_to_uid": mock_uid,
-                "file.group_to_gid": mock_gid,
-                "file.is_link": mock_t,
-                "file.readlink": mock_target,
-                "user.info": mock_empty,
-                "user.current": mock_user,
-            },
-        ), patch.dict(filestate.__opts__, {"test": False}), patch.object(
-            os.path, "isdir", mock_t
-        ), patch.object(
-            salt.states.file, "_check_symlink_ownership", mock_t
-        ), patch(
-            "salt.utils.win_functions.get_sid_from_name", return_value="test-sid"
-        ):
+        with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
+                                             'file.user_to_uid': mock_uid,
+                                             'file.group_to_gid': mock_gid,
+                                             'file.is_link': mock_t,
+                                             'file.readlink': mock_target,
+                                             'user.info': mock_empty,
+                                             'user.current': mock_user}),\
+                patch.dict(filestate.__opts__, {'test': False}),\
+                patch.object(os.path, 'isdir', mock_t),\
+                patch.object(salt.states.file, '_check_symlink_ownership', mock_t),\
+                patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
             if salt.utils.platform.is_windows():
                 comt = "Symlink {0} is present and owned by {1}".format(name, user)
             else:
-                comt = "Symlink {0} is present and owned by {1}:{2}".format(
-                    name, user, group
-                )
-            ret = return_val({"comment": comt, "result": True, "changes": {}})
-            self.assertDictEqual(
-                filestate.symlink(name, target, user=user, group=group), ret
-            )
+                comt = 'Symlink {0} is present and owned by {1}:{2}'.format(name, user, group)
+            ret = return_val({'comment': comt,
+                              'result': True,
+                              'changes': {}})
+            self.assertDictEqual(filestate.symlink(name, target,
+                                                   user=user,
+                                                   group=group), ret)
 
-        with patch.dict(
-            filestate.__salt__,
-            {
-                "config.manage_mode": mock_t,
-                "file.user_to_uid": mock_uid,
-                "file.group_to_gid": mock_gid,
-                "file.is_link": mock_f,
-                "file.readlink": mock_target,
-                "user.info": mock_empty,
-                "user.current": mock_user,
-            },
-        ), patch.dict(filestate.__opts__, {"test": False}), patch.object(
-            os.path, "isdir", mock_t
-        ), patch.object(
-            os.path, "exists", mock_t
-        ), patch.object(
-            os.path, "lexists", mock_t
-        ), patch(
-            "salt.utils.win_functions.get_sid_from_name", return_value="test-sid"
-        ):
-            comt = (
-                "Symlink & backup dest exists and Force not set. {0} -> "
-                "{1} - backup: {2}".format(name, target, os.path.join(test_dir, "SALT"))
-            )
-            ret.update({"comment": comt, "result": False, "changes": {}})
+        with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
+                                             'file.user_to_uid': mock_uid,
+                                             'file.group_to_gid': mock_gid,
+                                             'file.is_link': mock_f,
+                                             'file.readlink': mock_target,
+                                             'user.info': mock_empty,
+                                             'user.current': mock_user}),\
+                patch.dict(filestate.__opts__, {'test': False}),\
+                patch.object(os.path, 'isdir', mock_t),\
+                patch.object(os.path, 'exists', mock_f),\
+                patch.object(os.path, 'lexists', mock_t),\
+                patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
+            comt = 'Symlink & backup dest exists and Force not set. {0} -> ' \
+                   '{1} - backup: {2}'.format(name, target, os.path.join(test_dir, 'SALT'))
+            ret.update({'comment': comt,
+                        'result': False,
+                        'changes': {}})
+            self.assertDictEqual(
+                filestate.symlink(name, target, user=user, group=group,
+                                  backupname='SALT'),
+                ret)
+
+        with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
+                                             'file.user_to_uid': mock_uid,
+                                             'file.group_to_gid': mock_gid,
+                                             'file.is_link': mock_f,
+                                             'file.readlink': mock_target,
+                                             'user.info': mock_empty,
+                                             'user.current': mock_user}),\
+                patch.dict(filestate.__opts__, {'test': False}),\
+                patch.object(os.path, 'isfile', mock_t), \
+                patch.object(os.path, 'isdir', mock_t),\
+                patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
+            comt = 'Backupname must be an absolute path or a file name: {0}'.format('tmp/SALT')
+            ret.update({'comment': comt,
+                        'result': False,
+                        'changes': {}})
             self.assertDictEqual(
                 filestate.symlink(
                     name, target, user=user, group=group, backupname="SALT"
@@ -355,578 +350,118 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             )
             ret.update({"comment": comt, "result": False, "changes": {}})
             self.assertDictEqual(
-                filestate.symlink(
-                    name, target, user=user, group=group, backupname="tmp/SALT"
-                ),
-                ret,
-            )
+                filestate.symlink(name, target, user=user, group=group),
+                ret)
 
-        with patch.dict(
-            filestate.__salt__,
-            {
-                "config.manage_mode": mock_t,
-                "file.user_to_uid": mock_uid,
-                "file.group_to_gid": mock_gid,
-                "file.is_link": mock_f,
-                "file.readlink": mock_target,
-                "user.info": mock_empty,
-                "user.current": mock_user,
-            },
-        ), patch.dict(filestate.__opts__, {"test": False}), patch.object(
-            os.path, "isdir", mock_t
-        ), patch.object(
-            os.path, "exists", mock_t
-        ), patch.object(
-            os.path, "isfile", mock_t
-        ), patch(
-            "salt.utils.win_functions.get_sid_from_name", return_value="test-sid"
-        ):
-            comt = "File exists where the symlink {0} should be".format(name)
-            ret = return_val({"comment": comt, "changes": {}, "result": False})
+        with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
+                                             'file.user_to_uid': mock_uid,
+                                             'file.group_to_gid': mock_gid,
+                                             'file.is_link': mock_f,
+                                             'file.readlink': mock_target,
+                                             'file.symlink': mock_t,
+                                             'user.info': mock_t,
+                                             'file.lchown': mock_f}),\
+                patch.dict(filestate.__opts__, {'test': False}),\
+                patch.object(os.path, 'isdir', MagicMock(side_effect=[True, False])),\
+                patch.object(os.path, 'isfile', mock_t),\
+                patch.object(os.path, 'exists', mock_f),\
+                patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
+            comt = 'File exists where the symlink {0} should be'.format(name)
+            ret = return_val({'comment': comt,
+                              'result': False,
+                              'changes': {}})
             self.assertDictEqual(
-                filestate.symlink(name, target, user=user, group=group), ret
-            )
+                filestate.symlink(name, target, user=user, group=group),
+                ret)
 
-        with patch.dict(
-            filestate.__salt__,
-            {
-                "config.manage_mode": mock_t,
-                "file.user_to_uid": mock_uid,
-                "file.group_to_gid": mock_gid,
-                "file.is_link": mock_f,
-                "file.readlink": mock_target,
-                "file.symlink": mock_t,
-                "user.info": mock_t,
-                "file.lchown": mock_f,
-            },
-        ), patch.dict(filestate.__opts__, {"test": False}), patch.object(
-            os.path, "isdir", MagicMock(side_effect=[True, False])
-        ), patch.object(
-            os.path, "isdir", mock_t
-        ), patch.object(
-            os.path, "exists", mock_t
-        ), patch(
-            "salt.utils.win_functions.get_sid_from_name", return_value="test-sid"
-        ):
-            comt = "Directory exists where the symlink {0} should be".format(name)
-            ret = return_val({"comment": comt, "result": False, "changes": {}})
+        with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
+                                             'file.user_to_uid': mock_uid,
+                                             'file.group_to_gid': mock_gid,
+                                             'file.is_link': mock_f,
+                                             'file.readlink': mock_target,
+                                             'file.symlink': mock_t,
+                                             'user.info': mock_t,
+                                             'file.lchown': mock_f}),\
+                patch.dict(filestate.__opts__, {'test': False}),\
+                patch.object(os.path, 'isdir', MagicMock(side_effect=[True, False])),\
+                patch.object(os.path, 'isdir', mock_t),\
+                patch.object(os.path, 'exists', mock_f),\
+                patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
+            comt = 'Directory exists where the symlink {0} should be'.format(name)
+            ret = return_val({'comment': comt,
+                              'result': False,
+                              'changes': {}})
             self.assertDictEqual(
-                filestate.symlink(name, target, user=user, group=group), ret
-            )
+                filestate.symlink(name, target, user=user, group=group),
+                ret)
 
-        with patch.dict(
-            filestate.__salt__,
-            {
-                "config.manage_mode": mock_t,
-                "file.user_to_uid": mock_uid,
-                "file.group_to_gid": mock_gid,
-                "file.is_link": mock_f,
-                "file.readlink": mock_target,
-                "file.symlink": mock_os_error,
-                "user.info": mock_t,
-                "file.lchown": mock_f,
-            },
-        ), patch.dict(filestate.__opts__, {"test": False}), patch.object(
-            os.path, "isdir", MagicMock(side_effect=[True, False])
-        ), patch.object(
-            os.path, "isfile", mock_f
-        ), patch(
-            "salt.utils.win_functions.get_sid_from_name", return_value="test-sid"
-        ):
-            comt = "Unable to create new symlink {0} -> {1}: ".format(name, target)
-            ret = return_val({"comment": comt, "result": False, "changes": {}})
+        with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
+                                             'file.user_to_uid': mock_uid,
+                                             'file.group_to_gid': mock_gid,
+                                             'file.is_link': mock_f,
+                                             'file.readlink': mock_target,
+                                             'file.symlink': mock_os_error,
+                                             'user.info': mock_t,
+                                             'file.lchown': mock_f}),\
+                patch.dict(filestate.__opts__, {'test': False}),\
+                patch.object(os.path, 'isdir', MagicMock(side_effect=[True, False])),\
+                patch.object(os.path, 'isfile', mock_f),\
+                patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
+            comt = 'Unable to create new symlink {0} -> {1}: '.format(name, target)
+            ret = return_val({'comment': comt,
+                              'result': False,
+                              'changes': {}})
             self.assertDictEqual(
-                filestate.symlink(name, target, user=user, group=group), ret
-            )
+                filestate.symlink(name, target, user=user, group=group),
+                ret)
 
-        with patch.dict(
-            filestate.__salt__,
-            {
-                "config.manage_mode": mock_t,
-                "file.user_to_uid": mock_uid,
-                "file.group_to_gid": mock_gid,
-                "file.is_link": mock_f,
-                "file.readlink": mock_target,
-                "file.symlink": mock_t,
-                "user.info": mock_t,
-                "file.lchown": mock_f,
-                "file.get_user": mock_user,
-                "file.get_group": mock_grp,
-            },
-        ), patch.dict(filestate.__opts__, {"test": False}), patch.object(
-            os.path, "isdir", MagicMock(side_effect=[True, False])
-        ), patch.object(
-            os.path, "isfile", mock_f
-        ), patch(
-            "salt.states.file._check_symlink_ownership", return_value=True
-        ), patch(
-            "salt.utils.win_functions.get_sid_from_name", return_value="test-sid"
-        ):
-            comt = "Created new symlink {0} -> {1}".format(name, target)
-            ret = return_val(
-                {"comment": comt, "result": True, "changes": {"new": name}}
-            )
+        with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
+                                             'file.user_to_uid': mock_uid,
+                                             'file.group_to_gid': mock_gid,
+                                             'file.is_link': mock_f,
+                                             'file.readlink': mock_target,
+                                             'file.symlink': mock_t,
+                                             'user.info': mock_t,
+                                             'file.lchown': mock_f,
+                                             'file.get_user': mock_user,
+                                             'file.get_group': mock_grp}),\
+                patch.dict(filestate.__opts__, {'test': False}),\
+                patch.object(os.path, 'isdir', MagicMock(side_effect=[True, False])),\
+                patch.object(os.path, 'isfile', mock_f),\
+                patch('salt.states.file._check_symlink_ownership', return_value=True),\
+                patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
+            comt = 'Created new symlink {0} -> {1}'.format(name, target)
+            ret = return_val({'comment': comt,
+                              'result': True,
+                              'changes': {'new': name}})
             self.assertDictEqual(
-                filestate.symlink(name, target, user=user, group=group), ret
-            )
+                filestate.symlink(name, target, user=user, group=group),
+                ret)
 
-        with patch.dict(
-            filestate.__salt__,
-            {
-                "config.manage_mode": mock_t,
-                "file.user_to_uid": mock_uid,
-                "file.group_to_gid": mock_gid,
-                "file.is_link": mock_f,
-                "file.readlink": mock_target,
-                "file.symlink": mock_t,
-                "user.info": mock_t,
-                "file.lchown": mock_f,
-                "file.get_user": mock_empty,
-                "file.get_group": mock_empty,
-            },
-        ), patch.dict(filestate.__opts__, {"test": False}), patch.object(
-            os.path, "isdir", MagicMock(side_effect=[True, False])
-        ), patch.object(
-            os.path, "isfile", mock_f
-        ), patch(
-            "salt.utils.win_functions.get_sid_from_name", return_value="test-sid"
-        ), patch(
-            "salt.states.file._set_symlink_ownership", return_value=False
-        ), patch(
-            "salt.states.file._check_symlink_ownership", return_value=False
-        ):
-            comt = (
-                "Created new symlink {0} -> {1}, but was unable to set "
-                "ownership to {2}:{3}".format(name, target, user, group)
-            )
-            ret = return_val(
-                {"comment": comt, "result": False, "changes": {"new": name}}
-            )
+        with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
+                                             'file.user_to_uid': mock_uid,
+                                             'file.group_to_gid': mock_gid,
+                                             'file.is_link': mock_f,
+                                             'file.readlink': mock_target,
+                                             'file.symlink': mock_t,
+                                             'user.info': mock_t,
+                                             'file.lchown': mock_f,
+                                             'file.get_user': mock_empty,
+                                             'file.get_group': mock_empty}),\
+                patch.dict(filestate.__opts__, {'test': False}),\
+                patch.object(os.path, 'isdir', MagicMock(side_effect=[True, False])),\
+                patch.object(os.path, 'isfile', mock_f),\
+                patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'),\
+                patch('salt.states.file._set_symlink_ownership', return_value=False),\
+                patch('salt.states.file._check_symlink_ownership', return_value=False):
+            comt = 'Created new symlink {0} -> {1}, but was unable to set ' \
+                   'ownership to {2}:{3}'.format(name, target, user, group)
+            ret = return_val({'comment': comt,
+                              'result': False,
+                              'changes': {'new': name}})
             self.assertDictEqual(
-                filestate.symlink(name, target, user=user, group=group), ret
-            )
-
-    @skipIf(salt.utils.platform.is_windows(), "Do not run on Windows")
-    def test_hardlink(self):
-        """
-        Test to create a hardlink.
-        """
-
-        name = os.path.join(os.sep, "tmp", "testfile.txt")
-        target = salt.utils.files.mkstemp()
-        test_dir = os.path.join(os.sep, "tmp")
-        user, group = "salt", "saltstack"
-
-        def return_val(**kwargs):
-            res = {
-                "name": name,
-                "result": False,
-                "comment": "",
-                "changes": {},
-            }
-            res.update(kwargs)
-            return res
-
-        mock_t = MagicMock(return_value=True)
-        mock_f = MagicMock(return_value=False)
-        mock_empty = MagicMock(return_value="")
-        mock_uid = MagicMock(return_value="U1001")
-        mock_gid = MagicMock(return_value="g1001")
-        mock_nothing = MagicMock(return_value={})
-        mock_stats = MagicMock(return_value={"inode": 1})
-        mock_execerror = MagicMock(side_effect=CommandExecutionError)
-
-        patches = {}
-        patches["file.user_to_uid"] = mock_empty
-        patches["file.group_to_gid"] = mock_empty
-        patches["user.info"] = mock_empty
-        patches["file.is_hardlink"] = mock_t
-        patches["file.stats"] = mock_empty
-
-        # Argument validation
-        with patch.dict(filestate.__salt__, patches):
-            expected = "Must provide name to file.hardlink"
-            ret = return_val(comment=expected, name="")
-            self.assertDictEqual(filestate.hardlink("", target), ret)
-
-        # User validation for dir_mode
-        with patch.dict(filestate.__salt__, patches), patch.dict(
-            filestate.__salt__, {"file.user_to_uid": mock_empty}
-        ), patch.dict(
-            filestate.__salt__, {"file.group_to_gid": mock_gid}
-        ), patch.object(
-            os.path, "isabs", mock_t
-        ):
-            expected = "User {0} does not exist".format(user)
-            ret = return_val(comment=expected, name=name)
-            self.assertDictEqual(
-                filestate.hardlink(name, target, user=user, group=group), ret
-            )
-
-        # Group validation for dir_mode
-        with patch.dict(filestate.__salt__, patches), patch.dict(
-            filestate.__salt__, {"file.user_to_uid": mock_uid}
-        ), patch.dict(
-            filestate.__salt__, {"file.group_to_gid": mock_empty}
-        ), patch.object(
-            os.path, "isabs", mock_t
-        ):
-            expected = "Group {0} does not exist".format(group)
-            ret = return_val(comment=expected, name=name)
-            self.assertDictEqual(
-                filestate.hardlink(name, target, user=user, group=group), ret
-            )
-
-        # Absolute path for name
-        nonabs = "./non-existent-path/to/non-existent-file"
-        with patch.dict(filestate.__salt__, patches), patch.dict(
-            filestate.__salt__, {"file.user_to_uid": mock_uid}
-        ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}):
-            expected = "Specified file {0} is not an absolute path".format(nonabs)
-            ret = return_val(comment=expected, name=nonabs)
-            self.assertDictEqual(
-                filestate.hardlink(nonabs, target, user=user, group=group), ret
-            )
-
-        # Absolute path for target
-        with patch.dict(filestate.__salt__, patches), patch.dict(
-            filestate.__salt__, {"file.user_to_uid": mock_uid}
-        ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}):
-            expected = "Specified target {0} is not an absolute path".format(nonabs)
-            ret = return_val(comment=expected, name=name)
-            self.assertDictEqual(
-                filestate.hardlink(name, nonabs, user=user, group=group), ret
-            )
-        # Test option -- nonexistent target
-        with patch.dict(filestate.__salt__, patches), patch.dict(
-            filestate.__salt__, {"file.user_to_uid": mock_uid}
-        ), patch.dict(
-            filestate.__salt__, {"file.group_to_gid": mock_gid}
-        ), patch.object(
-            os.path, "exists", mock_f
-        ), patch.dict(
-            filestate.__opts__, {"test": True}
-        ):
-            expected = "Target {0} for hard link does not exist".format(target)
-            ret = return_val(comment=expected, name=name)
-            self.assertDictEqual(
-                filestate.hardlink(name, target, user=user, group=group), ret
-            )
-
-        # Test option -- target is a directory
-        with patch.dict(filestate.__salt__, patches), patch.dict(
-            filestate.__salt__, {"file.user_to_uid": mock_uid}
-        ), patch.dict(
-            filestate.__salt__, {"file.group_to_gid": mock_gid}
-        ), patch.object(
-            os.path, "exists", mock_t
-        ), patch.dict(
-            filestate.__opts__, {"test": True}
-        ):
-            expected = "Unable to hard link from directory {0}".format(test_dir)
-            ret = return_val(comment=expected, name=name)
-            self.assertDictEqual(
-                filestate.hardlink(name, test_dir, user=user, group=group), ret
-            )
-
-        # Test option -- name is a directory
-        with patch.dict(filestate.__salt__, patches), patch.dict(
-            filestate.__salt__, {"file.user_to_uid": mock_uid}
-        ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}), patch.dict(
-            filestate.__opts__, {"test": True}
-        ):
-            expected = "Unable to hard link to directory {0}".format(test_dir)
-            ret = return_val(comment=expected, name=test_dir)
-            self.assertDictEqual(
-                filestate.hardlink(test_dir, target, user=user, group=group), ret
-            )
-
-        # Test option -- name does not exist
-        with patch.dict(filestate.__salt__, patches), patch.dict(
-            filestate.__salt__, {"file.user_to_uid": mock_uid}
-        ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}), patch.dict(
-            filestate.__opts__, {"test": True}
-        ):
-            expected = "Hard link {0} to {1} is set for creation".format(name, target)
-            changes = dict(new=name)
-            ret = return_val(result=None, comment=expected, name=name, changes=changes)
-            self.assertDictEqual(
-                filestate.hardlink(name, target, user=user, group=group), ret
-            )
-
-        # Test option -- hardlink matches
-        with patch.dict(filestate.__salt__, patches), patch.dict(
-            filestate.__salt__, {"file.user_to_uid": mock_uid}
-        ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}), patch.dict(
-            filestate.__salt__, {"file.is_hardlink": mock_t}
-        ), patch.dict(
-            filestate.__salt__, {"file.stats": mock_stats}
-        ), patch.object(
-            os.path, "exists", mock_t
-        ), patch.dict(
-            filestate.__opts__, {"test": True}
-        ):
-            expected = "The hard link {0} is presently targetting {1}".format(
-                name, target
-            )
-            ret = return_val(result=True, comment=expected, name=name)
-            self.assertDictEqual(
-                filestate.hardlink(name, target, user=user, group=group), ret
-            )
-
-        # Test option -- hardlink does not match
-        with patch.dict(filestate.__salt__, patches), patch.dict(
-            filestate.__salt__, {"file.user_to_uid": mock_uid}
-        ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}), patch.dict(
-            filestate.__salt__, {"file.is_hardlink": mock_t}
-        ), patch.dict(
-            filestate.__salt__, {"file.stats": mock_nothing}
-        ), patch.object(
-            os.path, "exists", mock_t
-        ), patch.dict(
-            filestate.__opts__, {"test": True}
-        ):
-            expected = "Link {0} target is set to be changed to {1}".format(
-                name, target
-            )
-            changes = dict(change=name)
-            ret = return_val(result=None, comment=expected, name=name, changes=changes)
-            self.assertDictEqual(
-                filestate.hardlink(name, target, user=user, group=group), ret
-            )
-
-        # Test option -- force removal
-        with patch.dict(filestate.__salt__, patches), patch.dict(
-            filestate.__salt__, {"file.user_to_uid": mock_uid}
-        ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}), patch.dict(
-            filestate.__salt__, {"file.is_hardlink": mock_f}
-        ), patch.object(
-            os.path, "exists", mock_t
-        ), patch.dict(
-            filestate.__opts__, {"test": True}
-        ):
-            expected = (
-                "The file or directory {0} is set for removal to "
-                "make way for a new hard link targeting {1}".format(name, target)
-            )
-            ret = return_val(result=None, comment=expected, name=name)
-            self.assertDictEqual(
-                filestate.hardlink(name, target, force=True, user=user, group=group),
-                ret,
-            )
-
-        # Test option -- without force removal
-        with patch.dict(filestate.__salt__, patches), patch.dict(
-            filestate.__salt__, {"file.user_to_uid": mock_uid}
-        ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}), patch.dict(
-            filestate.__salt__, {"file.is_hardlink": mock_f}
-        ), patch.object(
-            os.path, "exists", mock_t
-        ), patch.dict(
-            filestate.__opts__, {"test": True}
-        ):
-            expected = (
-                "File or directory exists where the hard link {0} "
-                "should be. Did you mean to use force?".format(name)
-            )
-            ret = return_val(result=False, comment=expected, name=name)
-            self.assertDictEqual(
-                filestate.hardlink(name, target, force=False, user=user, group=group),
-                ret,
-            )
-
-        # Target is a directory
-        with patch.dict(filestate.__salt__, patches), patch.dict(
-            filestate.__salt__, {"file.user_to_uid": mock_uid}
-        ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}):
-            expected = "Unable to hard link from directory {0}".format(test_dir)
-            ret = return_val(comment=expected, name=name)
-            self.assertDictEqual(
-                filestate.hardlink(name, test_dir, user=user, group=group), ret
-            )
-
-        # Name is a directory
-        with patch.dict(filestate.__salt__, patches), patch.dict(
-            filestate.__salt__, {"file.user_to_uid": mock_uid}
-        ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}):
-            expected = "Unable to hard link to directory {0}".format(test_dir)
-            ret = return_val(comment=expected, name=test_dir)
-            self.assertDictEqual(
-                filestate.hardlink(test_dir, target, user=user, group=group), ret
-            )
-
-        # Try overwrite file with link
-        with patch.dict(filestate.__salt__, patches), patch.dict(
-            filestate.__salt__, {"file.user_to_uid": mock_uid}
-        ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}), patch.dict(
-            filestate.__salt__, {"file.is_hardlink": mock_f}
-        ), patch.object(
-            os.path, "isfile", mock_t
-        ):
-
-            expected = "File exists where the hard link {0} should be".format(name)
-            ret = return_val(comment=expected, name=name)
-            self.assertDictEqual(
-                filestate.hardlink(name, target, user=user, group=group), ret
-            )
-
-        # Try overwrite link with same
-        with patch.dict(filestate.__salt__, patches), patch.dict(
-            filestate.__salt__, {"file.user_to_uid": mock_uid}
-        ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}), patch.dict(
-            filestate.__salt__, {"file.is_hardlink": mock_t}
-        ), patch.dict(
-            filestate.__salt__, {"file.stats": mock_stats}
-        ), patch.object(
-            os.path, "isfile", mock_f
-        ):
-
-            expected = "Target of hard link {0} is already pointing " "to {1}".format(
-                name, target
-            )
-            ret = return_val(result=True, comment=expected, name=name)
-            self.assertDictEqual(
-                filestate.hardlink(name, target, user=user, group=group), ret
-            )
-
-        # Really overwrite link with same
-        with patch.dict(filestate.__salt__, patches), patch.dict(
-            filestate.__salt__, {"file.user_to_uid": mock_uid}
-        ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}), patch.dict(
-            filestate.__salt__, {"file.is_hardlink": mock_t}
-        ), patch.dict(
-            filestate.__salt__, {"file.link": mock_t}
-        ), patch.dict(
-            filestate.__salt__, {"file.stats": mock_nothing}
-        ), patch.object(
-            os, "remove", mock_t
-        ), patch.object(
-            os.path, "isfile", mock_f
-        ):
-
-            expected = "Set target of hard link {0} -> {1}".format(name, target)
-            changes = dict(new=name)
-            ret = return_val(result=True, comment=expected, name=name, changes=changes)
-            self.assertDictEqual(
-                filestate.hardlink(name, target, user=user, group=group), ret
-            )
-
-        # Fail at overwriting link with same
-        with patch.dict(filestate.__salt__, patches), patch.dict(
-            filestate.__salt__, {"file.user_to_uid": mock_uid}
-        ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}), patch.dict(
-            filestate.__salt__, {"file.is_hardlink": mock_t}
-        ), patch.dict(
-            filestate.__salt__, {"file.link": mock_execerror}
-        ), patch.dict(
-            filestate.__salt__, {"file.stats": mock_nothing}
-        ), patch.object(
-            os, "remove", mock_t
-        ), patch.object(
-            os.path, "isfile", mock_f
-        ):
-
-            expected = "Unable to set target of hard link {0} -> " "{1}: {2}".format(
-                name, target, ""
-            )
-            ret = return_val(result=False, comment=expected, name=name)
-            self.assertDictEqual(
-                filestate.hardlink(name, target, user=user, group=group), ret
-            )
-
-        # Make new link
-        with patch.dict(filestate.__salt__, patches), patch.dict(
-            filestate.__salt__, {"file.user_to_uid": mock_uid}
-        ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}), patch.dict(
-            filestate.__salt__, {"file.is_hardlink": mock_f}
-        ), patch.dict(
-            filestate.__salt__, {"file.link": mock_f}
-        ), patch.dict(
-            filestate.__salt__, {"file.stats": mock_nothing}
-        ), patch.object(
-            os, "remove", mock_t
-        ), patch.object(
-            os.path, "isfile", mock_f
-        ):
-
-            expected = "Created new hard link {0} -> {1}".format(name, target)
-            changes = dict(new=name)
-            ret = return_val(result=True, comment=expected, name=name, changes=changes)
-            self.assertDictEqual(
-                filestate.hardlink(name, target, user=user, group=group), ret
-            )
-
-        # Fail while making new link
-        with patch.dict(filestate.__salt__, patches), patch.dict(
-            filestate.__salt__, {"file.user_to_uid": mock_uid}
-        ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}), patch.dict(
-            filestate.__salt__, {"file.is_hardlink": mock_f}
-        ), patch.dict(
-            filestate.__salt__, {"file.link": mock_execerror}
-        ), patch.dict(
-            filestate.__salt__, {"file.stats": mock_nothing}
-        ), patch.object(
-            os, "remove", mock_t
-        ), patch.object(
-            os.path, "isfile", mock_f
-        ):
-
-            expected = "Unable to create new hard link {0} -> " "{1}: {2}".format(
-                name, target, ""
-            )
-            ret = return_val(result=False, comment=expected, name=name)
-            self.assertDictEqual(
-                filestate.hardlink(name, target, user=user, group=group), ret
-            )
-
-        # Force making new link over file
-        with patch.dict(filestate.__salt__, patches), patch.dict(
-            filestate.__salt__, {"file.user_to_uid": mock_uid}
-        ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}), patch.dict(
-            filestate.__salt__, {"file.is_hardlink": mock_f}
-        ), patch.dict(
-            filestate.__salt__, {"file.link": mock_t}
-        ), patch.dict(
-            filestate.__salt__, {"file.stats": mock_nothing}
-        ), patch.object(
-            os, "remove", mock_t
-        ), patch.object(
-            os.path, "isfile", mock_t
-        ):
-
-            expected = "Created new hard link {0} -> {1}".format(name, target)
-            changes = dict(new=name)
-            changes["forced"] = "File for hard link was forcibly replaced"
-            ret = return_val(result=True, comment=expected, name=name, changes=changes)
-            self.assertDictEqual(
-                filestate.hardlink(name, target, user=user, force=True, group=group),
-                ret,
-            )
-
-        # Force making new link over file but error out
-        with patch.dict(filestate.__salt__, patches), patch.dict(
-            filestate.__salt__, {"file.user_to_uid": mock_uid}
-        ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}), patch.dict(
-            filestate.__salt__, {"file.is_hardlink": mock_f}
-        ), patch.dict(
-            filestate.__salt__, {"file.link": mock_execerror}
-        ), patch.dict(
-            filestate.__salt__, {"file.stats": mock_nothing}
-        ), patch.object(
-            os, "remove", mock_t
-        ), patch.object(
-            os.path, "isfile", mock_t
-        ):
-
-            expected = "Unable to create new hard link {0} -> " "{1}: {2}".format(
-                name, target, ""
-            )
-            changes = dict(forced="File for hard link was forcibly replaced")
-            ret = return_val(result=False, comment=expected, name=name, changes=changes)
-            self.assertDictEqual(
-                filestate.hardlink(name, target, user=user, force=True, group=group),
-                ret,
-            )
+                filestate.symlink(name, target, user=user, group=group),
+                ret)
 
     # 'absent' function tests: 1
     def test_absent(self):
@@ -1404,12 +939,10 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                 with patch.dict(filestate.__opts__, {"test": True}):
                                     ret.update({"comment": comt})
                                     if salt.utils.platform.is_windows():
-                                        self.assertDictEqual(
-                                            filestate.managed(
-                                                name, user=user, group=group
-                                            ),
-                                            ret,
-                                        )
+                                        self.assertDictEqual(filestate.managed
+                                                             (name, user=user,
+                                                              group=group
+                                                              ), ret)
                                     else:
                                         self.assertDictEqual(
                                             filestate.managed(
@@ -1486,214 +1019,134 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             )
         )
         mock_error = CommandExecutionError
-        with patch.dict(
-            filestate.__salt__,
-            {
-                "config.manage_mode": mock_t,
-                "file.user_to_uid": mock_uid,
-                "file.group_to_gid": mock_gid,
-                "file.stats": mock_f,
-                "file.check_perms": mock_perms,
-                "file.mkdir": mock_t,
-            },
-        ), patch("salt.utils.win_dacl.get_sid", mock_error), patch(
-            "os.path.isdir", mock_t
-        ), patch(
-            "salt.states.file._check_directory_win", mock_check
-        ):
+        with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
+                                             'file.user_to_uid': mock_uid,
+                                             'file.group_to_gid': mock_gid,
+                                             'file.stats': mock_f,
+                                             'file.check_perms': mock_perms,
+                                             'file.mkdir': mock_t}), \
+             patch('salt.utils.win_dacl.get_sid', mock_error), \
+             patch('os.path.isdir', mock_t):
+                 #, \
+             #patch('salt.states.file._check_directory_win', mock_check):
             if salt.utils.platform.is_windows():
                 comt = ""
             else:
-                comt = "User salt is not available Group saltstack" " is not available"
-            ret.update({"comment": comt, "name": name})
-            self.assertDictEqual(filestate.directory(name, user=user, group=group), ret)
-
-            with patch.object(os.path, "isabs", mock_f):
-                comt = "Specified file {0} is not an absolute path".format(name)
-                ret.update({"comment": comt})
+                comt = ('User salt is not available Group saltstack'
+                        ' is not available')
+            ret.update({'comment': comt, 'name': name})
+            with patch('salt.states.file._check_directory_win', mock_check):
                 self.assertDictEqual(
-                    filestate.directory(name, user=user, group=group), ret
-                )
+                    filestate.directory(name, user=user, group=group), ret)
 
-            with patch.object(os.path, "isabs", mock_t):
-                with patch.object(
-                    os.path,
-                    "isfile",
-                    MagicMock(side_effect=[True, True, False, True, True, True, False]),
-                ):
-                    with patch.object(os.path, "lexists", mock_t):
-                        comt = "File exists where the backup target" " A should go"
-                        ret.update({"comment": comt})
-                        self.assertDictEqual(
-                            filestate.directory(
-                                name, user=user, group=group, backupname="A"
-                            ),
-                            ret,
-                        )
+            with patch.object(os.path, 'isabs', mock_f):
+                comt = ('Specified file {0} is not an absolute path'
+                        .format(name))
+                ret.update({'comment': comt})
+                self.assertDictEqual(filestate.directory(name, user=user,
+                                                         group=group), ret)
 
-                    with patch.object(os.path, "isfile", mock_t):
-                        comt = "Specified location {0} exists and is a file".format(
-                            name
-                        )
-                        ret.update({"comment": comt})
-                        self.assertDictEqual(
-                            filestate.directory(name, user=user, group=group), ret
-                        )
+            with patch.object(os.path, 'isabs', mock_t):
+                with patch.object(os.path, 'isfile',
+                                  MagicMock(side_effect=[True, True, False,
+                                                         True, True, True,
+                                                         False])):
+                    with patch.object(os.path, 'lexists', mock_t):
+                        comt = ('File exists where the backup target'
+                                ' A should go')
+                        ret.update({'comment': comt})
+                        self.assertDictEqual(filestate.directory
+                                             (name, user=user,
+                                              group=group,
+                                              backupname='A'), ret)
 
-                    with patch.object(os.path, "islink", mock_t):
-                        comt = "Specified location {0} exists and is a symlink".format(
-                            name
-                        )
-                        ret.update({"comment": comt})
-                        self.assertDictEqual(
-                            filestate.directory(name, user=user, group=group), ret
-                        )
+                    with patch.object(os.path, 'isfile', mock_t):
+                        comt = ('Specified location {0} exists and is a file'
+                                .format(name))
+                        ret.update({'comment': comt})
+                        self.assertDictEqual(filestate.directory(name, user=user,
+                                                                 group=group), ret)
 
-                with patch.object(os.path, "isdir", mock_f):
-                    with patch.dict(filestate.__opts__, {"test": True}):
-                        if salt.utils.platform.is_windows():
-                            comt = 'The directory "{0}" will be changed' "".format(name)
-                        else:
-                            comt = (
-                                "The following files will be changed:\n{0}:"
-                                " directory - new\n".format(name)
-                            )
-                        ret.update(
-                            {
-                                "comment": comt,
-                                "result": None,
-                                "changes": {name: {"directory": "new"}},
-                            }
-                        )
-                        self.assertDictEqual(
-                            filestate.directory(name, user=user, group=group), ret
-                        )
+                    with patch.object(os.path, 'islink', mock_t):
+                        comt = ('Specified location {0} exists and is a symlink'
+                                .format(name))
+                        ret.update({'comment': comt})
+                        self.assertDictEqual(filestate.directory(name,
+                                                                 user=user,
+                                                                 group=group),
+                                             ret)
 
-                    with patch.dict(filestate.__opts__, {"test": False}):
-                        with patch.object(os.path, "isdir", mock_f):
-                            comt = "No directory to create {0} in".format(name)
-                            ret.update({"comment": comt, "result": False})
-                            self.assertDictEqual(
-                                filestate.directory(name, user=user, group=group), ret
-                            )
-
-                        if salt.utils.platform.is_windows():
-                            isdir_side_effect = [False, True, False]
-                        else:
-                            isdir_side_effect = [True, False, True, False]
-                        with patch.object(
-                            os.path, "isdir", MagicMock(side_effect=isdir_side_effect)
-                        ):
-                            comt = "Failed to create directory {0}".format(name)
-                            ret.update(
-                                {
-                                    "comment": comt,
-                                    "result": False,
-                                    "changes": {name: "New Dir"},
-                                }
-                            )
-                            self.assertDictEqual(
-                                filestate.directory(name, user=user, group=group), ret
-                            )
-
-                        check_perms_ret = {
-                            "name": name,
-                            "result": False,
-                            "comment": "",
-                            "changes": {},
-                        }
-                        if salt.utils.platform.is_windows():
-                            mock_perms = MagicMock(return_value=check_perms_ret)
-                        else:
-                            mock_perms = MagicMock(return_value=(check_perms_ret, ""))
-
-                        recurse = ["silent"]
-                        ret = {
-                            "name": name,
-                            "result": False,
-                            "comment": "Directory /etc/testdir updated",
-                            "changes": {"recursion": "Changes silenced"},
-                        }
-                        if salt.utils.platform.is_windows():
-                            ret["comment"] = ret["comment"].replace("/", "\\")
-                        with patch.dict(
-                            filestate.__salt__, {"file.check_perms": mock_perms}
-                        ):
-                            with patch.object(os.path, "isdir", mock_t):
-                                self.assertDictEqual(
-                                    filestate.directory(
-                                        name, user=user, recurse=recurse, group=group
-                                    ),
-                                    ret,
-                                )
-
-                        check_perms_ret = {
-                            "name": name,
-                            "result": False,
-                            "comment": "",
-                            "changes": {},
-                        }
-                        if salt.utils.platform.is_windows():
-                            mock_perms = MagicMock(return_value=check_perms_ret)
-                        else:
-                            mock_perms = MagicMock(return_value=(check_perms_ret, ""))
-
-                        recurse = ["ignore_files", "ignore_dirs"]
-                        ret = {
-                            "name": name,
-                            "result": False,
-                            "comment": 'Must not specify "recurse" '
-                            'options "ignore_files" and '
-                            '"ignore_dirs" at the same '
-                            "time.",
-                            "changes": {},
-                        }
-                        with patch.dict(
-                            filestate.__salt__, {"file.check_perms": mock_perms}
-                        ):
-                            with patch.object(os.path, "isdir", mock_t):
-                                self.assertDictEqual(
-                                    filestate.directory(
-                                        name, user=user, recurse=recurse, group=group
-                                    ),
-                                    ret,
-                                )
-
-                        comt = "Directory {0} updated".format(name)
-                        ret = {
-                            "name": name,
-                            "result": True,
-                            "comment": comt,
-                            "changes": {
-                                "group": "group",
-                                "mode": "0777",
-                                "user": "user",
-                            },
-                        }
-
-                        check_perms_ret = {
-                            "name": name,
-                            "result": True,
-                            "comment": "",
-                            "changes": {
-                                "group": "group",
-                                "mode": "0777",
-                                "user": "user",
-                            },
-                        }
-
+                with patch.object(os.path, 'isdir', mock_f):
+                    with patch.dict(filestate.__opts__, {'test': True}):
                         if salt.utils.platform.is_windows():
                             _mock_perms = MagicMock(return_value=check_perms_ret)
                         else:
-                            _mock_perms = MagicMock(return_value=(check_perms_ret, ""))
-                        with patch.object(os.path, "isdir", mock_t):
-                            with patch.dict(
-                                filestate.__salt__, {"file.check_perms": _mock_perms}
-                            ):
-                                self.assertDictEqual(
-                                    filestate.directory(name, user=user, group=group),
-                                    ret,
-                                )
+                            comt = ('The following files will be changed:\n{0}:'
+                                    ' directory - new\n'.format(name))
+                        ret.update({
+                            'comment': comt,
+                            'result': None,
+                            'changes': {name: {'directory': 'new'}}
+                        })
+                        self.assertDictEqual(filestate.directory(name,
+                                                                 user=user,
+                                                                 group=group),
+                                             ret)
+
+                    with patch.dict(filestate.__opts__, {'test': False}):
+                        with patch.object(os.path, 'isdir', mock_f):
+                            comt = ('No directory to create {0} in'
+                                    .format(name))
+                            ret.update({'comment': comt, 'result': False})
+                            self.assertDictEqual(filestate.directory
+                                                 (name, user=user, group=group),
+                                                 ret)
+
+                        with patch.object(os.path, 'isdir',
+                                          MagicMock(side_effect=[True, False, True, True])), \
+                              patch('salt.states.file._check_directory_win', mock_check):
+                            comt = ('Failed to create directory {0}'
+                                    .format(name))
+                            ret.update({'comment': comt, 'result': False})
+                            self.assertDictEqual(filestate.directory
+                                                 (name, user=user, group=group),
+                                                 ret)
+
+                        recurse = ['ignore_files', 'ignore_dirs']
+                        ret.update({'comment': 'Must not specify "recurse" '
+                                               'options "ignore_files" and '
+                                               '"ignore_dirs" at the same '
+                                               'time.',
+                                    'changes': {}})
+                        with patch.object(os.path, 'isdir', mock_t), \
+                              patch('salt.states.file._check_directory_win', mock_check):
+                            self.assertDictEqual(filestate.directory
+                                                 (name, user=user,
+                                                  recurse=recurse, group=group),
+                                                 ret)
+
+                            self.assertDictEqual(filestate.directory
+                                                 (name, user=user, group=group),
+                                                 ret)
+                    changes = {}
+                    mock_check = MagicMock(
+                        return_value=(True, 'The directory {0} is in the correct state'.format(name), changes)
+                    )
+                    with patch('salt.states.file._check_directory_win', mock_check):
+                        recurse = ['mode']
+                        ret.update({'comment': 'The directory {} is in the '
+                                               'correct state'.format(name),
+                                    'changes': {},
+                                    'result': True})
+                        with patch.object(os.path, 'isdir', mock_t):
+                            self.assertDictEqual(
+                                filestate.directory(
+                                    name, user=user, dir_mode=700,
+                                    recurse=recurse, group=group,
+                                    children_only=True
+                                ),
+                                ret,
+                            )
 
     # 'recurse' function tests: 1
 
@@ -1882,36 +1335,24 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 ret.update({"comment": comt, "name": name})
                 self.assertDictEqual(filestate.comment(name, regex), ret)
 
-            with patch.object(os.path, "isabs", mock_t):
-                with patch.dict(
-                    filestate.__salt__,
-                    {"file.search": MagicMock(side_effect=[False, True, False, False])},
-                ):
-                    comt = "Pattern already commented"
-                    ret.update({"comment": comt, "result": True})
+            with patch.object(os.path, 'isabs', mock_t):
+                with patch.dict(filestate.__salt__,
+                                {'file.search': MagicMock(side_effect=[False, True, False, False])}):
+                    comt = ('Pattern already commented')
+                    ret.update({'comment': comt, 'result': True})
                     self.assertDictEqual(filestate.comment(name, regex), ret)
 
                     comt = "{0}: Pattern not found".format(regex)
                     ret.update({"comment": comt, "result": False})
                     self.assertDictEqual(filestate.comment(name, regex), ret)
 
-                with patch.dict(
-                    filestate.__salt__,
-                    {
-                        "file.search": MagicMock(side_effect=[True, True, True]),
-                        "file.comment": mock_t,
-                        "file.comment_line": mock_t,
-                    },
-                ):
-                    with patch.dict(filestate.__opts__, {"test": True}):
-                        comt = "File {0} is set to be updated".format(name)
-                        ret.update(
-                            {
-                                "comment": comt,
-                                "result": None,
-                                "changes": {name: "updated"},
-                            }
-                        )
+                with patch.dict(filestate.__salt__,
+                                {'file.search': MagicMock(side_effect=[True, True, True]),
+                                 'file.comment': mock_t,
+                                 'file.comment_line': mock_t}):
+                    with patch.dict(filestate.__opts__, {'test': True}):
+                        comt = ('File {0} is set to be updated'.format(name))
+                        ret.update({'comment': comt, 'result': None, 'changes': {name: 'updated'}})
                         self.assertDictEqual(filestate.comment(name, regex), ret)
 
                     with patch.dict(filestate.__opts__, {"test": False}):
@@ -1940,10 +1381,13 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
             mock_t = MagicMock(return_value=True)
             mock_f = MagicMock(return_value=False)
-            mock = MagicMock(side_effect=[False, True, False, False, True, True, True])
-            with patch.object(os.path, "isabs", mock_f):
-                comt = "Specified file {0} is not an absolute path".format(name)
-                ret.update({"comment": comt, "name": name})
+            mock = MagicMock(side_effect=[False, True,
+                                          False, False,
+                                          True,
+                                          True, True])
+            with patch.object(os.path, 'isabs', mock_f):
+                comt = ('Specified file {0} is not an absolute path'.format(name))
+                ret.update({'comment': comt, 'name': name})
                 self.assertDictEqual(filestate.uncomment(name, regex), ret)
 
             with patch.object(os.path, "isabs", mock_t):
@@ -2258,13 +1702,11 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 self.assertDictEqual(filestate.rename(name, source), ret)
 
         mock_lex = MagicMock(side_effect=[True, True, True])
-        with patch.object(os.path, "isabs", mock_t):
-            with patch.object(os.path, "lexists", mock_lex):
-                comt = (
-                    'The target file "{0}" exists and will not be '
-                    "overwritten".format(name)
-                )
-                ret.update({"comment": comt, "result": True})
+        with patch.object(os.path, 'isabs', mock_t):
+            with patch.object(os.path, 'lexists', mock_lex):
+                comt = ('The target file "{0}" exists and will not be '
+                        'overwritten'.format(name))
+                ret.update({'comment': comt, 'result': True})
                 self.assertDictEqual(filestate.rename(name, source), ret)
 
         mock_lex = MagicMock(side_effect=[True, True, True])
@@ -2780,17 +2222,14 @@ class TestFileTidied(TestCase):
         ):
             ret = filestate.tidied(name=name)
         exp = {
-            "name": name,
-            "changes": {
-                "removed": [
-                    os.path.join("test", "test1", "file1"),
-                    os.path.join("test", "test2", "file2"),
-                    os.path.join("test", "file3"),
-                ]
-            },
-            "pchanges": {},
-            "result": True,
-            "comment": "Removed 3 files or directories from directory {0}".format(name),
+            'name': name,
+            'changes': {
+                'removed': [
+                    os.path.join('test', 'test1', 'file1'),
+                    os.path.join('test', 'test2', 'file2'),
+                    os.path.join('test', 'file3')]},
+            'result': True,
+            'comment': 'Removed 3 files or directories from directory {0}'.format(name),
         }
         self.assertDictEqual(exp, ret)
         assert remove.call_count == 3
@@ -2809,151 +2248,78 @@ class TestFileTidied(TestCase):
         ):
             ret = filestate.tidied(name=name, rmdirs=True)
         exp = {
-            "name": name,
-            "changes": {
-                "removed": [
-                    os.path.join("test", "test1", "file1"),
-                    os.path.join("test", "test2", "file2"),
-                    os.path.join("test", "test2", "test3"),
-                    os.path.join("test", "file3"),
-                    os.path.join("test", "test1"),
-                    os.path.join("test", "test2"),
-                ]
-            },
-            "pchanges": {},
-            "result": True,
-            "comment": "Removed 6 files or directories from directory {0}".format(name),
+            'name': name,
+            'changes': {
+                'removed': [
+                    os.path.join('test', 'test1', 'file1'),
+                    os.path.join('test', 'test2', 'file2'),
+                    os.path.join('test', 'test2', 'test3'),
+                    os.path.join('test', 'file3'),
+                    os.path.join('test', 'test1'),
+                    os.path.join('test', 'test2')]},
+            'result': True,
+            'comment': 'Removed 6 files or directories from directory {0}'.format(name),
         }
         self.assertDictEqual(exp, ret)
         assert remove.call_count == 6
 
     def test__bad_input(self):
         exp = {
-            "name": "test/",
-            "changes": {},
-            "pchanges": {},
-            "result": False,
-            "comment": "Specified file test/ is not an absolute path",
+            'name': 'test/',
+            'changes': {},
+            'result': False,
+            'comment': 'Specified file test/ is not an absolute path',
         }
         assert filestate.tidied(name="test/") == exp
         exp = {
-            "name": "/bad-directory-name/",
-            "changes": {},
-            "pchanges": {},
-            "result": False,
-            "comment": "/bad-directory-name/ does not exist or is not a directory.",
+            'name': '/bad-directory-name/',
+            'changes': {},
+            'result': False,
+            'comment': '/bad-directory-name/ does not exist or is not a directory.',
         }
-        assert filestate.tidied(name="/bad-directory-name/") == exp
+        assert filestate.tidied(name='/bad-directory-name/') == exp
 
 
-class TestFilePrivateFunctions(TestCase, LoaderModuleMockMixin):
-    def setup_loader_modules(self):
-        return {filestate: {"__salt__": {"file.stats": filemod.stats}}}
-
-    @destructiveTest
-    @skipIf(salt.utils.platform.is_windows(), "File modes do not exist on windows")
-    def test__check_directory(self):
-        """
-        Test the _check_directory function
-        Make sure that recursive file permission checks return correctly
-        """
-        # set file permissions
-        # Run _check_directory function
-        # Verify that it returns correctly
-        # Delete tmp directory structure
-        root_tmp_dir = os.path.join(RUNTIME_VARS.TMP, "test__check_dir")
-        expected_dir_mode = 0o777
-        depth = 3
-        try:
-
-            def create_files(tmp_dir):
-                for f in range(depth):
-                    path = os.path.join(tmp_dir, "file_{:03}.txt".format(f))
-                    with salt.utils.files.fopen(path, "w+"):
-                        os.chmod(path, expected_dir_mode)
-
-            # Create tmp directory structure
-            os.mkdir(root_tmp_dir)
-            os.chmod(root_tmp_dir, expected_dir_mode)
-            create_files(root_tmp_dir)
-
-            for d in range(depth):
-                dir_name = os.path.join(root_tmp_dir, "dir{:03}".format(d))
-                os.mkdir(dir_name)
-                os.chmod(dir_name, expected_dir_mode)
-                create_files(dir_name)
-                for s in range(depth):
-                    sub_dir_name = os.path.join(dir_name, "dir{:03}".format(s))
-                    os.mkdir(sub_dir_name)
-                    os.chmod(sub_dir_name, expected_dir_mode)
-                    create_files(sub_dir_name)
-
-            # Set some bad permissions
-            changed_files = {
-                os.path.join(root_tmp_dir, "file_000.txt"),
-                os.path.join(root_tmp_dir, "dir002", "file_000.txt"),
-                os.path.join(root_tmp_dir, "dir000", "dir001", "file_002.txt"),
-                os.path.join(root_tmp_dir, "dir001", "dir002"),
-                os.path.join(root_tmp_dir, "dir002", "dir000"),
-                os.path.join(root_tmp_dir, "dir001"),
-            }
-            for c in changed_files:
-                os.chmod(c, 0o770)
-
-            ret = filestate._check_directory(
-                root_tmp_dir,
-                dir_mode=oct(expected_dir_mode),
-                file_mode=oct(expected_dir_mode),
-                recurse=["mode"],
-            )
-            self.assertSetEqual(changed_files, set(ret[-1].keys()))
-
-        finally:
-            # Cleanup
-            shutil.rmtree(root_tmp_dir)
-
-
-@skipIf(not salt.utils.platform.is_linux(), "Selinux only supported on linux")
+@skipIf(not salt.utils.platform.is_linux(), 'Selinux only supported on linux')
 class TestSelinux(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
             filestate: {
-                "__env__": "base",
-                "__salt__": {"file.manage_file": False},
-                "__opts__": {"test": False, "cachedir": ""},
-                "__instance_id__": "",
-                "__low__": {},
-                "__utils__": {},
+                '__env__': 'base',
+                '__salt__': {
+                    'file.manage_file': False
+                    },
+                '__opts__': {'test': False, 'cachedir': ''},
+                '__instance_id__': '',
+                '__low__': {},
+                '__utils__': {},
             }
         }
 
     def test_selinux_change(self):
-        file_name = "/tmp/some-test-file"
+        file_name = '/tmp/some-test-file'
         check_perms_result = [
             {
                 "comment": "The file {0} is set to be changed".format(file_name),
                 "changes": {
                     "selinux": {
                         "New": "User: unconfined_u Type: lost_found_t",
-                        "Old": "User: system_u Type: user_tmp_t",
+                        "Old": "User: system_u Type: user_tmp_t"
                     }
                 },
                 "name": file_name,
-                "result": True,
+                "result": True
             },
-            {"luser": "root", "lmode": "0644", "lgroup": "root"},
+            {
+                "luser": "root",
+                "lmode": "0644",
+                "lgroup": "root"
+            }
         ]
 
-        with patch.object(os.path, "exists", MagicMock(return_value=True)):
-            with patch.dict(
-                filestate.__salt__,
-                {
-                    "file.source_list": MagicMock(return_value=[file_name, None]),
-                    "file.check_perms": MagicMock(return_value=check_perms_result),
-                },
-            ):
-                ret = filestate.managed(
-                    file_name,
-                    selinux={"seuser": "unconfined_u", "setype": "user_tmp_t"},
-                )
-                self.assertEqual(True, ret["result"])
+        with patch.object(os.path, 'exists', MagicMock(return_value=True)):
+            with patch.dict(filestate.__salt__, {'file.source_list': MagicMock(return_value=[file_name, None]),
+                                                 'file.check_perms': MagicMock(return_value=check_perms_result)
+                                                }):
+                ret = filestate.managed(file_name, selinux={'seuser': 'unconfined_u', 'setype': 'user_tmp_t'})
+                self.assertEqual(True, ret['result'])

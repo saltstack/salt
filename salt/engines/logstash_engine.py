@@ -40,11 +40,9 @@ __virtualname__ = "logstash"
 
 
 def __virtual__():
-    return (
-        __virtualname__
-        if logstash is not None
-        else (False, "python-logstash not installed")
-    )
+    return __virtualname__ \
+        if logstash is not None \
+        else (False, 'python-logstash not installed')
 
 
 def event_bus_context(opts):
@@ -63,8 +61,8 @@ def event_bus_context(opts):
     return event_bus
 
 
-def start(host, port=5959, tag="salt/engine/logstash", proto="udp"):
-    """
+def start(host, port=5959, tag='salt/engine/logstash', proto='udp'):
+    '''
     Listen to salt events and forward them to logstash
     """
 

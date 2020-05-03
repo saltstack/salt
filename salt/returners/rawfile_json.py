@@ -71,8 +71,8 @@ def returner(ret):
 def event_return(events):
     """
     Write event data (return data and non-return data) to file on the master.
-    """
-    if len(events) == 0:
+    '''
+    if not events:
         # events is an empty list.
         # Don't open the logfile in vain.
         return

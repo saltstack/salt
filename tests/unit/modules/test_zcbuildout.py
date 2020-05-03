@@ -34,7 +34,6 @@ from tests.support.unit import TestCase, skipIf
 
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
-
 KNOWN_VIRTUALENV_BINARY_NAMES = (
     "virtualenv",
     "virtualenv2",
@@ -77,9 +76,9 @@ class Base(TestCase, LoaderModuleMockMixin):
         if not os.path.isdir(RUNTIME_VARS.TMP):
             os.makedirs(RUNTIME_VARS.TMP)
 
-        cls.root = os.path.join(RUNTIME_VARS.BASE_FILES, "buildout")
+        cls.root = os.path.join(RUNTIME_VARS.BASE_FILES, 'buildout')
         cls.rdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-        cls.tdir = os.path.join(cls.rdir, "test")
+        cls.tdir = os.path.join(cls.rdir, 'test')
         for idx, url in six.iteritems(buildout._URL_VERSIONS):
             log.debug("Downloading bootstrap from %s", url)
             dest = os.path.join(cls.rdir, "{0}_bootstrap.py".format(idx))
@@ -306,8 +305,7 @@ class BuildoutTestCase(Base):
     @skipIf(True, "SLOWTEST skip")
     def test__find_cfgs(self):
         result = sorted(
-            [a.replace(self.root, "") for a in buildout._find_cfgs(self.root)]
-        )
+            [a.replace(self.root, '') for a in buildout._find_cfgs(self.root)])
         assertlist = sorted(
             [
                 os.path.join(os.sep, "buildout.cfg"),

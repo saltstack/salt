@@ -11,6 +11,13 @@ import logging
 import os
 import shutil
 
+# Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.integration import AdaptedConfigurationTestCaseMixin
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mock import patch, Mock, MagicMock, NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase, skipIf
+
 # Import Salt libs
 import salt.utils.files
 from salt import fileclient
@@ -95,30 +102,37 @@ class FileclientTestCase(TestCase):
         assert len(oversized_file_with_query_params) < 256
 
 
-SALTENVS = ("base", "dev")
-SUBDIR = "subdir"
-SUBDIR_FILES = ("foo.txt", "bar.txt", "baz.txt")
+SALTENVS = ('base', 'dev')
+SUBDIR = 'subdir'
+SUBDIR_FILES = ('foo.txt', 'bar.txt', 'baz.txt')
 
+
+def _get_file_roots(fs_root):
+    return dict(
+        [(x, [os.path.join(fs_root, x)]) for x in SALTENVS]
+    )
 
 def _get_file_roots(fs_root):
     return dict([(x, [os.path.join(fs_root, x)]) for x in SALTENVS])
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class FileClientTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin):
 
 class FileClientTest(
     TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin
 ):
     def setup_loader_modules(self):
-        FS_ROOT = os.path.join(RUNTIME_VARS.TMP, "fileclient_fs_root")
-        CACHE_ROOT = os.path.join(RUNTIME_VARS.TMP, "fileclient_cache_root")
+        FS_ROOT = os.path.join(RUNTIME_VARS.TMP, 'fileclient_fs_root')
+        CACHE_ROOT = os.path.join(RUNTIME_VARS.TMP, 'fileclient_cache_root')
         MOCKED_OPTS = {
-            "file_roots": _get_file_roots(FS_ROOT),
-            "fileserver_backend": ["roots"],
-            "cachedir": CACHE_ROOT,
-            "file_client": "local",
+            'file_roots': _get_file_roots(FS_ROOT),
+            'fileserver_backend': ['roots'],
+            'cachedir': CACHE_ROOT,
+            'file_client': 'local',
         }
         self.addCleanup(shutil.rmtree, FS_ROOT, ignore_errors=True)
         self.addCleanup(shutil.rmtree, CACHE_ROOT, ignore_errors=True)
-        return {fileclient: {"__opts__": MOCKED_OPTS}}
+        return {fileclient: {'__opts__': MOCKED_OPTS}}
 
     def setUp(self):
         self.file_client = fileclient.Client(self.master_opts)
@@ -160,17 +174,17 @@ class FileclientCacheTest(
     """
 
     def setup_loader_modules(self):
-        self.FS_ROOT = os.path.join(RUNTIME_VARS.TMP, "fileclient_fs_root")
-        self.CACHE_ROOT = os.path.join(RUNTIME_VARS.TMP, "fileclient_cache_root")
+        self.FS_ROOT = os.path.join(RUNTIME_VARS.TMP, 'fileclient_fs_root')
+        self.CACHE_ROOT = os.path.join(RUNTIME_VARS.TMP, 'fileclient_cache_root')
         self.MOCKED_OPTS = {
-            "file_roots": _get_file_roots(self.FS_ROOT),
-            "fileserver_backend": ["roots"],
-            "cachedir": self.CACHE_ROOT,
-            "file_client": "local",
+            'file_roots': _get_file_roots(self.FS_ROOT),
+            'fileserver_backend': ['roots'],
+            'cachedir': self.CACHE_ROOT,
+            'file_client': 'local',
         }
         self.addCleanup(shutil.rmtree, self.FS_ROOT, ignore_errors=True)
         self.addCleanup(shutil.rmtree, self.CACHE_ROOT, ignore_errors=True)
-        return {fileclient: {"__opts__": self.MOCKED_OPTS}}
+        return {fileclient: {'__opts__': self.MOCKED_OPTS}}
 
     def setUp(self):
         """
@@ -263,7 +277,7 @@ class FileclientCacheTest(
         """
         patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
         patched_opts.update(self.MOCKED_OPTS)
-        alt_cachedir = os.path.join(RUNTIME_VARS.TMP, "abs_cachedir")
+        alt_cachedir = os.path.join(RUNTIME_VARS.TMP, 'abs_cachedir')
 
         with patch.dict(fileclient.__opts__, patched_opts):
             client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
@@ -299,7 +313,7 @@ class FileclientCacheTest(
         """
         patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
         patched_opts.update(self.MOCKED_OPTS)
-        alt_cachedir = "foo"
+        alt_cachedir = 'foo'
 
         with patch.dict(fileclient.__opts__, patched_opts):
             client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
@@ -369,7 +383,7 @@ class FileclientCacheTest(
         """
         patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
         patched_opts.update(self.MOCKED_OPTS)
-        alt_cachedir = os.path.join(RUNTIME_VARS.TMP, "abs_cachedir")
+        alt_cachedir = os.path.join(RUNTIME_VARS.TMP, 'abs_cachedir')
 
         with patch.dict(fileclient.__opts__, patched_opts):
             client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
@@ -398,7 +412,7 @@ class FileclientCacheTest(
         """
         patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
         patched_opts.update(self.MOCKED_OPTS)
-        alt_cachedir = "foo"
+        alt_cachedir = 'foo'
 
         with patch.dict(fileclient.__opts__, patched_opts):
             client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
@@ -425,3 +439,51 @@ class FileclientCacheTest(
                 log.debug("cache_loc = %s", cache_loc)
                 log.debug("content = %s", content)
                 self.assertTrue(saltenv in content)
+
+    def test_cache_dest(self):
+        '''
+        Tests functionality for cache_dest
+        '''
+        patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
+        patched_opts.update(self.MOCKED_OPTS)
+
+        relpath = 'foo.com/bar.txt'
+        cachedir = self.minion_opts['cachedir']
+
+        def _external(saltenv='base'):
+            return salt.utils.path.join(
+                patched_opts['cachedir'],
+                'extrn_files',
+                saltenv,
+                relpath)
+
+        def _salt(saltenv='base'):
+            return salt.utils.path.join(
+                patched_opts['cachedir'],
+                'files',
+                saltenv,
+                relpath)
+
+        def _check(ret, expected):
+            assert ret == expected, '{0} != {1}'.format(ret, expected)
+
+        with patch.dict(fileclient.__opts__, patched_opts):
+            client = fileclient.get_file_client(
+                fileclient.__opts__, pillar=False)
+
+            _check(client.cache_dest('https://' + relpath),
+                   _external())
+
+            _check(client.cache_dest('https://' + relpath, 'dev'),
+                   _external('dev'))
+
+            _check(client.cache_dest('salt://' + relpath),
+                   _salt())
+
+            _check(client.cache_dest('salt://' + relpath, 'dev'),
+                   _salt('dev'))
+
+            _check(client.cache_dest('salt://' + relpath + '?saltenv=dev'),
+                   _salt('dev'))
+
+            _check('/foo/bar', '/foo/bar')

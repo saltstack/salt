@@ -6,6 +6,7 @@ codecov:
 #                               # want to disable this check. Expired reports will not be processed by codecov.
 #  require_ci_to_pass: yes      # Less spammy. Only notify on passing builds.
 
+  branch: develop
 
 #  notify:
 #    after_n_builds: 25           # Only notify after N builds

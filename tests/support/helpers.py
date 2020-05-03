@@ -32,9 +32,29 @@ import threading
 import time
 import types
 
-import pytest
-import salt.ext.tornado.ioloop
-import salt.ext.tornado.web
+# Import 3rd-party libs
+import psutil  # pylint: disable=3rd-party-module-not-gated
+from salt.ext import six
+from salt.ext.six.moves import range, builtins  # pylint: disable=import-error,redefined-builtin
+try:
+    from pytestsalt.utils import get_unused_localhost_port  # pylint: disable=unused-import
+except ImportError:
+    def get_unused_localhost_port():
+        '''
+        Return a random unused port on localhost
+        '''
+        usock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+        usock.bind(('127.0.0.1', 0))
+        port = usock.getsockname()[1]
+        usock.close()
+        return port
+
+# Import Salt Tests Support libs
+from tests.support.unit import skip, _id, SkipTest
+from tests.support.mock import patch
+from tests.support.paths import FILES, TMP
+
+# Import Salt libs
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
@@ -225,24 +245,11 @@ def flaky(caller=None, condition=True, attempts=4):
                     if callable(setup):
                         setup()
                 return caller(cls)
-            except SkipTest as exc:
-                cls.skipTest(exc.args[0])
-            except Exception as exc:  # pylint: disable=broad-except
-                exc_info = sys.exc_info()
-                if isinstance(exc, SkipTest):
-                    six.reraise(*exc_info)
-                if not isinstance(exc, AssertionError) and log.isEnabledFor(
-                    logging.DEBUG
-                ):
-                    log.exception(exc, exc_info=exc_info)
-                if attempt >= attempts - 1:
-                    # We won't try to run tearDown once the attempts are exhausted
-                    # because the regular test runner will do that for us
-                    six.reraise(*exc_info)
-                # Run through tearDown again
-                teardown = getattr(cls, "tearDown", None)
-                if callable(teardown):
-                    teardown()
+            except Exception as exc:
+                if not isinstance(exc, (AssertionError, SkipTest)) and log.isEnabledFor(logging.DEBUG):
+                    log.exception(exc, exc_info=True)
+                if attempt >= attempts -1:
+                    six.reraise(*sys.exc_info())
                 backoff_time = attempt ** 2
                 log.info("Found Exception. Waiting %s seconds to retry.", backoff_time)
                 time.sleep(backoff_time)
@@ -451,7 +458,7 @@ class ForceImportErrorOn(object):
     Traceback (most recent call last):
       File "<stdin>", line 2, in <module>
       File "salttesting/helpers.py", line 263, in __import__
-        'Forced ImportError raised for {0!r}'.format(name)
+        'Forced ImportError raised for \'{0}\''.format(name)
     ImportError: Forced ImportError raised for 'os.path'
     >>>
 
@@ -478,7 +485,7 @@ class ForceImportErrorOn(object):
     Traceback (most recent call last):
       File "<stdin>", line 2, in <module>
       File "salttesting/helpers.py", line 281, in __fake_import__
-        'Forced ImportError raised for {0!r}'.format(name)
+        'Forced ImportError raised for \'{0}\''.format(name)
     ImportError: Forced ImportError raised for 'os.path'
     >>>
     """
@@ -520,12 +527,16 @@ class ForceImportErrorOn(object):
         if name in self.__module_names:
             importerror_fromlist = self.__module_names.get(name)
             if importerror_fromlist is None:
-                raise ImportError("Forced ImportError raised for {0!r}".format(name))
+                raise ImportError(
+                    'Forced ImportError raised for \'{0}\''.format(name)
+                )
 
             if importerror_fromlist.intersection(set(fromlist)):
                 raise ImportError(
-                    "Forced ImportError raised for {0!r}".format(
-                        "from {0} import {1}".format(name, ", ".join(fromlist))
+                    'Forced ImportError raised for \'{0}\''.format(
+                        'from {0} import {1}'.format(
+                            name, ', '.join(fromlist)
+                        )
                     )
                 )
         return self.__original_import(name, globals_, locals_, fromlist, level)
@@ -695,48 +706,47 @@ def with_system_user(
         def wrap(cls):
 
             # Let's add the user to the system.
-            log.debug("Creating system user {0!r}".format(username))
-            kwargs = {"timeout": 60, "groups": groups}
+            log.debug('Creating system user \'%s\'', username)
+            kwargs = {'timeout': 60, 'groups': groups}
             if salt.utils.platform.is_windows():
                 kwargs.update({"password": password})
             create_user = cls.run_function("user.add", [username], **kwargs)
             if not create_user:
                 log.debug("Failed to create system user")
                 # The user was not created
-                if on_existing == "skip":
-                    cls.skipTest("Failed to create system user {0!r}".format(username))
+                if on_existing == 'skip':
+                    cls.skipTest(
+                        'Failed to create system user \'{0}\''.format(
+                            username
+                        )
+                    )
 
-                if on_existing == "delete":
-                    log.debug("Deleting the system user {0!r}".format(username))
+                if on_existing == 'delete':
+                    log.debug('Deleting the system user \'%s\'', username)
                     delete_user = cls.run_function(
                         "user.delete", [username, True, True]
                     )
                     if not delete_user:
                         cls.skipTest(
-                            "A user named {0!r} already existed on the "
-                            "system and re-creating it was not possible".format(
-                                username
-                            )
+                            'A user named \'{0}\' already existed on the '
+                            'system and re-creating it was not possible'
+                            .format(username)
                         )
-                    log.debug("Second time creating system user {0!r}".format(username))
-                    create_user = cls.run_function("user.add", [username], **kwargs)
+                    log.debug('Second time creating system user \'%s\'', username)
+                    create_user = cls.run_function('user.add', [username], **kwargs)
                     if not create_user:
                         cls.skipTest(
-                            "A user named {0!r} already existed, was deleted "
-                            "as requested, but re-creating it was not possible".format(
-                                username
-                            )
+                            'A user named \'{0}\' already existed, was deleted '
+                            'as requested, but re-creating it was not possible'
+                            .format(username)
                         )
 
             failure = None
             try:
                 try:
                     return func(cls, username)
-                except Exception as exc:  # pylint: disable=W0703
-                    log.error(
-                        "Running {0!r} raised an exception: {1}".format(func, exc),
-                        exc_info=True,
-                    )
+                except Exception:
+                    log.exception('Running %s raised an exception', func)
                     # Store the original exception details which will be raised
                     # a little further down the code
                     failure = sys.exc_info()
@@ -748,14 +758,14 @@ def with_system_user(
                     if not delete_user:
                         if failure is None:
                             log.warning(
-                                "Although the actual test-case did not fail, "
-                                "deleting the created system user {0!r} "
-                                "afterwards did.".format(username)
+                                'Although the actual test-case did not fail, '
+                                'deleting the created system user \'%s\' '
+                                'afterwards did.', username
                             )
                         else:
                             log.warning(
-                                "The test-case failed and also did the removal"
-                                " of the system user {0!r}".format(username)
+                                'The test-case failed and also did the removal'
+                                ' of the system user \'%s\'', username
                             )
                 if failure is not None:
                     # If an exception was thrown, raise it
@@ -795,41 +805,40 @@ def with_system_group(group, on_existing="delete", delete=True):
         def wrap(cls):
 
             # Let's add the user to the system.
-            log.debug("Creating system group {0!r}".format(group))
-            create_group = cls.run_function("group.add", [group])
+            log.debug('Creating system group \'%s\'', group)
+            create_group = cls.run_function('group.add', [group])
             if not create_group:
                 log.debug("Failed to create system group")
                 # The group was not created
-                if on_existing == "skip":
-                    cls.skipTest("Failed to create system group {0!r}".format(group))
+                if on_existing == 'skip':
+                    cls.skipTest(
+                        'Failed to create system group \'{0}\''.format(group)
+                    )
 
-                if on_existing == "delete":
-                    log.debug("Deleting the system group {0!r}".format(group))
-                    delete_group = cls.run_function("group.delete", [group])
+                if on_existing == 'delete':
+                    log.debug('Deleting the system group \'%s\'', group)
+                    delete_group = cls.run_function('group.delete', [group])
                     if not delete_group:
                         cls.skipTest(
-                            "A group named {0!r} already existed on the "
-                            "system and re-creating it was not possible".format(group)
+                            'A group named \'{0}\' already existed on the '
+                            'system and re-creating it was not possible'
+                            .format(group)
                         )
-                    log.debug("Second time creating system group {0!r}".format(group))
-                    create_group = cls.run_function("group.add", [group])
+                    log.debug('Second time creating system group \'%s\'', group)
+                    create_group = cls.run_function('group.add', [group])
                     if not create_group:
                         cls.skipTest(
-                            "A group named {0!r} already existed, was deleted "
-                            "as requested, but re-creating it was not possible".format(
-                                group
-                            )
+                            'A group named \'{0}\' already existed, was deleted '
+                            'as requested, but re-creating it was not possible'
+                            .format(group)
                         )
 
             failure = None
             try:
                 try:
                     return func(cls, group)
-                except Exception as exc:  # pylint: disable=W0703
-                    log.error(
-                        "Running {0!r} raised an exception: {1}".format(func, exc),
-                        exc_info=True,
-                    )
+                except Exception:
+                    log.exception('Running %s raised an exception', func)
                     # Store the original exception details which will be raised
                     # a little further down the code
                     failure = sys.exc_info()
@@ -839,14 +848,14 @@ def with_system_group(group, on_existing="delete", delete=True):
                     if not delete_group:
                         if failure is None:
                             log.warning(
-                                "Although the actual test-case did not fail, "
-                                "deleting the created system group {0!r} "
-                                "afterwards did.".format(group)
+                                'Although the actual test-case did not fail, '
+                                'deleting the created system group \'%s\' '
+                                'afterwards did.', group
                             )
                         else:
                             log.warning(
-                                "The test-case failed and also did the removal"
-                                " of the system group {0!r}".format(group)
+                                'The test-case failed and also did the removal'
+                                ' of the system group \'%s\'', group
                             )
                 if failure is not None:
                     # If an exception was thrown, raise it
@@ -889,70 +898,71 @@ def with_system_user_and_group(username, group, on_existing="delete", delete=Tru
         def wrap(cls):
 
             # Let's add the user to the system.
-            log.debug("Creating system user {0!r}".format(username))
-            create_user = cls.run_function("user.add", [username])
-            log.debug("Creating system group {0!r}".format(group))
-            create_group = cls.run_function("group.add", [group])
+            log.debug('Creating system user %s', username)
+            create_user = cls.run_function('user.add', [username])
+            log.debug('Creating system group %s', group)
+            create_group = cls.run_function('group.add', [group])
             if not create_user:
                 log.debug("Failed to create system user")
                 # The user was not created
-                if on_existing == "skip":
-                    cls.skipTest("Failed to create system user {0!r}".format(username))
+                if on_existing == 'skip':
+                    cls.skipTest(
+                        'Failed to create system user \'{0}\''.format(
+                            username
+                        )
+                    )
 
-                if on_existing == "delete":
-                    log.debug("Deleting the system user {0!r}".format(username))
+                if on_existing == 'delete':
+                    log.debug('Deleting the system user \'%s\'', username)
                     delete_user = cls.run_function(
                         "user.delete", [username, True, True]
                     )
                     if not delete_user:
                         cls.skipTest(
-                            "A user named {0!r} already existed on the "
-                            "system and re-creating it was not possible".format(
-                                username
-                            )
+                            'A user named \'{0}\' already existed on the '
+                            'system and re-creating it was not possible'
+                            .format(username)
                         )
-                    log.debug("Second time creating system user {0!r}".format(username))
-                    create_user = cls.run_function("user.add", [username])
+                    log.debug('Second time creating system user \'%s\'', username)
+                    create_user = cls.run_function('user.add', [username])
                     if not create_user:
                         cls.skipTest(
-                            "A user named {0!r} already existed, was deleted "
-                            "as requested, but re-creating it was not possible".format(
-                                username
-                            )
+                            'A user named \'{0}\' already existed, was deleted '
+                            'as requested, but re-creating it was not possible'
+                            .format(username)
                         )
             if not create_group:
                 log.debug("Failed to create system group")
                 # The group was not created
-                if on_existing == "skip":
-                    cls.skipTest("Failed to create system group {0!r}".format(group))
+                if on_existing == 'skip':
+                    cls.skipTest(
+                        'Failed to create system group \'{0}\''.format(group)
+                    )
 
-                if on_existing == "delete":
-                    log.debug("Deleting the system group {0!r}".format(group))
-                    delete_group = cls.run_function("group.delete", [group])
+                if on_existing == 'delete':
+                    log.debug('Deleting the system group %s', group)
+                    delete_group = cls.run_function('group.delete', [group])
                     if not delete_group:
                         cls.skipTest(
-                            "A group named {0!r} already existed on the "
-                            "system and re-creating it was not possible".format(group)
+                            'A group named \'{0}\' already existed on the '
+                            'system and re-creating it was not possible'
+                            .format(group)
                         )
-                    log.debug("Second time creating system group {0!r}".format(group))
-                    create_group = cls.run_function("group.add", [group])
+                    log.debug('Second time creating system group %s', group)
+                    create_group = cls.run_function('group.add', [group])
                     if not create_group:
                         cls.skipTest(
-                            "A group named {0!r} already existed, was deleted "
-                            "as requested, but re-creating it was not possible".format(
-                                group
-                            )
+                            'A group named \'{0}\' already existed, was deleted '
+                            'as requested, but re-creating it was not possible'
+                            .format(group)
                         )
 
             failure = None
             try:
                 try:
                     return func(cls, username, group)
-                except Exception as exc:  # pylint: disable=W0703
-                    log.error(
-                        "Running {0!r} raised an exception: {1}".format(func, exc),
-                        exc_info=True,
-                    )
+                except Exception:
+                    log.exception('Running %s raised an exception', func)
                     # Store the original exception details which will be raised
                     # a little further down the code
                     failure = sys.exc_info()
@@ -965,26 +975,26 @@ def with_system_user_and_group(username, group, on_existing="delete", delete=Tru
                     if not delete_user:
                         if failure is None:
                             log.warning(
-                                "Although the actual test-case did not fail, "
-                                "deleting the created system user {0!r} "
-                                "afterwards did.".format(username)
+                                'Although the actual test-case did not fail, '
+                                'deleting the created system user \'%s\' '
+                                'afterwards did.', username
                             )
                         else:
                             log.warning(
-                                "The test-case failed and also did the removal"
-                                " of the system user {0!r}".format(username)
+                                'The test-case failed and also did the removal'
+                                ' of the system user \'%s\'', username
                             )
                     if not delete_group:
                         if failure is None:
                             log.warning(
-                                "Although the actual test-case did not fail, "
-                                "deleting the created system group {0!r} "
-                                "afterwards did.".format(group)
+                                'Although the actual test-case did not fail, '
+                                'deleting the created system group \'%s\' '
+                                'afterwards did.', group
                             )
                         else:
                             log.warning(
-                                "The test-case failed and also did the removal"
-                                " of the system group {0!r}".format(group)
+                                'The test-case failed and also did the removal'
+                                ' of the system group \'%s\'', group
                             )
                 if failure is not None:
                     # If an exception was thrown, raise it
@@ -1203,6 +1213,19 @@ def requires_salt_states(*names):
                 if old_setup is not None:
                     old_setup(self, *args, **kwargs)
 
+                if not hasattr(self, 'run_function'):
+                    raise RuntimeError(
+                        '{0} does not have the \'run_function\' method which '
+                        'is necessary to collect the loaded modules'.format(
+                            self.__class__.__name__
+                        )
+                    )
+
+                not_found_modules = self.run_function('runtests_helpers.modules_available', names)
+                if not_found_modules:
+                    if len(not_found_modules) == 1:
+                        self.skipTest('Salt module \'{0}\' is not available'.format(not_found_modules[0]))
+                    self.skipTest('Salt modules not available: \'{0}\''.format(not_found_modules))
             caller.setUp = setUp
             return caller
 
@@ -1222,19 +1245,10 @@ def requires_salt_modules(*names):
     """
     Makes sure the passed salt module is available. Skips the test if not
 
-    .. versionadded:: 0.5.2
-    """
-    not_available = _check_required_sminion_attributes("functions", *names)
-
-    def decorator(caller):
-        if inspect.isclass(caller):
-            # We're decorating a class
-            old_setup = getattr(caller, "setUp", None)
-
-            def setUp(self, *args, **kwargs):
-                if not_available:
-                    raise SkipTest(
-                        "Unavailable salt modules: {}".format(*not_available)
+            for name in names:
+                if name not in cls.run_function('sys.doc', [name]):
+                    cls.skipTest(
+                        'Salt module \'{0}\' is not available'.format(name)
                     )
                 if old_setup is not None:
                     old_setup(self, *args, **kwargs)
@@ -1271,8 +1285,9 @@ def skip_if_binaries_missing(*binaries, **kwargs):
         for binary in binaries:
             if salt.utils.path.which(binary) is None:
                 return skip(
-                    "{0}The {1!r} binary was not found".format(
-                        message and "{0}. ".format(message) or "", binary
+                    '{0}The \'{1}\' binary was not found'.format(
+                        message and '{0}. '.format(message) or '',
+                        binary
                     )
                 )
     elif salt.utils.path.which_bin(binaries) is None:
@@ -1647,8 +1662,9 @@ def dedent(text, linesep=os.linesep):
 
 
 class PatchedEnviron(object):
+
     def __init__(self, **kwargs):
-        self.cleanup_keys = kwargs.pop("__cleanup__", ())
+        self.cleanup_keys = kwargs.pop('__cleanup__', ())
         self.kwargs = kwargs
         self.original_environ = None
 
@@ -1656,22 +1672,6 @@ class PatchedEnviron(object):
         self.original_environ = os.environ.copy()
         for key in self.cleanup_keys:
             os.environ.pop(key, None)
-
-        # Make sure there are no unicode characters in the self.kwargs if we're
-        # on Python 2. These are being added to `os.environ` and causing
-        # problems
-        if sys.version_info < (3,):
-            kwargs = self.kwargs.copy()
-            clean_kwargs = {}
-            for k in self.kwargs:
-                key = k
-                if isinstance(key, six.text_type):
-                    key = key.encode("utf-8")
-                if isinstance(self.kwargs[k], six.text_type):
-                    kwargs[k] = kwargs[k].encode("utf-8")
-                clean_kwargs[key] = kwargs[k]
-            self.kwargs = clean_kwargs
-
         os.environ.update(**self.kwargs)
         return self
 
@@ -1681,64 +1681,3 @@ class PatchedEnviron(object):
 
 
 patched_environ = PatchedEnviron
-
-
-class VirtualEnv(object):
-    def __init__(self, venv_dir=None):
-        self.venv_dir = venv_dir or tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-        if salt.utils.platform.is_windows():
-            self.venv_python = os.path.join(self.venv_dir, "Scripts", "python.exe")
-        else:
-            self.venv_python = os.path.join(self.venv_dir, "bin", "python")
-
-    def __enter__(self):
-        try:
-            self._create_virtualenv()
-        except subprocess.CalledProcessError:
-            raise AssertionError("Failed to create virtualenv")
-        return self
-
-    def __exit__(self, *args):
-        shutil.rmtree(self.venv_dir, ignore_errors=True)
-
-    def install(self, *args):
-        subprocess.check_call([self.venv_python, "-m", "pip", "install"] + list(args))
-
-    def _get_real_python(self):
-        """
-        The reason why the virtualenv creation is proxied by this function is mostly
-        because under windows, we can't seem to properly create a virtualenv off of
-        another virtualenv(we can on linux) and also because, we really don't want to
-        test virtualenv creation off of another virtualenv, we want a virtualenv created
-        from the original python.
-        Also, on windows, we must also point to the virtualenv binary outside the existing
-        virtualenv because it will fail otherwise
-        """
-        try:
-            if salt.utils.platform.is_windows():
-                return os.path.join(sys.real_prefix, os.path.basename(sys.executable))
-            else:
-                python_binary_names = [
-                    "python{}.{}".format(*sys.version_info),
-                    "python{}".format(*sys.version_info),
-                    "python",
-                ]
-                for binary_name in python_binary_names:
-                    python = os.path.join(sys.real_prefix, "bin", binary_name)
-                    if os.path.exists(python):
-                        break
-                else:
-                    raise AssertionError(
-                        "Couldn't find a python binary name under '{}' matching: {}".format(
-                            os.path.join(sys.real_prefix, "bin"), python_binary_names
-                        )
-                    )
-                return python
-        except AttributeError:
-            return sys.executable
-
-    def _create_virtualenv(self):
-        sminion = create_sminion()
-        sminion.functions.virtualenv.create(
-            self.venv_dir, python=self._get_real_python()
-        )

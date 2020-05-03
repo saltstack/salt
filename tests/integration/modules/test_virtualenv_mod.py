@@ -6,6 +6,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import tempfile
 
+# Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
+
 # Import salt libs
 import salt.utils.path
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
@@ -27,7 +32,7 @@ class VirtualenvModuleTest(ModuleCase):
     def setUp(self):
         super(VirtualenvModuleTest, self).setUp()
         self.venv_test_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-        self.venv_dir = os.path.join(self.venv_test_dir, "venv")
+        self.venv_dir = os.path.join(self.venv_test_dir, 'venv')
 
     @skipIf(True, "SLOWTEST skip")
     def test_create_defaults(self):

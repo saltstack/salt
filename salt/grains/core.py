@@ -23,6 +23,9 @@ import socket
 import sys
 import time
 import uuid
+import zlib
+from errno import EACCES, EPERM
+import datetime
 import warnings
 from errno import EACCES, EPERM
 
@@ -89,6 +92,20 @@ try:
 except ImportError:
     from distro import linux_distribution
 
+# Import salt libs
+import salt.exceptions
+import salt.log
+import salt.utils.args
+import salt.utils.dns
+import salt.utils.files
+import salt.utils.network
+import salt.utils.path
+import salt.utils.pkg.rpm
+import salt.utils.platform
+import salt.utils.stringutils
+import salt.utils.versions
+from salt.ext import six
+from salt.ext.six.moves import range
 
 if salt.utils.platform.is_windows():
     import salt.utils.win_osinfo
@@ -165,28 +182,22 @@ def _linux_cpudata():
     cpuinfo = "/proc/cpuinfo"
     # Parse over the cpuinfo file
     if os.path.isfile(cpuinfo):
-        with salt.utils.files.fopen(cpuinfo, "r") as _fp:
+        with salt.utils.files.fopen(cpuinfo, 'r') as _fp:
+            grains['num_cpus'] = 0
             for line in _fp:
                 comps = line.split(":")
                 if not len(comps) > 1:
                     continue
                 key = comps[0].strip()
                 val = comps[1].strip()
-                if key == "processor":
-                    grains["num_cpus"] = int(val) + 1
-                # head -2 /proc/cpuinfo
-                # vendor_id       : IBM/S390
-                # # processors    : 2
-                elif key == "# processors":
-                    grains["num_cpus"] = int(val)
-                elif key == "vendor_id":
-                    grains["cpu_model"] = val
-                elif key == "model name":
-                    grains["cpu_model"] = val
-                elif key == "flags":
-                    grains["cpu_flags"] = val.split()
-                elif key == "Features":
-                    grains["cpu_flags"] = val.split()
+                if key == 'processor':
+                    grains['num_cpus'] += 1
+                elif key == 'model name':
+                    grains['cpu_model'] = val
+                elif key == 'flags':
+                    grains['cpu_flags'] = val.split()
+                elif key == 'Features':
+                    grains['cpu_flags'] = val.split()
                 # ARM support - /proc/cpuinfo
                 #
                 # Processor       : ARMv6-compatible processor rev 7 (v6l)
@@ -282,7 +293,7 @@ def _linux_gpu_data():
 
     gpus = []
     for gpu in devs:
-        vendor_strings = re.split("[^A-Za-z0-9]", gpu["Vendor"].lower())
+        vendor_strings = re.split('[^A-Za-z0-9]', gpu['Vendor'].lower())
         # default vendor to 'unknown', overwrite if we match a known one
         vendor = "unknown"
         for name in known_vendors:
@@ -2016,16 +2027,23 @@ def os_data():
                         for line in ifile:
                             # ALT Linux Sisyphus (unstable)
                             comps = line.split()
-                            if comps[0] == "ALT":
-                                grains["lsb_distrib_release"] = comps[2]
-                                grains["lsb_distrib_codename"] = (
-                                    comps[3].replace("(", "").replace(")", "")
-                                )
-                elif os.path.isfile("/etc/centos-release"):
-                    log.trace("Parsing distrib info from /etc/centos-release")
-                    # CentOS Linux
-                    grains["lsb_distrib_id"] = "CentOS"
-                    with salt.utils.files.fopen("/etc/centos-release") as ifile:
+                            if comps[0] == 'ALT':
+                                grains['lsb_distrib_release'] = comps[2]
+                                grains['lsb_distrib_codename'] = \
+                                    comps[3].replace('(', '').replace(')', '')
+                elif os.path.isfile('/etc/centos-release'):
+                    log.trace('Parsing distrib info from /etc/centos-release')
+                    # Maybe CentOS Linux; could also be SUSE Expanded Support.
+                    # SUSE ES has both, centos-release and redhat-release.
+                    if os.path.isfile('/etc/redhat-release'):
+                        with salt.utils.files.fopen('/etc/redhat-release') as ifile:
+                            for line in ifile:
+                                if "red hat enterprise linux server" in line.lower():
+                                    # This is a SUSE Expanded Support Rhel installation
+                                    grains['lsb_distrib_id'] = 'RedHat'
+                                    break
+                    grains.setdefault('lsb_distrib_id', 'CentOS')
+                    with salt.utils.files.fopen('/etc/centos-release') as ifile:
                         for line in ifile:
                             # Need to pull out the version and codename
                             # in the case of custom content in /etc/centos-release
@@ -2068,8 +2086,8 @@ def os_data():
         # Use the already intelligent platform module to get distro info
         # (though apparently it's not intelligent enough to strip quotes)
         log.trace(
-            "Getting OS name, release, and codename from "
-            "platform.linux_distribution()"
+            'Getting OS name, release, and codename from '
+            'distro.linux_distribution()'
         )
         (osname, osrelease, oscodename) = [
             x.strip('"').strip("'") for x in linux_distribution()
@@ -2394,16 +2412,13 @@ def fqdns():
     grains = {}
     fqdns = set()
 
-    addresses = salt.utils.network.ip_addrs(
-        include_loopback=False, interface_data=_INTERFACES
-    )
-    addresses.extend(
-        salt.utils.network.ip_addrs6(include_loopback=False, interface_data=_INTERFACES)
-    )
-    err_message = "An exception occurred resolving address '%s': %s"
+    addresses = salt.utils.network.ip_addrs(include_loopback=False, interface_data=_get_interfaces())
+    addresses.extend(salt.utils.network.ip_addrs6(include_loopback=False, interface_data=_get_interfaces()))
+    err_message = 'Exception during resolving address: %s'
     for ip in addresses:
         try:
-            fqdns.add(socket.getfqdn(socket.gethostbyaddr(ip)[0]))
+            name, aliaslist, addresslist = socket.gethostbyaddr(ip)
+            fqdns.update([socket.getfqdn(name)] + [als for als in aliaslist if salt.utils.network.is_fqdn(als)])
         except socket.herror as err:
             if err.errno in (0, HOST_NOT_FOUND, NO_DATA):
                 # No FQDN for this IP address, so we don't need to know this all the time.
@@ -2413,8 +2428,7 @@ def fqdns():
         except (socket.error, socket.gaierror, socket.timeout) as err:
             log.error(err_message, ip, err)
 
-    grains["fqdns"] = sorted(list(fqdns))
-    return grains
+    return {"fqdns": sorted(list(fqdns))}
 
 
 def ip_fqdn():
@@ -2590,6 +2604,13 @@ def cwd():
     Current working directory
     """
     return {"cwd": os.getcwd()}
+
+
+def cwd():
+    '''
+    Current working directory
+    '''
+    return {'cwd': os.getcwd()}
 
 
 def path():
@@ -2975,41 +2996,55 @@ def _hw_data(osdata):
     return grains
 
 
-def get_server_id():
-    """
-    Provides an integer based on the FQDN of a machine.
-    Useful as server-id in MySQL replication or anywhere else you'll need an ID
-    like this.
-    """
-    # Provides:
-    #   server_id
-
-    if salt.utils.platform.is_proxy():
-        return {}
-    id_ = __opts__.get("id", "")
+def _get_hash_by_shell():
+    '''
+    Shell-out Python 3 for compute reliable hash
+    :return:
+    '''
+    id_ = __opts__.get('id', '')
     id_hash = None
     py_ver = sys.version_info[:2]
     if py_ver >= (3, 3):
         # Python 3.3 enabled hash randomization, so we need to shell out to get
         # a reliable hash.
-        id_hash = __salt__["cmd.run"](
-            [sys.executable, "-c", 'print(hash("{0}"))'.format(id_)],
-            env={"PYTHONHASHSEED": "0"},
-        )
+        id_hash = __salt__['cmd.run']([sys.executable, '-c', 'print(hash("{0}"))'.format(id_)],
+                                      env={'PYTHONHASHSEED': '0'})
         try:
             id_hash = int(id_hash)
         except (TypeError, ValueError):
-            log.debug(
-                "Failed to hash the ID to get the server_id grain. Result of "
-                "hash command: %s",
-                id_hash,
-            )
+            log.debug('Failed to hash the ID to get the server_id grain. Result of hash command: %s', id_hash)
             id_hash = None
     if id_hash is None:
         # Python < 3.3 or error encountered above
         id_hash = hash(id_)
 
-    return {"server_id": abs(id_hash % (2 ** 31))}
+    return abs(id_hash % (2 ** 31))
+
+
+def get_server_id():
+    '''
+    Provides an integer based on the FQDN of a machine.
+    Useful as server-id in MySQL replication or anywhere else you'll need an ID
+    like this.
+    '''
+    # Provides:
+    #   server_id
+
+    if salt.utils.platform.is_proxy():
+        server_id = {}
+    else:
+        use_crc = __opts__.get('server_id_use_crc')
+        if bool(use_crc):
+            id_hash = getattr(zlib, use_crc, zlib.adler32)(__opts__.get('id', '').encode()) & 0xffffffff
+        else:
+            log.debug('This server_id is computed not by Adler32 nor by CRC32. '
+                      'Please use "server_id_use_crc" option and define algorithm you '
+                      'prefer (default "Adler32"). Starting with Sodium, the '
+                      'server_id will be computed with Adler32 by default.')
+            id_hash = _get_hash_by_shell()
+        server_id = {'server_id': id_hash}
+
+    return server_id
 
 
 def get_master():
@@ -3069,23 +3104,25 @@ def default_gateway():
 
 
 def kernelparams():
-    """
+    '''
     Return the kernel boot parameters
-    """
-    try:
-        with salt.utils.files.fopen("/proc/cmdline", "r") as fhr:
-            cmdline = fhr.read()
-            grains = {"kernelparams": []}
-            for data in [
-                item.split("=") for item in salt.utils.args.shlex_split(cmdline)
-            ]:
-                value = None
-                if len(data) == 2:
-                    value = data[1].strip('"')
+    '''
+    if salt.utils.platform.is_windows():
+        # TODO: add grains using `bcdedit /enum {current}`
+        return {}
+    else:
+        try:
+            with salt.utils.files.fopen('/proc/cmdline', 'r') as fhr:
+                cmdline = fhr.read()
+                grains = {'kernelparams': []}
+                for data in [item.split('=') for item in salt.utils.args.shlex_split(cmdline)]:
+                    value = None
+                    if len(data) == 2:
+                        value = data[1].strip('"')
 
-                grains["kernelparams"] += [(data[0], value)]
-    except IOError as exc:
-        grains = {}
-        log.debug("Failed to read /proc/cmdline: %s", exc)
+                    grains['kernelparams'] += [(data[0], value)]
+        except IOError as exc:
+            grains = {}
+            log.debug('Failed to read /proc/cmdline: %s', exc)
 
-    return grains
+        return grains

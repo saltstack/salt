@@ -24,8 +24,8 @@ __virtualname__ = "gentoolkit"
 def __virtual__():
     """
     Only work on Gentoo systems with gentoolkit installed
-    """
-    if __grains__["os"] == "Gentoo" and HAS_GENTOOLKIT:
+    '''
+    if __grains__.get('os_family') == 'Gentoo' and HAS_GENTOOLKIT:
         return __virtualname__
     return (
         False,
@@ -58,8 +58,8 @@ def revdep_rebuild(lib=None):
 def _pretty_size(size):
     """
     Print sizes in a similar fashion as eclean
-    """
-    units = [" G", " M", " K", " B"]
+    '''
+    units = [' G', ' M', ' K', ' B']
     while units and size >= 1000:
         size = size / 1024.0
         units.pop()

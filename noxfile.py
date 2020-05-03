@@ -19,11 +19,10 @@ import shutil
 import sys
 import tempfile
 
-# fmt: off
-if __name__ == "__main__":
-    sys.stderr.write(
-        "Do not execute this file directly. Use nox instead, it will know how to handle this file\n"
-    )
+IS_PY3 = sys.version_info >= (3,)
+
+if __name__ == '__main__':
+    sys.stderr.write('Do not execute this file directly. Use nox instead, it will know how to handle this file\n')
     sys.stderr.flush()
     exit(1)
 # fmt: on
@@ -47,7 +46,7 @@ SITECUSTOMIZE_DIR = os.path.join(REPO_ROOT, "tests", "support", "coverage")
 IS_DARWIN = sys.platform.lower().startswith("darwin")
 IS_WINDOWS = sys.platform.lower().startswith("win")
 # Python versions to run against
-_PYTHON_VERSIONS = ("2", "2.7", "3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9")
+_PYTHON_VERSIONS = ('3', '3.4', '3.5', '3.6', '3.7')
 
 # Nox options
 #  Reuse existing virtualenvs
@@ -86,15 +85,12 @@ def _get_session_python_version_info(session):
             #   https://github.com/theacodes/nox/pull/181
             session._runner.global_config.install_only = False
             session_py_version = session.run(
-                "python",
-                "-c"
+                'python', '-c'
                 'import sys; sys.stdout.write("{}.{}.{}".format(*sys.version_info))',
                 silent=True,
                 log=False,
             )
-            version_info = tuple(
-                int(part) for part in session_py_version.split(".") if part.isdigit()
-            )
+            version_info = tuple(int(part) for part in session_py_version.split('.') if part.isdigit())
             session._runner._real_python_version_info = version_info
         finally:
             session._runner.global_config.install_only = old_install_only_value
@@ -112,9 +108,8 @@ def _get_session_python_site_packages_dir(session):
             #   https://github.com/theacodes/nox/pull/181
             session._runner.global_config.install_only = False
             site_packages_dir = session.run(
-                "python",
-                "-c"
-                "import sys; from distutils.sysconfig import get_python_lib; sys.stdout.write(get_python_lib())",
+                'python', '-c'
+                'import sys; from distutils.sysconfig import get_python_lib; sys.stdout.write(get_python_lib())',
                 silent=True,
                 log=False,
             )
@@ -126,9 +121,9 @@ def _get_session_python_site_packages_dir(session):
 
 def _get_pydir(session):
     version_info = _get_session_python_version_info(session)
-    if version_info < (2, 7):
-        session.error("Only Python >= 2.7 is supported")
-    return "py{}.{}".format(*version_info)
+    if version_info < (3,):
+        session.error('Only Python 3 is supported')
+    return 'py{}.{}'.format(*version_info)
 
 
 def _get_distro_info(session):
@@ -142,10 +137,10 @@ def _get_distro_info(session):
             # For additional information as to why see:
             #   https://github.com/theacodes/nox/pull/181
             session._runner.global_config.install_only = False
-            session.install("--progress-bar=off", "distro", silent=PIP_INSTALL_SILENT)
-            output = session.run("distro", "-j", silent=True)
+            session.install('--progress-bar=off', 'distro', silent=PIP_INSTALL_SILENT)
+            output = session.run('distro', '-j', silent=True)
             distro = json.loads(output.strip())
-            session.log("Distro information:\n%s", pprint.pformat(distro))
+            session.log('Distro information:\n%s', pprint.pformat(distro))
             session._runner._distro = distro
         finally:
             session._runner.global_config.install_only = old_install_only_value
@@ -214,40 +209,30 @@ def _get_distro_pip_constraints(session, transport):
         # The TCP requirements are the exact same requirements as the ZeroMQ ones
         transport = "zeromq"
 
+    if transport == 'tcp':
+        # The TCP requirements are the exact same requirements as the ZeroMQ ones
+        transport = 'zeromq'
+
     pydir = _get_pydir(session)
 
     if IS_WINDOWS:
-        _distro_constraints = os.path.join(
-            "requirements", "static", pydir, "{}-windows.txt".format(transport)
-        )
-        if os.path.exists(_distro_constraints):
-            distro_constraints.append(_distro_constraints)
-        _distro_constraints = os.path.join(
-            "requirements", "static", pydir, "windows.txt"
-        )
-        if os.path.exists(_distro_constraints):
-            distro_constraints.append(_distro_constraints)
-        _distro_constraints = os.path.join(
-            "requirements", "static", pydir, "windows-crypto.txt"
-        )
-        if os.path.exists(_distro_constraints):
-            distro_constraints.append(_distro_constraints)
-    elif IS_DARWIN:
-        _distro_constraints = os.path.join(
-            "requirements", "static", pydir, "{}-darwin.txt".format(transport)
-        )
-        if os.path.exists(_distro_constraints):
-            distro_constraints.append(_distro_constraints)
-        _distro_constraints = os.path.join(
-            "requirements", "static", pydir, "darwin.txt"
-        )
-        if os.path.exists(_distro_constraints):
-            distro_constraints.append(_distro_constraints)
-        _distro_constraints = os.path.join(
-            "requirements", "static", pydir, "darwin-crypto.txt"
-        )
-        if os.path.exists(_distro_constraints):
-            distro_constraints.append(_distro_constraints)
+        _distro_requirements = os.path.join(REPO_ROOT,
+                                            'requirements',
+                                            'static',
+                                            pydir,
+                                            '{}-windows.txt'.format(transport))
+        if os.path.exists(_distro_requirements):
+            distro_requirements = _distro_requirements
+        if distro_requirements:
+            with open(distro_requirements) as rfh:
+                for line in rfh.read().strip().splitlines():
+                    # There are some SSL issues with distutils when installing pylxd which
+                    # tries to install pbr, so lets just install pbr first
+                    if line.startswith('pbr='):
+                        session.install(
+                            '--progress-bar=off',
+                            line.split()[0].strip(),
+                            silent=PIP_INSTALL_SILENT)
     else:
         _install_system_packages(session)
         distro = _get_distro_info(session)
@@ -488,10 +473,10 @@ def _runtests(session, coverage, cmd_args):
         # pylint: enable=unreachable
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="runtests-parametrized")
-@nox.parametrize("coverage", [False, True])
-@nox.parametrize("transport", ["zeromq", "tcp"])
-@nox.parametrize("crypto", [None, "m2crypto", "pycryptodome"])
+@nox.session(python=_PYTHON_VERSIONS, name='runtests-parametrized')
+@nox.parametrize('coverage', [False, True])
+@nox.parametrize('transport', ['zeromq', 'tcp'])
+@nox.parametrize('crypto', [None, 'm2crypto', 'pycryptodomex'])
 def runtests_parametrized(session, coverage, transport, crypto):
     # Install requirements
     _install_requirements(session, transport, "unittest-xml-reporting==2.5.2")
@@ -554,16 +539,17 @@ def runtests_tcp(session, coverage):
 def runtests_zeromq(session, coverage):
     """
     runtests.py session with zeromq transport and default crypto
-    """
+    '''
     session.notify(
-        "runtests-parametrized-{}(coverage={}, crypto=None, transport='zeromq')".format(
-            session.python, coverage
+        'runtests-parametrized-{}(coverage={}, crypto=None, transport=\'zeromq\')'.format(
+            session.python,
+            coverage
         )
     )
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="runtests-m2crypto")
-@nox.parametrize("coverage", [False, True])
+@nox.session(python=_PYTHON_VERSIONS, name='runtests-m2crypto')
+@nox.parametrize('coverage', [False, True])
 def runtests_m2crypto(session, coverage):
     """
     runtests.py session with zeromq transport and m2crypto
@@ -593,7 +579,21 @@ def runtests_tcp_m2crypto(session, coverage):
 def runtests_zeromq_m2crypto(session, coverage):
     """
     runtests.py session with zeromq transport and m2crypto
-    """
+    '''
+    session.notify(
+        'runtests-parametrized-{}(coverage={}, crypto=\'m2crypto\', transport=\'zeromq\')'.format(
+            session.python,
+            coverage
+        )
+    )
+
+
+@nox.session(python=_PYTHON_VERSIONS, name='runtests-pycryptodomex')
+@nox.parametrize('coverage', [False, True])
+def runtests_pycryptodomex(session, coverage):
+    '''
+    runtests.py session with zeromq transport and pycryptodomex
+    '''
     session.notify(
         "runtests-parametrized-{}(coverage={}, crypto='m2crypto', transport='zeromq')".format(
             session.python, coverage
@@ -627,21 +627,8 @@ def runtests_tcp_pycryptodome(session, coverage):
     )
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="runtests-zeromq-pycryptodome")
-@nox.parametrize("coverage", [False, True])
-def runtests_zeromq_pycryptodome(session, coverage):
-    """
-    runtests.py session with zeromq transport and pycryptodome
-    """
-    session.notify(
-        "runtests-parametrized-{}(coverage={}, crypto='pycryptodome', transport='zeromq')".format(
-            session.python, coverage
-        )
-    )
-
-
-@nox.session(python=_PYTHON_VERSIONS, name="runtests-cloud")
-@nox.parametrize("coverage", [False, True])
+@nox.session(python=_PYTHON_VERSIONS, name='runtests-cloud')
+@nox.parametrize('coverage', [False, True])
 def runtests_cloud(session, coverage):
     # Install requirements
     _install_requirements(session, "zeromq", "unittest-xml-reporting==2.2.1")
@@ -672,10 +659,10 @@ def runtests_tornado(session, coverage):
     _runtests(session, coverage, cmd_args)
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-parametrized")
-@nox.parametrize("coverage", [False, True])
-@nox.parametrize("transport", ["zeromq", "tcp"])
-@nox.parametrize("crypto", [None, "m2crypto", "pycryptodome"])
+@nox.session(python=_PYTHON_VERSIONS, name='pytest-parametrized')
+@nox.parametrize('coverage', [False, True])
+@nox.parametrize('transport', ['zeromq', 'tcp'])
+@nox.parametrize('crypto', [None, 'm2crypto', 'pycryptodomex'])
 def pytest_parametrized(session, coverage, transport, crypto):
     # Install requirements
     _install_requirements(session, transport)
@@ -744,16 +731,17 @@ def pytest_tcp(session, coverage):
 def pytest_zeromq(session, coverage):
     """
     pytest session with zeromq transport and default crypto
-    """
+    '''
     session.notify(
-        "pytest-parametrized-{}(coverage={}, crypto=None, transport='zeromq')".format(
-            session.python, coverage
+        'pytest-parametrized-{}(coverage={}, crypto=None, transport=\'zeromq\')'.format(
+            session.python,
+            coverage
         )
     )
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-m2crypto")
-@nox.parametrize("coverage", [False, True])
+@nox.session(python=_PYTHON_VERSIONS, name='pytest-m2crypto')
+@nox.parametrize('coverage', [False, True])
 def pytest_m2crypto(session, coverage):
     """
     pytest session with zeromq transport and m2crypto
@@ -783,7 +771,21 @@ def pytest_tcp_m2crypto(session, coverage):
 def pytest_zeromq_m2crypto(session, coverage):
     """
     pytest session with zeromq transport and m2crypto
-    """
+    '''
+    session.notify(
+        'pytest-parametrized-{}(coverage={}, crypto=\'m2crypto\', transport=\'zeromq\')'.format(
+            session.python,
+            coverage
+        )
+    )
+
+
+@nox.session(python=_PYTHON_VERSIONS, name='pytest-pycryptodomex')
+@nox.parametrize('coverage', [False, True])
+def pytest_pycryptodomex(session, coverage):
+    '''
+    pytest session with zeromq transport and pycryptodomex
+    '''
     session.notify(
         "pytest-parametrized-{}(coverage={}, crypto='m2crypto', transport='zeromq')".format(
             session.python, coverage
@@ -817,21 +819,8 @@ def pytest_tcp_pycryptodome(session, coverage):
     )
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-zeromq-pycryptodome")
-@nox.parametrize("coverage", [False, True])
-def pytest_zeromq_pycryptodome(session, coverage):
-    """
-    pytest session with zeromq transport and pycryptodome
-    """
-    session.notify(
-        "pytest-parametrized-{}(coverage={}, crypto='pycryptodome', transport='zeromq')".format(
-            session.python, coverage
-        )
-    )
-
-
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-cloud")
-@nox.parametrize("coverage", [False, True])
+@nox.session(python=_PYTHON_VERSIONS, name='pytest-cloud')
+@nox.parametrize('coverage', [False, True])
 def pytest_cloud(session, coverage):
     # Install requirements
     _install_requirements(session, "zeromq")
@@ -915,10 +904,15 @@ def _pytest(session, coverage, cmd_args):
         # pylint: enable=unreachable
 
 
-class Tee:
-    """
-    Python class to mimic linux tee behaviour
-    """
+def _lint(session, rcfile, flags, paths):
+    _install_requirements(session, 'zeromq')
+    pydir = _get_pydir(session)
+    session.install(
+        '--progress-bar=off',
+        '-r', 'requirements/static/{}/lint.txt'.format(pydir),
+        silent=PIP_INSTALL_SILENT)
+    session.run('pylint', '--version')
+    pylint_report_path = os.environ.get('PYLINT_REPORT')
 
     def __init__(self, first, second):
         self._first = first
@@ -962,58 +956,24 @@ def _lint(session, rcfile, flags, paths, tee_output=True):
         lint_failed = True
         raise
     finally:
-        if tee_output:
-            stdout.seek(0)
-            contents = stdout.read()
-            if contents:
-                if IS_PY3:
-                    contents = contents.decode("utf-8")
-                else:
-                    contents = contents.encode("utf-8")
-                sys.stdout.write(contents)
-                sys.stdout.flush()
-                if pylint_report_path:
-                    # Write report
-                    with open(pylint_report_path, "w") as wfh:
-                        wfh.write(contents)
-                    session.log("Report file written to %r", pylint_report_path)
-            stdout.close()
+        stdout.seek(0)
+        contents = stdout.read()
+        if contents:
+            if IS_PY3:
+                contents = contents.decode('utf-8')
+            else:
+                contents = contents.encode('utf-8')
+            sys.stdout.write(contents)
+            sys.stdout.flush()
+            if pylint_report_path:
+                # Write report
+                with open(pylint_report_path, 'w') as wfh:
+                    wfh.write(contents)
+                session.log('Report file written to %r', pylint_report_path)
+        stdout.close()
 
 
-def _lint_pre_commit(session, rcfile, flags, paths):
-    if "VIRTUAL_ENV" not in os.environ:
-        session.error(
-            "This should be running from within a virtualenv and "
-            "'VIRTUAL_ENV' was not found as an environment variable."
-        )
-    if "pre-commit" not in os.environ["VIRTUAL_ENV"]:
-        session.error(
-            "This should be running from within a pre-commit virtualenv and "
-            "'VIRTUAL_ENV'({}) does not appear to be a pre-commit virtualenv.".format(
-                os.environ["VIRTUAL_ENV"]
-            )
-        )
-    from nox.virtualenv import VirtualEnv
-
-    # Let's patch nox to make it run inside the pre-commit virtualenv
-    try:
-        session._runner.venv = VirtualEnv(  # pylint: disable=unexpected-keyword-arg
-            os.environ["VIRTUAL_ENV"],
-            interpreter=session._runner.func.python,
-            reuse_existing=True,
-            venv=True,
-        )
-    except TypeError:
-        # This is still nox-py2
-        session._runner.venv = VirtualEnv(
-            os.environ["VIRTUAL_ENV"],
-            interpreter=session._runner.func.python,
-            reuse_existing=True,
-        )
-    _lint(session, rcfile, flags, paths, tee_output=False)
-
-
-@nox.session(python="3")
+@nox.session(python='3')
 def lint(session):
     """
     Run PyLint against Salt and it's test suite. Set PYLINT_REPORT to a path to capture output.
@@ -1022,7 +982,7 @@ def lint(session):
     session.notify("lint-tests-{}".format(session.python))
 
 
-@nox.session(python="3", name="lint-salt")
+@nox.session(python='3', name='lint-salt')
 def lint_salt(session):
     """
     Run PyLint against Salt. Set PYLINT_REPORT to a path to capture output.
@@ -1035,7 +995,7 @@ def lint_salt(session):
     _lint(session, ".pylintrc", flags, paths)
 
 
-@nox.session(python="3", name="lint-tests")
+@nox.session(python='3', name='lint-tests')
 def lint_tests(session):
     """
     Run PyLint against Salt and it's test suite. Set PYLINT_REPORT to a path to capture output.
@@ -1074,131 +1034,20 @@ def lint_tests_pre_commit(session):
     _lint_pre_commit(session, ".pylintrc", flags, paths)
 
 
-@nox.session(python="3")
-@nox.parametrize("update", [False, True])
-@nox.parametrize("compress", [False, True])
-def docs(session, compress, update):
-    """
+@nox.session(python='3')
+def docs(session):
+    '''
     Build Salt's Documentation
-    """
-    session.notify("docs-html(compress={})".format(compress))
-    session.notify("docs-man(compress={}, update={})".format(compress, update))
-
-
-@nox.session(name="docs-html", python="3")
-@nox.parametrize("compress", [False, True])
-def docs_html(session, compress):
-    """
-    Build Salt's HTML Documentation
-    """
+    '''
     pydir = _get_pydir(session)
-    if pydir == "py3.4":
-        session.error("Sphinx only runs on Python >= 3.5")
-    requirements_file = "requirements/static/docs.in"
-    distro_constraints = ["requirements/static/{}/docs.txt".format(_get_pydir(session))]
-    install_command = ["--progress-bar=off", "-r", requirements_file]
-    for distro_constraint in distro_constraints:
-        install_command.extend(["--constraint", distro_constraint])
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
-    os.chdir("doc/")
-    session.run("make", "clean", external=True)
-    session.run("make", "html", "SPHINXOPTS=-W", external=True)
-    if compress:
-        session.run("tar", "-cJvf", "html-archive.tar.xz", "_build/html", external=True)
-    os.chdir("..")
-
-
-@nox.session(name="docs-man", python="3")
-@nox.parametrize("update", [False, True])
-@nox.parametrize("compress", [False, True])
-def docs_man(session, compress, update):
-    """
-    Build Salt's Manpages Documentation
-    """
-    pydir = _get_pydir(session)
-    if pydir == "py3.4":
-        session.error("Sphinx only runs on Python >= 3.5")
-    requirements_file = "requirements/static/docs.in"
-    distro_constraints = ["requirements/static/{}/docs.txt".format(_get_pydir(session))]
-    install_command = ["--progress-bar=off", "-r", requirements_file]
-    for distro_constraint in distro_constraints:
-        install_command.extend(["--constraint", distro_constraint])
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
-    os.chdir("doc/")
-    session.run("make", "clean", external=True)
-    session.run("make", "man", "SPHINXOPTS=-W", external=True)
-    if update:
-        session.run("rm", "-rf", "man/", external=True)
-        session.run("cp", "-Rp", "_build/man", "man/", external=True)
-    if compress:
-        session.run("tar", "-cJvf", "man-archive.tar.xz", "_build/man", external=True)
-    os.chdir("..")
-
-
-def _invoke(session):
-    """
-    Run invoke tasks
-    """
-    requirements_file = "requirements/static/invoke.in"
-    distro_constraints = [
-        "requirements/static/{}/invoke.txt".format(_get_pydir(session))
-    ]
-    install_command = ["--progress-bar=off", "-r", requirements_file]
-    for distro_constraint in distro_constraints:
-        install_command.extend(["--constraint", distro_constraint])
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
-    cmd = ["inv"]
-    files = []
-
-    # Unfortunately, invoke doesn't support the nargs functionality like argpase does.
-    # Let's make it behave properly
-    for idx, posarg in enumerate(session.posargs):
-        if idx == 0:
-            cmd.append(posarg)
-            continue
-        if posarg.startswith("--"):
-            cmd.append(posarg)
-            continue
-        files.append(posarg)
-    if files:
-        cmd.append("--files={}".format(" ".join(files)))
-    session.run(*cmd)
-
-
-@nox.session(name="invoke", python="3")
-def invoke(session):
-    _invoke(session)
-
-
-@nox.session(name="invoke-pre-commit", python="3")
-def invoke_pre_commit(session):
-    if "VIRTUAL_ENV" not in os.environ:
-        session.error(
-            "This should be running from within a virtualenv and "
-            "'VIRTUAL_ENV' was not found as an environment variable."
-        )
-    if "pre-commit" not in os.environ["VIRTUAL_ENV"]:
-        session.error(
-            "This should be running from within a pre-commit virtualenv and "
-            "'VIRTUAL_ENV'({}) does not appear to be a pre-commit virtualenv.".format(
-                os.environ["VIRTUAL_ENV"]
-            )
-        )
-    from nox.virtualenv import VirtualEnv
-
-    # Let's patch nox to make it run inside the pre-commit virtualenv
-    try:
-        session._runner.venv = VirtualEnv(  # pylint: disable=unexpected-keyword-arg
-            os.environ["VIRTUAL_ENV"],
-            interpreter=session._runner.func.python,
-            reuse_existing=True,
-            venv=True,
-        )
-    except TypeError:
-        # This is still nox-py2
-        session._runner.venv = VirtualEnv(
-            os.environ["VIRTUAL_ENV"],
-            interpreter=session._runner.func.python,
-            reuse_existing=True,
-        )
-    _invoke(session)
+    if pydir == 'py3.4':
+        session.error('Sphinx only runs on Python >= 3.5')
+    session.install(
+        '--progress-bar=off',
+        '-r', 'requirements/static/{}/docs.txt'.format(pydir),
+        silent=PIP_INSTALL_SILENT)
+    os.chdir('doc/')
+    session.run('make', 'clean', external=True)
+    session.run('make', 'html', 'SPHINXOPTS=-W', external=True)
+    session.run('tar', '-czvf', 'doc-archive.tar.gz', '_build/html')
+    os.chdir('..')

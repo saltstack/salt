@@ -3,7 +3,15 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-import os
+# Import Salt Testing Libs
+from tests.support.mock import (
+    NO_MOCK,
+    NO_MOCK_REASON,
+    patch
+)
+from tests.support import mixins
+from tests.support.unit import skipIf, TestCase
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt Libs
 import salt.config
@@ -57,10 +65,8 @@ EXPECTED = {
 class AnsibleRosterTestCase(TestCase, mixins.LoaderModuleMockMixin):
     @classmethod
     def setUpClass(cls):
-        cls.roster_dir = os.path.join(
-            RUNTIME_VARS.TESTS_DIR, "unit/files/rosters/ansible/"
-        )
-        cls.opts = {"roster_defaults": {"passwd": "test123"}}
+        cls.roster_dir = os.path.join(RUNTIME_VARS.TESTS_DIR, 'unit/files/rosters/ansible/')
+        cls.opts = {'roster_defaults': {'passwd': 'test123'}}
 
     @classmethod
     def tearDownClass(cls):

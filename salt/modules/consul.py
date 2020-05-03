@@ -214,11 +214,11 @@ def get(consul_url=None, key=None, token=None, recurse=False, decode=False, raw=
 
     if ret["res"]:
         if decode:
-            for item in ret["data"]:
-                if item["Value"] is not None:
-                    item["Value"] = base64.b64decode(item["Value"])
+            for item in ret['data']:
+                if item['Value'] is None:
+                    item['Value'] = ""
                 else:
-                    item["Value"] = ""
+                    item['Value'] = base64.b64decode(item['Value'])
     return ret
 
 

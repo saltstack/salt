@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-r"""
+r'''
 .. _`AWS KMS Envelope Encryption`: https://docs.aws.amazon.com/kms/latest/developerguide/workflow.html
 
 Renderer that will decrypt ciphers encrypted using `AWS KMS Envelope Encryption`_.

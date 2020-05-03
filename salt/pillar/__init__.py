@@ -63,30 +63,14 @@ def get_pillar(
         file_client = "local"
     ptype = {"remote": RemotePillar, "local": Pillar}.get(file_client, Pillar)
     # If local pillar and we're caching, run through the cache system first
-    log.debug("Determining pillar cache")
-    if opts["pillar_cache"]:
-        log.debug("get_pillar using pillar cache with ext: %s", ext)
-        return PillarCache(
-            opts,
-            grains,
-            minion_id,
-            saltenv,
-            ext=ext,
-            functions=funcs,
-            pillar_override=pillar_override,
-            pillarenv=pillarenv,
-        )
-    return ptype(
-        opts,
-        grains,
-        minion_id,
-        saltenv,
-        ext,
-        functions=funcs,
-        pillar_override=pillar_override,
-        pillarenv=pillarenv,
-        extra_minion_data=extra_minion_data,
-    )
+    log.debug('Determining pillar cache')
+    if opts['pillar_cache']:
+        log.debug('get_pillar using pillar cache with ext: %s', ext)
+        return PillarCache(opts, grains, minion_id, saltenv, ext=ext, functions=funcs,
+                pillar_override=pillar_override, pillarenv=pillarenv)
+    return ptype(opts, grains, minion_id, saltenv, ext, functions=funcs,
+                 pillar_override=pillar_override, pillarenv=pillarenv,
+                 extra_minion_data=extra_minion_data)
 
 
 # TODO: migrate everyone to this one!
@@ -409,55 +393,59 @@ class PillarCache(object):
         """
         In the event of a cache miss, we need to incur the overhead of caching
         a new pillar.
-        """
-        log.debug("Pillar cache getting external pillar with ext: %s", self.ext)
-        fresh_pillar = Pillar(
-            self.opts,
-            self.grains,
-            self.minion_id,
-            self.saltenv,
-            ext=self.ext,
-            functions=self.functions,
-            pillar_override=self.pillar_override,
-            pillarenv=self.pillarenv,
-        )
+        '''
+        log.debug('Pillar cache getting external pillar with ext: %s', self.ext)
+        fresh_pillar = Pillar(self.opts,
+                              self.grains,
+                              self.minion_id,
+                              self.saltenv,
+                              ext=self.ext,
+                              functions=self.functions,
+                              pillarenv=self.pillarenv)
         return fresh_pillar.compile_pillar()
 
     def compile_pillar(self, *args, **kwargs):  # Will likely just be pillar_dirs
-        log.debug(
-            "Scanning pillar cache for information about minion %s and pillarenv %s",
-            self.minion_id,
-            self.pillarenv,
-        )
-        log.debug("Scanning cache: %s", self.cache._dict)
+        '''
+        Compile pillar and set it to the cache, if not found.
+
+        :param args:
+        :param kwargs:
+        :return:
+        '''
+        log.debug('Scanning pillar cache for information about minion %s and pillarenv %s', self.minion_id, self.pillarenv)
+        log.debug('Scanning cache for minion %s: %s', self.minion_id, self.cache[self.minion_id] or '*empty*')
+
         # Check the cache!
         if self.minion_id in self.cache:  # Keyed by minion_id
             # TODO Compare grains, etc?
             if self.pillarenv in self.cache[self.minion_id]:
                 # We have a cache hit! Send it back.
-                log.debug(
-                    "Pillar cache hit for minion %s and pillarenv %s",
-                    self.minion_id,
-                    self.pillarenv,
-                )
-                return self.cache[self.minion_id][self.pillarenv]
+                log.debug('Pillar cache hit for minion %s and pillarenv %s', self.minion_id, self.pillarenv)
+                pillar_data = self.cache[self.minion_id][self.pillarenv]
             else:
                 # We found the minion but not the env. Store it.
-                fresh_pillar = self.fetch_pillar()
-                self.cache[self.minion_id][self.pillarenv] = fresh_pillar
-                log.debug(
-                    "Pillar cache miss for pillarenv %s for minion %s",
-                    self.pillarenv,
-                    self.minion_id,
-                )
-                return fresh_pillar
+                pillar_data = self.fetch_pillar()
+                self.cache[self.minion_id][self.pillarenv] = pillar_data
+                self.cache.store()
+                log.debug('Pillar cache miss for pillarenv %s for minion %s', self.pillarenv, self.minion_id)
         else:
             # We haven't seen this minion yet in the cache. Store it.
-            fresh_pillar = self.fetch_pillar()
-            self.cache[self.minion_id] = {self.pillarenv: fresh_pillar}
-            log.debug("Pillar cache miss for minion %s", self.minion_id)
-            log.debug("Current pillar cache: %s", self.cache._dict)  # FIXME hack!
-            return fresh_pillar
+            pillar_data = self.fetch_pillar()
+            self.cache[self.minion_id] = {self.pillarenv: pillar_data}
+            log.debug('Pillar cache has been added for minion %s', self.minion_id)
+            log.debug('Current pillar cache: %s', self.cache[self.minion_id])
+
+        # we dont want the pillar_override baked into the cached fetch_pillar from above
+        if self.pillar_override:
+            pillar_data = merge(
+                pillar_data,
+                self.pillar_override,
+                self.opts.get('pillar_source_merging_strategy', 'smart'),
+                self.opts.get('renderer', 'yaml'),
+                self.opts.get('pillar_merge_lists', False))
+            pillar_data.update(self.pillar_override)
+
+        return pillar_data
 
 
 class Pillar(object):
@@ -723,6 +711,9 @@ class Pillar(object):
                         states = OrderedDict()
                         orders[saltenv][tgt] = 0
                         ignore_missing = False
+                        # handle a pillar sls target written in shorthand form
+                        if isinstance(ctop[saltenv][tgt], six.string_types):
+                            ctop[saltenv][tgt] = [ctop[saltenv][tgt]]
                         for comp in ctop[saltenv][tgt]:
                             if isinstance(comp, dict):
                                 if "match" in comp:
@@ -815,7 +806,7 @@ class Pillar(object):
         err = ""
         errors = []
         state_data = self.client.get_state(sls, saltenv)
-        fn_ = state_data.get("dest", False)
+        fn_ = state_data.get('dest', False)
         if not fn_:
             if sls in self.ignored_pillars.get(saltenv, []):
                 log.debug(
@@ -904,6 +895,12 @@ class Pillar(object):
                             else:
                                 key = None
                             try:
+                                if sub_sls.startswith('.'):
+                                    if state_data.get('source', '').endswith('/init.sls'):
+                                        include_parts = sls.split('.')
+                                    else:
+                                        include_parts = sls.split('.')[:-1]
+                                    sub_sls = '.'.join(include_parts+[sub_sls[1:]])
                                 matched_pstates = fnmatch.filter(
                                     self.avail[saltenv],
                                     sub_sls.lstrip(".").replace("/", "."),

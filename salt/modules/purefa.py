@@ -630,8 +630,8 @@ def volume_detach(name, host):
             return False
 
 
-def host_create(name, iqn=None, wwn=None):
-    """
+def host_create(name, iqn=None, wwn=None, nqn=None):
+    '''
 
     Add a host on a Pure Storage FlashArray.
 
@@ -645,6 +645,8 @@ def host_create(name, iqn=None, wwn=None):
         name of host (truncated to 63 characters)
     iqn : string
         iSCSI IQN of host
+    nqn : string
+        NVMeF NQN of host
     wwn : string
         Fibre Channel WWN of host
 
@@ -652,7 +654,7 @@ def host_create(name, iqn=None, wwn=None):
 
     .. code-block:: bash
 
-        salt '*' purefa.host_create foo iqn='<Valid iSCSI IQN>' wwn='<Valid WWN>'
+        salt '*' purefa.host_create foo iqn='<Valid iSCSI IQN>' wwn='<Valid WWN>' nqn='<Valid NQN>'
 
     """
     array = _get_system()
@@ -663,6 +665,12 @@ def host_create(name, iqn=None, wwn=None):
             array.create_host(name)
         except purestorage.PureError:
             return False
+        if nqn is not None:
+            try:
+                array.set_host(name, addnqnlist=[nqn])
+            except purestorage.PureError:
+                array.delete_host(name)
+                return False
         if iqn is not None:
             try:
                 array.set_host(name, addiqnlist=[iqn])
@@ -681,8 +689,8 @@ def host_create(name, iqn=None, wwn=None):
     return True
 
 
-def host_update(name, iqn=None, wwn=None):
-    """
+def host_update(name, iqn=None, wwn=None, nqn=None):
+    '''
 
     Update a hosts port definitions on a Pure Storage FlashArray.
 
@@ -694,6 +702,8 @@ def host_update(name, iqn=None, wwn=None):
 
     name : string
         name of host
+    nqn : string
+        Additional NVMeF NQN of host
     iqn : string
         Additional iSCSI IQN of host
     wwn : string
@@ -703,11 +713,16 @@ def host_update(name, iqn=None, wwn=None):
 
     .. code-block:: bash
 
-        salt '*' purefa.host_update foo iqn='<Valid iSCSI IQN>' wwn='<Valid WWN>'
+        salt '*' purefa.host_update foo iqn='<Valid iSCSI IQN>' wwn='<Valid WWN>' nqn='<Valid NQN>'
 
     """
     array = _get_system()
     if _get_host(name, array) is not None:
+        if nqn is not None:
+            try:
+                array.set_host(name, addnqnlist=[nqn])
+            except purestorage.PureError:
+                return False
         if iqn is not None:
             try:
                 array.set_host(name, addiqnlist=[iqn])

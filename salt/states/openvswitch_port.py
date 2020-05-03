@@ -54,31 +54,17 @@ def present(
 
     comments = {}
 
-    comments["comment_bridge_notexists"] = "Bridge {0} does not exist.".format(bridge)
-    comments["comment_port_exists"] = "Port {0} already exists.".format(name)
-    comments["comment_port_created"] = "Port {0} created on bridge {1}.".format(
-        name, bridge
-    )
-    comments[
-        "comment_port_notcreated"
-    ] = "Unable to create port {0} on bridge {1}.".format(name, bridge)
-    comments["changes_port_created"] = {
-        name: {
-            "old": "No port named {0} present.".format(name),
-            "new": "Created port {1} on bridge {0}.".format(bridge, name),
-        }
-    }
-    comments[
-        "comment_port_internal"
-    ] = "Port {0} already exists, but interface type has been changed to internal.".format(
-        name
-    )
-    comments["changes_port_internal"] = {"internal": {"old": False, "new": True}}
-    comments[
-        "comment_port_internal_not_changed"
-    ] = "Port {0} already exists, but the interface type could not be changed to internal.".format(
-        name
-    )
+    comments['comment_bridge_notexists'] = 'Bridge {0} does not exist.'.format(bridge)
+    comments['comment_port_exists'] = 'Port {0} already exists.'.format(name)
+    comments['comment_port_created'] = 'Port {0} created on bridge {1}.'.format(name, bridge)
+    comments['comment_port_notcreated'] = 'Unable to create port {0} on bridge {1}.'.format(name, bridge)
+    comments['changes_port_created'] = {name: {'old': 'No port named {0} present.'.format(name),
+                                   'new': 'Created port {1} on bridge {0}.'.format(bridge, name),
+                                   }
+                            }
+    comments['comment_port_internal'] = 'Port {0} already exists, but interface type has been changed to internal.'.format(name)
+    comments['changes_port_internal'] = {'internal': {'old': False, 'new': True}}
+    comments['comment_port_internal_not_changed'] = 'Port {0} already exists, but the interface type could not be changed to internal.'.format(name)
 
     if tunnel_type:
         comments["comment_invalid_ip"] = "Remote is not valid ip address."
@@ -273,13 +259,14 @@ def present(
                     ret["comment"] = comments["comment_gre_created"]
             else:
                 if name in port_list:
-                    ret["result"] = True
-                    current_type = __salt__["openvswitch.interface_get_type"](name)
+                    ret['result'] = True
+                    current_type = __salt__['openvswitch.interface_get_type'](
+                        name)
                     # The interface type is returned as a single-element list.
-                    if internal and (current_type != ["internal"]):
-                        ret["comment"] = comments["comment_port_internal"]
+                    if internal and (current_type != ['internal']):
+                        ret['comment'] = comments['comment_port_internal']
                     else:
-                        ret["comment"] = comments["comment_port_exists"]
+                        ret['comment'] = comments['comment_port_exists']
                 else:
                     ret["result"] = None
                     ret["comment"] = comments["comment_port_created"]
@@ -331,29 +318,27 @@ def present(
                     ret["comment"] = comments["comment_gre_notcreated"]
         else:
             if name in port_list:
-                current_type = __salt__["openvswitch.interface_get_type"](name)
+                current_type = __salt__['openvswitch.interface_get_type'](name)
                 # The interface type is returned as a single-element list.
-                if internal and (current_type != ["internal"]):
+                if internal and (current_type != ['internal']):
                     # We do not have a direct way of only setting the interface
                     # type to internal, so we add the port with the --may-exist
                     # option.
-                    port_add = __salt__["openvswitch.port_add"](
-                        bridge, name, may_exist=True, internal=internal
-                    )
+                    port_add = __salt__['openvswitch.port_add'](
+                        bridge, name, may_exist=True, internal=internal)
                     if port_add:
-                        ret["result"] = True
-                        ret["comment"] = comments["comment_port_internal"]
-                        ret["changes"] = comments["changes_port_internal"]
+                        ret['result'] = True
+                        ret['comment'] = comments['comment_port_internal']
+                        ret['changes'] = comments['changes_port_internal']
                     else:
-                        ret["result"] = False
-                        ret["comment"] = comments["comment_port_internal_not_changed"]
+                        ret['result'] = False
+                        ret['comment'] = comments[
+                            'comment_port_internal_not_changed']
                 else:
-                    ret["result"] = True
-                    ret["comment"] = comments["comment_port_exists"]
+                    ret['result'] = True
+                    ret['comment'] = comments['comment_port_exists']
             else:
-                port_add = __salt__["openvswitch.port_add"](
-                    bridge, name, internal=internal
-                )
+                port_add = __salt__['openvswitch.port_add'](bridge, name, internal=internal)
                 if port_add:
                     ret["result"] = True
                     ret["comment"] = comments["comment_port_created"]

@@ -339,7 +339,7 @@ def extract_index(index_data, global_index=False):
             "read": parsed_data["read_capacity_units"],
             "write": parsed_data["write_capacity_units"],
         }
-    if parsed_data["name"] and keys:
+    if parsed_data['name'] and keys:
         if global_index:
             if parsed_data.get("keys_only") and parsed_data.get("includes"):
                 raise SaltInvocationError(

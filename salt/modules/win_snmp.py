@@ -53,8 +53,8 @@ def __virtual__():
     if not salt.utils.platform.is_windows():
         return False, "Module win_snmp: Requires Windows"
 
-    if not __utils__["reg.key_exists"](_HKEY, _SNMP_KEY):
-        return False, "Module win_snmp: SNMP not installed"
+    if not __utils__['reg.key_exists'](_HKEY, _SNMP_KEY):
+        return False, 'Module win_snmp: SNMP not installed'
 
     return __virtualname__
 
@@ -120,18 +120,15 @@ def get_agent_settings():
     ret = dict()
     sorted_types = sorted(_SERVICE_TYPES.items(), key=lambda x: (-x[1], x[0]))
 
-    ret["services"] = list()
-    ret["contact"] = (__utils__["reg.read_value"](_HKEY, _AGENT_KEY, "sysContact"))[
-        "vdata"
-    ]
+    ret['services'] = list()
+    ret['contact'] = (__utils__['reg.read_value'](
+        _HKEY, _AGENT_KEY, 'sysContact'))['vdata']
 
-    ret["location"] = (__utils__["reg.read_value"](_HKEY, _AGENT_KEY, "sysLocation"))[
-        "vdata"
-    ]
+    ret['location'] = (__utils__['reg.read_value'](
+        _HKEY, _AGENT_KEY, 'sysLocation'))['vdata']
 
-    current_bitmask = (__utils__["reg.read_value"](_HKEY, _AGENT_KEY, "sysServices"))[
-        "vdata"
-    ]
+    current_bitmask = (__utils__['reg.read_value'](
+        _HKEY, _AGENT_KEY, 'sysServices'))['vdata']
 
     if current_bitmask == 0:
         ret["services"].append(sorted_types[-1][0])
@@ -199,16 +196,14 @@ def set_agent_settings(contact=None, location=None, services=None):
         return True
 
     if contact is not None:
-        if contact != current_settings["contact"]:
-            __utils__["reg.set_value"](
-                _HKEY, _AGENT_KEY, "sysContact", contact, "REG_SZ"
-            )
+        if contact != current_settings['contact']:
+            __utils__['reg.set_value'](
+                _HKEY, _AGENT_KEY, 'sysContact', contact, 'REG_SZ')
 
     if location is not None:
-        if location != current_settings["location"]:
-            __utils__["reg.set_value"](
-                _HKEY, _AGENT_KEY, "sysLocation", location, "REG_SZ"
-            )
+        if location != current_settings['location']:
+            __utils__['reg.set_value'](
+                _HKEY, _AGENT_KEY, 'sysLocation', location, 'REG_SZ')
 
     if services is not None:
         if set(services) != set(current_settings["services"]):
@@ -218,9 +213,8 @@ def set_agent_settings(contact=None, location=None, services=None):
 
             _LOG.debug("Setting sysServices vdata to: %s", vdata)
 
-            __utils__["reg.set_value"](
-                _HKEY, _AGENT_KEY, "sysServices", vdata, "REG_DWORD"
-            )
+            __utils__['reg.set_value'](
+                _HKEY, _AGENT_KEY, 'sysServices', vdata, 'REG_DWORD')
 
     # Get the fields post-change so that we can verify tht all values
     # were modified successfully. Track the ones that weren't.
@@ -251,8 +245,9 @@ def get_auth_traps_enabled():
     .. code-block:: bash
 
         salt '*' win_snmp.get_auth_traps_enabled
-    """
-    reg_ret = __utils__["reg.read_value"](_HKEY, _SNMP_KEY, "EnableAuthenticationTraps")
+    '''
+    reg_ret = __utils__['reg.read_value'](
+        _HKEY, _SNMP_KEY, 'EnableAuthenticationTraps')
 
     if reg_ret["vdata"] == "(value not set)":
         return False
@@ -283,7 +278,7 @@ def set_auth_traps_enabled(status=True):
         return True
 
     vdata = int(status)
-    __utils__["reg.set_value"](_HKEY, _SNMP_KEY, vname, vdata, "REG_DWORD")
+    __utils__['reg.set_value'](_HKEY, _SNMP_KEY, vname, vdata, 'REG_DWORD')
 
     new_status = get_auth_traps_enabled()
 
@@ -325,11 +320,12 @@ def get_community_names():
     ret = dict()
 
     # Look in GPO settings first
-    if __utils__["reg.key_exists"](_HKEY, _COMMUNITIES_GPO_KEY):
+    if __utils__['reg.key_exists'](_HKEY, _COMMUNITIES_GPO_KEY):
 
         _LOG.debug("Loading communities from Group Policy settings")
 
-        current_values = __utils__["reg.list_values"](_HKEY, _COMMUNITIES_GPO_KEY)
+        current_values = __utils__['reg.list_values'](
+            _HKEY, _COMMUNITIES_GPO_KEY, include_default=False)
 
         # GPO settings are different in that they do not designate permissions
         # They are a numbered list of communities like so:
@@ -356,7 +352,8 @@ def get_community_names():
 
         _LOG.debug("Loading communities from SNMP settings")
 
-        current_values = __utils__["reg.list_values"](_HKEY, _COMMUNITIES_KEY)
+        current_values = __utils__['reg.list_values'](
+            _HKEY, _COMMUNITIES_KEY, include_default=False)
 
         # The communities are stored as the community name with a numeric
         # permission value. Like this (4 = Read Only):
@@ -419,8 +416,8 @@ def set_community_names(communities):
     """
     values = dict()
 
-    if __utils__["reg.key_exists"](_HKEY, _COMMUNITIES_GPO_KEY):
-        _LOG.debug("Communities on this system are managed by Group Policy")
+    if __utils__['reg.key_exists'](_HKEY, _COMMUNITIES_GPO_KEY):
+        _LOG.debug('Communities on this system are managed by Group Policy')
         raise CommandExecutionError(
             "Communities on this system are managed by Group Policy"
         )
@@ -448,23 +445,19 @@ def set_community_names(communities):
         if current_vname in values:
             # Modify existing communities that have a different permission value.
             if current_communities[current_vname] != values[current_vname]:
-                __utils__["reg.set_value"](
-                    _HKEY,
-                    _COMMUNITIES_KEY,
-                    current_vname,
-                    values[current_vname],
-                    "REG_DWORD",
-                )
+                __utils__['reg.set_value'](
+                    _HKEY, _COMMUNITIES_KEY, current_vname,
+                    values[current_vname], 'REG_DWORD')
         else:
             # Remove current communities that weren't provided.
-            __utils__["reg.delete_value"](_HKEY, _COMMUNITIES_KEY, current_vname)
+            __utils__['reg.delete_value'](
+                _HKEY, _COMMUNITIES_KEY, current_vname)
 
     # Create any new communities.
     for vname in values:
         if vname not in current_communities:
-            __utils__["reg.set_value"](
-                _HKEY, _COMMUNITIES_KEY, vname, values[vname], "REG_DWORD"
-            )
+            __utils__['reg.set_value'](
+                _HKEY, _COMMUNITIES_KEY, vname, values[vname], 'REG_DWORD')
 
     # Get the fields post-change so that we can verify tht all values
     # were modified successfully. Track the ones that weren't.

@@ -5,7 +5,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import subprocess
-import time
+
+# Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
 
 # Import salt libs
 import salt.utils.path
@@ -33,9 +37,9 @@ class SupervisordModuleTest(ModuleCase):
     def setUp(self):
         super(SupervisordModuleTest, self).setUp()
 
-        self.venv_test_dir = os.path.join(RUNTIME_VARS.TMP, "supervisortests")
-        self.venv_dir = os.path.join(self.venv_test_dir, "venv")
-        self.supervisor_sock = os.path.join(self.venv_dir, "supervisor.sock")
+        self.venv_test_dir = os.path.join(RUNTIME_VARS.TMP, 'supervisortests')
+        self.venv_dir = os.path.join(self.venv_test_dir, 'venv')
+        self.supervisor_sock = os.path.join(self.venv_dir, 'supervisor.sock')
 
         if not os.path.exists(self.venv_dir):
             os.makedirs(self.venv_test_dir)

@@ -31,19 +31,13 @@ def __virtual__():
     .. versionadded:: 2016.3.4
 
     Only work on FreeBSD RELEASEs >= 6.2, where freebsd-update was introduced.
-    """
-    if __grains__["os"] != "FreeBSD":
-        return (
-            False,
-            "The freebsd_update execution module cannot be loaded: only available on FreeBSD systems.",
-        )
-    if float(__grains__["osrelease"]) < 6.2:
-        return (
-            False,
-            "freebsd_update is only available on FreeBSD versions >= 6.2-RELESE",
-        )
-    if "release" not in __grains__["kernelrelease"].lower():
-        return (False, "freebsd_update is only available on FreeBSD RELEASES")
+    '''
+    if __grains__.get('os') != 'FreeBSD':
+        return (False, 'The freebsd_update execution module cannot be loaded: only available on FreeBSD systems.')
+    if float(__grains__['osrelease']) < 6.2:
+        return (False, 'freebsd_update is only available on FreeBSD versions >= 6.2-RELESE')
+    if 'release' not in __grains__['kernelrelease'].lower():
+        return (False, 'freebsd_update is only available on FreeBSD RELEASES')
     return __virtualname__
 
 

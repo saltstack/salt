@@ -10,23 +10,21 @@ import textwrap
 import pytest
 import salt.utils.files
 from tests.support.case import ModuleCase
-from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
+from tests.support.mixins import SaltReturnAssertsMixin
+
+# Import salt libs
+import salt.utils.files
 
 
 @pytest.mark.windows_whitelisted
 class EnvTestCase(ModuleCase, SaltReturnAssertsMixin):
     def setUp(self):
-        self.state_name = "test_sdb_env"
-        self.state_file_name = self.state_name + ".sls"
-        self.state_file_set_var = os.path.join(
-            RUNTIME_VARS.BASE_FILES, self.state_file_name
-        )
-        with salt.utils.files.fopen(self.state_file_set_var, "w") as wfh:
-            wfh.write(
-                textwrap.dedent(
-                    """\
+        self.state_name = 'test_sdb_env'
+        self.state_file_name = self.state_name + '.sls'
+        self.state_file_set_var = os.path.join(RUNTIME_VARS.BASE_FILES, self.state_file_name)
+        with salt.utils.files.fopen(self.state_file_set_var, 'w') as wfh:
+            wfh.write(textwrap.dedent('''\
                 set some env var:
                   cmd.run:
                     - name: echo {{ salt['sdb.set']('sdb://osenv/foo', 'bar') }}

@@ -37,12 +37,13 @@ except ImportError:
 
 
 _DEFAULTS = {
-    "server": "localhost",
-    "port": 1433,
-    "user": "sysdba",
-    "password": "",
-    "database": "",
-    "as_dict": False,
+    'server': 'localhost',
+    'port': 1433,
+    'user': 'sysdba',
+    'password': '',
+    'database': '',
+    'as_dict': False,
+    'autocommit': False
 }
 
 
@@ -60,7 +61,7 @@ def __virtual__():
 
 def _get_connection(**kwargs):
     connection_args = {}
-    for arg in ("server", "port", "user", "password", "database", "as_dict"):
+    for arg in ('server', 'port', 'user', 'password', 'database', 'as_dict', 'autocommit'):
         if arg in kwargs:
             connection_args[arg] = kwargs[arg]
         else:

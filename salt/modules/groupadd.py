@@ -14,12 +14,14 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import functools
 import logging
+import functools
 import os
 
 import salt.utils.files
 import salt.utils.stringutils
 from salt.ext import six
-
+import salt.utils.files
+import salt.utils.stringutils
 try:
     import grp
 except ImportError:
@@ -35,8 +37,8 @@ __virtualname__ = "group"
 def __virtual__():
     """
     Set the user module if the kernel is Linux or OpenBSD
-    """
-    if __grains__["kernel"] in ("Linux", "OpenBSD", "NetBSD"):
+    '''
+    if __grains__.get('kernel') in ('Linux', 'OpenBSD', 'NetBSD'):
         return __virtualname__
     return (
         False,
@@ -69,16 +71,16 @@ def add(name, gid=None, system=False, root=None):
     """
     cmd = ["groupadd"]
     if gid:
-        cmd.append("-g {0}".format(gid))
-    if system and __grains__["kernel"] != "OpenBSD":
-        cmd.append("-r")
+        cmd.append('-g {0}'.format(gid))
+    if system and __grains__['kernel'] != 'OpenBSD':
+        cmd.append('-r')
 
     if root is not None:
         cmd.extend(("-R", root))
 
     cmd.append(name)
 
-    ret = __salt__["cmd.run_all"](cmd, python_shell=False)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     return not ret["retcode"]
 
@@ -98,21 +100,21 @@ def delete(name, root=None):
     .. code-block:: bash
 
         salt '*' group.delete foo
-    """
-    cmd = ["groupdel"]
+    '''
+    cmd = ['groupdel']
 
     if root is not None:
         cmd.extend(("-R", root))
 
     cmd.append(name)
 
-    ret = __salt__["cmd.run_all"](cmd, python_shell=False)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     return not ret["retcode"]
 
 
 def info(name, root=None):
-    """
+    '''
     Return information about a group
 
     name
@@ -126,7 +128,7 @@ def info(name, root=None):
     .. code-block:: bash
 
         salt '*' group.info foo
-    """
+    '''
     if root is not None:
         getgrnam = functools.partial(_getgrnam, root=root)
     else:
@@ -153,7 +155,7 @@ def _format_info(data):
 
 
 def getent(refresh=False, root=None):
-    """
+    '''
     Return info on all groups
 
     refresh
@@ -184,9 +186,9 @@ def getent(refresh=False, root=None):
 
 
 def _chattrib(name, key, value, param, root=None):
-    """
+    '''
     Change an attribute for a named user
-    """
+    '''
     pre_info = info(name, root=root)
     if not pre_info:
         return False
@@ -194,14 +196,14 @@ def _chattrib(name, key, value, param, root=None):
     if value == pre_info[key]:
         return True
 
-    cmd = ["groupmod"]
+    cmd = ['groupmod']
 
     if root is not None:
-        cmd.extend(("-R", root))
+        cmd.extend(('-R', root))
 
     cmd.extend((param, value, name))
 
-    __salt__["cmd.run"](cmd, python_shell=False)
+    __salt__['cmd.run'](cmd, python_shell=False)
     return info(name, root=root).get(key) == value
 
 
@@ -223,8 +225,8 @@ def chgid(name, gid, root=None):
     .. code-block:: bash
 
         salt '*' group.chgid foo 4376
-    """
-    return _chattrib(name, "gid", gid, "-g", root=root)
+    '''
+    return _chattrib(name, 'gid', gid, '-g', root=root)
 
 
 def adduser(name, username, root=None):
@@ -266,7 +268,7 @@ def adduser(name, username, root=None):
         else:
             cmd = ["gpasswd", "--add", username, name]
         if root is not None:
-            cmd.extend(("--root", root))
+            cmd.extend(('--root', root))
     else:
         cmd = ["usermod", "-G", name, username]
         if root is not None:
@@ -319,18 +321,15 @@ def deluser(name, username, root=None):
                 else:
                     cmd = ["gpasswd", "--del", username, name]
                 if root is not None:
-                    cmd.extend(("--root", root))
-                retcode = __salt__["cmd.retcode"](cmd, python_shell=False)
-            elif __grains__["kernel"] == "OpenBSD":
-                out = __salt__["cmd.run_stdout"](
-                    "id -Gn {0}".format(username), python_shell=False
-                )
-                cmd = ["usermod", "-S"]
-                cmd.append(
-                    ",".join([g for g in out.split() if g != six.text_type(name)])
-                )
-                cmd.append("{0}".format(username))
-                retcode = __salt__["cmd.retcode"](cmd, python_shell=False)
+                    cmd.extend(('--root', root))
+                retcode = __salt__['cmd.retcode'](cmd, python_shell=False)
+            elif __grains__['kernel'] == 'OpenBSD':
+                out = __salt__['cmd.run_stdout']('id -Gn {0}'.format(username),
+                                                 python_shell=False)
+                cmd = ['usermod', '-S']
+                cmd.append(','.join([g for g in out.split() if g != six.text_type(name)]))
+                cmd.append('{0}'.format(username))
+                retcode = __salt__['cmd.retcode'](cmd, python_shell=False)
             else:
                 log.error("group.deluser is not yet supported on this platform")
                 return False
@@ -382,9 +381,9 @@ def members(name, members_list, root=None):
         else:
             cmd = ["gpasswd", "--members", members_list, name]
         if root is not None:
-            cmd.extend(("--root", root))
-        retcode = __salt__["cmd.retcode"](cmd, python_shell=False)
-    elif __grains__["kernel"] == "OpenBSD":
+            cmd.extend(('--root', root))
+        retcode = __salt__['cmd.retcode'](cmd, python_shell=False)
+    elif __grains__['kernel'] == 'OpenBSD':
         retcode = 1
         grp_info = __salt__["group.info"](name)
         if grp_info and name in grp_info["name"]:
@@ -410,40 +409,40 @@ def members(name, members_list, root=None):
 
 
 def _getgrnam(name, root=None):
-    """
+    '''
     Alternative implementation for getgrnam, that use only /etc/group
-    """
-    root = root or "/"
-    passwd = os.path.join(root, "etc/group")
+    '''
+    root = root or '/'
+    passwd = os.path.join(root, 'etc/group')
     with salt.utils.files.fopen(passwd) as fp_:
         for line in fp_:
             line = salt.utils.stringutils.to_unicode(line)
-            comps = line.strip().split(":")
+            comps = line.strip().split(':')
             if len(comps) < 4:
-                log.debug("Ignoring group line: %s", line)
+                log.debug('Ignoring group line: %s', line)
                 continue
             if comps[0] == name:
                 # Generate a getpwnam compatible output
                 comps[2] = int(comps[2])
-                comps[3] = comps[3].split(",") if comps[3] else []
+                comps[3] = comps[3].split(',') if comps[3] else []
                 return grp.struct_group(comps)
-    raise KeyError("getgrnam(): name not found: {}".format(name))
+    raise KeyError('getgrnam(): name not found: {}'.format(name))
 
 
 def _getgrall(root=None):
-    """
+    '''
     Alternative implemetantion for getgrall, that use only /etc/group
-    """
-    root = root or "/"
-    passwd = os.path.join(root, "etc/group")
+    '''
+    root = root or '/'
+    passwd = os.path.join(root, 'etc/group')
     with salt.utils.files.fopen(passwd) as fp_:
         for line in fp_:
             line = salt.utils.stringutils.to_unicode(line)
-            comps = line.strip().split(":")
+            comps = line.strip().split(':')
             if len(comps) < 4:
-                log.debug("Ignoring group line: %s", line)
+                log.debug('Ignoring group line: %s', line)
                 continue
             # Generate a getgrall compatible output
             comps[2] = int(comps[2])
-            comps[3] = comps[3].split(",") if comps[3] else []
+            comps[3] = comps[3].split(',') if comps[3] else []
             yield grp.struct_group(comps)

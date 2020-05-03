@@ -442,13 +442,14 @@ class AESReqServerMixin(object):
             if os.path.isfile(pubfn):
                 with salt.utils.files.fopen(pubfn, "r") as fp_:
                     disk_key = fp_.read()
-            if load["pub"] and load["pub"] != disk_key:
-                log.debug("Host key change detected in open mode.")
-                with salt.utils.files.fopen(pubfn, "w+") as fp_:
-                    fp_.write(load["pub"])
-            elif not load["pub"]:
-                log.error("Public key is empty: {0}".format(load["id"]))
-                return {"enc": "clear", "load": {"ret": False}}
+            if load['pub'] and load['pub'] != disk_key:
+                log.debug('Host key change detected in open mode.')
+                with salt.utils.files.fopen(pubfn, 'w+') as fp_:
+                    fp_.write(load['pub'])
+            elif not load['pub']:
+                log.error('Public key is empty: %s', load['id'])
+                return {'enc': 'clear',
+                        'load': {'ret': False}}
 
         pub = None
 
@@ -460,9 +461,10 @@ class AESReqServerMixin(object):
         # and an empty request comes in
         try:
             pub = salt.crypt.get_rsa_pub_key(pubfn)
-        except (ValueError, IndexError, TypeError) as err:
-            log.error('Corrupt public key "%s": %s', pubfn, err)
-            return {"enc": "clear", "load": {"ret": False}}
+        except Exception as err:
+            log.error('Corrupt public key "%s": %s', pubfn, err, exc_info_on_loglevel=logging.DEBUG)
+            return {'enc': 'clear',
+                    'load': {'ret': False}}
 
         if not HAS_M2:
             cipher = PKCS1_OAEP.new(pub)

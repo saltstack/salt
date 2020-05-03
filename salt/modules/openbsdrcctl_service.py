@@ -22,8 +22,8 @@ __virtualname__ = "service"
 def __virtual__():
     """
     rcctl(8) is only available on OpenBSD.
-    """
-    if __grains__["os"] == "OpenBSD" and os.path.exists("/usr/sbin/rcctl"):
+    '''
+    if __grains__.get('os') == 'OpenBSD' and os.path.exists('/usr/sbin/rcctl'):
         return __virtualname__
     return (
         False,

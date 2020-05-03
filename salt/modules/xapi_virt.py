@@ -52,8 +52,8 @@ __virtualname__ = "virt"
 
 
 def _check_xenapi():
-    if __grains__["os"] == "Debian":
-        debian_xen_version = "/usr/lib/xen-common/bin/xen-version"
+    if __grains__.get('os') == 'Debian':
+        debian_xen_version = '/usr/lib/xen-common/bin/xen-version'
         if os.path.isfile(debian_xen_version):
             # __salt__ is not available in __virtual__
             xenversion = salt.modules.cmdmod._run_quiet(debian_xen_version)
@@ -307,7 +307,7 @@ def node_info():
         def getFreeCpuCount():
             cnt = 0
             for host_cpu_it in host_cpu_rec:
-                if len(host_cpu_rec["cpu_pool"]) == 0:
+                if not host_cpu_rec['cpu_pool']:
                     cnt += 1
             return cnt
 

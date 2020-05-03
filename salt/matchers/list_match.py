@@ -10,28 +10,26 @@ log = logging.getLogger(__name__)
 
 
 def match(tgt, opts=None):
-    """
+    '''
     Determines if this host is on the list
-    """
+    '''
 
     if not opts:
         opts = __opts__
     try:
-        if (
-            "," + opts["id"] + "," in tgt
-            or tgt.startswith(opts["id"] + ",")
-            or tgt.endswith("," + opts["id"])
-        ):
+        if ',' + opts['id'] + ',' in tgt \
+                or tgt.startswith(opts['id'] + ',') \
+                or tgt.endswith(',' + opts['id']):
             return True
         # tgt is a string, which we know because the if statement above did not
         # cause one of the exceptions being caught. Therefore, look for an
         # exact match. (e.g. salt -L foo test.ping)
-        return opts["id"] == tgt
+        return opts['id'] == tgt
     except (AttributeError, TypeError):
         # tgt is not a string, maybe it's a sequence type?
         try:
-            return opts["id"] in tgt
-        except Exception:  # pylint: disable=broad-except
+            return opts['id'] in tgt
+        except Exception:
             # tgt was likely some invalid type
             return False
 

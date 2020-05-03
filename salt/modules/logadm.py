@@ -55,8 +55,8 @@ option_flags = {
 def __virtual__():
     """
     Only work on Solaris based systems
-    """
-    if "Solaris" in __grains__["os_family"]:
+    '''
+    if 'Solaris' in __grains__.get('os_family'):
         return True
     return (
         False,

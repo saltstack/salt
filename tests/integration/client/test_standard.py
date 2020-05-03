@@ -105,9 +105,9 @@ class StdTest(ModuleCase):
     def test_disconnected_return(self):
         """
         Test return/messaging on a disconnected minion
-        """
-        test_ret = "Minion did not return. [No response]"
-        test_out = "no_return"
+        '''
+        test_ret = 'Minion did not return. [No response]'
+        test_out = 'no_return'
 
         # Create a minion key, but do not start the "fake" minion. This mimics
         # a disconnected minion.
@@ -123,12 +123,8 @@ class StdTest(ModuleCase):
             num_ret = 0
             for ret in cmd_iter:
                 num_ret += 1
-                assert ret["disconnected"]["ret"].startswith(test_ret), ret[
-                    "disconnected"
-                ]["ret"]
-                assert ret["disconnected"]["out"] == test_out, ret["disconnected"][
-                    "out"
-                ]
+                assert ret['disconnected']['ret'].startswith(test_ret), ret['disconnected']['ret']
+                assert ret['disconnected']['out'] == test_out, ret['disconnected']['out']
 
             # Ensure that we entered the loop above
             self.assertEqual(num_ret, 1)
@@ -140,24 +136,32 @@ class StdTest(ModuleCase):
     def test_missing_minion_list(self):
         """
         test cmd with missing minion in nodegroup
-        """
-        ret = self.client.cmd("minion,ghostminion", "test.ping", tgt_type="list")
-        assert "minion" in ret
-        assert "ghostminion" in ret
-        assert ret["minion"] is True
-        assert ret["ghostminion"].startswith(
-            "Minion did not return. [No response]"
-        ), ret["ghostminion"]
+        '''
+        ret = self.client.cmd(
+                'minion,ghostminion',
+                'test.ping',
+                tgt_type='list',
+                timeout=self.TIMEOUT
+                )
+        assert 'minion' in ret
+        assert 'ghostminion' in ret
+        assert ret['minion'] is True
+        assert ret['ghostminion'].startswith(
+            'Minion did not return. [No response]'
+        ), ret['ghostminion']
 
-    @skipIf(True, "SLOWTEST skip")
     def test_missing_minion_nodegroup(self):
         """
         test cmd with missing minion in nodegroup
-        """
-        ret = self.client.cmd("missing_minion", "test.ping", tgt_type="nodegroup")
-        assert "minion" in ret
-        assert "ghostminion" in ret
-        assert ret["minion"] is True
-        assert ret["ghostminion"].startswith(
-            "Minion did not return. [No response]"
-        ), ret["ghostminion"]
+        '''
+        ret = self.client.cmd(
+                'missing_minion',
+                'test.ping',
+                tgt_type='nodegroup'
+                )
+        assert 'minion' in ret
+        assert 'ghostminion' in ret
+        assert ret['minion'] is True
+        assert ret['ghostminion'].startswith(
+            'Minion did not return. [No response]'
+        ), ret['ghostminion']

@@ -15,6 +15,8 @@ import logging
 import multiprocessing
 import os
 import re
+import sys
+import time
 import signal
 import stat
 import sys
@@ -28,9 +30,9 @@ import salt.client.ssh.client
 
 # Import salt libs
 import salt.crypt
-import salt.daemons.masterapi
-import salt.defaults.exitcodes
-import salt.engines
+import salt.cli.batch_async
+import salt.client
+import salt.client.ssh.client
 import salt.exceptions
 import salt.ext.tornado.gen  # pylint: disable=F0401
 import salt.key
@@ -248,9 +250,8 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
                 salt.daemons.masterapi.clean_old_jobs(self.opts)
                 salt.daemons.masterapi.clean_expired_tokens(self.opts)
                 salt.daemons.masterapi.clean_pub_auth(self.opts)
-            if (now - last_git_pillar_update) >= git_pillar_update_interval:
-                last_git_pillar_update = now
-                self.handle_git_pillar()
+                salt.daemons.masterapi.clean_proc_dir(self.opts)
+            self.handle_git_pillar()
             self.handle_schedule()
             self.handle_key_cache()
             self.handle_presence(old_present)
@@ -1033,7 +1034,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         self.mkey = mkey
         self.key = key
         self.k_mtime = 0
-        self.stats = collections.defaultdict(lambda: {"mean": 0, "runs": 0})
+        self.stats = collections.defaultdict(lambda: {'mean': 0, 'latency': 0, 'runs': 0})
         self.stat_clock = time.time()
 
     # We need __setstate__ and __getstate__ to also pickle 'SMaster.secrets'.
@@ -1114,27 +1115,16 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         ret = {"aes": self._handle_aes, "clear": self._handle_clear}[key](load)
         raise salt.ext.tornado.gen.Return(ret)
 
-    def _post_stats(self, start, cmd):
-        """
-        Calculate the master stats and fire events with stat info
-        """
-        end = time.time()
-        duration = end - start
-        self.stats[cmd]["mean"] = (
-            self.stats[cmd]["mean"] * (self.stats[cmd]["runs"] - 1) + duration
-        ) / self.stats[cmd]["runs"]
-        if end - self.stat_clock > self.opts["master_stats_event_iter"]:
+    def _post_stats(self, stats):
+        '''
+        Fire events with stat info if it's time
+        '''
+        end_time = time.time()
+        if end_time - self.stat_clock > self.opts['master_stats_event_iter']:
             # Fire the event with the stats and wipe the tracker
-            self.aes_funcs.event.fire_event(
-                {
-                    "time": end - self.stat_clock,
-                    "worker": self.name,
-                    "stats": self.stats,
-                },
-                tagify(self.name, "stats"),
-            )
-            self.stats = collections.defaultdict(lambda: {"mean": 0, "runs": 0})
-            self.stat_clock = end
+            self.aes_funcs.event.fire_event({'time': end_time - self.stat_clock, 'worker': self.name, 'stats': stats}, tagify(self.name, 'stats'))
+            self.stats = collections.defaultdict(lambda: {'mean': 0, 'latency': 0, 'runs': 0})
+            self.stat_clock = end_time
 
     def _handle_clear(self, load):
         """
@@ -1151,10 +1141,10 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             return {}, {"fun": "send_clear"}
         if self.opts["master_stats"]:
             start = time.time()
-            self.stats[cmd]["runs"] += 1
-        ret = method(load), {"fun": "send_clear"}
-        if self.opts["master_stats"]:
-            self._post_stats(start, cmd)
+        ret = getattr(self.clear_funcs, cmd)(load), {'fun': 'send_clear'}
+        if self.opts['master_stats']:
+            stats = salt.utils.event.update_stats(self.stats, start, load)
+            self._post_stats(stats)
         return ret
 
     def _handle_aes(self, data):
@@ -1175,7 +1165,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             return {}, {"fun": "send"}
         if self.opts["master_stats"]:
             start = time.time()
-            self.stats[cmd]["runs"] += 1
 
         def run_func(data):
             return self.aes_funcs.run_func(data["cmd"], data)
@@ -1185,8 +1174,9 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         ):
             ret = run_func(data)
 
-        if self.opts["master_stats"]:
-            self._post_stats(start, cmd)
+        if self.opts['master_stats']:
+            stats = salt.utils.event.update_stats(self.stats, start, data)
+            self._post_stats(stats)
         return ret
 
     def run(self):
@@ -1564,20 +1554,16 @@ class AESFuncs(TransportMethods):
             return False
         if not salt.utils.verify.valid_id(self.opts, load["id"]):
             return False
-        file_recv_max_size = 1024 * 1024 * self.opts["file_recv_max_size"]
-
-        if "loc" in load and load["loc"] < 0:
-            log.error("Invalid file pointer: load[loc] < 0")
+        if 'loc' in load and load['loc'] < 0:
+            log.error('Invalid file pointer: load[loc] < 0')
             return False
 
-        if len(load["data"]) + load.get("loc", 0) > file_recv_max_size:
+        if len(load['data']) + load.get('loc', 0) > self.opts['file_recv_max_size'] * 0x100000:
             log.error(
-                "file_recv_max_size limit of %d MB exceeded! %s will be "
-                "truncated. To successfully push this file, adjust "
-                "file_recv_max_size to an integer (in MB) large enough to "
-                "accommodate it.",
-                file_recv_max_size,
-                load["path"],
+                'file_recv_max_size limit of %d MB exceeded! %s will be '
+                'truncated. To successfully push this file, adjust '
+                'file_recv_max_size to an integer (in MB) large enough to '
+                'accommodate it.', self.opts['file_recv_max_size'], load['path']
             )
             return False
         if "tok" not in load:
@@ -2189,6 +2175,30 @@ class ClearFuncs(TransportMethods):
             return False
         return self.loadauth.get_tok(clear_load["token"])
 
+    def publish_batch(self, clear_load, extra, minions, missing):
+        batch_load = {}
+        batch_load.update(clear_load)
+        import salt.cli.batch_async
+        batch = salt.cli.batch_async.BatchAsync(
+            self.local.opts,
+            functools.partial(self._prep_jid, clear_load, {}),
+            batch_load
+        )
+        ioloop = tornado.ioloop.IOLoop.current()
+
+        self._prep_pub(minions, batch.batch_jid, clear_load, extra, missing)
+
+        ioloop.add_callback(batch.start)
+
+        return {
+            'enc': 'clear',
+            'load': {
+                'jid': batch.batch_jid,
+                'minions': minions,
+                'missing': missing
+            }
+        }
+
     def publish(self, clear_load):
         """
         This method sends out publications to the minions, it can only be used
@@ -2306,6 +2316,9 @@ class ClearFuncs(TransportMethods):
                         ),
                     },
                 }
+        if extra.get('batch', None):
+            return self.publish_batch(clear_load, extra, minions, missing)
+
         jid = self._prep_jid(clear_load, extra)
         if jid is None:
             return {"enc": "clear", "load": {"error": "Master failed to assign jid"}}

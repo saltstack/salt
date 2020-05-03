@@ -180,9 +180,10 @@ class SaltCacheLoader(BaseLoader):
                 tpldir = environment.globals.get("tpldir", tpldir)
                 tplfile = template
             tpldata = {
-                "tplfile": tplfile,
-                "tpldir": "." if tpldir == "" else tpldir,
-                "tpldot": tpldir.replace("/", "."),
+                'tplfile': tplfile,
+                'tpldir': '.' if tpldir == '' else tpldir,
+                'tpldot': tpldir.replace('/', '.'),
+                'tplroot': tpldir.split('/')[0],
             }
             environment.globals.update(tpldata)
 
@@ -351,8 +352,8 @@ def to_bool(val):
         return val.lower() in ("yes", "1", "true")
     if isinstance(val, six.integer_types):
         return val > 0
-    if not isinstance(val, Hashable):
-        return len(val) > 0
+    if not isinstance(val, collections.Hashable):
+        return bool(val)
     return False
 
 
@@ -714,6 +715,11 @@ def symmetric_difference(lst1, lst2):
 
 
 @jinja_filter("method_call")
+def method_call(obj, f_name, *f_args, **f_kwargs):
+    return getattr(obj, f_name, lambda *args, **kwargs: None)(*f_args, **f_kwargs)
+
+
+@jinja_filter('method_call')
 def method_call(obj, f_name, *f_args, **f_kwargs):
     return getattr(obj, f_name, lambda *args, **kwargs: None)(*f_args, **f_kwargs)
 

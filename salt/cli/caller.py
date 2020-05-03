@@ -10,6 +10,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import sys
+import logging
 import traceback
 
 # Import salt libs
@@ -27,6 +28,11 @@ import salt.utils.jid
 import salt.utils.minion
 import salt.utils.profile
 import salt.utils.stringutils
+import salt.defaults.exitcodes
+from salt.log import LOG_LEVELS
+
+# Import 3rd-party libs
+from salt.ext import six
 
 # Custom exceptions
 from salt.exceptions import (
@@ -63,7 +69,7 @@ class Caller(object):
         if ttype in ("zeromq", "tcp", "detect"):
             return ZeroMQCaller(opts, **kwargs)
         else:
-            raise Exception("Callers are only defined for ZeroMQ and TCP")
+            raise Exception('Callers are only defined for ZeroMQ and TCP')
             # return NewKindOfCaller(opts, **kwargs)
 
 
@@ -320,14 +326,7 @@ class BaseCaller(object):
 class ZeroMQCaller(BaseCaller):
     """
     Object to wrap the calling of local salt modules for the salt-call command
-    """
-
-    def __init__(self, opts):  # pylint: disable=useless-super-delegation
-        """
-        Pass in the command line options
-        """
-        super(ZeroMQCaller, self).__init__(opts)
-
+    '''
     def return_pub(self, ret):
         """
         Return the data up to the master
@@ -339,3 +338,5 @@ class ZeroMQCaller(BaseCaller):
             for key, value in six.iteritems(ret):
                 load[key] = value
             channel.send(load)
+        finally:
+            channel.close()

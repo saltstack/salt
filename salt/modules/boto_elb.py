@@ -860,10 +860,7 @@ def set_instances(
     if test:
         return bool(add or remove)
     if remove:
-        if (
-            deregister_instances(name, list(remove), region, key, keyid, profile)
-            is False
-        ):
+        if deregister_instances(name, list(remove), region, key, keyid, profile) is False:
             ret = False
     if add:
         if register_instances(name, list(add), region, key, keyid, profile) is False:

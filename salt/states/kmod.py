@@ -45,9 +45,9 @@ def __virtual__():
 def _append_comment(ret, comment):
     """
     append ``comment`` to ``ret['comment']``
-    """
-    if ret["comment"]:
-        ret["comment"] = ret["comment"].rstrip() + "\n" + comment
+    '''
+    if ret['comment']:
+        ret['comment'] = ret['comment'].rstrip() + '\n' + comment
     else:
         ret["comment"] = comment
 
@@ -98,10 +98,10 @@ def present(name, persist=False, mods=None):
     # Complement of proposed modules and already loaded modules
     not_loaded = list(set(mods) - set(already_loaded))
 
-    if __opts__["test"]:
-        ret["result"] = None
-        if ret["comment"]:
-            ret["comment"] += "\n"
+    if __opts__['test']:
+        ret['result'] = None
+        if ret['comment']:
+            ret['comment'] += '\n'
         if len(not_loaded) == 1:
             comment = "Kernel module {0} is set to be loaded".format(not_loaded[0])
         else:
@@ -133,7 +133,7 @@ def present(name, persist=False, mods=None):
             continue
         load_result = __salt__["kmod.load"](mod, persist)
         if isinstance(load_result, (list, tuple)):
-            if len(load_result) > 0:
+            if load_result:
                 for module in load_result:
                     ret["changes"][module] = "loaded"
                     if module != mod:
@@ -147,25 +147,19 @@ def present(name, persist=False, mods=None):
             loaded["failed"].append([mod, load_result])
 
     # Update comment with results
-    if len(loaded["yes"]) == 1:
-        _append_comment(ret, "Loaded kernel module {0}".format(loaded["yes"][0]))
-    elif len(loaded["yes"]) > 1:
-        _append_comment(
-            ret, "Loaded kernel modules {0}".format(", ".join(loaded["yes"]))
-        )
+    if len(loaded['yes']) == 1:
+        _append_comment(ret, 'Loaded kernel module {0}'.format(loaded['yes'][0]))
+    elif len(loaded['yes']) > 1:
+        _append_comment(ret, 'Loaded kernel modules {0}'.format(', '.join(loaded['yes'])))
 
-    if len(loaded["no"]) == 1:
-        _append_comment(ret, "Failed to load kernel module {0}".format(loaded["no"][0]))
-    if len(loaded["no"]) > 1:
-        _append_comment(
-            ret, "Failed to load kernel modules {0}".format(", ".join(loaded["no"]))
-        )
+    if len(loaded['no']) == 1:
+        _append_comment(ret, 'Failed to load kernel module {0}'.format(loaded['no'][0]))
+    if len(loaded['no']) > 1:
+        _append_comment(ret, 'Failed to load kernel modules {0}'.format(', '.join(loaded['no'])))
 
-    if loaded["failed"]:
-        for mod, msg in loaded["failed"]:
-            _append_comment(
-                ret, "Failed to load kernel module {0}: {1}".format(mod, msg)
-            )
+    if loaded['failed']:
+        for mod, msg in loaded['failed']:
+            _append_comment(ret, 'Failed to load kernel module {0}: {1}'.format(mod, msg))
 
     return ret
 
@@ -223,7 +217,7 @@ def absent(name, persist=False, comment=True, mods=None):
         for mod in to_unload:
             unload_result = __salt__["kmod.remove"](mod, persist, comment)
             if isinstance(unload_result, (list, tuple)):
-                if len(unload_result) > 0:
+                if unload_result:
                     for module in unload_result:
                         ret["changes"][module] = "removed"
                     unloaded["yes"].append(mod)
@@ -235,28 +229,19 @@ def absent(name, persist=False, comment=True, mods=None):
                 unloaded["failed"].append([mod, unload_result])
 
         # Update comment with results
-        if len(unloaded["yes"]) == 1:
-            _append_comment(ret, "Removed kernel module {0}".format(unloaded["yes"][0]))
-        elif len(unloaded["yes"]) > 1:
-            _append_comment(
-                ret, "Removed kernel modules {0}".format(", ".join(unloaded["yes"]))
-            )
+        if len(unloaded['yes']) == 1:
+            _append_comment(ret, 'Removed kernel module {0}'.format(unloaded['yes'][0]))
+        elif len(unloaded['yes']) > 1:
+            _append_comment(ret, 'Removed kernel modules {0}'.format(', '.join(unloaded['yes'])))
 
-        if len(unloaded["no"]) == 1:
-            _append_comment(
-                ret, "Failed to remove kernel module {0}".format(unloaded["no"][0])
-            )
-        if len(unloaded["no"]) > 1:
-            _append_comment(
-                ret,
-                "Failed to remove kernel modules {0}".format(", ".join(unloaded["no"])),
-            )
+        if len(unloaded['no']) == 1:
+            _append_comment(ret, 'Failed to remove kernel module {0}'.format(unloaded['no'][0]))
+        if len(unloaded['no']) > 1:
+            _append_comment(ret, 'Failed to remove kernel modules {0}'.format(', '.join(unloaded['no'])))
 
-        if unloaded["failed"]:
-            for mod, msg in unloaded["failed"]:
-                _append_comment(
-                    ret, "Failed to remove kernel module {0}: {1}".format(mod, msg)
-                )
+        if unloaded['failed']:
+            for mod, msg in unloaded['failed']:
+                _append_comment(ret, 'Failed to remove kernel module {0}: {1}'.format(mod, msg))
 
         return ret
 

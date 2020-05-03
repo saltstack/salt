@@ -52,8 +52,8 @@ def default_hash():
     return "*" if __grains__["os"].lower() == "freebsd" else "*************"
 
 
-def info(name):
-    """
+def info(name, **kwargs):
+    '''
     Return information for the specified user
 
     CLI Example:
@@ -70,14 +70,14 @@ def info(name):
 
     if not isinstance(name, six.string_types):
         name = six.text_type(name)
-    if ":" in name:
-        raise SaltInvocationError("Invalid username '{0}'".format(name))
+    if ':' in name:
+        raise SaltInvocationError('Invalid username \'{0}\''.format(name))
 
-    if __salt__["cmd.has_exec"]("pw"):
-        change, expire = __salt__["cmd.run_stdout"](
-            ["pw", "user", "show", name], python_shell=False
-        ).split(":")[5:7]
-    elif __grains__["kernel"] in ("NetBSD", "OpenBSD"):
+    if __salt__['cmd.has_exec']('pw'):
+        change, expire = __salt__['cmd.run_stdout'](
+            ['pw', 'usershow', '-n', name],
+            python_shell=False).split(':')[5:7]
+    elif __grains__['kernel'] in ('NetBSD', 'OpenBSD'):
         try:
             with salt.utils.files.fopen("/etc/master.passwd", "r") as fp_:
                 for line in fp_:

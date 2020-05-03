@@ -284,7 +284,7 @@ def delete_objects(
             return {"deleted": False, "error": __utils__["boto3.get_error"](e)}
 
     if failed:
-        return {"deleted": False, "failed": failed}
+        return {'deleted': False, 'failed': failed}
     else:
         return {"deleted": True}
 
@@ -377,29 +377,15 @@ def empty(
         Bucket, region=region, key=key, keyid=keyid, profile=profile
     )
     Delete = {}
-    Delete["Objects"] = [
-        {"Key": v["Key"], "VersionId": v["VersionId"]}
-        for v in stuff.get("Versions", [])
-    ]
-    Delete["Objects"] += [
-        {"Key": v["Key"], "VersionId": v["VersionId"]}
-        for v in stuff.get("DeleteMarkers", [])
-    ]
-    if Delete["Objects"]:
-        ret = delete_objects(
-            Bucket,
-            Delete,
-            MFA=MFA,
-            RequestPayer=RequestPayer,
-            region=region,
-            key=key,
-            keyid=keyid,
-            profile=profile,
-        )
-        failed = ret.get("failed", [])
+    Delete['Objects'] = [{'Key': v['Key'], 'VersionId': v['VersionId']} for v in stuff.get('Versions', [])]
+    Delete['Objects'] += [{'Key': v['Key'], 'VersionId': v['VersionId']} for v in stuff.get('DeleteMarkers', [])]
+    if Delete['Objects']:
+        ret = delete_objects(Bucket, Delete, MFA=MFA, RequestPayer=RequestPayer,
+                             region=region, key=key, keyid=keyid, profile=profile)
+        failed = ret.get('failed', [])
         if failed:
-            return {"deleted": False, "failed": ret[failed]}
-    return {"deleted": True}
+            return {'deleted': False, 'failed': ret[failed]}
+    return {'deleted': True}
 
 
 def list(region=None, key=None, keyid=None, profile=None):

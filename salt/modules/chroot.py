@@ -1,61 +1,73 @@
 # -*- coding: utf-8 -*-
+#
+# Author: Alberto Planas <aplanas@suse.com>
+#
+# Copyright 2018 SUSE LINUX GmbH, Nuernberg, Germany.
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
 
-"""
+'''
 :maintainer:    Alberto Planas <aplanas@suse.com>
 :maturity:      new
 :depends:       None
 :platform:      Linux
-"""
+'''
 from __future__ import absolute_import, print_function, unicode_literals
-
-import copy
 import logging
 import os
 import sys
 import tempfile
 
-import salt
-import salt.client.ssh.state
-import salt.client.ssh.wrapper.state
-import salt.defaults.exitcodes
-import salt.exceptions
-import salt.ext.six as six
-import salt.utils.args
-
-__func_alias__ = {"apply_": "apply"}
+from salt.defaults.exitcodes import EX_OK
+from salt.exceptions import CommandExecutionError
+from salt.utils.args import clean_kwargs
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    """
+    '''
     Chroot command is required.
-    """
-    if __utils__["path.which"]("chroot") is not None:
+    '''
+    if __utils__['path.which']('chroot') is not None:
         return True
     else:
-        return (False, "Module chroot requires the command chroot")
+        return (False, 'Module chroot requires the command chroot')
 
 
-def exist(root):
-    """
+def exist(name):
+    '''
     Return True if the chroot environment is present.
-    """
-    dev = os.path.join(root, "dev")
-    proc = os.path.join(root, "proc")
-    sys = os.path.join(root, "sys")
-    return all(os.path.isdir(i) for i in (root, dev, proc, sys))
+    '''
+    dev = os.path.join(name, 'dev')
+    proc = os.path.join(name, 'proc')
+    return all(os.path.isdir(i) for i in (name, dev, proc))
 
 
-def create(root):
-    """
+def create(name):
+    '''
     Create a basic chroot environment.
 
     Note that this environment is not functional. The caller needs to
     install the minimal required binaries, including Python if
     chroot.call is called.
 
-    root
+    name
         Path to the chroot environment
 
     CLI Example:
@@ -64,29 +76,27 @@ def create(root):
 
         salt myminion chroot.create /chroot
 
-    """
-    if not exist(root):
-        dev = os.path.join(root, "dev")
-        proc = os.path.join(root, "proc")
-        sys = os.path.join(root, "sys")
+    '''
+    if not exist(name):
+        dev = os.path.join(name, 'dev')
+        proc = os.path.join(name, 'proc')
         try:
             os.makedirs(dev, mode=0o755)
             os.makedirs(proc, mode=0o555)
-            os.makedirs(sys, mode=0o555)
         except OSError as e:
-            log.error("Error when trying to create chroot directories: %s", e)
+            log.error('Error when trying to create chroot directories: %s', e)
             return False
     return True
 
 
-def call(root, function, *args, **kwargs):
-    """
+def call(name, function, *args, **kwargs):
+    '''
     Executes a Salt function inside a chroot environment.
 
     The chroot does not need to have Salt installed, but Python is
     required.
 
-    root
+    name
         Path to the chroot environment
 
     function
@@ -97,262 +107,59 @@ def call(root, function, *args, **kwargs):
     .. code-block:: bash
 
         salt myminion chroot.call /chroot test.ping
-        salt myminion chroot.call /chroot ssh.set_auth_key user key=mykey
 
-    """
+    '''
 
     if not function:
-        raise salt.exceptions.CommandExecutionError("Missing function parameter")
+        raise CommandExecutionError('Missing function parameter')
 
-    if not exist(root):
-        raise salt.exceptions.CommandExecutionError("Chroot environment not found")
+    if not exist(name):
+        raise CommandExecutionError('Chroot environment not found')
 
     # Create a temporary directory inside the chroot where we can
     # untar salt-thin
-    thin_dest_path = tempfile.mkdtemp(dir=root)
-    thin_path = __utils__["thin.gen_thin"](
-        __opts__["cachedir"],
-        extra_mods=__salt__["config.option"]("thin_extra_mods", ""),
-        so_mods=__salt__["config.option"]("thin_so_mods", ""),
+    thin_dest_path = tempfile.mkdtemp(dir=name)
+    thin_path = __utils__['thin.gen_thin'](
+        __opts__['cachedir'],
+        extra_mods=__salt__['config.option']('thin_extra_mods', ''),
+        so_mods=__salt__['config.option']('thin_so_mods', '')
     )
-    # Some bug in Salt is preventing us to use `archive.tar` here. A
-    # AsyncZeroMQReqChannel is not closed at the end os the salt-call,
-    # and makes the client never exit.
-    #
-    # stdout = __salt__['archive.tar']('xzf', thin_path, dest=thin_dest_path)
-    #
-    stdout = __salt__["cmd.run"](["tar", "xzf", thin_path, "-C", thin_dest_path])
+    stdout = __salt__['archive.tar']('xzf', thin_path, dest=thin_dest_path)
     if stdout:
-        __utils__["files.rm_rf"](thin_dest_path)
-        return {"result": False, "comment": stdout}
+        __utils__['files.rm_rf'](thin_dest_path)
+        return {'result': False, 'comment': stdout}
 
-    chroot_path = os.path.join(os.path.sep, os.path.relpath(thin_dest_path, root))
+    chroot_path = os.path.join(os.path.sep,
+                               os.path.relpath(thin_dest_path, name))
     try:
-        safe_kwargs = salt.utils.args.clean_kwargs(**kwargs)
-        salt_argv = (
-            [
-                "python{}".format(sys.version_info[0]),
-                os.path.join(chroot_path, "salt-call"),
-                "--metadata",
-                "--local",
-                "--log-file",
-                os.path.join(chroot_path, "log"),
-                "--cachedir",
-                os.path.join(chroot_path, "cache"),
-                "--out",
-                "json",
-                "-l",
-                "quiet",
-                "--",
-                function,
-            ]
-            + list(args)
-            + ["{}={}".format(k, v) for (k, v) in safe_kwargs.items()]
-        )
-        ret = __salt__["cmd.run_chroot"](root, [str(x) for x in salt_argv])
+        safe_kwargs = clean_kwargs(**kwargs)
+        salt_argv = [
+            'python{}'.format(sys.version_info[0]),
+            os.path.join(chroot_path, 'salt-call'),
+            '--metadata',
+            '--local',
+            '--log-file', os.path.join(chroot_path, 'log'),
+            '--cachedir', os.path.join(chroot_path, 'cache'),
+            '--out', 'json',
+            '-l', 'quiet',
+            '--',
+            function
+        ] + list(args) + ['{}={}'.format(k, v) for (k, v) in safe_kwargs]
+        ret = __salt__['cmd.run_chroot'](name, [str(x) for x in salt_argv])
+        if ret['retcode'] != EX_OK:
+            raise CommandExecutionError(ret['stderr'])
 
         # Process "real" result in stdout
         try:
-            data = __utils__["json.find_json"](ret["stdout"])
-            local = data.get("local", data)
-            if isinstance(local, dict) and "retcode" in local:
-                __context__["retcode"] = local["retcode"]
-            return local.get("return", data)
-        except (KeyError, ValueError):
-            return {"result": False, "comment": "Can't parse container command output"}
+            data = __utils__['json.find_json'](ret['stdout'])
+            local = data.get('local', data)
+            if isinstance(local, dict) and 'retcode' in local:
+                __context__['retcode'] = local['retcode']
+            return local.get('return', data)
+        except ValueError:
+            return {
+                'result': False,
+                'comment': "Can't parse container command output"
+            }
     finally:
-        __utils__["files.rm_rf"](thin_dest_path)
-
-
-def apply_(root, mods=None, **kwargs):
-    """
-    Apply an state inside a chroot.
-
-    This function will call `chroot.highstate` or `chroot.sls` based
-    on the arguments passed to this function. It exists as a more
-    intuitive way of applying states.
-
-    root
-        Path to the chroot environment
-
-    For a formal description of the possible parameters accepted in
-    this function, check `state.apply_` documentation.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt myminion chroot.apply /chroot
-        salt myminion chroot.apply /chroot stuff
-        salt myminion chroot.apply /chroot stuff pillar='{"foo": "bar"}'
-
-    """
-    if mods:
-        return sls(root, mods, **kwargs)
-    return highstate(root, **kwargs)
-
-
-def _create_and_execute_salt_state(root, chunks, file_refs, test, hash_type):
-    """
-    Create the salt_stage tarball, and execute in the chroot
-    """
-    # Create the tar containing the state pkg and relevant files.
-    salt.client.ssh.wrapper.state._cleanup_slsmod_low_data(chunks)
-    trans_tar = salt.client.ssh.state.prep_trans_tar(
-        salt.fileclient.get_file_client(__opts__), chunks, file_refs, __pillar__, root
-    )
-    trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, hash_type)
-
-    ret = None
-
-    # Create a temporary directory inside the chroot where we can move
-    # the salt_stage.tgz
-    salt_state_path = tempfile.mkdtemp(dir=root)
-    salt_state_path = os.path.join(salt_state_path, "salt_state.tgz")
-    salt_state_path_in_chroot = salt_state_path.replace(root, "", 1)
-    try:
-        salt.utils.files.copyfile(trans_tar, salt_state_path)
-        ret = call(
-            root,
-            "state.pkg",
-            salt_state_path_in_chroot,
-            test=test,
-            pkg_sum=trans_tar_sum,
-            hash_type=hash_type,
-        )
-    finally:
-        __utils__["files.rm_rf"](salt_state_path)
-
-    return ret
-
-
-def sls(root, mods, saltenv="base", test=None, exclude=None, **kwargs):
-    """
-    Execute the states in one or more SLS files inside the chroot.
-
-    root
-        Path to the chroot environment
-
-    saltenv
-        Specify a salt fileserver environment to be used when applying
-        states
-
-    mods
-        List of states to execute
-
-    test
-        Run states in test-only (dry-run) mode
-
-    exclude
-        Exclude specific states from execution. Accepts a list of sls
-        names, a comma-separated string of sls names, or a list of
-        dictionaries containing ``sls`` or ``id`` keys. Glob-patterns
-        may be used to match multiple states.
-
-    For a formal description of the possible parameters accepted in
-    this function, check `state.sls` documentation.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' chroot.sls /chroot stuff pillar='{"foo": "bar"}'
-    """
-    # Get a copy of the pillar data, to avoid overwriting the current
-    # pillar, instead the one delegated
-    pillar = copy.deepcopy(__pillar__)
-    pillar.update(kwargs.get("pillar", {}))
-
-    # Clone the options data and apply some default values. May not be
-    # needed, as this module just delegate
-    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
-    st_ = salt.client.ssh.state.SSHHighState(
-        opts, pillar, __salt__, salt.fileclient.get_file_client(__opts__)
-    )
-
-    if isinstance(mods, six.string_types):
-        mods = mods.split(",")
-
-    high_data, errors = st_.render_highstate({saltenv: mods})
-    if exclude:
-        if isinstance(exclude, six.string_types):
-            exclude = exclude.split(",")
-        if "__exclude__" in high_data:
-            high_data["__exclude__"].extend(exclude)
-        else:
-            high_data["__exclude__"] = exclude
-
-    high_data, ext_errors = st_.state.reconcile_extend(high_data)
-    errors += ext_errors
-    errors += st_.state.verify_high(high_data)
-    if errors:
-        return errors
-
-    high_data, req_in_errors = st_.state.requisite_in(high_data)
-    errors += req_in_errors
-    if errors:
-        return errors
-
-    high_data = st_.state.apply_exclude(high_data)
-
-    # Compile and verify the raw chunks
-    chunks = st_.state.compile_high_data(high_data)
-    file_refs = salt.client.ssh.state.lowstate_file_refs(
-        chunks,
-        salt.client.ssh.wrapper.state._merge_extra_filerefs(
-            kwargs.get("extra_filerefs", ""), opts.get("extra_filerefs", "")
-        ),
-    )
-
-    hash_type = opts["hash_type"]
-    return _create_and_execute_salt_state(root, chunks, file_refs, test, hash_type)
-
-
-def highstate(root, **kwargs):
-    """
-    Retrieve the state data from the salt master for this minion and
-    execute it inside the chroot.
-
-    root
-        Path to the chroot environment
-
-    For a formal description of the possible parameters accepted in
-    this function, check `state.highstate` documentation.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt myminion chroot.highstate /chroot
-        salt myminion chroot.highstate /chroot pillar='{"foo": "bar"}'
-
-    """
-    # Get a copy of the pillar data, to avoid overwriting the current
-    # pillar, instead the one delegated
-    pillar = copy.deepcopy(__pillar__)
-    pillar.update(kwargs.get("pillar", {}))
-
-    # Clone the options data and apply some default values. May not be
-    # needed, as this module just delegate
-    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
-    st_ = salt.client.ssh.state.SSHHighState(
-        opts, pillar, __salt__, salt.fileclient.get_file_client(__opts__)
-    )
-
-    # Compile and verify the raw chunks
-    chunks = st_.compile_low_chunks()
-    file_refs = salt.client.ssh.state.lowstate_file_refs(
-        chunks,
-        salt.client.ssh.wrapper.state._merge_extra_filerefs(
-            kwargs.get("extra_filerefs", ""), opts.get("extra_filerefs", "")
-        ),
-    )
-    # Check for errors
-    for chunk in chunks:
-        if not isinstance(chunk, dict):
-            __context__["retcode"] = 1
-            return chunks
-
-    test = kwargs.pop("test", False)
-    hash_type = opts["hash_type"]
-    return _create_and_execute_salt_state(root, chunks, file_refs, test, hash_type)
+        __utils__['files.rm_rf'](thin_dest_path)

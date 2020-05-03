@@ -139,35 +139,29 @@ def get_event(
     """
     sock_dir = sock_dir or opts["sock_dir"]
     # TODO: AIO core is separate from transport
-    if node == "master":
-        return MasterEvent(
-            sock_dir,
-            opts,
-            listen=listen,
-            io_loop=io_loop,
-            keep_loop=keep_loop,
-            raise_errors=raise_errors,
-        )
-    return SaltEvent(
-        node,
-        sock_dir,
-        opts,
-        listen=listen,
-        io_loop=io_loop,
-        keep_loop=keep_loop,
-        raise_errors=raise_errors,
-    )
+    if node == 'master':
+        return MasterEvent(sock_dir,
+                           opts,
+                           listen=listen,
+                           io_loop=io_loop,
+                           keep_loop=keep_loop,
+                           raise_errors=raise_errors)
+    return SaltEvent(node,
+                     sock_dir,
+                     opts,
+                     listen=listen,
+                     io_loop=io_loop,
+                     keep_loop=keep_loop,
+                     raise_errors=raise_errors)
 
 
-def get_master_event(opts, sock_dir, listen=True, io_loop=None, raise_errors=False):
-    """
+def get_master_event(opts, sock_dir, listen=True, io_loop=None, raise_errors=False, keep_loop=False):
+    '''
     Return an event object suitable for the named transport
     """
     # TODO: AIO core is separate from transport
-    if opts["transport"] in ("zeromq", "tcp", "detect"):
-        return MasterEvent(
-            sock_dir, opts, listen=listen, io_loop=io_loop, raise_errors=raise_errors
-        )
+    if opts['transport'] in ('zeromq', 'tcp', 'detect'):
+        return MasterEvent(sock_dir, opts, listen=listen, io_loop=io_loop, raise_errors=raise_errors, keep_loop=keep_loop)
 
 
 def fire_args(opts, jid, tag_data, prefix=""):
@@ -214,6 +208,32 @@ def tagify(suffix="", prefix="", base=SALT):
         except TypeError:
             parts[index] = str(parts[index])
     return TAGPARTER.join([part for part in parts if part])
+
+
+def update_stats(stats, start_time, data):
+    '''
+    Calculate the master stats and return the updated stat info
+    '''
+    end_time = time.time()
+    cmd = data['cmd']
+    # the jid is used as the create time
+    try:
+        jid = data['jid']
+    except KeyError:
+        try:
+            jid = data['data']['__pub_jid']
+        except KeyError:
+            log.info('jid not found in data, stats not updated')
+            return stats
+    create_time = int(time.mktime(time.strptime(jid, '%Y%m%d%H%M%S%f')))
+    latency = start_time - create_time
+    duration = end_time - start_time
+
+    stats[cmd]['runs'] += 1
+    stats[cmd]['latency'] = (stats[cmd]['latency'] * (stats[cmd]['runs'] - 1) + latency) / stats[cmd]['runs']
+    stats[cmd]['mean'] = (stats[cmd]['mean'] * (stats[cmd]['runs'] - 1) + duration) / stats[cmd]['runs']
+
+    return stats
 
 
 class SaltEvent(object):
@@ -324,8 +344,8 @@ class SaltEvent(object):
                 pulluri = os.path.join(
                     sock_dir, "minion_event_{0}_pull.ipc".format(id_hash)
                 )
-        log.debug("%s PUB socket URI: %s", self.__class__.__name__, puburi)
-        log.debug("%s PULL socket URI: %s", self.__class__.__name__, pulluri)
+        log.debug('%s PUB socket URI: %s', self.__class__.__name__, puburi)
+        log.debug('%s PULL socket URI: %s', self.__class__.__name__, pulluri)
         return puburi, pulluri
 
     def subscribe(self, tag=None, match_type=None):
@@ -877,6 +897,10 @@ class SaltEvent(object):
                     # Minion fired a bad retcode, fire an event
                     self._fire_ret_load_specific_fun(load)
 
+    def remove_event_handler(self, event_handler):
+        if event_handler in self.subscriber.callbacks:
+            self.subscriber.callbacks.remove(event_handler)
+
     def set_event_handler(self, event_handler):
         """
         Invoke the event_handler callback each time an event arrives.
@@ -885,8 +909,10 @@ class SaltEvent(object):
 
         if not self.cpub:
             self.connect_pub()
+
+        self.subscriber.callbacks.add(event_handler)
         # This will handle reconnects
-        return self.subscriber.read_async(event_handler)
+        return self.subscriber.read_async()
 
     # pylint: disable=W1701
     def __del__(self):
@@ -972,17 +998,12 @@ class MinionEvent(SaltEvent):
     Warning! Use the get_event function or the code will not be
     RAET compatible
     Create a master event management object
-    """
-
-    def __init__(self, opts, listen=True, io_loop=None, raise_errors=False):
+    '''
+    def __init__(self, opts, listen=True, io_loop=None, keep_loop=False, raise_errors=False):
         super(MinionEvent, self).__init__(
-            "minion",
-            sock_dir=opts.get("sock_dir"),
-            opts=opts,
-            listen=listen,
-            io_loop=io_loop,
-            raise_errors=raise_errors,
-        )
+            'minion', sock_dir=opts.get('sock_dir'),
+            opts=opts, listen=listen, io_loop=io_loop, keep_loop=keep_loop,
+            raise_errors=raise_errors)
 
 
 class AsyncEventPublisher(object):
@@ -1024,8 +1045,8 @@ class AsyncEventPublisher(object):
             epub_uri = epub_sock_path
             epull_uri = epull_sock_path
 
-        log.debug("%s PUB socket URI: %s", self.__class__.__name__, epub_uri)
-        log.debug("%s PULL socket URI: %s", self.__class__.__name__, epull_uri)
+        log.debug('%s PUB socket URI: %s', self.__class__.__name__, epub_uri)
+        log.debug('%s PULL socket URI: %s', self.__class__.__name__, epull_uri)
 
         minion_sock_dir = self.opts["sock_dir"]
 
@@ -1035,7 +1056,7 @@ class AsyncEventPublisher(object):
             try:
                 os.makedirs(minion_sock_dir, 0o755)
             except OSError as exc:
-                log.error("Could not create SOCK_DIR: %s", exc)
+                log.error('Could not create SOCK_DIR: %s', exc)
                 # Let's not fail yet and try using the default path
                 if minion_sock_dir == default_minion_sock_dir:
                     # We're already trying the default system path, stop now!
@@ -1045,7 +1066,7 @@ class AsyncEventPublisher(object):
                     try:
                         os.makedirs(default_minion_sock_dir, 0o755)
                     except OSError as exc:
-                        log.error("Could not create SOCK_DIR: %s", exc)
+                        log.error('Could not create SOCK_DIR: %s', exc)
                         # Let's stop at this stage
                         raise
 
@@ -1054,10 +1075,13 @@ class AsyncEventPublisher(object):
         )
 
         self.puller = salt.transport.ipc.IPCMessageServer(
-            epull_uri, io_loop=self.io_loop, payload_handler=self.handle_publish
+            self.opts,
+            epull_uri,
+            io_loop=self.io_loop,
+            payload_handler=self.handle_publish
         )
 
-        log.info("Starting pull socket on %s", epull_uri)
+        log.info('Starting pull socket on %s', epull_uri)
         with salt.utils.files.set_umask(0o177):
             self.publisher.start()
             self.puller.start()
@@ -1138,7 +1162,10 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
             )
 
             self.puller = salt.transport.ipc.IPCMessageServer(
-                epull_uri, io_loop=self.io_loop, payload_handler=self.handle_publish,
+                self.opts,
+                epull_uri,
+                io_loop=self.io_loop,
+                payload_handler=self.handle_publish,
             )
 
             # Start the master event publisher
@@ -1197,7 +1224,16 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
     """
     A dedicated process which listens to the master event bus and queues
     and forwards events to the specified returner.
-    """
+    '''
+    def __new__(cls, *args, **kwargs):
+        if sys.platform.startswith('win'):
+            # This is required for Windows.  On Linux, when a process is
+            # forked, the module namespace is copied and the current process
+            # gets all of sys.modules from where the fork happens.  This is not
+            # the case for Windows.
+            import salt.minion  # pylint: disable=unused-import
+        instance = super(EventReturn, cls).__new__(cls, *args, **kwargs)
+        return instance
 
     def __init__(self, opts, **kwargs):
         """
@@ -1212,10 +1248,8 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
         super(EventReturn, self).__init__(**kwargs)
 
         self.opts = opts
-        self.event_return_queue = self.opts["event_return_queue"]
-        self.event_return_queue_max_seconds = self.opts.get(
-            "event_return_queue_max_seconds", 0
-        )
+        self.event_return_queue = self.opts['event_return_queue']
+        self.event_return_queue_max_seconds = self.opts.get('event_return_queue_max_seconds', 0)
         local_minion_opts = self.opts.copy()
         local_minion_opts["file_client"] = "local"
         self.minion = salt.minion.MasterMinion(local_minion_opts)
@@ -1249,17 +1283,17 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
     def flush_events(self):
         if isinstance(self.opts["event_return"], list):
             # Multiple event returners
-            for r in self.opts["event_return"]:
-                log.debug("Calling event returner %s, one of many.", r)
-                event_return = "{0}.event_return".format(r)
+            for r in self.opts['event_return']:
+                log.debug('Calling event returner %s, one of many.', r)
+                event_return = '{0}.event_return'.format(r)
                 self._flush_event_single(event_return)
         else:
             # Only a single event returner
-            log.debug(
-                "Calling event returner %s, only one " "configured.",
-                self.opts["event_return"],
-            )
-            event_return = "{0}.event_return".format(self.opts["event_return"])
+            log.debug('Calling event returner %s, only one configured.',
+                      self.opts['event_return'])
+            event_return = '{0}.event_return'.format(
+                self.opts['event_return']
+                )
             self._flush_event_single(event_return)
         del self.event_queue[:]
 
@@ -1267,18 +1301,14 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
         if event_return in self.minion.returners:
             try:
                 self.minion.returners[event_return](self.event_queue)
-            except Exception as exc:  # pylint: disable=broad-except
-                log.error(
-                    "Could not store events - returner '%s' raised " "exception: %s",
-                    event_return,
-                    exc,
-                )
+            except Exception as exc:
+                log.error('Could not store events - returner \'%s\' raised '
+                          'exception: %s', event_return, exc)
                 # don't waste processing power unnecessarily on converting a
                 # potentially huge dataset to a string
                 if log.level <= logging.DEBUG:
-                    log.debug(
-                        "Event data that caused an exception: %s", self.event_queue
-                    )
+                    log.debug('Event data that caused an exception: %s',
+                              self.event_queue)
         else:
             log.error(
                 "Could not store return for event(s) - returner " "'%s' not found.",
@@ -1298,7 +1328,7 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
             oldestevent = None
             for event in events:
 
-                if event["tag"] == "salt/event/exit":
+                if event['tag'] == 'salt/event/exit':
                     # We're done eventing
                     self.stop = True
                 if self._filter(event):
@@ -1315,9 +1345,7 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
                         oldestevent = rightnow
                     age_in_seconds = (rightnow - oldestevent).seconds
                     if age_in_seconds > 0:
-                        log.debug(
-                            "Oldest event in queue is %s seconds old.", age_in_seconds
-                        )
+                        log.debug('Oldest event in queue is %s seconds old.', age_in_seconds)
                     if age_in_seconds >= self.event_return_queue_max_seconds:
                         too_long_in_queue = True
                         oldestevent = None
@@ -1325,17 +1353,12 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
                         too_long_in_queue = False
 
                     if too_long_in_queue:
-                        log.debug(
-                            "Oldest event has been in queue too long, will flush queue"
-                        )
+                        log.debug('Oldest event has been in queue too long, will flush queue')
 
                 # If we are over the max queue size or the oldest item in the queue has been there too long
                 # then flush the queue
-                if (
-                    len(self.event_queue) >= self.event_return_queue
-                    or too_long_in_queue
-                ):
-                    log.debug("Flushing %s events.", len(self.event_queue))
+                if len(self.event_queue) >= self.event_return_queue or too_long_in_queue:
+                    log.debug('Flushing %s events.', len(self.event_queue))
                     self.flush_events()
                     oldestevent = None
                 if self.stop:
@@ -1345,7 +1368,7 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
             # No matter what, make sure we flush the queue even when we are exiting
             # and there will be no more events.
             if self.event_queue:
-                log.debug("Flushing %s events.", len(self.event_queue))
+                log.debug('Flushing %s events.', len(self.event_queue))
 
                 self.flush_events()
 

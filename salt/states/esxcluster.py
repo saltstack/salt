@@ -176,15 +176,12 @@ def cluster_configured(name, cluster_config):
             __salt__["esxcluster.get_details"]()["datacenter"],
         )
     else:
-        raise salt.exceptions.CommandExecutionError(
-            "Unsupported proxy {0}" "".format(proxy_type)
-        )
-    log.info(
-        "Running {0} for cluster '{1}' in datacenter "
-        "'{2}'".format(name, cluster_name, datacenter_name)
-    )
+        raise salt.exceptions.CommandExecutionError('Unsupported proxy {0}'
+                                                    ''.format(proxy_type))
+    log.info('Running %s for cluster \'%s\' in datacenter \'%s\'',
+             name, cluster_name, datacenter_name)
     cluster_dict = cluster_config
-    log.trace("cluster_dict =  {0}".format(cluster_dict))
+    log.trace('cluster_dict = %s', cluster_dict)
     changes_required = False
     ret = {"name": name, "changes": {}, "result": None, "comment": "Default"}
     comments = []
@@ -194,7 +191,7 @@ def cluster_configured(name, cluster_config):
     try:
         log.trace("Validating cluster_configured state input")
         schema = ESXClusterConfigSchema.serialize()
-        log.trace("schema = {0}".format(schema))
+        log.trace('schema = %s', schema)
         try:
             jsonschema.validate(cluster_dict, schema)
         except jsonschema.exceptions.ValidationError as exc:
@@ -217,36 +214,31 @@ def cluster_configured(name, cluster_config):
                 __salt__["vsphere.disconnect"](si)
                 ret.update({"result": None, "comment": "\n".join(comments)})
                 return ret
-            log.trace(
-                "Creating cluster '{0}' in datacenter '{1}'. "
-                "".format(cluster_name, datacenter_name)
-            )
-            __salt__["vsphere.create_cluster"](
-                cluster_dict, datacenter_name, cluster_name, service_instance=si
-            )
-            comments.append(
-                "Created cluster '{0}' in datacenter '{1}'"
-                "".format(cluster_name, datacenter_name)
-            )
+            log.trace('Creating cluster \'%s\' in datacenter \'%s\'. ',
+                      cluster_name, datacenter_name)
+            __salt__['vsphere.create_cluster'](cluster_dict,
+                                               datacenter_name,
+                                               cluster_name,
+                                               service_instance=si)
+            comments.append('Created cluster \'{0}\' in datacenter \'{1}\''
+                            ''.format(cluster_name, datacenter_name))
             log.info(comments[-1])
             changes.update({"new": cluster_dict})
         if current:
             # Cluster already exists
             # We need to handle lists sepparately
             ldiff = None
-            if "ha" in cluster_dict and "options" in cluster_dict["ha"]:
-                ldiff = list_diff(
-                    current.get("ha", {}).get("options", []),
-                    cluster_dict.get("ha", {}).get("options", []),
-                    "key",
-                )
-                log.trace("options diffs = {0}".format(ldiff.diffs))
+            if 'ha' in cluster_dict and 'options' in cluster_dict['ha']:
+                ldiff = list_diff(current.get('ha', {}).get('options', []),
+                                  cluster_dict.get('ha', {}).get('options', []),
+                                  'key')
+                log.trace('options diffs = %s', ldiff.diffs)
                 # Remove options if exist
                 del cluster_dict["ha"]["options"]
                 if "ha" in current and "options" in current["ha"]:
                     del current["ha"]["options"]
             diff = recursive_diff(current, cluster_dict)
-            log.trace("diffs = {0}".format(diff.diffs))
+            log.trace('diffs = %s', diff.diffs)
             if not (diff.diffs or (ldiff and ldiff.diffs)):
                 # No differences
                 comments.append(
@@ -283,16 +275,15 @@ def cluster_configured(name, cluster_config):
                         )
                     if ldiff and ldiff.old_values:
                         dictupdate.update(
-                            old_values, {"ha": {"options": ldiff.old_values}}
-                        )
-                    log.trace("new_values = {0}".format(new_values))
-                    __salt__["vsphere.update_cluster"](
-                        new_values, datacenter_name, cluster_name, service_instance=si
-                    )
-                    comments.append(
-                        "Updated cluster '{0}' in datacenter "
-                        "'{1}'".format(cluster_name, datacenter_name)
-                    )
+                            old_values, {'ha': {'options': ldiff.old_values}})
+                    log.trace('new_values = %s', new_values)
+                    __salt__['vsphere.update_cluster'](new_values,
+                                                       datacenter_name,
+                                                       cluster_name,
+                                                       service_instance=si)
+                    comments.append('Updated cluster \'{0}\' in datacenter '
+                                    '\'{1}\''.format(cluster_name,
+                                                     datacenter_name))
                     log.info(comments[-1])
                     changes.update({"new": new_values, "old": old_values})
         __salt__["vsphere.disconnect"](si)
@@ -304,7 +295,7 @@ def cluster_configured(name, cluster_config):
         )
         return ret
     except salt.exceptions.CommandExecutionError as exc:
-        log.error("Error: {0}\n{1}".format(exc, traceback.format_exc()))
+        log.exception('Encountered error')
         if si:
             __salt__["vsphere.disconnect"](si)
         ret.update({"result": False, "comment": six.text_type(exc)})
@@ -318,15 +309,16 @@ def vsan_datastore_configured(name, datastore_name):
     WARNING: The VSAN datastore is created automatically after the first
     ESXi host is added to the cluster; the state assumes that the datastore
     exists and errors if it doesn't.
-    """
+    '''
 
-    cluster_name, datacenter_name = (
-        __salt__["esxcluster.get_details"]()["cluster"],
-        __salt__["esxcluster.get_details"]()["datacenter"],
-    )
-    display_name = "{0}/{1}".format(datacenter_name, cluster_name)
-    log.info("Running vsan_datastore_configured for " "'{0}'".format(display_name))
-    ret = {"name": name, "changes": {}, "result": None, "comment": "Default"}
+    cluster_name, datacenter_name = \
+            __salt__['esxcluster.get_details']()['cluster'], \
+            __salt__['esxcluster.get_details']()['datacenter']
+    display_name = '{0}/{1}'.format(datacenter_name, cluster_name)
+    log.info('Running vsan_datastore_configured for \'%s\'', display_name)
+    ret = {'name': name,
+           'changes': {}, 'result': None,
+           'comment': 'Default'}
     comments = []
     changes = {}
     changes_required = False
@@ -351,12 +343,10 @@ def vsan_datastore_configured(name, datastore_name):
                 )
                 log.info(comments[-1])
             else:
-                log.trace(
-                    "Renaming vSAN datastore '{0}' to '{1}'"
-                    "".format(vsan_ds["name"], datastore_name)
-                )
-                __salt__["vsphere.rename_datastore"](
-                    datastore_name=vsan_ds["name"],
+                log.trace('Renaming vSAN datastore \'%s\' to \'%s\'',
+                          vsan_ds['name'], datastore_name)
+                __salt__['vsphere.rename_datastore'](
+                    datastore_name=vsan_ds['name'],
                     new_datastore_name=datastore_name,
                     service_instance=si,
                 )
@@ -385,7 +375,7 @@ def vsan_datastore_configured(name, datastore_name):
         )
         return ret
     except salt.exceptions.CommandExecutionError as exc:
-        log.error("Error: {0}\n{1}".format(exc, traceback.format_exc()))
+        log.exception('Encountered error')
         if si:
             __salt__["vsphere.disconnect"](si)
         ret.update({"result": False, "comment": exc.strerror})
@@ -406,16 +396,17 @@ def licenses_configured(name, licenses=None):
     """
     ret = {"name": name, "changes": {}, "result": None, "comment": "Default"}
     if not licenses:
-        raise salt.exceptions.ArgumentValueError("No licenses provided")
-    cluster_name, datacenter_name = (
-        __salt__["esxcluster.get_details"]()["cluster"],
-        __salt__["esxcluster.get_details"]()["datacenter"],
-    )
-    display_name = "{0}/{1}".format(datacenter_name, cluster_name)
-    log.info("Running licenses configured for '{0}'".format(display_name))
-    log.trace("licenses = {0}".format(licenses))
-    entity = {"type": "cluster", "datacenter": datacenter_name, "cluster": cluster_name}
-    log.trace("entity = {0}".format(entity))
+        raise salt.exceptions.ArgumentValueError('No licenses provided')
+    cluster_name, datacenter_name = \
+            __salt__['esxcluster.get_details']()['cluster'], \
+            __salt__['esxcluster.get_details']()['datacenter']
+    display_name = '{0}/{1}'.format(datacenter_name, cluster_name)
+    log.info('Running licenses configured for \'%s\'', display_name)
+    log.trace('licenses = %s', licenses)
+    entity = {'type': 'cluster',
+              'datacenter': datacenter_name,
+              'cluster': cluster_name}
+    log.trace('entity = %s', entity)
 
     comments = []
     changes = {}
@@ -586,7 +577,7 @@ def licenses_configured(name, licenses=None):
 
         return ret
     except salt.exceptions.CommandExecutionError as exc:
-        log.error("Error: {0}\n{1}".format(exc, traceback.format_exc()))
+        log.exception('Encountered error')
         if si:
             __salt__["vsphere.disconnect"](si)
         ret.update({"result": False, "comment": exc.strerror})

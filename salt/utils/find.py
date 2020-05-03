@@ -199,14 +199,12 @@ def _parse_size(value):
     else:
         style = "="
 
-    if len(scalar) > 0:
-        multiplier = {
-            "b": 2 ** 0,
-            "k": 2 ** 10,
-            "m": 2 ** 20,
-            "g": 2 ** 30,
-            "t": 2 ** 40,
-        }.get(scalar[-1].lower())
+    if scalar:
+        multiplier = {'b': 2 ** 0,
+                      'k': 2 ** 10,
+                      'm': 2 ** 20,
+                      'g': 2 ** 30,
+                      't': 2 ** 40}.get(scalar[-1].lower())
         if multiplier:
             scalar = scalar[:-1].strip()
         else:
@@ -498,8 +496,8 @@ class PrintOption(Option):
             self.fmt.append(arg)
             if arg not in ["name", "path"]:
                 self.need_stat = True
-        if len(self.fmt) == 0:
-            self.fmt.append("path")
+        if not self.fmt:
+            self.fmt.append('path')
 
     def requires(self):
         return _REQUIRES_STAT if self.need_stat else _REQUIRES_PATH
@@ -560,8 +558,8 @@ class DeleteOption(TypeOption):
     """
 
     def __init__(self, key, value):
-        if "a" in value:
-            value = "bcdpfls"
+        if 'a' in value:
+            value = 'bcdpfls'
         super(DeleteOption, self).__init__(key, value)
 
     def execute(self, fullpath, fstat, test=False):
@@ -629,7 +627,7 @@ class Finder(object):
             if key.startswith("_"):
                 # this is a passthrough object, continue
                 continue
-            if value is None or len(str(value)) == 0:
+            if not value:
                 raise ValueError('missing value for "{0}" option'.format(key))
             try:
                 obj = globals()[key.title() + "Option"](key, value)
@@ -645,8 +643,8 @@ class Finder(object):
                     criteria[_REQUIRES_PATH].append(obj)
             if hasattr(obj, "execute"):
                 self.actions.append(obj)
-        if len(self.actions) == 0:
-            self.actions.append(PrintOption("print", ""))
+        if not self.actions:
+            self.actions.append(PrintOption('print', ''))
         # order criteria so that least expensive checks are done first
         self.criteria = (
             criteria[_REQUIRES_PATH]

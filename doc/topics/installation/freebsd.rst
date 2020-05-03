@@ -12,24 +12,17 @@ Salt is available in the FreeBSD ports tree at `sysutils/py-salt
 FreeBSD binary repo
 ===================
 
-
 For Python 2.7 use:
-
-Install Salt via the official package repository. Salt is packaged both as a Python 2.7 or 3.6 version.
-
 
 .. code-block:: bash
 
     pkg install py27-salt
 
-
 For Python 3.6 use:
-
 
 .. code-block:: bash
 
     pkg install py36-salt
-
 
 FreeBSD ports
 =============

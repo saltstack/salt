@@ -698,14 +698,11 @@ class AsyncAuth(object):
                     True
                 )  # mark the sign-in as complete
                 # Notify the bus about creds change
-                if self.opts.get("auth_events") is True:
-                    with salt.utils.event.get_event(
-                        self.opts.get("__role"), opts=self.opts, listen=False
-                    ) as event:
-                        event.fire_event(
-                            {"key": key, "creds": creds},
-                            salt.utils.event.tagify(prefix="auth", suffix="creds"),
-                        )
+                if self.opts.get('auth_events') is True:
+                    with salt.utils.event.get_event(self.opts.get('__role'), opts=self.opts, listen=False) as event:
+                        event.fire_event({'key': key, 'creds': creds}, salt.utils.event.tagify(prefix='auth', suffix='creds'))
+        finally:
+            channel.close()
 
     @salt.ext.tornado.gen.coroutine
     def sign_in(self, timeout=60, safe=True, tries=1, channel=None):

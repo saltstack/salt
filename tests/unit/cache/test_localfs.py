@@ -10,7 +10,16 @@ import errno
 import shutil
 import tempfile
 
-import salt.cache.localfs as localfs
+# Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
+    MagicMock,
+    NO_MOCK,
+    NO_MOCK_REASON,
+    patch
+)
 
 # Import Salt libs
 import salt.payload

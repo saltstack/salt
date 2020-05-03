@@ -6,7 +6,10 @@ integration tests for mac_pkgutil
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-import os
+# Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.case import ModuleCase
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import Salt libs
 import salt.utils.path
@@ -18,10 +21,8 @@ from tests.support.helpers import destructiveTest, skip_if_not_root
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
-TEST_PKG_URL = (
-    "https://distfiles.macports.org/MacPorts/MacPorts-2.3.4-10.11-ElCapitan.pkg"
-)
-TEST_PKG_NAME = "org.macports.MacPorts"
+TEST_PKG_URL = 'https://distfiles.macports.org/MacPorts/MacPorts-2.3.4-10.11-ElCapitan.pkg'
+TEST_PKG_NAME = 'org.macports.MacPorts'
 
 
 @skip_if_not_root
@@ -35,6 +36,10 @@ class MacPkgutilModuleTest(ModuleCase):
         cls.test_pkg = os.path.join(
             RUNTIME_VARS.TMP, "MacPorts-2.3.4-10.11-ElCapitan.pkg"
         )
+
+    @classmethod
+    def setUpClass(cls):
+        cls.test_pkg = os.path.join(RUNTIME_VARS.TMP, 'MacPorts-2.3.4-10.11-ElCapitan.pkg')
 
     def setUp(self):
         """
@@ -88,12 +93,11 @@ class MacPkgutilModuleTest(ModuleCase):
         self.assertFalse(self.run_function("pkgutil.is_installed", [TEST_PKG_NAME]))
 
         # Download the package
-        self.run_function("cp.get_url", [TEST_PKG_URL, self.test_pkg])
+        self.run_function('cp.get_url', [TEST_PKG_URL, self.test_pkg])
 
         # Test install
         self.assertTrue(
-            self.run_function("pkgutil.install", [self.test_pkg, TEST_PKG_NAME])
-        )
+            self.run_function('pkgutil.install', [self.test_pkg, TEST_PKG_NAME]))
         self.assertIn(
             "Unsupported scheme",
             self.run_function("pkgutil.install", ["ftp://test", "spongebob"]),

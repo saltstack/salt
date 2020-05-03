@@ -25,8 +25,17 @@ except ImportError:
     # pylint: disable=no-name-in-module
     from collections import Mapping
 
-    # pylint: enable=no-name-in-module
+# Import 3rd-party libs
+import copy
+import logging
 
+# Import salt libs
+import salt.ext.six as six
+from salt.defaults import DEFAULT_TARGET_DELIM
+import salt.utils.data
+from salt.exceptions import SaltInvocationError
+from salt.utils.odict import OrderedDict
+from salt.utils.decorators.jinja import jinja_filter
 
 log = logging.getLogger(__name__)
 
@@ -139,8 +148,12 @@ def merge(obj_a, obj_b, strategy="smart", renderer="yaml", merge_lists=False):
     return merged
 
 
-def ensure_dict_key(in_dict, keys, delimiter=DEFAULT_TARGET_DELIM, ordered_dict=False):
-    """
+def ensure_dict_key(
+        in_dict,
+        keys,
+        delimiter=DEFAULT_TARGET_DELIM,
+        ordered_dict=False):
+    '''
     Ensures that in_dict contains the series of recursive keys defined in keys.
 
     :param dict in_dict: The dict to work with.
@@ -148,9 +161,7 @@ def ensure_dict_key(in_dict, keys, delimiter=DEFAULT_TARGET_DELIM, ordered_dict=
     :param str delimiter: The delimiter to use in `keys`. Defaults to ':'.
     :param bool ordered_dict: Create OrderedDicts if keys are missing.
                               Default: create regular dicts.
-    :rtype: dict
-    :return: Returns the modified in-place `in_dict`.
-    """
+    '''
     if delimiter in keys:
         a_keys = keys.split(delimiter)
     else:
@@ -158,16 +169,18 @@ def ensure_dict_key(in_dict, keys, delimiter=DEFAULT_TARGET_DELIM, ordered_dict=
     dict_pointer = in_dict
     while a_keys:
         current_key = a_keys.pop(0)
-        if current_key not in dict_pointer or not isinstance(
-            dict_pointer[current_key], dict
-        ):
+        if current_key not in dict_pointer or not isinstance(dict_pointer[current_key], dict):
             dict_pointer[current_key] = OrderedDict() if ordered_dict else {}
         dict_pointer = dict_pointer[current_key]
     return in_dict
 
 
-def _dict_rpartition(in_dict, keys, delimiter=DEFAULT_TARGET_DELIM, ordered_dict=False):
-    """
+def _dict_rpartition(
+        in_dict,
+        keys,
+        delimiter=DEFAULT_TARGET_DELIM,
+        ordered_dict=False):
+    '''
     Helper function to:
     - Ensure all but the last key in `keys` exist recursively in `in_dict`.
     - Return the dict at the one-to-last key, and the last key
@@ -177,28 +190,33 @@ def _dict_rpartition(in_dict, keys, delimiter=DEFAULT_TARGET_DELIM, ordered_dict
     :param str delimiter: The delimiter to use in `keys`. Defaults to ':'.
     :param bool ordered_dict: Create OrderedDicts if keys are missing.
                               Default: create regular dicts.
-    :rtype: tuple(dict, str)
-    :return: (The dict at the one-to-last key, the last key)
-    """
+
+    :return tuple(dict, str)
+    '''
     if delimiter in keys:
         all_but_last_keys, _, last_key = keys.rpartition(delimiter)
-        ensure_dict_key(
-            in_dict, all_but_last_keys, delimiter=delimiter, ordered_dict=ordered_dict
-        )
-        dict_pointer = salt.utils.data.traverse_dict(
-            in_dict, all_but_last_keys, default=None, delimiter=delimiter
-        )
+        ensure_dict_key(in_dict,
+                        all_but_last_keys,
+                        delimiter=delimiter,
+                        ordered_dict=ordered_dict)
+        dict_pointer = salt.utils.data.traverse_dict(in_dict,
+                                                     all_but_last_keys,
+                                                     default=None,
+                                                     delimiter=delimiter)
     else:
         dict_pointer = in_dict
         last_key = keys
     return dict_pointer, last_key
 
 
-@jinja_filter("set_dict_key_value")
+@jinja_filter('set_dict_key_value')
 def set_dict_key_value(
-    in_dict, keys, value, delimiter=DEFAULT_TARGET_DELIM, ordered_dict=False
-):
-    """
+        in_dict,
+        keys,
+        value,
+        delimiter=DEFAULT_TARGET_DELIM,
+        ordered_dict=False):
+    '''
     Ensures that in_dict contains the series of recursive keys defined in keys.
     Also sets whatever is at the end of `in_dict` traversed with `keys` to `value`.
 
@@ -208,21 +226,25 @@ def set_dict_key_value(
     :param str delimiter: The delimiter to use in `keys`. Defaults to ':'.
     :param bool ordered_dict: Create OrderedDicts if keys are missing.
                               Default: create regular dicts.
-    :rtype: dict
-    :return: Returns the modified in-place `in_dict`.
-    """
-    dict_pointer, last_key = _dict_rpartition(
-        in_dict, keys, delimiter=delimiter, ordered_dict=ordered_dict
-    )
+
+    :return dict: Though it updates in_dict in-place.
+    '''
+    dict_pointer, last_key = _dict_rpartition(in_dict,
+                                              keys,
+                                              delimiter=delimiter,
+                                              ordered_dict=ordered_dict)
     dict_pointer[last_key] = value
     return in_dict
 
 
-@jinja_filter("update_dict_key_value")
+@jinja_filter('update_dict_key_value')
 def update_dict_key_value(
-    in_dict, keys, value, delimiter=DEFAULT_TARGET_DELIM, ordered_dict=False
-):
-    """
+        in_dict,
+        keys,
+        value,
+        delimiter=DEFAULT_TARGET_DELIM,
+        ordered_dict=False):
+    '''
     Ensures that in_dict contains the series of recursive keys defined in keys.
     Also updates the dict, that is at the end of `in_dict` traversed with `keys`,
     with `value`.
@@ -233,34 +255,34 @@ def update_dict_key_value(
     :param str delimiter: The delimiter to use in `keys`. Defaults to ':'.
     :param bool ordered_dict: Create OrderedDicts if keys are missing.
                               Default: create regular dicts.
-    :rtype: dict
-    :return: Returns the modified in-place `in_dict`.
-    """
-    dict_pointer, last_key = _dict_rpartition(
-        in_dict, keys, delimiter=delimiter, ordered_dict=ordered_dict
-    )
+
+    :return dict: Though it updates in_dict in-place.
+    '''
+    dict_pointer, last_key = _dict_rpartition(in_dict,
+                                              keys,
+                                              delimiter=delimiter,
+                                              ordered_dict=ordered_dict)
     if last_key not in dict_pointer or dict_pointer[last_key] is None:
         dict_pointer[last_key] = OrderedDict() if ordered_dict else {}
     try:
         dict_pointer[last_key].update(value)
     except AttributeError:
-        raise SaltInvocationError(
-            "The last key contains a {}, which cannot update."
-            "".format(type(dict_pointer[last_key]))
-        )
+        raise SaltInvocationError('The last key contains a {}, which cannot update.'
+                                  ''.format(type(dict_pointer[last_key])))
     except (ValueError, TypeError):
-        raise SaltInvocationError(
-            "Cannot update {} with a {}."
-            "".format(type(dict_pointer[last_key]), type(value))
-        )
+        raise SaltInvocationError('Cannot update {} with a {}.'
+                                  ''.format(type(dict_pointer[last_key]), type(value)))
     return in_dict
 
 
-@jinja_filter("append_dict_key_value")
+@jinja_filter('append_dict_key_value')
 def append_dict_key_value(
-    in_dict, keys, value, delimiter=DEFAULT_TARGET_DELIM, ordered_dict=False
-):
-    """
+        in_dict,
+        keys,
+        value,
+        delimiter=DEFAULT_TARGET_DELIM,
+        ordered_dict=False):
+    '''
     Ensures that in_dict contains the series of recursive keys defined in keys.
     Also appends `value` to the list that is at the end of `in_dict` traversed
     with `keys`.
@@ -271,29 +293,31 @@ def append_dict_key_value(
     :param str delimiter: The delimiter to use in `keys`. Defaults to ':'.
     :param bool ordered_dict: Create OrderedDicts if keys are missing.
                               Default: create regular dicts.
-    :rtype: dict
-    :return: Returns the modified in-place `in_dict`.
-    """
-    dict_pointer, last_key = _dict_rpartition(
-        in_dict, keys, delimiter=delimiter, ordered_dict=ordered_dict
-    )
+
+    :return dict: Though it updates in_dict in-place.
+    '''
+    dict_pointer, last_key = _dict_rpartition(in_dict,
+                                              keys,
+                                              delimiter=delimiter,
+                                              ordered_dict=ordered_dict)
     if last_key not in dict_pointer or dict_pointer[last_key] is None:
         dict_pointer[last_key] = []
     try:
         dict_pointer[last_key].append(value)
     except AttributeError:
-        raise SaltInvocationError(
-            "The last key contains a {}, which cannot append."
-            "".format(type(dict_pointer[last_key]))
-        )
+        raise SaltInvocationError('The last key contains a {}, which cannot append.'
+                                  ''.format(type(dict_pointer[last_key])))
     return in_dict
 
 
-@jinja_filter("extend_dict_key_value")
+@jinja_filter('extend_dict_key_value')
 def extend_dict_key_value(
-    in_dict, keys, value, delimiter=DEFAULT_TARGET_DELIM, ordered_dict=False
-):
-    """
+        in_dict,
+        keys,
+        value,
+        delimiter=DEFAULT_TARGET_DELIM,
+        ordered_dict=False):
+    '''
     Ensures that in_dict contains the series of recursive keys defined in keys.
     Also extends the list, that is at the end of `in_dict` traversed with `keys`,
     with `value`.
@@ -304,24 +328,22 @@ def extend_dict_key_value(
     :param str delimiter: The delimiter to use in `keys`. Defaults to ':'.
     :param bool ordered_dict: Create OrderedDicts if keys are missing.
                               Default: create regular dicts.
-    :rtype: dict
-    :return: Returns the modified in-place `in_dict`.
-    """
+
+    :return dict: Though it updates in_dict in-place.
+    '''
     dict_pointer, last_key = _dict_rpartition(
-        in_dict, keys, delimiter=delimiter, ordered_dict=ordered_dict
-    )
+        in_dict,
+        keys,
+        delimiter=delimiter,
+        ordered_dict=ordered_dict)
     if last_key not in dict_pointer or dict_pointer[last_key] is None:
         dict_pointer[last_key] = []
     try:
         dict_pointer[last_key].extend(value)
     except AttributeError:
-        raise SaltInvocationError(
-            "The last key contains a {}, which cannot extend."
-            "".format(type(dict_pointer[last_key]))
-        )
+        raise SaltInvocationError('The last key contains a {}, which cannot extend.'
+                                  ''.format(type(dict_pointer[last_key])))
     except TypeError:
-        raise SaltInvocationError(
-            "Cannot extend {} with a {}."
-            "".format(type(dict_pointer[last_key]), type(value))
-        )
+        raise SaltInvocationError('Cannot extend {} with a {}.'
+                                  ''.format(type(dict_pointer[last_key]), type(value)))
     return in_dict

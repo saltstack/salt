@@ -1861,20 +1861,11 @@ def accept_vpc_peering_connection(
 
 
 # pylint: disable=too-many-arguments
-def request_vpc_peering_connection(
-    name,
-    requester_vpc_id=None,
-    requester_vpc_name=None,
-    peer_vpc_id=None,
-    peer_vpc_name=None,
-    conn_name=None,
-    peer_owner_id=None,
-    region=None,
-    key=None,
-    keyid=None,
-    profile=None,
-):
-    """
+def request_vpc_peering_connection(name, requester_vpc_id=None, requester_vpc_name=None,
+                                   peer_vpc_id=None, peer_vpc_name=None, conn_name=None,
+                                   peer_owner_id=None, peer_region=None, region=None,
+                                   key=None, keyid=None, profile=None):
+    '''
     name
         Name of the state
 
@@ -1888,13 +1879,16 @@ def request_vpc_peering_connection(
         ID of the VPC tp crete VPC peering connection with.  This can be a VPC in another account. Exclusive with peer_vpc_name. String type.
 
     peer_vpc_name
-        Name tag of the VPC tp crete VPC peering connection with.  This can only be a VPC the same account. Exclusive with peer_vpc_id.  String type.
+        Name tag of the VPC tp crete VPC peering connection with.  This can only be a VPC the same account and region. Exclusive with peer_vpc_id.  String type.
 
     conn_name
         The (optional) name to use for this VPC peering connection. String type.
 
     peer_owner_id
         ID of the owner of the peer VPC. String type. If this isn't supplied AWS uses your account ID.  Required if peering to a different account.
+
+    peer_region
+        Region of peer VPC. For inter-region vpc peering connections. Not required for intra-region peering connections.
 
     region
         Region to connect to.
@@ -1954,6 +1948,7 @@ def request_vpc_peering_connection(
         peer_vpc_name,
         name=conn_name,
         peer_owner_id=peer_owner_id,
+        peer_region=peer_region,
         region=region,
         key=key,
         keyid=keyid,
@@ -1969,20 +1964,11 @@ def request_vpc_peering_connection(
     return ret
 
 
-def vpc_peering_connection_present(
-    name,
-    requester_vpc_id=None,
-    requester_vpc_name=None,
-    peer_vpc_id=None,
-    peer_vpc_name=None,
-    conn_name=None,
-    peer_owner_id=None,
-    region=None,
-    key=None,
-    keyid=None,
-    profile=None,
-):
-    """
+def vpc_peering_connection_present(name, requester_vpc_id=None, requester_vpc_name=None,
+                                   peer_vpc_id=None, peer_vpc_name=None, conn_name=None,
+                                   peer_owner_id=None, peer_region=None, region=None,
+                                   key=None, keyid=None, profile=None):
+    '''
     name
         Name of the state
 
@@ -2007,6 +1993,10 @@ def vpc_peering_connection_present(
     peer_owner_id
         ID of the owner of the peer VPC. Defaults to your account ID, so a value
         is required if peering with a VPC in a different account.
+
+    peer_region
+        Region of peer VPC. For inter-region vpc peering connections. Not required
+        for intra-region peering connections.
 
     region
         Region to connect to.
@@ -2057,27 +2047,15 @@ def vpc_peering_connection_present(
             )
             log.info(ret["comment"])
             return ret
-        return accept_vpc_peering_connection(
-            name=name,
-            conn_name=conn_name,
-            region=region,
-            key=key,
-            keyid=keyid,
-            profile=profile,
-        )
-    return request_vpc_peering_connection(
-        name=name,
-        requester_vpc_id=requester_vpc_id,
-        requester_vpc_name=requester_vpc_name,
-        peer_vpc_id=peer_vpc_id,
-        peer_vpc_name=peer_vpc_name,
-        conn_name=conn_name,
-        peer_owner_id=peer_owner_id,
-        region=region,
-        key=key,
-        keyid=keyid,
-        profile=profile,
-    )
+        return accept_vpc_peering_connection(name=name, conn_name=conn_name,
+                                             region=region, key=key, keyid=keyid,
+                                             profile=profile)
+    return request_vpc_peering_connection(name=name, requester_vpc_id=requester_vpc_id,
+                                          requester_vpc_name=requester_vpc_name,
+                                          peer_vpc_id=peer_vpc_id, peer_vpc_name=peer_vpc_name,
+                                          conn_name=conn_name, peer_owner_id=peer_owner_id,
+                                          peer_region=peer_region, region=region, key=key,
+                                          keyid=keyid, profile=profile)
 
 
 def vpc_peering_connection_absent(

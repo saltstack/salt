@@ -14,41 +14,37 @@ import hashlib
 import os
 import shutil
 import time
-import warnings
+import shutil
+
+# Import Salt Testing libs
+from tests.support.unit import expectedFailure, skipIf, TestCase
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.events import eventpublisher_process, eventsender_process
 
 # Import salt libs
 import salt.config
 import salt.ext.tornado.ioloop
 import salt.utils.event
 import salt.utils.stringutils
-import zmq
-import zmq.eventloop.ioloop
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # Import 3rd-+arty libs
-from salt.ext.tornado.testing import AsyncTestCase
-from tests.support.events import eventpublisher_process, eventsender_process
-from tests.support.processes import terminate_process
-from tests.support.runtests import RUNTIME_VARS
-
-# Import Salt Testing libs
-from tests.support.unit import TestCase, expectedFailure, skipIf
-
+from tornado.testing import AsyncTestCase
+import zmq
+import zmq.eventloop.ioloop
 # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
-if not hasattr(zmq.eventloop.ioloop, "ZMQIOLoop"):
+if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
     zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 NO_LONG_IPC = False
 if getattr(zmq, "IPC_PATH_MAX_LEN", 103) <= 103:
     NO_LONG_IPC = True
 
 
-@skipIf(
-    NO_LONG_IPC, "This system does not support long IPC paths. Skipping event tests!"
-)
+@skipIf(NO_LONG_IPC, "This system does not support long IPC paths. Skipping event tests!")
 class TestSaltEvent(TestCase):
     def setUp(self):
-        self.sock_dir = os.path.join(RUNTIME_VARS.TMP, "test-socks")
+        self.sock_dir = os.path.join(RUNTIME_VARS.TMP, 'test-socks')
         if not os.path.exists(self.sock_dir):
             os.makedirs(self.sock_dir)
         self.addCleanup(shutil.rmtree, self.sock_dir, ignore_errors=True)
@@ -64,30 +60,36 @@ class TestSaltEvent(TestCase):
     def test_master_event(self):
         me = salt.utils.event.MasterEvent(self.sock_dir, listen=False)
         self.assertEqual(
-            me.puburi, "{0}".format(os.path.join(self.sock_dir, "master_event_pub.ipc"))
+            me.puburi, '{0}'.format(
+                os.path.join(self.sock_dir, 'master_event_pub.ipc')
+            )
         )
         self.assertEqual(
             me.pulluri,
-            "{0}".format(os.path.join(self.sock_dir, "master_event_pull.ipc")),
+            '{0}'.format(
+                os.path.join(self.sock_dir, 'master_event_pull.ipc')
+            )
         )
 
     def test_minion_event(self):
-        opts = dict(id="foo", sock_dir=self.sock_dir)
-        id_hash = hashlib.sha256(
-            salt.utils.stringutils.to_bytes(opts["id"])
-        ).hexdigest()[:10]
+        opts = dict(id='foo', sock_dir=self.sock_dir)
+        id_hash = hashlib.sha256(salt.utils.stringutils.to_bytes(opts['id'])).hexdigest()[:10]
         me = salt.utils.event.MinionEvent(opts, listen=False)
         self.assertEqual(
             me.puburi,
-            "{0}".format(
-                os.path.join(self.sock_dir, "minion_event_{0}_pub.ipc".format(id_hash))
-            ),
+            '{0}'.format(
+                os.path.join(
+                    self.sock_dir, 'minion_event_{0}_pub.ipc'.format(id_hash)
+                )
+            )
         )
         self.assertEqual(
             me.pulluri,
-            "{0}".format(
-                os.path.join(self.sock_dir, "minion_event_{0}_pull.ipc".format(id_hash))
-            ),
+            '{0}'.format(
+                os.path.join(
+                    self.sock_dir, 'minion_event_{0}_pull.ipc'.format(id_hash)
+                )
+            )
         )
 
     def test_minion_event_tcp_ipc_mode(self):
@@ -98,32 +100,35 @@ class TestSaltEvent(TestCase):
 
     def test_minion_event_no_id(self):
         me = salt.utils.event.MinionEvent(dict(sock_dir=self.sock_dir), listen=False)
-        id_hash = hashlib.sha256(salt.utils.stringutils.to_bytes("")).hexdigest()[:10]
+        id_hash = hashlib.sha256(salt.utils.stringutils.to_bytes('')).hexdigest()[:10]
         self.assertEqual(
             me.puburi,
-            "{0}".format(
-                os.path.join(self.sock_dir, "minion_event_{0}_pub.ipc".format(id_hash))
-            ),
+            '{0}'.format(
+                os.path.join(
+                    self.sock_dir, 'minion_event_{0}_pub.ipc'.format(id_hash)
+                )
+            )
         )
         self.assertEqual(
             me.pulluri,
-            "{0}".format(
-                os.path.join(self.sock_dir, "minion_event_{0}_pull.ipc".format(id_hash))
-            ),
+            '{0}'.format(
+                os.path.join(
+                    self.sock_dir, 'minion_event_{0}_pull.ipc'.format(id_hash)
+                )
+            )
         )
 
     @skipIf(True, "SLOWTEST skip")
     def test_event_single(self):
-        """Test a single event is received"""
+        '''Test a single event is received'''
         with eventpublisher_process(self.sock_dir):
             me = salt.utils.event.MasterEvent(self.sock_dir, listen=True)
-            me.fire_event({"data": "foo1"}, "evt1")
-            evt1 = me.get_event(tag="evt1")
-            self.assertGotEvent(evt1, {"data": "foo1"})
+            me.fire_event({'data': 'foo1'}, 'evt1')
+            evt1 = me.get_event(tag='evt1')
+            self.assertGotEvent(evt1, {'data': 'foo1'})
 
-    @skipIf(True, "SLOWTEST skip")
     def test_event_single_no_block(self):
-        """Test a single event is received, no block"""
+        '''Test a single event is received, no block'''
         with eventpublisher_process(self.sock_dir):
             me = salt.utils.event.MasterEvent(self.sock_dir, listen=True)
             start = time.time()
@@ -140,111 +145,105 @@ class TestSaltEvent(TestCase):
 
     @skipIf(True, "SLOWTEST skip")
     def test_event_single_wait_0_no_block_False(self):
-        """Test a single event is received with wait=0 and no_block=False and doesn't spin the while loop"""
+        '''Test a single event is received with wait=0 and no_block=False and doesn't spin the while loop'''
         with eventpublisher_process(self.sock_dir):
             me = salt.utils.event.MasterEvent(self.sock_dir, listen=True)
-            me.fire_event({"data": "foo1"}, "evt1")
+            me.fire_event({'data': 'foo1'}, 'evt1')
             # This is too fast and will be None but assures we're not blocking
             evt1 = me.get_event(wait=0, tag="evt1", no_block=False)
             self.assertGotEvent(evt1, {"data": "foo1"})
 
     @skipIf(True, "SLOWTEST skip")
     def test_event_timeout(self):
-        """Test no event is received if the timeout is reached"""
+        '''Test no event is received if the timeout is reached'''
         with eventpublisher_process(self.sock_dir):
             me = salt.utils.event.MasterEvent(self.sock_dir, listen=True)
-            me.fire_event({"data": "foo1"}, "evt1")
-            evt1 = me.get_event(tag="evt1")
-            self.assertGotEvent(evt1, {"data": "foo1"})
-            evt2 = me.get_event(tag="evt1")
+            me.fire_event({'data': 'foo1'}, 'evt1')
+            evt1 = me.get_event(tag='evt1')
+            self.assertGotEvent(evt1, {'data': 'foo1'})
+            evt2 = me.get_event(tag='evt1')
             self.assertIsNone(evt2)
 
     @skipIf(True, "SLOWTEST skip")
     def test_event_no_timeout(self):
-        """Test no wait timeout, we should block forever, until we get one """
+        '''Test no wait timeout, we should block forever, until we get one '''
         with eventpublisher_process(self.sock_dir):
             me = salt.utils.event.MasterEvent(self.sock_dir, listen=True)
-            with eventsender_process({"data": "foo2"}, "evt2", self.sock_dir, 5):
-                evt = me.get_event(tag="evt2", wait=0, no_block=False)
-            self.assertGotEvent(evt, {"data": "foo2"})
+            with eventsender_process({'data': 'foo2'}, 'evt2', self.sock_dir, 5):
+                evt = me.get_event(tag='evt2', wait=0, no_block=False)
+            self.assertGotEvent(evt, {'data': 'foo2'})
 
-    @skipIf(True, "SLOWTEST skip")
     def test_event_matching(self):
-        """Test a startswith match"""
+        '''Test a startswith match'''
         with eventpublisher_process(self.sock_dir):
             me = salt.utils.event.MasterEvent(self.sock_dir, listen=True)
-            me.fire_event({"data": "foo1"}, "evt1")
-            evt1 = me.get_event(tag="ev")
-            self.assertGotEvent(evt1, {"data": "foo1"})
+            me.fire_event({'data': 'foo1'}, 'evt1')
+            evt1 = me.get_event(tag='ev')
+            self.assertGotEvent(evt1, {'data': 'foo1'})
 
-    @skipIf(True, "SLOWTEST skip")
     def test_event_matching_regex(self):
-        """Test a regex match"""
+        '''Test a regex match'''
         with eventpublisher_process(self.sock_dir):
             me = salt.utils.event.MasterEvent(self.sock_dir, listen=True)
-            me.fire_event({"data": "foo1"}, "evt1")
-            evt1 = me.get_event(tag="^ev", match_type="regex")
-            self.assertGotEvent(evt1, {"data": "foo1"})
+            me.fire_event({'data': 'foo1'}, 'evt1')
+            evt1 = me.get_event(tag='^ev', match_type='regex')
+            self.assertGotEvent(evt1, {'data': 'foo1'})
 
-    @skipIf(True, "SLOWTEST skip")
     def test_event_matching_all(self):
-        """Test an all match"""
+        '''Test an all match'''
         with eventpublisher_process(self.sock_dir):
             me = salt.utils.event.MasterEvent(self.sock_dir, listen=True)
-            me.fire_event({"data": "foo1"}, "evt1")
-            evt1 = me.get_event(tag="")
-            self.assertGotEvent(evt1, {"data": "foo1"})
+            me.fire_event({'data': 'foo1'}, 'evt1')
+            evt1 = me.get_event(tag='')
+            self.assertGotEvent(evt1, {'data': 'foo1'})
 
-    @skipIf(True, "SLOWTEST skip")
     def test_event_matching_all_when_tag_is_None(self):
-        """Test event matching all when not passing a tag"""
+        '''Test event matching all when not passing a tag'''
         with eventpublisher_process(self.sock_dir):
             me = salt.utils.event.MasterEvent(self.sock_dir, listen=True)
-            me.fire_event({"data": "foo1"}, "evt1")
+            me.fire_event({'data': 'foo1'}, 'evt1')
             evt1 = me.get_event()
             self.assertGotEvent(evt1, {"data": "foo1"})
 
     @skipIf(True, "SLOWTEST skip")
     def test_event_not_subscribed(self):
-        """Test get_event drops non-subscribed events"""
+        '''Test get_event drops non-subscribed events'''
         with eventpublisher_process(self.sock_dir):
             me = salt.utils.event.MasterEvent(self.sock_dir, listen=True)
-            me.fire_event({"data": "foo1"}, "evt1")
-            me.fire_event({"data": "foo2"}, "evt2")
-            evt2 = me.get_event(tag="evt2")
-            evt1 = me.get_event(tag="evt1")
-            self.assertGotEvent(evt2, {"data": "foo2"})
+            me.fire_event({'data': 'foo1'}, 'evt1')
+            me.fire_event({'data': 'foo2'}, 'evt2')
+            evt2 = me.get_event(tag='evt2')
+            evt1 = me.get_event(tag='evt1')
+            self.assertGotEvent(evt2, {'data': 'foo2'})
             self.assertIsNone(evt1)
 
     @skipIf(True, "SLOWTEST skip")
     def test_event_subscription_cache(self):
-        """Test subscriptions cache a message until requested"""
+        '''Test subscriptions cache a message until requested'''
         with eventpublisher_process(self.sock_dir):
             me = salt.utils.event.MasterEvent(self.sock_dir, listen=True)
-            me.subscribe("evt1")
-            me.fire_event({"data": "foo1"}, "evt1")
-            me.fire_event({"data": "foo2"}, "evt2")
-            evt2 = me.get_event(tag="evt2")
-            evt1 = me.get_event(tag="evt1")
-            self.assertGotEvent(evt2, {"data": "foo2"})
-            self.assertGotEvent(evt1, {"data": "foo1"})
+            me.subscribe('evt1')
+            me.fire_event({'data': 'foo1'}, 'evt1')
+            me.fire_event({'data': 'foo2'}, 'evt2')
+            evt2 = me.get_event(tag='evt2')
+            evt1 = me.get_event(tag='evt1')
+            self.assertGotEvent(evt2, {'data': 'foo2'})
+            self.assertGotEvent(evt1, {'data': 'foo1'})
 
-    @skipIf(True, "SLOWTEST skip")
     def test_event_subscriptions_cache_regex(self):
-        """Test regex subscriptions cache a message until requested"""
+        '''Test regex subscriptions cache a message until requested'''
         with eventpublisher_process(self.sock_dir):
             me = salt.utils.event.MasterEvent(self.sock_dir, listen=True)
-            me.subscribe("e..1$", "regex")
-            me.fire_event({"data": "foo1"}, "evt1")
-            me.fire_event({"data": "foo2"}, "evt2")
-            evt2 = me.get_event(tag="evt2")
-            evt1 = me.get_event(tag="evt1")
-            self.assertGotEvent(evt2, {"data": "foo2"})
-            self.assertGotEvent(evt1, {"data": "foo1"})
+            me.subscribe('e..1$', 'regex')
+            me.fire_event({'data': 'foo1'}, 'evt1')
+            me.fire_event({'data': 'foo2'}, 'evt2')
+            evt2 = me.get_event(tag='evt2')
+            evt1 = me.get_event(tag='evt1')
+            self.assertGotEvent(evt2, {'data': 'foo2'})
+            self.assertGotEvent(evt1, {'data': 'foo1'})
 
-    @skipIf(True, "SLOWTEST skip")
     def test_event_multiple_clients(self):
-        """Test event is received by multiple clients"""
+        '''Test event is received by multiple clients'''
         with eventpublisher_process(self.sock_dir):
             me1 = salt.utils.event.MasterEvent(self.sock_dir, listen=True)
             me2 = salt.utils.event.MasterEvent(self.sock_dir, listen=True)
@@ -264,16 +263,15 @@ class TestSaltEvent(TestCase):
         # Show why not to call get_event(tag='')
         with eventpublisher_process(self.sock_dir):
             me = salt.utils.event.MasterEvent(self.sock_dir, listen=True)
-            me.fire_event({"data": "foo1"}, "evt1")
-            me.fire_event({"data": "foo2"}, "evt2")
-            evt2 = me.get_event(tag="")
-            evt1 = me.get_event(tag="")
-            self.assertGotEvent(evt2, {"data": "foo2"})
-            self.assertGotEvent(evt1, {"data": "foo1"})
+            me.fire_event({'data': 'foo1'}, 'evt1')
+            me.fire_event({'data': 'foo2'}, 'evt2')
+            evt2 = me.get_event(tag='')
+            evt1 = me.get_event(tag='')
+            self.assertGotEvent(evt2, {'data': 'foo2'})
+            self.assertGotEvent(evt1, {'data': 'foo1'})
 
-    @skipIf(True, "SLOWTEST skip")
     def test_event_many(self):
-        """Test a large number of events, one at a time"""
+        '''Test a large number of events, one at a time'''
         with eventpublisher_process(self.sock_dir):
             me = salt.utils.event.MasterEvent(self.sock_dir, listen=True)
             for i in range(500):
@@ -285,7 +283,7 @@ class TestSaltEvent(TestCase):
 
     @skipIf(True, "SLOWTEST skip")
     def test_event_many_backlog(self):
-        """Test a large number of events, send all then recv all"""
+        '''Test a large number of events, send all then recv all'''
         with eventpublisher_process(self.sock_dir):
             me = salt.utils.event.MasterEvent(self.sock_dir, listen=True)
             # Must not exceed zmq HWM
@@ -301,17 +299,14 @@ class TestSaltEvent(TestCase):
     # we don't need to perform extensive testing.
     @skipIf(True, "SLOWTEST skip")
     def test_send_master_event(self):
-        """Tests that sending an event through fire_master generates expected event"""
+        '''Tests that sending an event through fire_master generates expected event'''
         with eventpublisher_process(self.sock_dir):
             me = salt.utils.event.MasterEvent(self.sock_dir, listen=True)
-            data = {"data": "foo1"}
-            me.fire_master(data, "test_master")
+            data = {'data': 'foo1'}
+            me.fire_master(data, 'test_master')
 
-            evt = me.get_event(tag="fire_master")
-            self.assertGotEvent(
-                evt,
-                {"data": data, "tag": "test_master", "events": None, "pretag": None},
-            )
+            evt = me.get_event(tag='fire_master')
+            self.assertGotEvent(evt, {'data': data, 'tag': 'test_master', 'events': None, 'pretag': None})
 
 
 class TestAsyncEventPublisher(AsyncTestCase):
@@ -320,14 +315,14 @@ class TestAsyncEventPublisher(AsyncTestCase):
 
     def setUp(self):
         super(TestAsyncEventPublisher, self).setUp()
-        self.sock_dir = os.path.join(RUNTIME_VARS.TMP, "test-socks")
+        self.sock_dir = os.path.join(RUNTIME_VARS.TMP, 'test-socks')
         if not os.path.exists(self.sock_dir):
             os.makedirs(self.sock_dir)
         self.addCleanup(shutil.rmtree, self.sock_dir, ignore_errors=True)
-        self.opts = {"sock_dir": self.sock_dir}
-        self.publisher = salt.utils.event.AsyncEventPublisher(self.opts, self.io_loop,)
-        self.event = salt.utils.event.get_event(
-            "minion", opts=self.opts, io_loop=self.io_loop
+        self.opts = {'sock_dir': self.sock_dir}
+        self.publisher = salt.utils.event.AsyncEventPublisher(
+            self.opts,
+            self.io_loop,
         )
         self.event.subscribe("")
         self.event.set_event_handler(self._handle_publish)

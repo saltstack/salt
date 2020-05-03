@@ -56,15 +56,15 @@ def _nftables_cmd():
 def _conf(family="ip"):
     """
     Use the same file for rules for now.
-    """
-    if __grains__["os_family"] == "RedHat":
-        return "/etc/nftables"
-    elif __grains__["os_family"] == "Arch":
-        return "/etc/nftables"
-    elif __grains__["os_family"] == "Debian":
-        return "/etc/nftables"
-    elif __grains__["os"] == "Gentoo":
-        return "/etc/nftables"
+    '''
+    if __grains__['os_family'] == 'RedHat':
+        return '/etc/nftables'
+    elif __grains__['os_family'] == 'Arch':
+        return '/etc/nftables'
+    elif __grains__['os_family'] == 'Debian':
+        return '/etc/nftables'
+    elif __grains__['os_family'] == 'Gentoo':
+        return '/etc/nftables'
     else:
         return False
 

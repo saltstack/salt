@@ -16,12 +16,15 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
+import logging
 
 import pytest
 import salt.utils.files
 from tests.support.case import ShellCase, SSHCase
 from tests.support.helpers import flaky
 from tests.support.unit import skipIf
+
+log = logging.getLogger(__name__)
 
 log = logging.getLogger(__name__)
 
@@ -74,11 +77,9 @@ class GrainsTargetingTest(ShellCase):
 
         # ping disconnected minion and ensure it times out and returns with correct message
         try:
-            ret = ""
-            for item in self.run_salt(
-                '-t 1 -G "id:disconnected" test.ping', timeout=40
-            ):
-                if item != "disconnected:":
+            ret = ''
+            for item in self.run_salt('-t 1 -G "id:disconnected" test.ping', timeout=40):
+                if item != 'disconnected:':
                     ret = item.strip()
                     break
             assert ret == test_ret

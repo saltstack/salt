@@ -22,8 +22,8 @@ __virtualname__ = "sysctl"
 def __virtual__():
     """
     Only run on NetBSD systems
-    """
-    if __grains__["os"] == "NetBSD":
+    '''
+    if __grains__.get('os') == 'NetBSD':
         return __virtualname__
     return (
         False,

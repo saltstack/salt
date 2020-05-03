@@ -387,7 +387,10 @@ def present(
         notifications of specified events for a bucket
 
     Policy
-        Policy on the bucket
+        Policy on the bucket.  As a special case, if the Policy is set to the
+        string `external`, it will not be managed by this state, and can thus
+        be safely set in other ways (e.g. by other state calls, or by hand if
+        some unusual policy configuration is required).
 
     Replication
         Replication rules. You can add as many as 1,000 rules.
@@ -430,7 +433,7 @@ def present(
     if RequestPayment is None:
         RequestPayment = {"Payer": "BucketOwner"}
     if Policy:
-        if isinstance(Policy, six.string_types):
+        if isinstance(Policy, six.string_types) and Policy != 'external':
             Policy = salt.utils.json.loads(Policy)
         Policy = __utils__["boto3.ordered"](Policy)
 
@@ -629,8 +632,13 @@ def present(
         config_items.append(versioning_item)
 
     update = False
+    changes = {}
     for varname, setter, current, comparator, desired, deleter in config_items:
-        if varname == "Policy":
+        if varname == 'Policy':
+            if desired == {'Policy': 'external'}:
+                # Short-circuit to allow external policy control.
+                log.debug('S3 Policy set to `external`, skipping application.')
+                continue
             if current is not None:
                 temp = current.get("Policy")
                 # Policy description is always returned as a JSON string.
@@ -641,53 +649,38 @@ def present(
                     )
         if not comparator(current, desired, region, key, keyid, profile):
             update = True
-            if varname == "ACL":
-                ret["changes"].setdefault("new", {})[varname] = _acl_to_grant(
-                    desired, _get_canonical_id(region, key, keyid, profile)
-                )
+            if varname == 'ACL':
+                changes.setdefault('new', {})[varname] = _acl_to_grant(
+                        desired, _get_canonical_id(region, key, keyid, profile))
             else:
-                ret["changes"].setdefault("new", {})[varname] = desired
-            ret["changes"].setdefault("old", {})[varname] = current
+                changes.setdefault('new', {})[varname] = desired
+            changes.setdefault('old', {})[varname] = current
 
             if not __opts__["test"]:
                 if deleter and desired is None:
                     # Setting can be deleted, so use that to unset it
-                    r = __salt__["boto_s3_bucket.{0}".format(deleter)](
-                        Bucket=Bucket,
-                        region=region,
-                        key=key,
-                        keyid=keyid,
-                        profile=profile,
-                    )
-                    if not r.get("deleted"):
-                        ret["result"] = False
-                        ret["comment"] = "Failed to update bucket: {0}.".format(
-                            r["error"]["message"]
-                        )
-                        ret["changes"] = {}
+                    r = __salt__['boto_s3_bucket.{0}'.format(deleter)](Bucket=Bucket,
+                      region=region, key=key, keyid=keyid, profile=profile)
+                    if not r.get('deleted'):
+                        ret['result'] = False
+                        ret['comment'] = 'Failed to update bucket: {0}.'.format(r['error']['message'])
                         return ret
                 else:
-                    r = __salt__["boto_s3_bucket.{0}".format(setter)](
-                        Bucket=Bucket,
-                        region=region,
-                        key=key,
-                        keyid=keyid,
-                        profile=profile,
-                        **(desired or {})
-                    )
-                    if not r.get("updated"):
-                        ret["result"] = False
-                        ret["comment"] = "Failed to update bucket: {0}.".format(
-                            r["error"]["message"]
-                        )
-                        ret["changes"] = {}
+                    r = __salt__['boto_s3_bucket.{0}'.format(setter)](Bucket=Bucket,
+                      region=region, key=key, keyid=keyid, profile=profile,
+                      **(desired or {}))
+                    if not r.get('updated'):
+                        ret['result'] = False
+                        ret['comment'] = 'Failed to update bucket: {0}.'.format(r['error']['message'])
                         return ret
-    if update and __opts__["test"]:
-        msg = "S3 bucket {0} set to be modified.".format(Bucket)
-        ret["comment"] = msg
-        ret["result"] = None
+    if update and __opts__['test']:
+        msg = 'S3 bucket {0} set to be modified.'.format(Bucket)
+        ret['comment'] = msg
+        ret['result'] = None
+        ret['pchanges'] = changes
         return ret
 
+    ret['changes'] = changes
     # Since location can't be changed, try that last so at least the rest of
     # the things are correct by the time we fail here. Fail so the user will
     # notice something mismatches their desired state.

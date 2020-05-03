@@ -86,6 +86,7 @@ import salt.utils.path
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
 from salt.output import nested
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -157,33 +158,28 @@ def __virtual__():
     if salt.utils.path.which("firewall-cmd"):
         return True
 
-    return (
-        False,
-        "firewall-cmd is not available, firewalld is probably not installed.",
-    )
+    return (False, 'firewall-cmd is not available, firewalld is probably not installed.')
 
 
-def present(
-    name,
-    block_icmp=None,
-    prune_block_icmp=False,
-    default=None,
-    masquerade=False,
-    ports=None,
-    prune_ports=False,
-    port_fwd=None,
-    prune_port_fwd=False,
-    services=None,
-    prune_services=False,
-    interfaces=None,
-    prune_interfaces=False,
-    sources=None,
-    prune_sources=False,
-    rich_rules=None,
-    prune_rich_rules=False,
-):
+def present(name,
+            block_icmp=None,
+            prune_block_icmp=False,
+            default=None,
+            masquerade=False,
+            ports=None,
+            prune_ports=False,
+            port_fwd=None,
+            prune_port_fwd=False,
+            services=None,
+            prune_services=False,
+            interfaces=None,
+            prune_interfaces=False,
+            sources=None,
+            prune_sources=False,
+            rich_rules=None,
+            prune_rich_rules=False):
 
-    """
+    '''
     Ensure a zone has specific attributes.
 
     name
@@ -237,26 +233,10 @@ def present(
 
     prune_rich_rules : False
         If ``True``, remove all but the specified rich rules from the zone.
-    """
-    ret = _present(
-        name,
-        block_icmp,
-        prune_block_icmp,
-        default,
-        masquerade,
-        ports,
-        prune_ports,
-        port_fwd,
-        prune_port_fwd,
-        services,
-        prune_services,
-        interfaces,
-        prune_interfaces,
-        sources,
-        prune_sources,
-        rich_rules,
-        prune_rich_rules,
-    )
+    '''
+    ret = _present(name, block_icmp, prune_block_icmp, default, masquerade, ports, prune_ports,
+            port_fwd, prune_port_fwd, services, prune_services, interfaces, prune_interfaces,
+            sources, prune_sources, rich_rules, prune_rich_rules)
 
     # Reload firewalld service on changes
     if ret["changes"] != {}:

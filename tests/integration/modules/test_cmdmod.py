@@ -3,9 +3,9 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
+import random
 import sys
 import tempfile
-from contextlib import contextmanager
 
 import pytest
 import salt.utils.path
@@ -183,7 +183,28 @@ class CMDModuleTest(ModuleCase):
 
         self.assertEqual(ret, 0)
 
-    @skipIf(True, "SLOWTEST skip")
+    def test_run_all_with_success_stderr(self):
+        '''
+        cmd.run with success_retcodes
+        '''
+        random_file = "{0}{1}{2}".format(RUNTIME_VARS.TMP_ROOT_DIR,
+                                         os.path.sep,
+                                         random.random())
+
+        if salt.utils.platform.is_windows():
+            func = 'type'
+            expected_stderr = 'The system cannot find the file specified.'
+        else:
+            func = 'cat'
+            expected_stderr = 'cat: {0}: No such file or directory'.format(random_file)
+        ret = self.run_function('cmd.run_all',
+                                ['{0} {1}'.format(func, random_file)],
+                                success_stderr=[expected_stderr],
+                                python_shell=True)
+
+        self.assertTrue('retcode' in ret)
+        self.assertEqual(ret.get('retcode'), 0)
+
     def test_blacklist_glob(self):
         """
         cmd_blacklist_glob
@@ -216,21 +237,18 @@ class CMDModuleTest(ModuleCase):
     def test_script_cwd(self):
         """
         cmd.script with cwd
-        """
+        '''
         tmp_cwd = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-        args = "saltines crackers biscuits=yes"
-        script = "salt://script.py"
-        ret = self.run_function("cmd.script", [script, args], cwd=tmp_cwd)
-        self.assertEqual(ret["stdout"], args)
+        args = 'saltines crackers biscuits=yes'
+        script = 'salt://script.py'
+        ret = self.run_function('cmd.script', [script, args], cwd=tmp_cwd)
+        self.assertEqual(ret['stdout'], args)
 
-    @skipIf(True, "SLOWTEST skip")
     def test_script_cwd_with_space(self):
         """
         cmd.script with cwd
-        """
-        tmp_cwd = "{0}{1}test 2".format(
-            tempfile.mkdtemp(dir=RUNTIME_VARS.TMP), os.path.sep
-        )
+        '''
+        tmp_cwd = "{0}{1}test 2".format(tempfile.mkdtemp(dir=RUNTIME_VARS.TMP), os.path.sep)
         os.mkdir(tmp_cwd)
 
         args = "saltines crackers biscuits=yes"
@@ -283,54 +301,50 @@ class CMDModuleTest(ModuleCase):
     def test_exec_code(self):
         """
         cmd.exec_code
-        """
+        '''
         # `code` is a multiline YAML text. Formatting it as a YAML block scalar.
-        code = """|
+        code = '''|
                    import sys
                    sys.stdout.write('cheese')
-               """
-        self.assertEqual(
-            self.run_function(
-                "cmd.exec_code", [AVAILABLE_PYTHON_EXECUTABLE, code]
-            ).rstrip(),
-            "cheese",
-        )
+               '''
+        self.assertEqual(self.run_function('cmd.exec_code',
+                                           [AVAILABLE_PYTHON_EXECUTABLE,
+                                            code]).rstrip(),
+                         'cheese')
 
     @skipIf(True, "SLOWTEST skip")
     def test_exec_code_with_single_arg(self):
         """
         cmd.exec_code
-        """
+        '''
         # `code` is a multiline YAML text. Formatting it as a YAML block scalar.
-        code = """|
+        code = '''|
                    import sys
                    sys.stdout.write(sys.argv[1])
-               """
-        arg = "cheese"
-        self.assertEqual(
-            self.run_function(
-                "cmd.exec_code", [AVAILABLE_PYTHON_EXECUTABLE, code], args=arg
-            ).rstrip(),
-            arg,
-        )
+               '''
+        arg = 'cheese'
+        self.assertEqual(self.run_function('cmd.exec_code',
+                                           [AVAILABLE_PYTHON_EXECUTABLE,
+                                            code],
+                                           args=arg).rstrip(),
+                         arg)
 
     @skipIf(True, "SLOWTEST skip")
     def test_exec_code_with_multiple_args(self):
         """
         cmd.exec_code
-        """
+        '''
         # `code` is a multiline YAML text. Formatting it as a YAML block scalar.
-        code = """|
+        code = '''|
                    import sys
                    sys.stdout.write(sys.argv[1])
-               """
-        arg = "cheese"
-        self.assertEqual(
-            self.run_function(
-                "cmd.exec_code", [AVAILABLE_PYTHON_EXECUTABLE, code], args=[arg, "test"]
-            ).rstrip(),
-            arg,
-        )
+               '''
+        arg = 'cheese'
+        self.assertEqual(self.run_function('cmd.exec_code',
+                                           [AVAILABLE_PYTHON_EXECUTABLE,
+                                            code],
+                                           args=[arg, 'test']).rstrip(),
+                         arg)
 
     @skipIf(True, "SLOWTEST skip")
     def test_quotes(self):

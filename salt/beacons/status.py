@@ -125,16 +125,14 @@ def beacon(config):
     log.debug(config)
     ctime = datetime.datetime.utcnow().isoformat()
 
-    if len(config) < 1:
-        config = [
-            {
-                "loadavg": ["all"],
-                "cpustats": ["all"],
-                "meminfo": ["all"],
-                "vmstats": ["all"],
-                "time": ["all"],
-            }
-        ]
+    if not config:
+        config = [{
+            'loadavg': ['all'],
+            'cpustats': ['all'],
+            'meminfo': ['all'],
+            'vmstats': ['all'],
+            'time': ['all'],
+        }]
 
     if not isinstance(config, list):
         # To support the old dictionary config format

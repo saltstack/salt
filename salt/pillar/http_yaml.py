@@ -13,7 +13,6 @@ Set the following Salt config to setup an http endpoint as the external pillar s
   ext_pillar:
     - http_yaml:
         url: http://example.com/api/minion_id
-        ::TODO::
         username: username
         password: password
 
@@ -59,12 +58,19 @@ def __virtual__():
     return True
 
 
-def ext_pillar(minion_id, pillar, url, with_grains=False):  # pylint: disable=W0613
-    """
+def ext_pillar(minion_id,
+               pillar,  # pylint: disable=W0613
+               url,
+               with_grains=False,
+               username=None,
+               password=None):
+    '''
     Read pillar data from HTTP response.
 
     :param str url: Url to request.
     :param bool with_grains: Whether to substitute strings in the url with their grain values.
+    :param str username: Username for http basic auth
+    :param str password: Password for http basic auth
 
     :return: A dictionary of the pillar data to add.
     :rtype: dict
@@ -88,8 +94,9 @@ def ext_pillar(minion_id, pillar, url, with_grains=False):  # pylint: disable=W0
             grain_value = _quote(six.text_type(grain_value))
             url = re.sub("<{0}>".format(grain_name), grain_value, url)
 
-    log.debug("Getting url: %s", url)
-    data = __salt__["http.query"](url=url, decode=True, decode_type="yaml")
+    log.debug('Getting url: %s', url)
+
+    data = __salt__['http.query'](url=url, username=username, password=password, decode=True, decode_type='yaml')
 
     if "dict" in data:
         return data["dict"]

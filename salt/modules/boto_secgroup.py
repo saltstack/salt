@@ -400,18 +400,13 @@ def convert_to_group_ids(
             # Security groups are a big deal - need to fail if any can't be resolved...
             # But... if we're running in test mode, it may just be that the SG is scheduled
             # to be created, and thus WOULD have been there if running "for real"...
-            if __opts__["test"]:
-                log.warn(
-                    "Security Group `%s` could not be resolved to an ID.  This may "
-                    "cause a failure when not running in test mode.",
-                    group,
-                )
+            if __opts__['test']:
+                log.warning('Security Group `%s` could not be resolved to an ID.  This may '
+                            'cause a failure when not running in test mode.', group)
                 return []
             else:
-                raise CommandExecutionError(
-                    "Could not resolve Security Group name "
-                    "{0} to a Group ID".format(group)
-                )
+                raise CommandExecutionError('Could not resolve Security Group name '
+                                            '{0} to a Group ID'.format(group))
         else:
             group_ids.append(six.text_type(group_id))
     log.debug("security group contents %s post-conversion", group_ids)

@@ -103,34 +103,32 @@ def _parallel_map(func, inputs):
     return outputs
 
 
-def state(
-    name,
-    tgt,
-    ssh=False,
-    tgt_type="glob",
-    ret="",
-    ret_config=None,
-    ret_kwargs=None,
-    highstate=None,
-    sls=None,
-    top=None,
-    saltenv=None,
-    test=None,
-    pillar=None,
-    pillarenv=None,
-    expect_minions=True,
-    fail_minions=None,
-    allow_fail=0,
-    concurrent=False,
-    timeout=None,
-    batch=None,
-    queue=False,
-    subset=None,
-    orchestration_jid=None,
-    failhard=None,
-    **kwargs
-):
-    """
+def state(name,
+        tgt,
+        ssh=False,
+        tgt_type='glob',
+        ret='',
+        ret_config=None,
+        ret_kwargs=None,
+        highstate=None,
+        sls=None,
+        top=None,
+        saltenv=None,
+        test=None,
+        pillar=None,
+        pillarenv=None,
+        expect_minions=True,
+        fail_minions=None,
+        allow_fail=0,
+        exclude=None,
+        concurrent=False,
+        timeout=None,
+        batch=None,
+        queue=False,
+        subset=None,
+        orchestration_jid=None,
+        **kwargs):
+    '''
     Invoke a state run on a given target
 
     name
@@ -202,6 +200,9 @@ def state(
         Pass in the number of minions to allow for failure before setting
         the result of the execution to False
 
+    exclude
+        Pass exclude kwarg to state
+
     concurrent
         Allow multiple state runs to occur at once.
 
@@ -222,10 +223,14 @@ def state(
 
         .. versionadded:: 2017.7.0
 
-    failhard
-        pass failhard down to the executing state
+    asynchronous
+        Run the salt command but don't wait for a reply.
 
-        .. versionadded:: 2019.2.2
+        NOTE: This flag conflicts with subset and batch flags and cannot be
+        used at the same time.
+
+        .. versionadded:: neon
+
 
     Examples:
 
@@ -241,6 +246,18 @@ def state(
               - apache
               - django
               - core
+            - saltenv: prod
+
+    Run sls file via :py:func:`state.sls <salt.state.sls>` on target
+    minions with exclude:
+
+    .. code-block:: yaml
+
+        docker:
+          salt.state:
+            - tgt: 'docker*'
+            - sls: docker
+            - exclude: docker.swarm
             - saltenv: prod
 
     Run a full :py:func:`state.highstate <salt.state.highstate>` on target
@@ -271,11 +288,12 @@ def state(
         state_ret["comment"] = "Passed invalid value for 'allow_fail', must be an int"
         return state_ret
 
-    cmd_kw["tgt_type"] = tgt_type
-    cmd_kw["ssh"] = ssh
-    if "roster" in kwargs:
-        cmd_kw["roster"] = kwargs["roster"]
-    cmd_kw["expect_minions"] = expect_minions
+    cmd_kw['tgt_type'] = tgt_type
+    cmd_kw['ssh'] = ssh
+    if 'roster' in kwargs:
+        cmd_kw['roster'] = kwargs['roster']
+    cmd_kw['expect_minions'] = expect_minions
+    cmd_kw['asynchronous'] = kwargs.pop('asynchronous', False)
     if highstate:
         fun = "state.highstate"
     elif top:
@@ -303,7 +321,10 @@ def state(
     if saltenv is not None:
         cmd_kw["kwarg"]["saltenv"] = saltenv
 
-    cmd_kw["kwarg"]["queue"] = queue
+    if exclude is not None:
+        cmd_kw['kwarg']['exclude'] = exclude
+
+    cmd_kw['kwarg']['queue'] = queue
 
     if isinstance(concurrent, bool):
         cmd_kw["kwarg"]["concurrent"] = concurrent
@@ -340,6 +361,17 @@ def state(
                 else "highstate",
             }
         }
+
+    if cmd_kw['asynchronous']:
+        state_ret['__jid__'] = cmd_ret.get('jid')
+        state_ret['changes'] = cmd_ret
+        if int(cmd_ret.get('jid', 0)) > 0:
+            state_ret['result'] = True
+            state_ret['comment'] = 'State submitted successfully.'
+        else:
+            state_ret['result'] = False
+            state_ret['comment'] = 'State failed to run.'
+        return state_ret
 
     try:
         state_ret["__jid__"] = cmd_ret[next(iter(cmd_ret))]["jid"]
@@ -489,13 +521,16 @@ def function(
 
         .. versionadded:: 2017.7.0
 
-    failhard
-        pass failhard down to the executing state
+    asynchronous
+        Run the salt command but don't wait for a reply.
 
-        .. versionadded:: 2019.2.2
+        .. versionadded:: neon
 
-    """
-    func_ret = {"name": name, "changes": {}, "comment": "", "result": True}
+    '''
+    func_ret = {'name': name,
+                'changes': {},
+                'comment': '',
+                'result': True}
     if kwarg is None:
         kwarg = {}
     if isinstance(arg, six.string_types):
@@ -509,13 +544,11 @@ def function(
     if subset is not None:
         cmd_kw["subset"] = subset
 
-    cmd_kw["tgt_type"] = tgt_type
-    cmd_kw["ssh"] = ssh
-    cmd_kw["expect_minions"] = expect_minions
-    cmd_kw["_cmd_meta"] = True
-
-    if failhard is True or __opts__.get("failhard"):
-        cmd_kw["failhard"] = True
+    cmd_kw['tgt_type'] = tgt_type
+    cmd_kw['ssh'] = ssh
+    cmd_kw['expect_minions'] = expect_minions
+    cmd_kw['_cmd_meta'] = True
+    cmd_kw['asynchronous'] = kwargs.pop('asynchronous', False)
 
     if ret_config:
         cmd_kw["ret_config"] = ret_config
@@ -536,6 +569,17 @@ def function(
     except Exception as exc:  # pylint: disable=broad-except
         func_ret["result"] = False
         func_ret["comment"] = six.text_type(exc)
+        return func_ret
+
+    if cmd_kw['asynchronous']:
+        func_ret['__jid__'] = cmd_ret.get('jid')
+        func_ret['changes'] = cmd_ret
+        if int(cmd_ret.get('jid', 0)) > 0:
+            func_ret['result'] = True
+            func_ret['comment'] = 'Function submitted successfully.'
+        else:
+            func_ret['result'] = False
+            func_ret['comment'] = 'Function failed to run.'
         return func_ret
 
     try:
@@ -699,11 +743,10 @@ def wait_for_event(name, id_list, event_id="id", timeout=300, node="master"):
         else:
             log.debug("wait_for_event: Skipping unmatched event '%s'", event["tag"])
 
-        if len(id_list) == 0:
-            ret["result"] = True
-            ret["comment"] = "All events seen in {0} seconds.".format(
-                time.time() - starttime
-            )
+        if not id_list:
+            ret['result'] = True
+            ret['comment'] = 'All events seen in {0} seconds.'.format(
+                    time.time() - starttime)
             return ret
 
         if is_timedout:
@@ -719,8 +762,15 @@ def runner(name, **kwargs):
 
     name
         The name of the function to run
+
     kwargs
         Any keyword arguments to pass to the runner function
+
+    asynchronous
+        Run the salt command but don't wait for a reply.
+
+        .. versionadded:: neon
+
 
     .. code-block:: yaml
 
@@ -743,8 +793,27 @@ def runner(name, **kwargs):
         }
         return ret
 
-    out = __salt__["saltutil.runner"](
-        name, __orchestration_jid__=jid, __env__=__env__, full_return=True, **kwargs
+    out = __salt__['saltutil.runner'](name,
+                                      __orchestration_jid__=jid,
+                                      __env__=__env__,
+                                      full_return=True,
+                                      **kwargs)
+
+    if kwargs.get('asynchronous'):
+        out['return'] = out.copy()
+        out['success'] = 'jid' in out and 'tag' in out
+
+    runner_return = out.get('return')
+    if isinstance(runner_return, dict) and 'Error' in runner_return:
+        out['success'] = False
+
+    success = out.get('success', True)
+    ret = {'name': name,
+           'changes': {'return': runner_return},
+           'result': success}
+    ret['comment'] = "Runner function '{0}' {1}.".format(
+        name,
+        'executed' if success else 'failed',
     )
 
     runner_return = out.get("return")
@@ -962,8 +1031,15 @@ def wheel(name, **kwargs):
 
     name
         The name of the function to run
+
     kwargs
         Any keyword arguments to pass to the wheel function
+
+    asynchronous
+        Run the salt command but don't wait for a reply.
+
+        .. versionadded:: neon
+
 
     .. code-block:: yaml
 
@@ -985,18 +1061,33 @@ def wheel(name, **kwargs):
         ret["comment"] = "Wheel function '{0}' would be executed.".format(name)
         return ret
 
-    out = __salt__["saltutil.wheel"](
-        name, __orchestration_jid__=jid, __env__=__env__, **kwargs
-    )
+    out = __salt__['saltutil.wheel'](name,
+                                     __orchestration_jid__=jid,
+                                     __env__=__env__,
+                                     **kwargs)
 
-    wheel_return = out.get("return")
-    if isinstance(wheel_return, dict) and "Error" in wheel_return:
-        out["success"] = False
+    if kwargs.get('asynchronous'):
+        ret['__jid__'] = ret.get('jid')
+        ret['changes'] = out
+        if int(out.get('jid', 0)) > 0:
+            ret['result'] = True
+            ret['comment'] = 'wheel submitted successfully.'
+        else:
+            ret['result'] = False
+            ret['comment'] = 'wheel failed to run.'
+        return ret
 
-    success = out.get("success", True)
-    ret = {"name": name, "changes": {"return": wheel_return}, "result": success}
-    ret["comment"] = "Wheel function '{0}' {1}.".format(
-        name, "executed" if success else "failed",
+    wheel_return = out.get('return')
+    if isinstance(wheel_return, dict) and 'Error' in wheel_return:
+        out['success'] = False
+
+    success = out.get('success', True)
+    ret = {'name': name,
+           'changes': {'return': wheel_return},
+           'result': success}
+    ret['comment'] = "Wheel function '{0}' {1}.".format(
+        name,
+        'executed' if success else 'failed',
     )
 
     ret["__orchestration__"] = True

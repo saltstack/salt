@@ -17,13 +17,10 @@ log = logging.getLogger(__name__)
 def __virtual__():
     """
     Only work on Gentoo systems with eselect installed
-    """
-    if __grains__["os"] == "Gentoo" and salt.utils.path.which("eselect"):
-        return "eselect"
-    return (
-        False,
-        "The eselect execution module cannot be loaded: either the system is not Gentoo or the eselect binary is not in the path.",
-    )
+    '''
+    if __grains__.get('os_family') == 'Gentoo' and salt.utils.path.which('eselect'):
+        return 'eselect'
+    return (False, 'The eselect execution module cannot be loaded: either the system is not Gentoo or the eselect binary is not in the path.')
 
 
 def exec_action(
@@ -204,7 +201,7 @@ def set_target(module, target, module_parameter=None, action_parameter=None):
 
     # get list of available modules
     if module not in get_modules():
-        log.error("Module %s not available", module)
+        log.error('Module %s not available', module)
         return False
 
     exec_result = exec_action(

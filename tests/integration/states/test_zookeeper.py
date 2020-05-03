@@ -5,6 +5,7 @@ Integration tests for the zookeeper states
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+import logging
 
 import logging
 
@@ -33,25 +34,19 @@ log = logging.getLogger(__name__)
 class ZookeeperTestCase(ModuleCase, SaltReturnAssertsMixin):
     """
     Test zookeeper states
-    """
-
+    '''
     @classmethod
     def setUpClass(cls):
-        cls.container_name = "zookeeper_salt"
+        cls.container_name = 'zookeeper_salt'
 
     def setUp(self):
-        self.run_state("docker_image.present", name="zookeeper")
-        self.run_state(
-            "docker_container.running",
-            name=self.container_name,
-            image="zookeeper",
-            port_bindings="2181:2181",
-        )
+        self.run_state('docker_image.present', name='zookeeper')
+        self.run_state('docker_container.running', name=self.container_name, image='zookeeper', port_bindings='2181:2181')
 
     def tearDown(self):
-        self.run_state("docker_container.stopped", name=self.container_name)
-        self.run_state("docker_container.absent", name=self.container_name)
-        self.run_state("docker_image.absent", name="docker.io/zookeeper", force=True)
+        self.run_state('docker_container.stopped', name=self.container_name)
+        self.run_state('docker_container.absent', name=self.container_name)
+        self.run_state('docker_image.absent', name='docker.io/zookeeper', force=True)
 
     @skipIf(True, "SLOWTEST skip")
     def test_zookeeper_present(self):

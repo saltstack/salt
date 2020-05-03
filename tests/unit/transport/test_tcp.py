@@ -256,7 +256,7 @@ class BaseTCPPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
             if self._start_handlers.get(k) != v:
                 failures.append((k, v))
         if failures:
-            raise Exception("FDs still attached to the IOLoop: {0}".format(failures))
+            raise Exception('FDs still attached to the IOLoop: {0}'.format(failures))
         del self.channel
         del self._start_handlers
 

@@ -12,8 +12,10 @@ import logging
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
 
 # Import Salt Testing libs
-from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
+from tests.support.case import ModuleCase, ShellCase
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest, expensiveTest, generate_random_name
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 
@@ -42,6 +44,7 @@ except ImportError:
     "Please install keystoneclient and a keystone server before running"
     "openstack integration tests.",
 )
+@expensiveTest
 class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
     """
     Validate the keystone state
@@ -50,7 +53,6 @@ class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
     endpoint = "http://localhost:35357/v2.0"
     token = "administrator"
 
-    @destructiveTest
     def test_aaa_setup_keystone_endpoint(self):
         ret = self.run_state(
             "keystone.service_present",
@@ -210,14 +212,48 @@ class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(driver.auth_token)
 
 
-@skipIf(not HAS_SHADE, "openstack driver requires `shade`")
-class RackspaceTest(CloudTest):
-    """
+@skipIf(not HAS_SHADE, 'openstack driver requires `shade`')
+@expensiveTest
+class RackspaceTest(ShellCase):
+    '''
     Integration tests for the Rackspace cloud provider using the Openstack driver
-    """
+    '''
 
-    PROVIDER = "openstack"
-    REQUIRED_PROVIDER_CONFIG_ITEMS = ("auth", "cloud", "region_name")
+    def setUp(self):
+        '''
+        Sets up the test requirements
+        '''
+        super(RackspaceTest, self).setUp()
+
+        # check if appropriate cloud provider and profile files are present
+        profile_str = 'openstack-config'
+        providers = self.run_cloud('--list-providers')
+        if profile_str + ':' not in providers:
+            self.skipTest(
+                'Configuration file for {0} was not found. Check {0}.conf files '
+                'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
+                .format(PROVIDER_NAME)
+            )
+
+        # check if personal access token, ssh_key_file, and ssh_key_names are present
+        config = cloud_providers_config(
+            os.path.join(
+                RUNTIME_VARS.FILES,
+                'conf',
+                'cloud.providers.d',
+                PROVIDER_NAME + '.conf'
+            )
+        )
+
+        region_name = config[profile_str][DRIVER_NAME].get('region_name')
+        auth = config[profile_str][DRIVER_NAME].get('auth')
+        cloud = config[profile_str][DRIVER_NAME].get('cloud')
+        if not region_name or not (auth or cloud):
+            self.skipTest(
+                'A region_name and (auth or cloud) must be provided to run these '
+                'tests. Check tests/integration/files/conf/cloud.providers.d/{0}.conf'
+                .format(PROVIDER_NAME)
+            )
 
     def test_instance(self):
         """

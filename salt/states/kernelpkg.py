@@ -36,14 +36,14 @@ Chaining can also be achieved using wait/listen requisites:
 .. code-block:: yaml
 
     install-latest-kernel:
-      kernel.latest_installed: []
+      kernelpkg.latest_installed: []
 
     boot-latest-kernel:
-      kernel.latest_wait:
+      kernelpkg.latest_wait:
         - at_time: 1
         - listen:
-          - kernel: install-latest-kernel
-"""
+          - kernelpkg: install-latest-kernel
+'''
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
@@ -201,10 +201,17 @@ def latest_wait(name, at_time=None, **kwargs):  # pylint: disable=unused-argumen
 
 
 def mod_watch(name, sfun, **kwargs):
-    """
-    Execute a kernelpkg state based on a watch or listen call
-    """
-    if sfun in ("latest_active", "latest_wait"):
+    '''
+    The kernerpkg watcher, called to invoke the watch command.
+    When called, execute a kernelpkg state based on a watch or listen call.
+
+    .. note::
+        This state exists to support special handling of the ``watch``
+        :ref:`requisite <requisites>`. It should not be called directly.
+
+        Parameters for this function should be set by the state being triggered.
+    '''
+    if sfun in ('latest_active', 'latest_wait'):
         return latest_active(name, **kwargs)
     else:
         return {

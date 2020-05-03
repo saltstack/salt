@@ -1539,7 +1539,7 @@ def get_attribute(
                 log.error("Found more than one EC2 instance matching the criteria.")
                 return False
             elif not instances:
-                log.error("Found no EC2 instance matching the criteria.")
+                log.error('Found no EC2 instance matching the criteria.')
                 return False
             instance_id = instances[0]
         instance_attribute = conn.get_instance_attribute(instance_id, attribute)
@@ -2269,10 +2269,10 @@ def set_volumes_tags(
             changes["old"][vol.id] = dict(getattr(vol, "tags", {}))
             changes["new"][vol.id] = tags
         else:
-            log.debug("No changes needed for vol.id %s", vol.id)
+            log.debug('No changes needed for vol.id %s', vol.id)
         if add:
             d = dict((k, tags[k]) for k in add)
-            log.debug("New tags for vol.id %s: %s", vol.id, d)
+            log.debug('New tags for vol.id %s: %s', vol.id, d)
         if update:
             d = dict((k, tags[k]) for k in update)
             log.debug("Updated tags for vol.id %s: %s", vol.id, d)
@@ -2287,21 +2287,10 @@ def set_volumes_tags(
                 return ret
             if authoritative:
                 if remove:
-                    log.debug("Removed tags for vol.id %s: %s", vol.id, remove)
-                    if not delete_tags(
-                        vol.id,
-                        remove,
-                        region=region,
-                        key=key,
-                        keyid=keyid,
-                        profile=profile,
-                    ):
-                        ret["success"] = False
-                        ret[
-                            "comment"
-                        ] = "Failed to remove tags on vol.id {0}: {1}".format(
-                            vol.id, remove
-                        )
+                    log.debug('Removed tags for vol.id %s: %s', vol.id, remove)
+                    if not delete_tags(vol.id, remove, region=region, key=key, keyid=keyid, profile=profile):
+                        ret['success'] = False
+                        ret['comment'] = "Failed to remove tags on vol.id {0}: {1}".format(vol.id, remove)
                         return ret
     if changes["old"] or changes["new"]:
         ret["changes"].update(changes)

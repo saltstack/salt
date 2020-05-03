@@ -160,23 +160,17 @@ class SPMTest(TestCase, AdaptedConfigurationTestCaseMixin):
             assert line.format(_F1["definition"][key]) in lines
         # Reinstall with force=False, should fail
         self.ui._error = []
-        with patch("salt.client.Caller", MagicMock(return_value=self.minion_opts)):
-            with patch(
-                "salt.client.get_local_client",
-                MagicMock(return_value=self.minion_opts["conf_file"]),
-            ):
-                self.client.run(["local", "install", pkgpath])
-        assert len(self.ui._error) > 0
+        with patch('salt.client.Caller', MagicMock(return_value=self.minion_opts)):
+            with patch('salt.client.get_local_client', MagicMock(return_value=self.minion_opts['conf_file'])):
+                self.client.run(['local', 'install', pkgpath])
+        assert self.ui._error
         # Reinstall with force=True, should succeed
         with patch.dict(self.minion_config, {"force": True}):
             self.ui._error = []
-            with patch("salt.client.Caller", MagicMock(return_value=self.minion_opts)):
-                with patch(
-                    "salt.client.get_local_client",
-                    MagicMock(return_value=self.minion_opts["conf_file"]),
-                ):
-                    self.client.run(["local", "install", pkgpath])
-            assert len(self.ui._error) == 0
+            with patch('salt.client.Caller', MagicMock(return_value=self.minion_opts)):
+                with patch('salt.client.get_local_client', MagicMock(return_value=self.minion_opts['conf_file'])):
+                    self.client.run(['local', 'install', pkgpath])
+            assert not self.ui._error
 
     def test_failure_paths(self):
         fail_args = (
@@ -213,4 +207,4 @@ class SPMTest(TestCase, AdaptedConfigurationTestCaseMixin):
                     MagicMock(return_value=self.minion_opts["conf_file"]),
                 ):
                     self.client.run(args)
-            assert len(self.ui._error) > 0
+            assert self.ui._error

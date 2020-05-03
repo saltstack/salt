@@ -15,6 +15,8 @@ from __future__ import absolute_import
 
 import logging
 
+# Import pytest-salt libs
+from pytestsalt.utils import collect_child_processes, terminate_process, terminate_process_list  # pylint: disable=unused-import
 from pytestsalt.fixtures.daemons import Salt as PytestSalt
 from pytestsalt.fixtures.daemons import SaltCall as PytestSaltCall
 from pytestsalt.fixtures.daemons import SaltKey as PytestSaltKey
@@ -103,32 +105,30 @@ class SaltMaster(GetSaltRunFixtureMixin, PytestSaltMaster):
 class SaltSyndic(GetSaltRunFixtureMixin, PytestSaltSyndic):
     """
     Class which runs the salt-syndic daemon
-    """
+    '''
 
 
-def start_daemon(
-    daemon_name=None,
-    daemon_id=None,
-    daemon_log_prefix=None,
-    daemon_cli_script_name=None,
-    daemon_config=None,
-    daemon_config_dir=None,
-    daemon_class=None,
-    bin_dir_path=None,
-    fail_hard=False,
-    start_timeout=10,
-    slow_stop=False,
-    environ=None,
-    cwd=None,
-    event_listener_config_dir=None,
-):
-    """
+def start_daemon(daemon_name=None,
+                 daemon_id=None,
+                 daemon_log_prefix=None,
+                 daemon_cli_script_name=None,
+                 daemon_config=None,
+                 daemon_config_dir=None,
+                 daemon_class=None,
+                 bin_dir_path=None,
+                 fail_hard=False,
+                 start_timeout=10,
+                 slow_stop=False,
+                 environ=None,
+                 cwd=None,
+                 event_listener_config_dir=None):
+    '''
     Returns a running salt daemon
-    """
+    '''
     # Old config name
-    daemon_config["pytest_port"] = daemon_config["runtests_conn_check_port"]
+    daemon_config['pytest_port'] = daemon_config['runtests_conn_check_port']
     # New config name
-    daemon_config["pytest_engine_port"] = daemon_config["runtests_conn_check_port"]
+    daemon_config['pytest_engine_port'] = daemon_config['runtests_conn_check_port']
     request = None
     if fail_hard:
         fail_method = RuntimeError
@@ -140,30 +140,26 @@ def start_daemon(
     while attempts <= 3:  # pylint: disable=too-many-nested-blocks
         attempts += 1
         try:
-            process = daemon_class(
-                request=request,
-                config=daemon_config,
-                config_dir=daemon_config_dir,
-                bin_dir_path=bin_dir_path,
-                log_prefix=daemon_log_prefix,
-                cli_script_name=daemon_cli_script_name,
-                slow_stop=slow_stop,
-                environ=environ,
-                cwd=cwd,
-                event_listener_config_dir=event_listener_config_dir,
-            )
+            process = daemon_class(request=request,
+                                   config=daemon_config,
+                                   config_dir=daemon_config_dir,
+                                   bin_dir_path=bin_dir_path,
+                                   log_prefix=daemon_log_prefix,
+                                   cli_script_name=daemon_cli_script_name,
+                                   slow_stop=slow_stop,
+                                   environ=environ,
+                                   cwd=cwd,
+                                   event_listener_config_dir=event_listener_config_dir)
         except TypeError:
-            process = daemon_class(
-                request=request,
-                config=daemon_config,
-                config_dir=daemon_config_dir,
-                bin_dir_path=bin_dir_path,
-                log_prefix=daemon_log_prefix,
-                cli_script_name=daemon_cli_script_name,
-                slow_stop=slow_stop,
-                environ=environ,
-                cwd=cwd,
-            )
+            process = daemon_class(request=request,
+                                   config=daemon_config,
+                                   config_dir=daemon_config_dir,
+                                   bin_dir_path=bin_dir_path,
+                                   log_prefix=daemon_log_prefix,
+                                   cli_script_name=daemon_cli_script_name,
+                                   slow_stop=slow_stop,
+                                   environ=environ,
+                                   cwd=cwd)
         process.start()
         if process.is_alive():
             try:
@@ -195,7 +191,7 @@ def start_daemon(
                 attempts,
             )
 
-            break
+            return process
         else:
             terminate_process(process.pid, kill_children=True, slow_stop=slow_stop)
             continue

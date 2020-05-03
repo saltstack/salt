@@ -322,18 +322,14 @@ def beacon(config):
         event = {}
         fun = mod.keys()[0]
         fun_cfg = mod.values()[0]
-        args = fun_cfg.pop("_args", [])
-        kwargs = fun_cfg.pop("_kwargs", {})
-        log.debug(
-            "Executing {fun} with {args} and {kwargs}".format(
-                fun=fun, args=args, kwargs=kwargs
-            )
-        )
+        args = fun_cfg.pop('_args', [])
+        kwargs = fun_cfg.pop('_kwargs', {})
+        log.debug('Executing %s with %s and %s', fun, args, kwargs)
         fun_ret = __salt__[fun](*args, **kwargs)
         log.debug("Got the reply from the minion:")
         log.debug(fun_ret)
-        if not fun_ret.get("result", False):
-            log.error("Error whilst executing {}".format(fun))
+        if not fun_ret.get('result', False):
+            log.error('Error whilst executing %s', fun)
             log.error(fun_ret)
             continue
         fun_ret_out = fun_ret["out"]
@@ -346,16 +342,16 @@ def beacon(config):
             # catch any exception and continue
             # to not jeopardise the execution of the next function in the list
             continue
-        log.debug("Result of comparison: {res}".format(res=fun_cmp_result))
+        log.debug('Result of comparison: %s', fun_cmp_result)
         if fun_cmp_result:
-            log.info("Matched {fun} with {cfg}".format(fun=fun, cfg=fun_cfg))
-            event["tag"] = "{os}/{fun}".format(os=__grains__["os"], fun=fun)
-            event["fun"] = fun
-            event["args"] = args
-            event["kwargs"] = kwargs
-            event["data"] = fun_ret
-            event["match"] = fun_cfg
-            log.debug("Queueing event:")
+            log.info('Matched %s with %s', fun, fun_cfg)
+            event['tag'] = '{os}/{fun}'.format(os=__grains__['os'], fun=fun)
+            event['fun'] = fun
+            event['args'] = args
+            event['kwargs'] = kwargs
+            event['data'] = fun_ret
+            event['match'] = fun_cfg
+            log.debug('Queueing event:')
             log.debug(event)
             ret.append(event)
     log.debug("NAPALM beacon generated the events:")

@@ -14,13 +14,10 @@ import salt.utils.files
 def __virtual__():
     """
     Only work on Gentoo
-    """
-    if __grains__["os"] == "Gentoo":
-        return "makeconf"
-    return (
-        False,
-        "The makeconf execution module cannot be loaded: only available on Gentoo systems.",
-    )
+    '''
+    if __grains__.get('os_family') == 'Gentoo':
+        return 'makeconf'
+    return (False, 'The makeconf execution module cannot be loaded: only available on Gentoo systems.')
 
 
 def _get_makeconf():

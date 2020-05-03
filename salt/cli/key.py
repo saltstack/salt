@@ -22,5 +22,5 @@ class SaltKey(salt.utils.parsers.SaltKeyOptionParser):
         verify_log(self.config)
 
         key = salt.key.KeyCLI(self.config)
-        if check_user(self.config["user"]):
+        if check_user(self.config['user']):
             key.run()

@@ -5,25 +5,554 @@
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-
-import tempfile
 from collections import OrderedDict as odict
-
-# Import third party libs
-import jinja2.exceptions
-
-# Import Salt Libs
-import salt.modules.debian_ip as debian_ip
-import salt.utils
+import tempfile
+import os
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
+# Import Salt Libs
+import salt.modules.debian_ip as debian_ip
+import salt.utils.files
+import salt.utils.platform
+
+        # IPv4-only interface; single address
+        {'iface_name': 'eth1', 'iface_type': 'eth', 'enabled': True,
+            'build_interface': {
+                'proto': 'static',
+                'ipaddr': '192.168.4.9',
+                'netmask': '255.255.255.0',
+                'gateway': '192.168.4.1',
+                'enable_ipv6': False,
+                'noifupdown': True,
+                },
+            'get_interface': odict([('eth1', odict([('enabled', True), ('data', odict([
+                ('inet', odict([
+                    ('addrfam', 'inet'),
+                    ('proto', 'static'),
+                    ('filename', None),
+                    ('address', '192.168.4.9'),
+                    ('netmask', '255.255.255.0'),
+                    ('gateway', '192.168.4.1'),
+                    ])),
+                ]))]))]),
+            'return': [
+                'auto eth1\n',
+                'iface eth1 inet static\n',
+                '    address 192.168.4.9\n',
+                '    netmask 255.255.255.0\n',
+                '    gateway 192.168.4.1\n',
+                '\n']},
+
+        # IPv6-only; single address
+        {'iface_name': 'eth2', 'iface_type': 'eth', 'enabled': True,
+            'build_interface': {
+                'ipv6proto': 'static',
+                'ipv6ipaddr': '2001:db8:dead:beef::3',
+                'ipv6netmask': '64',
+                'ipv6gateway': '2001:db8:dead:beef::1',
+                'enable_ipv6': True,
+                'noifupdown': True,
+                },
+            'get_interface': odict([('eth2', odict([('enabled', True), ('data', odict([
+                ('inet6', odict([
+                    ('addrfam', 'inet6'),
+                    ('proto', 'static'),
+                    ('filename', None),
+                    ('address', '2001:db8:dead:beef::3'),
+                    ('netmask', 64),
+                    ('gateway', '2001:db8:dead:beef::1'),
+                    ])),
+                ]))]))]),
+            'return': [
+                'auto eth2\n',
+                'iface eth2 inet6 static\n',
+                '    address 2001:db8:dead:beef::3\n',
+                '    netmask 64\n',
+                '    gateway 2001:db8:dead:beef::1\n',
+                '\n']},
+
+        # IPv6-only; multiple addrs; no gw; first addr from ipv6addr
+        {'iface_name': 'eth3', 'iface_type': 'eth', 'enabled': True,
+            'build_interface': {
+                'ipv6proto': 'static',
+                'ipv6ipaddr': '2001:db8:dead:beef::5/64',
+                'ipv6ipaddrs': [
+                    '2001:db8:dead:beef::7/64',
+                    '2001:db8:dead:beef::8/64',
+                    '2001:db8:dead:beef::9/64'],
+                'enable_ipv6': True,
+                'noifupdown': True,
+                },
+            'get_interface': odict([('eth3', odict([('enabled', True), ('data', odict([
+                ('inet6', odict([
+                    ('addrfam', 'inet6'),
+                    ('proto', 'static'),
+                    ('filename', None),
+                    ('address', '2001:db8:dead:beef::5/64'),
+                    ('addresses', [
+                        '2001:db8:dead:beef::7/64',
+                        '2001:db8:dead:beef::8/64',
+                        '2001:db8:dead:beef::9/64',
+                        ]),
+                    ])),
+                ]))]))]),
+            'return': [
+                'auto eth3\n',
+                'iface eth3 inet6 static\n',
+                '    address 2001:db8:dead:beef::5/64\n',
+                '    address 2001:db8:dead:beef::7/64\n',
+                '    address 2001:db8:dead:beef::8/64\n',
+                '    address 2001:db8:dead:beef::9/64\n',
+                '\n']},
+
+        # IPv6-only; multiple addresses
+        {'iface_name': 'eth4', 'iface_type': 'eth', 'enabled': True,
+            'build_interface': {
+                'ipv6proto': 'static',
+                'ipv6ipaddrs': [
+                    '2001:db8:dead:beef::5/64',
+                    '2001:db8:dead:beef::7/64',
+                    '2001:db8:dead:beef::8/64',
+                    '2001:db8:dead:beef::9/64'],
+                'ipv6gateway': '2001:db8:dead:beef::1',
+                'enable_ipv6': True,
+                'noifupdown': True,
+                },
+            'get_interface': odict([('eth4', odict([('enabled', True), ('data', odict([
+                ('inet6', odict([
+                    ('addrfam', 'inet6'),
+                    ('proto', 'static'),
+                    ('filename', None),
+                    ('address', '2001:db8:dead:beef::5/64'),
+                    ('addresses', [
+                        '2001:db8:dead:beef::7/64',
+                        '2001:db8:dead:beef::8/64',
+                        '2001:db8:dead:beef::9/64',
+                        ]),
+                    ('gateway', '2001:db8:dead:beef::1'),
+                    ])),
+                ]))]))]),
+            'return': [
+                'auto eth4\n',
+                'iface eth4 inet6 static\n',
+                '    address 2001:db8:dead:beef::5/64\n',
+                '    address 2001:db8:dead:beef::7/64\n',
+                '    address 2001:db8:dead:beef::8/64\n',
+                '    address 2001:db8:dead:beef::9/64\n',
+                '    gateway 2001:db8:dead:beef::1\n',
+                '\n']},
+
+        # IPv4 and IPv6 settings with v4 disabled
+        {'iface_name': 'eth5', 'iface_type': 'eth', 'enabled': True,
+            'build_interface': {
+                'proto': 'static',
+                'ipaddr': '192.168.4.9',
+                'netmask': '255.255.255.0',
+                'gateway': '192.168.4.1',
+                'ipv6proto': 'static',
+                'ipv6ipaddr': '2001:db8:dead:beef::3',
+                'ipv6netmask': '64',
+                'ipv6gateway': '2001:db8:dead:beef::1',
+                'enable_ipv4': False,
+                'noifupdown': True,
+                },
+            'get_interface': odict([('eth5', odict([('enabled', True), ('data', odict([
+                ('inet6', odict([
+                    ('addrfam', 'inet6'),
+                    ('proto', 'static'),
+                    ('filename', None),
+                    ('address', '2001:db8:dead:beef::3'),
+                    ('netmask', 64),
+                    ('gateway', '2001:db8:dead:beef::1'),
+                    ])),
+                ]))]))]),
+            'return': [
+                'auto eth5\n',
+                'iface eth5 inet6 static\n',
+                '    address 2001:db8:dead:beef::3\n',
+                '    netmask 64\n',
+                '    gateway 2001:db8:dead:beef::1\n',
+                '\n']},
+
+        # IPv4 and IPv6 settings with v6 disabled
+        {'iface_name': 'eth6', 'iface_type': 'eth', 'enabled': True,
+            'build_interface': {
+                'proto': 'static',
+                'ipaddr': '192.168.4.9',
+                'netmask': '255.255.255.0',
+                'gateway': '192.168.4.1',
+                'ipv6proto': 'static',
+                'ipv6ipaddr': '2001:db8:dead:beef::3',
+                'ipv6netmask': '64',
+                'ipv6gateway': '2001:db8:dead:beef::1',
+                'enable_ipv6': False,
+                'noifupdown': True,
+                },
+            'get_interface': odict([('eth6', odict([('enabled', True), ('data', odict([
+                ('inet', odict([
+                    ('addrfam', 'inet'),
+                    ('proto', 'static'),
+                    ('filename', None),
+                    ('address', '192.168.4.9'),
+                    ('netmask', '255.255.255.0'),
+                    ('gateway', '192.168.4.1'),
+                    ])),
+                ]))]))]),
+            'return': [
+                'auto eth6\n',
+                'iface eth6 inet static\n',
+                '    address 192.168.4.9\n',
+                '    netmask 255.255.255.0\n',
+                '    gateway 192.168.4.1\n',
+                '\n']},
+
+        # IPv4 and IPv6; shared/overridden settings
+        {'iface_name': 'eth7', 'iface_type': 'eth', 'enabled': True,
+            'build_interface': {
+                'proto': 'static',
+                'ipaddr': '192.168.4.9',
+                'netmask': '255.255.255.0',
+                'gateway': '192.168.4.1',
+                'ipv6proto': 'static',
+                'ipv6ipaddr': '2001:db8:dead:beef::3',
+                'ipv6netmask': '64',
+                'ipv6gateway': '2001:db8:dead:beef::1',
+                'ttl': '18',  # shared
+                'ipv6ttl': '15',  # overridden for v6
+                'mtu': '1480',  # shared
+                'enable_ipv6': True,
+                'noifupdown': True,
+                },
+            'get_interface': odict([('eth7', odict([('enabled', True), ('data', odict([
+                ('inet', odict([
+                    ('addrfam', 'inet'),
+                    ('proto', 'static'),
+                    ('filename', None),
+                    ('address', '192.168.4.9'),
+                    ('netmask', '255.255.255.0'),
+                    ('gateway', '192.168.4.1'),
+                    ('ttl', 18),
+                    ('mtu', 1480),
+                    ])),
+                ('inet6', odict([
+                    ('addrfam', 'inet6'),
+                    ('proto', 'static'),
+                    ('filename', None),
+                    ('address', '2001:db8:dead:beef::3'),
+                    ('netmask', 64),
+                    ('gateway', '2001:db8:dead:beef::1'),
+                    ('ttl', 15),
+                    ('mtu', 1480),
+                    ])),
+                ]))]))]),
+            'return': [
+                'auto eth7\n',
+                'iface eth7 inet static\n',
+                '    address 192.168.4.9\n',
+                '    netmask 255.255.255.0\n',
+                '    gateway 192.168.4.1\n',
+                '    ttl 18\n',
+                '    mtu 1480\n',
+                'iface eth7 inet6 static\n',
+                '    address 2001:db8:dead:beef::3\n',
+                '    netmask 64\n',
+                '    gateway 2001:db8:dead:beef::1\n',
+                '    ttl 15\n',
+                '    mtu 1480\n',
+                '\n']},
+
+        # Slave iface
+        {'iface_name': 'eth8', 'iface_type': 'slave', 'enabled': True,
+            'build_interface': {
+                'master': 'bond0',
+                'noifupdown': True,
+                },
+            'get_interface': odict([('eth8', odict([('enabled', True), ('data', odict([
+                ('inet', odict([
+                    ('addrfam', 'inet'),
+                    ('proto', 'manual'),
+                    ('filename', None),
+                    ('bonding', odict([
+                        ('master', 'bond0'),
+                        ])),
+                    ('bonding_keys', ['master']),
+                    ])),
+                ]))]))]),
+            'return': [
+                'auto eth8\n',
+                'iface eth8 inet manual\n',
+                '    bond-master bond0\n',
+                '\n']},
+
+        # Bond; with address IPv4 and IPv6 address; slaves as string
+        {'iface_name': 'bond9', 'iface_type': 'bond', 'enabled': True,
+            'build_interface': {
+                'proto': 'static',
+                'ipaddr': '10.1.0.14',
+                'netmask': '255.255.255.0',
+                'gateway': '10.1.0.1',
+                'ipv6proto': 'static',
+                'ipv6ipaddr': '2001:db8:dead:c0::3',
+                'ipv6netmask': '64',
+                'ipv6gateway': '2001:db8:dead:c0::1',
+                'mode': '802.3ad',
+                'slaves': 'eth4 eth5',
+                'enable_ipv6': True,
+                'noifupdown': True,
+                },
+            'get_interface': odict([('bond9', odict([('enabled', True), ('data', odict([
+                ('inet', odict([
+                    ('addrfam', 'inet'),
+                    ('proto', 'static'),
+                    ('filename', None),
+                    ('address', '10.1.0.14'),
+                    ('netmask', '255.255.255.0'),
+                    ('gateway', '10.1.0.1'),
+                    ('bonding', odict([
+                        ('ad_select', '0'),
+                        ('downdelay', '200'),
+                        ('lacp_rate', '0'),
+                        ('miimon', '100'),
+                        ('mode', '4'),
+                        ('slaves', 'eth4 eth5'),
+                        ('updelay', '0'),
+                        ('use_carrier', 'on'),
+                        ])),
+                    ('bonding_keys', [
+                        'ad_select',
+                        'downdelay',
+                        'lacp_rate',
+                        'miimon',
+                        'mode',
+                        'slaves',
+                        'updelay',
+                        'use_carrier',
+                        ]),
+                    ])),
+                ('inet6', odict([
+                    ('addrfam', 'inet6'),
+                    ('proto', 'static'),
+                    ('filename', None),
+                    ('address', '2001:db8:dead:c0::3'),
+                    ('netmask', 64),
+                    ('gateway', '2001:db8:dead:c0::1'),
+                    ('bonding', odict([
+                        ('ad_select', '0'),
+                        ('downdelay', '200'),
+                        ('lacp_rate', '0'),
+                        ('miimon', '100'),
+                        ('mode', '4'),
+                        ('slaves', 'eth4 eth5'),
+                        ('updelay', '0'),
+                        ('use_carrier', 'on'),
+                        ])),
+                    ('bonding_keys', [
+                        'ad_select',
+                        'downdelay',
+                        'lacp_rate',
+                        'miimon',
+                        'mode',
+                        'slaves',
+                        'updelay',
+                        'use_carrier',
+                        ]),
+                    ])),
+                ]))]))]),
+            'return': [
+                'auto bond9\n',
+                'iface bond9 inet static\n',
+                '    address 10.1.0.14\n',
+                '    netmask 255.255.255.0\n',
+                '    gateway 10.1.0.1\n',
+                '    bond-ad_select 0\n',
+                '    bond-downdelay 200\n',
+                '    bond-lacp_rate 0\n',
+                '    bond-miimon 100\n',
+                '    bond-mode 4\n',
+                '    bond-slaves eth4 eth5\n',
+                '    bond-updelay 0\n',
+                '    bond-use_carrier on\n',
+                'iface bond9 inet6 static\n',
+                '    address 2001:db8:dead:c0::3\n',
+                '    netmask 64\n',
+                '    gateway 2001:db8:dead:c0::1\n',
+                '    bond-ad_select 0\n',
+                '    bond-downdelay 200\n',
+                '    bond-lacp_rate 0\n',
+                '    bond-miimon 100\n',
+                '    bond-mode 4\n',
+                '    bond-slaves eth4 eth5\n',
+                '    bond-updelay 0\n',
+                '    bond-use_carrier on\n',
+                '\n']},
+
+        # Bond; with address IPv4 and IPv6 address; slaves as list
+        {'iface_name': 'bond10', 'iface_type': 'bond', 'enabled': True,
+            'build_interface': {
+                'proto': 'static',
+                'ipaddr': '10.1.0.14',
+                'netmask': '255.255.255.0',
+                'gateway': '10.1.0.1',
+                'ipv6proto': 'static',
+                'ipv6ipaddr': '2001:db8:dead:c0::3',
+                'ipv6netmask': '64',
+                'ipv6gateway': '2001:db8:dead:c0::1',
+                'mode': '802.3ad',
+                'slaves': ['eth4', 'eth5'],
+                'enable_ipv6': True,
+                'noifupdown': True,
+                },
+            'get_interface': odict([('bond10', odict([('enabled', True), ('data', odict([
+                ('inet', odict([
+                    ('addrfam', 'inet'),
+                    ('proto', 'static'),
+                    ('filename', None),
+                    ('address', '10.1.0.14'),
+                    ('netmask', '255.255.255.0'),
+                    ('gateway', '10.1.0.1'),
+                    ('bonding', odict([
+                        ('ad_select', '0'),
+                        ('downdelay', '200'),
+                        ('lacp_rate', '0'),
+                        ('miimon', '100'),
+                        ('mode', '4'),
+                        ('slaves', 'eth4 eth5'),
+                        ('updelay', '0'),
+                        ('use_carrier', 'on'),
+                        ])),
+                    ('bonding_keys', [
+                        'ad_select',
+                        'downdelay',
+                        'lacp_rate',
+                        'miimon',
+                        'mode',
+                        'slaves',
+                        'updelay',
+                        'use_carrier',
+                        ]),
+                    ])),
+                ('inet6', odict([
+                    ('addrfam', 'inet6'),
+                    ('proto', 'static'),
+                    ('filename', None),
+                    ('address', '2001:db8:dead:c0::3'),
+                    ('netmask', 64),
+                    ('gateway', '2001:db8:dead:c0::1'),
+                    ('bonding', odict([
+                        ('ad_select', '0'),
+                        ('downdelay', '200'),
+                        ('lacp_rate', '0'),
+                        ('miimon', '100'),
+                        ('mode', '4'),
+                        ('slaves', 'eth4 eth5'),
+                        ('updelay', '0'),
+                        ('use_carrier', 'on'),
+                        ])),
+                    ('bonding_keys', [
+                        'ad_select',
+                        'downdelay',
+                        'lacp_rate',
+                        'miimon',
+                        'mode',
+                        'slaves',
+                        'updelay',
+                        'use_carrier',
+                        ]),
+                    ])),
+                ]))]))]),
+            'return': [
+                'auto bond10\n',
+                'iface bond10 inet static\n',
+                '    address 10.1.0.14\n',
+                '    netmask 255.255.255.0\n',
+                '    gateway 10.1.0.1\n',
+                '    bond-ad_select 0\n',
+                '    bond-downdelay 200\n',
+                '    bond-lacp_rate 0\n',
+                '    bond-miimon 100\n',
+                '    bond-mode 4\n',
+                '    bond-slaves eth4 eth5\n',
+                '    bond-updelay 0\n',
+                '    bond-use_carrier on\n',
+                'iface bond10 inet6 static\n',
+                '    address 2001:db8:dead:c0::3\n',
+                '    netmask 64\n',
+                '    gateway 2001:db8:dead:c0::1\n',
+                '    bond-ad_select 0\n',
+                '    bond-downdelay 200\n',
+                '    bond-lacp_rate 0\n',
+                '    bond-miimon 100\n',
+                '    bond-mode 4\n',
+                '    bond-slaves eth4 eth5\n',
+                '    bond-updelay 0\n',
+                '    bond-use_carrier on\n',
+                '\n']},
+
+        # Bond VLAN; with IPv4 address
+        {'iface_name': 'bond0.11', 'iface_type': 'vlan', 'enabled': True,
+            'build_interface': {
+                'proto': 'static',
+                'ipaddr': '10.7.0.8',
+                'netmask': '255.255.255.0',
+                'gateway': '10.7.0.1',
+                'slaves': 'eth6 eth7',
+                'mode': '802.3ad',
+                'enable_ipv6': False,
+                'noifupdown': True,
+                },
+            'get_interface': odict([('bond0.11', odict([('enabled', True), ('data', odict([
+                ('inet', odict([
+                    ('addrfam', 'inet'),
+                    ('proto', 'static'),
+                    ('filename', None),
+                    ('vlan_raw_device', 'bond1'),
+                    ('address', '10.7.0.8'),
+                    ('netmask', '255.255.255.0'),
+                    ('gateway', '10.7.0.1'),
+                    ('mode', '802.3ad'),
+                    ])),
+                ]))]))]),
+            'return': [
+                'auto bond0.11\n',
+                'iface bond0.11 inet static\n',
+                '    vlan-raw-device bond1\n',
+                '    address 10.7.0.8\n',
+                '    netmask 255.255.255.0\n',
+                '    gateway 10.7.0.1\n',
+                '    mode 802.3ad\n',
+                '\n']},
+
+        # Bond; without address
+        {'iface_name': 'bond0.12', 'iface_type': 'vlan', 'enabled': True,
+            'build_interface': {
+                'proto': 'static',
+                'slaves': 'eth6 eth7',
+                'mode': '802.3ad',
+                'enable_ipv6': False,
+                'noifupdown': True,
+                },
+            'get_interface': odict([('bond0.12', odict([('enabled', True), ('data', odict([
+                ('inet', odict([
+                    ('addrfam', 'inet'),
+                    ('proto', 'static'),
+                    ('filename', None),
+                    ('vlan_raw_device', 'bond1'),
+                    ('mode', '802.3ad'),
+                    ])),
+                ]))]))]),
+            'return': [
+                'auto bond0.12\n',
+                'iface bond0.12 inet static\n',
+                '    vlan-raw-device bond1\n',
+                '    mode 802.3ad\n',
+                '\n']},
+
 # Big pile of interface data for unit tests
 #   To skip, search for 'DebianIpTestCase'
-# fmt: off
 test_interfaces = [
         # Structure
         #{'iface_name': 'ethX', 'iface_type': 'eth', 'enabled': True,
@@ -235,7 +764,7 @@ test_interfaces = [
                 'ipv6netmask': '64',
                 'ipv6gateway': '2001:db8:dead:beef::1',
                 'ttl': '18',  # shared
-                'ipv6ttl': '15',  # overridden for v6
+                'ipv6ttl': '15',  # overriden for v6
                 'mtu': '1480',  # shared
                 'enable_ipv6': True,
                 'noifupdown': True,
@@ -779,10 +1308,10 @@ test_interfaces = [
                 '    gateway 2001:db8:dead:c0::1\n',
                 '\n']},
         ]
-# fmt: on
 
 
-@skipIf(salt.utils.platform.is_windows(), "Do not run these tests on Windows")
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(salt.utils.platform.is_windows(), 'Do not run these tests on Windows')
 class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.modules.debian_ip
@@ -820,6 +1349,18 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
         values = [1, True, False, "no-kaboom"]
         msg = debian_ip._error_msg_network("fnord", values)
         self.assertTrue(msg.endswith("[1|True|False|no-kaboom]"), msg)
+
+    def test_error_message_iface_should_process_non_str_expected(self):
+        values = [1, True, False, 'no-kaboom']
+        iface = 'ethtest'
+        option = 'test'
+        msg = debian_ip._error_msg_iface(iface, option, values)
+        self.assertTrue(msg.endswith('[1|True|False|no-kaboom]'), msg)
+
+    def test_error_message_network_should_process_non_str_expected(self):
+        values = [1, True, False, 'no-kaboom']
+        msg = debian_ip._error_msg_network('fnord', values)
+        self.assertTrue(msg.endswith('[1|True|False|no-kaboom]'), msg)
 
     def test_build_bond_exception(self):
         """
@@ -922,76 +1463,78 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
                     iface["get_interface"],
                 )
 
+    # '_parse_interfaces' function tests: 1
+
+    def test_parse_interfaces(self):
+        '''
+        Test if it returns the correct data for parsed configuration file
+        '''
+        with tempfile.NamedTemporaryFile(mode='r', delete=True) as tfile:
+            for iface in test_interfaces:
+                iname = iface['iface_name']
+                if iface.get('skip_test', False):
+                    continue
+                with salt.utils.files.fopen(str(tfile.name), 'w') as fh:
+                    fh.writelines(iface['return'])
+                for inet in ['inet', 'inet6']:
+                    if inet in iface['get_interface'][iname]['data']:
+                        iface['get_interface'][iname]['data'][inet]['filename'] = str(tfile.name)
+                self.assertDictEqual(
+                        debian_ip._parse_interfaces([str(tfile.name)]),
+                        iface['get_interface'])
+
     # 'get_interface' function tests: 1
 
     def test_get_interface(self):
         """
         Test if it return the contents of an interface script
-        """
+        '''
         for iface in test_interfaces:
-            if iface.get("skip_test", False):
+            if iface.get('skip_test', False):
                 continue
             with patch.object(
-                debian_ip,
-                "_parse_interfaces",
-                MagicMock(return_value=iface["get_interface"]),
-            ):
+                    debian_ip, '_parse_interfaces',
+                    MagicMock(return_value=iface['get_interface'])):
                 self.assertListEqual(
-                    debian_ip.get_interface(iface["iface_name"]), iface["return"]
-                )
+                        debian_ip.get_interface(iface['iface_name']),
+                        iface['return'])
 
     # 'build_interface' function tests: 1
 
     def test_build_interface(self):
         """
         Test if it builds an interface script for a network interface.
-        """
-        with patch(
-            "salt.modules.debian_ip._write_file_ifaces", MagicMock(return_value="salt")
-        ):
-            self.assertEqual(
-                debian_ip.build_interface("eth0", "eth", "enabled"),
-                ["s\n", "a\n", "l\n", "t\n"],
-            )
+        '''
+        with patch('salt.modules.debian_ip._write_file_ifaces',
+                   MagicMock(return_value='salt')):
+            self.assertEqual(debian_ip.build_interface('eth0', 'eth', 'enabled'),
+                             ['s\n', 'a\n', 'l\n', 't\n'])
 
-            self.assertTrue(
-                debian_ip.build_interface("eth0", "eth", "enabled", test="True")
-            )
+            self.assertTrue(debian_ip.build_interface('eth0', 'eth', 'enabled', test='True'))
 
-            with patch.object(
-                debian_ip, "_parse_settings_eth", MagicMock(return_value={"routes": []})
-            ):
-                for eth_t in ["bridge", "slave", "bond"]:
-                    self.assertRaises(
-                        AttributeError,
-                        debian_ip.build_interface,
-                        "eth0",
-                        eth_t,
-                        "enabled",
-                    )
+            with patch.object(debian_ip, '_parse_settings_eth', MagicMock(return_value={'routes': []})):
+                for eth_t in ['bridge', 'slave', 'bond']:
+                    self.assertRaises(AttributeError, debian_ip.build_interface, 'eth0', eth_t, 'enabled')
 
-            self.assertTrue(
-                debian_ip.build_interface("eth0", "eth", "enabled", test="True")
-            )
+            self.assertTrue(debian_ip.build_interface('eth0', 'eth', 'enabled', test='True'))
 
-        with tempfile.NamedTemporaryFile(mode="r", delete=True) as tfile:
-            with patch("salt.modules.debian_ip._DEB_NETWORK_FILE", str(tfile.name)):
+        with tempfile.NamedTemporaryFile(mode='r', delete=False) as tfile:
+            with patch('salt.modules.debian_ip._DEB_NETWORK_FILE', str(tfile.name)):
                 for iface in test_interfaces:
-                    if iface.get("skip_test", False):
+                    if iface.get('skip_test', False):
                         continue
                     # Skip tests that require __salt__['pkg.install']()
-                    if iface["iface_type"] in ["bridge", "pppoe", "vlan"]:
+                    if iface['iface_type'] in ['bridge', 'pppoe', 'vlan']:
                         continue
                     self.assertListEqual(
-                        debian_ip.build_interface(
-                            iface=iface["iface_name"],
-                            iface_type=iface["iface_type"],
-                            enabled=iface["enabled"],
-                            interface_file=tfile.name,
-                            **iface["build_interface"]
-                        ),
-                        iface["return"],
-                    )
+                            debian_ip.build_interface(
+                                    iface=iface['iface_name'],
+                                    iface_type=iface['iface_type'],
+                                    enabled=iface['enabled'],
+                                    interface_file=tfile.name,
+                                    **iface['build_interface']),
+                            iface['return'])
+        os.remove(tfile.name)
 
     # 'up' function tests: 1
 

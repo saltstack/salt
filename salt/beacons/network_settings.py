@@ -198,19 +198,15 @@ def beacon(config):
             interfaces.append(interface_config)
         else:
             # No direct match, try with * wildcard regexp
-            for interface_stat in _stats:
-                match = re.search(interface_config, interface_stat)
+            interface_regexp = interface.replace('*', '[0-9]+')
+            for _interface in _stats:
+                match = re.search(interface_regexp, _interface)
                 if match:
-                    interfaces.append(interface_stat)
-                    expanded_config["interfaces"][interface_stat] = _config[
-                        "interfaces"
-                    ][interface_config]
+                    interfaces.append(match.group())
+                    expanded_config[match.group()] = _config['interfaces'][interface]
 
     if expanded_config:
-        _config["interfaces"].update(expanded_config["interfaces"])
-
-        # config updated so update _config
-        list(map(_config.update, config))
+        _config['interfaces'].update(expanded_config)
 
     log.debug("interfaces %s", interfaces)
     for interface in interfaces:

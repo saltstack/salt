@@ -31,8 +31,8 @@ __virtualname__ = "group"
 def __virtual__():
     """
     Set the group module if the kernel is SunOS
-    """
-    if __grains__["kernel"] == "SunOS":
+    '''
+    if __grains__.get('kernel') == 'SunOS':
         return __virtualname__
     return (
         False,

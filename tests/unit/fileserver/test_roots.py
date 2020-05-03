@@ -10,7 +10,13 @@ import copy
 import os
 import tempfile
 
-import salt.fileclient
+# Import Salt Testing libs
+from tests.integration import AdaptedConfigurationTestCaseMixin
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.paths import TMP
 
 # Import Salt libs
 import salt.fileserver.roots as roots
@@ -38,8 +44,8 @@ UNICODE_DIRNAME = UNICODE_ENVNAME = "соль"
 
 class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin):
     def setup_loader_modules(self):
-        self.opts = self.get_temp_config("master")
-        empty_dir = os.path.join(RUNTIME_VARS.TMP_STATE_TREE, "empty_dir")
+        self.opts = self.get_temp_config('master')
+        empty_dir = os.path.join(RUNTIME_VARS.TMP_STATE_TREE, 'empty_dir')
         if not os.path.isdir(empty_dir):
             os.makedirs(empty_dir)
         return {roots: {"__opts__": self.opts}}
@@ -51,9 +57,9 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         """
         if salt.utils.platform.is_windows():
             root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-            source_sym = os.path.join(root_dir, "source_sym")
-            with salt.utils.files.fopen(source_sym, "w") as fp_:
-                fp_.write("hello world!\n")
+            source_sym = os.path.join(root_dir, 'source_sym')
+            with salt.utils.files.fopen(source_sym, 'w') as fp_:
+                fp_.write('hello world!\n')
             cwd = os.getcwd()
             try:
                 os.chdir(root_dir)
@@ -70,11 +76,9 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
                 os.symlink("source_sym", dest_sym)
             cls.test_symlink_list_file_roots = None
         cls.tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-        full_path_to_file = os.path.join(RUNTIME_VARS.BASE_FILES, "testfile")
-        with salt.utils.files.fopen(full_path_to_file, "rb") as s_fp:
-            with salt.utils.files.fopen(
-                os.path.join(cls.tmp_dir, "testfile"), "wb"
-            ) as d_fp:
+        full_path_to_file = os.path.join(RUNTIME_VARS.BASE_FILES, 'testfile')
+        with salt.utils.files.fopen(full_path_to_file, 'rb') as s_fp:
+            with salt.utils.files.fopen(os.path.join(cls.tmp_dir, 'testfile'), 'wb') as d_fp:
                 for line in s_fp:
                     d_fp.write(line)
 
@@ -102,8 +106,8 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         ret = roots.find_file("testfile")
         self.assertEqual("testfile", ret["rel"])
 
-        full_path_to_file = os.path.join(RUNTIME_VARS.BASE_FILES, "testfile")
-        self.assertEqual(full_path_to_file, ret["path"])
+        full_path_to_file = os.path.join(RUNTIME_VARS.BASE_FILES, 'testfile')
+        self.assertEqual(full_path_to_file, ret['path'])
 
     def test_serve_file(self):
         with patch.dict(roots.__opts__, {"file_buffer_size": 262144}):
@@ -116,8 +120,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
             ret = roots.serve_file(load, fnd)
 
             with salt.utils.files.fopen(
-                os.path.join(RUNTIME_VARS.BASE_FILES, "testfile"), "rb"
-            ) as fp_:
+                    os.path.join(RUNTIME_VARS.BASE_FILES, 'testfile'), 'rb') as fp_:
                 data = fp_.read()
 
             self.assertDictEqual(ret, {"data": data, "dest": "testfile"})
@@ -141,8 +144,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         # Hashes are different in Windows. May be how git translates line
         # endings
         with salt.utils.files.fopen(
-            os.path.join(RUNTIME_VARS.BASE_FILES, "testfile"), "rb"
-        ) as fp_:
+                os.path.join(RUNTIME_VARS.BASE_FILES, 'testfile'), 'rb') as fp_:
             hsum = salt.utils.hashutils.sha256_digest(fp_.read())
 
         self.assertDictEqual(ret, {"hsum": hsum, "hash_type": "sha256"})

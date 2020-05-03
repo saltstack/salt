@@ -1104,11 +1104,9 @@ def verify(
     trustmodels = ("pgp", "classic", "tofu", "tofu+pgp", "direct", "always", "auto")
 
     if trustmodel and trustmodel not in trustmodels:
-        msg = "Invalid trustmodel defined: {}. Use one of: {}".format(
-            trustmodel, ", ".join(trustmodels)
-        )
+        msg = 'Invalid trustmodel defined: {}. Use one of: {}'.format(trustmodel, ', '.join(trustmodels))
         log.warning(msg)
-        return {"res": False, "message": msg}
+        return {'res': False, 'message': msg}
 
     extra_args = []
 

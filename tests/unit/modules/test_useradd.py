@@ -57,15 +57,15 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
     def test_add(self):
         """
         Test for adding a user
-        """
-        with patch.dict(useradd.__grains__, {"kernel": "OpenBSD"}):
-            mock = MagicMock(return_value={"retcode": 0})
-            with patch.dict(useradd.__salt__, {"cmd.run_all": mock}):
-                self.assertTrue(useradd.add("Salt"))
+        '''
+        with patch.dict(useradd.__grains__, {'kernel': 'OpenBSD'}):
+            mock = MagicMock(return_value={'retcode': 0})
+            with patch.dict(useradd.__salt__, {'cmd.run_all': mock}):
+                self.assertTrue(useradd.add('Salt'))
 
-            mock = MagicMock(return_value={"retcode": 1})
-            with patch.dict(useradd.__salt__, {"cmd.run_all": mock}):
-                self.assertFalse(useradd.add("Salt"))
+            mock = MagicMock(return_value={'retcode': 1})
+            with patch.dict(useradd.__salt__, {'cmd.run_all': mock}):
+                self.assertFalse(useradd.add('Salt'))
 
     # 'getent' function tests: 2
 
@@ -425,16 +425,18 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
             self.assertRaises(CommandExecutionError, useradd.rename, "salt", 1)
 
         mock = MagicMock(return_value=None)
-        with patch.dict(useradd.__salt__, {"cmd.run": mock}):
-            mock = MagicMock(side_effect=[False, {"name": ""}, {"name": "salt"}])
-            with patch.object(useradd, "info", mock):
-                self.assertTrue(useradd.rename("name", "salt"))
+        with patch.dict(useradd.__salt__, {'cmd.run': mock}):
+            mock = MagicMock(side_effect=[False, {'name': ''},
+                                          {'name': 'salt'}])
+            with patch.object(useradd, 'info', mock):
+                self.assertTrue(useradd.rename('name', 'salt'))
 
         mock = MagicMock(return_value=None)
-        with patch.dict(useradd.__salt__, {"cmd.run": mock}):
-            mock = MagicMock(side_effect=[False, {"name": ""}, {"name": ""}])
-            with patch.object(useradd, "info", mock):
-                self.assertFalse(useradd.rename("salt", "salt"))
+        with patch.dict(useradd.__salt__, {'cmd.run': mock}):
+            mock = MagicMock(side_effect=[False, {'name': ''},
+                                          {'name': ''}])
+            with patch.object(useradd, 'info', mock):
+                self.assertFalse(useradd.rename('salt', 'salt'))
 
     def test_build_gecos_field(self):
         """

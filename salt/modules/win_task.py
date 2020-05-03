@@ -18,6 +18,7 @@ from datetime import datetime
 
 # Import Salt libs
 import salt.utils.platform
+from salt.exceptions import ArgumentValueError, CommandExecutionError
 import salt.utils.winapi
 from salt.exceptions import ArgumentValueError, CommandExecutionError
 from salt.ext.six.moves import range
@@ -26,7 +27,7 @@ from salt.ext.six.moves import range
 try:
     import pythoncom
     import win32com.client
-
+    import win32api
     HAS_DEPENDENCIES = True
 except ImportError:
     HAS_DEPENDENCIES = False
@@ -97,83 +98,103 @@ TASK_TRIGGER_BOOT = 8
 TASK_TRIGGER_LOGON = 9
 TASK_TRIGGER_SESSION_STATE_CHANGE = 11
 
-duration = {
-    "Immediately": "PT0M",
-    "Indefinitely": "",
-    "Do not wait": "PT0M",
-    "15 seconds": "PT15S",
-    "30 seconds": "PT30S",
-    "1 minute": "PT1M",
-    "5 minutes": "PT5M",
-    "10 minutes": "PT10M",
-    "15 minutes": "PT15M",
-    "30 minutes": "PT30M",
-    "1 hour": "PT1H",
-    "2 hours": "PT2H",
-    "4 hours": "PT4H",
-    "8 hours": "PT8H",
-    "12 hours": "PT12H",
-    "1 day": ["P1D", "PT24H"],
-    "3 days": ["P3D", "PT72H"],
-    "30 days": "P30D",
-    "90 days": "P90D",
-    "180 days": "P180D",
-    "365 days": "P365D",
-}
+duration = {'Immediately': 'PT0M',
+            'Indefinitely': 'PT0M',
+            'Do not wait': 'PT0M',
+            '15 seconds': 'PT15S',
+            '30 seconds': 'PT30S',
+            '1 minute': 'PT1M',
+            '5 minutes': 'PT5M',
+            '10 minutes': 'PT10M',
+            '15 minutes': 'PT15M',
+            '30 minutes': 'PT30M',
+            '1 hour': 'PT1H',
+            '2 hours': 'PT2H',
+            '4 hours': 'PT4H',
+            '8 hours': 'PT8H',
+            '12 hours': 'PT12H',
+            '1 day': ['P1D', 'PT24H'],
+            '3 days': ['P3D', 'PT72H'],
+            '30 days': 'P30D',
+            '90 days': 'P90D',
+            '180 days': 'P180D',
+            '365 days': 'P365D'}
 
-action_types = {
-    "Execute": TASK_ACTION_EXEC,
-    "Email": TASK_ACTION_SEND_EMAIL,
-    "Message": TASK_ACTION_SHOW_MESSAGE,
-}
+action_types = {'Execute': TASK_ACTION_EXEC,
+                'Email': TASK_ACTION_SEND_EMAIL,
+                'Message': TASK_ACTION_SHOW_MESSAGE}
 
-trigger_types = {
-    "Event": TASK_TRIGGER_EVENT,
-    "Once": TASK_TRIGGER_TIME,
-    "Daily": TASK_TRIGGER_DAILY,
-    "Weekly": TASK_TRIGGER_WEEKLY,
-    "Monthly": TASK_TRIGGER_MONTHLY,
-    "MonthlyDay": TASK_TRIGGER_MONTHLYDOW,
-    "OnIdle": TASK_TRIGGER_IDLE,
-    "OnTaskCreation": TASK_TRIGGER_REGISTRATION,
-    "OnBoot": TASK_TRIGGER_BOOT,
-    "OnLogon": TASK_TRIGGER_LOGON,
-    "OnSessionChange": TASK_TRIGGER_SESSION_STATE_CHANGE,
-}
+trigger_types = {'Event': TASK_TRIGGER_EVENT,
+                 'Once': TASK_TRIGGER_TIME,
+                 'Daily': TASK_TRIGGER_DAILY,
+                 'Weekly': TASK_TRIGGER_WEEKLY,
+                 'Monthly': TASK_TRIGGER_MONTHLY,
+                 'MonthlyDay': TASK_TRIGGER_MONTHLYDOW,
+                 'OnIdle': TASK_TRIGGER_IDLE,
+                 'OnTaskCreation': TASK_TRIGGER_REGISTRATION,
+                 'OnBoot': TASK_TRIGGER_BOOT,
+                 'OnLogon': TASK_TRIGGER_LOGON,
+                 'OnSessionChange': TASK_TRIGGER_SESSION_STATE_CHANGE}
 
-states = {
-    TASK_STATE_UNKNOWN: "Unknown",
-    TASK_STATE_DISABLED: "Disabled",
-    TASK_STATE_QUEUED: "Queued",
-    TASK_STATE_READY: "Ready",
-    TASK_STATE_RUNNING: "Running",
-}
+states = {TASK_STATE_UNKNOWN: 'Unknown',
+          TASK_STATE_DISABLED: 'Disabled',
+          TASK_STATE_QUEUED: 'Queued',
+          TASK_STATE_READY: 'Ready',
+          TASK_STATE_RUNNING: 'Running'}
 
-instances = {
-    "Parallel": TASK_INSTANCES_PARALLEL,
-    "Queue": TASK_INSTANCES_QUEUE,
-    "No New Instance": TASK_INSTANCES_IGNORE_NEW,
-    "Stop Existing": TASK_INSTANCES_STOP_EXISTING,
-}
+instances = {'Parallel': TASK_INSTANCES_PARALLEL,
+             'Queue': TASK_INSTANCES_QUEUE,
+             'No New Instance': TASK_INSTANCES_IGNORE_NEW,
+             'Stop Existing': TASK_INSTANCES_STOP_EXISTING}
 
-results = {
-    0x0: "The operation completed successfully",
-    0x1: "Incorrect or unknown function called",
-    0x2: "File not found",
-    0xA: "The environment is incorrect",
-    0x41300: "Task is ready to run at its next scheduled time",
-    0x41301: "Task is currently running",
-    0x41302: "Task is disabled",
-    0x41303: "Task has not yet run",
-    0x41304: "There are no more runs scheduled for this task",
-    0x41306: "Task was terminated by the user",
-    0x8004130F: "Credentials became corrupted",
-    0x8004131F: "An instance of this task is already running",
-    0x800710E0: "The operator or administrator has refused the request",
-    0x800704DD: "The service is not available (Run only when logged " "in?)",
-    0xC000013A: "The application terminated as a result of CTRL+C",
-    0xC06D007E: "Unknown software exception",
-}
+results = {0x0: 'The operation completed successfully',
+           0x1: 'Incorrect or unknown function called',
+           0x2: 'File not found',
+           0xA: 'The environment is incorrect',
+           0x41300: 'Task is ready to run at its next scheduled time',
+           0x41301: 'Task is currently running',
+           0x41302: 'Task is disabled',
+           0x41303: 'Task has not yet run',
+           0x41304: 'There are no more runs scheduled for this task',
+           0x41306: 'Task was terminated by the user',
+           0x8004130F: 'Credentials became corrupted',
+           0x8004131F: 'An instance of this task is already running',
+           0x800710E0: 'The operator or administrator has refused the request',
+           0x800704DD: 'The service is not available (Run only when logged '
+                       'in?)',
+           0xC000013A: 'The application terminated as a result of CTRL+C',
+           0xC06D007E: 'Unknown software exception'}
+
+
+def show_win32api_code(code):
+    '''
+    We should try to use the win32api to get error codes
+    instead of having a dict like:
+    results = {
+    0x0: 'The operation completed successfully',
+    0x1: 'Incorrect or unknown function called',
+    0x2: 'File not found',
+    0xA: 'The environment is incorrect',
+    0x41300: 'Task is ready to run at its next scheduled time',
+    0x41301: 'Task is currently running',
+    0x41302: 'Task is disabled',
+    0x41303: 'Task has not yet run',
+    0x41304: 'There are no more runs scheduled for this task',
+    0x41306: 'Task was terminated by the user',
+    0x8004130F: 'Credentials became corrupted',
+    0x8004131F: 'An instance of this task is already running',
+    0x800704DD: 'The service is not available (Run only when logged in?)',
+    0x800710E0: 'The operator or administrator has refused the request',
+    0xC000013A: 'The application terminated as a result of CTRL+C',
+    0xC06D007E: 'Unknown software exception'}
+
+    :param code:
+        A return code or error code from the win32com objects
+
+    :return: The associated message for the code
+    :rtype: str
+    '''
+    return win32api.FormatMessage(code).strip()
 
 
 def __virtual__():
@@ -184,7 +205,7 @@ def __virtual__():
         if not HAS_DEPENDENCIES:
             log.warning("Could not load dependencies for %s", __virtualname__)
         return __virtualname__
-    return False, "Module win_task: module only works on Windows systems"
+    return False, 'Module win_task: module only works on Windows systems'
 
 
 def _get_date_time_format(dt_string):
@@ -643,7 +664,7 @@ def create_task_from_xml(
         return "{0} already exists".format(name)
 
     if not xml_text and not xml_path:
-        raise ArgumentValueError("Must specify either xml_text or xml_path")
+        raise ArgumentValueError('Must specify either xml_text or xml_path')
 
     # Create the task service object
     with salt.utils.winapi.Com():
@@ -681,42 +702,34 @@ def create_task_from_xml(
 
     except pythoncom.com_error as error:
         hr, msg, exc, arg = error.args  # pylint: disable=W0633
-        error_code = hex(exc[5] + 2 ** 32)
-        fc = {
-            0x80041319: "Required element or attribute missing",
-            0x80041318: "Value incorrectly formatted or out of range",
-            0x80020005: "Access denied",
-            0x80041309: "A task's trigger is not found",
-            0x8004130A: "One or more of the properties required to run this "
-            "task have not been set",
-            0x8004130C: "The Task Scheduler service is not installed on this "
-            "computer",
-            0x8004130D: "The task object could not be opened",
-            0x8004130E: "The object is either an invalid task object or is not "
-            "a task object",
-            0x8004130F: "No account information could be found in the Task "
-            "Scheduler security database for the task indicated",
-            0x80041310: "Unable to establish existence of the account specified",
-            0x80041311: "Corruption was detected in the Task Scheduler "
-            "security database; the database has been reset",
-            0x80041313: "The task object version is either unsupported or invalid",
-            0x80041314: "The task has been configured with an unsupported "
-            "combination of account settings and run time options",
-            0x80041315: "The Task Scheduler Service is not running",
-            0x80041316: "The task XML contains an unexpected node",
-            0x80041317: "The task XML contains an element or attribute from an "
-            "unexpected namespace",
-            0x8004131A: "The task XML is malformed",
-            0x0004131C: "The task is registered, but may fail to start. Batch "
-            "logon privilege needs to be enabled for the task principal",
-            0x8004131D: "The task XML contains too many nodes of the same type",
-        }
+        error_code = hex(exc[5] + 2**32)
+        failure_code = error_code
+        fc = {'0x80041319L': 'Required element or attribute missing',
+              '0x80041318L': 'Value incorrectly formatted or out of range',
+              '0x80020005L': 'Access denied',
+              '0x80041309L': "A task's trigger is not found",
+              '0x8004130aL': "One or more of the properties required to run this task have not been set",
+              '0x8004130cL': "The Task Scheduler service is not installed on this computer",
+              '0x8004130dL': "The task object could not be opened",
+              '0x8004130eL': "The object is either an invalid task object or is not a task object",
+              '0x8004130fL': "No account information could be found in the Task Scheduler security database for the task indicated",
+              '0x80041310L': "Unable to establish existence of the account specified",
+              '0x80041311L': "Corruption was detected in the Task Scheduler security database; the database has been reset",
+              '0x80041313L': "The task object version is either unsupported or invalid",
+              '0x80041314L': "The task has been configured with an unsupported combination of account settings and run time options",
+              '0x80041315L': "The Task Scheduler Service is not running",
+              '0x80041316L': "The task XML contains an unexpected node",
+              '0x80041317L': "The task XML contains an element or attribute from an unexpected namespace",
+              '0x8004131aL': "The task XML is malformed",
+              '0x0004131cL': "The task is registered, but may fail to start. Batch logon privilege needs to be enabled for the task principal",
+              '0x8004131dL': "The task XML contains too many nodes of the same type",
+              }
         try:
             failure_code = fc[error_code]
         except KeyError:
-            failure_code = "Unknown Failure: {0}".format(error_code)
+            failure_code = 'Unknown Failure: {0}'.format(error_code)
         finally:
-            log.debug("Failed to create task: %s", failure_code)
+            log.debug('Failed to create task: %s', failure_code)
         raise CommandExecutionError(failure_code)
 
     # Verify creation
@@ -1454,14 +1467,12 @@ def info(name, location="\\"):
     task_folder = task_service.GetFolder(location)
     task = task_folder.GetTask(name)
 
-    properties = {
-        "enabled": task.Enabled,
-        "last_run": _get_date_value(task.LastRunTime),
-        "last_run_result": results[task.LastTaskResult],
-        "missed_runs": task.NumberOfMissedRuns,
-        "next_run": _get_date_value(task.NextRunTime),
-        "status": states[task.State],
-    }
+    properties = {'enabled': task.Enabled,
+                  'last_run': _get_date_value(task.LastRunTime),
+                  'last_run_result': show_win32api_code(task.LastTaskResult),
+                  'missed_runs': task.NumberOfMissedRuns,
+                  'next_run': _get_date_value(task.NextRunTime),
+                  'status': states[task.State]}
 
     def_set = task.Definition.Settings
 

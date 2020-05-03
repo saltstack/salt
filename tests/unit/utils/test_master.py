@@ -1,104 +1,106 @@
 # -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import, unicode_literals
-
-# Import Salt Libs
-import salt.utils.master
-from tests.support.mock import patch
+# Import Python Libs
+from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
+    patch,
+    mock_open,
+)
+
+import salt.utils.master as master
+
+try:
+    import salt.utils.psutil_compat as psutil
+    HAS_PSUTIL = True
+except ImportError:
+    HAS_PSUTIL = False
 
 
-class MasterPillarUtilTestCase(TestCase):
-    """
-    TestCase for salt.utils.master.MasterPillarUtil methods
-    """
+class MasterUtilsReadProcTestCase(TestCase):
 
-    def test_get_minion_pillar(self):
-        """
-        test get_minion_pillar when
-        target exists
-        """
-        opts = {"test": False}
-        minion = "minion"
-        pillar = salt.utils.master.MasterPillarUtil(
-            tgt=minion, tgt_type="glob", opts=opts
-        )
-        grains_data = {minion: {"domain": ""}}
-        pillar_data = {minion: {"test_pillar": "foo"}}
+    def test_read_proc_successfully(self):
+        proc_data = {"pid": 1111, "tacos": "broseph"}
+        m_fopen = mock_open()
+        with patch('salt.payload.Serial.load', return_value=proc_data):
+            with patch('salt.utils.files.fopen', m_fopen):
+                data = master.read_proc_file('/tacos', {})
+                assert data == proc_data
 
-        patch_grain = patch(
-            "salt.utils.master.MasterPillarUtil._get_minion_grains",
-            return_value=grains_data,
-        )
-        patch_pillar = patch(
-            "salt.utils.master.MasterPillarUtil._get_minion_pillar",
-            return_value=pillar_data,
-        )
-        patch_tgt_list = patch(
-            "salt.utils.master.MasterPillarUtil._tgt_to_list", return_value=[minion]
-        )
+    def test_read_proc_open_raise(self):
+        m_fopen = mock_open()
+        m_fopen.side_effect = Exception
+        with patch('salt.utils.files.fopen', m_fopen):
+            data = master.read_proc_file('x', {})
+            assert data is None
 
-        with patch_grain, patch_pillar, patch_tgt_list:
-            ret = pillar.get_minion_pillar()
-        assert ret[minion] == pillar_data[minion]
+    def test_read_proc_not_dict(self):
+        proc_data = '}{'
+        m_fopen = mock_open()
+        with patch('salt.payload.Serial.load', return_value=proc_data):
+            with patch('salt.utils.files.fopen', m_fopen):
+                data = master.read_proc_file('/tacos', {})
+                assert data is None
 
-    def test_get_minion_pillar_doesnotexist(self):
-        """
-        test get_minion_pillar when
-        target does not exist
-        """
-        opts = {"test": False}
-        minion = "minion"
-        pillar = salt.utils.master.MasterPillarUtil(
-            tgt="doesnotexist", tgt_type="glob", opts=opts
-        )
-        grains_data = {minion: {"domain": ""}}
-        pillar_data = {minion: {"test_pillar": "foo"}}
+    def test_read_proc_no_pid(self):
+        m_fopen = mock_open()
+        proc_data = {"tacos": "broseph"}
+        with patch('salt.payload.Serial.load', return_value=proc_data):
+            with patch('salt.utils.files.fopen', m_fopen):
+                data = master.read_proc_file('/tacos', {})
+                assert data is None
 
-        patch_grain = patch(
-            "salt.utils.master.MasterPillarUtil._get_minion_grains",
-            return_value=grains_data,
-        )
-        patch_pillar = patch(
-            "salt.utils.master.MasterPillarUtil._get_minion_pillar",
-            return_value=pillar_data,
-        )
-        patch_tgt_list = patch(
-            "salt.utils.master.MasterPillarUtil._tgt_to_list", return_value=[]
-        )
 
-        with patch_grain, patch_pillar, patch_tgt_list:
-            ret = pillar.get_minion_pillar()
-        assert minion not in ret
+@skipIf(not HAS_PSUTIL, "psutil needed to run test")
+class MasterUtilsIsPidHealthyPsUtil(TestCase):
 
-    def test_get_minion_pillar_notgt(self):
-        """
-        test get_minion_pillar when
-        passing target None
-        """
-        opts = {"test": False}
-        minion = "minion"
-        pillar = salt.utils.master.MasterPillarUtil(
-            tgt=None, tgt_type="glob", opts=opts
-        )
-        grains_data = {minion: {"domain": ""}}
-        pillar_data = {minion: {"test_pillar": "foo"}}
+    def tests_pid_not_running(self):
+        assert master.is_pid_healthy(99999999) is False
 
-        patch_grain = patch(
-            "salt.utils.master.MasterPillarUtil._get_minion_grains",
-            return_value=grains_data,
-        )
-        patch_pillar = patch(
-            "salt.utils.master.MasterPillarUtil._get_minion_pillar",
-            return_value=pillar_data,
-        )
-        patch_tgt_list = patch(
-            "salt.utils.master.MasterPillarUtil._tgt_to_list", return_value=[]
-        )
+    def test_is_pid_healthy_running_salt(self):
+        with patch('psutil.Process.cmdline', return_value=['salt']):
+            assert master.is_pid_healthy(1) is True
 
-        with patch_grain, patch_pillar, patch_tgt_list:
-            ret = pillar.get_minion_pillar()
-        assert minion in ret
+    def test_is_pid_healthy_not_running_salt(self):
+        with patch('psutil.Process.cmdline', return_value=['tacos']):
+            assert master.is_pid_healthy(1) is False
+
+    def tets_is_pid_healthy_raises(self):
+        with patch("psutil.Process", side_effect=psutil.NoSuchProcess):
+            assert master.is_pid_healthy(1) is False
+
+
+@patch("salt.utils.master.HAS_PSUTIL", False)
+class MasterUtilsIsPidHealthy(TestCase):
+
+    def test_is_pid_healthy_unsupported_platform(self):
+        with patch("salt.utils.platform.is_aix", return_value=True):
+            assert master.is_pid_healthy(11) is True
+
+        with patch("salt.utils.platform.is_windows", return_value=True):
+            assert master.is_pid_healthy(1) is True
+
+    def test_pid_not_running(self):
+        assert master.is_pid_healthy(99999999) is False
+
+    def test_is_pid_healthy_running_salt(self):
+        m_fopen = mock_open(read_data=b'salt')
+        with patch('salt.utils.process.os_is_running', return_value=True):
+            with patch('salt.utils.files.fopen', m_fopen):
+                assert master.is_pid_healthy(12345) is True
+
+    def test_is_pid_healthy_not_running_salt(self):
+        m_fopen = mock_open(read_data=b'tacos')
+        with patch('salt.utils.process.os_is_running', return_value=True):
+            with patch('salt.utils.files.fopen', m_fopen):
+                assert master.is_pid_healthy(12345) is False
+
+    def tets_is_pid_healthy_raises(self):
+        m_fopen = mock_open(side_effect=IOError)
+        with patch('salt.utils.files.fopen', m_fopen):
+            assert master.is_pid_healthy(12345) is False
+
+        m_fopen = mock_open(side_effect=OSError)
+        with patch('salt.utils.files.fopen', m_fopen):
+            assert master.is_pid_healthy(12345) is False

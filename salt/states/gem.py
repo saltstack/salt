@@ -16,6 +16,9 @@ you can specify what ruby version and gemset to target.
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
+import salt.utils.versions
+
+import re
 import logging
 import re
 
@@ -94,7 +97,8 @@ def installed(
         log.warning("Use of argument ruby found, but neither rvm or rbenv is installed")
     gems = __salt__["gem.list"](name, ruby, gem_bin=gem_bin, runas=user)
     if name in gems and version is not None:
-        match = re.match(r"(>=|>|<|<=)", version)
+        versions = list([x.replace('default: ', '') for x in gems[name]])
+        match = re.match(r'(>=|>|<|<=)', version)
         if match:
             # Grab the comparison
             cmpr = match.group()
@@ -105,10 +109,16 @@ def installed(
             # Clear out comparison from version and whitespace
             desired_version = re.sub(cmpr, "", version).strip()
 
-            if salt.utils.versions.compare(installed_version, cmpr, desired_version):
-                ret["result"] = True
-                ret["comment"] = "Installed Gem meets version requirements."
+            if salt.utils.versions.compare(installed_version,
+                                           cmpr,
+                                           desired_version):
+                ret['result'] = True
+                ret['comment'] = 'Installed Gem meets version requirements.'
                 return ret
+        elif str(version) in versions:
+            ret['result'] = True
+            ret['comment'] = 'Gem is already installed.'
+            return ret
         else:
             if str(version) in gems[name]:
                 ret["result"] = True

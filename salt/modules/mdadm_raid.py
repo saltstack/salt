@@ -31,17 +31,11 @@ __virtualname__ = "raid"
 def __virtual__():
     """
     mdadm provides raid functions for Linux
-    """
-    if __grains__["kernel"] != "Linux":
-        return (
-            False,
-            "The mdadm execution module cannot be loaded: only available on Linux.",
-        )
-    if not salt.utils.path.which("mdadm"):
-        return (
-            False,
-            "The mdadm execution module cannot be loaded: the mdadm binary is not in the path.",
-        )
+    '''
+    if __grains__.get('kernel') != 'Linux':
+        return (False, 'The mdadm execution module cannot be loaded: only available on Linux.')
+    if not salt.utils.path.which('mdadm'):
+        return (False, 'The mdadm execution module cannot be loaded: the mdadm binary is not in the path.')
     return __virtualname__
 
 
@@ -136,10 +130,10 @@ def destroy(device):
     stop_cmd = ["mdadm", "--stop", device]
     zero_cmd = ["mdadm", "--zero-superblock"]
 
-    if __salt__["cmd.retcode"](stop_cmd, python_shell=False) == 0:
-        for number in details["members"]:
-            zero_cmd.append(details["members"][number]["device"])
-        __salt__["cmd.retcode"](zero_cmd, python_shell=False)
+    if __salt__['cmd.retcode'](stop_cmd, python_shell=False) == 0:
+        for number in details['members']:
+            zero_cmd.append(details['members'][number]['device'])
+        __salt__['cmd.retcode'](zero_cmd, python_shell=False)
 
     # Remove entry from config file:
     if __grains__.get("os_family") == "Debian":
@@ -241,12 +235,15 @@ def create(name, level, devices, metadata="default", test_mode=False, **kwargs):
         if key == "spare-devices":
             raid_devices -= int(kwargs[key])
 
-    cmd = (
-        ["mdadm", "-C", name, "-R", "-v", "-l", six.text_type(level)]
-        + opts
-        + ["-e", six.text_type(metadata), "-n", six.text_type(raid_devices)]
-        + devices
-    )
+    cmd = ['mdadm',
+           '-C', name,
+           '-R',
+           '-v',
+           '-l', six.text_type(level),
+           ] + opts + [
+           '-e', six.text_type(metadata),
+           '-n', six.text_type(raid_devices),
+           ] + devices
 
     cmd_str = " ".join(cmd)
 
@@ -357,7 +354,7 @@ def assemble(name, devices, test_mode=False, **kwargs):
 
 
 def examine(device, quiet=False):
-    """
+    '''
     Show detail for a specified RAID component device
 
     device
@@ -371,10 +368,10 @@ def examine(device, quiet=False):
     .. code-block:: bash
 
         salt '*' raid.examine '/dev/sda1'
-    """
-    res = __salt__["cmd.run_stdout"](
-        "mdadm -Y -E {0}".format(device), python_shell=False, ignore_retcode=quiet
-    )
+    '''
+    res = __salt__['cmd.run_stdout']('mdadm -Y -E {0}'.format(device),
+                                     python_shell=False,
+                                     ignore_retcode=quiet)
     ret = {}
 
     for line in res.splitlines():

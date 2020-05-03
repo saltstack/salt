@@ -55,9 +55,7 @@ def _get_module(module_name, backend=default_backend):
 
     """
     backend_instance = testinfra.get_backend(backend)
-    return backend_instance.get_module(
-        snake_to_camel_case(module_name, uppercamel=True)
-    )
+    return backend_instance.get_module(snake_to_camel_case(module_name, uppercamel=True))
 
 
 def _get_method_result(module_, module_instance, method_name, method_arg=None):

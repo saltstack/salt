@@ -17,15 +17,15 @@ log = logging.getLogger(__name__)
 
 
 def match(tgt, functions=None, opts=None):
-    """
+    '''
     Match based on the local data store on the minion
-    """
+    '''
     if not opts:
         opts = __opts__
     if functions is None:
         utils = salt.loader.utils(opts)
         functions = salt.loader.minion_mods(opts, utils=utils)
-    comps = tgt.split(":")
+    comps = tgt.split(':')
     if len(comps) < 2:
         return False
     val = functions["data.getval"](comps[0])

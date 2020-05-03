@@ -150,8 +150,7 @@ def to_unicode(s, encoding=None, errors="strict", normalize=False):
         # This needs to be str and not six.string_types, since if the string is
         # already a unicode type, it does not need to be decoded (and doing so
         # will raise an exception).
-        # pylint: disable=incompatible-py3-code
-        if isinstance(s, unicode):  # pylint: disable=E0602
+        if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code,undefined-variable
             return _normalize(s)
         elif isinstance(s, (str, bytearray)):
             for enc in encoding:
@@ -184,6 +183,19 @@ def to_num(text):
             return float(text)
         except ValueError:
             return text
+
+
+def to_bool(text):
+    '''
+    Convert the string name of a boolean to that boolean value.
+    '''
+    downcased_text = six.text_type(text).strip().lower()
+
+    if downcased_text == 'false':
+        return False
+    elif downcased_text == 'true':
+        return True
+    return text
 
 
 def to_none(text):
@@ -465,13 +477,18 @@ def check_include_exclude(path_str, include_pat=None, exclude_pat=None):
         passes the include_pat test or fails exclude_pat test respectively
       - If both include_pat and exclude_pat are supplied: return 'True' if
         include_pat matches AND exclude_pat does not match
-    """
-
+    '''
     def _pat_check(path_str, check_pat):
-        if re.match("E@", check_pat):
-            return True if re.search(check_pat[2:], path_str) else False
+        if re.match('E@', check_pat):
+            return True if re.search(
+                check_pat[2:],
+                path_str
+            ) else False
         else:
-            return True if fnmatch.fnmatch(path_str, check_pat) else False
+            return True if fnmatch.fnmatch(
+                path_str,
+                check_pat
+            ) else False
 
     ret = True  # -- default true
     # Before pattern match, check if it is regexp (E@'') or glob(default)
@@ -586,30 +603,28 @@ def get_diff(a, b, *args, **kwargs):
     )
 
 
-@jinja_filter("to_snake_case")
+@jinja_filter('to_snake_case')
 def camel_to_snake_case(camel_input):
-    """
+    '''
     Converts camelCase (or CamelCase) to snake_case.
     From https://codereview.stackexchange.com/questions/185966/functions-to-convert-camelcase-strings-to-snake-case
 
     :param str camel_input: The camelcase or CamelCase string to convert to snake_case
 
     :return str
-    """
+    '''
     res = camel_input[0].lower()
     for i, letter in enumerate(camel_input[1:], 1):
         if letter.isupper():
-            if camel_input[i - 1].islower() or (
-                i != len(camel_input) - 1 and camel_input[i + 1].islower()
-            ):
-                res += "_"
+            if camel_input[i-1].islower() or (i != len(camel_input)-1 and camel_input[i+1].islower()):
+                res += '_'
         res += letter.lower()
     return res
 
 
-@jinja_filter("to_camelcase")
+@jinja_filter('to_camelcase')
 def snake_to_camel_case(snake_input, uppercamel=False):
-    """
+    '''
     Converts snake_case to camelCase (or CamelCase if uppercamel is ``True``).
     Inspired by https://codereview.stackexchange.com/questions/85311/transform-snake-case-to-camelcase
 
@@ -617,8 +632,8 @@ def snake_to_camel_case(snake_input, uppercamel=False):
     :param bool uppercamel: Whether or not to convert to CamelCase instead
 
     :return str
-    """
-    words = snake_input.split("_")
+    '''
+    words = snake_input.split('_')
     if uppercamel:
         words[0] = words[0].capitalize()
-    return words[0] + "".join(word.capitalize() for word in words[1:])
+    return words[0] + ''.join(word.capitalize() for word in words[1:])

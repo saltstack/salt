@@ -654,7 +654,7 @@ Returns:
 ``method_call``
 ---------------
 
-.. versionadded:: Sodium
+.. versionadded:: Neon
 
 Returns a result of object's method call.
 
@@ -1074,7 +1074,7 @@ Returns:
 ``set_dict_key_value``
 ----------------------
 
-..versionadded:: 3000
+..versionadded:: Neon
 
 Allows you to set a value in a nested dictionary without having to worry if all the nested keys actually exist.
 Missing keys will be automatically created if they do not exist.
@@ -1107,7 +1107,7 @@ Example 2:
 ``append_dict_key_value``
 -------------------------
 
-..versionadded:: 3000
+..versionadded:: Neon
 
 Allows you to append to a list nested (deep) in a dictionary without having to worry if all the nested keys (or the list itself) actually exist.
 Missing keys will automatically be created if they do not exist.
@@ -1141,7 +1141,7 @@ Example 2:
 ``extend_dict_key_value``
 -------------------------
 
-..versionadded:: 3000
+..versionadded:: Neon
 
 Allows you to extend a list nested (deep) in a dictionary without having to worry if all the nested keys (or the list itself) actually exist.
 Missing keys will automatically be created if they do not exist.
@@ -1174,7 +1174,7 @@ Example 2:
 ``update_dict_key_value``
 -------------------------
 
-..versionadded:: 3000
+..versionadded:: Neon
 
 Allows you to update a dictionary nested (deep) in another dictionary without having to worry if all the nested keys actually exist.
 Missing keys will automatically be created if they do not exist.
@@ -1399,7 +1399,7 @@ Returns:
 ``json_query``
 --------------
 
-.. versionadded:: 3000
+.. versionadded:: Neon
 
 A port of Ansible ``json_query`` Jinja filter to make queries against JSON data using `JMESPath language`_.
 Could be used to filter ``pillar`` data, ``yaml`` maps, and together with :jinja_ref:`http_query`.
@@ -1415,7 +1415,7 @@ Examples:
   {"machines": [
     {"name": "a", "state": "running"},
     {"name": "b", "state": "stopped"},
-    {"name": "c", "state": "running"}
+    {"name": "b", "state": "running"}
   ]} | json_query("machines[?state=='running'].name") }}
 
   Example 3: {{
@@ -1431,7 +1431,7 @@ Returns:
 
   Example 1: [1, 2, 3, 4, 5, 6]
 
-  Example 2: ['a', 'c']
+  Example 2: ['a', 'b']
 
   Example 3: [80, 25, 22]
 
@@ -1440,12 +1440,13 @@ Returns:
 .. _`JMESPath language`: http://jmespath.org/
 .. _`jmespath`: https://github.com/jmespath/jmespath.py
 
+
 .. jinja_ref:: to_snake_case
 
 ``to_snake_case``
 -----------------
 
-.. versionadded:: 3000
+.. versionadded:: Neon
 
 Converts a string from camelCase (or CamelCase) to snake_case.
 
@@ -1465,7 +1466,7 @@ Returns:
 ``to_camelcase``
 ----------------
 
-.. versionadded:: 3000
+.. versionadded:: Neon
 
 Converts a string from snake_case to camelCase (or UpperCamelCase if so indicated).
 
@@ -1732,6 +1733,9 @@ Example:
 Return the ip resolved by dns, but do not exit on failure, only raise an
 exception. Obeys system preference for IPv4/6 address resolution.
 
+This function tries to connect to the address/port before considering it
+valid and therefor requires a port to test. The default port tested is 80.
+
 Example:
 
 .. code-block:: jinja
@@ -1746,6 +1750,15 @@ Returns:
 
 File filters
 ------------
+
+.. jinja_ref:: connection_check
+
+``connection_check``
+--------------------
+
+.. versionadded:: Neon
+
+Return the IP resolved by DNS. This is an alias of ``dns_check``.
 
 .. jinja_ref:: is_text_file
 

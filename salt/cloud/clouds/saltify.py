@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 .. _saltify-module:
 
 Saltify Module
@@ -272,6 +272,10 @@ def create(vm_):
     if not config.get_cloud_config_value("ssh_host", vm_, __opts__, default=""):
         vm_["ssh_host"] = vm_["name"]
 
+    # If ssh_host is not set, default to the minion name
+    if not config.get_cloud_config_value('ssh_host', vm_, __opts__, default=''):
+        vm_['ssh_host'] = vm_['name']
+
     if deploy_config:
         wol_mac = config.get_cloud_config_value(
             "wake_on_lan_mac", vm_, __opts__, default=""
@@ -324,10 +328,10 @@ def get_configured_provider():
 
 
 def _verify(vm_):
-    """
+    '''
     Verify credentials for an existing system
-    """
-    log.info("Verifying credentials for %s", vm_["name"])
+    '''
+    log.info('Verifying credentials for %s', vm_['name'])
 
     win_installer = config.get_cloud_config_value("win_installer", vm_, __opts__)
 

@@ -348,12 +348,12 @@ def table_absent(name, db):
             else:
                 conn.execute("DROP TABLE " + name)
                 conn.commit()
-                changes["changes"]["old"] = tables[0][0]
-                changes["result"] = True
-                changes["comment"] = "'" + name + "' was dropped"
-        elif len(tables) == 0:
-            changes["result"] = True
-            changes["comment"] = "'" + name + "' is already absent"
+                changes['changes']['old'] = tables[0][0]
+                changes['result'] = True
+                changes['comment'] = "'" + name + "' was dropped"
+        elif not tables:
+            changes['result'] = True
+            changes['comment'] = "'" + name + "' is already absent"
         else:
             changes["result"] = False
             changes["comment"] = "Multiple tables with the same name='" + name + "'"
@@ -425,9 +425,10 @@ def table_present(name, db, schema, force=False):
                         "Expected schema=" + sql + "\nactual schema=" + tables[0][0]
                     )
             else:
-                changes["result"] = True
-                changes["comment"] = "'" + name + "' exists with matching schema"
-        elif len(tables) == 0:
+                changes['result'] = True
+                changes['comment'] = "'" + name + \
+                                     "' exists with matching schema"
+        elif not tables:
             # Create the table
             sql = None
             if isinstance(schema, six.string_types):

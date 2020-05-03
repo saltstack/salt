@@ -24,8 +24,9 @@ from __future__ import absolute_import
 import logging
 from copy import deepcopy
 
-import salt.utils.json
-
+# salt modules
+from salt.utils.json import loads, dumps
+from salt.ext import six
 # import NAPALM utils
 import salt.utils.napalm
 

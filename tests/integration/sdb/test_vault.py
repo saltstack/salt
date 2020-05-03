@@ -82,11 +82,9 @@ class VaultTestCase(ModuleCase, ShellCase):
                 if login_attempts >= 3:
                     self.skipTest("unable to login to vault")
             ret = self.run_function(
-                "cmd.retcode",
-                cmd="{} policy write testpolicy {}/vault.hcl".format(
-                    vault_binary, RUNTIME_VARS.FILES
-                ),
-                env={"VAULT_ADDR": "http://127.0.0.1:8200"},
+                'cmd.retcode',
+                cmd='/usr/local/bin/vault policy write testpolicy {0}/vault.hcl'.format(RUNTIME_VARS.FILES),
+                env={'VAULT_ADDR': 'http://127.0.0.1:8200'},
             )
             if ret != 0:
                 self.skipTest("unable to assign policy to vault")

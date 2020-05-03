@@ -5,6 +5,15 @@ A REST API for Salt
 
 .. py:currentmodule:: salt.netapi.rest_cherrypy.app
 
+.. note::
+
+    This module is Experimental on Windows platforms, and supports limited
+    configurations:
+
+    - doesn't support PAM authentication (i.e. external_auth: auto)
+    - doesn't support SSL (i.e. disable_ssl: True)
+
+
 :depends:
     - CherryPy Python module.
 
@@ -68,12 +77,12 @@ A REST API for Salt
     debug : ``False``
         Starts the web server in development mode. It will reload itself when
         the underlying code is changed and will output more debugging info.
-    log_access_file
+    log.access_file
         Path to a file to write HTTP access logs.
 
         .. versionadded:: 2016.11.0
 
-    log_error_file
+    log.error_file
         Path to a file to write HTTP error logs.
 
         .. versionadded:: 2016.11.0
@@ -713,10 +722,13 @@ def salt_api_acl_tool(username, request):
     :type username: str
     :param request: Cherrypy request to check against the API.
     :type request: cherrypy.request
-    """
-    failure_str = "[api_acl] Authentication failed for " "user {0} from IP {1}"
-    success_str = "[api_acl] Authentication successful for user {0} from IP {1}"
-    pass_str = "[api_acl] Authentication not checked for " "user {0} from IP {1}"
+    '''
+    failure_str = ("[api_acl] Authentication failed for "
+                   "user %s from IP %s")
+    success_str = ("[api_acl] Authentication sucessful for "
+                   "user %s from IP %s")
+    pass_str = ("[api_acl] Authentication not checked for "
+                "user %s from IP %s")
 
     acl = None
     # Salt Configuration
@@ -733,24 +745,24 @@ def salt_api_acl_tool(username, request):
         users = acl.get("users", {})
         if users:
             if username in users:
-                if ip in users[username] or "*" in users[username]:
-                    logger.info(success_str.format(username, ip))
+                if ip in users[username] or '*' in users[username]:
+                    logger.info(success_str, username, ip)
                     return True
                 else:
-                    logger.info(failure_str.format(username, ip))
+                    logger.info(failure_str, username, ip)
                     return False
-            elif username not in users and "*" in users:
-                if ip in users["*"] or "*" in users["*"]:
-                    logger.info(success_str.format(username, ip))
+            elif username not in users and '*' in users:
+                if ip in users['*'] or '*' in users['*']:
+                    logger.info(success_str, username, ip)
                     return True
                 else:
-                    logger.info(failure_str.format(username, ip))
+                    logger.info(failure_str, username, ip)
                     return False
             else:
-                logger.info(failure_str.format(username, ip))
+                logger.info(failure_str, username, ip)
                 return False
     else:
-        logger.info(pass_str.format(username, ip))
+        logger.info(pass_str, username, ip)
         return True
 
 
@@ -767,12 +779,12 @@ def salt_ip_verify_tool():
         if cherrypy_conf:
             auth_ip_list = cherrypy_conf.get("authorized_ips", None)
             if auth_ip_list:
-                logger.debug("Found IP list: {0}".format(auth_ip_list))
-                rem_ip = cherrypy.request.headers.get("Remote-Addr", None)
-                logger.debug("Request from IP: {0}".format(rem_ip))
+                logger.debug('Found IP list: %s', auth_ip_list)
+                rem_ip = cherrypy.request.headers.get('Remote-Addr', None)
+                logger.debug('Request from IP: %s', rem_ip)
                 if rem_ip not in auth_ip_list:
-                    logger.error("Blocked IP: {0}".format(rem_ip))
-                    raise cherrypy.HTTPError(403, "Bad IP")
+                    logger.error('Blocked IP: %s', rem_ip)
+                    raise cherrypy.HTTPError(403, 'Bad IP')
 
 
 def salt_auth_tool():
@@ -1248,7 +1260,9 @@ class LowDataAdapter(object):
 
             HTTP/1.1 200 OK
             Content-Type: application/json
-        """
+        '''
+        import inspect  # pylint: disable=unused-import
+
         return {
             "return": "Welcome",
             "clients": salt.netapi.CLIENTS,
@@ -1910,13 +1924,11 @@ class Login(LowDataAdapter):
 
             if not perms:
                 logger.debug("Eauth permission list not found.")
-        except Exception:  # pylint: disable=broad-except
+        except Exception:
             logger.debug(
-                "Configuration for external_auth malformed for "
-                "eauth '{0}', and user '{1}'.".format(
-                    token.get("eauth"), token.get("name")
-                ),
-                exc_info=True,
+                "Configuration for external_auth malformed for eauth '%s', "
+                "and user '%s'.", token.get('eauth'), token.get('name'),
+                exc_info=True
             )
             perms = None
 
@@ -2582,8 +2594,7 @@ class WebsocketEndpoint(object):
                             )
                     except UnicodeDecodeError:
                         logger.error(
-                            "Error: Salt event has non UTF-8 data:\n{0}".format(data)
-                        )
+                            "Error: Salt event has non UTF-8 data:\n%s", data)
 
         parent_pipe, child_pipe = Pipe()
         handler.pipe = parent_pipe

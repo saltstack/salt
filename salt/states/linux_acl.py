@@ -167,30 +167,24 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
             if not need_refresh:
                 ret["comment"] = "Permissions are in the desired state"
             else:
-                _num = user[_search_name]["octal"]
-                new_perms = "{}{}{}".format(
-                    _octal_lookup[_num & 1],
-                    _octal_lookup[_num & 2],
-                    _octal_lookup[_num & 4],
-                )
-                changes = {
-                    "new": {"acl_name": acl_name, "acl_type": acl_type, "perms": perms},
-                    "old": {
-                        "acl_name": acl_name,
-                        "acl_type": acl_type,
-                        "perms": new_perms,
-                    },
-                }
+                _num = user[_search_name]['octal']
+                new_perms = '{}{}{}'.format(_octal_lookup[_num & 1],
+                                            _octal_lookup[_num & 2],
+                                            _octal_lookup[_num & 4])
+                changes = {'new': {'acl_name': acl_name,
+                                   'acl_type': acl_type,
+                                   'perms': perms},
+                           'old': {'acl_name': acl_name,
+                                   'acl_type': acl_type,
+                                   'perms': new_perms}}
 
-                if __opts__["test"]:
-                    ret.update(
-                        {
-                            "comment": "Updated permissions will be applied for "
-                            "{0}: {1} -> {2}".format(acl_name, new_perms, perms),
-                            "result": None,
-                            "changes": changes,
-                        }
-                    )
+                if __opts__['test']:
+                    ret.update({'comment': 'Updated permissions will be applied for '
+                                           '{0}: {1} -> {2}'.format(
+                        acl_name,
+                        new_perms,
+                        perms),
+                        'result': None, 'changes': changes})
                     return ret
                 try:
                     if force:
@@ -385,7 +379,10 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
     """
     if acl_names is None:
         acl_names = []
-    ret = {"name": name, "result": True, "changes": {}, "pchanges": {}, "comment": ""}
+    ret = {'name': name,
+           'result': True,
+           'changes': {},
+           'comment': ''}
 
     _octal = {"r": 4, "w": 2, "x": 1, "-": 0}
     _octal_perms = sum([_octal.get(i, i) for i in perms])
@@ -425,15 +422,10 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
                 pass
         diff_acls = set(_current_acl_types) ^ set(acl_names)
         if not diff_acls and diff_perms and not force:
-            ret = {
-                "name": name,
-                "result": True,
-                "changes": {},
-                "pchanges": {},
-                "comment": "Permissions and {}s are in the desired state".format(
-                    acl_type
-                ),
-            }
+            ret = {'name': name,
+                   'result': True,
+                   'changes': {},
+                   'comment': 'Permissions and {}s are in the desired state'.format(acl_type)}
             return ret
     # The getfacl execution module lists default with empty names as being
     # applied to the user/group that owns the file, e.g.,
@@ -466,33 +458,19 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
                     ):
                         ret["comment"] = "Permissions are in the desired state"
                     else:
-                        changes.update(
-                            {
-                                "new": {
-                                    "acl_name": ", ".join(acl_names),
-                                    "acl_type": acl_type,
-                                    "perms": _octal_perms,
-                                },
-                                "old": {
-                                    "acl_name": ", ".join(acl_names),
-                                    "acl_type": acl_type,
-                                    "perms": six.text_type(users[search_name]["octal"]),
-                                },
-                            }
-                        )
-                        if __opts__["test"]:
-                            ret.update(
-                                {
-                                    "comment": "Updated permissions will be applied for "
-                                    "{0}: {1} -> {2}".format(
-                                        acl_names,
-                                        six.text_type(users[search_name]["octal"]),
-                                        perms,
-                                    ),
-                                    "result": None,
-                                    "pchanges": changes,
-                                }
-                            )
+                        changes.update({'new': {'acl_name': ', '.join(acl_names),
+                                                                 'acl_type': acl_type,
+                                                                 'perms': _octal_perms},
+                                        'old': {'acl_name': ', '.join(acl_names),
+                                                                 'acl_type': acl_type,
+                                                                 'perms': six.text_type(users[search_name]['octal'])}})
+                        if __opts__['test']:
+                            ret.update({'comment': 'Updated permissions will be applied for '
+                                                   '{0}: {1} -> {2}'.format(
+                                acl_names,
+                                six.text_type(users[search_name]['octal']),
+                                perms),
+                                'result': None, 'changes': changes})
                             return ret
                         try:
                             if force:
@@ -526,24 +504,15 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
                                 }
                             )
                 else:
-                    changes = {
-                        "new": {
-                            "acl_name": ", ".join(acl_names),
-                            "acl_type": acl_type,
-                            "perms": perms,
-                        }
-                    }
+                    changes = {'new': {'acl_name': ', '.join(acl_names),
+                                       'acl_type': acl_type,
+                                       'perms': perms}}
 
-                    if __opts__["test"]:
-                        ret.update(
-                            {
-                                "comment": "New permissions will be applied for "
-                                "{0}: {1}".format(acl_names, perms),
-                                "result": None,
-                                "pchanges": changes,
-                            }
-                        )
-                        ret["result"] = None
+                    if __opts__['test']:
+                        ret.update({'comment': 'New permissions will be applied for '
+                                               '{0}: {1}'.format(acl_names, perms),
+                                    'result': None, 'changes': changes})
+                        ret['result'] = None
                         return ret
 
                     try:
@@ -579,24 +548,15 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
                         )
 
         else:
-            changes = {
-                "new": {
-                    "acl_name": ", ".join(acl_names),
-                    "acl_type": acl_type,
-                    "perms": perms,
-                }
-            }
+            changes = {'new': {'acl_name': ', '.join(acl_names),
+                               'acl_type': acl_type,
+                               'perms': perms}}
 
-            if __opts__["test"]:
-                ret.update(
-                    {
-                        "comment": "New permissions will be applied for "
-                        "{0}: {1}".format(acl_names, perms),
-                        "result": None,
-                        "pchanges": changes,
-                    }
-                )
-                ret["result"] = None
+            if __opts__['test']:
+                ret.update({'comment': 'New permissions will be applied for '
+                                       '{0}: {1}'.format(acl_names, perms),
+                            'result': None, 'changes': changes})
+                ret['result'] = None
                 return ret
 
             try:

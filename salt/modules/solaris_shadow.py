@@ -67,8 +67,8 @@ def default_hash():
     return "!"
 
 
-def info(name):
-    """
+def info(name, **kwargs):
+    '''
     Return information for the specified user
 
     CLI Example:

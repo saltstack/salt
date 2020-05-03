@@ -323,16 +323,16 @@ def managed(name, entries, connect_spec=None):
                     # perform the operation
                     if o:
                         if n:
-                            op = "modify"
+                            op = 'modify'
                             assert o != n
                             __salt__["ldap3.change"](l, dn, o, n)
                         else:
                             op = "delete"
                             __salt__["ldap3.delete"](l, dn)
                     else:
-                        op = "add"
+                        op = 'add'
                         assert n
-                        __salt__["ldap3.add"](l, dn, n)
+                        __salt__['ldap3.add'](l, dn, n)
 
                     # update these after the op in case an exception
                     # is raised
@@ -345,13 +345,10 @@ def managed(name, entries, connect_spec=None):
                     continue
 
             if errs:
-                ret["result"] = False
-                ret["comment"] = "failed to " + ", ".join(
-                    (
-                        op + " entry " + dn + "(" + six.text_type(err) + ")"
-                        for op, dn, err in errs
-                    )
-                )
+                ret['result'] = False
+                ret['comment'] = 'failed to ' \
+                                 + ', '.join((op + ' entry ' + dn + '(' + six.text_type(err) + ')'
+                                              for op, dn, err in errs))
 
     # set ret['changes'].  filter out any unchanged attributes, and
     # convert the value sets to lists before returning them to the
@@ -360,8 +357,8 @@ def managed(name, entries, connect_spec=None):
         o = changed_old.get(dn, {})
         n = changed_new.get(dn, {})
         changes = {}
-        ret["changes"][dn] = changes
-        for x, xn in ((o, "old"), (n, "new")):
+        ret['changes'][dn] = changes
+        for x, xn in ((o, 'old'), (n, 'new')):
             if not x:
                 changes[xn] = None
                 continue
@@ -441,7 +438,7 @@ def _process_entries(l, entries):
                     )
                 else:
                     # nothing, so it must be a brand new entry
-                    assert len(results) == 0
+                    assert not results
                     olde = {}
                 old[dn] = olde
             # copy the old entry to create the new (don't do a simple
@@ -485,7 +482,7 @@ def _update_entry(entry, status, directives):
         for attr, vals in six.iteritems(state):
             status["mentioned_attributes"].add(attr)
             vals = _toset(vals)
-            if directive == "default":
+            if directive == 'default':
                 if vals and (attr not in entry or not entry[attr]):
                     entry[attr] = vals
             elif directive == "add":

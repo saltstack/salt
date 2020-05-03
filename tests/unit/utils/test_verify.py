@@ -11,9 +11,26 @@ import getpass
 import os
 import shutil
 import socket
-import stat
-import sys
-import tempfile
+
+# Import third party libs
+if sys.platform.startswith('win'):
+    import win32file
+else:
+    import resource
+
+# Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf, TestCase
+from tests.support.helpers import (
+    requires_network,
+    TestsLoggingHandler
+)
+from tests.support.mock import (
+    MagicMock,
+    patch,
+    NO_MOCK,
+    NO_MOCK_REASON
+)
 
 # Import salt libs
 import salt.utils.files
@@ -119,8 +136,8 @@ class TestVerify(TestCase):
     @skipIf(salt.utils.platform.is_windows(), "No verify_env Windows")
     def test_verify_env(self):
         root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-        var_dir = os.path.join(root_dir, "var", "log", "salt")
-        key_dir = os.path.join(root_dir, "key_dir")
+        var_dir = os.path.join(root_dir, 'var', 'log', 'salt')
+        key_dir = os.path.join(root_dir, 'key_dir')
         verify_env([var_dir], getpass.getuser(), root_dir=root_dir)
         self.assertTrue(os.path.exists(var_dir))
         dir_stat = os.stat(var_dir)

@@ -792,7 +792,7 @@ def _get_by_id(collection, id):
     """
     matches = [item for item in collection if item.id == id]
     if not matches:
-        raise ValueError("Could not find a matching item")
+        raise ValueError('Could not find a matching item')
     elif len(matches) > 1:
         raise ValueError("The id matched {0} items, not 1".format(len(matches)))
     return matches[0]

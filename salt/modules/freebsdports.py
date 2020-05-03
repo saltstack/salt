@@ -39,8 +39,8 @@ __virtualname__ = "ports"
 def __virtual__():
     """
     Only runs on FreeBSD systems
-    """
-    if __grains__["os"] == "FreeBSD":
+    '''
+    if __grains__.get('os') == 'FreeBSD':
         return __virtualname__
     return (
         False,
@@ -289,7 +289,7 @@ def showconfig(name, default=False, dict_return=False):
     try:
         pkg = output[0].split()[-1].rstrip(":")
     except (IndexError, AttributeError, TypeError) as exc:
-        log.error("Unable to get pkg-version string: %s", exc)
+        log.error('Unable to get pkg-version string: %s', exc)
         return {}
 
     ret = {pkg: {}}

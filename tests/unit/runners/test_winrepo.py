@@ -7,7 +7,11 @@ import os
 import shutil
 import tempfile
 
-import salt.runners.winrepo as winrepo
+# Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
 # Import salt libs
 import salt.utils.files

@@ -275,9 +275,9 @@ def percent(args=None):
     return ret
 
 
-@salt.utils.decorators.path.which("blkid")
+@salt.utils.decorators.path.which('blkid')
 def blkid(device=None, token=None):
-    """
+    '''
     Return block device attributes: UUID, LABEL, etc. This function only works
     on systems where blkid is available.
 
@@ -295,15 +295,15 @@ def blkid(device=None, token=None):
         salt '*' disk.blkid /dev/sda
         salt '*' disk.blkid token='UUID=6a38ee5-7235-44e7-8b22-816a403bad5d'
         salt '*' disk.blkid token='TYPE=ext4'
-    """
-    cmd = ["blkid"]
+    '''
+    cmd = ['blkid']
     if device:
         cmd.append(device)
     elif token:
-        cmd.extend(["-t", token])
+        cmd.extend(['-t', token])
 
     ret = {}
-    blkid_result = __salt__["cmd.run_all"](cmd, python_shell=False)
+    blkid_result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if blkid_result["retcode"] > 0:
         return ret
@@ -438,17 +438,15 @@ def resize2fs(device):
         return True
 
 
-@salt.utils.decorators.path.which("sync")
-@salt.utils.decorators.path.which("mkfs")
-def format_(
-    device,
-    fs_type="ext4",
-    inode_size=None,
-    lazy_itable_init=None,
-    fat=None,
-    force=False,
-):
-    """
+@salt.utils.decorators.path.which('sync')
+@salt.utils.decorators.path.which('mkfs')
+def format_(device,
+            fs_type='ext4',
+            inode_size=None,
+            lazy_itable_init=None,
+            fat=None,
+            force=False):
+    '''
     Format a filesystem onto a device
 
     .. versionadded:: 2016.11.0
@@ -498,11 +496,11 @@ def format_(
         elif fs_type == "xfs":
             cmd.extend(["-i", "size={0}".format(inode_size)])
     if lazy_itable_init is not None:
-        if fs_type[:3] == "ext":
-            cmd.extend(["-E", "lazy_itable_init={0}".format(lazy_itable_init)])
+        if fs_type[:3] == 'ext':
+            cmd.extend(['-E', 'lazy_itable_init={0}'.format(lazy_itable_init)])
     if fat is not None and fat in (12, 16, 32):
-        if fs_type[-3:] == "fat":
-            cmd.extend(["-F", fat])
+        if fs_type[-3:] == 'fat':
+            cmd.extend(['-F', fat])
     if force:
         if fs_type[:3] == "ext":
             cmd.append("-F")
@@ -611,7 +609,7 @@ def hdparms(disks, args=None):
         disk_data = {}
         for line in _hdparm("-{0} {1}".format(args, disk), False).splitlines():
             line = line.strip()
-            if not line or line == disk + ":":
+            if not line or line == disk + ':':
                 continue
 
             if ":" in line:
@@ -900,12 +898,12 @@ def _iostat_linux(interval, count, disks):
         __salt__["cmd.run_stdout"](iostat_cmd, output_loglevel="quiet").splitlines()
     )
     for line in ret:
-        if line.startswith("avg-cpu:"):
+        if line.startswith('avg-cpu:'):
             if not sys_header:
                 sys_header = tuple(line.split()[1:])
             line = [decimal.Decimal(x) for x in next(ret).split()]
             sys_stats.append(line)
-        elif line.startswith("Device:"):
+        elif line.startswith('Device:'):
             if not dev_header:
                 dev_header = tuple(line.split()[1:])
             while line is not False:
@@ -920,7 +918,7 @@ def _iostat_linux(interval, count, disks):
     iostats = {}
 
     if sys_header:
-        iostats["sys"] = _iostats_dict(sys_header, sys_stats)
+        iostats['sys'] = _iostats_dict(sys_header, sys_stats)
 
     for disk, stats in dev_stats.items():
         iostats[disk] = _iostats_dict(dev_header, stats)

@@ -791,3 +791,27 @@ def ensure_unicode_args(function):
             return function(*args, **kwargs)
 
     return wrapped
+
+
+def external(func):
+    '''
+    Mark function as external.
+
+    :param func:
+    :return:
+    '''
+
+    def f(*args, **kwargs):
+        '''
+        Stub.
+
+        :param args:
+        :param kwargs:
+        :return:
+        '''
+        return func(*args, **kwargs)
+
+    f.external = True
+    f.__doc__ = func.__doc__
+
+    return f

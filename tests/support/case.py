@@ -18,6 +18,11 @@ import os
 import re
 import subprocess
 import sys
+import time
+import errno
+import signal
+import textwrap
+import logging
 import tempfile
 import textwrap
 import time
@@ -36,7 +41,13 @@ from tests.support.mixins import (
 from tests.support.paths import CODE_DIR, INTEGRATION_TEST_DIR, PYEXEC, SCRIPT_DIR
 from tests.support.processes import terminate_process
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin, SaltClientTestCaseMixin
+from tests.support.paths import INTEGRATION_TEST_DIR, CODE_DIR, PYEXEC, SCRIPT_DIR
+from tests.support.cli_scripts import ScriptPathMixin
+
+# Import 3rd-party libs
+from salt.ext import six
+from salt.ext.six.moves import cStringIO  # pylint: disable=import-error
 
 STATE_FUNCTION_RUNNING_RE = re.compile(
     r"""The function (?:"|')(?P<state_func>.*)(?:"|') is running as PID """
@@ -47,9 +58,9 @@ log = logging.getLogger(__name__)
 
 
 class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
-    """
+    '''
     Execute a test for a shell command
-    """
+    '''
 
     def run_salt(self, arg_str, with_retcode=False, catch_stderr=False, timeout=15):
         r'''
@@ -155,6 +166,10 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin
         from salt.ext.six.moves import cStringIO
 
         opts = salt.config.master_config(self.get_config_file_path("master"))
+
+        if 'asynchronous' in kwargs:
+            opts['async'] = True
+            kwargs.pop('asynchronous')
 
         opts_arg = list(arg)
         if kwargs:
@@ -612,6 +627,11 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         opts = {}
         opts.update(self.get_config("client_config", from_scratch=from_scratch))
         opts_arg = list(arg)
+
+        if 'asynchronous' in kwargs:
+            opts['async'] = True
+            kwargs.pop('asynchronous')
+
         if kwargs:
             opts_arg.append({"__kwarg__": True})
             opts_arg[-1].update(kwargs)

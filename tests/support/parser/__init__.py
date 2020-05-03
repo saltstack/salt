@@ -76,27 +76,15 @@ def __global_logging_exception_handler(
         return
 
     # Log the exception
-    try:
-        msg = "An un-handled exception was caught by salt's testing global exception handler:\n{}: {}\n{}".format(
-            exc_type.__name__,
-            exc_value,
-            "".join(_format_exception(exc_type, exc_value, exc_traceback)).strip(),
-        )
-    except Exception:  # pylint: disable=broad-except
-        msg = (
-            "An un-handled exception was caught by salt-testing's global exception handler:\n{}: {}\n"
-            "(UNABLE TO FORMAT TRACEBACK)".format(exc_type.__name__, exc_value,)
-        )
-    try:
-        _logger(__name__).error(msg)
-    except Exception:  # pylint: disable=broad-except
-        # Python is shutting down and logging has been set to None already
-        try:
-            _stderr.write(msg + "\n")
-        except Exception:  # pylint: disable=broad-except
-            # We have also lost reference to sys.__stderr__ ?!
-            print(msg)
-
+    logging.getLogger(__name__).error(
+        'An un-handled exception was caught by salt-testing\'s global '
+        'exception handler:\n%s: %s\n%s',
+        exc_type.__name__,
+        exc_value,
+        ''.join(traceback.format_exception(
+            exc_type, exc_value, exc_traceback
+        )).strip()
+    )
     # Call the original sys.excepthook
     try:
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
@@ -456,7 +444,9 @@ class SaltTestingParser(optparse.OptionParser):
                 r"^(salt/|tests/(unit|integration|multimaster)/)(.+\.py)$", path
             )
             if match:
-                comps = match.group(3).split("/")
+                comps = match.group(3).split('/')
+                if len(comps) < 2:
+                    continue
 
                 # Find matches for a source file
                 if match.group(1) == "salt/":
@@ -935,13 +925,13 @@ class SaltTestingParser(optparse.OptionParser):
             processes.terminate_process(children=children, kill_children=True)
             children = processes.collect_child_processes(os.getpid())
             if children:
-                log.info(
-                    "Second run at terminating test suite child processes: %s", children
-                )
-                processes.terminate_process(children=children, kill_children=True)
-        exit_msg = "Test suite execution finalized with exit code: {}".format(exit_code)
-        log.info(exit_msg)
-        self.exit(status=exit_code, msg=exit_msg + "\n")
+                log.info('Second run at terminating test suite child processes: %s', children)
+                helpers.terminate_process(children=children, kill_children=True)
+        log.info(
+            'Test suite execution finalized with exit code: %s',
+            exit_code
+        )
+        self.exit(exit_code)
 
     def run_suite_in_docker(self):
         """

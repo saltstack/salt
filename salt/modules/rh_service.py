@@ -62,28 +62,26 @@ def __virtual__():
         )
 
     # Enable on these platforms only.
-    enable = set(
-        (
-            "XenServer",
-            "XCP-ng",
-            "RedHat",
-            "CentOS",
-            "ScientificLinux",
-            "CloudLinux",
-            "Amazon",
-            "Fedora",
-            "ALT",
-            "OEL",
-            "SUSE  Enterprise Server",
-            "SUSE",
-            "McAfee  OS Server",
-            "VirtuozzoLinux",
-        )
-    )
-    if __grains__["os"] in enable:
+    enable = set((
+        'XenServer',
+        'XCP-ng',
+        'RedHat',
+        'CentOS',
+        'ScientificLinux',
+        'CloudLinux',
+        'Amazon',
+        'Fedora',
+        'ALT',
+        'OEL',
+        'SUSE  Enterprise Server',
+        'SUSE',
+        'McAfee  OS Server',
+        'VirtuozzoLinux'
+    ))
+    if __grains__.get('os') in enable:
 
-        if __grains__["os"] == "SUSE":
-            if six.text_type(__grains__["osrelease"]).startswith("11"):
+        if __grains__['os'] == 'SUSE':
+            if six.text_type(__grains__['osrelease']).startswith('11'):
                 return __virtualname__
             else:
                 return (False, "Cannot load rh_service module on SUSE > 11")

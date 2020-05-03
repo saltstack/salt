@@ -185,6 +185,10 @@ def until_no_eval(
         )
     if ret["comment"]:
         return ret
+    if not m_args:
+        m_args = []
+    if not m_kwargs:
+        m_kwargs = {}
 
     if init_wait:
         time.sleep(init_wait)

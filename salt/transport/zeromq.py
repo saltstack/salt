@@ -243,15 +243,10 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         if self.crypt != "clear":
             # we don't need to worry about auth as a kwarg, since its a singleton
             self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self._io_loop)
-        log.debug(
-            "Connecting the Minion to the Master URI (for the return server): %s",
-            self.master_uri,
-        )
-        self.message_client = AsyncReqMessageClientPool(
-            self.opts,
-            args=(self.opts, self.master_uri,),
-            kwargs={"io_loop": self._io_loop},
-        )
+        log.debug('Connecting the Minion to the Master URI (for the return server): %s', self.opts['master_uri'])
+        self.message_client = AsyncReqMessageClientPool(self.opts,
+                                                        args=(self.opts, self.opts['master_uri'],),
+                                                        kwargs={'io_loop': self._io_loop})
         self._closing = False
 
     def close(self):
@@ -564,16 +559,13 @@ class AsyncZeroMQPubChannel(
             yield self.auth.authenticate()
 
         # if this is changed from the default, we assume it was intentional
-        if int(self.opts.get("publish_port", 4506)) != 4506:
-            self.publish_port = self.opts.get("publish_port")
+        if int(self.opts.get('publish_port', 4505)) != 4505:
+            self.publish_port = self.opts.get('publish_port')
         # else take the relayed publish_port master reports
         else:
-            self.publish_port = self.auth.creds["publish_port"]
+            self.publish_port = self.auth.creds['publish_port']
 
-        log.debug(
-            "Connecting the Minion to the Master publish port, using the URI: %s",
-            self.master_pub,
-        )
+        log.debug('Connecting the Minion to the Master publish port, using the URI: %s', self.master_pub)
         self._socket.connect(self.master_pub)
 
     @property
@@ -602,15 +594,10 @@ class AsyncZeroMQPubChannel(
         # 2 includes a header which says who should do it
         elif messages_len == 2:
             message_target = salt.utils.stringutils.to_str(messages[0])
-            if (
-                self.opts.get("__role") != "syndic"
-                and message_target not in ("broadcast", self.hexid)
-            ) or (
-                self.opts.get("__role") == "syndic"
-                and message_target not in ("broadcast", "syndic")
-            ):
-                log.debug("Publish received for not this minion: %s", message_target)
-                raise salt.ext.tornado.gen.Return(None)
+            if (self.opts.get('__role') != 'syndic' and message_target not in ('broadcast', self.hexid)) or \
+                (self.opts.get('__role') == 'syndic' and message_target not in ('broadcast', 'syndic')):
+                log.debug('Publish received for not this minion: %s', message_target)
+                raise tornado.gen.Return(None)
             payload = self.serial.loads(messages[1])
         else:
             raise Exception(
@@ -853,9 +840,9 @@ class ZeroMQReqServerChannel(
             ret, req_opts = yield self.payload_handler(payload)
         except Exception as e:  # pylint: disable=broad-except
             # always attempt to return an error to the minion
-            stream.send("Some exception handling minion payload")
-            log.error("Some exception handling a payload from minion", exc_info=True)
-            raise salt.ext.tornado.gen.Return()
+            stream.send(self.serial.dumps('Some exception handling minion payload'))
+            log.error('Some exception handling a payload from minion', exc_info=True)
+            raise tornado.gen.Return()
 
         req_fun = req_opts.get("fun", "send")
         if req_fun == "send_clear":
@@ -871,8 +858,8 @@ class ZeroMQReqServerChannel(
         else:
             log.error("Unknown req_fun %s", req_fun)
             # always attempt to return an error to the minion
-            stream.send("Server-side exception handling payload")
-        raise salt.ext.tornado.gen.Return()
+            stream.send(self.serial.dumps('Server-side exception handling payload'))
+        raise tornado.gen.Return()
 
     def __setup_signals(self):
         signal.signal(signal.SIGINT, self._handle_signals)
@@ -1305,7 +1292,7 @@ class AsyncReqMessageClient(object):
 
     @salt.ext.tornado.gen.coroutine
     def _internal_send_recv(self):
-        while len(self.send_queue) > 0:
+        while self.send_queue:
             message = self.send_queue[0]
             future = self.send_future_map.get(message, None)
             if future is None:
@@ -1399,7 +1386,7 @@ class AsyncReqMessageClient(object):
             )
             self.send_timeout_map[message] = send_timeout
 
-        if len(self.send_queue) == 0:
+        if not self.send_queue:
             self.io_loop.spawn_callback(self._internal_send_recv)
 
         self.send_queue.append(message)

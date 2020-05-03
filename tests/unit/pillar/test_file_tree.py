@@ -10,7 +10,12 @@ import os
 import shutil
 import tempfile
 
-import salt.pillar.file_tree as file_tree
+# Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
+from tests.support.helpers import TestsLoggingHandler
 
 # Import Salt Libs
 import salt.utils.files

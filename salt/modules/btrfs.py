@@ -20,7 +20,6 @@ Module for managing BTRFS file systems.
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-
 import itertools
 import os
 import re
@@ -758,7 +757,7 @@ def properties(obj, type=None, set=None):
 
 
 def subvolume_exists(path):
-    """
+    '''
     Check if a subvolume is present in the filesystem.
 
     path
@@ -770,13 +769,13 @@ def subvolume_exists(path):
 
         salt '*' btrfs.subvolume_exists /mnt/var
 
-    """
-    cmd = ["btrfs", "subvolume", "show", path]
-    return __salt__["cmd.retcode"](cmd, ignore_retcode=True) == 0
+    '''
+    cmd = ['btrfs', 'subvolume', 'show', path]
+    return __salt__['cmd.retcode'](cmd, ignore_retcode=True) == 0
 
 
 def subvolume_create(name, dest=None, qgroupids=None):
-    """
+    '''
     Create subvolume `name` in `dest`.
 
     Return True if the subvolume is created, False is the subvolume is
@@ -801,9 +800,9 @@ def subvolume_create(name, dest=None, qgroupids=None):
         salt '*' btrfs.subvolume_create var dest=/mnt
         salt '*' btrfs.subvolume_create var qgroupids='[200]'
 
-    """
+    '''
     if qgroupids and type(qgroupids) is not list:
-        raise CommandExecutionError("Qgroupids parameter must be a list")
+        raise CommandExecutionError('Qgroupids parameter must be a list')
 
     if dest:
         name = os.path.join(dest, name)
@@ -812,19 +811,19 @@ def subvolume_create(name, dest=None, qgroupids=None):
     if subvolume_exists(name):
         return False
 
-    cmd = ["btrfs", "subvolume", "create"]
+    cmd = ['btrfs', 'subvolume', 'create']
     if type(qgroupids) is list:
-        cmd.append("-i")
+        cmd.append('-i')
         cmd.extend(qgroupids)
     cmd.append(name)
 
-    res = __salt__["cmd.run_all"](cmd)
+    res = __salt__['cmd.run_all'](cmd)
     salt.utils.fsutils._verify_run(res)
     return True
 
 
 def subvolume_delete(name=None, names=None, commit=None):
-    """
+    '''
     Delete the subvolume(s) from the filesystem
 
     The user can remove one single subvolume (name) or multiple of
@@ -854,36 +853,35 @@ def subvolume_delete(name=None, names=None, commit=None):
         salt '*' btrfs.subvolume_delete /var/volumes/tmp
         salt '*' btrfs.subvolume_delete /var/volumes/tmp commit=after
 
-    """
+    '''
     if not name and not (names and type(names) is list):
-        raise CommandExecutionError("Provide a value for the name parameter")
+        raise CommandExecutionError('Provide a value for the name parameter')
 
-    if commit and commit not in ("after", "each"):
-        raise CommandExecutionError("Value for commit not recognized")
+    if commit and commit not in ('after', 'each'):
+        raise CommandExecutionError('Value for commit not recognized')
 
     # Filter the names and take the ones that are still there
-    names = [
-        n for n in itertools.chain([name], names or []) if n and subvolume_exists(n)
-    ]
+    names = [n for n in itertools.chain([name], names or [])
+             if n and subvolume_exists(n)]
 
     # If the subvolumes are gone, we are done
     if not names:
         return False
 
-    cmd = ["btrfs", "subvolume", "delete"]
-    if commit == "after":
-        cmd.append("--commit-after")
-    elif commit == "each":
-        cmd.append("--commit-each")
+    cmd = ['btrfs', 'subvolume', 'delete']
+    if commit == 'after':
+        cmd.append('--commit-after')
+    elif commit == 'each':
+        cmd.append('--commit-each')
     cmd.extend(names)
 
-    res = __salt__["cmd.run_all"](cmd)
+    res = __salt__['cmd.run_all'](cmd)
     salt.utils.fsutils._verify_run(res)
     return True
 
 
 def subvolume_find_new(name, last_gen):
-    """
+    '''
     List the recently modified files in a subvolume
 
     name
@@ -898,25 +896,25 @@ def subvolume_find_new(name, last_gen):
 
         salt '*' btrfs.subvolume_find_new /var/volumes/tmp 1024
 
-    """
-    cmd = ["btrfs", "subvolume", "find-new", name, last_gen]
+    '''
+    cmd = ['btrfs', 'subvolume', 'find-new', name, last_gen]
 
-    res = __salt__["cmd.run_all"](cmd)
+    res = __salt__['cmd.run_all'](cmd)
     salt.utils.fsutils._verify_run(res)
 
-    lines = res["stdout"].splitlines()
+    lines = res['stdout'].splitlines()
     # Filenames are at the end of each inode line
-    files = [l.split()[-1] for l in lines if l.startswith("inode")]
+    files = [l.split()[-1] for l in lines if l.startswith('inode')]
     # The last transid is in the last line
     transid = lines[-1].split()[-1]
     return {
-        "files": files,
-        "transid": transid,
+        'files': files,
+        'transid': transid,
     }
 
 
 def subvolume_get_default(path):
-    """
+    '''
     Get the default subvolume of the filesystem path
 
     path
@@ -928,13 +926,13 @@ def subvolume_get_default(path):
 
         salt '*' btrfs.subvolume_get_default /var/volumes/tmp
 
-    """
-    cmd = ["btrfs", "subvolume", "get-default", path]
+    '''
+    cmd = ['btrfs', 'subvolume', 'get-default', path]
 
-    res = __salt__["cmd.run_all"](cmd)
+    res = __salt__['cmd.run_all'](cmd)
     salt.utils.fsutils._verify_run(res)
 
-    line = res["stdout"].strip()
+    line = res['stdout'].strip()
     # The ID is the second parameter, and the name the last one, or
     # '(FS_TREE)'
     #
@@ -947,13 +945,13 @@ def subvolume_get_default(path):
     id_ = line.split()[1]
     name = line.split()[-1]
     return {
-        "id": id_,
-        "name": name,
+        'id': id_,
+        'name': name,
     }
 
 
 def _pop(line, key, use_rest):
-    """
+    '''
     Helper for the line parser.
 
     If key is a prefix of line, will remove ir from the line and will
@@ -962,36 +960,25 @@ def _pop(line, key, use_rest):
     If use_rest is True, the value will be the rest of the line.
 
     Return a tuple with the value and the rest of the line.
-    """
+    '''
     value = None
     if line.startswith(key):
-        line = line[len(key) :].strip()
+        line = line[len(key):].strip()
         if use_rest:
             value = line
-            line = ""
+            line = ''
         else:
-            value, line = line.split(" ", 1)
+            value, line = line.split(' ', 1)
     return value, line.strip()
 
 
-def subvolume_list(
-    path,
-    parent_id=False,
-    absolute=False,
-    ogeneration=False,
-    generation=False,
-    subvolumes=False,
-    uuid=False,
-    parent_uuid=False,
-    sent_subvolume_uuid=False,
-    snapshots=False,
-    readonly=False,
-    deleted=False,
-    generation_cmp=None,
-    ogeneration_cmp=None,
-    sort=None,
-):
-    """
+def subvolume_list(path, parent_id=False, absolute=False,
+                   ogeneration=False, generation=False,
+                   subvolumes=False, uuid=False, parent_uuid=False,
+                   sent_subvolume_uuid=False, snapshots=False,
+                   readonly=False, deleted=False, generation_cmp=None,
+                   ogeneration_cmp=None, sort=None):
+    '''
     List the subvolumes present in the filesystem.
 
     path
@@ -1060,52 +1047,48 @@ def subvolume_list(
         salt '*' btrfs.subvolume_list /var/volumes/tmp path=True
         salt '*' btrfs.subvolume_list /var/volumes/tmp sort='[-rootid]'
 
-    """
+    '''
     if sort and type(sort) is not list:
-        raise CommandExecutionError("Sort parameter must be a list")
+        raise CommandExecutionError('Sort parameter must be a list')
 
     valid_sorts = [
-        "".join((order, attrib))
-        for order, attrib in itertools.product(
-            ("-", "", "+"), ("rootid", "gen", "ogen", "path")
-        )
+        ''.join((order, attrib)) for order, attrib in itertools.product(
+            ('-', '', '+'), ('rootid', 'gen', 'ogen', 'path'))
     ]
     if sort and not all(s in valid_sorts for s in sort):
-        raise CommandExecutionError("Value for sort not recognized")
+        raise CommandExecutionError('Value for sort not recognized')
 
-    cmd = ["btrfs", "subvolume", "list"]
+    cmd = ['btrfs', 'subvolume', 'list']
 
-    params = (
-        (parent_id, "-p"),
-        (absolute, "-a"),
-        (ogeneration, "-c"),
-        (generation, "-g"),
-        (subvolumes, "-o"),
-        (uuid, "-u"),
-        (parent_uuid, "-q"),
-        (sent_subvolume_uuid, "-R"),
-        (snapshots, "-s"),
-        (readonly, "-r"),
-        (deleted, "-d"),
-    )
+    params = ((parent_id, '-p'),
+              (absolute, '-a'),
+              (ogeneration, '-c'),
+              (generation, '-g'),
+              (subvolumes, '-o'),
+              (uuid, '-u'),
+              (parent_uuid, '-q'),
+              (sent_subvolume_uuid, '-R'),
+              (snapshots, '-s'),
+              (readonly, '-r'),
+              (deleted, '-d'))
     cmd.extend(p[1] for p in params if p[0])
 
     if generation_cmp:
-        cmd.extend(["-G", generation_cmp])
+        cmd.extend(['-G', generation_cmp])
 
     if ogeneration_cmp:
-        cmd.extend(["-C", ogeneration_cmp])
+        cmd.extend(['-C', ogeneration_cmp])
 
     # We already validated the content of the list
     if sort:
-        cmd.append("--sort={}".format(",".join(sort)))
+        cmd.append('--sort={}'.format(','.join(sort)))
 
     cmd.append(path)
 
-    res = __salt__["cmd.run_all"](cmd)
+    res = __salt__['cmd.run_all'](cmd)
     salt.utils.fsutils._verify_run(res)
 
-    # Parse the output. ID and gen are always at the beginning, and
+    # Parse the output. ID and gen are always at the begining, and
     # path is always at the end. There is only one column that
     # contains space (top level), and the path value can also have
     # spaces. The issue is that we do not know how many spaces do we
@@ -1113,23 +1096,13 @@ def subvolume_list(
     # will fail.
     #
     # This list is in order.
-    columns = (
-        "ID",
-        "gen",
-        "cgen",
-        "parent",
-        "top level",
-        "otime",
-        "parent_uuid",
-        "received_uuid",
-        "uuid",
-        "path",
-    )
+    columns = ('ID', 'gen', 'cgen', 'parent', 'top level', 'otime',
+               'parent_uuid', 'received_uuid', 'uuid', 'path')
     result = []
-    for line in res["stdout"].splitlines():
+    for line in res['stdout'].splitlines():
         table = {}
         for key in columns:
-            value, line = _pop(line, key, key == "path")
+            value, line = _pop(line, key, key == 'path')
             if value:
                 table[key.lower()] = value
         # If line is not empty here, we are not able to parse it
@@ -1140,7 +1113,7 @@ def subvolume_list(
 
 
 def subvolume_set_default(subvolid, path):
-    """
+    '''
     Set the subvolume as default
 
     subvolid
@@ -1155,16 +1128,16 @@ def subvolume_set_default(subvolid, path):
 
         salt '*' btrfs.subvolume_set_default 257 /var/volumes/tmp
 
-    """
-    cmd = ["btrfs", "subvolume", "set-default", subvolid, path]
+    '''
+    cmd = ['btrfs', 'subvolume', 'set-default', subvolid, path]
 
-    res = __salt__["cmd.run_all"](cmd)
+    res = __salt__['cmd.run_all'](cmd)
     salt.utils.fsutils._verify_run(res)
     return True
 
 
 def subvolume_show(path):
-    """
+    '''
     Show information of a given subvolume
 
     path
@@ -1176,28 +1149,28 @@ def subvolume_show(path):
 
         salt '*' btrfs.subvolume_show /var/volumes/tmp
 
-    """
-    cmd = ["btrfs", "subvolume", "show", path]
+    '''
+    cmd = ['btrfs', 'subvolume', 'show', path]
 
-    res = __salt__["cmd.run_all"](cmd)
+    res = __salt__['cmd.run_all'](cmd)
     salt.utils.fsutils._verify_run(res)
 
     result = {}
     table = {}
     # The real name is the first line, later there is a table of
     # values separated with colon.
-    stdout = res["stdout"].splitlines()
+    stdout = res['stdout'].splitlines()
     key = stdout.pop(0)
     result[key.strip()] = table
 
     for line in stdout:
-        key, value = line.split(":", 1)
+        key, value = line.split(':', 1)
         table[key.lower().strip()] = value.strip()
     return result
 
 
 def subvolume_snapshot(source, dest=None, name=None, read_only=False):
-    """
+    '''
     Create a snapshot of a source subvolume
 
     source
@@ -1220,13 +1193,13 @@ def subvolume_snapshot(source, dest=None, name=None, read_only=False):
         salt '*' btrfs.subvolume_snapshot /var/volumes/tmp dest=/.snapshots
         salt '*' btrfs.subvolume_snapshot /var/volumes/tmp name=backup
 
-    """
+    '''
     if not dest and not name:
-        raise CommandExecutionError("Provide parameter dest, name, or both")
+        raise CommandExecutionError('Provide parameter dest, name, or both')
 
-    cmd = ["btrfs", "subvolume", "snapshot"]
+    cmd = ['btrfs', 'subvolume', 'snapshot']
     if read_only:
-        cmd.append("-r")
+        cmd.append('-r')
     if dest and not name:
         cmd.append(dest)
     if dest and name:
@@ -1234,13 +1207,13 @@ def subvolume_snapshot(source, dest=None, name=None, read_only=False):
     if name:
         cmd.append(name)
 
-    res = __salt__["cmd.run_all"](cmd)
+    res = __salt__['cmd.run_all'](cmd)
     salt.utils.fsutils._verify_run(res)
     return True
 
 
 def subvolume_sync(path, subvolids=None, sleep=None):
-    """
+    '''
     Wait until given subvolume are completely removed from the
     filesystem after deletion.
 
@@ -1260,18 +1233,18 @@ def subvolume_sync(path, subvolids=None, sleep=None):
         salt '*' btrfs.subvolume_sync /var/volumes/tmp
         salt '*' btrfs.subvolume_sync /var/volumes/tmp subvolids='[257]'
 
-    """
+    '''
     if subvolids and type(subvolids) is not list:
-        raise CommandExecutionError("Subvolids parameter must be a list")
+        raise CommandExecutionError('Subvolids parameter must be a list')
 
-    cmd = ["btrfs", "subvolume", "sync"]
+    cmd = ['btrfs', 'subvolume', 'sync']
     if sleep:
-        cmd.extend(["-s", sleep])
+        cmd.extend(['-s', sleep])
 
     cmd.append(path)
     if subvolids:
         cmd.extend(subvolids)
 
-    res = __salt__["cmd.run_all"](cmd)
+    res = __salt__['cmd.run_all'](cmd)
     salt.utils.fsutils._verify_run(res)
     return True

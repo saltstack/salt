@@ -71,6 +71,10 @@ To use the EC2 cloud module, set up the cloud configuration at
       # Pass userdata to the instance to be created
       userdata_file: /etc/salt/my-userdata-file
 
+      # Instance termination protection setting
+      # Default is disabled
+      termination_protection: False
+
 :depends: requests
 """
 # pylint: disable=invalid-name,function-redefined
@@ -88,16 +92,20 @@ import hashlib
 import hmac
 import logging
 import os
-import pprint
-import re
 import stat
 import sys
 import time
 import uuid
 from functools import cmp_to_key
 
-import salt.config as config
-import salt.utils.aws as aws
+# Import libs for talking to the EC2 API
+import hmac
+import hashlib
+import binascii
+import datetime
+import base64
+import re
+import decimal
 
 # Import Salt Libs
 import salt.utils.cloud
@@ -221,11 +229,8 @@ def get_dependencies():
 def _xml_to_dict(xmltree):
     """
     Convert an XML tree into a dict
-    """
-    if sys.version_info < (2, 7):
-        children_len = len(xmltree.getchildren())
-    else:
-        children_len = len(xmltree)
+    '''
+    children_len = len(xmltree)
 
     if children_len < 1:
         name = xmltree.tag
@@ -241,10 +246,7 @@ def _xml_to_dict(xmltree):
             comps = name.split("}")
             name = comps[1]
         if name not in xmldict:
-            if sys.version_info < (2, 7):
-                children_len = len(item.getchildren())
-            else:
-                children_len = len(item)
+            children_len = len(item)
 
             if children_len > 0:
                 xmldict[name] = _xml_to_dict(item)
@@ -491,10 +493,7 @@ def query(
         items = root
 
     if setname:
-        if sys.version_info < (2, 7):
-            children_len = len(root.getchildren())
-        else:
-            children_len = len(root)
+        children_len = len(root)
 
         for item in range(0, children_len):
             comps = root[item].tag.split("}")
@@ -1978,23 +1977,18 @@ def request_instance(vm_=None, call=None):
     )
 
     set_termination_protection = config.get_cloud_config_value(
-        "termination_protection", vm_, __opts__, search_global=False
+        'termination_protection', vm_, __opts__, search_global=False
     )
 
     if set_termination_protection is not None:
         if not isinstance(set_termination_protection, bool):
             raise SaltCloudConfigError(
-                "'termination_protection' should be a boolean value."
+                '\'termination_protection\' should be a boolean value.'
             )
-        params.update(
-            _param_from_config(
-                spot_prefix + "DisableApiTermination", set_termination_protection
-            )
-        )
+        params.update(_param_from_config(spot_prefix + 'DisableApiTermination',
+                                         set_termination_protection))
 
-    if set_del_root_vol_on_destroy and not isinstance(
-        set_del_root_vol_on_destroy, bool
-    ):
+    if set_del_root_vol_on_destroy and not isinstance(set_del_root_vol_on_destroy, bool):
         raise SaltCloudConfigError(
             "'del_root_vol_on_destroy' should be a boolean value."
         )
@@ -4525,15 +4519,16 @@ def create_keypair(kwargs=None, call=None):
 
     params = {"Action": "CreateKeyPair", "KeyName": kwargs["keyname"]}
 
-    data = aws.query(
-        params,
-        return_url=True,
-        location=get_location(),
-        provider=get_provider(),
-        opts=__opts__,
-        sigver="4",
-    )
-    return data
+    data = aws.query(params,
+                     return_url=True,
+                     return_root=True,
+                     location=get_location(),
+                     provider=get_provider(),
+                     opts=__opts__,
+                     sigver='4')
+    keys = [x for x in data[0] if 'requestId' not in x]
+
+    return (keys, data[1])
 
 
 def import_keypair(kwargs=None, call=None):
@@ -4943,7 +4938,7 @@ def get_password_data(
         ret[next(six.iterkeys(item))] = next(six.itervalues(item))
 
     if not HAS_M2 and not HAS_PYCRYPTO:
-        if "key" in kwargs or "key_file" in kwargs:
+        if 'key' in kwargs or 'key_file' in kwargs:
             log.warning("No crypto library is installed, can not decrypt password")
         return ret
 
@@ -5051,8 +5046,10 @@ def _parse_pricing(url, name):
                 sizes[size["size"]] = size
         regions[region["region"]] = sizes
 
-    outfile = os.path.join(__opts__["cachedir"], "ec2-pricing-{0}.p".format(name))
-    with salt.utils.files.fopen(outfile, "w") as fho:
+    outfile = os.path.join(
+        __opts__['cachedir'], 'ec2-pricing-{0}.p'.format(name)
+    )
+    with salt.utils.files.fopen(outfile, 'w') as fho:
         salt.utils.msgpack.dump(regions, fho)
 
     return True
@@ -5118,8 +5115,9 @@ def show_pricing(kwargs=None, call=None):
     if not os.path.isfile(pricefile):
         update_pricing({"type": name}, "function")
 
-    with salt.utils.files.fopen(pricefile, "r") as fhi:
-        ec2_price = salt.utils.stringutils.to_unicode(salt.utils.msgpack.load(fhi))
+    with salt.utils.files.fopen(pricefile, 'r') as fhi:
+        ec2_price = salt.utils.stringutils.to_unicode(
+            salt.utils.msgpack.load(fhi))
 
     region = get_location(profile)
     size = profile.get("size", None)

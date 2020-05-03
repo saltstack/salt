@@ -194,14 +194,16 @@ def _move(src, dst):
 
 
 def _run_command(args):
-    log.info("Running command: {0}".format(args))
-    proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    log.info('Running command: %s', args)
+    proc = subprocess.Popen(args,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate()
     if stdout:
-        log.debug("Command output: \n{0}".format(stdout))
+        log.debug('Command output: \n%s', stdout)
     if stderr:
         log.error(stderr)
-    log.info("Return code: {0}".format(proc.returncode))
+    log.info('Return code: %s', proc.returncode)
     return stdout, stderr, proc.returncode
 
 
@@ -214,7 +216,7 @@ def _make_sdist(opts, python_bin="python"):
             glob.iglob(os.path.join(opts.source_dir, "dist", "salt-*.tar.gz")),
             key=os.path.getctime,
         )
-        log.info("sdist is located at {0}".format(sdist_path))
+        log.info('sdist is located at %s', sdist_path)
         return sdist_path
     else:
         _abort("Failed to create sdist")
@@ -241,7 +243,7 @@ def build_centos(opts):
     except IOError as exc:
         _abort("{0}".format(exc))
 
-    log.info("major_release: {0}".format(major_release))
+    log.info('major_release: %s', major_release)
 
     define_opts = ["--define", "_topdir {0}".format(os.path.join(opts.build_dir))]
     build_reqs = ["rpm-build"]
@@ -282,8 +284,8 @@ def build_centos(opts):
         salt_pkgver = ".".join((base, offset, oid))
         salt_srcver = "-".join((base, offset, oid))
 
-    log.info("salt_pkgver: {0}".format(salt_pkgver))
-    log.info("salt_srcver: {0}".format(salt_srcver))
+    log.info('salt_pkgver: %s', salt_pkgver)
+    log.info('salt_srcver: %s', salt_srcver)
 
     # Setup build environment
     for build_dir in "BUILD BUILDROOT RPMS SOURCES SPECS SRPMS".split():
@@ -379,9 +381,8 @@ if __name__ == "__main__":
         level=LOG_LEVELS[opts.log_level],
     )
     if opts.log_level not in LOG_LEVELS:
-        log.error(
-            "Invalid log level '{0}', falling back to 'warning'".format(opts.log_level)
-        )
+        log.error('Invalid log level \'%s\', falling back to \'warning\'',
+                  opts.log_level)
 
     # Build for the specified platform
     if not opts.platform:
@@ -396,5 +397,5 @@ if __name__ == "__main__":
     print(msg)  # pylint: disable=C0325
     for artifact in artifacts:
         shutil.copy(artifact, opts.artifact_dir)
-        log.info("Copied {0} to artifact directory".format(artifact))
-    log.info("Done!")
+        log.info('Copied %s to artifact directory', artifact)
+    log.info('Done!')

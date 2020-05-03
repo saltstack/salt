@@ -40,8 +40,8 @@ __virtualname__ = "pkg"
 def __virtual__():
     """
     Set the virtual pkg module if the os is Arch
-    """
-    if __grains__["os_family"] == "Arch":
+    '''
+    if __grains__.get('os_family') == 'Arch':
         return __virtualname__
     return (False, "The pacman module could not be loaded: unsupported OS family.")
 
@@ -71,8 +71,8 @@ def latest_version(*names, **kwargs):
     """
     refresh = salt.utils.data.is_true(kwargs.pop("refresh", False))
 
-    if len(names) == 0:
-        return ""
+    if not names:
+        return ''
 
     # Refresh before looking for the latest version available
     if refresh:
@@ -112,8 +112,8 @@ available_version = salt.utils.functools.alias_function(
 )
 
 
-def upgrade_available(name):
-    """
+def upgrade_available(name, **kwargs):
+    '''
     Check whether or not an upgrade is available for a given package
 
     CLI Example:
@@ -401,8 +401,8 @@ def group_diff(name):
     return ret
 
 
-def refresh_db(root=None):
-    """
+def refresh_db(root=None, **kwargs):
+    '''
     Just run a ``pacman -Sy``, return a dict::
 
         {'<database name>': Bool}
@@ -531,7 +531,7 @@ def install(
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     if "root" in kwargs:
@@ -836,8 +836,8 @@ def purge(name=None, pkgs=None, **kwargs):
     return _uninstall(action="purge", name=name, pkgs=pkgs)
 
 
-def file_list(*packages):
-    """
+def file_list(*packages, **kwargs):
+    '''
     List the files that belong to a package. Not specifying any packages will
     return a list of _every_ file on the system's package database (not
     generally recommended).
@@ -854,7 +854,7 @@ def file_list(*packages):
     ret = []
     cmd = ["pacman", "-Ql"]
 
-    if len(packages) > 0 and os.path.exists(packages[0]):
+    if packages and os.path.exists(packages[0]):
         packages = list(packages)
         cmd.extend(("-r", packages.pop(0)))
 
@@ -870,8 +870,8 @@ def file_list(*packages):
     return {"errors": errors, "files": ret}
 
 
-def file_dict(*packages):
-    """
+def file_dict(*packages, **kwargs):
+    '''
     List the files that belong to a package, grouped by package. Not
     specifying any packages will return a list of _every_ file on the system's
     package database (not generally recommended).
@@ -888,7 +888,7 @@ def file_dict(*packages):
     ret = {}
     cmd = ["pacman", "-Ql"]
 
-    if len(packages) > 0 and os.path.exists(packages[0]):
+    if packages and os.path.exists(packages[0]):
         packages = list(packages)
         cmd.extend(("-r", packages.pop(0)))
 
@@ -906,8 +906,8 @@ def file_dict(*packages):
     return {"errors": errors, "packages": ret}
 
 
-def owner(*paths):
-    """
+def owner(*paths, **kwargs):
+    '''
     .. versionadded:: 2014.7.0
 
     Return the name of the package that owns the file. Multiple file paths can

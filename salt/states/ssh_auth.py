@@ -58,7 +58,7 @@ to use a YAML 'explicit key', as demonstrated in the second example below.
           - ssh-dss AAAAB3NzaCL0sQ9fJ5bYTEyY== user@domain
           - option3="value3" ssh-dss AAAAB3NzaC1kcQ9J5bYTEyY== other@testdomain
           - AAAAB3NzaC1kcQ9fJFF435bYTEyY== newcomment
-"""
+'''
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -139,10 +139,8 @@ def _present_test(
         comment = ("Key {0} for user {1} is set to be added").format(name, user)
     elif check == "exists":
         result = True
-        comment = (
-            "The authorized host key {0} is already present "
-            "for user {1}".format(name, user)
-        )
+        comment = ('The authorized host key {0} is already present '
+                   'for user {1}'.format(name, user))
 
     return result, comment
 
@@ -271,10 +269,13 @@ def present(
     fingerprint_hash_type
         The public key fingerprint hash type that the public key fingerprint
         was originally hashed with. This defaults to ``sha256`` if not specified.
-    """
-    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
 
-    if source == "":
+    if source == '':
         # check if this is of form {options} {enc} {key} {comment}
         sshre = re.compile(r"^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$")
         fullkey = sshre.search(name)
@@ -332,7 +333,7 @@ def present(
                 )
             else:
                 # Split keyline to get key and comment
-                keyline = keyline.split(" ")
+                keyline = keyline.split(' ')
                 key_type = keyline[0]
                 key_value = keyline[1]
                 key_comment = keyline[2] if len(keyline) > 2 else ""
@@ -445,20 +446,22 @@ def absent(
         was originally hashed with. This defaults to ``sha256`` if not specified.
 
         .. versionadded:: 2016.11.7
-    """
-    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
 
-    if __opts__["test"]:
-        ret["result"], ret["comment"] = _absent_test(
-            user,
-            name,
-            enc,
-            comment,
-            options or [],
-            source,
-            config,
-            fingerprint_hash_type,
-        )
+    if __opts__['test']:
+        ret['result'], ret['comment'] = _absent_test(
+                user,
+                name,
+                enc,
+                comment,
+                options or [],
+                source,
+                config,
+                fingerprint_hash_type)
         return ret
 
     # Extract Key from file if source is present
@@ -619,5 +622,101 @@ def manage(
             ret["result"] = None
         elif not run_return["result"]:
             ret["result"] = False
+
+    return ret
+
+
+def manage(
+        name,
+        ssh_keys,
+        user,
+        enc='ssh-rsa',
+        comment='',
+        source='',
+        options=None,
+        config='.ssh/authorized_keys',
+        fingerprint_hash_type=None,
+        **kwargs):
+    '''
+    .. versionadded:: Neon
+
+    Ensures that only the specified ssh_keys are present for the specified user
+
+    ssh_keys
+        The SSH key to manage
+
+    user
+        The user who owns the SSH authorized keys file to modify
+
+    enc
+        Defines what type of key is being used; can be ed25519, ecdsa, ssh-rsa
+        or ssh-dss
+
+    comment
+        The comment to be placed with the SSH public key
+
+    source
+        The source file for the key(s). Can contain any number of public keys,
+        in standard "authorized_keys" format. If this is set, comment and enc
+        will be ignored.
+
+    .. note::
+        The source file must contain keys in the format ``<enc> <key>
+        <comment>``. If you have generated a keypair using PuTTYgen, then you
+        will need to do the following to retrieve an OpenSSH-compatible public
+        key.
+
+        1. In PuTTYgen, click ``Load``, and select the *private* key file (not
+           the public key), and click ``Open``.
+        2. Copy the public key from the box labeled ``Public key for pasting
+           into OpenSSH authorized_keys file``.
+        3. Paste it into a new file.
+
+    options
+        The options passed to the keys, pass a list object
+
+    config
+        The location of the authorized keys file relative to the user's home
+        directory, defaults to ".ssh/authorized_keys". Token expansion %u and
+        %h for username and home path supported.
+
+    fingerprint_hash_type
+        The public key fingerprint hash type that the public key fingerprint
+        was originally hashed with. This defaults to ``sha256`` if not specified.
+    '''
+    ret = {'name': '',
+           'changes': {},
+           'result': True,
+           'comment': ''}
+
+    all_potential_keys = []
+    for ssh_key in ssh_keys:
+        # gather list potential ssh keys for removal comparison
+        # options, enc, and comments could be in the mix
+        all_potential_keys.extend(ssh_key.split(' '))
+    existing_keys = __salt__['ssh.auth_keys'](user=user).keys()
+    remove_keys = set(existing_keys).difference(all_potential_keys)
+    for remove_key in remove_keys:
+        if __opts__['test']:
+            remove_comment = '{0} Key set for removal'.format(remove_key)
+            ret['comment'] = remove_comment
+            ret['result'] = None
+        else:
+            remove_comment = absent(remove_key, user)['comment']
+            ret['changes'][remove_key] = remove_comment
+
+    for ssh_key in ssh_keys:
+        run_return = present(ssh_key, user, enc, comment, source,
+                             options, config, fingerprint_hash_type, **kwargs)
+        if run_return['changes']:
+            ret['changes'].update(run_return['changes'])
+        else:
+            ret['comment'] += '\n' + run_return['comment']
+            ret['comment'].strip()
+
+        if run_return['result'] is None:
+            ret['result'] = None
+        elif not run_return['result']:
+            ret['result'] = False
 
     return ret

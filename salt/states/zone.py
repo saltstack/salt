@@ -958,14 +958,12 @@ def present(name, brand, zonepath, properties=None, resources=None):
                     elif value:
                         res = property_present(name, key, value)
                     if res:
-                        ret["result"] = ret["result"] if res["result"] else False
-                        ret["comment"].append(res["comment"])
-                        if len(res["changes"]) > 0:
-                            if "property" not in ret["changes"]:
-                                ret["changes"]["property"] = {}
-                            ret["changes"]["property"] = merge_dict(
-                                ret["changes"]["property"], res["changes"]
-                            )
+                        ret['result'] = ret['result'] if res['result'] else False
+                        ret['comment'].append(res['comment'])
+                        if res['changes']:
+                            if 'property' not in ret['changes']:
+                                ret['changes']['property'] = {}
+                            ret['changes']['property'] = merge_dict(ret['changes']['property'], res['changes'])
         if isinstance(resources, list):
             for resource in resources:
                 if not isinstance(prop, OrderedDict) or len(prop) != 1:
@@ -1024,14 +1022,12 @@ def present(name, brand, zonepath, properties=None, resources=None):
                         ] = name  # we do this last because name can also be a attrib value
                         res = resource_present(**resource_cfg)
                     if res:
-                        ret["result"] = ret["result"] if res["result"] else False
-                        ret["comment"].append(res["comment"])
-                        if len(res["changes"]) > 0:
-                            if "resource" not in ret["changes"]:
-                                ret["changes"]["resource"] = {}
-                            ret["changes"]["resource"] = merge_dict(
-                                ret["changes"]["resource"], res["changes"]
-                            )
+                        ret['result'] = ret['result'] if res['result'] else False
+                        ret['comment'].append(res['comment'])
+                        if res['changes']:
+                            if 'resource' not in ret['changes']:
+                                ret['changes']['resource'] = {}
+                            ret['changes']['resource'] = merge_dict(ret['changes']['resource'], res['changes'])
 
     if isinstance(ret["comment"], list):
         ret["comment"] = "\n".join(ret["comment"])

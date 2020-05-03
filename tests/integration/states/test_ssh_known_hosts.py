@@ -20,19 +20,18 @@ from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
-GITHUB_FINGERPRINT = "9d:38:5b:83:a9:17:52:92:56:1a:5e:c4:d4:81:8e:0a:ca:51:a2:64:f1:74:20:11:2e:f8:8a:c3:a1:39:49:8f"
-GITHUB_IP = "192.30.253.113"
+GITHUB_FINGERPRINT = '9d:38:5b:83:a9:17:52:92:56:1a:5e:c4:d4:81:8e:0a:ca:51:a2:64:f1:74:20:11:2e:f8:8a:c3:a1:39:49:8f'
+GITHUB_IP = '192.30.253.113'
 
 
 @skip_if_binaries_missing(["ssh", "ssh-keygen"], check_all=True)
 class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
     """
     Validate the ssh state
-    """
-
+    '''
     @classmethod
     def setUpClass(cls):
-        cls.known_hosts = os.path.join(RUNTIME_VARS.TMP, "known_hosts")
+        cls.known_hosts = os.path.join(RUNTIME_VARS.TMP, 'known_hosts')
 
     def tearDown(self):
         if os.path.isfile(self.known_hosts):
@@ -45,10 +44,10 @@ class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
         ssh_known_hosts.present
         """
         kwargs = {
-            "name": "github.com",
-            "user": "root",
-            "fingerprint": GITHUB_FINGERPRINT,
-            "config": self.known_hosts,
+            'name': 'github.com',
+            'user': 'root',
+            'fingerprint': GITHUB_FINGERPRINT,
+            'config': self.known_hosts
         }
         # test first
         ret = self.run_state("ssh_known_hosts.present", test=True, **kwargs)
@@ -93,16 +92,14 @@ class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
 
         # record for every host must be available
         ret = self.run_function(
-            "ssh.get_known_host_entries",
-            ["root", "github.com"],
-            config=self.known_hosts,
+            'ssh.get_known_host_entries', ['root', 'github.com'], config=self.known_hosts
         )[0]
         try:
             self.assertNotIn(ret, ("", None))
         except AssertionError:
             raise AssertionError("Salt return '{0}' is in ('', None).".format(ret))
         ret = self.run_function(
-            "ssh.get_known_host_entries", ["root", GITHUB_IP], config=self.known_hosts
+            'ssh.get_known_host_entries', ['root', GITHUB_IP], config=self.known_hosts
         )[0]
         try:
             self.assertNotIn(ret, ("", None, {}))
@@ -115,11 +112,11 @@ class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
     def test_present_fail(self):
         # save something wrong
         ret = self.run_state(
-            "ssh_known_hosts.present",
-            name="github.com",
-            user="root",
-            fingerprint="aa:bb:cc:dd",
-            config=self.known_hosts,
+            'ssh_known_hosts.present',
+            name='github.com',
+            user='root',
+            fingerprint='aa:bb:cc:dd',
+            config=self.known_hosts
         )
         self.assertSaltFalseReturn(ret)
 
@@ -127,15 +124,17 @@ class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
     def test_absent(self):
         """
         ssh_known_hosts.absent
-        """
-        known_hosts = os.path.join(RUNTIME_VARS.FILES, "ssh", "known_hosts")
+        '''
+        known_hosts = os.path.join(RUNTIME_VARS.FILES, 'ssh', 'known_hosts')
         shutil.copyfile(known_hosts, self.known_hosts)
         if not os.path.isfile(self.known_hosts):
             self.skipTest(
-                "Unable to copy {0} to {1}".format(known_hosts, self.known_hosts)
+                'Unable to copy {0} to {1}'.format(
+                    known_hosts, self.known_hosts
+                )
             )
 
-        kwargs = {"name": "github.com", "user": "root", "config": self.known_hosts}
+        kwargs = {'name': 'github.com', 'user': 'root', 'config': self.known_hosts}
         # test first
         ret = self.run_state("ssh_known_hosts.absent", test=True, **kwargs)
         self.assertSaltNoneReturn(ret)

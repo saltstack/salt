@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import shutil
+import sys
 
 # Import salt libs
 import salt.fileclient
@@ -87,7 +88,7 @@ def sync(opts, form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None)
             for sub_env in saltenv:
                 log.info("Syncing %s for environment '%s'", form, sub_env)
                 cache = []
-                log.info("Loading cache from {0}, for {1})".format(source, sub_env))
+                log.info('Loading cache from %s, for %s', source, sub_env)
                 # Grab only the desired files (.py, .pyx, .so)
                 cache.extend(
                     fileclient.cache_dir(
@@ -135,6 +136,12 @@ def sync(opts, form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None)
                             os.makedirs(dest_dir)
                         shutil.copyfile(fn_, dest)
                         ret.append("{0}.{1}".format(form, relname))
+
+                    # If the synchronized module is an utils
+                    # directory, we add it to sys.path
+                    for util_dir in opts['utils_dirs']:
+                        if mod_dir.endswith(util_dir) and mod_dir not in sys.path:
+                            sys.path.append(mod_dir)
 
             touched = bool(ret)
             if opts["clean_dynamic_modules"] is True:

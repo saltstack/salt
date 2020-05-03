@@ -8,30 +8,14 @@ import os.path
 import sys
 from copy import deepcopy
 
-import pkg_resources
-
-# Import Salt Libs
-import salt.config
-import salt.loader
-import salt.modules.boto_elb as boto_elb
-import salt.utils.versions
-from salt.ext import six
-
-# Import Salt Testing Libs
-from tests.support.mixins import LoaderModuleMockMixin
-
 # Import test support libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
 
 # import Python Third Party Libs
 # pylint: disable=import-error
 try:
     import boto
-
-    boto.ENDPOINTS_PATH = os.path.join(
-        RUNTIME_VARS.TESTS_DIR, "unit/files/endpoints.json"
-    )
+    boto.ENDPOINTS_PATH = os.path.join(RUNTIME_VARS.TESTS_DIR, 'unit/files/endpoints.json')
     import boto.ec2.elb
 
     HAS_BOTO = True

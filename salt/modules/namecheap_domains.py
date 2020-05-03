@@ -27,6 +27,7 @@ file, or in the Pillar data.
     #namecheap.url: https://api.sandbox.namecheap.xml.response
 """
 from __future__ import absolute_import, print_function, unicode_literals
+import logging
 
 import logging
 
@@ -40,6 +41,8 @@ try:
 except ImportError:
     CAN_USE_NAMECHEAP = False
 
+
+log = logging.getLogger(__name__)
 
 log = logging.getLogger(__name__)
 
@@ -315,61 +318,31 @@ def create(domain_name, years, **kwargs):
                 opts_dict[nextkey] = value
 
     for key, value in six.iteritems(kwargs):
-        if key.startswith("Registrant"):
-            add_to_opts(
-                opts,
-                kwargs,
-                value,
-                key[10:],
-                ["Tech", "Admin", "AuxBilling", "Billing"],
-            )
+        if key.startswith('Registrant'):
+            add_to_opts(opts, kwargs, value, key[10:], ['Tech', 'Admin', 'AuxBilling', 'Billing'])
 
-        if key.startswith("Tech"):
-            add_to_opts(
-                opts,
-                kwargs,
-                value,
-                key[4:],
-                ["Registrant", "Admin", "AuxBilling", "Billing"],
-            )
+        if key.startswith('Tech'):
+            add_to_opts(opts, kwargs, value, key[4:], ['Registrant', 'Admin', 'AuxBilling', 'Billing'])
 
-        if key.startswith("Admin"):
-            add_to_opts(
-                opts,
-                kwargs,
-                value,
-                key[5:],
-                ["Registrant", "Tech", "AuxBilling", "Billing"],
-            )
+        if key.startswith('Admin'):
+            add_to_opts(opts, kwargs, value, key[5:], ['Registrant', 'Tech', 'AuxBilling', 'Billing'])
 
-        if key.startswith("AuxBilling"):
-            add_to_opts(
-                opts,
-                kwargs,
-                value,
-                key[10:],
-                ["Registrant", "Tech", "Admin", "Billing"],
-            )
+        if key.startswith('AuxBilling'):
+            add_to_opts(opts, kwargs, value, key[10:], ['Registrant', 'Tech', 'Admin', 'Billing'])
 
-        if key.startswith("Billing"):
-            add_to_opts(
-                opts,
-                kwargs,
-                value,
-                key[7:],
-                ["Registrant", "Tech", "Admin", "AuxBilling"],
-            )
+        if key.startswith('Billing'):
+            add_to_opts(opts, kwargs, value, key[7:], ['Registrant', 'Tech', 'Admin', 'AuxBilling'])
 
-        if key == "IdnCode" and key not in idn_codes:
-            log.error("Invalid IdnCode")
-            raise Exception("Invalid IdnCode")
+        if key == 'IdnCode' and key not in idn_codes:
+            log.error('Invalid IdnCode')
+            raise Exception('Invalid IdnCode')
 
         opts[key] = value
 
     for requiredkey in require_opts:
         if requiredkey not in opts:
-            log.error("Missing required parameter '%s'", requiredkey)
-            raise Exception("Missing required parameter '" + requiredkey + "'")
+            log.error('Missing required parameter \'%s\'', requiredkey)
+            raise Exception('Missing required parameter \'{0}\''.format(requiredkey))
 
     response_xml = salt.utils.namecheap.post_request(opts)
 
@@ -507,14 +480,14 @@ def get_list(list_type=None, search_term=None, page=None, page_size=None, sort_b
     opts = salt.utils.namecheap.get_opts("namecheap.domains.getList")
 
     if list_type is not None:
-        if list_type not in ["ALL", "EXPIRING", "EXPIRED"]:
-            log.error("Invalid option for list_type")
-            raise Exception("Invalid option for list_type")
-        opts["ListType"] = list_type
+        if list_type not in ['ALL', 'EXPIRING', 'EXPIRED']:
+            log.error('Invalid option for list_type')
+            raise Exception('Invalid option for list_type')
+        opts['ListType'] = list_type
 
     if search_term is not None:
         if len(search_term) > 70:
-            log.warning("search_term trimmed to first 70 characters")
+            log.warning('search_term trimmed to first 70 characters')
             search_term = search_term[0:70]
         opts["SearchTerm"] = search_term
 
@@ -523,22 +496,15 @@ def get_list(list_type=None, search_term=None, page=None, page_size=None, sort_b
 
     if page_size is not None:
         if page_size > 100 or page_size < 10:
-            log.error("Invalid option for page")
-            raise Exception("Invalid option for page")
-        opts["PageSize"] = page_size
+            log.error('Invalid option for page')
+            raise Exception('Invalid option for page')
+        opts['PageSize'] = page_size
 
     if sort_by is not None:
-        if sort_by not in [
-            "NAME",
-            "NAME_DESC",
-            "EXPIREDATE",
-            "EXPIREDATE_DESC",
-            "CREATEDATE",
-            "CREATEDATE_DESC",
-        ]:
-            log.error("Invalid option for sort_by")
-            raise Exception("Invalid option for sort_by")
-        opts["SortBy"] = sort_by
+        if sort_by not in ['NAME', 'NAME_DESC', 'EXPIREDATE', 'EXPIREDATE_DESC', 'CREATEDATE', 'CREATEDATE_DESC']:
+            log.error('Invalid option for sort_by')
+            raise Exception('Invalid option for sort_by')
+        opts['SortBy'] = sort_by
 
     response_xml = salt.utils.namecheap.get_request(opts)
 

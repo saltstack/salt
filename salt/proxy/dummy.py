@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 This is the a dummy proxy-minion designed for testing the proxy minion subsystem.
-"""
+'''
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging

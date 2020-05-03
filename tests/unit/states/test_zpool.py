@@ -37,7 +37,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         self.opts = opts = salt.config.DEFAULT_MINION_OPTS.copy()
-        utils = salt.loader.utils(opts, whitelist=["zfs"])
+        utils = salt.loader.utils(opts, whitelist=['zfs'])
         zpool_obj = {
             zpool: {
                 "__opts__": opts,

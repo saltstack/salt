@@ -5,19 +5,13 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-import salt.modules.cmdmod as cmd
-import salt.modules.virtualenv_mod
-import salt.modules.zcbuildout as modbuildout
-import salt.states.zcbuildout as buildout
-
-# Import Salt libs
-import salt.utils.path
-
 # Import Salt Testing libs
 from tests.support.helpers import requires_network
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
-from tests.unit.modules.test_zcbuildout import KNOWN_VIRTUALENV_BINARY_NAMES, Base
+
+# Import Salt libs
+import salt.utils.path
 
 
 @skipIf(

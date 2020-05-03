@@ -611,7 +611,7 @@ def enable(name, start=False, **kwargs):
                 salt.utils.files.fopen(down_file, "w").close()
                 # pylint: enable=resource-leakage
             except IOError:
-                log.error("Unable to create file {0}".format(down_file))
+                log.error('Unable to create file %s', down_file)
                 return False
 
     # enable the service
@@ -620,7 +620,7 @@ def enable(name, start=False, **kwargs):
 
     except IOError:
         # (attempt to) remove temp down_file anyway
-        log.error("Unable to create symlink {0}".format(down_file))
+        log.error('Unable to create symlink %s', down_file)
         if not start:
             os.unlink(down_file)
         return False

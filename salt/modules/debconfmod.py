@@ -28,19 +28,14 @@ def __virtual__():
     """
     Confirm this module is on a Debian based system and that debconf-utils
     is installed.
-    """
-    if __grains__["os_family"] != "Debian":
-        return (
-            False,
-            "The debconfmod module could not be loaded: unsupported OS family",
-        )
+    '''
+    if __grains__.get('os_family') != 'Debian':
+        return (False, 'The debconfmod module could not be loaded: '
+                'unsupported OS family')
 
-    if salt.utils.path.which("debconf-get-selections") is None:
-        return (
-            False,
-            "The debconfmod module could not be loaded: "
-            "debconf-utils is not installed.",
-        )
+    if salt.utils.path.which('debconf-get-selections') is None:
+        return (False, 'The debconfmod module could not be loaded: '
+                'debconf-utils is not installed.')
 
     return __virtualname__
 

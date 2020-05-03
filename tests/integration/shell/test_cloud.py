@@ -39,15 +39,17 @@ class SaltCloudCliTest(ShellCase, ShellCaseCommonTestsMixin):
     @skipIf(True, "SLOWTEST skip")
     def test_function_arguments(self):
         self.assertIn(
-            "error: --function expects two arguments: " "<function-name> <provider>",
-            "\n".join(self.run_cloud("--function show_image -h", catch_stderr=True)[1]),
+            'error: --function expects two arguments: '
+            '<function-name> <provider>',
+            '\n'.join(self.run_cloud('--function show_image -h', catch_stderr=True)[1])
         )
 
     @skipIf(True, "SLOWTEST skip")
     def test_list_providers_accepts_no_arguments(self):
         self.assertIn(
-            "error: '--list-providers' does not accept any " "arguments",
-            "\n".join(self.run_cloud("--list-providers ec2", catch_stderr=True)[1]),
+            'error: \'--list-providers\' does not accept any '
+            'arguments',
+            '\n'.join(self.run_cloud('--list-providers ec2', catch_stderr=True)[1])
         )
 
     @skipIf(True, "SLOWTEST skip")
@@ -56,16 +58,15 @@ class SaltCloudCliTest(ShellCase, ShellCaseCommonTestsMixin):
         while True:
             for idx in range(1, len(test_options)):
                 self.assertIn(
-                    "error: The options {0}/{1} are mutually "
-                    "exclusive. Please only choose one of them".format(
+                    'error: The options {0}/{1} are mutually '
+                    'exclusive. Please only choose one of them'.format(
                         test_options[0], test_options[idx]
                     ),
-                    "\n".join(
+                    '\n'.join(
                         self.run_cloud(
-                            "{0} {1}".format(test_options[0], test_options[idx]),
-                            catch_stderr=True,
-                        )[1]
-                    ),
+                            '{0} {1}'.format(test_options[0], test_options[idx]),
+                            catch_stderr=True)[1]
+                    )
                 )
             # Remove the first option from the list
             test_options.pop(0)
@@ -84,11 +85,11 @@ class SaltCloudCliTest(ShellCase, ShellCaseCommonTestsMixin):
                 )
                 try:
                     self.assertIn(
-                        "error: The options {0}/{1} are mutually "
-                        "exclusive. Please only choose one of them".format(
+                        'error: The options {0}/{1} are mutually '
+                        'exclusive. Please only choose one of them'.format(
                             test_options[0], test_options[idx]
                         ),
-                        "\n".join(output[1]),
+                        '\n'.join(output[1])
                     )
                 except AssertionError:
                     print(output)

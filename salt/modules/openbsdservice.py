@@ -38,9 +38,9 @@ __func_alias__ = {"reload_": "reload"}
 def __virtual__():
     """
     Only work on OpenBSD
-    """
-    if __grains__["os"] == "OpenBSD" and os.path.exists("/etc/rc.d/rc.subr"):
-        krel = list(list(map(int, __grains__["kernelrelease"].split("."))))
+    '''
+    if __grains__.get('os') == 'OpenBSD' and os.path.exists('/etc/rc.d/rc.subr'):
+        krel = list(list(map(int, __grains__['kernelrelease'].split('.'))))
         # The -f flag, used to force a script to run even if disabled,
         # was added after the 5.0 release.
         # the rcctl(8) command is the preferred way to manage services.

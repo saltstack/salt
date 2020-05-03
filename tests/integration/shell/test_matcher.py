@@ -4,9 +4,8 @@ from __future__ import absolute_import
 
 import time
 
-import pytest
-import salt.utils.files
-import salt.utils.yaml
+# Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ShellCase
 from tests.support.helpers import dedent, flaky
 from tests.support.mixins import ShellCaseCommonTestsMixin
@@ -243,7 +242,10 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
                 "No command was sent, no jid was "
                 "assigned."
             )
-        self.assertEqual("".join(data), expect)
+        self.assertEqual(
+            ''.join(data),
+            expect
+        )
         # Nested grain (string value)
         data = self.run_salt('-t 1 -G "level1:level2:foo" test.ping')
         data = "\n".join(data)
@@ -390,11 +392,34 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
     def test_salt_documentation_too_many_arguments(self):
         """
         Test to see if passing additional arguments shows an error
-        """
-        data = self.run_salt(
-            '-d minion salt ldap.search "filter=ou=People"', catch_stderr=True
-        )
-        self.assertIn(
-            "You can only get documentation for one method at one time",
-            "\n".join(data[1]),
+        '''
+        data = self.run_salt('-d minion salt ldap.search "filter=ou=People"', catch_stderr=True)
+        self.assertIn('You can only get documentation for one method at one time', '\n'.join(data[1]))
+
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
+    def test_issue_7754(self):
+        '''
+        Skip on Windows because Syslog is not installed
+        '''
+        old_cwd = os.getcwd()
+        config_dir = os.path.join(RUNTIME_VARS.TMP, 'issue-7754')
+        if not os.path.isdir(config_dir):
+            os.makedirs(config_dir)
+
+        os.chdir(config_dir)
+
+        config_file_name = 'master'
+        with salt.utils.files.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
+            config = salt.utils.yaml.safe_load(fhr)
+            config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
+            with salt.utils.files.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
+                salt.utils.yaml.safe_dump(config, fhw, default_flow_style=False)
+        ret = self.run_script(
+            self._call_binary_,
+            '--config-dir {0} minion test.ping'.format(
+                config_dir
+            ),
+            timeout=60,
+            catch_stderr=True,
+            with_retcode=True
         )

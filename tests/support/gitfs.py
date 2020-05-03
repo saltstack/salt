@@ -34,10 +34,13 @@ from salt.pillar import git_pillar
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
+from tests.support.mixins import LoaderModuleMockMixin, SaltReturnAssertsMixin
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.helpers import (
     get_unused_localhost_port,
     patched_environ,
     requires_system_grains,
+    patched_environ
 )
 from tests.support.mixins import (
     AdaptedConfigurationTestCaseMixin,
@@ -343,22 +346,38 @@ class SaltClientMixin(ModuleCase):
     client = None
 
     @classmethod
-    @requires_system_grains
-    def setUpClass(cls, grains=None):  # pylint: disable=arguments-differ
-        # Cent OS 6 has too old a version of git to handle the make_repo code, as
-        # it lacks the -c option for git itself.
-        make_repo = getattr(cls, "make_repo", None)
-        if (
-            callable(make_repo)
-            and grains["os_family"] == "RedHat"
-            and grains["osmajorrelease"] < 7
-        ):
-            raise SkipTest("RHEL < 7 has too old a version of git to run these tests")
-        # Late import
-        import salt.client
+    def prep_server(cls):
+        cls.sshd_config_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        cls.sshd_config = os.path.join(cls.sshd_config_dir, 'sshd_config')
+        cls.sshd_port = get_unused_localhost_port()
+        cls.url = 'ssh://{username}@127.0.0.1:{port}/~/repo.git'.format(
+            username=cls.username,
+            port=cls.sshd_port)
+        cls.url_extra_repo = 'ssh://{username}@127.0.0.1:{port}/~/extra_repo.git'.format(
+            username=cls.username,
+            port=cls.sshd_port)
+        home = '/root/.ssh'
+        cls.ext_opts = {
+            'url': cls.url,
+            'url_extra_repo': cls.url_extra_repo,
+            'privkey_nopass': os.path.join(home, cls.id_rsa_nopass),
+            'pubkey_nopass': os.path.join(home, cls.id_rsa_nopass + '.pub'),
+            'privkey_withpass': os.path.join(home, cls.id_rsa_withpass),
+            'pubkey_withpass': os.path.join(home, cls.id_rsa_withpass + '.pub'),
+            'passphrase': cls.passphrase}
 
-        mopts = AdaptedConfigurationTestCaseMixin.get_config(
-            "master", from_scratch=True
+    def spawn_server(self):
+        ret = self.run_function(
+            'state.apply',
+            mods='git_pillar.ssh',
+            pillar={'git_pillar': {'git_ssh': self.git_ssh,
+                                   'id_rsa_nopass': self.id_rsa_nopass,
+                                   'id_rsa_withpass': self.id_rsa_withpass,
+                                   'sshd_bin': self.sshd_bin,
+                                   'sshd_port': self.sshd_port,
+                                   'sshd_config_dir': self.sshd_config_dir,
+                                   'master_user': self.master_opts['user'],
+                                   'user': self.username}}
         )
         cls.user = mopts["user"]
         cls.client = salt.client.get_local_client(mopts=mopts)
@@ -527,16 +546,15 @@ class WebserverMixin(SaltClientMixin, SaltReturnAssertsMixin):
         """
         Set up all the webserver paths. Designed to be run once in a
         setUpClass function.
-        """
-        super(WebserverMixin, cls).setUpClass()
+        '''
         cls.root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-        cls.config_dir = os.path.join(cls.root_dir, "config")
-        cls.nginx_conf = os.path.join(cls.config_dir, "nginx.conf")
-        cls.uwsgi_conf = os.path.join(cls.config_dir, "uwsgi.yml")
-        cls.git_dir = os.path.join(cls.root_dir, "git")
-        cls.repo_dir = os.path.join(cls.git_dir, "repos")
-        cls.venv_dir = os.path.join(cls.root_dir, "venv")
-        cls.uwsgi_bin = os.path.join(cls.venv_dir, "bin", "uwsgi")
+        cls.config_dir = os.path.join(cls.root_dir, 'config')
+        cls.nginx_conf = os.path.join(cls.config_dir, 'nginx.conf')
+        cls.uwsgi_conf = os.path.join(cls.config_dir, 'uwsgi.yml')
+        cls.git_dir = os.path.join(cls.root_dir, 'git')
+        cls.repo_dir = os.path.join(cls.git_dir, 'repos')
+        cls.venv_dir = os.path.join(cls.root_dir, 'venv')
+        cls.uwsgi_bin = os.path.join(cls.venv_dir, 'bin', 'uwsgi')
         cls.nginx_port = cls.uwsgi_port = get_unused_localhost_port()
         while cls.uwsgi_port == cls.nginx_port:
             # Ensure we don't hit a corner case in which two sucessive calls to
@@ -691,7 +709,7 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
     def get_pillar(self, ext_pillar_conf):
         """
         Run git_pillar with the specified configuration
-        """
+        '''
         cachedir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, cachedir, ignore_errors=True)
         ext_pillar_opts = {"optimization_order": [0, 1, 2]}
@@ -986,7 +1004,7 @@ class GitPillarSSHTestBase(GitPillarTestBase, SSHDMixin):
         changes the GIT_SSH to use our custom script, ensuring that the
         passphraselsess key is used to auth without needing to modify the root
         user's ssh config file.
-        """
+        '''
         with patched_environ(GIT_SSH=self.git_ssh):
             return super(GitPillarSSHTestBase, self).get_pillar(ext_pillar_conf)
 

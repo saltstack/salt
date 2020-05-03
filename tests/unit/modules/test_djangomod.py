@@ -55,6 +55,16 @@ class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(djangomod.__salt__, {"cmd.run": mock}):
             self.assertTrue(djangomod.migrate("DJANGO_SETTINGS_MODULE"))
 
+    # 'migrate' function tests: 1
+
+    def test_migrate(self):
+        '''
+        Test if it runs the Django-Admin migrate command
+        '''
+        mock = MagicMock(return_value=True)
+        with patch.dict(djangomod.__salt__, {'cmd.run': mock}):
+            self.assertTrue(djangomod.migrate('DJANGO_SETTINGS_MODULE'))
+
     # 'createsuperuser' function tests: 1
 
     def test_createsuperuser(self):
@@ -184,6 +194,18 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
             )
 
     def test_django_admin_cli_migrate(self):
+        mock = MagicMock()
+        with patch.dict(djangomod.__salt__,
+                        {'cmd.run': mock}):
+            djangomod.migrate('settings.py')
+            mock.assert_called_once_with(
+                'django-admin.py migrate --settings=settings.py --noinput',
+                python_shell=False,
+                env=None,
+                runas=None
+            )
+
+    def test_django_admin_cli_createsuperuser(self):
         mock = MagicMock()
         with patch.dict(djangomod.__salt__, {"cmd.run": mock}):
             djangomod.migrate("settings.py")

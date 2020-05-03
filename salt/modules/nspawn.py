@@ -57,8 +57,9 @@ EXEC_DRIVER = "nsenter"
 def __virtual__():
     """
     Only work on systems that have been booted with systemd
-    """
-    if __grains__["kernel"] == "Linux" and salt.utils.systemd.booted(__context__):
+    '''
+    if __grains__.get('kernel') == 'Linux' \
+            and salt.utils.systemd.booted(__context__):
         if salt.utils.systemd.version() is None:
             log.error("nspawn: Unable to determine systemd version")
         else:

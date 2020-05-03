@@ -255,40 +255,40 @@ def _check_avail(cmd):
     return bret and wret
 
 
-def _run(
-    cmd,
-    cwd=None,
-    stdin=None,
-    stdout=subprocess.PIPE,
-    stderr=subprocess.PIPE,
-    output_encoding=None,
-    output_loglevel="debug",
-    log_callback=None,
-    runas=None,
-    group=None,
-    shell=DEFAULT_SHELL,
-    python_shell=False,
-    env=None,
-    clean_env=False,
-    prepend_path=None,
-    rstrip=True,
-    template=None,
-    umask=None,
-    timeout=None,
-    with_communicate=True,
-    reset_system_locale=True,
-    ignore_retcode=False,
-    saltenv="base",
-    pillarenv=None,
-    pillar_override=None,
-    use_vt=False,
-    password=None,
-    bg=False,
-    encoded_cmd=False,
-    success_retcodes=None,
-    **kwargs
-):
-    """
+def _run(cmd,
+         cwd=None,
+         stdin=None,
+         stdout=subprocess.PIPE,
+         stderr=subprocess.PIPE,
+         output_encoding=None,
+         output_loglevel='debug',
+         log_callback=None,
+         runas=None,
+         group=None,
+         shell=DEFAULT_SHELL,
+         python_shell=False,
+         env=None,
+         clean_env=False,
+         prepend_path=None,
+         rstrip=True,
+         template=None,
+         umask=None,
+         timeout=None,
+         with_communicate=True,
+         reset_system_locale=True,
+         ignore_retcode=False,
+         saltenv='base',
+         pillarenv=None,
+         pillar_override=None,
+         use_vt=False,
+         password=None,
+         bg=False,
+         encoded_cmd=False,
+         success_retcodes=None,
+         success_stdout=None,
+         success_stderr=None,
+         **kwargs):
+    '''
     Do the DRY thing and only call subprocess.Popen() once
     """
     if "pillar" in kwargs and not pillar_override:
@@ -430,28 +430,10 @@ def _run(
         if isinstance(cmd, (list, tuple)):
             cmd = " ".join(map(_cmd_quote, cmd))
 
-        # Ensure directory is correct before running command
-        cmd = "cd -- {dir} && {{ {cmd}\n }}".format(dir=_cmd_quote(cwd), cmd=cmd)
-
-        # Ensure environment is correct for a newly logged-in user by running
-        # the command under bash as a login shell
-        try:
-            user_shell = __salt__["user.info"](runas)["shell"]
-            if re.search("bash$", user_shell):
-                cmd = "{shell} -l -c {cmd}".format(
-                    shell=user_shell, cmd=_cmd_quote(cmd)
-                )
-        except KeyError:
-            pass
-
-        # Ensure the login is simulated correctly (note: su runs sh, not bash,
-        # which causes the environment to be initialised incorrectly, which is
-        # fixed by the previous line of code)
-        cmd = "su -l {0} -c {1}".format(_cmd_quote(runas), _cmd_quote(cmd))
-
-        # Set runas to None, because if you try to run `su -l` after changing
-        # user, su will prompt for the password of the user and cause salt to
-        # hang.
+        cmd = 'su -l {0} -c "cd {1}; {2}"'.format(runas, cwd, cmd)
+        # set runas to None, because if you try to run `su -l` as well as
+        # simulate the environment macOS will prompt for the password of the
+        # user and will cause salt to hang.
         runas = None
 
     if runas:
@@ -683,16 +665,47 @@ def _run(
                 int(i) for i in salt.utils.args.split_input(success_retcodes)
             ]
         except ValueError:
-            raise SaltInvocationError("success_retcodes must be a list of integers")
+            raise SaltInvocationError(
+                'success_retcodes must be a list of integers'
+            )
+
+    if success_stdout is None:
+        success_stdout = []
+    else:
+        try:
+            success_stdout = [i for i in
+                              salt.utils.args.split_input(
+                                 success_stdout
+                              )]
+        except ValueError:
+            raise SaltInvocationError(
+                'success_stdout must be a list of integers'
+            )
+
+    if success_stderr is None:
+        success_stderr = []
+    else:
+        try:
+            success_stderr = [i for i in
+                              salt.utils.args.split_input(
+                                 success_stderr
+                              )]
+        except ValueError:
+            raise SaltInvocationError(
+                'success_stderr must be a list of integers'
+            )
+
     if not use_vt:
         # This is where the magic happens
         try:
             proc = salt.utils.timed_subprocess.TimedProc(cmd, **new_kwargs)
         except (OSError, IOError) as exc:
             msg = (
-                "Unable to run command '{0}' with the context '{1}', "
-                "reason: {2}".format(
-                    cmd if output_loglevel is not None else "REDACTED", new_kwargs, exc
+                'Unable to run command \'{0}\' with the context \'{1}\', '
+                'reason: {2}'.format(
+                    cmd if output_loglevel is not None else 'REDACTED',
+                    new_kwargs,
+                    exc
                 )
             )
             raise CommandExecutionError(msg)
@@ -756,12 +769,14 @@ def _run(
                 out = out.rstrip()
             if err is not None:
                 err = err.rstrip()
-        ret["pid"] = proc.process.pid
-        ret["retcode"] = proc.process.returncode
-        if ret["retcode"] in success_retcodes:
-            ret["retcode"] = 0
-        ret["stdout"] = out
-        ret["stderr"] = err
+        ret['pid'] = proc.process.pid
+        ret['retcode'] = proc.process.returncode
+        if ret['retcode'] in success_retcodes:
+            ret['retcode'] = 0
+        ret['stdout'] = out
+        ret['stderr'] = err
+        if ret['stdout'] in success_stdout or ret['stderr'] in success_stderr:
+            ret['retcode'] = 0
     else:
         formatted_timeout = ""
         if timeout:
@@ -827,11 +842,13 @@ def _run(
                 if not proc.isalive():
                     # Process terminated, i.e., not canceled by the user or by
                     # the timeout
-                    ret["stderr"] = stderr
-                    ret["retcode"] = proc.exitstatus
-                    if ret["retcode"] in success_retcodes:
-                        ret["retcode"] = 0
-                ret["pid"] = proc.pid
+                    ret['stderr'] = stderr
+                    ret['retcode'] = proc.exitstatus
+                    if ret['retcode'] in success_retcodes:
+                        ret['retcode'] = 0
+                    if ret['stdout'] in success_stdout or ret['stderr'] in success_stderr:
+                        ret['retcode'] = 0
+                ret['pid'] = proc.pid
         finally:
             proc.close(terminate=True, kill=True)
     try:
@@ -852,80 +869,80 @@ def _run(
                 cmd, ret["retcode"]
             )
             log.error(log_callback(msg))
-        if ret["stdout"]:
-            log.log(output_loglevel, "stdout: %s", log_callback(ret["stdout"]))
-        if ret["stderr"]:
-            log.log(output_loglevel, "stderr: %s", log_callback(ret["stderr"]))
-        if ret["retcode"]:
-            log.log(output_loglevel, "retcode: %s", ret["retcode"])
+        if ret['stdout']:
+            log.log(output_loglevel, 'stdout: %s', log_callback(ret['stdout']))
+        if ret['stderr']:
+            log.log(output_loglevel, 'stderr: %s', log_callback(ret['stderr']))
+        if ret['retcode']:
+            log.log(output_loglevel, 'retcode: %s', ret['retcode'])
 
     return ret
 
 
-def _run_quiet(
-    cmd,
-    cwd=None,
-    stdin=None,
-    output_encoding=None,
-    runas=None,
-    shell=DEFAULT_SHELL,
-    python_shell=False,
-    env=None,
-    template=None,
-    umask=None,
-    timeout=None,
-    reset_system_locale=True,
-    saltenv="base",
-    pillarenv=None,
-    pillar_override=None,
-    success_retcodes=None,
-):
-    """
+def _run_quiet(cmd,
+               cwd=None,
+               stdin=None,
+               output_encoding=None,
+               runas=None,
+               shell=DEFAULT_SHELL,
+               python_shell=False,
+               env=None,
+               template=None,
+               umask=None,
+               timeout=None,
+               reset_system_locale=True,
+               saltenv='base',
+               pillarenv=None,
+               pillar_override=None,
+               success_retcodes=None,
+               success_stdout=None,
+               success_stderr=None):
+    '''
     Helper for running commands quietly for minion startup
-    """
-    return _run(
-        cmd,
-        runas=runas,
-        cwd=cwd,
-        stdin=stdin,
-        stderr=subprocess.STDOUT,
-        output_encoding=output_encoding,
-        output_loglevel="quiet",
-        log_callback=None,
-        shell=shell,
-        python_shell=python_shell,
-        env=env,
-        template=template,
-        umask=umask,
-        timeout=timeout,
-        reset_system_locale=reset_system_locale,
-        saltenv=saltenv,
-        pillarenv=pillarenv,
-        pillar_override=pillar_override,
-        success_retcodes=success_retcodes,
-    )["stdout"]
+    '''
+    return _run(cmd,
+                runas=runas,
+                cwd=cwd,
+                stdin=stdin,
+                stderr=subprocess.STDOUT,
+                output_encoding=output_encoding,
+                output_loglevel='quiet',
+                log_callback=None,
+                shell=shell,
+                python_shell=python_shell,
+                env=env,
+                template=template,
+                umask=umask,
+                timeout=timeout,
+                reset_system_locale=reset_system_locale,
+                saltenv=saltenv,
+                pillarenv=pillarenv,
+                pillar_override=pillar_override,
+                success_retcodes=success_retcodes,
+                success_stdout=success_stdout,
+                success_stderr=success_stderr)['stdout']
 
 
-def _run_all_quiet(
-    cmd,
-    cwd=None,
-    stdin=None,
-    runas=None,
-    shell=DEFAULT_SHELL,
-    python_shell=False,
-    env=None,
-    template=None,
-    umask=None,
-    timeout=None,
-    reset_system_locale=True,
-    saltenv="base",
-    pillarenv=None,
-    pillar_override=None,
-    output_encoding=None,
-    success_retcodes=None,
-):
+def _run_all_quiet(cmd,
+                   cwd=None,
+                   stdin=None,
+                   runas=None,
+                   shell=DEFAULT_SHELL,
+                   python_shell=False,
+                   env=None,
+                   template=None,
+                   umask=None,
+                   timeout=None,
+                   reset_system_locale=True,
+                   saltenv='base',
+                   pillarenv=None,
+                   pillar_override=None,
+                   output_encoding=None,
+                   success_retcodes=None,
+                   success_stdout=None,
+                   success_stderr=None):
 
-    """
+    '''
     Helper for running commands quietly for minion startup.
     Returns a dict of return data.
 
@@ -933,60 +950,60 @@ def _run_all_quiet(
     cmd.run_all directly to _run_all_quiet in certain chicken-and-egg
     situations where modules need to work both before and after
     the __salt__ dictionary is populated (cf dracr.py)
-    """
-    return _run(
-        cmd,
-        runas=runas,
-        cwd=cwd,
-        stdin=stdin,
-        shell=shell,
-        python_shell=python_shell,
-        env=env,
-        output_encoding=output_encoding,
-        output_loglevel="quiet",
+    '''
+    return _run(cmd,
+                runas=runas,
+                cwd=cwd,
+                stdin=stdin,
+                shell=shell,
+                python_shell=python_shell,
+                env=env,
+                output_encoding=output_encoding,
+                output_loglevel='quiet',
+                log_callback=None,
+                template=template,
+                umask=umask,
+                timeout=timeout,
+                reset_system_locale=reset_system_locale,
+                saltenv=saltenv,
+                pillarenv=pillarenv,
+                pillar_override=pillar_override,
+                success_retcodes=success_retcodes,
+                success_stdout=success_stdout,
+                success_stderr=success_stderr)
+
+
+def run(cmd,
+        cwd=None,
+        stdin=None,
+        runas=None,
+        group=None,
+        shell=DEFAULT_SHELL,
+        python_shell=None,
+        env=None,
+        clean_env=False,
+        template=None,
+        rstrip=True,
+        umask=None,
+        output_encoding=None,
+        output_loglevel='debug',
         log_callback=None,
-        template=template,
-        umask=umask,
-        timeout=timeout,
-        reset_system_locale=reset_system_locale,
-        saltenv=saltenv,
-        pillarenv=pillarenv,
-        pillar_override=pillar_override,
-        success_retcodes=success_retcodes,
-    )
-
-
-def run(
-    cmd,
-    cwd=None,
-    stdin=None,
-    runas=None,
-    group=None,
-    shell=DEFAULT_SHELL,
-    python_shell=None,
-    env=None,
-    clean_env=False,
-    template=None,
-    rstrip=True,
-    umask=None,
-    output_encoding=None,
-    output_loglevel="debug",
-    log_callback=None,
-    hide_output=False,
-    timeout=None,
-    reset_system_locale=True,
-    ignore_retcode=False,
-    saltenv="base",
-    use_vt=False,
-    bg=False,
-    password=None,
-    encoded_cmd=False,
-    raise_err=False,
-    prepend_path=None,
-    success_retcodes=None,
-    **kwargs
-):
-    r"""
+        hide_output=False,
+        timeout=None,
+        reset_system_locale=True,
+        ignore_retcode=False,
+        saltenv='base',
+        use_vt=False,
+        bg=False,
+        password=None,
+        encoded_cmd=False,
+        raise_err=False,
+        prepend_path=None,
+        success_retcodes=None,
+        success_stdout=None,
+        success_stderr=None,
+        **kwargs):
+    r'''
     Execute the passed command and return the output as a string
 
     :param str cmd: The command to run. ex: ``ls -lart /home``
@@ -1131,6 +1148,20 @@ def run(
 
       .. versionadded:: 2019.2.0
 
+    :param list success_stdout: This parameter will be allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
+    :param list success_stderr: This parameter will be allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
         present in the ``stdin`` value to newlines.
@@ -1173,37 +1204,38 @@ def run(
     .. code-block:: bash
 
         salt '*' cmd.run cmd='sed -e s/=/:/g'
-    """
-    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
-    ret = _run(
-        cmd,
-        runas=runas,
-        group=group,
-        shell=shell,
-        python_shell=python_shell,
-        cwd=cwd,
-        stdin=stdin,
-        stderr=subprocess.STDOUT,
-        env=env,
-        clean_env=clean_env,
-        prepend_path=prepend_path,
-        template=template,
-        rstrip=rstrip,
-        umask=umask,
-        output_encoding=output_encoding,
-        output_loglevel=output_loglevel,
-        log_callback=log_callback,
-        timeout=timeout,
-        reset_system_locale=reset_system_locale,
-        ignore_retcode=ignore_retcode,
-        saltenv=saltenv,
-        use_vt=use_vt,
-        bg=bg,
-        password=password,
-        encoded_cmd=encoded_cmd,
-        success_retcodes=success_retcodes,
-        **kwargs
-    )
+    '''
+    python_shell = _python_shell_default(python_shell,
+                                         kwargs.get('__pub_jid', ''))
+    ret = _run(cmd,
+               runas=runas,
+               group=group,
+               shell=shell,
+               python_shell=python_shell,
+               cwd=cwd,
+               stdin=stdin,
+               stderr=subprocess.STDOUT,
+               env=env,
+               clean_env=clean_env,
+               prepend_path=prepend_path,
+               template=template,
+               rstrip=rstrip,
+               umask=umask,
+               output_encoding=output_encoding,
+               output_loglevel=output_loglevel,
+               log_callback=log_callback,
+               timeout=timeout,
+               reset_system_locale=reset_system_locale,
+               ignore_retcode=ignore_retcode,
+               saltenv=saltenv,
+               use_vt=use_vt,
+               bg=bg,
+               password=password,
+               encoded_cmd=encoded_cmd,
+               success_retcodes=success_retcodes,
+               success_stdout=success_stdout,
+               success_stderr=success_stderr,
+               **kwargs)
 
     log_callback = _check_cb(log_callback)
 
@@ -1220,38 +1252,38 @@ def run(
                 raise CommandExecutionError(
                     log_callback(ret["stdout"] if not hide_output else "")
                 )
-        log.log(lvl, "output: %s", log_callback(ret["stdout"]))
-    return ret["stdout"] if not hide_output else ""
+        log.log(lvl, 'output: %s', log_callback(ret['stdout']))
+    return ret['stdout'] if not hide_output else ''
 
 
-def shell(
-    cmd,
-    cwd=None,
-    stdin=None,
-    runas=None,
-    group=None,
-    shell=DEFAULT_SHELL,
-    env=None,
-    clean_env=False,
-    template=None,
-    rstrip=True,
-    umask=None,
-    output_encoding=None,
-    output_loglevel="debug",
-    log_callback=None,
-    hide_output=False,
-    timeout=None,
-    reset_system_locale=True,
-    ignore_retcode=False,
-    saltenv="base",
-    use_vt=False,
-    bg=False,
-    password=None,
-    prepend_path=None,
-    success_retcodes=None,
-    **kwargs
-):
-    """
+def shell(cmd,
+          cwd=None,
+          stdin=None,
+          runas=None,
+          group=None,
+          shell=DEFAULT_SHELL,
+          env=None,
+          clean_env=False,
+          template=None,
+          rstrip=True,
+          umask=None,
+          output_encoding=None,
+          output_loglevel='debug',
+          log_callback=None,
+          hide_output=False,
+          timeout=None,
+          reset_system_locale=True,
+          ignore_retcode=False,
+          saltenv='base',
+          use_vt=False,
+          bg=False,
+          password=None,
+          prepend_path=None,
+          success_retcodes=None,
+          success_stdout=None,
+          success_stderr=None,
+          **kwargs):
+    '''
     Execute the passed command and return the output as a string.
 
     .. versionadded:: 2015.5.0
@@ -1383,6 +1415,20 @@ def shell(
 
       .. versionadded:: 2019.2.0
 
+    :param list success_stdout: This parameter will be allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
+    :param list success_stderr: This parameter will be allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
         present in the ``stdin`` value to newlines.
@@ -1430,64 +1476,64 @@ def shell(
         python_shell = kwargs.pop("python_shell")
     else:
         python_shell = True
-    return run(
-        cmd,
-        cwd=cwd,
-        stdin=stdin,
-        runas=runas,
-        group=group,
-        shell=shell,
-        env=env,
-        clean_env=clean_env,
-        prepend_path=prepend_path,
-        template=template,
-        rstrip=rstrip,
-        umask=umask,
-        output_encoding=output_encoding,
-        output_loglevel=output_loglevel,
-        log_callback=log_callback,
-        hide_output=hide_output,
-        timeout=timeout,
-        reset_system_locale=reset_system_locale,
-        ignore_retcode=ignore_retcode,
-        saltenv=saltenv,
-        use_vt=use_vt,
-        python_shell=python_shell,
-        bg=bg,
-        password=password,
-        success_retcodes=success_retcodes,
-        **kwargs
-    )
+    return run(cmd,
+               cwd=cwd,
+               stdin=stdin,
+               runas=runas,
+               group=group,
+               shell=shell,
+               env=env,
+               clean_env=clean_env,
+               prepend_path=prepend_path,
+               template=template,
+               rstrip=rstrip,
+               umask=umask,
+               output_encoding=output_encoding,
+               output_loglevel=output_loglevel,
+               log_callback=log_callback,
+               hide_output=hide_output,
+               timeout=timeout,
+               reset_system_locale=reset_system_locale,
+               ignore_retcode=ignore_retcode,
+               saltenv=saltenv,
+               use_vt=use_vt,
+               python_shell=python_shell,
+               bg=bg,
+               password=password,
+               success_retcodes=success_retcodes,
+               success_stdout=success_stdout,
+               success_stderr=success_stderr,
+               **kwargs)
 
 
-def run_stdout(
-    cmd,
-    cwd=None,
-    stdin=None,
-    runas=None,
-    group=None,
-    shell=DEFAULT_SHELL,
-    python_shell=None,
-    env=None,
-    clean_env=False,
-    template=None,
-    rstrip=True,
-    umask=None,
-    output_encoding=None,
-    output_loglevel="debug",
-    log_callback=None,
-    hide_output=False,
-    timeout=None,
-    reset_system_locale=True,
-    ignore_retcode=False,
-    saltenv="base",
-    use_vt=False,
-    password=None,
-    prepend_path=None,
-    success_retcodes=None,
-    **kwargs
-):
-    """
+def run_stdout(cmd,
+               cwd=None,
+               stdin=None,
+               runas=None,
+               group=None,
+               shell=DEFAULT_SHELL,
+               python_shell=None,
+               env=None,
+               clean_env=False,
+               template=None,
+               rstrip=True,
+               umask=None,
+               output_encoding=None,
+               output_loglevel='debug',
+               log_callback=None,
+               hide_output=False,
+               timeout=None,
+               reset_system_locale=True,
+               ignore_retcode=False,
+               saltenv='base',
+               use_vt=False,
+               password=None,
+               prepend_path=None,
+               success_retcodes=None,
+               success_stdout=None,
+               success_stderr=None,
+               **kwargs):
+    '''
     Execute a command, and only return the standard out
 
     :param str cmd: The command to run. ex: ``ls -lart /home``
@@ -1612,6 +1658,20 @@ def run_stdout(
 
       .. versionadded:: 2019.2.0
 
+    :param list success_stdout: This parameter will be allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
+    :param list success_stderr: This parameter will be allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
         present in the ``stdin`` value to newlines.
@@ -1639,66 +1699,67 @@ def run_stdout(
     .. code-block:: bash
 
         salt '*' cmd.run_stdout "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
-    """
-    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
-    ret = _run(
-        cmd,
-        runas=runas,
-        group=group,
-        cwd=cwd,
-        stdin=stdin,
-        shell=shell,
-        python_shell=python_shell,
-        env=env,
-        clean_env=clean_env,
-        prepend_path=prepend_path,
-        template=template,
-        rstrip=rstrip,
-        umask=umask,
-        output_encoding=output_encoding,
-        output_loglevel=output_loglevel,
-        log_callback=log_callback,
-        timeout=timeout,
-        reset_system_locale=reset_system_locale,
-        ignore_retcode=ignore_retcode,
-        saltenv=saltenv,
-        use_vt=use_vt,
-        password=password,
-        success_retcodes=success_retcodes,
-        **kwargs
-    )
+    '''
+    python_shell = _python_shell_default(python_shell,
+                                         kwargs.get('__pub_jid', ''))
+    ret = _run(cmd,
+               runas=runas,
+               group=group,
+               cwd=cwd,
+               stdin=stdin,
+               shell=shell,
+               python_shell=python_shell,
+               env=env,
+               clean_env=clean_env,
+               prepend_path=prepend_path,
+               template=template,
+               rstrip=rstrip,
+               umask=umask,
+               output_encoding=output_encoding,
+               output_loglevel=output_loglevel,
+               log_callback=log_callback,
+               timeout=timeout,
+               reset_system_locale=reset_system_locale,
+               ignore_retcode=ignore_retcode,
+               saltenv=saltenv,
+               use_vt=use_vt,
+               password=password,
+               success_retcodes=success_retcodes,
+               success_stdout=success_stdout,
+               success_stderr=success_stderr,
+               **kwargs)
 
-    return ret["stdout"] if not hide_output else ""
+    return ret['stdout'] if not hide_output else ''
 
 
-def run_stderr(
-    cmd,
-    cwd=None,
-    stdin=None,
-    runas=None,
-    group=None,
-    shell=DEFAULT_SHELL,
-    python_shell=None,
-    env=None,
-    clean_env=False,
-    template=None,
-    rstrip=True,
-    umask=None,
-    output_encoding=None,
-    output_loglevel="debug",
-    log_callback=None,
-    hide_output=False,
-    timeout=None,
-    reset_system_locale=True,
-    ignore_retcode=False,
-    saltenv="base",
-    use_vt=False,
-    password=None,
-    prepend_path=None,
-    success_retcodes=None,
-    **kwargs
-):
-    """
+def run_stderr(cmd,
+               cwd=None,
+               stdin=None,
+               runas=None,
+               group=None,
+               shell=DEFAULT_SHELL,
+               python_shell=None,
+               env=None,
+               clean_env=False,
+               template=None,
+               rstrip=True,
+               umask=None,
+               output_encoding=None,
+               output_loglevel='debug',
+               log_callback=None,
+               hide_output=False,
+               timeout=None,
+               reset_system_locale=True,
+               ignore_retcode=False,
+               saltenv='base',
+               use_vt=False,
+               password=None,
+               prepend_path=None,
+               success_retcodes=None,
+               success_stdout=None,
+               success_stderr=None,
+               **kwargs):
+    '''
     Execute a command and only return the standard error
 
     :param str cmd: The command to run. ex: ``ls -lart /home``
@@ -1823,6 +1884,20 @@ def run_stderr(
 
       .. versionadded:: 2019.2.0
 
+    :param list success_stdout: This parameter will be allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
+    :param list success_stderr: This parameter will be allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
         present in the ``stdin`` value to newlines.
@@ -1850,68 +1925,69 @@ def run_stderr(
     .. code-block:: bash
 
         salt '*' cmd.run_stderr "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
-    """
-    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
-    ret = _run(
-        cmd,
-        runas=runas,
-        group=group,
-        cwd=cwd,
-        stdin=stdin,
-        shell=shell,
-        python_shell=python_shell,
-        env=env,
-        clean_env=clean_env,
-        prepend_path=prepend_path,
-        template=template,
-        rstrip=rstrip,
-        umask=umask,
-        output_encoding=output_encoding,
-        output_loglevel=output_loglevel,
-        log_callback=log_callback,
-        timeout=timeout,
-        reset_system_locale=reset_system_locale,
-        ignore_retcode=ignore_retcode,
-        use_vt=use_vt,
-        saltenv=saltenv,
-        password=password,
-        success_retcodes=success_retcodes,
-        **kwargs
-    )
+    '''
+    python_shell = _python_shell_default(python_shell,
+                                         kwargs.get('__pub_jid', ''))
+    ret = _run(cmd,
+               runas=runas,
+               group=group,
+               cwd=cwd,
+               stdin=stdin,
+               shell=shell,
+               python_shell=python_shell,
+               env=env,
+               clean_env=clean_env,
+               prepend_path=prepend_path,
+               template=template,
+               rstrip=rstrip,
+               umask=umask,
+               output_encoding=output_encoding,
+               output_loglevel=output_loglevel,
+               log_callback=log_callback,
+               timeout=timeout,
+               reset_system_locale=reset_system_locale,
+               ignore_retcode=ignore_retcode,
+               use_vt=use_vt,
+               saltenv=saltenv,
+               password=password,
+               success_retcodes=success_retcodes,
+               success_stdout=success_stdout,
+               success_stderr=success_stderr,
+               **kwargs)
 
-    return ret["stderr"] if not hide_output else ""
+    return ret['stderr'] if not hide_output else ''
 
 
-def run_all(
-    cmd,
-    cwd=None,
-    stdin=None,
-    runas=None,
-    group=None,
-    shell=DEFAULT_SHELL,
-    python_shell=None,
-    env=None,
-    clean_env=False,
-    template=None,
-    rstrip=True,
-    umask=None,
-    output_encoding=None,
-    output_loglevel="debug",
-    log_callback=None,
-    hide_output=False,
-    timeout=None,
-    reset_system_locale=True,
-    ignore_retcode=False,
-    saltenv="base",
-    use_vt=False,
-    redirect_stderr=False,
-    password=None,
-    encoded_cmd=False,
-    prepend_path=None,
-    success_retcodes=None,
-    **kwargs
-):
-    """
+def run_all(cmd,
+            cwd=None,
+            stdin=None,
+            runas=None,
+            group=None,
+            shell=DEFAULT_SHELL,
+            python_shell=None,
+            env=None,
+            clean_env=False,
+            template=None,
+            rstrip=True,
+            umask=None,
+            output_encoding=None,
+            output_loglevel='debug',
+            log_callback=None,
+            hide_output=False,
+            timeout=None,
+            reset_system_locale=True,
+            ignore_retcode=False,
+            saltenv='base',
+            use_vt=False,
+            redirect_stderr=False,
+            password=None,
+            encoded_cmd=False,
+            prepend_path=None,
+            success_retcodes=None,
+            success_stdout=None,
+            success_stderr=None,
+            **kwargs):
+    '''
     Execute the passed command and return a dict of return data
 
     :param str cmd: The command to run. ex: ``ls -lart /home``
@@ -2058,6 +2134,20 @@ def run_all(
 
       .. versionadded:: 2019.2.0
 
+    :param list success_stdout: This parameter will be allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
+    :param list success_stderr: This parameter will be allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
         present in the ``stdin`` value to newlines.
@@ -2088,65 +2178,65 @@ def run_all(
     """
     python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
     stderr = subprocess.STDOUT if redirect_stderr else subprocess.PIPE
-    ret = _run(
-        cmd,
-        runas=runas,
-        group=group,
-        cwd=cwd,
-        stdin=stdin,
-        stderr=stderr,
-        shell=shell,
-        python_shell=python_shell,
-        env=env,
-        clean_env=clean_env,
-        prepend_path=prepend_path,
-        template=template,
-        rstrip=rstrip,
-        umask=umask,
-        output_encoding=output_encoding,
-        output_loglevel=output_loglevel,
-        log_callback=log_callback,
-        timeout=timeout,
-        reset_system_locale=reset_system_locale,
-        ignore_retcode=ignore_retcode,
-        saltenv=saltenv,
-        use_vt=use_vt,
-        password=password,
-        encoded_cmd=encoded_cmd,
-        success_retcodes=success_retcodes,
-        **kwargs
-    )
+    ret = _run(cmd,
+               runas=runas,
+               group=group,
+               cwd=cwd,
+               stdin=stdin,
+               stderr=stderr,
+               shell=shell,
+               python_shell=python_shell,
+               env=env,
+               clean_env=clean_env,
+               prepend_path=prepend_path,
+               template=template,
+               rstrip=rstrip,
+               umask=umask,
+               output_encoding=output_encoding,
+               output_loglevel=output_loglevel,
+               log_callback=log_callback,
+               timeout=timeout,
+               reset_system_locale=reset_system_locale,
+               ignore_retcode=ignore_retcode,
+               saltenv=saltenv,
+               use_vt=use_vt,
+               password=password,
+               encoded_cmd=encoded_cmd,
+               success_retcodes=success_retcodes,
+               success_stdout=success_stdout,
+               success_stderr=success_stderr,
+               **kwargs)
 
     if hide_output:
         ret["stdout"] = ret["stderr"] = ""
     return ret
 
 
-def retcode(
-    cmd,
-    cwd=None,
-    stdin=None,
-    runas=None,
-    group=None,
-    shell=DEFAULT_SHELL,
-    python_shell=None,
-    env=None,
-    clean_env=False,
-    template=None,
-    umask=None,
-    output_encoding=None,
-    output_loglevel="debug",
-    log_callback=None,
-    timeout=None,
-    reset_system_locale=True,
-    ignore_retcode=False,
-    saltenv="base",
-    use_vt=False,
-    password=None,
-    success_retcodes=None,
-    **kwargs
-):
-    """
+def retcode(cmd,
+            cwd=None,
+            stdin=None,
+            runas=None,
+            group=None,
+            shell=DEFAULT_SHELL,
+            python_shell=None,
+            env=None,
+            clean_env=False,
+            template=None,
+            umask=None,
+            output_encoding=None,
+            output_loglevel='debug',
+            log_callback=None,
+            timeout=None,
+            reset_system_locale=True,
+            ignore_retcode=False,
+            saltenv='base',
+            use_vt=False,
+            password=None,
+            success_retcodes=None,
+            success_stdout=None,
+            success_stderr=None,
+            **kwargs):
+    '''
     Execute a shell command and return the command's return code.
 
     :param str cmd: The command to run. ex: ``ls -lart /home``
@@ -2260,6 +2350,20 @@ def retcode(
 
       .. versionadded:: 2019.2.0
 
+    :param list success_stdout: This parameter will be allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
+    :param list success_stderr: This parameter will be allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
         present in the ``stdin`` value to newlines.
@@ -2287,116 +2391,117 @@ def retcode(
     .. code-block:: bash
 
         salt '*' cmd.retcode "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
-    """
-    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
+    '''
+    python_shell = _python_shell_default(python_shell,
+                                         kwargs.get('__pub_jid', ''))
 
-    ret = _run(
-        cmd,
-        runas=runas,
-        group=group,
-        cwd=cwd,
-        stdin=stdin,
-        stderr=subprocess.STDOUT,
-        shell=shell,
-        python_shell=python_shell,
-        env=env,
-        clean_env=clean_env,
-        template=template,
-        umask=umask,
-        output_encoding=output_encoding,
-        output_loglevel=output_loglevel,
-        log_callback=log_callback,
-        timeout=timeout,
-        reset_system_locale=reset_system_locale,
-        ignore_retcode=ignore_retcode,
-        saltenv=saltenv,
-        use_vt=use_vt,
-        password=password,
-        success_retcodes=success_retcodes,
-        **kwargs
-    )
-    return ret["retcode"]
+    ret = _run(cmd,
+               runas=runas,
+               group=group,
+               cwd=cwd,
+               stdin=stdin,
+               stderr=subprocess.STDOUT,
+               shell=shell,
+               python_shell=python_shell,
+               env=env,
+               clean_env=clean_env,
+               template=template,
+               umask=umask,
+               output_encoding=output_encoding,
+               output_loglevel=output_loglevel,
+               log_callback=log_callback,
+               timeout=timeout,
+               reset_system_locale=reset_system_locale,
+               ignore_retcode=ignore_retcode,
+               saltenv=saltenv,
+               use_vt=use_vt,
+               password=password,
+               success_retcodes=success_retcodes,
+               success_stdout=success_stdout,
+               success_stderr=success_stderr,
+               **kwargs)
+    return ret['retcode']
 
 
-def _retcode_quiet(
-    cmd,
-    cwd=None,
-    stdin=None,
-    runas=None,
-    group=None,
-    shell=DEFAULT_SHELL,
-    python_shell=False,
-    env=None,
-    clean_env=False,
-    template=None,
-    umask=None,
-    output_encoding=None,
-    log_callback=None,
-    timeout=None,
-    reset_system_locale=True,
-    ignore_retcode=False,
-    saltenv="base",
-    use_vt=False,
-    password=None,
-    success_retcodes=None,
-    **kwargs
-):
-    """
+def _retcode_quiet(cmd,
+                   cwd=None,
+                   stdin=None,
+                   runas=None,
+                   group=None,
+                   shell=DEFAULT_SHELL,
+                   python_shell=False,
+                   env=None,
+                   clean_env=False,
+                   template=None,
+                   umask=None,
+                   output_encoding=None,
+                   log_callback=None,
+                   timeout=None,
+                   reset_system_locale=True,
+                   ignore_retcode=False,
+                   saltenv='base',
+                   use_vt=False,
+                   password=None,
+                   success_retcodes=None,
+                   success_stdout=None,
+                   success_stderr=None,
+                   **kwargs):
+    '''
     Helper for running commands quietly for minion startup. Returns same as
     the retcode() function.
-    """
-    return retcode(
-        cmd,
-        cwd=cwd,
-        stdin=stdin,
-        runas=runas,
-        group=group,
-        shell=shell,
-        python_shell=python_shell,
-        env=env,
-        clean_env=clean_env,
-        template=template,
-        umask=umask,
-        output_encoding=output_encoding,
-        output_loglevel="quiet",
-        log_callback=log_callback,
-        timeout=timeout,
-        reset_system_locale=reset_system_locale,
-        ignore_retcode=ignore_retcode,
-        saltenv=saltenv,
-        use_vt=use_vt,
-        password=password,
-        success_retcodes=success_retcodes,
-        **kwargs
-    )
+    '''
+    return retcode(cmd,
+                   cwd=cwd,
+                   stdin=stdin,
+                   runas=runas,
+                   group=group,
+                   shell=shell,
+                   python_shell=python_shell,
+                   env=env,
+                   clean_env=clean_env,
+                   template=template,
+                   umask=umask,
+                   output_encoding=output_encoding,
+                   output_loglevel='quiet',
+                   log_callback=log_callback,
+                   timeout=timeout,
+                   reset_system_locale=reset_system_locale,
+                   ignore_retcode=ignore_retcode,
+                   saltenv=saltenv,
+                   use_vt=use_vt,
+                   password=password,
+                   success_retcodes=success_retcodes,
+                   success_stdout=success_stderr,
+                   success_stderr=success_stderr,
+                   **kwargs)
 
 
-def script(
-    source,
-    args=None,
-    cwd=None,
-    stdin=None,
-    runas=None,
-    group=None,
-    shell=DEFAULT_SHELL,
-    python_shell=None,
-    env=None,
-    template=None,
-    umask=None,
-    output_encoding=None,
-    output_loglevel="debug",
-    log_callback=None,
-    hide_output=False,
-    timeout=None,
-    reset_system_locale=True,
-    saltenv="base",
-    use_vt=False,
-    bg=False,
-    password=None,
-    success_retcodes=None,
-    **kwargs
-):
-    """
+def script(source,
+           args=None,
+           cwd=None,
+           stdin=None,
+           runas=None,
+           group=None,
+           shell=DEFAULT_SHELL,
+           python_shell=None,
+           env=None,
+           template=None,
+           umask=None,
+           output_encoding=None,
+           output_loglevel='debug',
+           log_callback=None,
+           hide_output=False,
+           timeout=None,
+           reset_system_locale=True,
+           saltenv='base',
+           use_vt=False,
+           bg=False,
+           password=None,
+           success_retcodes=None,
+           success_stdout=None,
+           success_stderr=None,
+           **kwargs):
+    '''
     Download a script from a remote location and execute the script locally.
     The script can be located on the salt master file server or on an HTTP/FTP
     server.
@@ -2532,6 +2637,20 @@ def script(
 
       .. versionadded:: 2019.2.0
 
+    :param list success_stdout: This parameter will be allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
+    :param list success_stderr: This parameter will be allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
         present in the ``stdin`` value to newlines.
@@ -2620,28 +2739,28 @@ def script(
     else:
         cmd_path = _cmd_quote(path)
 
-    ret = _run(
-        cmd_path + " " + six.text_type(args) if args else cmd_path,
-        cwd=cwd,
-        stdin=stdin,
-        output_encoding=output_encoding,
-        output_loglevel=output_loglevel,
-        log_callback=log_callback,
-        runas=runas,
-        group=group,
-        shell=shell,
-        python_shell=python_shell,
-        env=env,
-        umask=umask,
-        timeout=timeout,
-        reset_system_locale=reset_system_locale,
-        saltenv=saltenv,
-        use_vt=use_vt,
-        bg=bg,
-        password=password,
-        success_retcodes=success_retcodes,
-        **kwargs
-    )
+    ret = _run(cmd_path + ' ' + six.text_type(args) if args else cmd_path,
+               cwd=cwd,
+               stdin=stdin,
+               output_encoding=output_encoding,
+               output_loglevel=output_loglevel,
+               log_callback=log_callback,
+               runas=runas,
+               group=group,
+               shell=shell,
+               python_shell=python_shell,
+               env=env,
+               umask=umask,
+               timeout=timeout,
+               reset_system_locale=reset_system_locale,
+               saltenv=saltenv,
+               use_vt=use_vt,
+               bg=bg,
+               password=password,
+               success_retcodes=success_retcodes,
+               success_stdout=success_stdout,
+               success_stderr=success_stderr,
+               **kwargs)
     _cleanup_tempfile(path)
     # If a temp working directory was created (Windows), let's remove that
     if win_cwd:
@@ -2652,30 +2771,30 @@ def script(
     return ret
 
 
-def script_retcode(
-    source,
-    args=None,
-    cwd=None,
-    stdin=None,
-    runas=None,
-    group=None,
-    shell=DEFAULT_SHELL,
-    python_shell=None,
-    env=None,
-    template="jinja",
-    umask=None,
-    timeout=None,
-    reset_system_locale=True,
-    saltenv="base",
-    output_encoding=None,
-    output_loglevel="debug",
-    log_callback=None,
-    use_vt=False,
-    password=None,
-    success_retcodes=None,
-    **kwargs
-):
-    """
+def script_retcode(source,
+                   args=None,
+                   cwd=None,
+                   stdin=None,
+                   runas=None,
+                   group=None,
+                   shell=DEFAULT_SHELL,
+                   python_shell=None,
+                   env=None,
+                   template='jinja',
+                   umask=None,
+                   timeout=None,
+                   reset_system_locale=True,
+                   saltenv='base',
+                   output_encoding=None,
+                   output_loglevel='debug',
+                   log_callback=None,
+                   use_vt=False,
+                   password=None,
+                   success_retcodes=None,
+                   success_stdout=None,
+                   success_stderr=None,
+                   **kwargs):
+    '''
     Download a script from a remote location and execute the script locally.
     The script can be located on the salt master file server or on an HTTP/FTP
     server.
@@ -2784,6 +2903,20 @@ def script_retcode(
 
       .. versionadded:: 2019.2.0
 
+    :param list success_stdout: This parameter will be allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
+    :param list success_stderr: This parameter will be allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
         present in the ``stdin`` value to newlines.
@@ -2808,31 +2941,31 @@ def script_retcode(
     """
     if "__env__" in kwargs:
         # "env" is not supported; Use "saltenv".
-        kwargs.pop("__env__")
+        kwargs.pop('__env__')
 
-    return script(
-        source=source,
-        args=args,
-        cwd=cwd,
-        stdin=stdin,
-        runas=runas,
-        group=group,
-        shell=shell,
-        python_shell=python_shell,
-        env=env,
-        template=template,
-        umask=umask,
-        timeout=timeout,
-        reset_system_locale=reset_system_locale,
-        saltenv=saltenv,
-        output_encoding=output_encoding,
-        output_loglevel=output_loglevel,
-        log_callback=log_callback,
-        use_vt=use_vt,
-        password=password,
-        success_retcodes=success_retcodes,
-        **kwargs
-    )["retcode"]
+    return script(source=source,
+                  args=args,
+                  cwd=cwd,
+                  stdin=stdin,
+                  runas=runas,
+                  group=group,
+                  shell=shell,
+                  python_shell=python_shell,
+                  env=env,
+                  template=template,
+                  umask=umask,
+                  timeout=timeout,
+                  reset_system_locale=reset_system_locale,
+                  saltenv=saltenv,
+                  output_encoding=output_encoding,
+                  output_loglevel=output_loglevel,
+                  log_callback=log_callback,
+                  use_vt=use_vt,
+                  password=password,
+                  success_retcodes=success_retcodes,
+                  success_stdout=success_stdout,
+                  success_stderr=success_stderr,
+                  **kwargs)['retcode']
 
 
 def which(cmd):
@@ -2955,38 +3088,40 @@ def tty(device, echo=""):
             tty_device.write(salt.utils.stringutils.to_bytes(echo))
         return {"Success": "Message was successfully echoed to {0}".format(teletype)}
     except IOError:
-        return {"Error": "Echoing to {0} returned error".format(teletype)}
+        return {
+            'Error': 'Echoing to {0} returned error'.format(teletype)
+        }
 
 
-def run_chroot(
-    root,
-    cmd,
-    cwd=None,
-    stdin=None,
-    runas=None,
-    group=None,
-    shell=DEFAULT_SHELL,
-    python_shell=True,
-    binds=None,
-    env=None,
-    clean_env=False,
-    template=None,
-    rstrip=True,
-    umask=None,
-    output_encoding=None,
-    output_loglevel="quiet",
-    log_callback=None,
-    hide_output=False,
-    timeout=None,
-    reset_system_locale=True,
-    ignore_retcode=False,
-    saltenv="base",
-    use_vt=False,
-    bg=False,
-    success_retcodes=None,
-    **kwargs
-):
-    """
+def run_chroot(root,
+               cmd,
+               cwd=None,
+               stdin=None,
+               runas=None,
+               group=None,
+               shell=DEFAULT_SHELL,
+               python_shell=True,
+               binds=None,
+               env=None,
+               clean_env=False,
+               template=None,
+               rstrip=True,
+               umask=None,
+               output_encoding=None,
+               output_loglevel='quiet',
+               log_callback=None,
+               hide_output=False,
+               timeout=None,
+               reset_system_locale=True,
+               ignore_retcode=False,
+               saltenv='base',
+               use_vt=False,
+               bg=False,
+               success_retcodes=None,
+               success_stdout=None,
+               success_stderr=None,
+               **kwargs):
+    '''
     .. versionadded:: 2014.7.0
 
     This function runs :mod:`cmd.run_all <salt.modules.cmdmod.run_all>` wrapped
@@ -3030,8 +3165,6 @@ def run_chroot(
 
     :param list binds: List of directories that will be exported inside
         the chroot with the bind option.
-
-        .. versionadded:: 3000
 
     :param dict env: Environment variables to be set prior to execution.
 
@@ -3103,12 +3236,26 @@ def run_chroot(
         Use VT utils (saltstack) to stream the command output more
         interactively to the console and the logs. This is experimental.
 
-    success_retcodes: This parameter will be allow a list of
+    :param success_retcodes: This parameter will be allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
+
+    :param list success_stdout: This parameter will be allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
+    :param list success_stderr: This parameter will be allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
 
     CLI Example:
 
@@ -3126,49 +3273,52 @@ def run_chroot(
         bind_exported_to = os.path.join(root, bind_exported_to)
         __salt__["mount.mount"](bind_exported_to, bind_exported, opts="default,bind")
 
+    binds = binds if binds else []
+    for bind_exported in binds:
+        bind_exported_to = os.path.relpath(bind_exported, os.path.sep)
+        bind_exported_to = os.path.join(root, bind_exported_to)
+        __salt__['mount.mount'](
+            bind_exported_to,
+            bind_exported,
+            opts='default,bind')
+
     # Execute chroot routine
     sh_ = "/bin/sh"
     if os.path.isfile(os.path.join(root, "bin/bash")):
         sh_ = "/bin/bash"
 
     if isinstance(cmd, (list, tuple)):
-        cmd = " ".join([six.text_type(i) for i in cmd])
+        cmd = ' '.join([six.text_type(i) for i in cmd])
+    cmd = 'chroot {0} {1} -c {2}'.format(root, sh_, _cmd_quote(cmd))
 
-    # If runas and group are provided, we expect that the user lives
-    # inside the chroot, not outside.
-    if runas:
-        userspec = "--userspec {}:{}".format(runas, group if group else "")
-    else:
-        userspec = ""
+    run_func = __context__.pop('cmd.run_chroot.func', run_all)
 
-    cmd = "chroot {} {} {} -c {}".format(userspec, root, sh_, _cmd_quote(cmd))
-
-    run_func = __context__.pop("cmd.run_chroot.func", run_all)
-
-    ret = run_func(
-        cmd,
-        cwd=cwd,
-        stdin=stdin,
-        shell=shell,
-        python_shell=python_shell,
-        env=env,
-        clean_env=clean_env,
-        template=template,
-        rstrip=rstrip,
-        umask=umask,
-        output_encoding=output_encoding,
-        output_loglevel=output_loglevel,
-        log_callback=log_callback,
-        timeout=timeout,
-        reset_system_locale=reset_system_locale,
-        ignore_retcode=ignore_retcode,
-        saltenv=saltenv,
-        pillarenv=kwargs.get("pillarenv"),
-        pillar=kwargs.get("pillar"),
-        use_vt=use_vt,
-        success_retcodes=success_retcodes,
-        bg=bg,
-    )
+    ret = run_func(cmd,
+                   runas=runas,
+                   group=group,
+                   cwd=cwd,
+                   stdin=stdin,
+                   shell=shell,
+                   python_shell=python_shell,
+                   env=env,
+                   clean_env=clean_env,
+                   template=template,
+                   rstrip=rstrip,
+                   umask=umask,
+                   output_encoding=output_encoding,
+                   output_loglevel=output_loglevel,
+                   log_callback=log_callback,
+                   timeout=timeout,
+                   reset_system_locale=reset_system_locale,
+                   ignore_retcode=ignore_retcode,
+                   saltenv=saltenv,
+                   pillarenv=kwargs.get('pillarenv'),
+                   pillar=kwargs.get('pillar'),
+                   use_vt=use_vt,
+                   success_retcodes=success_retcodes,
+                   success_stdout=success_stdout,
+                   success_stderr=success_stderr,
+                   bg=bg)
 
     # Kill processes running in the chroot
     for i in range(6):
@@ -3191,9 +3341,14 @@ def run_chroot(
         bind_exported_to = os.path.join(root, bind_exported_to)
         __salt__["mount.umount"](bind_exported_to)
 
-    __salt__["mount.umount"](os.path.join(root, "sys"))
-    __salt__["mount.umount"](os.path.join(root, "proc"))
-    __salt__["mount.umount"](os.path.join(root, "dev"))
+    for bind_exported in binds:
+        bind_exported_to = os.path.relpath(bind_exported, os.path.sep)
+        bind_exported_to = os.path.join(root, bind_exported_to)
+        __salt__['mount.umount'](bind_exported_to)
+
+    __salt__['mount.umount'](os.path.join(root, 'sys'))
+    __salt__['mount.umount'](os.path.join(root, 'proc'))
+    __salt__['mount.umount'](os.path.join(root, 'dev'))
     if hide_output:
         ret["stdout"] = ret["stderr"] = ""
     return ret
@@ -3471,32 +3626,32 @@ def shell_info(shell, list_modules=False):
     return ret
 
 
-def powershell(
-    cmd,
-    cwd=None,
-    stdin=None,
-    runas=None,
-    shell=DEFAULT_SHELL,
-    env=None,
-    clean_env=False,
-    template=None,
-    rstrip=True,
-    umask=None,
-    output_encoding=None,
-    output_loglevel="debug",
-    hide_output=False,
-    timeout=None,
-    reset_system_locale=True,
-    ignore_retcode=False,
-    saltenv="base",
-    use_vt=False,
-    password=None,
-    depth=None,
-    encode_cmd=False,
-    success_retcodes=None,
-    **kwargs
-):
-    """
+def powershell(cmd,
+               cwd=None,
+               stdin=None,
+               runas=None,
+               shell=DEFAULT_SHELL,
+               env=None,
+               clean_env=False,
+               template=None,
+               rstrip=True,
+               umask=None,
+               output_encoding=None,
+               output_loglevel='debug',
+               hide_output=False,
+               timeout=None,
+               reset_system_locale=True,
+               ignore_retcode=False,
+               saltenv='base',
+               use_vt=False,
+               password=None,
+               depth=None,
+               encode_cmd=False,
+               success_retcodes=None,
+               success_stdout=None,
+               success_stderr=None,
+               **kwargs):
+    '''
     Execute the passed PowerShell command and return the output as a dictionary.
 
     Other ``cmd.*`` functions (besides ``cmd.powershell_all``)
@@ -3647,6 +3802,20 @@ def powershell(
 
       .. versionadded:: 2019.2.0
 
+    :param list success_stdout: This parameter will be allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
+    :param list success_stderr: This parameter will be allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
         present in the ``stdin`` value to newlines.
@@ -3693,31 +3862,31 @@ def powershell(
     cmd = "try {" + cmd + '} catch { "{}" }'
 
     # Retrieve the response, while overriding shell with 'powershell'
-    response = run(
-        cmd,
-        cwd=cwd,
-        stdin=stdin,
-        runas=runas,
-        shell="powershell",
-        env=env,
-        clean_env=clean_env,
-        template=template,
-        rstrip=rstrip,
-        umask=umask,
-        output_encoding=output_encoding,
-        output_loglevel=output_loglevel,
-        hide_output=hide_output,
-        timeout=timeout,
-        reset_system_locale=reset_system_locale,
-        ignore_retcode=ignore_retcode,
-        saltenv=saltenv,
-        use_vt=use_vt,
-        python_shell=python_shell,
-        password=password,
-        encoded_cmd=encoded_cmd,
-        success_retcodes=success_retcodes,
-        **kwargs
-    )
+    response = run(cmd,
+                   cwd=cwd,
+                   stdin=stdin,
+                   runas=runas,
+                   shell='powershell',
+                   env=env,
+                   clean_env=clean_env,
+                   template=template,
+                   rstrip=rstrip,
+                   umask=umask,
+                   output_encoding=output_encoding,
+                   output_loglevel=output_loglevel,
+                   hide_output=hide_output,
+                   timeout=timeout,
+                   reset_system_locale=reset_system_locale,
+                   ignore_retcode=ignore_retcode,
+                   saltenv=saltenv,
+                   use_vt=use_vt,
+                   python_shell=python_shell,
+                   password=password,
+                   encoded_cmd=encoded_cmd,
+                   success_retcodes=success_retcodes,
+                   success_stdout=success_stdout,
+                   success_stderr=success_stderr,
+                   **kwargs)
 
     try:
         return salt.utils.json.loads(response)
@@ -3726,33 +3895,33 @@ def powershell(
         return {}
 
 
-def powershell_all(
-    cmd,
-    cwd=None,
-    stdin=None,
-    runas=None,
-    shell=DEFAULT_SHELL,
-    env=None,
-    clean_env=False,
-    template=None,
-    rstrip=True,
-    umask=None,
-    output_encoding=None,
-    output_loglevel="debug",
-    quiet=False,
-    timeout=None,
-    reset_system_locale=True,
-    ignore_retcode=False,
-    saltenv="base",
-    use_vt=False,
-    password=None,
-    depth=None,
-    encode_cmd=False,
-    force_list=False,
-    success_retcodes=None,
-    **kwargs
-):
-    """
+def powershell_all(cmd,
+                   cwd=None,
+                   stdin=None,
+                   runas=None,
+                   shell=DEFAULT_SHELL,
+                   env=None,
+                   clean_env=False,
+                   template=None,
+                   rstrip=True,
+                   umask=None,
+                   output_encoding=None,
+                   output_loglevel='debug',
+                   quiet=False,
+                   timeout=None,
+                   reset_system_locale=True,
+                   ignore_retcode=False,
+                   saltenv='base',
+                   use_vt=False,
+                   password=None,
+                   depth=None,
+                   encode_cmd=False,
+                   force_list=False,
+                   success_retcodes=None,
+                   success_stdout=None,
+                   success_stderr=None,
+                   **kwargs):
+    '''
     Execute the passed PowerShell command and return a dictionary with a result
     field representing the output of the command, as well as other fields
     showing us what the PowerShell invocation wrote to ``stderr``, the process
@@ -3953,6 +4122,20 @@ def powershell_all(
 
       .. versionadded:: 2019.2.0
 
+    :param list success_stdout: This parameter will be allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
+    :param list success_stderr: This parameter will be allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
         present in the ``stdin`` value to newlines.
@@ -4012,32 +4195,32 @@ def powershell_all(
         encoded_cmd = False
 
     # Retrieve the response, while overriding shell with 'powershell'
-    response = run_all(
-        cmd,
-        cwd=cwd,
-        stdin=stdin,
-        runas=runas,
-        shell="powershell",
-        env=env,
-        clean_env=clean_env,
-        template=template,
-        rstrip=rstrip,
-        umask=umask,
-        output_encoding=output_encoding,
-        output_loglevel=output_loglevel,
-        quiet=quiet,
-        timeout=timeout,
-        reset_system_locale=reset_system_locale,
-        ignore_retcode=ignore_retcode,
-        saltenv=saltenv,
-        use_vt=use_vt,
-        python_shell=python_shell,
-        password=password,
-        encoded_cmd=encoded_cmd,
-        success_retcodes=success_retcodes,
-        **kwargs
-    )
-    stdoutput = response["stdout"]
+    response = run_all(cmd,
+                       cwd=cwd,
+                       stdin=stdin,
+                       runas=runas,
+                       shell='powershell',
+                       env=env,
+                       clean_env=clean_env,
+                       template=template,
+                       rstrip=rstrip,
+                       umask=umask,
+                       output_encoding=output_encoding,
+                       output_loglevel=output_loglevel,
+                       quiet=quiet,
+                       timeout=timeout,
+                       reset_system_locale=reset_system_locale,
+                       ignore_retcode=ignore_retcode,
+                       saltenv=saltenv,
+                       use_vt=use_vt,
+                       python_shell=python_shell,
+                       password=password,
+                       encoded_cmd=encoded_cmd,
+                       success_retcodes=success_retcodes,
+                       success_stdout=success_stdout,
+                       success_stderr=success_stderr,
+                       **kwargs)
+    stdoutput = response['stdout']
 
     # if stdoutput is the empty string and force_list is True we return an empty list
     # Otherwise we return response with no result key
@@ -4068,30 +4251,30 @@ def powershell_all(
     return response
 
 
-def run_bg(
-    cmd,
-    cwd=None,
-    runas=None,
-    group=None,
-    shell=DEFAULT_SHELL,
-    python_shell=None,
-    env=None,
-    clean_env=False,
-    template=None,
-    umask=None,
-    timeout=None,
-    output_encoding=None,
-    output_loglevel="debug",
-    log_callback=None,
-    reset_system_locale=True,
-    ignore_retcode=False,
-    saltenv="base",
-    password=None,
-    prepend_path=None,
-    success_retcodes=None,
-    **kwargs
-):
-    r"""
+def run_bg(cmd,
+           cwd=None,
+           runas=None,
+           group=None,
+           shell=DEFAULT_SHELL,
+           python_shell=None,
+           env=None,
+           clean_env=False,
+           template=None,
+           umask=None,
+           timeout=None,
+           output_encoding=None,
+           output_loglevel='debug',
+           log_callback=None,
+           reset_system_locale=True,
+           ignore_retcode=False,
+           saltenv='base',
+           password=None,
+           prepend_path=None,
+           success_retcodes=None,
+           success_stdout=None,
+           success_stderr=None,
+           **kwargs):
+    r'''
     .. versionadded: 2016.3.0
 
     Execute the passed command in the background and return its PID
@@ -4222,6 +4405,20 @@ def run_bg(
 
       .. versionadded:: 2019.2.0
 
+    :param list success_stdout: This parameter will be allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
+    :param list success_stderr: This parameter will be allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
         present in the ``stdin`` value to newlines.
@@ -4256,37 +4453,41 @@ def run_bg(
     .. code-block:: bash
 
         salt '*' cmd.run_bg cmd='ls -lR / | sed -e s/=/:/g > /tmp/dontwait'
-    """
+    '''
 
-    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
-    res = _run(
-        cmd,
-        stdin=None,
-        stderr=None,
-        stdout=None,
-        output_encoding=output_encoding,
-        output_loglevel=output_loglevel,
-        use_vt=None,
-        bg=True,
-        with_communicate=False,
-        rstrip=False,
-        runas=runas,
-        group=group,
-        shell=shell,
-        python_shell=python_shell,
-        cwd=cwd,
-        env=env,
-        clean_env=clean_env,
-        prepend_path=prepend_path,
-        template=template,
-        umask=umask,
-        log_callback=log_callback,
-        timeout=timeout,
-        reset_system_locale=reset_system_locale,
-        saltenv=saltenv,
-        password=password,
-        success_retcodes=success_retcodes,
-        **kwargs
-    )
+    python_shell = _python_shell_default(python_shell,
+                                         kwargs.get('__pub_jid', ''))
+    res = _run(cmd,
+               stdin=None,
+               stderr=None,
+               stdout=None,
+               output_encoding=output_encoding,
+               output_loglevel=output_loglevel,
+               use_vt=None,
+               bg=True,
+               with_communicate=False,
+               rstrip=False,
+               runas=runas,
+               group=group,
+               shell=shell,
+               python_shell=python_shell,
+               cwd=cwd,
+               env=env,
+               clean_env=clean_env,
+               prepend_path=prepend_path,
+               template=template,
+               umask=umask,
+               log_callback=log_callback,
+               timeout=timeout,
+               reset_system_locale=reset_system_locale,
+               saltenv=saltenv,
+               password=password,
+               success_retcodes=success_retcodes,
+               success_stdout=success_stdout,
+               success_stderr=success_stderr,
+               **kwargs
+               )
 
-    return {"pid": res["pid"]}
+    return {
+        'pid': res['pid']
+    }

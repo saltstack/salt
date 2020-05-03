@@ -234,12 +234,11 @@ def team_present(
         if privacy is not None and target["privacy"] != privacy:
             parameters["privacy"] = privacy
 
-        if len(parameters) > 0:
-            if __opts__["test"]:
-                test_comments.append(
-                    "Team properties are set to be edited: {0}".format(parameters)
-                )
-                ret["result"] = None
+        if parameters:
+            if __opts__['test']:
+                test_comments.append('Team properties are set to be edited: {0}'
+                                     .format(parameters))
+                ret['result'] = None
             else:
                 result = __salt__["github.edit_team"](
                     name, profile=profile, **parameters
@@ -445,8 +444,8 @@ def team_present(
             name, profile=profile, ignore_cache=False, **kwargs
         )
 
-    if len(test_comments) > 0:
-        ret["comment"] = "\n".join(test_comments)
+    if test_comments:
+        ret['comment'] = '\n'.join(test_comments)
     return ret
 
 
@@ -614,7 +613,7 @@ def repo_present(
                 parameters[param_name] = param_value
                 old_parameters[param_name] = target[param_name]
 
-        if len(parameters) > 0:
+        if parameters:
             repo_change = {
                 "old": "Repo properties were {0}".format(old_parameters),
                 "new": "Repo properties (that changed) are {0}".format(parameters),

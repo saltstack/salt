@@ -27,6 +27,7 @@ from tests.support.mock import MagicMock
 
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.mock import MagicMock
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
@@ -40,10 +41,11 @@ class BaseIPCReqCase(salt.ext.tornado.testing.AsyncTestCase):
 
     def setUp(self):
         super(BaseIPCReqCase, self).setUp()
-        # self._start_handlers = dict(self.io_loop._handlers)
-        self.socket_path = os.path.join(RUNTIME_VARS.TMP, "ipc_test.ipc")
+        #self._start_handlers = dict(self.io_loop._handlers)
+        self.socket_path = os.path.join(RUNTIME_VARS.TMP, 'ipc_test.ipc')
 
         self.server_channel = salt.transport.ipc.IPCMessageServer(
+            salt.config.master_config(None),
             self.socket_path,
             io_loop=self.io_loop,
             payload_handler=self._handle_payload,
@@ -180,8 +182,11 @@ class IPCMessagePubSubCase(salt.ext.tornado.testing.AsyncTestCase):
 
     def setUp(self):
         super(IPCMessagePubSubCase, self).setUp()
-        self.opts = {"ipc_write_buffer": 0}
-        self.socket_path = os.path.join(RUNTIME_VARS.TMP, "ipc_test.ipc")
+        self.opts = {
+                'ipc_write_buffer': 0,
+                'ipc_so_backlog': 128,
+                }
+        self.socket_path = os.path.join(RUNTIME_VARS.TMP, 'ipc_test.ipc')
         self.pub_channel = self._get_pub_channel()
         self.sub_channel = self._get_sub_channel()
 
@@ -244,9 +249,11 @@ class IPCMessagePubSubCase(salt.ext.tornado.testing.AsyncTestCase):
                 self.stop()
 
         # Now let both waiting data at once
-        client1.read_async(handler)
-        client2.read_async(handler)
-        self.pub_channel.publish("TEST")
+        client1.callbacks.add(handler)
+        client2.callbacks.add(handler)
+        client1.read_async()
+        client2.read_async()
+        self.pub_channel.publish('TEST')
         self.wait()
         self.assertEqual(len(call_cnt), 2)
         self.assertEqual(call_cnt[0], "TEST")

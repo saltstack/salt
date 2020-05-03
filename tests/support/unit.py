@@ -27,15 +27,19 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import sys
-from unittest import TestCase as _TestCase
-from unittest import TestLoader as _TestLoader
-from unittest import TestResult
-from unittest import TestSuite as _TestSuite
-from unittest import TextTestResult as _TextTestResult
-from unittest import TextTestRunner as _TextTestRunner
-from unittest import expectedFailure, skip, skipIf
-from unittest.case import SkipTest, _id
-
+import logging
+from unittest import (
+    TestLoader as _TestLoader,
+    TextTestRunner as _TextTestRunner,
+    TestCase as _TestCase,
+    expectedFailure,
+    TestSuite as _TestSuite,
+    skip,
+    skipIf,
+    TestResult,
+    TextTestResult as _TextTestResult
+)
+from unittest.case import _id, SkipTest
 from salt.ext import six
 
 try:
@@ -61,7 +65,7 @@ Duis ac cursus leo, non varius metus. Sed laoreet felis magna, vel tempor diam m
 Quisque cursus odio tortor. In consequat augue nisl, eget lacinia odio vestibulum eget.
 Donec venenatis elementum arcu at rhoncus. Nunc pharetra erat in lacinia convallis. Ut condimentum
 eu mauris sit amet convallis. Morbi vulputate vel odio non laoreet. Nullam in suscipit tellus.
-Sed quis posuere urna."""
+Sed quis posuere urna.'''
 
 
 class TestSuite(_TestSuite):
@@ -377,11 +381,11 @@ class TextTestResult(_TextTestResult):
     """
 
     def startTest(self, test):
-        log.debug(">>>>> START >>>>> {0}".format(test.id()))
+        log.debug('>>>>> START >>>>> %s', test.id())
         return super(TextTestResult, self).startTest(test)
 
     def stopTest(self, test):
-        log.debug("<<<<< END <<<<<<< {0}".format(test.id()))
+        log.debug('<<<<< END <<<<<<< %s', test.id())
         return super(TextTestResult, self).stopTest(test)
 
 

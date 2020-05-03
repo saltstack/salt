@@ -99,13 +99,14 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
             side_effect=lambda x, y: x
             != os.path.join(systemd.INITSCRIPT_PATH, "README")
         )
-        sysv_enabled_mock = MagicMock(side_effect=lambda x, _: x == "baz")
+        sysv_enabled_mock = MagicMock(side_effect=lambda x, _: x == 'baz')
 
-        with patch.dict(systemd.__salt__, {"cmd.run": cmd_mock}):
-            with patch.object(os, "listdir", listdir_mock):
-                with patch.object(systemd, "_get_systemd_services", sd_mock):
-                    with patch.object(os, "access", side_effect=access_mock):
-                        with patch.object(systemd, "_sysv_enabled", sysv_enabled_mock):
+        with patch.dict(systemd.__salt__, {'cmd.run': cmd_mock}):
+            with patch.object(os, 'listdir', listdir_mock):
+                with patch.object(systemd, '_get_systemd_services', sd_mock):
+                    with patch.object(os, 'access', side_effect=access_mock):
+                        with patch.object(systemd, '_sysv_enabled',
+                                          sysv_enabled_mock):
                             self.assertListEqual(
                                 systemd.get_enabled(),
                                 ["baz", "service1", "timer1.timer"],
@@ -130,13 +131,14 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
             side_effect=lambda x, y: x
             != os.path.join(systemd.INITSCRIPT_PATH, "README")
         )
-        sysv_enabled_mock = MagicMock(side_effect=lambda x, _: x == "baz")
+        sysv_enabled_mock = MagicMock(side_effect=lambda x, _: x == 'baz')
 
-        with patch.dict(systemd.__salt__, {"cmd.run": cmd_mock}):
-            with patch.object(os, "listdir", listdir_mock):
-                with patch.object(systemd, "_get_systemd_services", sd_mock):
-                    with patch.object(os, "access", side_effect=access_mock):
-                        with patch.object(systemd, "_sysv_enabled", sysv_enabled_mock):
+        with patch.dict(systemd.__salt__, {'cmd.run': cmd_mock}):
+            with patch.object(os, 'listdir', listdir_mock):
+                with patch.object(systemd, '_get_systemd_services', sd_mock):
+                    with patch.object(os, 'access', side_effect=access_mock):
+                        with patch.object(systemd, '_sysv_enabled',
+                                          sysv_enabled_mock):
                             self.assertListEqual(
                                 systemd.get_disabled(),
                                 ["bar", "service2", "timer2.timer"],

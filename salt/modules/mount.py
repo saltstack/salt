@@ -768,19 +768,18 @@ def rm_vfstab(name, device, config="/etc/vfstab"):
 
 
 def set_fstab(
-    name,
-    device,
-    fstype,
-    opts="defaults",
-    dump=0,
-    pass_num=0,
-    config="/etc/fstab",
-    test=False,
-    match_on="auto",
-    not_change=False,
-    **kwargs
-):
-    """
+        name,
+        device,
+        fstype,
+        opts='defaults',
+        dump=0,
+        pass_num=0,
+        config='/etc/fstab',
+        test=False,
+        match_on='auto',
+        not_change=False,
+        **kwargs):
+    '''
     Verify that this mount is represented in the fstab, change the mount
     to match the data passed, or add the mount if it is not present.
 
@@ -869,7 +868,7 @@ def set_fstab(
                     if criteria.match(line):
                         # Note: If ret isn't None here,
                         # we've matched multiple lines
-                        ret = "present"
+                        ret = 'present'
                         if entry.match(line) or not_change:
                             lines.append(line)
                         else:
@@ -904,20 +903,19 @@ def set_fstab(
 
 
 def set_vfstab(
-    name,
-    device,
-    fstype,
-    opts="-",
-    device_fsck="-",
-    pass_fsck="-",
-    mount_at_boot="yes",
-    config="/etc/vfstab",
-    test=False,
-    match_on="auto",
-    not_change=False,
-    **kwargs
-):
-    """
+        name,
+        device,
+        fstype,
+        opts='-',
+        device_fsck='-',
+        pass_fsck='-',
+        mount_at_boot='yes',
+        config='/etc/vfstab',
+        test=False,
+        match_on='auto',
+        not_change=False,
+        **kwargs):
+    '''
     ..verionadded:: 2016.3.2
     Verify that this mount is represented in the fstab, change the mount
     to match the data passed, or add the mount if it is not present.
@@ -998,7 +996,7 @@ def set_vfstab(
                     if criteria.match(line):
                         # Note: If ret isn't None here,
                         # we've matched multiple lines
-                        ret = "present"
+                        ret = 'present'
                         if entry.match(line) or not_change:
                             lines.append(line)
                         else:
@@ -1094,16 +1092,15 @@ def rm_automaster(name, device, config="/etc/auto_salt"):
 
 
 def set_automaster(
-    name,
-    device,
-    fstype,
-    opts="",
-    config="/etc/auto_salt",
-    test=False,
-    not_change=False,
-    **kwargs
-):
-    """
+        name,
+        device,
+        fstype,
+        opts='',
+        config='/etc/auto_salt',
+        test=False,
+        not_change=False,
+        **kwargs):
+    '''
     Verify that this mount is represented in the auto_salt, change the mount
     to match the data passed, or add the mount if it is not present.
 
@@ -1288,10 +1285,10 @@ def mount(
         # use of fstype on AIX differs from typical Linux use of -t
         # functionality AIX uses -v vfsname, -t fstype mounts all with
         # fstype in /etc/filesystems
-        if "AIX" in __grains__["os"]:
-            args += " -v {0}".format(fstype)
-        elif "solaris" in __grains__["os"].lower():
-            args += " -F {0}".format(fstype)
+        if 'AIX' in __grains__['os']:
+            args += ' -v {0}'.format(fstype)
+        elif 'solaris' in __grains__['os'].lower():
+            args += ' -F {0}'.format(fstype)
         else:
             args += " -t {0}".format(fstype)
 
@@ -1320,8 +1317,8 @@ def remount(name, device, mkmnt=False, fstype="", opts="defaults", user=None):
         if fstype == "smbfs":
             force_mount = True
 
-    if "AIX" in __grains__["os"]:
-        if opts == "defaults":
+    if 'AIX' in __grains__['os']:
+        if opts == 'defaults':
             opts = []
 
     if isinstance(opts, six.string_types):
@@ -1338,19 +1335,19 @@ def remount(name, device, mkmnt=False, fstype="", opts="defaults", user=None):
         if force_mount:
             # We need to force the mount but first we should unmount
             umount(name, device, user=user)
-        lopts = ",".join(opts)
-        args = "-o {0}".format(lopts)
+        lopts = ','.join(opts)
+        args = '-o {0}'.format(lopts)
 
         if fstype:
             # use of fstype on AIX differs from typical Linux use of
             # -t functionality AIX uses -v vfsname, -t fstype mounts
             # all with fstype in /etc/filesystems
-            if "AIX" in __grains__["os"]:
-                args += " -v {0}".format(fstype)
-            elif "solaris" in __grains__["os"].lower():
-                args += " -F {0}".format(fstype)
+            if 'AIX' in __grains__['os']:
+                args += ' -v {0}'.format(fstype)
+            elif 'solaris' in __grains__['os'].lower():
+                args += ' -F {0}'.format(fstype)
             else:
-                args += " -t {0}".format(fstype)
+                args += ' -t {0}'.format(fstype)
 
         if __grains__["os"] not in ["OpenBSD", "MacOS", "Darwin"] or force_mount:
             cmd = "mount {0} {1} {2} ".format(args, device, name)
@@ -1748,18 +1745,17 @@ def filesystems(config="/etc/filesystems"):
 
 
 def set_filesystems(
-    name,
-    device,
-    vfstype,
-    opts="-",
-    mount="true",
-    config="/etc/filesystems",
-    test=False,
-    match_on="auto",
-    not_change=False,
-    **kwargs
-):
-    """
+        name,
+        device,
+        vfstype,
+        opts='-',
+        mount='true',
+        config='/etc/filesystems',
+        test=False,
+        match_on='auto',
+        not_change=False,
+        **kwargs):
+    '''
     .. versionadded:: 2018.3.3
 
     Verify that this mount is represented in the filesystems, change the mount
@@ -1871,7 +1867,7 @@ def set_filesystems(
         fsys_filedict = _filesystems(config, False)
         for fsys_view in six.viewitems(fsys_filedict):
             if criteria.match(fsys_view):
-                ret = "present"
+                ret = 'present'
                 if entry_ip.match(fsys_view) or not_change:
                     view_lines.append(fsys_view)
                 else:

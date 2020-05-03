@@ -186,7 +186,7 @@ def key_exists(hive, key, use_32bit_registry=False):
 
             import salt.utils.win_reg as reg
             reg.key_exists(hive='HKLM', key='SOFTWARE\\Microsoft')
-    """
+    '''
     local_hive = _to_unicode(hive)
     local_key = _to_unicode(key)
 
@@ -234,10 +234,8 @@ def value_exists(hive, key, vname, use_32bit_registry=False):
         .. code-block:: python
 
             import salt.utils.win_reg as reg
-            reg.value_exists(hive='HKLM',
-                                key='SOFTWARE\\Microsoft\\Windows\\CurrentVersion',
-                                vname='CommonFilesDir')
-    """
+            reg.key_exists(hive='HKLM', key='SOFTWARE\\Microsoft')
+    '''
     local_hive = _to_unicode(hive)
     local_key = _to_unicode(key)
     local_vname = _to_unicode(vname)
@@ -428,7 +426,9 @@ def list_values(hive, key=None, use_32bit_registry=False):
             vname, vdata, vtype = win32api.RegEnumValue(handle, i)
 
             if not vname:
-                vname = "(Default)"
+                if not include_default:
+                    continue
+                vname = '(Default)'
 
             value = {
                 "hive": local_hive,
@@ -514,7 +514,7 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
 
             import salt.utils.win_reg as reg
             reg.read_value(hive='HKLM', key='SOFTWARE\\Salt')
-    """
+    '''
     # If no name is passed, the default value of the key will be returned
     # The value name is Default
 
@@ -821,9 +821,7 @@ def cast_vdata(vdata=None, vtype="REG_SZ"):
         return [_to_unicode(i) for i in vdata]
     # Make sure REG_QWORD is a 64 bit integer
     elif vtype_value == win32con.REG_QWORD:
-        # pylint: disable=undefined-variable,incompatible-py3-code
-        return int(vdata) if six.PY3 else long(vdata)
-        # pylint: enable=undefined-variable,incompatible-py3-code
+        return vdata if six.PY3 else long(vdata)  # pylint: disable=incompatible-py3-code,undefined-variable
     # Everything else is int
     else:
         return int(vdata)

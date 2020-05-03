@@ -10,6 +10,8 @@ grains modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    bluecoat_sslv
+    cimc
     chronos
     cimc
     core
@@ -28,11 +30,12 @@ grains modules
     napalm
     nvme
     nxos
+    onyx
     opts
     panos
     pending_reboot
     philips_hue
-    rest_sample
     smartos
     ssh_sample
+    rest_sample
     zfs
