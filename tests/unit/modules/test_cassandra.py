@@ -5,7 +5,7 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-import salt.modules.cassandra as cassandra
+import salt.modules.cassandra_mod as cassandra
 
 # Import Salt Libs
 from salt.ext import six

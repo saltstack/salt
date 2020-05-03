@@ -43,7 +43,7 @@ def __virtual__():
         )
 
     if HAS_PYCASSA and salt.utils.path.which("nodetool"):
-        return "cassandra_mod"
+        return "cassandra"
     return (
         False,
         "The cassandra execution module cannot be loaded: nodetool not found.",
