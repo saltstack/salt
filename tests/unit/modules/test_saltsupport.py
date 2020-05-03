@@ -41,7 +41,8 @@ class SaltSupportModuleTestCase(TestCase, LoaderModuleMockMixin):
         :return:
         """
         support = saltsupport.SaltSupportModule()
-        assert support._get_archive_name() == "/mnt/storage/c-3po-support-000-000.bz2"
+        result = support._get_archive_name()
+        assert result == "/mnt/storage/c-3po-support-000-000.bz2", result
 
     @patch("tempfile.gettempdir", MagicMock(return_value="/mnt/storage"))
     @patch("salt.modules.saltsupport.__grains__", {"fqdn": "c-3po"})
@@ -54,11 +55,11 @@ class SaltSupportModuleTestCase(TestCase, LoaderModuleMockMixin):
         """
         support = saltsupport.SaltSupportModule()
         temp_name = support._get_archive_name(archname="Darth Wader")
-        assert temp_name == "/mnt/storage/c-3po-darthwader-000-000.bz2"
+        assert temp_name == "/mnt/storage/c-3po-darthwader-000-000.bz2", temp_name
         temp_name = support._get_archive_name(archname="Яйця з сіллю")
-        assert temp_name == "/mnt/storage/c-3po-support-000-000.bz2"
+        assert temp_name == "/mnt/storage/c-3po-support-000-000.bz2", temp_name
         temp_name = support._get_archive_name(archname="!@#$%^&*()Fillip J. Fry")
-        assert temp_name == "/mnt/storage/c-3po-fillipjfry-000-000.bz2"
+        assert temp_name == "/mnt/storage/c-3po-fillipjfry-000-000.bz2", temp_name
 
     @patch(
         "salt.cli.support.get_profiles",
@@ -106,7 +107,7 @@ class SaltSupportModuleTestCase(TestCase, LoaderModuleMockMixin):
             "/mnt/storage/two-support-111-111.bz2",
             "/mnt/storage/000-support-000-000.bz2",
         ]:
-            assert name in out
+            assert name in out, name
 
     def test_last_archive(self):
         """
@@ -334,7 +335,7 @@ professor: Farnsworth
             (0, b"\n"),
             (0, b"three-support-222-222.bz2"),
             (0, b"\n"),
-        ]
+        ], calls
 
     @patch("salt.modules.saltsupport.__pillar__", {})
     @patch("salt.modules.saltsupport.SupportDataCollector", MagicMock())

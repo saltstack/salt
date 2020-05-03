@@ -64,7 +64,7 @@ class SaltSupportIndentOutputTestCase(TestCase):
         ):
             assert (
                 self.device.write.call_args_list[idx][0][0] == data
-            ), "The result doesn't match the expected data: {0} != {1}".format(
+            ), "The result doesn't match the expected data: '{0}' != '{1}'".format(
                 self.device.write.call_args_list[idx][0][0], data
             )
 
@@ -85,7 +85,7 @@ class SaltSupportIndentOutputTestCase(TestCase):
         ):
             assert (
                 self.device.write.call_args_list[idx][0][0] == data
-            ), "The result doesn't match the expected data: {0} != {1}".format(
+            ), "The result doesn't match the expected data: '{0}' != '{1}'".format(
                 self.device.write.call_args_list[idx][0][0], data
             )
 
