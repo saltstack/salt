@@ -29,9 +29,6 @@ class SchedulerSkipTest(SchedulerTestsBase):
         super(SchedulerSkipTest, self).setUp()
         self.schedule.opts["loop_interval"] = 1
 
-    def tearDown(self):
-        self.schedule.reset()
-
     @skipIf(True, "SLOWTEST skip")
     def test_skip(self):
         """

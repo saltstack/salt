@@ -124,9 +124,9 @@ from salt.utils.functools import namespaced_function as _namespaced_function
 
 # pylint: disable=no-name-in-module
 try:
-    from collections import Iterable, Mapping
-except ImportError:
     from collections.abc import Iterable, Mapping
+except ImportError:
+    from collections import Iterable, Mapping
 # pylint: enable=no-name-in-module
 
 
