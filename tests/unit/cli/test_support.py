@@ -11,6 +11,7 @@ import jinja2
 import salt.cli.support.collector
 import salt.exceptions
 import salt.utils.files
+import salt.utils.platform
 import yaml
 from salt.cli.support.collector import SaltSupport, SupportDataCollector
 from salt.cli.support.console import IndentOutput
@@ -25,6 +26,7 @@ except ImportError:
     pytest = None
 
 
+@skipIf(salt.utils.platform.is_windows(), "not currently supported in Windows")
 @skipIf(not bool(pytest), "Pytest needs to be installed")
 class SaltSupportIndentOutputTestCase(TestCase):
     """
@@ -108,6 +110,7 @@ class SaltSupportIndentOutputTestCase(TestCase):
             step += 5
 
 
+@skipIf(salt.utils.platform.is_windows(), "not currently supported in Windows")
 @skipIf(not bool(pytest), "Pytest needs to be installed")
 class SaltSupportCollectorTestCase(TestCase):
     """
@@ -239,6 +242,7 @@ class SaltSupportCollectorTestCase(TestCase):
             self.collector.close()
 
 
+@skipIf(salt.utils.platform.is_windows(), "not currently supported in Windows")
 @skipIf(not bool(pytest), "Pytest needs to be installed")
 class SaltSupportRunnerTestCase(TestCase):
     """
@@ -474,6 +478,7 @@ class SaltSupportRunnerTestCase(TestCase):
             ] == "Overwriting existing archive: {}".format(arch)
 
 
+@skipIf(salt.utils.platform.is_windows(), "not currently supported in Windows")
 @skipIf(not bool(pytest), "Pytest needs to be installed")
 class ProfileIntegrityTestCase(TestCase):
     """

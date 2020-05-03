@@ -9,6 +9,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import datetime
 
 import salt.exceptions
+import salt.utils.platform
 from salt.modules import saltsupport
 
 # Import Salt Testing Libs
@@ -22,6 +23,7 @@ except ImportError:
     pytest = None
 
 
+@skipIf(salt.utils.platform.is_windows(), "not currently supported in Windows")
 @skipIf(not bool(pytest), "Pytest required")
 class SaltSupportModuleTestCase(TestCase, LoaderModuleMockMixin):
     """
@@ -365,6 +367,7 @@ professor: Farnsworth
         assert support.collect_internal_data.call_count == 1
 
 
+@skipIf(salt.utils.platform.is_windows(), "not currently supported in Windows")
 @skipIf(not bool(pytest), "Pytest required")
 class LogCollectorTestCase(TestCase, LoaderModuleMockMixin):
     """
