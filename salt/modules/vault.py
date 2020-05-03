@@ -90,10 +90,24 @@ Functions to interact with Hashicorp Vault.
 
            export VAULT_TOKEN=11111111-1111-1111-1111-1111111111111
 
-        Configuration keys ``uses`` or ``ttl`` may also be specified under auth
+        Configuration keys ``uses`` or ``ttl`` may also be specified under ``auth``
         to configure the tokens generated on behalf of minions to be reused for the
-        defined time length or number of uses. These settings may also be configured
-        on the minion when
+        defined number of uses or length of time in seconds. These settings may also be configured
+        on the minion when ``allow_minion_override`` is set to ``True`` in the master
+        config.
+
+        Defining ``uses`` will cause the salt master to generate a token with that number of uses rather
+        than a single use token. This multi-use token will be cached on the minion.
+
+        .. code-block:: bash
+
+          vault:
+            auth:
+              method: token
+              token: xxxxxx
+              uses: 10
+              ttl: 43200
+              allow_minion_override: True
 
             .. versionchanged:: Sodium
 
@@ -146,6 +160,7 @@ Functions to interact with Hashicorp Vault.
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
+import os
 
 log = logging.getLogger(__name__)
 
@@ -339,3 +354,18 @@ def list_secrets(path):
     except Exception as err:  # pylint: disable=broad-except
         log.error("Failed to list secrets! %s: %s", type(err).__name__, err)
         return None
+
+
+def clear_token_cache():
+    """
+    Delete minion Vault token cache file
+    """
+    log.debug("Deleting cache file")
+    cache_file = os.path.join(__opts__["cachedir"], "salt_vault_token")
+
+    if os.path.exists(cache_file):
+        os.remove(cache_file)
+        return True
+    else:
+        log.info("Attempted to delete vault cache file, but it does not exist.")
+        return False

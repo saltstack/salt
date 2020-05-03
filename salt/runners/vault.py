@@ -61,19 +61,12 @@ def generate_token(
         config = __opts__.get("vault", {})
         verify = config.get("verify", None)
         # Allow disabling of minion provided values via the master
-        allow_minion_override = config.get("minion_auth", {}).get(
-            "allow_minion_override", False
-        )
+        allow_minion_override = config["auth"].get("allow_minion_override", False)
         # This preserves the previous behavior of default TTL and 1 use
         if not allow_minion_override or uses is None:
-            uses = config.get("minion_auth", {}).get("uses", 1)
+            uses = config["auth"].get("uses", 1)
         if not allow_minion_override or ttl is None:
-            ttl = config.get("minion_auth", {}).get("ttl", None)
-        try:
-            # Ensure uses is valid
-            assert uses >= 0
-        except AssertionError:
-            uses = 1
+            ttl = config["auth"].get("ttl", None)
 
         if config["auth"]["method"] == "approle":
             if _selftoken_expired():
@@ -103,7 +96,7 @@ def generate_token(
         }
 
         if ttl is not None:
-            payload["ttl"] = str(ttl)
+            payload["explicit_max_ttl"] = str(ttl)
 
         if payload["policies"] == []:
             return {"error": "No policies matched minion"}
@@ -123,7 +116,7 @@ def generate_token(
             "url": config["url"],
             "verify": verify,
         }
-        if uses > 0:
+        if uses >= 0:
             ret["uses"] = uses
 
         return ret

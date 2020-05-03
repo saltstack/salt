@@ -47,8 +47,13 @@ def _get_token_and_url_from_master():
     minion_id = __grains__["id"]
     pki_dir = __opts__["pki_dir"]
     # Allow minion override salt-master settings/defaults
-    uses = __opts__.get("vault", {}).get("auth", {}).get("uses", None)
-    ttl = __opts__.get("vault", {}).get("auth", {}).get("ttl", None)
+    try:
+        uses = __opts__.get("vault", {}).get("auth", {}).get("uses", None)
+        ttl = __opts__.get("vault", {}).get("auth", {}).get("ttl", None)
+    except (TypeError, AttributeError):
+        # If uses or ttl are not defined, just use defaults
+        uses = None
+        ttl = None
 
     # When rendering pillars, the module executes on the master, but the token
     # should be issued for the minion, so that the correct policies are applied
@@ -176,7 +181,7 @@ def del_cache():
     """
     Delete cache file
     """
-    log.debug("UUUUU deleting cache file")
+    log.debug("Deleting cache file")
     cache_file = os.path.join(__opts__["cachedir"], "salt_vault_token")
 
     if os.path.exists(cache_file):
@@ -186,21 +191,26 @@ def del_cache():
 
 
 def write_cache(connection):
-    if connection.get("uses") == 1 and "unlimited_use_token" not in connection:
-        # This token is missing unlimited_use_token key, so it has not been seen before.
-        # Since uses is already 1, no point in saving a single use token
-        log.debug("XXXX not saving single use token")
+    # If uses is 1 and unlimited_use_token is not true, then this is a single use token and should not be cached
+    # In that case, we still want to cache the vault metadata lookup information for paths, so continue on
+    if (
+        connection.get("uses", None) == 1
+        and "unlimited_use_token" not in connection
+        and "vault_secret_path_metadata" not in connection
+    ):
+        log.debug("Not caching vault single use token")
+        __context__["vault_token"] = connection
         return True
 
     cache_file = os.path.join(__opts__["cachedir"], "salt_vault_token")
     try:
         log.debug("Writing vault cache file")
         # Detect if token was issued without use limit
-        if connection["uses"] == 0:
+        if connection.get("uses") == 0:
             connection["unlimited_use_token"] = True
         else:
             connection["unlimited_use_token"] = False
-        with salt.utils.files.fopen(cache_file, "w+") as fp_:
+        with salt.utils.files.fpopen(cache_file, "w", mode=0o600) as fp_:
             fp_.write(salt.utils.json.dumps(connection))
         return True
     except (IOError, OSError):
@@ -210,9 +220,21 @@ def write_cache(connection):
         return False
 
 
+def _read_cache_file():
+    """
+    Return contents of cache file
+    """
+    try:
+        cache_file = os.path.join(__opts__["cachedir"], "salt_vault_token")
+        with salt.utils.files.fopen(cache_file, "r") as contents:
+            return salt.utils.json.load(contents)
+    except FileNotFoundError:
+        return {}
+
+
 def get_cache():
     """
-    Return information from vault cache file
+    Return connection information from vault cache file
     """
 
     def _gen_new_connection():
@@ -221,49 +243,28 @@ def get_cache():
         write_status = write_cache(connection)
         return connection
 
-    try:
-        cache_file = os.path.join(__opts__["cachedir"], "salt_vault_token")
-        with salt.utils.files.fopen(cache_file, "r") as contents:
-            connection = salt.utils.json.load(contents)
-    except (OSError, IOError):
-        log.error("Error reading cache file: %s", cache_file)
+    connection = _read_cache_file()
+    # If no cache, or only metadata info is saved in cache, generate a new token
+    if not connection or "url" not in connection:
         return _gen_new_connection()
 
-    if "unlimited_use_token" in connection:
-        log.debug("XXX Found cached vault token: %s", connection)
-        unlimited_uses = connection.get("unlimited_use_token", False)
+    unlimited_uses = connection.get("unlimited_use_token", False)
 
-        # Drop 10 seconds just to be safe
-        ttl10 = connection["issued"] + connection["lease_duration"] - 10
-        cur_time = int(round(time.time()))
+    # Drop 10 seconds from ttl to be safe
+    ttl10 = connection["issued"] + connection["lease_duration"] - 10
+    cur_time = int(round(time.time()))
 
-        # Determine if ttl still valid
-        if ttl10 < cur_time:
-            log.debug(
-                "Cached token has expired {} < {}: DELETING".format(ttl10, cur_time)
-            )
-            del_cache()
-            return _gen_new_connection()
-        else:
-            log.debug("Token has not expired {} > {}".format(ttl10, cur_time))
-
-        # Determine if token uses have run out
-        if not unlimited_uses:
-            current_uses = connection.get("uses", 1)
-            if not current_uses:
-                current_uses = 1
-            if current_uses <= 0:
-                log.debug(
-                    "Cached token has no more uses left {}: DELETING".format(
-                        connection["uses"]
-                    )
-                )
-                del_cache()
-                return _gen_new_connection()
-            else:
-                log.debug("Token has {} uses left".format(current_uses))
+    # Determine if ttl still valid
+    if ttl10 < cur_time:
+        log.debug("Cached token has expired {} < {}: DELETING".format(ttl10, cur_time))
+        del_cache()
+        return _gen_new_connection()
     else:
-        return _gen_new_connection()
+        log.debug("Token has not expired {} > {}".format(ttl10, cur_time))
+
+    if not unlimited_uses:
+        current_uses = connection.get("uses", 1)
+        log.debug("Token has {} uses left".format(current_uses))
     return connection
 
 
@@ -279,15 +280,20 @@ def make_request(
     """
     Make a request to Vault
     """
-    connection = get_cache()
-    log.debug("XXXX got cache result: %s", connection)
+    if "vault_token" in __context__:
+        connection = __context__["vault_token"]
+    else:
+        connection = get_cache()
     token = connection["token"] if not token else token
     vault_url = connection["url"] if not vault_url else vault_url
-    args["verify"] = (
-        __opts__.get("vault", {}).get("verify", None)
-        if "verify" not in args
-        else args["verify"]
-    )
+    if "verify" in args:
+        args["verify"] = args["verify"]
+    else:
+        try:
+            args["verify"] = __opts__.get("vault").get("verify", None)
+        except (TypeError, AttributeError):
+            # Don't worry about setting verify if it doesn't exist
+            pass
     url = "{0}/{1}".format(vault_url, resource)
     headers = {"X-Vault-Token": token, "Content-Type": "application/json"}
     response = requests.request(method, url, headers=headers, **args)
@@ -312,11 +318,23 @@ def make_request(
         log.error("Error from vault: %s", response.text)
         return response
 
-    # Decrement vault uses, but only on secret URL lookups
-    if not connection["unlimited_use_token"] and not resource.startswith("v1/sys"):
+    # Decrement vault uses, only on secret URL lookups and multi use tokens
+    if (
+        not connection.get(
+            "unlimited_use_token"
+        )  # Don't both tracking count on unlimited use tokens
+        and not resource.startswith(
+            "v1/sys"
+        )  # The metadata url does not count as a token use
+        and "vault_token" not in __context__  # Running with a single use token
+    ):
         log.debug("Decrementing Vault uses on limited token for url: %s", resource)
         connection["uses"] -= 1
-        write_cache(connection)
+        if connection["uses"] <= 0:
+            log.debug("Cached token has no more uses left.")
+            del_cache()
+        else:
+            write_cache(connection)
 
     if get_token_url:
         return response, token, vault_url
@@ -431,15 +449,17 @@ def _get_secret_path_metadata(path):
     .. code-block:: python
         _get_secret_path_metadata('dev/secrets/fu/bar')
     """
-    # TODO save mount metadata in file cache
     ckey = "vault_secret_path_metadata"
-    if ckey not in __context__:
-        __context__[ckey] = {}
+
+    # Attempt to lookup from cache
+    cache_content = _read_cache_file()
+    if ckey not in cache_content:
+        cache_content[ckey] = {}
 
     ret = None
-    if path.startswith(tuple(__context__[ckey].keys())):
+    if path.startswith(tuple(cache_content[ckey].keys())):
         log.debug("Found cached metadata for %s", path)
-        ret = next(v for k, v in __context__[ckey].items() if path.startswith(k))
+        ret = next(v for k, v in cache_content[ckey].items() if path.startswith(k))
     else:
         log.debug("Fetching metadata for %s", path)
         try:
@@ -450,9 +470,16 @@ def _get_secret_path_metadata(path):
             if response.json().get("data", False):
                 log.debug("Got metadata for %s", path)
                 ret = response.json()["data"]
-                __context__[ckey][path] = ret
+                # Write metadata to cache file
+                # Check for new cache content from make_request
+                if "url" not in cache_content:
+                    cache_content = _read_cache_file()
+                    if ckey not in cache_content:
+                        cache_content[ckey] = {}
+                cache_content[ckey][path] = ret
+                write_cache(cache_content)
             else:
                 raise response.json()
         except Exception as err:  # pylint: disable=broad-except
-            log.error("Failed to list secrets! %s: %s", type(err).__name__, err)
+            log.error("Failed to get secret metadata %s: %s", type(err).__name__, err)
     return ret
