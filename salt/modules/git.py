@@ -395,6 +395,7 @@ def _git_run(
             ignore_retcode=ignore_retcode,
             redirect_stderr=redirect_stderr,
             output_encoding=output_encoding,
+            output_loglevel="quiet",
             **kwargs
         )
 
