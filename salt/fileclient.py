@@ -47,6 +47,8 @@ from salt.ext.tornado.httputil import (
 )
 from salt.utils.openstack.swift import SaltSwift
 
+# pylint: enable=no-name-in-module,import-error
+
 log = logging.getLogger(__name__)
 MAX_FILENAME_LENGTH = 255
 
@@ -571,7 +573,7 @@ class Client(object):
                     https_enable=s3_opt("https_enable", True),
                 )
                 return dest
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 raise MinionError(
                     "Could not fetch from {0}. Exception: {1}".format(url, exc)
                 )
