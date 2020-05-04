@@ -1024,7 +1024,7 @@ def refresh_db(**kwargs):
         )
     except MinionError as exc:
         log.exception(
-            "Failed to cache %s" % repo_details.winrepo_source_dir, exc_info=exc
+            "Failed to cache %s", repo_details.winrepo_source_dir, exc_info=exc
         )
     return genrepo(saltenv=saltenv, verbose=verbose, failhard=failhard)
 
@@ -1308,11 +1308,13 @@ def _get_source_sum(source_hash, file_path, saltenv):
         try:
             cached_hash_file = __salt__["cp.cache_file"](source_hash, saltenv)
         except MinionError as exc:
-            log.exception("Failed to cache %s" % source_hash, exc_info=exc)
+            log.exception("Failed to cache %s", source_hash, exc_info=exc)
             raise
 
         if not cached_hash_file:
-            raise CommandExecutionError("Source hash file %s not found" % source_hash)
+            raise CommandExecutionError(
+                "Source hash file {0} not found".format(source_hash)
+            )
 
         ret = __salt__["file.extract_hash"](cached_hash_file, "", file_path)
         if ret is None:
@@ -1625,9 +1627,9 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                         exclude_pat="E@init.sls$",
                     )
                 except MinionError as exc:
-                    msg = "Failed to cache %s" % path
+                    msg = "Failed to cache {0}".format(path)
                     log.exception(msg, exc_info=exc)
-                    return "%s\n%s" % (msg, exc)
+                    return "{0}\n{1}".format(msg, exc)
 
             # Check to see if the cache_file is cached... if passed
             if cache_file and cache_file.startswith("salt:"):
@@ -1638,9 +1640,9 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                     try:
                         cached_file = __salt__["cp.cache_file"](cache_file, saltenv)
                     except MinionError as exc:
-                        msg = "Failed to cache %s" % cache_file
+                        msg = "Failed to cache {0}".format(cache_file)
                         log.exception(msg, exc_info=exc)
-                        return "%s\n%s" % (msg, exc)
+                        return "{0}\n{1}".format(msg, exc)
 
                 # Make sure the cached file is the same as the source
                 if __salt__["cp.hash_file"](cache_file, saltenv) != __salt__[
@@ -1649,9 +1651,9 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                     try:
                         cached_file = __salt__["cp.cache_file"](cache_file, saltenv)
                     except MinionError as exc:
-                        msg = "Failed to cache %s" % cache_file
+                        msg = "Failed to cache {0}".foromat(cache_file)
                         log.exception(msg, exc_info=exc)
-                        return "%s\n%s" % (msg, exc)
+                        return "{0}\n{1}".format(msg, exc)
 
                     # Check if the cache_file was cached successfully
                     if not cached_file:
@@ -1666,9 +1668,9 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 try:
                     cached_pkg = __salt__["cp.cache_file"](installer, saltenv)
                 except MinionError as exc:
-                    msg = "Failed to cache %s" % installer
+                    msg = "Failed to cache {0}".format(installer)
                     log.exception(msg, exc_info=exc)
-                    return "%s\n%s" % (msg, exc)
+                    return "{0}\n{1}".format(msg, exc)
 
                 # Check if the installer was cached successfully
                 if not cached_pkg:
@@ -1687,9 +1689,9 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                     try:
                         cached_pkg = __salt__["cp.cache_file"](installer, saltenv)
                     except MinionError as exc:
-                        msg = "Failed to cache %s" % installer
+                        msg = "Failed to cache {0}".format(installer)
                         log.exception(msg, exc_info=exc)
-                        return "%s\n%s" % (msg, exc)
+                        return "{0}\n{1}".format(msg, exc)
 
                     # Check if the installer was cached successfully
                     if not cached_pkg:
@@ -1725,7 +1727,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
             if source_sum["hsum"] != cached_pkg_sum:
                 raise SaltInvocationError(
-                    ("Source hash '{0}' does not match package hash" " '{1}'").format(
+                    "Source hash '{0}' does not match package hash '{1}'".format(
                         source_sum["hsum"], cached_pkg_sum
                     )
                 )
@@ -2057,9 +2059,9 @@ def remove(name=None, pkgs=None, **kwargs):
                             path, saltenv, False, None, "E@init.sls$"
                         )
                     except MinionError as exc:
-                        msg = "Failed to cache %s" % path
+                        msg = "Failed to cache {0}".format(path)
                         log.exception(msg, exc_info=exc)
-                        return "%s\n%s" % (msg, exc)
+                        return "{0}\n{1}".format(msg, exc)
 
                 # Check to see if the uninstaller is cached
                 cached_pkg = __salt__["cp.is_cached"](uninstaller, saltenv)
@@ -2068,9 +2070,9 @@ def remove(name=None, pkgs=None, **kwargs):
                     try:
                         cached_pkg = __salt__["cp.cache_file"](uninstaller, saltenv)
                     except MinionError as exc:
-                        msg = "Failed to cache %s" % uninstaller
+                        msg = "Failed to cache {0}".format(uninstaller)
                         log.exception(msg, exc_info=exc)
-                        return "%s\n%s" % (msg, exc)
+                        return "{0}\n{1}".format(msg, exc)
 
                     # Check if the uninstaller was cached successfully
                     if not cached_pkg:
@@ -2088,9 +2090,9 @@ def remove(name=None, pkgs=None, **kwargs):
                         try:
                             cached_pkg = __salt__["cp.cache_file"](uninstaller, saltenv)
                         except MinionError as exc:
-                            msg = "Failed to cache %s" % uninstaller
+                            msg = "Failed to cache {0}".format(uninstaller)
                             log.exception(msg, exc_info=exc)
-                            return "%s\n%s" % (msg, exc)
+                            return "{0}\n{1}".format(msg, exc)
 
                         # Check if the installer was cached successfully
                         if not cached_pkg:
