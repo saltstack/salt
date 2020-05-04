@@ -327,7 +327,7 @@ class TestVaultUtils(LoaderModuleMockMixin, TestCase):
         with patch("salt.utils.files.fpopen", mock_open()) as mock_fpopen:
             function_response = vault.write_cache(self.cache_uses)
             assert mock_fpopen.call_count == 1
-            self.assertEqual(
+            self.assertListEqual(
                 list(mock_fpopen.filehandles),
                 [os.path.join("somepath", "salt_vault_token")],
             )
@@ -355,7 +355,7 @@ class TestVaultUtils(LoaderModuleMockMixin, TestCase):
         with patch("salt.utils.files.fpopen", mock_open()) as mock_fpopen:
             function_response = vault.write_cache(write_data)
             assert mock_fpopen.call_count == 1
-            self.assertEqual(
+            self.assertListEqual(
                 list(mock_fpopen.filehandles),
                 [os.path.join("somepath", "salt_vault_token")],
             )
