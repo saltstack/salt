@@ -522,7 +522,7 @@ class MapTests(RendererMixin, TestCase, MapBuilder):
         """
         Test declarative ordering
         """
-        # With declarative ordering, the ubuntu-specfic service name should
+        # With declarative ordering, the ubuntu-specific service name should
         # override the one inherited from debian.
         template = self.build_map(
             textwrap.dedent(

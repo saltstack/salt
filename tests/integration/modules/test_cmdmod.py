@@ -5,7 +5,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 import tempfile
-import textwrap
 from contextlib import contextmanager
 
 import pytest
@@ -285,11 +284,11 @@ class CMDModuleTest(ModuleCase):
         """
         cmd.exec_code
         """
-        code = textwrap.dedent(
-            """\
-               import sys
-               sys.stdout.write('cheese')"""
-        )
+        # `code` is a multiline YAML text. Formatting it as a YAML block scalar.
+        code = """|
+                   import sys
+                   sys.stdout.write('cheese')
+               """
         self.assertEqual(
             self.run_function(
                 "cmd.exec_code", [AVAILABLE_PYTHON_EXECUTABLE, code]
@@ -302,11 +301,11 @@ class CMDModuleTest(ModuleCase):
         """
         cmd.exec_code
         """
-        code = textwrap.dedent(
-            """\
-               import sys
-               sys.stdout.write(sys.argv[1])"""
-        )
+        # `code` is a multiline YAML text. Formatting it as a YAML block scalar.
+        code = """|
+                   import sys
+                   sys.stdout.write(sys.argv[1])
+               """
         arg = "cheese"
         self.assertEqual(
             self.run_function(
@@ -320,11 +319,11 @@ class CMDModuleTest(ModuleCase):
         """
         cmd.exec_code
         """
-        code = textwrap.dedent(
-            """\
-               import sys
-               sys.stdout.write(sys.argv[1])"""
-        )
+        # `code` is a multiline YAML text. Formatting it as a YAML block scalar.
+        code = """|
+                   import sys
+                   sys.stdout.write(sys.argv[1])
+               """
         arg = "cheese"
         self.assertEqual(
             self.run_function(
@@ -549,6 +548,27 @@ class CMDModuleTest(ModuleCase):
         self.assertIn("ABC=456", out)
 
     @skipIf(not salt.utils.platform.is_windows(), "minion is not windows")
+    def test_windows_cmd_powershell_list(self):
+        """
+        Ensure that cmd.run_all supports running shell='cmd' with cmd passed
+        as a list
+        """
+        out = self.run_function(
+            "cmd.run_all", cmd=["echo", "salt"], python_shell=False, shell="powershell"
+        )
+        self.assertEqual(out["stdout"], "salt")
+
+    @skipIf(not salt.utils.platform.is_windows(), "minion is not windows")
+    def test_windows_cmd_powershell_string(self):
+        """
+        Ensure that cmd.run_all supports running shell='cmd' with cmd passed
+        as a string
+        """
+        out = self.run_function(
+            "cmd.run_all", cmd="echo salt", python_shell=False, shell="powershell"
+        )
+        self.assertEqual(out["stdout"], "salt")
+
     @skipIf(True, "SLOWTEST skip")
     def test_windows_powershell_script_args(self):
         """

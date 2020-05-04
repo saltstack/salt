@@ -292,11 +292,7 @@ import shutil
 import sys
 import time
 import traceback
-
-# pylint: disable=no-name-in-module
-from collections import Iterable, Mapping, defaultdict
-
-# pylint: enable=no-name-in-module
+from collections import defaultdict
 from datetime import date, datetime  # python3 problem in the making?
 
 # Import salt libs
@@ -322,11 +318,18 @@ from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 from salt.serializers import DeserializationError
 from salt.state import get_accumulator_dir as _get_accumulator_dir
 
+# pylint: disable=no-name-in-module
+try:
+    from collections.abc import Iterable, Mapping
+except ImportError:
+    from collections import Iterable, Mapping
+# pylint: enable=no-name-in-module
+
+
 if salt.utils.platform.is_windows():
     import salt.utils.win_dacl
     import salt.utils.win_functions
     import salt.utils.winapi
-
 
 if salt.utils.platform.is_windows():
     import pywintypes
@@ -1670,7 +1673,7 @@ def symlink(
         will be deleted to make room for the symlink, unless
         backupname is set, when it will be renamed
 
-        .. versionchanged:: 3000
+        .. versionchanged:: Neon
             Force will now remove all types of existing file system entries,
             not just files, directories and symlinks.
 
@@ -2253,6 +2256,7 @@ def managed(
     follow_symlinks=True,
     check_cmd=None,
     skip_verify=False,
+    selinux=None,
     win_owner=None,
     win_perms=None,
     win_deny_perms=None,
@@ -2754,6 +2758,22 @@ def managed(
 
         .. versionadded:: 2016.3.0
 
+    selinux : None
+        Allows setting the selinux user, role, type, and range of a managed file
+
+        .. code-block:: yaml
+
+            /tmp/selinux.test
+              file.managed:
+                - user: root
+                - selinux:
+                    seuser: system_u
+                    serole: object_r
+                    setype: system_conf_t
+                    seranage: s0
+
+        .. versionadded:: Neon
+
     win_owner : None
         The owner of the directory. If this is not passed, user will be used. If
         user is not passed, the account under which Salt is running will be
@@ -2833,6 +2853,17 @@ def managed(
 
     if attrs is not None and salt.utils.platform.is_windows():
         return _error(ret, "The 'attrs' option is not supported on Windows")
+
+    if selinux is not None and not salt.utils.platform.is_linux():
+        return _error(ret, "The 'selinux' option is only supported on Linux")
+
+    if selinux:
+        seuser = selinux.get("seuser", None)
+        serole = selinux.get("serole", None)
+        setype = selinux.get("setype", None)
+        serange = selinux.get("serange", None)
+    else:
+        seuser = serole = setype = serange = None
 
     try:
         keep_mode = mode.lower() == "keep"
@@ -3048,7 +3079,17 @@ def managed(
             )
         else:
             ret, ret_perms = __salt__["file.check_perms"](
-                name, ret, user, group, mode, attrs, follow_symlinks
+                name,
+                ret,
+                user,
+                group,
+                mode,
+                attrs,
+                follow_symlinks,
+                seuser=seuser,
+                serole=serole,
+                setype=setype,
+                serange=serange,
             )
         if __opts__["test"]:
             if (
@@ -3095,6 +3136,10 @@ def managed(
                     contents,
                     skip_verify,
                     keep_mode,
+                    seuser=seuser,
+                    serole=serole,
+                    setype=setype,
+                    serange=serange,
                     **kwargs
                 )
 
@@ -3205,6 +3250,10 @@ def managed(
                 win_perms_reset=win_perms_reset,
                 encoding=encoding,
                 encoding_errors=encoding_errors,
+                seuser=seuser,
+                serole=serole,
+                setype=setype,
+                serange=serange,
                 **kwargs
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -3275,6 +3324,10 @@ def managed(
                 win_perms_reset=win_perms_reset,
                 encoding=encoding,
                 encoding_errors=encoding_errors,
+                seuser=seuser,
+                serole=serole,
+                setype=setype,
+                serange=serange,
                 **kwargs
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -4044,8 +4097,8 @@ def recurse(
         :ref:`backup_mode documentation <file-state-backups>` for more details.
 
     include_pat
-        When copying, include only this pattern from the source. Default
-        is glob match; if prefixed with 'E@', then regexp match.
+        When copying, include only this pattern, or list of patterns, from the
+        source. Default is glob match; if prefixed with 'E@', then regexp match.
         Example:
 
         .. code-block:: text
@@ -4055,9 +4108,19 @@ def recurse(
           - include_pat: E@hello      :: regexp matches 'otherhello',
                                          'hello01' ...
 
+        .. versionchanged:: Sodium
+
+            List patterns are now supported
+
+        .. code-block:: text
+
+            - include_pat:
+                - hello01
+                - hello02
+
     exclude_pat
-        Exclude this pattern from the source when copying. If both
-        `include_pat` and `exclude_pat` are supplied, then it will apply
+        Exclude this pattern, or list of patterns, from the source when copying.
+        If both `include_pat` and `exclude_pat` are supplied, then it will apply
         conditions cumulatively. i.e. first select based on include_pat, and
         then within that result apply exclude_pat.
 
@@ -4071,6 +4134,16 @@ def recurse(
                                                    APPDATA.02,.. for exclusion
           - exclude_pat: E@(APPDATA)|(TEMPDATA) :: regexp matches APPDATA
                                                    or TEMPDATA for exclusion
+
+        .. versionchanged:: Sodium
+
+            List patterns are now supported
+
+        .. code-block:: text
+
+            - exclude_pat:
+                - APPDATA.01
+                - APPDATA.02
 
     maxdepth
         When copying, only copy paths which are of depth `maxdepth` from the
@@ -4116,6 +4189,7 @@ def recurse(
         True to inherit permissions from parent, otherwise False
 
         .. versionadded:: 2017.7.7
+
     """
     if "env" in kwargs:
         # "env" is not supported; Use "saltenv".
@@ -4587,35 +4661,57 @@ def line(
     file_mode=None,
 ):
     """
-    Line-based editing of a file.
+    Line-focused editing of a file.
 
     .. versionadded:: 2015.8.0
 
-    :param name:
+    .. note::
+
+        ``file.line`` exists for historic reasons, and is not
+        generally recommended. It has a lot of quirks.  You may find
+        ``file.replace`` to be more suitable.
+
+    ``file.line`` is most useful if you have single lines in a file,
+    potentially a config file, that you would like to manage. It can
+    remove, add, and replace lines.
+
+    name
         Filesystem path to the file to be edited.
 
-    :param content:
+    content
         Content of the line. Allowed to be empty if mode=delete.
 
-    :param match:
+    match
         Match the target line for an action by
         a fragment of a string or regular expression.
 
         If neither ``before`` nor ``after`` are provided, and ``match``
-        is also ``None``, match becomes the ``content`` value.
+        is also ``None``, match falls back to the ``content`` value.
 
-    :param mode:
+    mode
         Defines how to edit a line. One of the following options is
         required:
 
         - ensure
-            If line does not exist, it will be added.
+            If line does not exist, it will be added. If ``before``
+            and ``after`` are specified either zero lines, or lines
+            that contain the ``content`` line are allowed to be in between
+            ``before`` and ``after``. If there are lines, and none of
+            them match then it will produce an error.
         - replace
             If line already exists, it will be replaced.
         - delete
-            Delete the line, once found.
+            Delete the line, if found.
         - insert
-            Insert a line.
+            Nearly identical to ``ensure``. If a line does not exist,
+            it will be added.
+
+            The differences are that multiple (and non-matching) lines are
+            alloweed between ``before`` and ``after``, if they are
+            specified. The line will always be inserted right before
+            ``before``. ``insert`` also allows the use of ``location`` to
+            specify that the line should be added at the beginning or end of
+            the file.
 
         .. note::
 
@@ -4624,28 +4720,33 @@ def line(
             ``after``. If ``location`` is used, it takes precedence
             over the other two options.
 
-    :param location:
-        Defines where to place content in the line. Note this option is only
-        used when ``mode=insert`` is specified. If a location is passed in, it
-        takes precedence over both the ``before`` and ``after`` kwargs. Valid
-        locations are:
+    location
+        In ``mode=insert`` only, whether to place the ``content`` at the
+        beginning or end of a the file. If ``location`` is provided,
+        ``before`` and ``after`` are ignored. Valid locations:
 
         - start
             Place the content at the beginning of the file.
         - end
             Place the content at the end of the file.
 
-    :param before:
+    before
         Regular expression or an exact case-sensitive fragment of the string.
-        This option is only used when either the ``ensure`` or ``insert`` mode
-        is defined.
+        Will be tried as **both** a regex **and** a part of the line.  Must
+        match **exactly** one line in the file.  This value is only used in
+        ``ensure`` and ``insert`` modes. The ``content`` will be inserted just
+        before this line, matching its ``indent`` unless ``indent=False``.
 
-    :param after:
+    after
         Regular expression or an exact case-sensitive fragment of the string.
-        This option is only used when either the ``ensure`` or ``insert`` mode
-        is defined.
+        Will be tried as **both** a regex **and** a part of the line.  Must
+        match **exactly** one line in the file.  This value is only used in
+        ``ensure`` and ``insert`` modes. The ``content`` will be inserted
+        directly after this line, unless ``before`` is also provided. If
+        ``before`` is not matched, indentation will match this line, unless
+        ``indent=False``.
 
-    :param show_changes:
+    show_changes
         Output a unified diff of the old file and the new file.
         If ``False`` return a boolean if any changes were made.
         Default is ``True``
@@ -4654,36 +4755,36 @@ def line(
             Using this option will store two copies of the file in-memory
             (the original version and the edited version) in order to generate the diff.
 
-    :param backup:
+    backup
         Create a backup of the original file with the extension:
         "Year-Month-Day-Hour-Minutes-Seconds".
 
-    :param quiet:
+    quiet
         Do not raise any exceptions. E.g. ignore the fact that the file that is
         tried to be edited does not exist and nothing really happened.
 
-    :param indent:
+    indent
         Keep indentation with the previous line. This option is not considered when
-        the ``delete`` mode is specified.
+        the ``delete`` mode is specified. Default is ``True``.
 
-    :param create:
-        Create an empty file if doesn't exists.
+    create
+        Create an empty file if doesn't exist.
 
         .. versionadded:: 2016.11.0
 
-    :param user:
+    user
         The user to own the file, this defaults to the user salt is running as
         on the minion.
 
         .. versionadded:: 2016.11.0
 
-    :param group:
+    group
         The group ownership set for the file, this defaults to the group salt
         is running as on the minion On Windows, this is ignored.
 
         .. versionadded:: 2016.11.0
 
-    :param file_mode:
+    file_mode
         The permissions to set on this file, aka 644, 0775, 4664. Not supported
         on Windows.
 
@@ -4703,6 +4804,145 @@ def line(
            - content: my key = my value
            - before: somekey.*?
 
+
+    **Examples:**
+
+    Here's a simple config file.
+
+    .. code-block:: ini
+
+        [some_config]
+        # Some config file
+        # this line will go away
+
+        here=False
+        away=True
+        goodybe=away
+
+    And an sls file:
+
+    .. code-block:: yaml
+
+        remove_lines:
+          file.line:
+            - name: /some/file.conf
+            - mode: delete
+            - match: away
+
+    This will produce:
+
+    .. code-block:: ini
+
+        [some_config]
+        # Some config file
+
+        here=False
+        away=True
+        goodbye=away
+
+    If that state is executed 2 more times, this will be the result:
+
+    .. code-block:: ini
+
+        [some_config]
+        # Some config file
+
+        here=False
+
+    Given that original file with this state:
+
+    .. code-block:: yaml
+
+        replace_things:
+          file.line:
+            - name: /some/file.conf
+            - mode: replace
+            - match: away
+            - content: here
+
+    Three passes will this state will result in this file:
+
+    .. code-block:: ini
+
+        [some_config]
+        # Some config file
+        here
+
+        here=False
+        here
+        here
+
+    Each pass replacing the first line found.
+
+    Given this file:
+
+    .. code-block:: text
+
+        insert after me
+        something
+        insert before me
+
+    The following state:
+
+    .. code-block:: yaml
+
+        insert_a_line:
+          file.line:
+            - name: /some/file.txt
+            - mode: insert
+            - after: insert after me
+            - before: insert before me
+            - content: thrice
+
+    If this state is executed 3 times, the result will be:
+
+    .. code-block:: text
+
+        insert after me
+        something
+        thrice
+        thrice
+        thrice
+        insert before me
+
+    If the mode is ensure instead, it will fail each time. To succeed, we need
+    to remove the incorrect line between before and after:
+
+    .. code-block:: text
+
+        insert after me
+        insert before me
+
+    With an ensure mode, this will insert ``thrice`` the first time and
+    make no changes for subsequent calls. For something simple this is
+    fine, but if you have instead blocks like this:
+
+    .. code-block:: text
+
+        Begin SomeBlock
+            foo = bar
+        End
+
+        Begin AnotherBlock
+            another = value
+        End
+
+    And given this state:
+
+    .. code-block:: yaml
+
+        ensure_someblock:
+          file.line:
+            - name: /some/file.conf
+            - mode: ensure
+            - after: Begin SomeBlock
+            - content: this = should be my content
+            - before: End
+
+    This will fail because there are multiple ``End`` lines. Without that
+    problem, it still would fail because there is a non-matching line,
+    ``foo = bar``. Ensure **only** allows either zero, or the matching
+    line present to be present in between ``before`` and ``after``.
     """
     name = os.path.expanduser(name)
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
@@ -5021,13 +5261,13 @@ def keyvalue(
         Return with success even if the file is not found (or not readable).
 
     count : 1
-        Number of occurences to allow (and correct), default is 1. Set to -1 to
+        Number of occurrences to allow (and correct), default is 1. Set to -1 to
         replace all, or set to 0 to remove all lines with this key regardsless
         of its value.
 
     .. note::
-        Any additional occurences after ``count`` are removed.
-        A count of -1 will only replace all occurences that are currently
+        Any additional occurrences after ``count`` are removed.
+        A count of -1 will only replace all occurrences that are currently
         uncommented already. Lines commented out will be left alone.
 
     uncomment : None
@@ -8506,14 +8746,15 @@ def not_cached(name, saltenv="base"):
     """
     .. versionadded:: 2017.7.3
 
-    Ensures that a file is saved to the minion's cache. This state is primarily
-    invoked by other states to ensure that we do not re-download a source file
-    if we do not need to.
+    Ensures that a file is not present in the minion's cache, deleting it
+    if found. This state is primarily invoked by other states to ensure
+    that a fresh copy is fetched.
 
     name
-        The URL of the file to be cached. To cache a file from an environment
-        other than ``base``, either use the ``saltenv`` argument or include the
-        saltenv in the URL (e.g. ``salt://path/to/file.conf?saltenv=dev``).
+        The URL of the file to be removed from cache. To remove a file from
+        cache in an environment other than ``base``, either use the ``saltenv``
+        argument or include the saltenv in the URL (e.g.
+        ``salt://path/to/file.conf?saltenv=dev``).
 
         .. note::
             A list of URLs is not supported, this must be a single URL. If a

@@ -37,7 +37,7 @@ the loader knows that the module needs to be imported as a Cython module. The
 compilation of the Cython module is automatic and happens when the minion
 starts, so only the ``*.pyx`` file is required.
 
-.. _`Cython`: http://cython.org/
+.. _`Cython`: https://cython.org/
 
 Zip Archives as Modules
 =======================
