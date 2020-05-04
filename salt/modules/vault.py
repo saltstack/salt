@@ -97,7 +97,11 @@ Functions to interact with Hashicorp Vault.
         config.
 
         Defining ``uses`` will cause the salt master to generate a token with that number of uses rather
-        than a single use token. This multi-use token will be cached on the minion.
+        than a single use token. This multi-use token will be cached on the minion. The type of minion
+        cache can be specified with ``token_backend: session`` or ``token_backend: disk``. The value of
+        ``session`` is the default, and will store the vault information in memory only for that session.
+        The value of ``disk`` will write to an on disk file, and persist between state runs (most
+        helpful for multi-use tokens).
 
         .. code-block:: bash
 
@@ -108,6 +112,7 @@ Functions to interact with Hashicorp Vault.
               uses: 10
               ttl: 43200
               allow_minion_override: True
+              token_backend: disk
 
             .. versionchanged:: Sodium
 

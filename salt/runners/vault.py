@@ -67,6 +67,7 @@ def generate_token(
             uses = config["auth"].get("uses", 1)
         if not allow_minion_override or ttl is None:
             ttl = config["auth"].get("ttl", None)
+        storage_type = config["auth"].get("token_backend", "session")
 
         if config["auth"]["method"] == "approle":
             if _selftoken_expired():
@@ -115,6 +116,7 @@ def generate_token(
             "issued": int(round(time.time())),
             "url": config["url"],
             "verify": verify,
+            "token_backend": storage_type,
         }
         if uses >= 0:
             ret["uses"] = uses
