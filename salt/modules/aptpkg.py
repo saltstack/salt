@@ -1931,6 +1931,9 @@ def list_repos(**kwargs):
         repo["file"] = source.file
         repo["comps"] = getattr(source, "comps", [])
         repo["disabled"] = source.disabled
+        repo["enabled"] = not repo[
+            "disabled"
+        ]  # This is for compatibility with the other modules
         repo["dist"] = source.dist
         repo["type"] = source.type
         repo["uri"] = source.uri
