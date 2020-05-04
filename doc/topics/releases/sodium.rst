@@ -155,12 +155,33 @@ Vault Module
 ------------
 
 The :py:func:`vault module <salt.modules.vault>` has been updated with the ability
-to cache generated tokens. By specifying ``ttl`` or ``uses`` the token generated on
+to cache generated tokens. By specifying ``uses`` and optionally ``ttl``, the token generated on
 behalf of the minion will be allowed to persist and function for the defined time period
-or number of uses.
+or number of uses. Setting ``uses: 0`` creates an unlimited use token, that is only constrained by
+the ``ttl``.
 
 .. code-block:: yaml
 
   vault:
     auth:
       uses: 25
+
+This functionality is configured by default on the master and is thus shared behavior for all minion token generation.
+To delegate use count to individual minions, specify ``allow_minion_override: True`` in the master config, and define
+``uses`` and ``ttl`` in the minion config as directed above.
+
+.. code-block:: yaml
+
+  vault:
+  auth:
+    method: token
+    allow_minion_override: True
+
+Additionally, the vault module now supports Vault secrets backend version 2. The approperate secrets backend will be
+automatically detected, and cached in the same credentials file as long lived vault tokens mentioned above. For any
+configurations that worked around KV v2 handling by adding a manual data key to the end of vault lookups,
+``salt['vault'].read_secret('secret/my/secret')['data']``, these are automatically detected and will continue to
+function, but will generate a debug log message and can be removed.
+
+The long lived token and secret metadata cache file can be cleared with the new ``vault.clear_token_cache``
+execution function.
