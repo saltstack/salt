@@ -81,7 +81,7 @@ This test case has also been tested with the ``yaml`` and ``json`` filters succe
     cases where :jinja_ref:`json_encode_dict` and :jinja_ref:`json_encode_list`
     would have been used.
 
-.. _`tojson Jinja filter`: http://jinja.pocoo.org/docs/2.10/templates/#tojson
+.. _`tojson Jinja filter`: https://jinja.palletsprojects.com/en/2.11.x/templates/#tojson
 
 Ansible Playbook State and Execution Modules
 ============================================
