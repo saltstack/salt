@@ -39,6 +39,9 @@ def _load_libcrypto():
         )
     else:
         lib = find_library("crypto")
+        if not lib and sys.platform.startswith("sunos5"):
+            # ctypes.util.find_library defaults to 32 bit library path on sunos5, test for 64 bit python execution
+            lib = find_library("crypto", sys.maxsize > 2 ** 32)
         if not lib and salt.utils.platform.is_sunos():
             # Solaris-like distribution that use pkgsrc have
             # libraries in a non standard location.
