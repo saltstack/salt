@@ -248,8 +248,6 @@ def get_cache():
     if not connection or "url" not in connection:
         return _gen_new_connection()
 
-    unlimited_uses = connection.get("unlimited_use_token", False)
-
     # Drop 10 seconds from ttl to be safe
     ttl10 = connection["issued"] + connection["lease_duration"] - 10
     cur_time = int(round(time.time()))
@@ -262,6 +260,7 @@ def get_cache():
     else:
         log.debug("Token has not expired {} > {}".format(ttl10, cur_time))
 
+    unlimited_uses = connection.get("unlimited_use_token", False)
     if not unlimited_uses:
         current_uses = connection.get("uses", 1)
         log.debug("Token has {} uses left".format(current_uses))
