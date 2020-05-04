@@ -1651,7 +1651,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                     try:
                         cached_file = __salt__["cp.cache_file"](cache_file, saltenv)
                     except MinionError as exc:
-                        msg = "Failed to cache {0}".foromat(cache_file)
+                        msg = "Failed to cache {0}".format(cache_file)
                         log.exception(msg, exc_info=exc)
                         return "{0}\n{1}".format(msg, exc)
 
