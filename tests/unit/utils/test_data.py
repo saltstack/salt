@@ -345,6 +345,27 @@ class DataTestCase(TestCase):
         self.assertEqual(salt.utils.data.decode(BYTES, keep=True), BYTES)
         self.assertRaises(UnicodeDecodeError, salt.utils.data.decode, BYTES, keep=False)
 
+    def test_circular_refs_dicts(self):
+        test_dict = {"key": "value", "type": "test1"}
+        test_dict["self"] = test_dict
+        ret = salt.utils.data._remove_circular_refs(ob=test_dict)
+        self.assertDictEqual(ret, {"key": "value", "type": "test1", "self": None})
+
+    def test_circular_refs_lists(self):
+        test_list = {
+            "foo": [],
+        }
+        test_list["foo"].append((test_list,))
+        ret = salt.utils.data._remove_circular_refs(ob=test_list)
+        self.assertDictEqual(ret, {"foo": [(None,)]})
+
+    def test_circular_refs_tuple(self):
+        test_dup = {"foo": "string 1", "bar": "string 1", "ham": 1, "spam": 1}
+        ret = salt.utils.data._remove_circular_refs(ob=test_dup)
+        self.assertDictEqual(
+            ret, {"foo": "string 1", "bar": "string 1", "ham": 1, "spam": 1}
+        )
+
     def test_decode_to_str(self):
         """
         Companion to test_decode, they should both be kept up-to-date with one
