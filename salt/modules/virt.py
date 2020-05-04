@@ -205,6 +205,7 @@ def __get_conn(**kwargs):
     """
     # This has only been tested on kvm and xen, it needs to be expanded to
     # support all vm layers supported by libvirt
+    # Connection string works on bhyve, but auth is not tested.
 
     username = kwargs.get("username", None)
     password = kwargs.get("password", None)
@@ -438,6 +439,19 @@ def _get_graphics(dom):
     return out
 
 
+def _get_loader(dom):
+    """
+    Get domain loader from a libvirt domain object.
+    """
+    out = {"path": "None"}
+    doc = ElementTree.fromstring(dom.XMLDesc(0))
+    for g_node in doc.findall("os/loader"):
+        out["path"] = g_node.text
+        for key, value in six.iteritems(g_node.attrib):
+            out[key] = value
+    return out
+
+
 def _get_disks(dom):
     """
     Get domain disks from a libvirt domain object.
@@ -463,6 +477,9 @@ def _get_disks(dom):
                 qemu_target = "{0}:{1}".format(
                     source.get("protocol"), source.get("name")
                 )
+            elif qemu_target.startswith("/dev/zvol/"):
+                disks[target.get("dev")] = {"file": qemu_target, "zfs": True}
+                continue
             if not qemu_target:
                 continue
 
@@ -787,6 +804,82 @@ def _get_images_dir():
     return img_dir
 
 
+def _zfs_image_create(
+    vm_name,
+    pool,
+    disk_name,
+    hostname_property_name,
+    sparse_volume,
+    disk_size,
+    disk_image_name,
+):
+    """
+    Clones an existing image, or creates a new one.
+
+    When cloning an image, disk_image_name refers to the source
+    of the clone. If not specified, disk_size is used for creating
+    a new zvol, and sparse_volume determines whether to create
+    a thin provisioned volume.
+
+    The cloned or new volume can have a ZFS property set containing
+    the vm_name. Use hostname_property_name for specifying the key
+    of this ZFS property.
+    """
+    if not disk_image_name and not disk_size:
+        raise CommandExecutionError(
+            "Unable to create new disk {0}, please specify"
+            " the disk image name or disk size argument".format(disk_name)
+        )
+
+    if not pool:
+        raise CommandExecutionError(
+            "Unable to create new disk {0}, please specify"
+            " the disk pool name".format(disk_name)
+        )
+
+    destination_fs = os.path.join(pool, "{0}.{1}".format(vm_name, disk_name))
+    log.debug("Image destination will be %s", destination_fs)
+
+    existing_disk = __salt__["zfs.list"](name=pool)
+    if "error" in existing_disk:
+        raise CommandExecutionError(
+            "Unable to create new disk {0}. {1}".format(
+                destination_fs, existing_disk["error"]
+            )
+        )
+    elif destination_fs in existing_disk:
+        log.info(
+            "ZFS filesystem {0} already exists. Skipping creation".format(
+                destination_fs
+            )
+        )
+        blockdevice_path = os.path.join("/dev/zvol", pool, vm_name)
+        return blockdevice_path
+
+    properties = {}
+    if hostname_property_name:
+        properties[hostname_property_name] = vm_name
+
+    if disk_image_name:
+        __salt__["zfs.clone"](
+            name_a=disk_image_name, name_b=destination_fs, properties=properties
+        )
+
+    elif disk_size:
+        __salt__["zfs.create"](
+            name=destination_fs,
+            properties=properties,
+            volume_size=disk_size,
+            sparse=sparse_volume,
+        )
+
+    blockdevice_path = os.path.join(
+        "/dev/zvol", pool, "{0}.{1}".format(vm_name, disk_name)
+    )
+    log.debug("Image path will be %s", blockdevice_path)
+    return blockdevice_path
+
+
 def _qemu_image_create(disk, create_overlay=False, saltenv="base"):
     """
     Create the image file using specified disk_size or/and disk_image
@@ -928,6 +1021,8 @@ def _disk_profile(profile, hypervisor, disks=None, vm_name=None, **kwargs):
         overlay = {"format": "qcow2", "device": "disk", "model": "virtio"}
     elif hypervisor == "xen":
         overlay = {"format": "qcow2", "device": "disk", "model": "xen"}
+    elif hypervisor in ["bhyve"]:
+        overlay = {"format": "raw", "model": "virtio", "sparse_volume": False}
     else:
         overlay = {}
 
@@ -938,7 +1033,7 @@ def _disk_profile(profile, hypervisor, disks=None, vm_name=None, **kwargs):
             __salt__["config.get"]("virt:disk", {}).get(profile, default)
         )
 
-        # Transform the list to remove one level of dictionnary and add the name as a property
+        # Transform the list to remove one level of dictionary and add the name as a property
         disklist = [dict(d, name=name) for disk in disklist for name, d in disk.items()]
 
     # Merge with the user-provided disks definitions
@@ -993,8 +1088,13 @@ def _fill_disk_filename(vm_name, disk, hypervisor, **kwargs):
                     )
                 base_dir = pool["target_path"]
 
-    # Compute the filename and source file properties if possible
-    if vm_name:
+    if hypervisor == "bhyve" and vm_name:
+        disk["filename"] = "{0}.{1}".format(vm_name, disk["name"])
+        disk["source_file"] = os.path.join(
+            "/dev/zvol", base_dir or "", disk["filename"]
+        )
+    elif vm_name:
+        # Compute the filename and source file properties if possible
         disk["filename"] = "{0}_{1}.{2}".format(vm_name, disk["name"], disk["format"])
         disk["source_file"] = os.path.join(base_dir, disk["filename"])
 
@@ -1007,11 +1107,13 @@ def _complete_nics(interfaces, hypervisor):
     vmware_overlay = {"type": "bridge", "source": "DEFAULT", "model": "e1000"}
     kvm_overlay = {"type": "bridge", "source": "br0", "model": "virtio"}
     xen_overlay = {"type": "bridge", "source": "br0", "model": None}
+    bhyve_overlay = {"type": "bridge", "source": "bridge0", "model": "virtio"}
     overlays = {
         "xen": xen_overlay,
         "kvm": kvm_overlay,
         "qemu": kvm_overlay,
         "vmware": vmware_overlay,
+        "bhyve": bhyve_overlay,
     }
 
     def _normalize_net_types(attributes):
@@ -1342,11 +1444,37 @@ def init(
         Type of device of the disk. Can be one of 'disk', 'cdrom', 'floppy' or 'lun'.
         (Default: ``'disk'``)
 
+    hostname_property
+        When using ZFS volumes, setting this value to a ZFS property ID will make Salt store the name of the
+        virtual machine inside this property. (Default: ``None``)
+
+    sparse_volume
+        Boolean to specify whether to use a thin provisioned ZFS volume.
+
+        Example profile for a bhyve VM with two ZFS disks. The first is
+        cloned from the specified image. The second disk is a thin
+        provisioned volume.
+
+        .. code-block:: yaml
+
+            virt:
+              disk:
+                two_zvols:
+                  - system:
+                      image: zroot/bhyve/CentOS-7-x86_64-v1@v1.0.5
+                      hostname_property: virt:hostname
+                      pool: zroot/bhyve/guests
+                  - data:
+                      pool: tank/disks
+                      size: 20G
+                      hostname_property: virt:hostname
+                      sparse_volume: True
+
     .. _init-graphics-def:
 
     .. rubric:: Graphics Definition
 
-    The graphics dictionnary can have the following properties:
+    The graphics dictionary can have the following properties:
 
     type
         Graphics type. The possible values are ``none``, ``'spice'``, ``'vnc'`` and other values
@@ -1457,6 +1585,17 @@ def init(
                     pub_key=pub_key,
                     priv_key=priv_key,
                 )
+
+        elif hypervisor in ["bhyve"]:
+            img_dest = _zfs_image_create(
+                vm_name=name,
+                pool=_disk.get("pool"),
+                disk_name=_disk.get("name"),
+                disk_size=_disk.get("size"),
+                disk_image_name=_disk.get("image"),
+                hostname_property_name=_disk.get("hostname_property"),
+                sparse_volume=_disk.get("sparse_volume"),
+            )
 
         else:
             # Unknown hypervisor
@@ -1701,6 +1840,7 @@ def update(
     graphics=None,
     live=True,
     boot=None,
+    test=False,
     **kwargs
 ):
     """
@@ -1758,6 +1898,10 @@ def update(
 
         .. versionadded:: 3000
 
+    :param test: run in dry-run mode if set to True
+
+        .. versionadded:: sodium
+
     :return:
 
         Returns a dictionary indicating the status of what has been done. It is structured in
@@ -1805,8 +1949,8 @@ def update(
     new_desc = ElementTree.fromstring(
         _gen_xml(
             name,
-            cpu,
-            mem,
+            cpu or 0,
+            mem or 0,
             all_disks,
             _get_merged_nics(hypervisor, nic_profile, interfaces),
             hypervisor,
@@ -1927,11 +2071,15 @@ def update(
                     item in changes["disk"]["new"]
                     and source_file
                     and not os.path.isfile(source_file)
+                    and not test
                 ):
                     _qemu_image_create(all_disks[idx])
 
         try:
-            conn.defineXML(salt.utils.stringutils.to_str(ElementTree.tostring(desc)))
+            if not test:
+                conn.defineXML(
+                    salt.utils.stringutils.to_str(ElementTree.tostring(desc))
+                )
             status["definition"] = True
         except libvirt.libvirtError as err:
             conn.close()
@@ -1988,7 +2136,7 @@ def update(
 
         for cmd in commands:
             try:
-                ret = getattr(domain, cmd["cmd"])(*cmd["args"])
+                ret = getattr(domain, cmd["cmd"])(*cmd["args"]) if not test else 0
                 device_type = cmd["device"]
                 if device_type in ["cpu", "mem"]:
                     status[device_type] = not bool(ret)
@@ -2140,6 +2288,7 @@ def vm_info(vm_=None, **kwargs):
             "graphics": _get_graphics(dom),
             "nics": _get_nics(dom),
             "uuid": _get_uuid(dom),
+            "loader": _get_loader(dom),
             "on_crash": _get_on_crash(dom),
             "on_reboot": _get_on_reboot(dom),
             "on_poweroff": _get_on_poweroff(dom),
@@ -2325,6 +2474,31 @@ def get_graphics(vm_, **kwargs):
     graphics = _get_graphics(_get_domain(conn, vm_))
     conn.close()
     return graphics
+
+
+def get_loader(vm_, **kwargs):
+    """
+    Returns the information on the loader for a given vm
+
+    :param vm_: name of the domain
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.get_loader <domain>
+
+    .. versionadded:: Fluorine
+    """
+    conn = __get_conn(**kwargs)
+    try:
+        loader = _get_loader(_get_domain(conn, vm_))
+        return loader
+    finally:
+        conn.close()
 
 
 def get_disks(vm_, **kwargs):
@@ -3308,8 +3482,15 @@ def purge(vm_, dirs=False, removables=False, **kwargs):
     for disk in disks:
         if not removables and disks[disk]["type"] in ["cdrom", "floppy"]:
             continue
-        os.remove(disks[disk]["file"])
-        directories.add(os.path.dirname(disks[disk]["file"]))
+        elif disks[disk].get("zfs", False):
+            # TODO create solution for 'dataset is busy'
+            time.sleep(3)
+            fs_name = disks[disk]["file"][len("/dev/zvol/") :]
+            log.info("Destroying VM ZFS volume {0}".format(fs_name))
+            __salt__["zfs.destroy"](name=fs_name, force=True)
+        else:
+            os.remove(disks[disk]["file"])
+            directories.add(os.path.dirname(disks[disk]["file"]))
     if dirs:
         for dir_ in directories:
             shutil.rmtree(dir_)
@@ -3380,6 +3561,7 @@ def get_hypervisor():
 
     - kvm
     - xen
+    - bhyve
 
     CLI Example:
 
@@ -3388,17 +3570,30 @@ def get_hypervisor():
         salt '*' virt.get_hypervisor
 
     .. versionadded:: 2019.2.0
-        the function and the ``kvm`` and ``xen`` hypervisors support
+        the function and the ``kvm``, ``xen`` and ``bhyve`` hypervisors support
     """
     # To add a new 'foo' hypervisor, add the _is_foo_hyper function,
     # add 'foo' to the list below and add it to the docstring with a .. versionadded::
-    hypervisors = ["kvm", "xen"]
+    hypervisors = ["kvm", "xen", "bhyve"]
     result = [
         hyper
         for hyper in hypervisors
         if getattr(sys.modules[__name__], "_is_{}_hyper".format(hyper))()
     ]
     return result[0] if result else None
+
+
+def _is_bhyve_hyper():
+    sysctl_cmd = "sysctl hw.vmm.create"
+    vmm_enabled = False
+    try:
+        stdout = subprocess.Popen(
+            sysctl_cmd, shell=True, stdout=subprocess.PIPE
+        ).communicate()[0]
+        vmm_enabled = len(salt.utils.stringutils.to_str(stdout).split('"')[1]) != 0
+    except IndexError:
+        pass
+    return vmm_enabled
 
 
 def is_hyper():
@@ -3412,7 +3607,7 @@ def is_hyper():
         salt '*' virt.is_hyper
     """
     if HAS_LIBVIRT:
-        return _is_xen_hyper() or _is_kvm_hyper()
+        return _is_xen_hyper() or _is_kvm_hyper() or _is_bhyve_hyper()
     return False
 
 
@@ -4406,7 +4601,7 @@ def cpu_baseline(full=False, migratable=False, out="libvirt", **kwargs):
             "vendor": cpu.find("vendor").text,
             "features": [feature.get("name") for feature in cpu.findall("feature")],
         }
-    return cpu.toxml()
+    return ElementTree.tostring(cpu)
 
 
 def network_define(name, bridge, forward, ipv4_config=None, ipv6_config=None, **kwargs):
@@ -4530,7 +4725,7 @@ def list_networks(**kwargs):
 
 def network_info(name=None, **kwargs):
     """
-    Return informations on a virtual network provided its name.
+    Return information on a virtual network provided its name.
 
     :param name: virtual network name
     :param connection: libvirt connection URI, overriding defaults
@@ -4739,7 +4934,7 @@ def _parse_pools_caps(doc):
             if options:
                 if "options" not in pool_caps:
                     pool_caps["options"] = {}
-                kind = option_kind if option_kind is not "vol" else "volume"
+                kind = option_kind if option_kind != "vol" else "volume"
                 pool_caps["options"][kind] = options
         return pool_caps
 
@@ -4967,7 +5162,7 @@ def pool_define(
         keys. The path is the qualified name for iSCSI devices.
 
         Report to `this libvirt page <https://libvirt.org/formatstorage.html#StoragePool>`_
-        for more informations on the use of ``part_separator``
+        for more information on the use of ``part_separator``
     :param source_dir:
         Path to the source directory for pools of type ``dir``, ``netfs`` or ``gluster``.
         (Default: ``None``)
@@ -5190,7 +5385,7 @@ def pool_update(
         keys. The path is the qualified name for iSCSI devices.
 
         Report to `this libvirt page <https://libvirt.org/formatstorage.html#StoragePool>`_
-        for more informations on the use of ``part_separator``
+        for more information on the use of ``part_separator``
     :param source_dir:
         Path to the source directory for pools of type ``dir``, ``netfs`` or ``gluster``.
         (Default: ``None``)
@@ -5379,7 +5574,7 @@ def list_pools(**kwargs):
 
 def pool_info(name=None, **kwargs):
     """
-    Return informations on a storage pool provided its name.
+    Return information on a storage pool provided its name.
 
     :param name: libvirt storage pool name
     :param connection: libvirt connection URI, overriding defaults

@@ -52,7 +52,6 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
         """
         expected = {
             "comment": "Added {0} to {1}".format(self.vname, self.name),
-            "pchanges": {},
             "changes": {
                 "reg": {
                     "Added": {
@@ -82,7 +81,6 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
         expected_vdata = 1
         expected = {
             "comment": "Added {0} to {1}".format(vname, self.name),
-            "pchanges": {},
             "changes": {
                 "reg": {
                     "Added": {
@@ -113,7 +111,6 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
         reg.present(self.name, vname=vname, vdata=vdata, vtype=vtype)
         expected = {
             "comment": "{0} in {1} is already present".format(vname, self.name),
-            "pchanges": {},
             "changes": {},
             "name": self.name,
             "result": True,
@@ -124,7 +121,6 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
     def test_present_test_true(self):
         expected = {
             "comment": "",
-            "pchanges": {},
             "changes": {
                 "reg": {
                     "Will add": {
@@ -152,7 +148,6 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
 
         expected = {
             "comment": "{0} in {1} is already present".format(self.vname, self.name),
-            "pchanges": {},
             "changes": {},
             "name": self.name,
             "result": True,
@@ -168,7 +163,6 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
 
         expected = {
             "comment": "{0} in {1} is already present".format(self.vname, self.name),
-            "pchanges": {},
             "changes": {},
             "name": self.name,
             "result": True,

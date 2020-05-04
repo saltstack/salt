@@ -260,7 +260,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                             MagicMock(side_effect=OSError(expected_error)),
                         ):
                             with self.assertRaises(CommandExecutionError) as error:
-                                cmdmod.run("foo")
+                                cmdmod.run("foo", cwd="/")
                             assert error.exception.args[0].endswith(
                                 expected_error
                             ), repr(error.exception.args[0])
@@ -279,7 +279,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                             MagicMock(side_effect=IOError(expected_error)),
                         ):
                             with self.assertRaises(CommandExecutionError) as error:
-                                cmdmod.run("foo")
+                                cmdmod.run("foo", cwd="/")
                             assert error.exception.args[0].endswith(
                                 expected_error
                             ), repr(error.exception.args[0])
@@ -630,7 +630,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
             cmdmod.__salt__, {"mount.mount": MagicMock(), "mount.umount": MagicMock()}
         ):
             with patch("salt.modules.cmdmod.run_all") as run_all_mock:
-                cmdmod.run_chroot("/mnt", "ls", runas="foobar")
+                cmdmod.run_chroot("/mnt", "ls", runas="foobar", shell="/bin/sh")
         run_all_mock.assert_called_with(
             "chroot --userspec foobar: /mnt /bin/sh -c ls",
             bg=False,
@@ -647,7 +647,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
             reset_system_locale=True,
             rstrip=True,
             saltenv="base",
-            shell="/bin/bash",
+            shell="/bin/sh",
             stdin=None,
             success_retcodes=None,
             template=None,
