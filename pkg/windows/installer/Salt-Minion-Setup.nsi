@@ -928,14 +928,16 @@ FunctionEnd
 ###############################################################################
 Function UninstallMSI
     ; $R0 === product code
-    MessageBox MB_YESNOCANCEL|MB_ICONQUESTION  "Uninstalling a previous version of ${PRODUCT_NAME}" IDNO UninstallMSI_nomsi IDYES UninstallMSI_yesmsi
-        Abort
-UninstallMSI_yesmsi:
-    ExecWait '"msiexec.exe" /x $R0'
-    MessageBox MB_OK|MB_ICONINFORMATION "Click OK to continue upgrading your version of ${PRODUCT_NAME}"
-UninstallMSI_nomsi:
-FunctionEnd
+    MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION \
+        "${PRODUCT_NAME} is already installed via MSI.$\n$\n\
+        Click `OK` to remove the existing installation." \
+        /SD IDOK IDOK UninstallMSI
+    Abort
 
+    UninstallMSI:
+        ExecWait '"msiexec.exe" /x $R0 /qb /quiet /norestart'
+
+FunctionEnd
 
 
 #------------------------------------------------------------------------------
