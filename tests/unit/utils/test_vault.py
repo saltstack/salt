@@ -7,6 +7,7 @@ Test case for the vault utils module
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
+import os
 from copy import copy
 
 # Import Salt libs
@@ -327,9 +328,12 @@ class TestVaultUtils(LoaderModuleMockMixin, TestCase):
             function_response = vault.write_cache(self.cache_uses)
             assert mock_fpopen.call_count == 1
             self.assertEqual(
-                list(mock_fpopen.filehandles), ["somepath/salt_vault_token"]
+                list(mock_fpopen.filehandles),
+                [os.path.join("somepath", "salt_vault_token")],
             )
-            opens = mock_fpopen.filehandles["somepath/salt_vault_token"]
+            opens = mock_fpopen.filehandles[
+                os.path.join("somepath", "salt_vault_token")
+            ]
             self.assertEqual(opens[0].write_calls, expected_write)
             self.assertTrue(function_response)
 
@@ -352,9 +356,12 @@ class TestVaultUtils(LoaderModuleMockMixin, TestCase):
             function_response = vault.write_cache(write_data)
             assert mock_fpopen.call_count == 1
             self.assertEqual(
-                list(mock_fpopen.filehandles), ["somepath/salt_vault_token"]
+                list(mock_fpopen.filehandles),
+                [os.path.join("somepath", "salt_vault_token")],
             )
-            opens = mock_fpopen.filehandles["somepath/salt_vault_token"]
+            opens = mock_fpopen.filehandles[
+                os.path.join("somepath", "salt_vault_token")
+            ]
             self.assertEqual(opens[0].write_calls, expected_write)
             self.assertTrue(function_response)
 
