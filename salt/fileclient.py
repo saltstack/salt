@@ -590,7 +590,7 @@ class Client(object):
                     ftp.retrbinary("RETR {0}".format(remote_file_path), fp_.write)
                 ftp.quit()
                 return dest
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 raise MinionError(
                     "Could not retrieve {0} from FTP server. Exception: {1}".format(
                         url, exc
@@ -620,7 +620,7 @@ class Client(object):
 
                 swift_conn.get_object(url_data.netloc, url_data.path[1:], dest)
                 return dest
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 raise MinionError("Could not fetch from {0}".format(url))
 
         get_kwargs = {}
