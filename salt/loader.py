@@ -498,6 +498,23 @@ def fileserver(opts, backends):
     Returns the file server modules
     """
     _utils = utils(opts)
+
+    if backends is not None:
+        if not isinstance(backends, list):
+            backends = [backends]
+        # Make sure that the VCS backends work either with git or gitfs, hg or
+        # hgfs, etc.
+        vcs_re = re.compile("^(git|svn|hg)")
+        fs_re = re.compile("fs$")
+        vcs = []
+        non_vcs = []
+        for back in [fs_re.sub("", x) for x in backends]:
+            if vcs_re.match(back):
+                vcs.extend((back, back + "fs"))
+            else:
+                non_vcs.append(back)
+        backends = vcs + non_vcs
+
     return LazyLoader(
         _module_dirs(opts, "fileserver"),
         opts,
