@@ -98,6 +98,11 @@ def _get_token_and_url_from_master():
             result["error"],
         )
         raise salt.exceptions.CommandExecutionError(result)
+    if "session" in result.get("token_backend", "session"):
+        # This is the only way that this key can be placed onto __context__
+        # Thus is tells the minion that the master is configured for token_backend: session
+        log.debug("Using session storage for vault credentials")
+        __context__["vault_secret_path_metadata"] = {}
     return {
         "url": result["url"],
         "token": result["token"],
@@ -201,6 +206,18 @@ def write_cache(connection):
         log.debug("Not caching vault single use token")
         __context__["vault_token"] = connection
         return True
+    elif (
+        "vault_secret_path_metadata" in __context__
+        and "vault_secret_path_metadata" not in connection
+    ):
+        # If session storage is being used, and info passed is not the already saved metadata
+        log.debug("Storing token only for this session")
+        __context__["vault_token"] = connection
+        return True
+    elif "vault_secret_path_metadata" in __context__:
+        # Must have been passed metadata. This is already handled by _get_secret_path_metadata
+        #  and does not need to be resaved
+        return True
 
     cache_file = os.path.join(__opts__["cachedir"], "salt_vault_token")
     try:
@@ -259,11 +276,6 @@ def get_cache():
         return _gen_new_connection()
     else:
         log.debug("Token has not expired {} > {}".format(ttl10, cur_time))
-
-    unlimited_uses = connection.get("unlimited_use_token", False)
-    if not unlimited_uses:
-        current_uses = connection.get("uses", 1)
-        log.debug("Token has {} uses left".format(current_uses))
     return connection
 
 
@@ -318,21 +330,18 @@ def make_request(
         return response
 
     # Decrement vault uses, only on secret URL lookups and multi use tokens
-    if (
-        not connection.get(
-            "unlimited_use_token"
-        )  # Don't both tracking count on unlimited use tokens
-        and not resource.startswith(
-            "v1/sys"
-        )  # The metadata url does not count as a token use
-        and "vault_token" not in __context__  # Running with a single use token
-    ):
+    if not connection.get("unlimited_use_token") and not resource.startswith("v1/sys"):
         log.debug("Decrementing Vault uses on limited token for url: %s", resource)
         connection["uses"] -= 1
         if connection["uses"] <= 0:
             log.debug("Cached token has no more uses left.")
-            del_cache()
+            if "vault_token" not in __context__:
+                del_cache()
+            else:
+                log.debug("Deleting token from memory")
+                del __context__["vault_token"]
         else:
+            log.debug("Token has {} uses left".format(connection["uses"]))
             write_cache(connection)
 
     if get_token_url:
@@ -451,7 +460,10 @@ def _get_secret_path_metadata(path):
     ckey = "vault_secret_path_metadata"
 
     # Attempt to lookup from cache
-    cache_content = _read_cache_file()
+    if ckey in __context__:
+        cache_content = __context__[ckey]
+    else:
+        cache_content = _read_cache_file()
     if ckey not in cache_content:
         cache_content[ckey] = {}
 
@@ -472,7 +484,10 @@ def _get_secret_path_metadata(path):
                 # Write metadata to cache file
                 # Check for new cache content from make_request
                 if "url" not in cache_content:
-                    cache_content = _read_cache_file()
+                    if ckey in __context__:
+                        cache_content = __context__[ckey]
+                    else:
+                        cache_content = _read_cache_file()
                     if ckey not in cache_content:
                         cache_content[ckey] = {}
                 cache_content[ckey][path] = ret
