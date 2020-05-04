@@ -29,11 +29,7 @@ import string
 import sys
 import tempfile
 import time
-
-# pylint: disable=no-name-in-module
-from collections import Iterable, Mapping, namedtuple
-
-# pylint: enable=no-name-in-module
+from collections import namedtuple
 from functools import reduce  # pylint: disable=redefined-builtin
 
 # Import salt libs
@@ -61,6 +57,12 @@ from salt.ext import six
 from salt.ext.six.moves import range, zip
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 from salt.utils.files import HASHES, HASHES_REVMAP
+
+try:
+    from collections.abc import Iterable, Mapping
+except ImportError:
+    from collections import Iterable, Mapping
+
 
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
@@ -1719,48 +1721,6 @@ def _mkstemp_copy(path, preserve_inode=True):
     return temp_file
 
 
-def _starts_till(src, probe, strip_comments=True):
-    """
-    Returns True if src and probe at least matches at the beginning till some point.
-    """
-
-    def _strip_comments(txt):
-        """
-        Strip possible comments.
-        Usually comments are one or two symbols at the beginning of the line, separated with space
-        """
-        buff = txt.split(" ", 1)
-        return len(buff) == 2 and len(buff[0]) < 2 and buff[1] or txt
-
-    def _to_words(txt):
-        """
-        Split by words
-        """
-        return txt and [w for w in txt.strip().split(" ") if w.strip()] or txt
-
-    no_match = -1
-    equal = 0
-    if not src or not probe:
-        return no_match
-
-    src = src.rstrip("\n\r")
-    probe = probe.rstrip("\n\r")
-    if src == probe:
-        return equal
-
-    src = _to_words(strip_comments and _strip_comments(src) or src)
-    probe = _to_words(strip_comments and _strip_comments(probe) or probe)
-
-    a_buff, b_buff = len(src) < len(probe) and (src, probe) or (probe, src)
-    b_buff = " ".join(b_buff)
-    for idx in range(len(a_buff)):
-        prb = " ".join(a_buff[: -(idx + 1)])
-        if prb and b_buff.startswith(prb):
-            return idx
-
-    return no_match
-
-
 def _regex_to_static(src, regex):
     """
     Expand regular expression to static match.
@@ -1774,7 +1734,7 @@ def _regex_to_static(src, regex):
     except Exception as ex:  # pylint: disable=broad-except
         raise CommandExecutionError("{0}: '{1}'".format(_get_error_message(ex), regex))
 
-    return src and src or []
+    return src
 
 
 def _assert_occurrence(probe, target, amount=1):
@@ -1828,20 +1788,198 @@ def _set_line_eol(src, line):
     return line.rstrip() + line_ending
 
 
-def _insert_line_before(idx, body, content, indent):
-    if not idx or (idx and _starts_till(body[idx - 1], content) < 0):
-        cnd = _set_line_indent(body[idx], content, indent)
-        body.insert(idx, cnd)
-    return body
+def _set_line(
+    lines,
+    content=None,
+    match=None,
+    mode=None,
+    location=None,
+    before=None,
+    after=None,
+    indent=True,
+):
+    """
+    Take ``lines`` and insert ``content`` and the correct place. If
+    ``mode`` is ``'delete'`` then delete the ``content`` line instead.
+    Returns a list of modified lines.
 
+    lines
+        The original file lines to modify.
 
-def _insert_line_after(idx, body, content, indent):
-    # No duplicates or append, if "after" is the last line
-    next_line = idx + 1 < len(body) and body[idx + 1] or None
-    if next_line is None or _starts_till(next_line, content) < 0:
-        cnd = _set_line_indent(body[idx], content, indent)
-        body.insert(idx + 1, cnd)
-    return body
+    content
+        Content of the line. Allowed to be empty if ``mode='delete'``.
+
+    match
+        The regex or contents to seek for on the line.
+
+    mode
+        What to do with the matching line. One of the following options
+        is required:
+
+        - ensure
+            If ``content`` does not exist, it will be added.
+        - replace
+            If the line already exists, it will be replaced(???? TODO WHAT DOES THIS MEAN?)
+        - delete
+            Delete the line, if found.
+        - insert
+            Insert a line if it does not already exist.
+
+        .. note::
+
+            If ``mode=insert`` is used, at least one of the following
+            options must also be defined: ``location``, ``before``, or
+            ``after``. If ``location`` is used, it takes precedence
+            over the other two options
+
+    location
+        ``start`` or ``end``. Defines where to place the content in the
+        lines. **Note** this option is only used when ``mode='insert`` is
+        specified. If a location is passed in, it takes precedence over
+        both the ``before`` and ``after`` kwargs.
+
+        - start
+            Place the ``content`` at the beginning of the lines.
+        - end
+            Place the ``content`` at the end of the lines.
+
+    before
+        Regular expression or an exact, case-sensitive fragment of the
+        line to place the ``content`` before. This option is only used
+        when either ``ensure`` or ``insert`` mode is specified.
+
+    after
+        Regular expression or an exact, case-sensitive fragment of the
+        line to plaece the ``content`` after. This option is only used
+        when either ``ensure`` or ``insert`` mode is specified.
+
+    indent
+        Keep indentation to match the previous line. Ignored when
+        ``mode='delete'`` is specified.
+    """
+
+    if mode not in ("insert", "ensure", "delete", "replace"):
+        if mode is None:
+            raise CommandExecutionError(
+                "Mode was not defined. How to process the file?"
+            )
+        else:
+            raise CommandExecutionError("Unknown mode: {0}".format(mode))
+
+    if mode != "delete" and content is None:
+        raise CommandExecutionError("Content can only be empty if mode is delete")
+
+    if not match and before is None and after is None:
+        match = content
+
+    after = _regex_to_static(lines, after)
+    before = _regex_to_static(lines, before)
+    match = _regex_to_static(lines, match)
+
+    if not lines and mode in ("delete", "replace"):
+        log.warning("Cannot find text to %s. File is empty.", mode)
+        lines = []
+    elif mode == "delete" and match:
+        lines = [line for line in lines if line != match[0]]
+    elif mode == "replace" and match:
+        idx = lines.index(match[0])
+        original_line = lines.pop(idx)
+        lines.insert(idx, _set_line_indent(original_line, content, indent))
+    elif mode == "insert":
+        if before is None and after is None and location is None:
+            raise CommandExecutionError(
+                'On insert either "location" or "before/after" conditions are'
+                " required.",
+            )
+
+        if location:
+            if location == "end":
+                if lines:
+                    lines.append(_set_line_indent(lines[-1], content, indent))
+                else:
+                    lines.append(content)
+            elif location == "start":
+                if lines:
+                    lines.insert(0, _set_line_eol(lines[0], content))
+                else:
+                    lines = [content + os.linesep]
+        else:
+            if before and after:
+                _assert_occurrence(before, "before")
+                _assert_occurrence(after, "after")
+                first = lines.index(after[0])
+                last = lines.index(before[0])
+                lines.insert(last, _set_line_indent(lines[last], content, indent))
+            elif after:
+                _assert_occurrence(after, "after")
+                idx = lines.index(after[0])
+                next_line = None if idx + 1 >= len(lines) else lines[idx + 1]
+                if next_line is None or next_line.rstrip("\r\n") != content.rstrip(
+                    "\r\n"
+                ):
+                    lines.insert(idx + 1, _set_line_indent(lines[idx], content, indent))
+            elif before:
+                _assert_occurrence(before, "before")
+                idx = lines.index(before[0])
+                prev_line = lines[idx - 1]
+                if prev_line.rstrip("\r\n") != content.rstrip("\r\n"):
+                    lines.insert(idx, _set_line_indent(lines[idx], content, indent))
+            else:
+                raise CommandExecutionError("Neither before or after was found in file")
+    elif mode == "ensure":
+        if before and after:
+            _assert_occurrence(after, "after")
+            _assert_occurrence(before, "before")
+
+            after_index = lines.index(after[0])
+            before_index = lines.index(before[0])
+
+            already_there = any(line.lstrip() == content for line in lines)
+            if not already_there:
+                if after_index + 1 == before_index:
+                    lines.insert(
+                        after_index + 1,
+                        _set_line_indent(lines[after_index], content, indent),
+                    )
+                elif after_index + 2 == before_index:
+                    # TODO: This should change, it doesn't match existing
+                    # behavior -W. Werner, 2019-06-28
+                    lines[after_index + 1] = _set_line_indent(
+                        lines[after_index], content, indent
+                    )
+                else:
+                    raise CommandExecutionError(
+                        "Found more than one line between boundaries"
+                        ' "before" and "after".'
+                    )
+        elif before:
+            _assert_occurrence(before, "before")
+            before_index = lines.index(before[0])
+            if before_index == 0 or lines[before_index - 1].rstrip(
+                "\r\n"
+            ) != content.rstrip("\r\n"):
+                lines.insert(
+                    before_index,
+                    _set_line_indent(lines[before_index - 1], content, indent),
+                )
+        elif after:
+            _assert_occurrence(after, "after")
+            after_index = lines.index(after[0])
+            is_last_line = after_index + 1 >= len(lines)
+            if is_last_line or lines[after_index + 1].rstrip("\r\n") != content.rstrip(
+                "\r\n"
+            ):
+                lines.insert(
+                    after_index + 1,
+                    _set_line_indent(lines[after_index], content, indent),
+                )
+        else:
+            raise CommandExecutionError(
+                "Wrong conditions? Unable to ensure line without knowing where"
+                " to put it before and/or after."
+            )
+
+    return lines
 
 
 def line(
@@ -1857,52 +1995,70 @@ def line(
     quiet=False,
     indent=True,
 ):
+    # pylint: disable=W1401
     """
     .. versionadded:: 2015.8.0
 
-    Edit a line in the configuration file. The ``path`` and ``content``
-    arguments are required, as well as passing in one of the ``mode``
-    options.
+    Line-focused editing of a file.
+
+    .. note::
+
+        ``file.line`` exists for historic reasons, and is not
+        generally recommended. It has a lot of quirks.  You may find
+        ``file.replace`` to be more suitable.
+
+    ``file.line`` is most useful if you have single lines in a file
+    (potentially a config file) that you would like to manage. It can
+    remove, add, and replace a single line at a time.
 
     path
         Filesystem path to the file to be edited.
 
     content
-        Content of the line. Allowed to be empty if mode=delete.
+        Content of the line. Allowed to be empty if ``mode='delete'``.
 
     match
         Match the target line for an action by
         a fragment of a string or regular expression.
 
         If neither ``before`` nor ``after`` are provided, and ``match``
-        is also ``None``, match becomes the ``content`` value.
+        is also ``None``, match falls back to the ``content`` value.
 
     mode
         Defines how to edit a line. One of the following options is
         required:
 
         - ensure
-            If line does not exist, it will be added. This is based on the
-            ``content`` argument.
+            If line does not exist, it will be added. If ``before``
+            and ``after`` are specified either zero lines, or lines
+            that contain the ``content`` line are allowed to be in between
+            ``before`` and ``after``. If there are lines, and none of
+            them match then it will produce an error.
         - replace
-            If line already exists, it will be replaced.
+            If line already exists, the entire line will be replaced.
         - delete
-            Delete the line, once found.
+            Delete the line, if found.
         - insert
-            Insert a line.
+            Nearly identical to ``ensure``. If a line does not exist,
+            it will be added.
+
+            The differences are that multiple (and non-matching) lines are
+            alloweed between ``before`` and ``after``, if they are
+            specified. The line will always be inserted right before
+            ``before``. ``insert`` also allows the use of ``location`` to
+            specify that the line should be added at the beginning or end of
+            the file.
 
         .. note::
 
-            If ``mode=insert`` is used, at least one of the following
-            options must also be defined: ``location``, ``before``, or
-            ``after``. If ``location`` is used, it takes precedence
-            over the other two options.
+            If ``mode='insert'`` is used, at least one of ``location``,
+            ``before``, or ``after`` is required.  If ``location`` is used,
+            ``before`` and ``after`` are ignored.
 
     location
-        Defines where to place content in the line. Note this option is only
-        used when ``mode=insert`` is specified. If a location is passed in, it
-        takes precedence over both the ``before`` and ``after`` kwargs. Valid
-        locations are:
+        In ``mode='insert'`` only, whether to place the ``content`` at the
+        beginning or end of a the file. If ``location`` is provided,
+        ``before`` and ``after`` are ignored. Valid locations:
 
         - start
             Place the content at the beginning of the file.
@@ -1911,13 +2067,19 @@ def line(
 
     before
         Regular expression or an exact case-sensitive fragment of the string.
-        This option is only used when either the ``ensure`` or ``insert`` mode
-        is defined.
+        Will be tried as **both** a regex **and** a part of the line.  Must
+        match **exactly** one line in the file.  This value is only used in
+        ``ensure`` and ``insert`` modes. The ``content`` will be inserted just
+        before this line, with matching indentation unless ``indent=False``.
 
     after
         Regular expression or an exact case-sensitive fragment of the string.
-        This option is only used when either the ``ensure`` or ``insert`` mode
-        is defined.
+        Will be tried as **both** a regex **and** a part of the line.  Must
+        match **exactly** one line in the file.  This value is only used in
+        ``ensure`` and ``insert`` modes. The ``content`` will be inserted
+        directly after this line, unless ``before`` is also provided. If
+        ``before`` is not provided, indentation will match this line, unless
+        ``indent=False``.
 
     show_changes
         Output a unified diff of the old file and the new file.
@@ -1938,7 +2100,7 @@ def line(
 
     indent
         Keep indentation with the previous line. This option is not considered when
-        the ``delete`` mode is specified.
+        the ``delete`` mode is specified. Default is ``True``
 
     CLI Example:
 
@@ -1956,7 +2118,124 @@ def line(
         .. code-block:: bash
 
             salt '*' file.line /path/to/file content="CREATEMAIL_SPOOL=no" match="CREATE_MAIL_SPOOL=yes" mode="replace"
+
+    **Examples:**
+
+    Here's a simple config file.
+
+    .. code-block:: ini
+
+        [some_config]
+        # Some config file
+        # this line will go away
+
+        here=False
+        away=True
+        goodybe=away
+
+    .. code-block:: bash
+
+        salt \* file.line /some/file.conf mode=delete match=away
+
+    This will produce:
+
+    .. code-block:: ini
+
+        [some_config]
+        # Some config file
+
+        here=False
+        away=True
+        goodbye=away
+
+    If that command is executed 2 more times, this will be the result:
+
+    .. code-block:: ini
+
+        [some_config]
+        # Some config file
+
+        here=False
+
+    If we reset the file to its original state and run
+
+    .. code-block:: bash
+
+        salt \* file.line /some/file.conf mode=replace match=away content=here
+
+    Three passes will this state will result in this file:
+
+    .. code-block:: ini
+
+        [some_config]
+        # Some config file
+        here
+
+        here=False
+        here
+        here
+
+    Each pass replacing the first line found.
+
+    Given this file:
+
+    .. code-block:: text
+
+        insert after me
+        something
+        insert before me
+
+    The following command
+
+    .. code-block:: bash
+
+        salt \* file.line /some/file.txt mode=insert after="insert after me" before="insert before me" content=thrice
+
+    If that command is executed 3 times, the result will be:
+
+    .. code-block:: text
+
+        insert after me
+        something
+        thrice
+        thrice
+        thrice
+        insert before me
+
+    If the mode is ``ensure`` instead, it will fail each time. To succeed, we
+    need to remove the incorrect line between before and after:
+
+    .. code-block:: text
+
+        insert after me
+        insert before me
+
+    With an ensure mode, this will insert ``thrice`` the first time and
+    make no changes for subsequent calls. For something simple this is
+    fine, but if you have instead blocks like this:
+
+    .. code-block:: text
+
+        Begin SomeBlock
+            foo = bar
+        End
+
+        Begin AnotherBlock
+            another = value
+        End
+
+    And you try to use ensure this way:
+
+    .. code-block:: bash
+
+        salt \* file.line  /tmp/fun.txt mode="ensure" content="this = should be my content" after="Begin SomeBlock" before="End"
+
+    This will fail because there are multiple ``End`` lines. Without that
+    problem, it still would fail because there is a non-matching line,
+    ``foo = bar``. Ensure **only** allows either zero, or the matching
+    line present to be present in between ``before`` and ``after``.
     """
+    # pylint: enable=W1401
     path = os.path.realpath(os.path.expanduser(path))
     if not os.path.isfile(path):
         if not quiet:
@@ -1999,100 +2278,20 @@ def line(
     if body and _get_eol(body[-1]):
         body.append("")
 
-    after = _regex_to_static(body, after)
-    before = _regex_to_static(body, before)
-    match = _regex_to_static(body, match)
-
     if os.stat(path).st_size == 0 and mode in ("delete", "replace"):
         log.warning("Cannot find text to %s. File '%s' is empty.", mode, path)
         body = []
-    elif mode == "delete" and match:
-        body = [line for line in body if line != match[0]]
-    elif mode == "replace" and match:
-        idx = body.index(match[0])
-        file_line = body.pop(idx)
-        body.insert(idx, _set_line_indent(file_line, content, indent))
-    elif mode == "insert":
-        if not location and not before and not after:
-            raise CommandExecutionError(
-                'On insert must be defined either "location" or "before/after" conditions.'
-            )
 
-        if not location:
-            if before and after:
-                _assert_occurrence(before, "before")
-                _assert_occurrence(after, "after")
-
-                out = []
-                in_range = False
-                for line in body:
-                    if line == after[0]:
-                        in_range = True
-                    elif line == before[0] and in_range:
-                        cnd = _set_line_indent(line, content, indent)
-                        out.append(cnd)
-                    out.append(line)
-                body = out
-
-            if before and not after:
-                _assert_occurrence(before, "before")
-
-                idx = body.index(before[0])
-                body = _insert_line_before(idx, body, content, indent)
-
-            elif after and not before:
-                _assert_occurrence(after, "after")
-
-                idx = body.index(after[0])
-                body = _insert_line_after(idx, body, content, indent)
-
-        else:
-            if location == "start":
-                if body:
-                    body.insert(0, _set_line_eol(body[0], content))
-                else:
-                    body.append(content + os.linesep)
-            elif location == "end":
-                body.append(
-                    _set_line_indent(body[-1], content, indent) if body else content
-                )
-
-    elif mode == "ensure":
-
-        if before and after:
-            _assert_occurrence(before, "before")
-            _assert_occurrence(after, "after")
-
-            is_there = bool([l for l in body if l.count(content)])
-            if not is_there:
-                idx = body.index(after[0])
-                if idx < (len(body) - 1) and body[idx + 1] == before[0]:
-                    cnd = _set_line_indent(body[idx], content, indent)
-                    body.insert(idx + 1, cnd)
-                else:
-                    raise CommandExecutionError(
-                        "Found more than one line between "
-                        'boundaries "before" and "after".'
-                    )
-
-        elif before and not after:
-            _assert_occurrence(before, "before")
-
-            idx = body.index(before[0])
-            body = _insert_line_before(idx, body, content, indent)
-
-        elif not before and after:
-            _assert_occurrence(after, "after")
-
-            idx = body.index(after[0])
-            body = _insert_line_after(idx, body, content, indent)
-
-        else:
-            raise CommandExecutionError(
-                "Wrong conditions? "
-                "Unable to ensure line without knowing "
-                "where to put it before and/or after."
-            )
+    body = _set_line(
+        lines=body,
+        content=content,
+        match=match,
+        mode=mode,
+        location=location,
+        before=before,
+        after=after,
+        indent=indent,
+    )
 
     if body:
         for idx, line in enumerate(body):
@@ -2382,16 +2581,6 @@ def replace(
                     # Identity check the potential change
                     has_changes = True if pattern != repl else has_changes
 
-                orig_file = (
-                    r_data.read(filesize).splitlines(True)
-                    if isinstance(r_data, mmap.mmap)
-                    else r_data.splitlines(True)
-                )
-                new_file = result.splitlines(True)
-
-                if orig_file == new_file:
-                    has_changes = False
-
                 if prepend_if_not_found or append_if_not_found:
                     # Search for content, to avoid pre/appending the
                     # content if it was pre/appended in a previous run.
@@ -2404,6 +2593,13 @@ def replace(
                     ):
                         # Content was found, so set found.
                         found = True
+
+                orig_file = (
+                    r_data.read(filesize).splitlines(True)
+                    if isinstance(r_data, mmap.mmap)
+                    else r_data.splitlines(True)
+                )
+                new_file = result.splitlines(True)
 
     except (OSError, IOError) as exc:
         raise CommandExecutionError(
@@ -2788,7 +2984,7 @@ def blockreplace(
 
     if block_found:
         diff = __utils__["stringutils.get_diff"](orig_file, new_file)
-        has_changes = diff is not ""
+        has_changes = diff != ""
         if has_changes and not dry_run:
             # changes detected
             # backup file attrs
@@ -3837,7 +4033,7 @@ def remove(path):
 
         salt '*' file.remove /tmp/foo
 
-    .. versionchanged:: 3000
+    .. versionchanged:: Neon
         The method now works on all types of file system entries, not just
         files, directories and symlinks.
     """
@@ -3970,7 +4166,7 @@ def set_selinux_context(
         fcontext_result = __salt__["selinux.fcontext_add_policy"](
             path, sel_type=type, sel_user=user, sel_level=range
         )
-        if fcontext_result.get("retcode", None) is not 0:
+        if fcontext_result.get("retcode", None) != 0:
             # Problem setting fcontext policy
             raise CommandExecutionError(
                 "Problem setting fcontext: {0}".format(fcontext_result)

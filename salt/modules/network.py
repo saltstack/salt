@@ -1053,7 +1053,7 @@ def traceroute(host):
 
         ret.append(result)
         if not result:
-            log.warn("Cannot parse traceroute output line: %s", line)
+            log.warning("Cannot parse traceroute output line: %s", line)
     return ret
 
 
@@ -1225,7 +1225,7 @@ def ip_in_subnet(ip_addr, cidr):
 
 def convert_cidr(cidr):
     """
-    returns the network and subnet mask of a cidr addr
+    returns the network address, subnet mask and broadcast address of a cidr address
 
     .. versionadded:: 2016.3.0
 
@@ -1235,11 +1235,12 @@ def convert_cidr(cidr):
 
         salt '*' network.convert_cidr 172.31.0.0/16
     """
-    ret = {"network": None, "netmask": None}
+    ret = {"network": None, "netmask": None, "broadcast": None}
     cidr = calc_net(cidr)
     network_info = ipaddress.ip_network(cidr)
     ret["network"] = six.text_type(network_info.network_address)
     ret["netmask"] = six.text_type(network_info.netmask)
+    ret["broadcast"] = six.text_type(network_info.broadcast_address)
     return ret
 
 

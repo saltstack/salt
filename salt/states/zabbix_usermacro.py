@@ -86,7 +86,7 @@ def present(name, value, hostid=None, **kwargs):
             }
         }
 
-    # Zabbix API expects script parameters as a string of arguments seperated by newline characters
+    # Zabbix API expects script parameters as a string of arguments separated by newline characters
     if "exec_params" in kwargs:
         if isinstance(kwargs["exec_params"], list):
             kwargs["exec_params"] = "\n".join(kwargs["exec_params"]) + "\n"

@@ -88,10 +88,10 @@ pyopenssl==19.0.0
 pyparsing==2.4.5          # via packaging
 pyserial==3.4             # via junos-eznc
 pytest-helpers-namespace==2019.1.8
-pytest-salt-runtests-bridge==2019.7.10
-pytest-salt==2019.12.27
+pytest-salt-runtests-bridge==2019.12.5
+pytest-salt==2020.1.27
 pytest-tempdir==2019.10.12
-pytest==4.6.6
+pytest==4.6.9
 python-dateutil==2.8.0
 python-etcd==0.4.5
 python-gnupg==0.4.4
@@ -99,7 +99,7 @@ python-jose==2.0.2        # via moto
 pytz==2019.1              # via moto, tempora
 pyvmomi==6.7.1.2018.12
 pyyaml==5.1.2
-pyzmq==18.0.1 ; python_version != "3.4"
+pyzmq==18.0.1 ; python_version < "3.8"
 requests==2.21.0
 responses==0.10.6         # via moto
 rfc3987==1.3.8
@@ -113,6 +113,7 @@ smmap2==2.0.5             # via gitdb2
 strict-rfc3339==0.7
 tempora==1.14.1           # via portend
 timelib==0.2.4
+toml==0.10.0
 urllib3==1.24.2           # via botocore, kubernetes, python-etcd, requests
 vcert==0.7.3
 virtualenv==20.0.10

@@ -641,10 +641,13 @@ def query(
             ret["status"] = exc.code
             ret["error"] = six.text_type(exc)
             return ret
-        except socket.gaierror as exc:
+        except (socket.herror, socket.error, socket.timeout, socket.gaierror) as exc:
             if status is True:
                 ret["status"] = 0
             ret["error"] = six.text_type(exc)
+            log.debug(
+                "Cannot perform 'http.query': {0} - {1}".format(url_full, ret["error"])
+            )
             return ret
 
         if stream is True or handle is True:

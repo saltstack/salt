@@ -5,7 +5,7 @@ noxfile
 
 Nox configuration script
 """
-# pylint: disable=resource-leakage
+# pylint: disable=resource-leakage,3rd-party-module-not-gated
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -20,8 +20,10 @@ import sys
 import tempfile
 
 # fmt: off
-if __name__ == '__main__':
-    sys.stderr.write('Do not execute this file directly. Use nox instead, it will know how to handle this file\n')
+if __name__ == "__main__":
+    sys.stderr.write(
+        "Do not execute this file directly. Use nox instead, it will know how to handle this file\n"
+    )
     sys.stderr.flush()
     exit(1)
 # fmt: on
@@ -848,7 +850,9 @@ def pytest_cloud(session, coverage):
         "--no-print-logs",
         "-ra",
         "-s",
-        os.path.join("tests", "integration", "cloud", "providers"),
+        "--run-expensive",
+        "-k",
+        "cloud",
     ] + session.posargs
     _pytest(session, coverage, cmd_args)
 
@@ -1027,7 +1031,7 @@ def lint_salt(session):
     if session.posargs:
         paths = session.posargs
     else:
-        paths = ["setup.py", "noxfile.py", "salt/"]
+        paths = ["setup.py", "noxfile.py", "salt/", "tasks/"]
     _lint(session, ".pylintrc", flags, paths)
 
 
@@ -1129,3 +1133,72 @@ def docs_man(session, compress, update):
     if compress:
         session.run("tar", "-cJvf", "man-archive.tar.xz", "_build/man", external=True)
     os.chdir("..")
+
+
+def _invoke(session):
+    """
+    Run invoke tasks
+    """
+    requirements_file = "requirements/static/invoke.in"
+    distro_constraints = [
+        "requirements/static/{}/invoke.txt".format(_get_pydir(session))
+    ]
+    install_command = ["--progress-bar=off", "-r", requirements_file]
+    for distro_constraint in distro_constraints:
+        install_command.extend(["--constraint", distro_constraint])
+    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    cmd = ["inv"]
+    files = []
+
+    # Unfortunately, invoke doesn't support the nargs functionality like argpase does.
+    # Let's make it behave properly
+    for idx, posarg in enumerate(session.posargs):
+        if idx == 0:
+            cmd.append(posarg)
+            continue
+        if posarg.startswith("--"):
+            cmd.append(posarg)
+            continue
+        files.append(posarg)
+    if files:
+        cmd.append("--files={}".format(" ".join(files)))
+    session.run(*cmd)
+
+
+@nox.session(name="invoke", python="3")
+def invoke(session):
+    _invoke(session)
+
+
+@nox.session(name="invoke-pre-commit", python="3")
+def invoke_pre_commit(session):
+    if "VIRTUAL_ENV" not in os.environ:
+        session.error(
+            "This should be running from within a virtualenv and "
+            "'VIRTUAL_ENV' was not found as an environment variable."
+        )
+    if "pre-commit" not in os.environ["VIRTUAL_ENV"]:
+        session.error(
+            "This should be running from within a pre-commit virtualenv and "
+            "'VIRTUAL_ENV'({}) does not appear to be a pre-commit virtualenv.".format(
+                os.environ["VIRTUAL_ENV"]
+            )
+        )
+    from nox.virtualenv import VirtualEnv
+
+    # Let's patch nox to make it run inside the pre-commit virtualenv
+    try:
+        session._runner.venv = VirtualEnv(  # pylint: disable=unexpected-keyword-arg
+            os.environ["VIRTUAL_ENV"],
+            interpreter=session._runner.func.python,
+            reuse_existing=True,
+            venv=True,
+        )
+    except TypeError:
+        # This is still nox-py2
+        session._runner.venv = VirtualEnv(
+            os.environ["VIRTUAL_ENV"],
+            interpreter=session._runner.func.python,
+            reuse_existing=True,
+        )
+    _invoke(session)

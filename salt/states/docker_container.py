@@ -53,11 +53,7 @@ import logging
 import salt.utils.args
 import salt.utils.data
 import salt.utils.dockermod
-
-# Import Salt libs
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
 from salt.ext import six
 
 # Enable proper logging
@@ -2016,7 +2012,7 @@ def running(
     # "not cleanup_temp" means that the temp container became permanent, either
     #     because the named container did not exist or changes were detected
     # "cleanup_temp" means that the container already existed and no changes
-    #     were detected, so the the temp container was discarded
+    #     were detected, so the temp container was discarded
     if (
         not cleanup_temp
         and (not exists or (exists and start))

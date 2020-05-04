@@ -2362,7 +2362,7 @@ def detached(
             target, user, password, output_encoding=output_encoding
         )[0]
 
-        if remote_rev_type is "hash":
+        if remote_rev_type == "hash":
             try:
                 __salt__["git.describe"](
                     target,
@@ -2539,7 +2539,7 @@ def detached(
 
     # get refs and checkout
     checkout_commit_id = ""
-    if remote_rev_type is "hash":
+    if remote_rev_type == "hash":
         if __salt__["git.describe"](
             target, rev, user=user, password=password, output_encoding=output_encoding
         ):

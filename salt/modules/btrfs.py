@@ -1105,7 +1105,7 @@ def subvolume_list(
     res = __salt__["cmd.run_all"](cmd)
     salt.utils.fsutils._verify_run(res)
 
-    # Parse the output. ID and gen are always at the begining, and
+    # Parse the output. ID and gen are always at the beginning, and
     # path is always at the end. There is only one column that
     # contains space (top level), and the path value can also have
     # spaces. The issue is that we do not know how many spaces do we

@@ -84,7 +84,7 @@ def check_onfail_requisites(state_id, state_result, running, highstate):
 
     Returns:
 
-        True: if onfail handlers suceeded
+        True: if onfail handlers succeeded
         False: if one on those handler failed
         None: if the state does not have onfail requisites
 
