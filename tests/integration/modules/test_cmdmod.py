@@ -254,10 +254,11 @@ class CMDModuleTest(ModuleCase):
         """
         cmd.which
         """
-        self.assertEqual(
-            self.run_function("cmd.which", ["cat"]).rstrip(),
-            self.run_function("cmd.run", ["which cat"]).rstrip(),
-        )
+        cmd_which = self.run_function("cmd.which", ["cat"])
+        self.assertIsInstance(cmd_which, str)
+        cmd_run = self.run_function("cmd.run", ["which cat"])
+        self.assertIsInstance(cmd_run, str)
+        self.assertEqual(cmd_which.rstrip(), cmd_run.rstrip())
 
     @skip_if_binaries_missing(["which"])
     def test_which_bin(self):
@@ -352,13 +353,13 @@ class CMDModuleTest(ModuleCase):
         cmd.run with quoted command
         """
         cmd = """echo 'SELECT * FROM foo WHERE bar="baz"' """
-
         expected_result = 'SELECT * FROM foo WHERE bar="baz"'
-
-        runas = RUNTIME_VARS.RUNNING_TESTS_USER
-
-        result = self.run_function("cmd.run_stdout", [cmd], runas=runas).strip()
-        self.assertEqual(result, expected_result)
+        result = self.run_function(
+            "cmd.run_all", [cmd], runas=RUNTIME_VARS.RUNNING_TESTS_USER
+        )
+        errmsg = "The command returned: {}".format(result)
+        self.assertEqual(result["retcode"], 0, errmsg)
+        self.assertEqual(result["stdout"], expected_result, errmsg)
 
     @destructiveTest
     @skip_if_not_root
