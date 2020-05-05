@@ -145,12 +145,12 @@ class TestVaultUtils(LoaderModuleMockMixin, TestCase):
         Given single use token in __context__, function should run successful secret lookup with no other modifications
         """
         mock = self._mock_json_response(self.json_success)
-        expected_context = {"vault_token": self.cache_single}
+        supplied_context = {"vault_token": copy(self.cache_single)}
         expected_headers = {"X-Vault-Token": "test", "Content-Type": "application/json"}
-        with patch.dict(vault.__context__, expected_context):
+        with patch.dict(vault.__context__, supplied_context):
             with patch("requests.request", mock):
                 vault_return = vault.make_request("/secret/my/secret", "key")
-                self.assertEqual(vault.__context__, expected_context)
+                self.assertEqual(vault.__context__, {})
                 mock.assert_called_with(
                     "/secret/my/secret",
                     "http://127.0.0.1:8200/key",
@@ -163,15 +163,16 @@ class TestVaultUtils(LoaderModuleMockMixin, TestCase):
         """
         Given single use token in __context__ and login error, function should request token and re-run
         """
+        # Disable logging because simulated http failures are logged as errors
         logging.disable(logging.CRITICAL)
         mock = self._mock_json_response(self.json_denied, status_code=400)
-        expected_context = {"vault_token": self.cache_single}
+        supplied_context = {"vault_token": copy(self.cache_single)}
         expected_headers = {"X-Vault-Token": "test", "Content-Type": "application/json"}
-        with patch.dict(vault.__context__, expected_context):
+        with patch.dict(vault.__context__, supplied_context):
             with patch("requests.request", mock):
                 with patch.object(vault, "del_cache") as mock_del_cache:
                     vault_return = vault.make_request("/secret/my/secret", "key")
-                    self.assertEqual(vault.__context__, expected_context)
+                    self.assertEqual(vault.__context__, {})
                     mock.assert_called_with(
                         "/secret/my/secret",
                         "http://127.0.0.1:8200/key",
@@ -272,10 +273,10 @@ class TestVaultUtils(LoaderModuleMockMixin, TestCase):
             with patch.object(
                 vault, "get_vault_connection"
             ) as mock_get_vault_connection:
-                mock_get_vault_connection.return_value = self.cache_single
+                mock_get_vault_connection.return_value = copy(self.cache_single)
                 with patch.object(vault, "write_cache") as mock_write_cache:
                     cache_result = vault.get_cache()
-                    mock_write_cache.assert_called_with(self.cache_single)
+                    mock_write_cache.assert_called_with(copy(self.cache_single))
 
     def test_get_cache_existing_cache_valid(self):
         """
@@ -313,8 +314,8 @@ class TestVaultUtils(LoaderModuleMockMixin, TestCase):
         """
         Test write cache with standard single use token
         """
-        function_response = vault.write_cache(self.cache_single)
-        self.assertEqual(vault.__context__["vault_token"], self.cache_single)
+        function_response = vault.write_cache(copy(self.cache_single))
+        self.assertEqual(vault.__context__["vault_token"], copy(self.cache_single))
         self.assertTrue(function_response)
 
     def test_write_cache_multi_use_token(self):
