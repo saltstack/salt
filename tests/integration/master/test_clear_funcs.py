@@ -176,6 +176,7 @@ class ClearFuncsConfigTest(TestCase):
         ret = clear_channel.send(msg, timeout=5)
         assert not os.path.exists(os.path.join(self.conf_dir, 'evil.conf')), \
             'Wrote file via directory traversal'
+        assert ret['data']['return'] == 'Invalid path'
 
 
 class ClearFuncsFileRoots(TestCase):
