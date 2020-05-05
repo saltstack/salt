@@ -82,7 +82,7 @@ And on any Syndics:
     # apt-get install salt-syndic
 
 The official Salt PPA for Ubuntu is located at:
-https://launchpad.net/~saltstack/+archive/salt
+https://launchpad.net/~saltstack/+archive/ubuntu/salt
 
 
 Major Features
