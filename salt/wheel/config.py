@@ -12,6 +12,7 @@ import os
 import salt.config
 import salt.utils.files
 import salt.utils.yaml
+import salt.utils.verify
 
 # Import 3rd-party libs
 from salt.ext import six
