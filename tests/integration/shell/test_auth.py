@@ -79,7 +79,12 @@ class UserAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
         set_pw_cmd = "shadow.set_password {0} '{1}'".format(
             self.user, password if salt.utils.platform.is_darwin() else hashed_pwd
         )
-        self.assertRunCall(set_pw_cmd)
+        stdout, stderr, retcode = self.run_call(
+            set_pw_cmd, catch_stderr=True, with_retcode=True
+        )
+        if stderr:
+            log.warning(stderr)
+        self.assertFalse(retcode, stderr)
 
         # test user auth against pam
         cmd = '-a pam "*" test.ping --username {0} --password {1}'.format(
@@ -123,9 +128,12 @@ class GroupAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
             "user.present", name=self.user, createhome=False, groups=[self.group]
         )
         self.assertSaltTrueReturn(ret)
-        self.assertRunCall(
+        stdout, stderr, retcode = self.run_call(
             "user.chgroups {0} {1} True".format(self.user, self.group), local=True
         )
+        if stderr:
+            log.warning(stderr)
+        self.assertFalse(retcode, stderr)
 
     def tearDown(self):
         ret0 = self.run_state("user.absent", name=self.user)
@@ -144,7 +152,12 @@ class GroupAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
         set_pw_cmd = "shadow.set_password {0} '{1}'".format(
             self.user, password if salt.utils.platform.is_darwin() else hashed_pwd
         )
-        self.assertRunCall(set_pw_cmd)
+        stdout, stderr, retcode = self.run_call(
+            set_pw_cmd, catch_stderr=True, with_retcode=True
+        )
+        if stderr:
+            log.warning(stderr)
+        self.assertFalse(retcode, stderr)
 
         # test group auth against pam: saltadm is not configured in
         # external_auth, but saltops is and saldadm is a member of saltops

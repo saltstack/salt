@@ -2,8 +2,6 @@
 """
 Tests for the state runner
 """
-
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
@@ -16,7 +14,6 @@ import textwrap
 import threading
 import time
 
-# Import Salt Libs
 import salt.exceptions
 import salt.utils.event
 import salt.utils.files
@@ -24,15 +21,11 @@ import salt.utils.json
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.yaml
-
-# Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import queue
 from tests.support.case import ShellCase
 from tests.support.helpers import expensiveTest, flaky
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -44,6 +37,8 @@ class StateRunnerTest(ShellCase):
     """
     Test the state runner.
     """
+
+    RUN_TIMEOUT = 300
 
     def add_to_queue(self, q, cmd):
         """
@@ -357,6 +352,8 @@ class OrchEventTest(ShellCase):
     Tests for orchestration events
     """
 
+    RUN_TIMEOUT = 300
+
     def setUp(self):
         self.timeout = 60
         self.master_d_dir = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "master.d")
@@ -376,7 +373,7 @@ class OrchEventTest(ShellCase):
             self.addCleanup(delattr, self, attr)
         # Force a reload of the configuration now that our temp config file has
         # been removed.
-        self.addCleanup(self.run_run_plus, "test.arg", __reload_config=True)
+        self.addCleanup(self.run_run_plus, "test.arg")
 
     def alarm_handler(self, signal, frame):
         raise Exception("Timeout of {0} seconds reached".format(self.timeout))
@@ -444,9 +441,7 @@ class OrchEventTest(ShellCase):
             opts=self.master_opts,
         )
 
-        jid = self.run_run_plus(
-            "state.orchestrate", "test_orch", __reload_config=True
-        ).get("jid")
+        jid = self.run_run_plus("state.orchestrate", "test_orch").get("jid")
 
         if jid is None:
             raise Exception("jid missing from run_run_plus output")
@@ -517,9 +512,7 @@ class OrchEventTest(ShellCase):
         )
 
         start_time = time.time()
-        jid = self.run_run_plus(
-            "state.orchestrate", "test_par_orch", __reload_config=True
-        ).get("jid")
+        jid = self.run_run_plus("state.orchestrate", "test_par_orch").get("jid")
 
         if jid is None:
             raise Exception("jid missing from run_run_plus output")
@@ -589,9 +582,9 @@ class OrchEventTest(ShellCase):
         mock_jid = "20131219120000000000"
         self.run_run("state.soft_kill {0} stage_two".format(mock_jid))
         with patch("salt.utils.jid.gen_jid", MagicMock(return_value=mock_jid)):
-            jid = self.run_run_plus(
-                "state.orchestrate", "two_stage_orch_kill", __reload_config=True
-            ).get("jid")
+            jid = self.run_run_plus("state.orchestrate", "two_stage_orch_kill").get(
+                "jid"
+            )
 
         if jid is None:
             raise Exception("jid missing from run_run_plus output")
@@ -689,9 +682,7 @@ class OrchEventTest(ShellCase):
             opts=self.master_opts,
         )
 
-        jid = self.run_run_plus("state.orchestrate", "main", __reload_config=True).get(
-            "jid"
-        )
+        jid = self.run_run_plus("state.orchestrate", "main").get("jid")
 
         if jid is None:
             raise salt.exceptions.SaltInvocationError(
@@ -767,20 +758,14 @@ class OrchEventTest(ShellCase):
         )
 
         try:
-            jid1 = self.run_run_plus(
-                "state.orchestrate", "orch", test=True, __reload_config=True
-            ).get("jid")
+            jid1 = self.run_run_plus("state.orchestrate", "orch", test=True).get("jid")
 
             # Run for real to create the file
-            self.run_run_plus("state.orchestrate", "orch", __reload_config=True).get(
-                "jid"
-            )
+            self.run_run_plus("state.orchestrate", "orch").get("jid")
 
             # Run again in test mode. Since there were no changes, the
             # requisites should not fire.
-            jid2 = self.run_run_plus(
-                "state.orchestrate", "orch", test=True, __reload_config=True
-            ).get("jid")
+            jid2 = self.run_run_plus("state.orchestrate", "orch", test=True).get("jid")
         finally:
             try:
                 os.remove(os.path.join(RUNTIME_VARS.TMP, "orch.req_test"))
