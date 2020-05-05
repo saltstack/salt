@@ -1,0 +1,5 @@
+===========================
+Salt 2019.2.5 Release Notes
+===========================
+
+Version 2019.2.5 is a bug-fix release for :ref:`2019.2.0 <release-2019-2-0>`.
