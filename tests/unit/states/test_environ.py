@@ -24,7 +24,6 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
             "__env__": "base",
             "__opts__": {"test": False},
             "__salt__": {"environ.setenv": envmodule.setenv},
-            "__utils__": {"reg.read_value": salt.modules.reg.read_value},
         }
         return {envstate: loader_globals, envmodule: loader_globals}
 
@@ -54,11 +53,15 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
     @skipIf(not salt.utils.platform.is_windows(), "Windows only")
     def test_setenv_permanent(self):
         """
-        test that we can set perminent environment variables (requires pywin32)
+        test that we can set permanent environment variables (requires pywin32)
         """
         with patch.dict(
             envmodule.__utils__,
-            {"reg.set_value": MagicMock(), "reg.delete_value": MagicMock()},
+            {
+                "reg.set_value": MagicMock(),
+                "reg.delete_value": MagicMock(),
+                "win_functions.broadcast_setting_change": MagicMock(),
+            },
         ):
             ret = envstate.setenv("test", "value", permanent=True)
             self.assertEqual(ret["changes"], {"test": "value"})

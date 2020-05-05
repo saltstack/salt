@@ -9,8 +9,8 @@ Module for running ZFS command
 :platform:      illumos,freebsd,linux
 
 .. versionchanged:: 2018.3.1
-  Big refactor to remove duplicate code, better type converions and improved
-  consistancy in output.
+  Big refactor to remove duplicate code, better type conversions and improved
+  consistency in output.
 
 """
 from __future__ import absolute_import, print_function, unicode_literals
@@ -332,7 +332,7 @@ def list_(name=None, **kwargs):
         else:
             opts["-S"] = kwargs_sort
     if isinstance(properties, list):
-        # NOTE: There can be only one -o and it takes a comma-seperated list
+        # NOTE: There can be only one -o and it takes a comma-separated list
         opts["-o"] = ",".join(properties)
     else:
         opts["-o"] = properties

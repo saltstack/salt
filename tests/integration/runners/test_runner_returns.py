@@ -32,7 +32,7 @@ class RunnerReturnsTest(ShellCase):
         """
         self.job_dir = os.path.join(self.master_opts["cachedir"], "jobs")
         self.hash_type = self.master_opts["hash_type"]
-        self.master_d_dir = os.path.join(self.config_dir, "master.d")
+        self.master_d_dir = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "master.d")
         try:
             os.makedirs(self.master_d_dir)
         except OSError as exc:

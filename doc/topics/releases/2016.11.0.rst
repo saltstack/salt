@@ -300,7 +300,7 @@ from network devices running widely used operating systems such: JunOS, IOS-XR,
 eOS, IOS, NX-OS etc.
 
 - see `the complete list of supported devices
-  <http://napalm.readthedocs.io/en/latest/support/index.html#supported-devices>`_.
+  <https://napalm.readthedocs.io/en/latest/support/index.html#supported-devices>`_.
 
 The connection is established via the :mod:`NAPALM proxy <salt.proxy.napalm>`.
 

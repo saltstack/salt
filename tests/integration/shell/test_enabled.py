@@ -21,7 +21,7 @@ class EnabledTest(ModuleCase):
     """
 
     cmd = (
-        "printf '%s\n' first second third | wc -l ; "
+        "printf '%s\\n' first second third | wc -l ; "
         "export SALTY_VARIABLE='saltines' && echo $SALTY_VARIABLE ; "
         "echo duh &> /dev/null"
     )

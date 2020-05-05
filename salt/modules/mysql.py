@@ -648,7 +648,7 @@ def _execute(cur, qry, args=None):
 
 def _sanitize_comments(content):
     # Remove comments which might affect line by line parsing
-    # Regex should remove any text begining with # (or --) not inside of ' or "
+    # Regex should remove any text beginning with # (or --) not inside of ' or "
     content = re.sub(
         r"""(['"](?:[^'"]+|(?<=\\)['"])*['"])|#[^\n]*""",
         lambda m: m.group(1) or "",

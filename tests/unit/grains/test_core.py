@@ -667,6 +667,15 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._run_os_grains_tests("debian-9", _os_release_map, expectation)
 
+    def test_unicode_error(self):
+        raise_unicode_mock = MagicMock(
+            name="raise_unicode_error", side_effect=UnicodeError
+        )
+        with patch("salt.grains.core.hostname"):
+            with patch("socket.getaddrinfo", raise_unicode_mock):
+                ret = salt.grains.core.ip_fqdn()
+                assert ret["fqdn_ip4"] == ret["fqdn_ip6"] == []
+
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     def test_ubuntu_xenial_os_grains(self):
         """
@@ -859,6 +868,12 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         with patch("platform.release", MagicMock(return_value="7")):
             version = core._windows_os_release_grain(caption, 1)
             self.assertEqual(version, "7")
+
+        # Microsoft Hyper-V Server 2019
+        # Issue https://github.com/saltstack/salt/issue/55212
+        caption = "Microsoft Hyper-V Server"
+        version = core._windows_os_release_grain(caption, 1)
+        self.assertEqual(version, "2019Server")
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     def test_linux_memdata(self):

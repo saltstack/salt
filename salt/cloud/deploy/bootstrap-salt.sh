@@ -349,7 +349,7 @@ __usage() {
         with -c and -k
     -C  Only run the configuration function. Implies -F (forced overwrite).
         To overwrite Master or Syndic configs, -M or -S, respectively, must
-        also be specified. Salt installation will be ommitted, but some of the
+        also be specified. Salt installation will be omitted, but some of the
         dependencies could be installed to write configuration with -j or -J.
     -A  Pass the salt-master DNS name or IP. This will be stored under
         \${BS_SALT_ETC_DIR}/minion.d/99-master-address.conf
@@ -2620,7 +2620,7 @@ __install_tornado_pip() {
 #    PARAMETERS:  requirements_file
 #----------------------------------------------------------------------------------------------------------------------
 __install_pip_deps() {
-    # Install virtualenv to system pip before activating virtualenv if thats going to be used
+    # Install virtualenv to system pip before activating virtualenv if that's going to be used
     # We assume pip pkg is installed since that is distro specific
     if [ "$_VIRTUALENV_DIR" != "null" ]; then
         if ! __check_command_exists pip; then
