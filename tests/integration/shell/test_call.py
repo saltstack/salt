@@ -210,7 +210,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             _ = self.run_script(
                 "salt-call",
                 "-c {0} --output-file={1} test.versions".format(
-                    self.config_dir, output_file_append
+                    RUNTIME_VARS.TMP_MINION_CONF_DIR, output_file_append
                 ),
                 catch_stderr=True,
                 with_retcode=True,
@@ -243,7 +243,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 self.run_script(
                     "salt-call",
                     "-c {0} --output-file={1} -l trace -g".format(
-                        self.config_dir, output_file
+                        RUNTIME_VARS.TMP_MINION_CONF_DIR, output_file
                     ),
                     catch_stderr=True,
                     with_retcode=True,
@@ -259,7 +259,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 self.run_script(
                     "salt-call",
                     "-c {0} --output-file={1} --output-file-append -g".format(
-                        self.config_dir, output_file
+                        RUNTIME_VARS.TMP_MINION_CONF_DIR, output_file
                     ),
                     catch_stderr=True,
                     with_retcode=True,
@@ -278,7 +278,9 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 # Not appending data
                 self.run_script(
                     "salt-call",
-                    "-c {0} --output-file={1} -g".format(self.config_dir, output_file),
+                    "-c {0} --output-file={1} -g".format(
+                        RUNTIME_VARS.TMP_MINION_CONF_DIR, output_file
+                    ),
                     catch_stderr=True,
                     with_retcode=True,
                 )

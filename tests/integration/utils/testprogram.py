@@ -121,7 +121,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         self._parent_dir = parent_dir or None
         self.clean_on_exit = clean_on_exit
         self._root_dir = kwargs.pop("root_dir", self.name)
-        self.config_dir = kwargs.pop("config_dir", copy.copy(self.config_dir))
+        self.config_dir = kwargs.pop("config_dir", copy.copy(RUNTIME_VARS.TMP_CONF_DIR))
 
         config_attrs = copy.copy(self.config_attrs)
         config_attrs.update(kwargs.pop("config_attrs", set()))

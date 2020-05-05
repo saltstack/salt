@@ -5,7 +5,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 import tempfile
-import textwrap
 from contextlib import contextmanager
 
 import pytest
@@ -285,11 +284,11 @@ class CMDModuleTest(ModuleCase):
         """
         cmd.exec_code
         """
-        code = textwrap.dedent(
-            """\
-               import sys
-               sys.stdout.write('cheese')"""
-        )
+        # `code` is a multiline YAML text. Formatting it as a YAML block scalar.
+        code = """|
+                   import sys
+                   sys.stdout.write('cheese')
+               """
         self.assertEqual(
             self.run_function(
                 "cmd.exec_code", [AVAILABLE_PYTHON_EXECUTABLE, code]
@@ -302,11 +301,11 @@ class CMDModuleTest(ModuleCase):
         """
         cmd.exec_code
         """
-        code = textwrap.dedent(
-            """\
-               import sys
-               sys.stdout.write(sys.argv[1])"""
-        )
+        # `code` is a multiline YAML text. Formatting it as a YAML block scalar.
+        code = """|
+                   import sys
+                   sys.stdout.write(sys.argv[1])
+               """
         arg = "cheese"
         self.assertEqual(
             self.run_function(
@@ -320,11 +319,11 @@ class CMDModuleTest(ModuleCase):
         """
         cmd.exec_code
         """
-        code = textwrap.dedent(
-            """\
-               import sys
-               sys.stdout.write(sys.argv[1])"""
-        )
+        # `code` is a multiline YAML text. Formatting it as a YAML block scalar.
+        code = """|
+                   import sys
+                   sys.stdout.write(sys.argv[1])
+               """
         arg = "cheese"
         self.assertEqual(
             self.run_function(

@@ -1214,7 +1214,7 @@ def set_system_date_time(
         # pylint: enable=invalid-name
         system_time_ptr = ctypes.pointer(system_time)
         succeeded = ctypes.windll.kernel32.SetLocalTime(system_time_ptr)
-        if succeeded is not 0:
+        if succeeded != 0:
             return True
         else:
             log.error("Failed to set local time")
