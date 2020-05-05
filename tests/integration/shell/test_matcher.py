@@ -23,6 +23,8 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
     Test salt matchers
     """
 
+    RUN_TIMEOUT = 300
+
     _call_binary_ = "salt"
 
     @skipIf(True, "SLOWTEST skip")

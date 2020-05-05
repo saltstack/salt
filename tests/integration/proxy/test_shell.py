@@ -5,19 +5,14 @@ Test salt-call --proxyid commands
 tests.integration.proxy.test_shell
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
-
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import json
 import logging
 import sys
 
-# Import Salt Libs
 import salt.ext.six as six
 import salt.utils.json as json
-
-# Import salt tests libs
 from tests.support.case import ShellCase
 from tests.support.unit import skipIf
 
@@ -28,6 +23,8 @@ class ProxyCallerSimpleTestCase(ShellCase):
     """
     Test salt-call --proxyid <proxyid> commands
     """
+
+    RUN_TIMEOUT = 300
 
     @staticmethod
     def _load_return(ret):
