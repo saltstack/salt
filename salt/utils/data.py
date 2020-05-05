@@ -175,6 +175,46 @@ def compare_lists(old=None, new=None):
     return ret
 
 
+def _remove_circular_refs(ob, _seen=None):
+    """
+    Generic method to remove circular references from objects.
+    This has been taken from author Martijn Pieters
+    https://stackoverflow.com/questions/44777369/
+    remove-circular-references-in-dicts-lists-tuples/44777477#44777477
+    :param ob: dict, list, typle, set, and frozenset
+        Standard python object
+    :param object _seen:
+        Object that has circular reference
+    :returns:
+        Cleaned Python object
+    :rtype:
+        type(ob)
+    """
+    if _seen is None:
+        _seen = set()
+    if id(ob) in _seen:
+        # Here we caught a circular reference.
+        # Alert user and cleanup to continue.
+        log.exception(
+            "Caught a circular reference in data structure below."
+            "Cleaning and continuing execution.\n%r\n",
+            ob,
+        )
+        return None
+    _seen.add(id(ob))
+    res = ob
+    if isinstance(ob, dict):
+        res = {
+            _remove_circular_refs(k, _seen): _remove_circular_refs(v, _seen)
+            for k, v in ob.items()
+        }
+    elif isinstance(ob, (list, tuple, set, frozenset)):
+        res = type(ob)(_remove_circular_refs(v, _seen) for v in ob)
+    # remove id again; only *nested* references count
+    _seen.remove(id(ob))
+    return res
+
+
 def decode(
     data,
     encoding=None,
@@ -211,7 +251,11 @@ def decode(
     two strings above, in which "й" is represented as two code points (i.e. one
     for the base character, and one for the breve mark). Normalizing allows for
     a more reliable test case.
+
     """
+    # Clean data object before decoding to avoid circular references
+    data = _remove_circular_refs(data)
+
     _decode_func = (
         salt.utils.stringutils.to_unicode
         if not to_str
@@ -283,6 +327,9 @@ def decode_dict(
     Decode all string values to Unicode. Optionally use to_str=True to ensure
     strings are str types and not unicode on Python 2.
     """
+    # Clean data object before decoding to avoid circular references
+    data = _remove_circular_refs(data)
+
     _decode_func = (
         salt.utils.stringutils.to_unicode
         if not to_str
@@ -395,6 +442,9 @@ def decode_list(
     Decode all string values to Unicode. Optionally use to_str=True to ensure
     strings are str types and not unicode on Python 2.
     """
+    # Clean data object before decoding to avoid circular references
+    data = _remove_circular_refs(data)
+
     _decode_func = (
         salt.utils.stringutils.to_unicode
         if not to_str
@@ -493,7 +543,11 @@ def encode(
     original value to silently be returned in cases where encoding fails. This
     can be useful for cases where the data passed to this function is likely to
     contain binary blobs.
+
     """
+    # Clean data object before encoding to avoid circular references
+    data = _remove_circular_refs(data)
+
     if isinstance(data, Mapping):
         return encode_dict(
             data, encoding, errors, keep, preserve_dict_class, preserve_tuples
@@ -536,6 +590,8 @@ def encode_dict(
     """
     Encode all string values to bytes
     """
+    # Clean data object before encoding to avoid circular references
+    data = _remove_circular_refs(data)
     ret = data.__class__() if preserve_dict_class else {}
     for key, value in six.iteritems(data):
         if isinstance(key, tuple):
@@ -603,6 +659,9 @@ def encode_list(
     """
     Encode all string values to bytes
     """
+    # Clean data object before encoding to avoid circular references
+    data = _remove_circular_refs(data)
+
     ret = []
     for item in data:
         if isinstance(item, list):
@@ -768,7 +827,30 @@ def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DEL
         else:
             try:
                 ptr = ptr[each]
-            except (KeyError, TypeError):
+            except KeyError:
+                # Late import to avoid circular import
+                import salt.utils.args
+
+                # YAML-load the current key (catches integer/float dict keys)
+                try:
+                    loaded_key = salt.utils.args.yamlify_arg(each)
+                except Exception:  # pylint: disable=broad-except
+                    return default
+                if loaded_key == each:
+                    # After YAML-loading, the desired key is unchanged. This
+                    # means that the KeyError caught above is a legitimate
+                    # failure to match the desired key. Therefore, return the
+                    # default.
+                    return default
+                else:
+                    # YAML-loading the key changed its value, so re-check with
+                    # the loaded key. This is how we can match a numeric key
+                    # with a string-based expression.
+                    try:
+                        ptr = ptr[loaded_key]
+                    except (KeyError, TypeError):
+                        return default
+            except TypeError:
                 return default
     return ptr
 

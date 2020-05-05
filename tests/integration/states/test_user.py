@@ -56,6 +56,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
     """
 
     user_name = "salt-test"
+    alt_group = "salt-test-altgroup"
     user_home = (
         "/var/lib/{0}".format(user_name)
         if not salt.utils.platform.is_windows()
@@ -307,6 +308,67 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
 
         user_info = self.run_function("user.info", [self.user_name])
         self.assertTrue(os.path.exists(user_info["home"]))
+
+    @skipIf(
+        salt.utils.platform.is_windows() or salt.utils.platform.is_darwin(),
+        "groups/gid not fully supported",
+    )
+    def test_user_present_change_gid_but_keep_group(self):
+        """
+        This tests the case in which the default group is changed at the same
+        time as it is also moved into the "groups" list.
+        """
+        try:
+            # Add the groups
+            ret = self.run_state("group.present", name=self.user_name)
+            self.assertSaltTrueReturn(ret)
+            ret = self.run_state("group.present", name=self.alt_group)
+            self.assertSaltTrueReturn(ret)
+
+            user_name_gid = self.run_function("file.group_to_gid", [self.user_name])
+            alt_group_gid = self.run_function("file.group_to_gid", [self.alt_group])
+
+            # Add the user
+            ret = self.run_state("user.present", name=self.user_name, gid=alt_group_gid)
+
+            # Check that the initial user addition set the gid and groups as
+            # expected.
+            new_gid = self.run_function("file.group_to_gid", [self.user_name])
+            uinfo = self.run_function("user.info", [self.user_name])
+
+            assert uinfo["gid"] == alt_group_gid, uinfo["gid"]
+            assert uinfo["groups"] == [self.alt_group], uinfo["groups"]
+
+            # Now change the gid and move alt_group to the groups list in the
+            # same salt run.
+            ret = self.run_state(
+                "user.present",
+                name=self.user_name,
+                gid=user_name_gid,
+                groups=[self.alt_group],
+                allow_gid_change=True,
+            )
+            self.assertSaltTrueReturn(ret)
+
+            # Be sure that we did what we intended
+            new_gid = self.run_function("file.group_to_gid", [self.user_name])
+            uinfo = self.run_function("user.info", [self.user_name])
+
+            assert uinfo["gid"] == new_gid, uinfo["gid"]
+            assert uinfo["groups"] == [self.user_name, self.alt_group], uinfo["groups"]
+
+        finally:
+            # Do the cleanup here so we don't have to put all of this in the
+            # tearDown to be executed after each test.
+            self.assertSaltTrueReturn(
+                self.run_state("user.absent", name=self.user_name)
+            )
+            self.assertSaltTrueReturn(
+                self.run_state("group.absent", name=self.user_name)
+            )
+            self.assertSaltTrueReturn(
+                self.run_state("group.absent", name=self.alt_group)
+            )
 
     def tearDown(self):
         if salt.utils.platform.is_darwin():

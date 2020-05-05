@@ -26,4 +26,4 @@ It is also possible to use in both pillar and state-matching
      - match: ipcidr
      - internal
 
-.. _CIDR: http://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing
+.. _CIDR: https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing
