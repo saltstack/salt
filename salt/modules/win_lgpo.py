@@ -6790,11 +6790,23 @@ def _checkAllAdmxPolicies(
                                         "explicitValue list, we will return value names"
                                     )
                                     return_value_name = True
-                                regex_str = [r'(?!\*', r'\*',
-                                             'D', 'e', 'l', 'V', 'a', 'l', 's',
-                                             r'\.', ')']
-                                delvals_regex = '\x00'.join(regex_str)
-                                delvals_regex = salt.utils.stringutils.to_bytes(delvals_regex)
+                                regex_str = [
+                                    r"(?!\*",
+                                    r"\*",
+                                    "D",
+                                    "e",
+                                    "l",
+                                    "V",
+                                    "a",
+                                    "l",
+                                    "s",
+                                    r"\.",
+                                    ")",
+                                ]
+                                delvals_regex = "\x00".join(regex_str)
+                                delvals_regex = salt.utils.stringutils.to_bytes(
+                                    delvals_regex
+                                )
                                 if _regexSearchRegPolData(
                                     re.escape(
                                         _processValueItem(
@@ -6806,8 +6818,7 @@ def _checkAllAdmxPolicies(
                                             check_deleted=False,
                                         )
                                     )
-                                    + delvals_regex
-                                    ),
+                                    + delvals_regex,
                                     policy_file_data,
                                 ):
                                     configured_value = _getDataFromRegPolData(
@@ -9104,10 +9115,20 @@ def _get_policy_adm_setting(
                         ):
                             log.trace("explicitValue list, we will return value names")
                             return_value_name = True
-                        regex_str = [r'(?!\*', r'\*',
-                                     'D', 'e', 'l', 'V', 'a', 'l', 's',
-                                     r'\.', ')']
-                        delvals_regex = '\x00'.join(regex_str)
+                        regex_str = [
+                            r"(?!\*",
+                            r"\*",
+                            "D",
+                            "e",
+                            "l",
+                            "V",
+                            "a",
+                            "l",
+                            "s",
+                            r"\.",
+                            ")",
+                        ]
+                        delvals_regex = "\x00".join(regex_str)
                         delvals_regex = salt.utils.stringutils.to_bytes(delvals_regex)
                         if _regexSearchRegPolData(
                             re.escape(
