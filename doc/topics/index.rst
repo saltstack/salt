@@ -141,6 +141,11 @@ is happening in Salt development:
 
 |saltrepo|
 
+Long-term planning and strategic decisions are handled via Salt Enhancement Proposals
+and can be found on GitHub.
+
+.. _`Salt Enhancement Proposals`: https://github.com/saltstack/salt-enhancement-proposals
+
 
 Blogs
 =====
