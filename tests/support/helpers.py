@@ -31,6 +31,7 @@ import textwrap
 import threading
 import time
 import types
+from contextlib import contextmanager
 
 import pytest
 import salt.ext.tornado.ioloop
@@ -1742,3 +1743,20 @@ class VirtualEnv(object):
         sminion.functions.virtualenv.create(
             self.venv_dir, python=self._get_real_python()
         )
+
+
+@contextmanager
+def change_cwd(path):
+    """
+    Context manager helper to change CWD for a with code block and restore
+    it at the end
+    """
+    old_cwd = os.getcwd()
+
+    os.chdir(path)
+
+    # Do stuff
+    yield
+
+    # Restore Old CWD
+    os.chdir(old_cwd)
