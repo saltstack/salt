@@ -55,7 +55,7 @@ Beginning with version 0.9.4, Salt has been available in `EPEL`_.
    Packages in this repository are built by community, and it can take a little
    while until the latest stable SaltStack release become available.
 
-.. _`EPEL`: http://fedoraproject.org/wiki/EPEL
+.. _`EPEL`: https://fedoraproject.org/wiki/EPEL
 
 RHEL/CentOS 6 and 7, Scientific Linux, etc.
 -------------------------------------------
@@ -124,7 +124,7 @@ will need to provide your own systemd service unit.
 
 Installation from pip:
 
-.. _`PyPI`: https://pypi.python.org/pypi/salt
+.. _`PyPI`: https://pypi.org/project/salt/
 
 .. code-block:: bash
 

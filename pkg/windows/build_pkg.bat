@@ -7,7 +7,6 @@
 @echo %0 :: Get Passed Parameters...
 @echo ---------------------------------------------------------------------
 Set "Version="
-Set "Python="
 :: First Parameter
 if not "%~1"=="" (
     echo.%1 | FIND /I "=" > nul && (
@@ -18,48 +17,19 @@ if not "%~1"=="" (
         set "Version=%~1"
     )
 )
-:: Second Parameter
-if not "%~2"=="" (
-    echo.%2 | FIND /I "=" > nul && (
-        :: Named Parameter
-        set "%~2"
-    ) || (
-        :: Positional Parameter
-        set "Python=%~2"
-    )
-)
-
 :: If Version not defined, Get the version from Git
 if "%Version%"=="" (
     for /f "delims=" %%a in ('git describe') do @set "Version=%%a"
 )
 
-:: If Python not defined, Assume Python 2
-if "%Python%"=="" (
-    set Python=2
-)
-
-:: Verify valid Python value (2 or 3)
-set "x="
-for /f "delims=23" %%i in ("%Python%") do set x=%%i
-if Defined x (
-    echo Invalid Python Version specified. Must be 2 or 3. Passed %Python%
-    goto eof
-)
 @echo.
 
 :: Define Variables
 @echo Defining Variables...
 @echo ----------------------------------------------------------------------
-if %Python%==2 (
-    Set "PyDir=C:\Python27"
-    Set "PyVerMajor=2"
-    Set "PyVerMinor=7"
-) else (
-    Set "PyDir=C:\Python35"
-    Set "PyVerMajor=3"
-    Set "PyVerMinor=5"
-)
+Set "PyDir=C:\Python35"
+Set "PyVerMajor=3"
+Set "PyVerMinor=5"
 
 :: Verify the Python Installation
 If not Exist "%PyDir%\python.exe" (
@@ -132,9 +102,6 @@ If Defined ProgramFiles(x86) (
 If Exist "%PreDir%" rd /s /q "%PreDir%"
 mkdir "%PreDir%"
 
-:: Skip KB2999226 if on Py3
-If %Python%==2 goto get_vcredist
-
 :: For PY 3, include KB2999226
 @echo Copying KB2999226 to Prerequisites
 @echo ----------------------------------------------------------------------
@@ -179,25 +146,6 @@ powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url61
 powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url80% -file "%PreDir%\%Name80%"
 @echo - Downloading %Name81%
 powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url81% -file "%PreDir%\%Name81%"
-
-goto prereq_end
-
-:: For PY 2, include VCRedist
-:get_vcredist
-@echo Copying VCRedist to Prerequisites
-@echo ----------------------------------------------------------------------
-
-:: Set the location of the vcredist to download
-Set Url64="http://repo.saltstack.com/windows/dependencies/64/vcredist_x64_2008_mfc.exe"
-Set Url32="http://repo.saltstack.com/windows/dependencies/32/vcredist_x86_2008_mfc.exe"
-
-:: Check for 64 bit by finding the Program Files (x86) directory
-If Defined ProgramFiles(x86) (
-    powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url64%" -file "%PreDir%\vcredist.exe"
-) Else (
-    powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url32%" -file "%PreDir%\vcredist.exe"
-)
-@echo.
 
 :prereq_end
 
@@ -616,7 +564,7 @@ If Exist "%BinDir%\Scripts\salt-unity*"^
 @echo ----------------------------------------------------------------------
 :: Make the Master installer if the nullsoft script exists
 If Exist "%InsDir%\Salt-Setup.nsi"^
-    makensis.exe /DSaltVersion=%Version% /DPythonVersion=%Python% "%InsDir%\Salt-Setup.nsi"
+    makensis.exe /DSaltVersion=%Version% "%InsDir%\Salt-Setup.nsi"
 
 :: Remove files not needed for Salt Minion
 :: salt
@@ -648,7 +596,7 @@ if Exist "%CnfDir%\master"^
     del /Q "%CnfDir%\master" 1>nul
 
 :: Make the Salt Minion Installer
-makensis.exe /DSaltVersion=%Version% /DPythonVersion=%Python% "%InsDir%\Salt-Minion-Setup.nsi"
+makensis.exe /DSaltVersion=%Version% "%InsDir%\Salt-Minion-Setup.nsi"
 @echo.
 
 @echo.

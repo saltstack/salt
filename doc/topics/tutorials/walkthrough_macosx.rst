@@ -115,7 +115,7 @@ it all over again. It also lets you *uninstall* things easily.
 Install Homebrew
 ----------------
 
-Install Homebrew here http://brew.sh/
+Install Homebrew here https://brew.sh/
 
 Or just type
 
@@ -217,13 +217,13 @@ customizing it using "provisioners". In our case, we'll use it to:
 Install VirtualBox
 ------------------
 
-Go get it here: https://www.virtualBox.org/wiki/Downloads (click on VirtualBox
+Go get it here: https://www.virtualbox.org/wiki/Downloads (click on VirtualBox
 for macOS hosts => x86/amd64)
 
 Install Vagrant
 ---------------
 
-Go get it here: http://downloads.vagrantup.com/ and choose the latest version
+Go get it here: https://www.vagrantup.com/downloads.html and choose the latest version
 (1.3.5 at time of writing), then the .dmg file. Double-click to install it.
 Make sure the ``vagrant`` command is found when run in the terminal. Type
 ``vagrant``. It should display a list of commands.
