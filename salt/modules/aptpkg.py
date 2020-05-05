@@ -212,10 +212,12 @@ def normalize_name(name):
         salt '*' pkg.normalize_name zsh:amd64
     """
     try:
-        name, arch = name.rsplit(PKG_ARCH_SEPARATOR, 1)
+        pkgname, pkgarch = name.rsplit(PKG_ARCH_SEPARATOR, 1)
     except ValueError:
-        return name
-    return name
+        pkgname = name
+        pkgarch = __grains__["osarch"]
+
+    return pkgname if pkgarch in (__grains__["osarch"], "any") else name
 
 
 def parse_arch(name):
