@@ -7,10 +7,9 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import python libs
 from __future__ import absolute_import
 
-# Import salt test libs
+import pytest
 import tests.integration.utils
 from tests.integration.utils import testprogram
 from tests.support.case import ShellCase
@@ -19,6 +18,7 @@ from tests.support.unit import skipIf
 
 
 @skipIf(True, "This test file should be in an isolated test space.")
+@pytest.mark.windows_whitelisted
 class MasterTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
 
     _call_binary_ = "salt-master"

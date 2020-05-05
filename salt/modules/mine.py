@@ -571,7 +571,7 @@ def valid():
         if function_name:
             mine_data[function_alias] = {
                 function_name: function_args
-                + [{key, value} for key, value in six.iteritems(function_kwargs)]
+                + [{key: value} for key, value in six.iteritems(function_kwargs)]
             }
         else:
             mine_data[function_alias] = function_data

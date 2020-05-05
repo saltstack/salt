@@ -19,7 +19,7 @@ def __virtual__():
     """
     if "influxdb08.db_exists" in __salt__:
         return "influxdb08_user"
-    return False
+    return (False, "influxdb08 module could not be loaded")
 
 
 def present(

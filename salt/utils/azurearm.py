@@ -47,7 +47,6 @@ try:
         UserPassCredentials,
         ServicePrincipalCredentials,
     )
-    from msrestazure.azure_active_directory import MSIAuthentication
     from msrestazure.azure_cloud import (
         MetadataEndpointError,
         get_cloud_from_metadata_endpoint,
@@ -123,7 +122,14 @@ def _determine_auth(**kwargs):
                 kwargs["username"], kwargs["password"], cloud_environment=cloud_env
             )
     elif "subscription_id" in kwargs:
-        credentials = MSIAuthentication(cloud_environment=cloud_env)
+        try:
+            from msrestazure.azure_active_directory import MSIAuthentication
+
+            credentials = MSIAuthentication(cloud_environment=cloud_env)
+        except ImportError:
+            raise SaltSystemExit(
+                msg="MSI authentication support not availabe (requires msrestazure >= 0.4.14)"
+            )
 
     else:
         raise SaltInvocationError(
@@ -161,7 +167,7 @@ def get_client(client_type, **kwargs):
 
     if client_type not in client_map:
         raise SaltSystemExit(
-            "The Azure ARM client_type {0} specified can not be found.".format(
+            msg="The Azure ARM client_type {0} specified can not be found.".format(
                 client_type
             )
         )
@@ -255,7 +261,7 @@ def create_object_model(module_name, object_name, **kwargs):
     if "_attribute_map" in dir(Model):
         for attr, items in Model._attribute_map.items():
             param = kwargs.get(attr)
-            if param:
+            if param is not None:
                 if items["type"][0].isupper() and isinstance(param, dict):
                     object_kwargs[attr] = create_object_model(
                         module_name, items["type"], **param

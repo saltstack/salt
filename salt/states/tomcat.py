@@ -65,8 +65,9 @@ def __virtual__():
     """
     Load if the module tomcat exists
     """
-
-    return "tomcat" if "tomcat.status" in __salt__ else False
+    if "tomcat.status" in __salt__:
+        return "tomcat"
+    return (False, "tomcat module could not be loaded")
 
 
 # Functions

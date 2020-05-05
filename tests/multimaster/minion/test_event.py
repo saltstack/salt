@@ -26,6 +26,7 @@ class TestHandleEvents(
     Validate the events handling in multimaster environment
     """
 
+    @skipIf(True, "SLOWTEST skip")
     def test_minion_hangs_on_master_failure_50814(self):
         """
         Check minion handling events for the alive master when another master is dead.
