@@ -125,6 +125,7 @@ STATE_RUNTIME_KEYWORDS = frozenset(
         "__pub_pid",
         "__pub_tgt_type",
         "__prereq__",
+        "__prerequired__",
     ]
 )
 
