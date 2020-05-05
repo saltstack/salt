@@ -222,7 +222,7 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
             with patch.dict(virtualenv_mod.__salt__, {"cmd.run_all": mock}):
                 self.assertRaises(
-                    CommandExecutionError, virtualenv_mod.create, "/tmp/foo",
+                    CommandExecutionError, virtualenv_mod.create, "/tmp/foo"
                 )
             # <---- virtualenv binary not available --------------------------
 
@@ -276,9 +276,7 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
 
         with patch.dict(virtualenv_mod.__salt__, {"cmd.run_all": mock}):
-            virtualenv_mod.create(
-                "/tmp/foo", python=sys.executable,
-            )
+            virtualenv_mod.create("/tmp/foo", python=sys.executable)
             mock.assert_called_once_with(
                 ["virtualenv", "--python={0}".format(sys.executable), "/tmp/foo"],
                 runas=None,
@@ -369,3 +367,93 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(virtualenv_mod.__salt__, {"cmd.run_all": mock_ver}):
                 with self.assertRaises(CommandExecutionError):
                     virtualenv_mod.virtualenv_ver(venv_bin="pyenv")
+
+    def test_virtualenv_create_should_prefer_venv_bin_in_pillar_over_opts(self):
+        expected_venv_bin = "fake venv"
+        mock_runall = MagicMock(return_value={"retcode": 0, "stdout": ""})
+        patch_cmd_runall = patch.dict(
+            virtualenv_mod.__salt__, {"cmd.run_all": mock_runall}
+        )
+        patch_opts = patch.dict(
+            virtualenv_mod.__opts__, {"venv_bin": "bad value do not use!!!"}
+        )
+        patch_pillar = patch.dict(
+            virtualenv_mod.__pillar__, {"venv_bin": expected_venv_bin}
+        )
+        patch_virtualenv_ver = patch(
+            "virtualenv_mod.virtualenv_ver", autospec=True, return_value=None
+        )
+        with patch_cmd_runall, patch_opts, patch_pillar:
+            virtualenv_mod.create(
+                "/tmp/foo",
+                venv_bin=None,
+                upgrade=None,
+                symlinks=None,
+                distribute=False,
+                extra_search_dir=None,
+                never_download=False,
+                prompt=None,
+            )
+
+            call_args = mock_runall.call_args
+            assert call_args.args[0][0] == expected_venv_bin
+
+    def test_virtualenv_create_should_use_opts_if_pillar_and_argument_are_not_set(self):
+        expected_venv_bin = "fake venv"
+        mock_runall = MagicMock(return_value={"retcode": 0, "stdout": ""})
+        patch_cmd_runall = patch.dict(
+            virtualenv_mod.__salt__, {"cmd.run_all": mock_runall}
+        )
+        patch_opts = patch.dict(
+            virtualenv_mod.__opts__, {"venv_bin": expected_venv_bin}
+        )
+        patch_pillar = patch.dict(virtualenv_mod.__pillar__, {"venv_bin": None})
+        patch_virtualenv_ver = patch(
+            "virtualenv_mod.virtualenv_ver", autospec=True, return_value=None
+        )
+        with patch_cmd_runall, patch_opts, patch_pillar:
+            virtualenv_mod.create(
+                "/tmp/foo",
+                venv_bin=None,
+                upgrade=None,
+                symlinks=None,
+                distribute=False,
+                extra_search_dir=None,
+                never_download=False,
+                prompt=None,
+            )
+
+            call_args = mock_runall.call_args
+            assert call_args.args[0][0] == expected_venv_bin
+
+    def test_virtualenv_create_should_ignore_pillar_and_opts_if_venv_bin_argument_is_provided(
+        self,
+    ):
+        expected_venv_bin = "fake venv"
+        mock_runall = MagicMock(return_value={"retcode": 0, "stdout": ""})
+        patch_cmd_runall = patch.dict(
+            virtualenv_mod.__salt__, {"cmd.run_all": mock_runall}
+        )
+        patch_opts = patch.dict(
+            virtualenv_mod.__opts__, {"venv_bin": "bad value do not use!!!"}
+        )
+        patch_pillar = patch.dict(
+            virtualenv_mod.__pillar__, {"venv_bin": "another bad value, do not use!!"}
+        )
+        patch_virtualenv_ver = patch(
+            "virtualenv_mod.virtualenv_ver", autospec=True, return_value=None
+        )
+        with patch_cmd_runall, patch_opts, patch_pillar:
+            virtualenv_mod.create(
+                "/tmp/foo",
+                venv_bin=expected_venv_bin,
+                upgrade=None,
+                symlinks=None,
+                distribute=False,
+                extra_search_dir=None,
+                never_download=False,
+                prompt=None,
+            )
+
+            call_args = mock_runall.call_args
+            assert call_args.args[0][0] == expected_venv_bin
