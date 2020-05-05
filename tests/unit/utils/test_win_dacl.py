@@ -13,7 +13,7 @@ import salt.utils.win_reg as win_reg
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
-from tests.support.helpers import destructiveTest, random_string, TstSuiteLoggingHandler
+from tests.support.helpers import TstSuiteLoggingHandler, destructiveTest, random_string
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
