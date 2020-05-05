@@ -1683,8 +1683,13 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         Tests that cloud.{providers,profiles}.d directories are loaded, even if not
         directly passed in through path
         """
-        log.warning("Clound config file path: %s", self.get_config_file_path("cloud"))
-        config = salt.config.cloud_config(self.get_config_file_path("cloud"))
+        config_file = self.get_config_file_path("cloud")
+        log.debug("Cloud config file path: %s", config_file)
+        self.assertTrue(
+            os.path.exists(config_file), "{} does not exist".format(config_file)
+        )
+        config = salt.config.cloud_config(config_file)
+        self.assertIn("providers", config)
         self.assertIn("ec2-config", config["providers"])
         self.assertIn("ec2-test", config["profiles"])
 
