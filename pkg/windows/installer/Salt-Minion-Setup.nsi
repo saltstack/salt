@@ -1189,8 +1189,7 @@ Function UninstallMSI
     Abort
 
     UninstallMSI:
-        #ExecWait '"msiexec.exe" /x $R0 /qb /quiet /norestart'
-        ExecWait '"msiexec.exe" /x $R0 '
+        ExecWait '"msiexec.exe" /x $R0 /qb /quiet /norestart'
 
 FunctionEnd
 
