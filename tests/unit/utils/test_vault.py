@@ -6,6 +6,7 @@ Test case for the vault utils module
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import json
 import logging
 import os
 from copy import copy
@@ -322,9 +323,15 @@ class TestVaultUtils(LoaderModuleMockMixin, TestCase):
         """
         Test write cache with multi-use token
         """
-        expected_write = [
-            '{"url": "http://127.0.0.1:8200", "token": "test", "verify": null, "uses": 10, "lease_duration": 100, "issued": 3000, "unlimited_use_token": false}'
-        ]
+        expected_write = {
+            "url": "http://127.0.0.1:8200",
+            "token": "test",
+            "verify": None,
+            "uses": 10,
+            "lease_duration": 100,
+            "issued": 3000,
+            "unlimited_use_token": False,
+        }
         with patch("salt.utils.files.fpopen", mock_open()) as mock_fpopen:
             function_response = vault.write_cache(self.cache_uses)
             assert mock_fpopen.call_count == 1
@@ -335,7 +342,8 @@ class TestVaultUtils(LoaderModuleMockMixin, TestCase):
             opens = mock_fpopen.filehandles[
                 os.path.join("somepath", "salt_vault_token")
             ]
-            self.assertEqual(opens[0].write_calls, expected_write)
+            write_calls_output = json.loads(opens[0].write_calls[0])
+            self.assertDictEqual(write_calls_output, expected_write)
             self.assertTrue(function_response)
 
     def test_write_cache_unlimited_token(self):
@@ -350,9 +358,16 @@ class TestVaultUtils(LoaderModuleMockMixin, TestCase):
             "lease_duration": 100,
             "issued": 3000,
         }
-        expected_write = [
-            '{"url": "http://127.0.0.1:8200", "token": "test", "verify": null, "uses": 0, "lease_duration": 100, "issued": 3000, "unlimited_use_token": true}'
-        ]
+        expected_write = {
+            "url": "http://127.0.0.1:8200",
+            "token": "test",
+            "verify": None,
+            "uses": 0,
+            "lease_duration": 100,
+            "issued": 3000,
+            "unlimited_use_token": True,
+        }
+
         with patch("salt.utils.files.fpopen", mock_open()) as mock_fpopen:
             function_response = vault.write_cache(write_data)
             assert mock_fpopen.call_count == 1
@@ -363,7 +378,8 @@ class TestVaultUtils(LoaderModuleMockMixin, TestCase):
             opens = mock_fpopen.filehandles[
                 os.path.join("somepath", "salt_vault_token")
             ]
-            self.assertEqual(opens[0].write_calls, expected_write)
+            write_calls_output = json.loads(opens[0].write_calls[0])
+            self.assertEqual(write_calls_output, expected_write)
             self.assertTrue(function_response)
 
     def test_path_is_v2(self):
@@ -406,7 +422,6 @@ class TestVaultUtils(LoaderModuleMockMixin, TestCase):
             mock_read_cache.return_value = cache_object
             with patch.object(vault, "write_cache") as mock_write_cache:
                 with patch("salt.utils.vault.make_request", mock):
-                    # with patch.object(vault, "make_request") as mock_make_request:
                     function_result = vault._get_secret_path_metadata(secret_path)
                     self.assertEqual(function_result, self.metadata_v2)
                     mock_write_cache.assert_called_with(cache_object)
