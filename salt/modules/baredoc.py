@@ -186,7 +186,7 @@ def _get_files(name=False, type="states", return_type="args") -> List:
 
     if name:
         if "." in name:
-            if return_type is not "docs":
+            if return_type != "docs":
                 # Only docs support module.function syntax
                 raise ArgumentValueError("Function name given")
             else:
