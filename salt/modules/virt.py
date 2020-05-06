@@ -1589,21 +1589,48 @@ def init(
 
                      .. versionadded:: 2019.2.0
     :param boot:
-        Specifies kernel for the virtual machine, as well as boot parameters
-        for the virtual machine. This is an optionl parameter, and all of the
-        keys are optional within the dictionary. If a remote path is provided
-        to kernel or initrd, salt will handle the downloading of the specified
-        remote fild, and will modify the XML accordingly.
+        Specifies kernel, initial ramdisk and kernel command line parameters for the virtual machine.
+        This is an optional parameter, all of the keys are optional within the dictionary. The structure of
+        the dictionary is documented in :ref:`init-boot-def`. If a remote path is provided to kernel or initrd,
+        salt will handle the downloading of the specified remote file and modify the XML accordingly.
+        To boot VM with UEFI, specify loader and nvram path.
+
+        .. versionadded:: 3000
 
         .. code-block:: python
 
             {
                 'kernel': '/root/f8-i386-vmlinuz',
                 'initrd': '/root/f8-i386-initrd',
-                'cmdline': 'console=ttyS0 ks=http://example.com/f8-i386/os/'
+                'cmdline': 'console=ttyS0 ks=http://example.com/f8-i386/os/',
+                'loader': '/usr/share/OVMF/OVMF_CODE.fd',
+                'nvram': '/usr/share/OVMF/OVMF_VARS.ms.fd'
             }
 
-        .. versionadded:: 3000
+    .. _init-boot-def:
+
+    .. rubric:: Boot parameters definition
+
+    The boot parameters dictionary can contains the following properties:
+
+    kernel
+        The URL or path to the kernel to run the virtual machine with.
+
+    initrd
+        The URL or path to the initrd file to run the virtual machine with.
+
+    cmdline
+        The parameters to pass to the kernel provided in the `kernel` property.
+
+    loader
+        The path to the UEFI binary loader to use.
+
+        .. versionadded:: sodium
+
+    nvram
+        The path to the UEFI data template. The file will be copied when creating the virtual machine.
+
+        .. versionadded:: sodium
 
     .. _init-nic-def:
 
@@ -2140,23 +2167,13 @@ def update(
     :param password: password to connect with, overriding defaults
 
     :param boot:
-        Specifies kernel for the virtual machine, as well as boot parameters
-        for the virtual machine. This is an optionl parameter, and all of the
-        keys are optional within the dictionary. If a remote path is provided
-        to kernel or initrd, salt will handle the downloading of the specified
-        remote fild, and will modify the XML accordingly.Boot vm with UEFI,
-        loader and nvram can be specified to achieve the goal. To remove any
-        boot parameters, pass an None object to the relevant parameter, for instance: "kernel": None
+        Specifies kernel, initial ramdisk and kernel command line parameters for the virtual machine.
+        This is an optional parameter, all of the keys are optional within the dictionary.
 
-        .. code-block:: python
+        Refer to :ref:`init-boot-def` for the complete boot parameter description.
 
-            {
-                'kernel': '/root/f8-i386-vmlinuz',
-                'initrd': '/root/f8-i386-initrd',
-                'cmdline': 'console=ttyS0 ks=http://example.com/f8-i386/os/'
-                'loader': /usr/share/OVMF/OVMF_CODE.fd
-                'nvram': /usr/share/OVMF/OVMF_VARS.ms.fd
-            }
+        To update any boot parameters, specify the new path for each. To remove any boot parameters,
+        pass a None object, for instance: 'kernel': ``None``.
 
         .. versionadded:: 3000
 
