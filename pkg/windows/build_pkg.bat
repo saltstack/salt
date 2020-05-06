@@ -27,9 +27,9 @@ if "%Version%"=="" (
 :: Define Variables
 @echo Defining Variables...
 @echo ----------------------------------------------------------------------
-Set "PyDir=C:\Python35"
+Set "PyDir=C:\Python37"
 Set "PyVerMajor=3"
-Set "PyVerMinor=5"
+Set "PyVerMinor=7"
 
 :: Verify the Python Installation
 If not Exist "%PyDir%\python.exe" (

@@ -8,7 +8,12 @@ from __future__ import absolute_import, print_function, unicode_literals
 from salt.exceptions import CommandExecutionError
 from salt.ext import six
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, random_string, skip_if_not_root
+from tests.support.helpers import (
+    destructiveTest,
+    random_string,
+    runs_on,
+    skip_if_not_root,
+)
 from tests.support.unit import skipIf
 
 # Create group name strings for tests
@@ -21,18 +26,11 @@ REP_USER_GROUP = random_string("RS-", lowercase=False)
 
 @destructiveTest
 @skip_if_not_root
+@runs_on(kernel="Darwin")
 class MacGroupModuleTest(ModuleCase):
     """
     Integration tests for the mac_group module
     """
-
-    def setUp(self):
-        """
-        Sets up test requirements
-        """
-        os_grain = self.run_function("grains.item", ["kernel"])
-        if os_grain["kernel"] not in "Darwin":
-            self.skipTest("Test not applicable to '{kernel}' kernel".format(**os_grain))
 
     @skipIf(True, "SLOWTEST skip")
     def test_mac_group_add(self):

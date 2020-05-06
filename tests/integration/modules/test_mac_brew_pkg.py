@@ -3,20 +3,17 @@
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
-import salt.utils.path
-import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
 from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import (
+    destructiveTest,
+    runs_on,
+    skip_if_binaries_missing,
+    skip_if_not_root,
+)
 from tests.support.unit import skipIf
 
 # Brew doesn't support local package installation - So, let's
@@ -27,8 +24,8 @@ DEL_PKG = "acme"
 
 @destructiveTest
 @skip_if_not_root
-@skipIf(not salt.utils.platform.is_darwin(), "Test only applies to macOS")
-@skipIf(not salt.utils.path.which("brew"), "This test requires the brew binary")
+@skip_if_binaries_missing("brew")
+@runs_on(kernel="Darwin")
 class BrewModuleTest(ModuleCase):
     """
     Integration tests for the brew module

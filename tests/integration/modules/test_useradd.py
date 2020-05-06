@@ -3,28 +3,21 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import pytest
-import salt.utils.platform
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
     random_string,
     requires_system_grains,
+    runs_on,
     skip_if_not_root,
 )
 from tests.support.unit import skipIf
 
 
 @destructiveTest
-@skipIf(not salt.utils.platform.is_linux(), "These tests can only be run on linux")
 @skip_if_not_root
-@pytest.mark.windows_whitelisted
+@runs_on(kernel="Linux")
 class UseraddModuleTestLinux(ModuleCase):
-    def setUp(self):
-        super(UseraddModuleTestLinux, self).setUp()
-        os_grain = self.run_function("grains.item", ["kernel"])
-        if os_grain["kernel"] not in ("Linux", "Darwin"):
-            self.skipTest("Test not applicable to '{kernel}' kernel".format(**os_grain))
-
     @requires_system_grains
     @skipIf(True, "SLOWTEST skip")
     def test_groups_includes_primary(self, grains):
@@ -93,8 +86,8 @@ class UseraddModuleTestLinux(ModuleCase):
 
 
 @destructiveTest
-@skipIf(not salt.utils.platform.is_windows(), "These tests can only be run on Windows")
 @skip_if_not_root
+@runs_on(kernel="Windows")
 @pytest.mark.windows_whitelisted
 class UseraddModuleTestWindows(ModuleCase):
     def setUp(self):
