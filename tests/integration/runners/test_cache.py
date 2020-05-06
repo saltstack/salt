@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 
 class CacheTest(ShellCase):
     """
-    Test the cache runner
+    Test the cache runner.
     """
 
     @skipIf(True, "SLOWTEST skip")

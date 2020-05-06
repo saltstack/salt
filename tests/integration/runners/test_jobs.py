@@ -17,7 +17,7 @@ from tests.support.unit import skipIf
 @pytest.mark.windows_whitelisted
 class JobsTest(ShellCase):
     """
-    Test the jobs runner
+    Test the jobs runner.
     """
 
     @skipIf(True, "SLOWTEST skip")
