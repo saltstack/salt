@@ -18,8 +18,8 @@ import salt.returners
 import salt.utils.args
 import salt.utils.files
 import salt.utils.jid
-from salt.exceptions import SaltClientError
 import salt.utils.master
+from salt.exceptions import SaltClientError
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -35,7 +35,7 @@ log = logging.getLogger(__name__)
 
 
 def master():
-    '''
+    """
     Return the actively executing runners for the master
 
     CLI Example:
@@ -43,7 +43,7 @@ def master():
     .. code-block:: bash
 
         salt-run jobs.master
-    '''
+    """
     return salt.utils.master.get_running_jobs(__opts__)
 
 
