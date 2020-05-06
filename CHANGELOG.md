@@ -6,6 +6,32 @@ This changelog follows [keepachangelog](https://keepachangelog.com/en/1.0.0/) fo
 This project versioning is _similar_ to [Semantic Versioning](https://semver.org), and is documented in [SEP 14](https://github.com/saltstack/salt-enhancement-proposals/pull/20/files).
 Versions are `MAJOR.PATCH`.
 
+### 3000.3
+
+### Removed
+
+### Deprecated
+
+### Changed
+
+### Fixed
+- [#57100](https://github.com/saltstack/salt/pull/57100) - Address Issues in CVE Release
+### Added
+
+
+### 3000.2
+
+### Removed
+
+### Deprecated
+
+### Changed
+
+### Fixed
+- [#56987](https://github.com/saltstack/salt/pull/56987) - CVE fix
+### Added
+
+
 ### 3000.1
 
 ### Removed
