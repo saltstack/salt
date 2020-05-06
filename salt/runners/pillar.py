@@ -29,6 +29,10 @@ def show_top(minion=None, saltenv="base"):
         __jid_event__.fire_event({"data": errors, "outputter": "nested"}, "progress")
         return errors
 
+    # needed because pillar compilation clobbers grains etc via lazyLoader
+    # this resets the masterminion back to known state
+    __salt__["salt.cmd"]("sys.reload_modules")
+
     return top
 
 
@@ -96,4 +100,9 @@ def show_pillar(minion="*", **kwargs):
     pillar = salt.pillar.Pillar(__opts__, grains, id_, saltenv, pillarenv=pillarenv)
 
     compiled_pillar = pillar.compile_pillar()
+
+    # needed because pillar compilation clobbers grains etc via lazyLoader
+    # this resets the masterminion back to known state
+    __salt__["salt.cmd"]("sys.reload_modules")
+
     return compiled_pillar
