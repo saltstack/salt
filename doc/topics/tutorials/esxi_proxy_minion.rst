@@ -21,7 +21,7 @@ ESXi Proxy Minion
     basic understanding of ESXi hosts. You can learn more about ESXi hosts on
     `VMware's various resources`_.
 
-.. _VMware's various resources: https://www.vmware.com/products/esxi-and-esx/overview
+.. _VMware's various resources: https://www.vmware.com/products/esxi-and-esx.html
 
 Salt's ESXi Proxy Minion allows a VMware ESXi host to be treated as an individual
 Salt Minion, without installing a Salt Minion on the ESXi host.
@@ -50,14 +50,14 @@ Salt's ESXi Proxy Minion was added in the 2015.8.4 release of Salt.
 
     Please see the `vSphere Comparison`_ page for more information.
 
-.. _vSphere Comparison: https://www.vmware.com/products/vsphere/compare
+.. _vSphere Comparison: https://www.vmware.com/products/vsphere.html#compare
 
 
 Dependencies
 ============
 
 Manipulation of the ESXi host via a Proxy Minion requires the machine running
-the Proxy Minion process to have the ESXCLI package (and all of it's dependencies)
+the Proxy Minion process to have the ESXCLI package (and all of its dependencies)
 and the pyVmomi Python Library to be installed.
 
 ESXi Password

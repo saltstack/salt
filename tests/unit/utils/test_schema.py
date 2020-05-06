@@ -45,13 +45,6 @@ try:
     HAS_STRICT_RFC3339 = True
 except ImportError:
     HAS_STRICT_RFC3339 = False
-
-try:
-    import isodate
-
-    HAS_ISODATE = True
-except ImportError:
-    HAS_ISODATE = False
 # pylint: enable=unused-import
 
 
@@ -876,10 +869,7 @@ class ConfigTestCase(TestCase):
         )
 
     @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
-    @skipIf(
-        any([HAS_ISODATE, HAS_STRICT_RFC3339]) is False,
-        "The 'strict_rfc3339' or 'isodate' library is missing",
-    )
+    @skipIf(not HAS_STRICT_RFC3339, "The 'strict_rfc3339' library is missing")
     def test_datetime_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.DateTimeItem(title="Item", description="Item description")

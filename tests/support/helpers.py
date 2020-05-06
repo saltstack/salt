@@ -11,7 +11,6 @@
 """
 # pylint: disable=repr-flag-used-in-string,wrong-import-order
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import base64
@@ -32,29 +31,35 @@ import textwrap
 import threading
 import time
 import types
+from contextlib import contextmanager
 
+import pytest
 import salt.ext.tornado.ioloop
 import salt.ext.tornado.web
-
-# Import Salt libs
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.versions
 from pytestsalt.utils import get_unused_localhost_port
-
-# Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import builtins, range
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
-
-# Import Salt Tests Support libs
 from tests.support.unit import SkipTest, _id, skip
 
 log = logging.getLogger(__name__)
 
 HAS_SYMLINKS = None
+
+
+PRE_PYTEST_SKIP_OR_NOT = "PRE_PYTEST_DONT_SKIP" not in os.environ
+PRE_PYTEST_SKIP_REASON = (
+    "PRE PYTEST - This test was skipped before running under pytest"
+)
+PRE_PYTEST_SKIP = pytest.mark.skipif(
+    PRE_PYTEST_SKIP_OR_NOT, reason=PRE_PYTEST_SKIP_REASON
+)
 
 
 def no_symlinks():
@@ -622,6 +627,9 @@ def requires_network(only_local_network=False):
                     cls.skipTest("No local network was detected")
                 return func(cls)
 
+            if os.environ.get("NO_INTERNET"):
+                cls.skipTest("Environment variable NO_INTERNET is set.")
+
             # We are using the google.com DNS records as numerical IPs to avoid
             # DNS lookups which could greatly slow down this check
             for addr in (
@@ -1079,21 +1087,24 @@ def runs_on(grains=None, **kwargs):
     def decorator(caller):
         @functools.wraps(caller)
         def wrapper(cls):
+            reason = kwargs.pop("reason", None)
             for kw, value in kwargs.items():
                 if isinstance(value, list):
                     if not any(
                         str(grains.get(kw)).lower() != str(v).lower() for v in value
                     ):
-                        cls.skipTest(
-                            "This test does not run on {}={}".format(kw, grains.get(kw))
-                        )
+                        if reason is None:
+                            reason = "This test does not run on {}={}".format(
+                                kw, grains.get(kw)
+                            )
+                        raise SkipTest(reason)
                 else:
                     if str(grains.get(kw)).lower() != str(value).lower():
-                        cls.skipTest(
-                            "This test runs on {}={}, not {}".format(
+                        if reason is None:
+                            reason = "This test runs on {}={}, not {}".format(
                                 kw, value, grains.get(kw)
                             )
-                        )
+                        raise SkipTest(reason)
             return caller(cls)
 
         return wrapper
@@ -1112,21 +1123,24 @@ def not_runs_on(grains=None, **kwargs):
     def decorator(caller):
         @functools.wraps(caller)
         def wrapper(cls):
+            reason = kwargs.pop("reason", None)
             for kw, value in kwargs.items():
                 if isinstance(value, list):
                     if any(
                         str(grains.get(kw)).lower() == str(v).lower() for v in value
                     ):
-                        cls.skipTest(
-                            "This test does not run on {}={}".format(kw, grains.get(kw))
-                        )
+                        if reason is None:
+                            reason = "This test does not run on {}={}".format(
+                                kw, grains.get(kw)
+                            )
+                        raise SkipTest(reason)
                 else:
                     if str(grains.get(kw)).lower() == str(value).lower():
-                        cls.skipTest(
-                            "This test does not run on {}={}, got {}".format(
+                        if reason is None:
+                            reason = "This test does not run on {}={}, got {}".format(
                                 kw, value, grains.get(kw)
                             )
-                        )
+                        raise SkipTest(reason)
             return caller(cls)
 
         return wrapper
@@ -1411,9 +1425,42 @@ def generate_random_name(prefix, size=6):
     size
         The number of characters to generate. Default: 6.
     """
-    return prefix + "".join(
-        random.choice(string.ascii_uppercase + string.digits) for x in range(size)
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please replace your call 'generate_random_name({0})' with 'random_string({0}, lowercase=False)' as "
+        "'generate_random_name' will be removed after {{date}}".format(prefix),
     )
+    return random_string(prefix, size=size, lowercase=False)
+
+
+def random_string(prefix, size=6, uppercase=True, lowercase=True, digits=True):
+    """
+    Generates a random string.
+
+    ..versionadded: 3001
+
+    Args:
+        prefix(str): The prefix for the random string
+        size(int): The size of the random string
+        uppercase(bool): If true, include uppercased ascii chars in choice sample
+        lowercase(bool): If true, include lowercased ascii chars in choice sample
+        digits(bool): If true, include digits in choice sample
+    Returns:
+        str: The random string
+    """
+    if not any([uppercase, lowercase, digits]):
+        raise RuntimeError(
+            "At least one of 'uppercase', 'lowercase' or 'digits' needs to be true"
+        )
+    choices = []
+    if uppercase:
+        choices.extend(string.ascii_uppercase)
+    if lowercase:
+        choices.extend(string.ascii_lowercase)
+    if digits:
+        choices.extend(string.digits)
+
+    return prefix + "".join(random.choice(choices) for _ in range(size))
 
 
 class Webserver(object):
@@ -1696,3 +1743,20 @@ class VirtualEnv(object):
         sminion.functions.virtualenv.create(
             self.venv_dir, python=self._get_real_python()
         )
+
+
+@contextmanager
+def change_cwd(path):
+    """
+    Context manager helper to change CWD for a with code block and restore
+    it at the end
+    """
+    old_cwd = os.getcwd()
+
+    os.chdir(path)
+
+    # Do stuff
+    yield
+
+    # Restore Old CWD
+    os.chdir(old_cwd)

@@ -17,7 +17,7 @@ Dependencies
 The vmware module for Salt Cloud requires the ``pyVmomi`` package, which is
 available at PyPI:
 
-https://pypi.python.org/pypi/pyvmomi
+https://pypi.org/project/pyvmomi/
 
 This package can be installed using `pip` or `easy_install`:
 
@@ -508,7 +508,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     Specify the guest id of the VM. For a full list of supported values see the
     VMware vSphere documentation:
 
-    http://pubs.vmware.com/vsphere-60/topic/com.vmware.wssdk.apiref.doc/vim.vm.GuestOsDescriptor.GuestOsIdentifier.html
+    https://code.vmware.com/apis?pid=com.vmware.wssdk.apiref.doc&release=vsphere-60&topic=vim.vm.GuestOsDescriptor.GuestOsIdentifier.html
 
     .. note::
 

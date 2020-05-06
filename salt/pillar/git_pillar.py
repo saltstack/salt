@@ -151,7 +151,7 @@ The corresponding Pillar top file would look like this:
 With the addition of pygit2_ support, git_pillar can now interact with
 authenticated remotes. Authentication works just like in gitfs (as outlined in
 the :ref:`Git Fileserver Backend Walkthrough <gitfs-authentication>`), only
-with the global authenication parameter names prefixed with ``git_pillar``
+with the global authentication parameter names prefixed with ``git_pillar``
 instead of ``gitfs`` (e.g. :conf_master:`git_pillar_pubkey`,
 :conf_master:`git_pillar_privkey`, :conf_master:`git_pillar_passphrase`, etc.).
 
@@ -365,6 +365,28 @@ remotes. The update is handled within the global loop, hence
 
     git_pillar_update_interval: 120
 
+.. _git-pillar-fallback:
+
+fallback
+~~~~~~~~
+
+.. versionadded:: sodium
+
+Setting ``fallback`` per-remote or global configuration parameter will map non-existing environments to a default branch. Example:
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - git:
+        - __env__ https://mydomain.tld/top.git
+          - all_saltenvs: master
+        - __env__ https://mydomain.tld/pillar-nginx.git:
+          - mountpoint: web/server/
+          - fallback: master
+        - __env__ https://mydomain.tld/pillar-appdata.git:
+          - mountpoint: web/server/
+          - fallback: master
+
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -384,7 +406,7 @@ from salt.exceptions import FileserverConfigError
 from salt.ext import six
 from salt.pillar import Pillar
 
-PER_REMOTE_OVERRIDES = ("env", "root", "ssl_verify", "refspecs")
+PER_REMOTE_OVERRIDES = ("env", "root", "ssl_verify", "refspecs", "fallback")
 PER_REMOTE_ONLY = ("name", "mountpoint", "all_saltenvs")
 GLOBAL_ONLY = ("base", "branch")
 

@@ -3,25 +3,21 @@
 integration tests for mac_softwareupdate
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
-import salt.utils.path
-import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
-
-# Import Salt Testing libs
+from tests.support.helpers import (
+    destructiveTest,
+    runs_on,
+    skip_if_binaries_missing,
+    skip_if_not_root,
+)
 from tests.support.unit import skipIf
 
 
 @skip_if_not_root
-@skipIf(not salt.utils.platform.is_darwin(), "Test only available on macOS")
-@skipIf(
-    not salt.utils.path.which("softwareupdate"),
-    "'softwareupdate' binary not found in $PATH",
-)
+@runs_on(kernel="Darwin")
+@skip_if_binaries_missing("softwareupdate")
 class MacSoftwareUpdateModuleTest(ModuleCase):
     """
     Validate the mac_softwareupdate module
@@ -60,6 +56,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
 
         super(MacSoftwareUpdateModuleTest, self).tearDown()
 
+    @skipIf(True, "SLOWTEST skip")
     def test_list_available(self):
         """
         Test softwareupdate.list_available
@@ -69,6 +66,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         self.assertIsInstance(self.run_function("softwareupdate.list_available"), dict)
 
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_ignore(self):
         """
         Test softwareupdate.ignore
@@ -88,6 +86,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         self.assertIn("squidward", self.run_function("softwareupdate.list_ignored"))
 
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_schedule(self):
         """
         Test softwareupdate.schedule_enable
@@ -102,6 +101,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         self.assertFalse(self.run_function("softwareupdate.schedule_enabled"))
 
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_update(self):
         """
         Test softwareupdate.update_all
@@ -126,6 +126,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
             self.run_function("softwareupdate.update", ["spongebob"]),
         )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_list_downloads(self):
         """
         Test softwareupdate.list_downloads
@@ -133,6 +134,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         self.assertIsInstance(self.run_function("softwareupdate.list_downloads"), list)
 
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_download(self):
         """
         Test softwareupdate.download
@@ -147,6 +149,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         )
 
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_download_all(self):
         """
         Test softwareupdate.download_all
@@ -154,6 +157,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         self.assertIsInstance(self.run_function("softwareupdate.download_all"), list)
 
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_get_set_reset_catalog(self):
         """
         Test softwareupdate.download_all

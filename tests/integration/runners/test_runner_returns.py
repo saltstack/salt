@@ -2,7 +2,6 @@
 """
 Tests for runner_returns
 """
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
@@ -10,18 +9,18 @@ import os
 import socket
 import tempfile
 
-# Import salt libs
+import pytest
 import salt.payload
 import salt.utils.args
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.yaml
-
-# Import Salt Testing libs
 from tests.support.case import ShellCase
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf
 
 
+@pytest.mark.windows_whitelisted
 class RunnerReturnsTest(ShellCase):
     """
     Test the "runner_returns" feature
@@ -33,7 +32,7 @@ class RunnerReturnsTest(ShellCase):
         """
         self.job_dir = os.path.join(self.master_opts["cachedir"], "jobs")
         self.hash_type = self.master_opts["hash_type"]
-        self.master_d_dir = os.path.join(self.config_dir, "master.d")
+        self.master_d_dir = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "master.d")
         try:
             os.makedirs(self.master_d_dir)
         except OSError as exc:
@@ -51,7 +50,7 @@ class RunnerReturnsTest(ShellCase):
         salt.utils.files.rm_rf(self.master_d_dir)
         # Force a reload of the configuration now that our temp config file has
         # been removed.
-        self.run_run_plus("test.arg", __reload_config=True)
+        self.run_run_plus("test.arg")
 
     @staticmethod
     def clean_return(data):
@@ -77,14 +76,13 @@ class RunnerReturnsTest(ShellCase):
         self.conf.flush()
         self.conf.close()
 
+    @skipIf(True, "SLOWTEST skip")
     def test_runner_returns_disabled(self):
         """
         Test with runner_returns enabled
         """
         self.write_conf({"runner_returns": False})
-        ret = self.run_run_plus(
-            "test.arg", "foo", bar="hello world!", __reload_config=True
-        )
+        ret = self.run_run_plus("test.arg", "foo", bar="hello world!")
 
         jid = ret.get("jid")
         if jid is None:
@@ -97,14 +95,13 @@ class RunnerReturnsTest(ShellCase):
         )
         self.assertFalse(os.path.isfile(serialized_return))
 
+    @skipIf(True, "SLOWTEST skip")
     def test_runner_returns_enabled(self):
         """
         Test with runner_returns enabled
         """
         self.write_conf({"runner_returns": True})
-        ret = self.run_run_plus(
-            "test.arg", "foo", bar="hello world!", __reload_config=True
-        )
+        ret = self.run_run_plus("test.arg", "foo", bar="hello world!")
 
         jid = ret.get("jid")
         if jid is None:

@@ -3,45 +3,32 @@
 integration tests for mac_system
 """
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-import random
-import string
 
-# Import salt libs
-import salt.utils.path
-import salt.utils.platform
-from salt.ext.six.moves import range
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, flaky, skip_if_not_root
+from tests.support.helpers import (
+    destructiveTest,
+    flaky,
+    random_string,
+    runs_on,
+    skip_if_binaries_missing,
+    skip_if_not_root,
+)
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
 
-def __random_string(size=6):
-    """
-    Generates a random username
-    """
-    return "RS-" + "".join(
-        random.choice(string.ascii_uppercase + string.digits) for x in range(size)
-    )
-
-
-SET_COMPUTER_NAME = __random_string()
-SET_SUBNET_NAME = __random_string()
+SET_COMPUTER_NAME = random_string("RS-", lowercase=False)
+SET_SUBNET_NAME = random_string("RS-", lowercase=False)
 
 
 @skip_if_not_root
 @flaky(attempts=10)
-@skipIf(not salt.utils.platform.is_darwin(), "Test only available on macOS")
-@skipIf(
-    not salt.utils.path.which("systemsetup"), "'systemsetup' binary not found in $PATH"
-)
+@runs_on(kernel="Darwin")
+@skip_if_binaries_missing("systemsetup")
 class MacSystemModuleTest(ModuleCase):
     """
     Validate the mac_system module
@@ -81,6 +68,7 @@ class MacSystemModuleTest(ModuleCase):
         )
 
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_get_set_remote_login(self):
         """
         Test system.get_remote_login
@@ -109,6 +97,7 @@ class MacSystemModuleTest(ModuleCase):
         )
 
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_get_set_remote_events(self):
         """
         Test system.get_remote_events
@@ -137,6 +126,7 @@ class MacSystemModuleTest(ModuleCase):
         )
 
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_get_set_subnet_name(self):
         """
         Test system.get_subnet_name
@@ -145,6 +135,7 @@ class MacSystemModuleTest(ModuleCase):
         self.assertTrue(self.run_function("system.set_subnet_name", [SET_SUBNET_NAME]))
         self.assertEqual(self.run_function("system.get_subnet_name"), SET_SUBNET_NAME)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_get_list_startup_disk(self):
         """
         Test system.get_startup_disk
@@ -181,6 +172,7 @@ class MacSystemModuleTest(ModuleCase):
             self.run_function("system.set_restart_delay", [70]),
         )
 
+    @skipIf(True, "SLOWTEST skip")
     def test_get_set_disable_keyboard_on_lock(self):
         """
         Test system.get_disable_keyboard_on_lock
@@ -247,7 +239,7 @@ class MacSystemModuleTest(ModuleCase):
 
 
 @skip_if_not_root
-@skipIf(not salt.utils.platform.is_darwin(), "Test only available on macOS")
+@runs_on(kernel="Darwin")
 class MacSystemComputerNameTest(ModuleCase):
     def setUp(self):
         self.COMPUTER_NAME = self.run_function("system.get_computer_name")
@@ -262,6 +254,7 @@ class MacSystemComputerNameTest(ModuleCase):
     # investigate
     # @skipIf(salt.utils.platform.is_darwin() and six.PY3, 'This test hangs on OS X on Py3.  Skipping until #53566 is merged.')
     @destructiveTest
+    @skipIf(True, "SLOWTEST skip")
     def test_get_set_computer_name(self):
         """
         Test system.get_computer_name

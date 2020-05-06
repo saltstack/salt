@@ -27,7 +27,7 @@ def __virtual__():
     """
     if salt.utils.platform.is_windows():
         return __virtualname__
-    return False
+    return (False, "Module win_certutil: module only works on Windows systems.")
 
 
 def get_cert_serial(cert_file):

@@ -1,19 +1,14 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import salt libs
+import pytest
 import salt.utils.path
-
-# Import 3rd-party libs
 from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import range
 from salt.modules import mysql as mysqlmod
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
@@ -36,6 +31,7 @@ if not salt.utils.path.which("mysqladmin"):
     "Please install MySQL bindings and a MySQL Server before running"
     "MySQL integration tests.",
 )
+@pytest.mark.windows_whitelisted
 class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
     """
     Module testing database creation on a real MySQL Server.
@@ -522,7 +518,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
         )
         expected = []
         for tablename, engine in sorted(six.iteritems(tablenames)):
-            if engine is "MEMORY":
+            if engine == "MEMORY":
                 expected.append(
                     [
                         {
@@ -557,7 +553,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
         )
         expected = []
         for tablename, engine in sorted(six.iteritems(tablenames)):
-            if engine is "MYISAM":
+            if engine == "MYISAM":
                 expected.append(
                     [
                         {
@@ -593,7 +589,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
 
         expected = []
         for tablename, engine in sorted(six.iteritems(tablenames)):
-            if engine is "MYISAM":
+            if engine == "MYISAM":
                 expected.append(
                     [
                         {
@@ -604,7 +600,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
                         }
                     ]
                 )
-            elif engine is "InnoDB":
+            elif engine == "InnoDB":
                 expected.append(
                     [
                         {
@@ -624,7 +620,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
                         },
                     ]
                 )
-            elif engine is "MEMORY":
+            elif engine == "MEMORY":
                 expected.append(
                     [
                         {
@@ -654,6 +650,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
     "Please install MySQL bindings and a MySQL Server before running"
     "MySQL integration tests.",
 )
+@pytest.mark.windows_whitelisted
 class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
     """
     User Creation and connection tests
@@ -1327,6 +1324,7 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
     "Please install MySQL bindings and a MySQL Server before running"
     "MySQL integration tests.",
 )
+@pytest.mark.windows_whitelisted
 class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
     """
     User Creation and connection tests
@@ -1715,6 +1713,7 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
     "Please install MySQL bindings and a MySQL Server before running"
     "MySQL integration tests.",
 )
+@pytest.mark.windows_whitelisted
 class MysqlModuleFileQueryTest(ModuleCase, SaltReturnAssertsMixin):
     """
     Test file query module

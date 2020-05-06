@@ -270,7 +270,7 @@ def latest_version(*names, **kwargs):
     fromrepo = kwargs.pop("fromrepo", None)
     cache_valid_time = kwargs.pop("cache_valid_time", 0)
 
-    if len(names) == 0:
+    if not names:
         return ""
     ret = {}
     # Initialize the dict with empty strings
@@ -634,7 +634,7 @@ def install(
     if not fromrepo and repo:
         fromrepo = repo
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     cmd_prefix = []
@@ -821,7 +821,7 @@ def install(
         # all_pkgs contains the argument to be passed to apt-get install, which
         # when a specific version is requested will be in the format
         # name=version.  Strip off the '=' if present so we can compare the
-        # held package names against the pacakges we are trying to install.
+        # held package names against the packages we are trying to install.
         targeted_names = [x.split("=")[0] for x in all_pkgs]
         to_unhold = [x for x in hold_pkgs if x in targeted_names]
 
@@ -1645,6 +1645,34 @@ def list_repo_pkgs(*args, **kwargs):  # pylint: disable=unused-import
     return ret
 
 
+def _skip_source(source):
+    """
+    Decide to skip source or not.
+
+    :param source:
+    :return:
+    """
+    if source.invalid:
+        if (
+            source.uri
+            and source.type
+            and source.type in ("deb", "deb-src", "rpm", "rpm-src")
+        ):
+            pieces = source.mysplit(source.line)
+            if pieces[1].strip()[0] == "[":
+                options = pieces.pop(1).strip("[]").split()
+                if len(options) > 0:
+                    log.debug(
+                        "Source %s will be included although is marked invalid",
+                        source.uri,
+                    )
+                    return False
+            return True
+        else:
+            return True
+    return False
+
+
 def list_repos():
     """
     Lists all repos in the sources.list (and sources.lists.d) files
@@ -1660,7 +1688,7 @@ def list_repos():
     repos = {}
     sources = sourceslist.SourcesList()
     for source in sources.list:
-        if source.invalid:
+        if _skip_source(source):
             continue
         repo = {}
         repo["file"] = source.file

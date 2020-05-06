@@ -41,7 +41,7 @@ def __virtual__():
     """
     if "redis.set_key" in __salt__:
         return __virtualname__
-    return False
+    return (False, "redis module could not be loaded")
 
 
 def string(name, value, expire=None, expireat=None, **connection_args):

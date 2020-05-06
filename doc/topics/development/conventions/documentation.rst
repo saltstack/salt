@@ -26,8 +26,8 @@ writing guidelines. Those guidelines are not strictly enforced but rather serve
 as an excellent resource for technical writing questions. The `NCBI style
 guide`_ is another very approachable resource.
 
-.. _`IEEE style guide`: https://development.standards.ieee.org/myproject/Public/mytools/draft/styleman.pdf
-.. _`NCBI style guide`: http://www.ncbi.nlm.nih.gov/books/NBK993/
+.. _`IEEE style guide`: https://mentor.ieee.org/myproject/Public/mytools/draft/styleman.pdf
+.. _`NCBI style guide`: https://www.ncbi.nlm.nih.gov/books/NBK993/
 
 Point-of-view
 -------------
@@ -306,7 +306,7 @@ Documentation Changes and Fixes
 Documentation changes and fixes should be made against the earliest supported
 release branch that the update applies to. The practice of updating a release
 branch instead of making all documentation changes against Salt's main, default
-branch, ``develop``, is necessary in order for the docs to be as up-to-date as
+branch, ``master``, is necessary in order for the docs to be as up-to-date as
 possible when the docs are built.
 
 The workflow mentioned above is also in line with the recommendations outlined

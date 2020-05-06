@@ -18,6 +18,7 @@ from tests.support.case import ModuleCase
 from tests.support.helpers import Webserver, skip_if_not_root
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf
 
 # Setup logging
 log = logging.getLogger(__name__)
@@ -147,6 +148,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
 
         self._check_extracted(self.untar_file)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_archive_extracted_with_strip_in_options(self):
         """
         test archive.extracted with --strip in options
@@ -185,6 +187,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
 
         self._check_extracted(os.path.join(ARCHIVE_DIR, "README"))
 
+    @skipIf(True, "SLOWTEST skip")
     def test_archive_extracted_without_archive_format(self):
         """
         test archive.extracted with no archive_format option
@@ -252,6 +255,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
 
         self._check_extracted(self.untar_file)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_local_archive_extracted_with_source_hash(self):
         """
         test archive.extracted with local file and valid hash
@@ -268,6 +272,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
 
         self._check_extracted(self.untar_file)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_local_archive_extracted_with_bad_source_hash(self):
         """
         test archive.extracted with local file and bad hash
@@ -298,6 +303,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
 
         self._check_extracted(self.untar_file)
 
+    @skipIf(True, "SLOWTEST skip")
     def test_archive_extracted_with_non_base_saltenv(self):
         """
         test archive.extracted with a saltenv other than `base`
@@ -311,6 +317,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self._check_extracted(os.path.join(ARCHIVE_DIR, self.untar_file))
 
+    @skipIf(True, "SLOWTEST skip")
     def test_local_archive_extracted_with_skip_files_list_verify(self):
         """
         test archive.extracted with local file and skip_files_list_verify set to True
@@ -346,3 +353,31 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
 
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(expected_comment, ret)
+
+    @skipIf(True, "SLOWTEST skip")
+    def test_local_archive_extracted_trim_output(self):
+        """
+        test archive.extracted with local file and trim_output set to 1
+        """
+        expected_changes = {
+            "directories_created": ["/tmp/archive/"],
+            "extracted_files": ["custom"],
+        }
+        ret = self.run_state(
+            "archive.extracted",
+            name=ARCHIVE_DIR,
+            source=self.archive_local_tar_source,
+            archive_format="tar",
+            skip_files_list_verify=True,
+            source_hash_update=True,
+            source_hash=ARCHIVE_TAR_SHA_HASH,
+            trim_output=1,
+        )
+
+        self.assertSaltTrueReturn(ret)
+        self._check_extracted(self.untar_file)
+        state_ret = ret["archive_|-/tmp/archive_|-/tmp/archive_|-extracted"]
+        self.assertTrue(
+            state_ret["comment"].endswith("Output was trimmed to 1 number of lines")
+        )
+        self.assertEqual(state_ret["changes"], expected_changes)

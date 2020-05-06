@@ -8,14 +8,14 @@ Example state to install the latest kernel from package repositories:
 .. code-block:: yaml
 
     install-latest-kernel:
-      kernel.latest_installed: []
+      kernelpkg.latest_installed: []
 
 Example state to boot the system if a new kernel has been installed:
 
 .. code-block:: yaml
 
     boot-latest-kernel:
-      kernel.latest_active:
+      kernelpkg.latest_active:
         - at_time: 1
 
 Example state chaining the install and reboot operations:
@@ -23,13 +23,13 @@ Example state chaining the install and reboot operations:
 .. code-block:: yaml
 
     install-latest-kernel:
-      kernel.latest_installed: []
+      kernelpkg.latest_installed: []
 
     boot-latest-kernel:
-      kernel.latest_active:
+      kernelpkg.latest_active:
         - at_time: 1
         - onchanges:
-          - kernel: install-latest-kernel
+          - kernelpkg: install-latest-kernel
 
 Chaining can also be achieved using wait/listen requisites:
 
@@ -56,7 +56,9 @@ def __virtual__():
     Only make these states available if a kernelpkg provider has been detected or
     assigned for this minion
     """
-    return "kernelpkg.upgrade" in __salt__
+    if "kernelpkg.upgrade" in __salt__:
+        return True
+    return (False, "kernelpkg module could not be loaded")
 
 
 def latest_installed(name, **kwargs):  # pylint: disable=unused-argument

@@ -318,7 +318,7 @@ def compile_config(
         cmd.append(script_parameters)
     cmd.extend([";", config_name])
     if config_data:
-        cmd.append(config_data)
+        cmd.extend(["-ConfigurationData", config_data])
     cmd.append(
         "| Select-Object -Property FullName, Extension, Exists, "
         '@{Name="LastWriteTime";Expression={Get-Date ($_.LastWriteTime) '
@@ -365,7 +365,7 @@ def apply_config(path, source=None, salt_env="base"):
 
     CLI Example:
 
-    To apply a config that already exists on the the system
+    To apply a config that already exists on the system
 
     .. code-block:: bash
 

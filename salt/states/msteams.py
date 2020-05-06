@@ -33,7 +33,9 @@ def __virtual__():
     """
     Only load if the msteams module is available in __salt__
     """
-    return "msteams" if "msteams.post_card" in __salt__ else False
+    if "msteams.post_card" in __salt__:
+        return "msteams"
+    return (False, "msteams module could not be loaded")
 
 
 def post_card(name, message, hook_url=None, title=None, theme_color=None):

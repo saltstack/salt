@@ -74,8 +74,7 @@ def __virtual__():
     """
     if "boto_ec2.get_key" in __salt__:
         return "boto_ec2"
-    else:
-        return False
+    return (False, "boto_ec2 module could not be loaded")
 
 
 def key_present(
@@ -827,7 +826,7 @@ def instance_present(
         a public_ip instead.
     allocate_eip:
         (bool) - Allocate and attach an EIP on-the-fly for this instance.  Note
-        you'll want to releaase this address when terminating the instance,
+        you'll want to release this address when terminating the instance,
         either manually or via the 'release_eip' flag to 'instance_absent'.
     region
         (string) - Region to connect to.
