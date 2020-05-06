@@ -1182,7 +1182,7 @@ class State(object):
             elif data["fun"] == "symlink":
                 if "bin" in data["name"]:
                     self.module_refresh()
-        elif data["state"] in ("pkg", "ports"):
+        elif data["state"] in ("pkg", "ports", "pip"):
             self.module_refresh()
 
     def verify_data(self, data):

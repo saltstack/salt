@@ -113,7 +113,7 @@ def get_vault_connection():
                         payload["secret_id"] = __opts__["vault"]["auth"]["secret_id"]
                     response = requests.post(url, json=payload, verify=verify)
                     if response.status_code != 200:
-                        errmsg = "An error occured while getting a token from approle"
+                        errmsg = "An error occurred while getting a token from approle"
                         raise salt.exceptions.CommandExecutionError(errmsg)
                     __opts__["vault"]["auth"]["token"] = response.json()["auth"][
                         "client_token"

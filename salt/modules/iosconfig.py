@@ -384,7 +384,7 @@ def diff_tree(
         ``running_path`` is set.
 
     running_path
-        Absolute or remote path from where to load the runing configuration
+        Absolute or remote path from where to load the running configuration
         text. This argument allows any URI supported by
         :py:func:`cp.get_url <salt.modules.cp.get_url>`), e.g., ``salt://``,
         ``https://``, ``s3://``, ``ftp:/``, etc.
@@ -430,7 +430,7 @@ def diff_text(
         ``running_path`` is set.
 
     running_path
-        Absolute or remote path from where to load the runing configuration
+        Absolute or remote path from where to load the running configuration
         text. This argument allows any URI supported by
         :py:func:`cp.get_url <salt.modules.cp.get_url>`), e.g., ``salt://``,
         ``https://``, ``s3://``, ``ftp:/``, etc.

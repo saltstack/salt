@@ -733,7 +733,7 @@ def create(vm_):
 def _import_api():
     """
     Download https://<url>/pve-docs/api-viewer/apidoc.js
-    Extract content of pveapi var (json formated)
+    Extract content of pveapi var (json formatted)
     Load this json content into global variable "api"
     """
     global api

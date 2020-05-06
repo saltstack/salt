@@ -252,7 +252,7 @@ def returner(ret):
         # Init the state counts
         if options["states_count"]:
             counts = {
-                "suceeded": 0,
+                "succeeded": 0,
                 "failed": 0,
             }
 
@@ -295,7 +295,7 @@ def returner(ret):
                 if state_data["result"] is False:
                     counts["failed"] += 1
                 else:
-                    counts["suceeded"] += 1
+                    counts["succeeded"] += 1
 
     # Ensure the index exists
     _ensure_index(index)
