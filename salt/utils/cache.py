@@ -55,7 +55,7 @@ class CacheDict(dict):
         """
         Enforce the TTL to a specific key, delete if its past TTL
         """
-        if key not in self._key_cache_time:
+        if key not in self._key_cache_time or self._ttl == 0:
             return
         if time.time() - self._key_cache_time[key] > self._ttl:
             del self._key_cache_time[key]
@@ -97,7 +97,7 @@ class CacheDisk(CacheDict):
         """
         Enforce the TTL to a specific key, delete if its past TTL
         """
-        if key not in self._key_cache_time:
+        if key not in self._key_cache_time or self._ttl == 0:
             return
         if time.time() - self._key_cache_time[key] > self._ttl:
             del self._key_cache_time[key]
