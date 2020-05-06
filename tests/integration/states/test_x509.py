@@ -148,6 +148,60 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         assert "Certificate" in ret[key]["changes"]
         assert "New" in ret[key]["changes"]["Certificate"]
 
+    def test_cert_issue_not_before_not_after(self):
+        ret = self.run_function(
+            "state.apply",
+            ["test_cert_not_before_not_after"],
+            pillar={"tmp_dir": RUNTIME_VARS.TMP},
+        )
+        key = "x509_|-test_crt_|-{}/pki/test.crt_|-certificate_managed".format(
+            RUNTIME_VARS.TMP
+        )
+        assert key in ret
+        assert "changes" in ret[key]
+        assert "Certificate" in ret[key]["changes"]
+        assert "New" in ret[key]["changes"]["Certificate"]
+        assert "Not Before" in ret[key]["changes"]["Certificate"]["New"]
+        assert "Not After" in ret[key]["changes"]["Certificate"]["New"]
+        not_before = ret[key]["changes"]["Certificate"]["New"]["Not Before"]
+        not_after = ret[key]["changes"]["Certificate"]["New"]["Not After"]
+        assert not_before == "2019-05-05 00:00:00"
+        assert not_after == "2020-05-05 14:30:00"
+
+    def test_cert_issue_not_before(self):
+        ret = self.run_function(
+            "state.apply",
+            ["test_cert_not_before"],
+            pillar={"tmp_dir": RUNTIME_VARS.TMP},
+        )
+        key = "x509_|-test_crt_|-{}/pki/test.crt_|-certificate_managed".format(
+            RUNTIME_VARS.TMP
+        )
+        assert key in ret
+        assert "changes" in ret[key]
+        assert "Certificate" in ret[key]["changes"]
+        assert "New" in ret[key]["changes"]["Certificate"]
+        assert "Not Before" in ret[key]["changes"]["Certificate"]["New"]
+        assert "Not After" in ret[key]["changes"]["Certificate"]["New"]
+        not_before = ret[key]["changes"]["Certificate"]["New"]["Not Before"]
+        assert not_before == "2019-05-05 00:00:00"
+
+    def test_cert_issue_not_after(self):
+        ret = self.run_function(
+            "state.apply", ["test_cert_not_after"], pillar={"tmp_dir": RUNTIME_VARS.TMP}
+        )
+        key = "x509_|-test_crt_|-{}/pki/test.crt_|-certificate_managed".format(
+            RUNTIME_VARS.TMP
+        )
+        assert key in ret
+        assert "changes" in ret[key]
+        assert "Certificate" in ret[key]["changes"]
+        assert "New" in ret[key]["changes"]["Certificate"]
+        assert "Not Before" in ret[key]["changes"]["Certificate"]["New"]
+        assert "Not After" in ret[key]["changes"]["Certificate"]["New"]
+        not_after = ret[key]["changes"]["Certificate"]["New"]["Not After"]
+        assert not_after == "2020-05-05 14:30:00"
+
     @with_tempfile(suffix=".crt", create=False)
     @with_tempfile(suffix=".key", create=False)
     def test_issue_41858(self, keyfile, crtfile):
