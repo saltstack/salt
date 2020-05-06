@@ -8,37 +8,17 @@ Versions are `MAJOR.PATCH`.
 
 ### 3000.3
 
-### Removed
-
-### Deprecated
-
-### Changed
-
 ### Fixed
 - [#57100](https://github.com/saltstack/salt/pull/57100) - Address Issues in CVE Release
-### Added
 
 
 ### 3000.2
 
-### Removed
-
-### Deprecated
-
-### Changed
-
 ### Fixed
 - [#56987](https://github.com/saltstack/salt/pull/56987) - CVE fix
-### Added
 
 
 ### 3000.1
-
-### Removed
-
-### Deprecated
-
-### Changed
 
 ### Fixed
 - [#56082](https://github.com/saltstack/salt/pull/56082) - Fix saltversioninfo grain for new version
@@ -71,9 +51,8 @@ Versions are `MAJOR.PATCH`.
 - [#56418](https://github.com/saltstack/salt/pull/56418) - Ensure version.py included before we install
 - [#56435](https://github.com/saltstack/salt/pull/56435) - Update mac build scripts
 
-### Added
 
-## 3000 - Neon [2020-02-10]
+### 3000 - Neon [2020-02-10]
 
 ### Removed
 
