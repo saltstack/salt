@@ -148,10 +148,9 @@ def _check_bundled():
     """
     Gather run-time information to indicate if we are running from source or bundled.
     """
-    frozen = False
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
-        frozen = True
-    return frozen
+        return True
+    return False
 
 
 def _get_pip_bin(bin_env):
