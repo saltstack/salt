@@ -36,7 +36,6 @@ docker-pycreds==0.4.0     # via docker
 docker==3.7.2
 docutils==0.14            # via botocore
 ecdsa==0.13.3             # via python-jose
-enum34==1.1.6
 filelock==3.0.12          # via virtualenv
 future==0.17.1            # via python-jose
 genshi==0.7.3
