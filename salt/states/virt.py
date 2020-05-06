@@ -337,19 +337,15 @@ def defined(
         but ``x86_64`` is prefed over ``i686``. Only used when creating a new virtual machine.
 
     :param boot:
-        Specifies kernel for the virtual machine, as well as boot parameters
-        for the virtual machine. This is an optionl parameter, and all of the
-        keys are optional within the dictionary. If a remote path is provided
-        to kernel or initrd, salt will handle the downloading of the specified
-        remote fild, and will modify the XML accordingly.
+        Specifies kernel, initial ramdisk and kernel command line parameters for the virtual machine.
+        This is an optional parameter, all of the keys are optional within the dictionary.
 
-        .. code-block:: python
+        Refer to :ref:`init-boot-def` for the complete boot parameters description.
 
-            {
-                'kernel': '/root/f8-i386-vmlinuz',
-                'initrd': '/root/f8-i386-initrd',
-                'cmdline': 'console=ttyS0 ks=http://example.com/f8-i386/os/'
-            }
+        To update any boot parameters, specify the new path for each. To remove any boot parameters,
+        pass a None object, for instance: 'kernel': ``None``.
+
+        .. versionadded:: 3000
 
     :param update: set to ``False`` to prevent updating a defined domain. (Default: ``True``)
 
@@ -567,19 +563,13 @@ def running(
         .. versionadded:: 3000
 
     :param boot:
-        Specifies kernel for the virtual machine, as well as boot parameters
-        for the virtual machine. This is an optionl parameter, and all of the
-        keys are optional within the dictionary. If a remote path is provided
-        to kernel or initrd, salt will handle the downloading of the specified
-        remote fild, and will modify the XML accordingly.
+        Specifies kernel, initial ramdisk and kernel command line parameters for the virtual machine.
+        This is an optional parameter, all of the keys are optional within the dictionary.
 
-        .. code-block:: python
+        Refer to :ref:`init-boot-def` for the complete boot parameters description.
 
-            {
-                'kernel': '/root/f8-i386-vmlinuz',
-                'initrd': '/root/f8-i386-initrd',
-                'cmdline': 'console=ttyS0 ks=http://example.com/f8-i386/os/'
-            }
+        To update any boot parameters, specify the new path for each. To remove any boot parameters,
+        pass a None object, for instance: 'kernel': ``None``.
 
         .. versionadded:: 3000
 
