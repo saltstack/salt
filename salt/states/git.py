@@ -681,7 +681,9 @@ def latest(
     # will be passed where appropriate to ensure that these commands are
     # authenticated and that the git LFS plugin can download files.
     use_lfs = bool(
-        __salt__["git.config_get_regexp"](r"filter\.lfs\.", **{"global": True})
+        __salt__["git.config_get_regexp"](
+            r"filter\.lfs\.", **{"global": True, "ignore_retcode": True}
+        )
     )
     lfs_opts = {"identity": identity} if use_lfs else {}
 
