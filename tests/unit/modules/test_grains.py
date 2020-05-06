@@ -729,8 +729,8 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
         )
 
     def test_setval_unicode(self):
-        key = "塩"   # salt
-        value = "人生です"  # is life
+        key = "塩"  # salt
+        value = "塩人生です"  # salt is life
 
         # Note: call setvals 2 times is important
         # 1: add key to conf grains
