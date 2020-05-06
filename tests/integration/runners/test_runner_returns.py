@@ -50,7 +50,7 @@ class RunnerReturnsTest(ShellCase):
         salt.utils.files.rm_rf(self.master_d_dir)
         # Force a reload of the configuration now that our temp config file has
         # been removed.
-        self.run_run_plus("test.arg", __reload_config=True)
+        self.run_run_plus("test.arg")
 
     @staticmethod
     def clean_return(data):
@@ -82,9 +82,7 @@ class RunnerReturnsTest(ShellCase):
         Test with runner_returns enabled
         """
         self.write_conf({"runner_returns": False})
-        ret = self.run_run_plus(
-            "test.arg", "foo", bar="hello world!", __reload_config=True
-        )
+        ret = self.run_run_plus("test.arg", "foo", bar="hello world!")
 
         jid = ret.get("jid")
         if jid is None:
@@ -103,9 +101,7 @@ class RunnerReturnsTest(ShellCase):
         Test with runner_returns enabled
         """
         self.write_conf({"runner_returns": True})
-        ret = self.run_run_plus(
-            "test.arg", "foo", bar="hello world!", __reload_config=True
-        )
+        ret = self.run_run_plus("test.arg", "foo", bar="hello world!")
 
         jid = ret.get("jid")
         if jid is None:

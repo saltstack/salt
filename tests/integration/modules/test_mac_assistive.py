@@ -3,12 +3,10 @@
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Testing Libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import destructiveTest, runs_on, skip_if_not_root
 from tests.support.unit import skipIf
 
 OSA_SCRIPT = "/usr/bin/osascript"
@@ -16,6 +14,7 @@ OSA_SCRIPT = "/usr/bin/osascript"
 
 @destructiveTest
 @skip_if_not_root
+@runs_on(kernel="Darwin")
 class MacAssistiveTest(ModuleCase):
     """
     Integration tests for the mac_assistive module.
@@ -25,10 +24,6 @@ class MacAssistiveTest(ModuleCase):
         """
         Sets up test requirements
         """
-        os_grain = self.run_function("grains.item", ["kernel"])
-        if os_grain["kernel"] not in "Darwin":
-            self.skipTest("Test not applicable to '{kernel}' kernel".format(**os_grain))
-
         # Let's install a bundle to use in tests
         self.run_function("assistive.install", [OSA_SCRIPT, True])
 

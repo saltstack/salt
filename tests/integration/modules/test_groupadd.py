@@ -9,7 +9,12 @@ import salt.utils.stringutils
 from salt.ext import six
 from salt.ext.six.moves import range
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, random_string, skip_if_not_root
+from tests.support.helpers import (
+    destructiveTest,
+    random_string,
+    runs_on,
+    skip_if_not_root,
+)
 from tests.support.unit import skipIf
 
 if not salt.utils.platform.is_windows():
@@ -19,6 +24,7 @@ if not salt.utils.platform.is_windows():
 @skip_if_not_root
 @destructiveTest
 @pytest.mark.windows_whitelisted
+@runs_on(kernel=("Linux", "Windows"))
 class GroupModuleTest(ModuleCase):
     """
     Validate the linux group system module
@@ -34,13 +40,12 @@ class GroupModuleTest(ModuleCase):
         self._no_user = random_string("tg-", uppercase=False)
         self._group = random_string("tg-", uppercase=False)
         self._no_group = random_string("tg-", uppercase=False)
-        self.os_grain = self.run_function("grains.item", ["kernel"])
-        self._gid = 64989 if "Windows" not in self.os_grain["kernel"] else None
-        self._new_gid = 64998 if "Windows" not in self.os_grain["kernel"] else None
-        if self.os_grain["kernel"] not in ("Linux", "Windows"):
-            self.skipTest(
-                "Test not applicable to '{kernel}' kernel".format(**self.os_grain)
-            )
+        _gid = _new_gid = None
+        if not salt.utils.platform.is_windows():
+            _gid = 64989
+            _new_gid = 64998
+        self._gid = _gid
+        self._new_gid = _new_gid
 
     def tearDown(self):
         """

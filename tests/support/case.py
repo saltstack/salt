@@ -33,7 +33,6 @@ from tests.support.mixins import (
     SaltClientTestCaseMixin,
     SaltMultimasterClientTestCaseMixin,
 )
-from tests.support.paths import CODE_DIR, INTEGRATION_TEST_DIR, PYEXEC, SCRIPT_DIR
 from tests.support.processes import terminate_process
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
@@ -46,18 +45,27 @@ STATE_FUNCTION_RUNNING_RE = re.compile(
 log = logging.getLogger(__name__)
 
 
-class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
+class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
     """
     Execute a test for a shell command
     """
 
-    def run_salt(self, arg_str, with_retcode=False, catch_stderr=False, timeout=15):
+    RUN_TIMEOUT = 30
+
+    def run_salt(
+        self,
+        arg_str,
+        with_retcode=False,
+        catch_stderr=False,
+        timeout=None,
+        popen_kwargs=None,
+    ):
         r'''
         Run the ``salt`` CLI tool with the provided arguments
 
         .. code-block:: python
 
-            class MatchTest(ShellTestCase):
+            class MatchTest(ShellCase):
                 def test_list(self):
                     """
                     test salt -L matcher
@@ -66,6 +74,9 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin
                     data = '\n'.join(data)
                     self.assertIn('minion', data)
         '''
+        if timeout is None:
+            timeout = self.RUN_TIMEOUT
+
         arg_str = "-c {0} -t {1} {2}".format(
             RUNTIME_VARS.TMP_CONF_DIR, timeout, arg_str
         )
@@ -81,30 +92,33 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin
         self,
         arg_str,
         with_retcode=False,
-        timeout=25,
         catch_stderr=False,
+        timeout=None,
         wipe=False,
         raw=False,
         roster_file=None,
         ssh_opts="",
+        log_level="error",
         **kwargs
     ):
         """
         Execute salt-ssh
         """
+        if timeout is None:
+            timeout = self.RUN_TIMEOUT
         if not roster_file:
             roster_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "roster")
-
-        arg_str = "{0} {1} -c {2} -i --priv {3} --roster-file {4} {5} localhost {6} --out=json".format(
+        arg_str = "{} {} -l{} -c {} -i --priv {} --roster-file {} {} localhost {} --out=json".format(
             " -W" if wipe else "",
             " -r" if raw else "",
+            log_level,
             RUNTIME_VARS.TMP_CONF_DIR,
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "key_test"),
             roster_file,
             ssh_opts,
             arg_str,
         )
-        return self.run_script(
+        ret = self.run_script(
             "salt-ssh",
             arg_str,
             with_retcode=with_retcode,
@@ -113,6 +127,8 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin
             timeout=timeout,
             **kwargs
         )
+        log.debug("Result of run_ssh for command '%s %s': %s", arg_str, kwargs, ret)
+        return ret
 
     def run_run(
         self,
@@ -120,13 +136,15 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin
         with_retcode=False,
         catch_stderr=False,
         asynchronous=False,
-        timeout=60,
+        timeout=None,
         config_dir=None,
         **kwargs
     ):
         """
         Execute salt-run
         """
+        if timeout is None:
+            timeout = self.RUN_TIMEOUT
         asynchronous = kwargs.get("async", asynchronous)
         arg_str = "-c {0}{async_flag} -t {timeout} {1}".format(
             config_dir or RUNTIME_VARS.TMP_CONF_DIR,
@@ -134,13 +152,15 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin
             timeout=timeout,
             async_flag=" --async" if asynchronous else "",
         )
-        return self.run_script(
+        ret = self.run_script(
             "salt-run",
             arg_str,
             with_retcode=with_retcode,
             catch_stderr=catch_stderr,
             timeout=timeout,
         )
+        log.debug("Result of run_run for command '%s': %s", arg_str, ret)
+        return ret
 
     def run_run_plus(self, fun, *arg, **kwargs):
         """
@@ -152,7 +172,6 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin
         import salt.config
         import salt.output
         import salt.runner
-        from salt.ext.six.moves import cStringIO
 
         opts = salt.config.master_config(self.get_config_file_path("master"))
 
@@ -179,7 +198,9 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin
             ret["out"] = opts["output_file"].getvalue()
         finally:
             opts["output_file"].close()
-
+        log.debug(
+            "Result of run_run_plus for fun '%s' with arg '%s': %s", fun, opts_arg, ret
+        )
         return ret
 
     def run_key(self, arg_str, catch_stderr=False, with_retcode=False):
@@ -191,13 +212,21 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin
             "salt-key", arg_str, catch_stderr=catch_stderr, with_retcode=with_retcode
         )
 
-    def run_cp(self, arg_str, with_retcode=False, catch_stderr=False):
+    def run_cp(self, arg_str, with_retcode=False, catch_stderr=False, timeout=None):
         """
         Execute salt-cp
         """
+        if timeout is None:
+            timeout = self.RUN_TIMEOUT
+        # Note: not logging result of run_cp because it will log a bunch of
+        # bytes which will not be very helpful.
         arg_str = "--config-dir {0} {1}".format(RUNTIME_VARS.TMP_CONF_DIR, arg_str)
         return self.run_script(
-            "salt-cp", arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr
+            "salt-cp",
+            arg_str,
+            with_retcode=with_retcode,
+            catch_stderr=catch_stderr,
+            timeout=timeout,
         )
 
     def run_call(
@@ -206,41 +235,51 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin
         with_retcode=False,
         catch_stderr=False,
         local=False,
-        timeout=15,
+        timeout=None,
         config_dir=None,
     ):
+        if timeout is None:
+            timeout = self.RUN_TIMEOUT
         if not config_dir:
             config_dir = RUNTIME_VARS.TMP_MINION_CONF_DIR
         arg_str = "{0} --config-dir {1} {2}".format(
-            "--local" if local else "", config_dir, arg_str
+            "--local" if local else "", RUNTIME_VARS.TMP_CONF_DIR, arg_str
         )
-
-        return self.run_script(
+        ret = self.run_script(
             "salt-call",
             arg_str,
             with_retcode=with_retcode,
             catch_stderr=catch_stderr,
             timeout=timeout,
         )
-
-    def assertRunCall(self, arg_str, **kwargs):
-        """
-        Assert no error code was returned with run_call, give stderr as error message
-        """
-        stdout, stderr, retcode = self.run_call(
-            arg_str, catch_stderr=True, with_retcode=True, **kwargs
-        )
-        if stderr:
-            log.warning(stderr)
-        self.assertFalse(retcode, stderr)
-        return stdout
+        log.debug("Result of run_call for command '%s': %s", arg_str, ret)
+        return ret
 
     def run_cloud(self, arg_str, catch_stderr=False, timeout=None):
         """
         Execute salt-cloud
         """
-        arg_str = "-c {0} {1}".format(RUNTIME_VARS.TMP_CONF_DIR, arg_str)
-        return self.run_script("salt-cloud", arg_str, catch_stderr, timeout)
+        if timeout is None:
+            timeout = self.RUN_TIMEOUT
+        ret = self.run_script("salt-cloud", arg_str, catch_stderr, timeout=timeout)
+        log.debug("Result of run_cloud for command '%s': %s", arg_str, ret)
+        return ret
+
+    def run_spm(self, arg_str, with_retcode=False, catch_stderr=False, timeout=None):
+        """
+        Execute spm
+        """
+        if timeout is None:
+            timeout = self.RUN_TIMEOUT
+        ret = self.run_script(
+            "spm",
+            arg_str,
+            with_retcode=with_retcode,
+            catch_stderr=catch_stderr,
+            timeout=timeout,
+        )
+        log.debug("Result of run_spm for command '%s': %s", arg_str, ret)
+        return ret
 
     def run_script(
         self,
@@ -278,10 +317,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin
                 popen_kwargs["cwd"] = os.getcwd()
             if "env" not in popen_kwargs:
                 popen_kwargs["env"] = os.environ.copy()
-                if sys.version_info[0] < 3:
-                    popen_kwargs["env"][b"PYTHONPATH"] = CODE_DIR.encode()
-                else:
-                    popen_kwargs["env"]["PYTHONPATH"] = CODE_DIR
+                popen_kwargs["env"]["PYTHONPATH"] = RUNTIME_VARS.CODE_DIR
         else:
             cmd = "PYTHONPATH="
             python_path = os.environ.get("PYTHONPATH", None)
@@ -461,255 +497,15 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin
                 pass
 
 
-class MultiMasterTestShellCase(ShellTestCase):
+class MultiMasterTestShellCase(ShellCase):
     """
+    '''
     Execute a test for a shell command when running multi-master tests
     """
 
     @property
     def config_dir(self):
         return RUNTIME_VARS.TMP_MM_CONF_DIR
-
-
-class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
-    """
-    Execute a test for a shell command
-    """
-
-    _code_dir_ = CODE_DIR
-    _script_dir_ = SCRIPT_DIR
-    _python_executable_ = PYEXEC
-    RUN_TIMEOUT = 500
-
-    def chdir(self, dirname):
-        try:
-            os.chdir(dirname)
-        except OSError:
-            os.chdir(INTEGRATION_TEST_DIR)
-
-    def run_salt(  # pylint: disable=arguments-differ
-        self,
-        arg_str,
-        with_retcode=False,
-        catch_stderr=False,
-        timeout=RUN_TIMEOUT,
-        popen_kwargs=None,
-    ):
-        """
-        Execute salt
-        """
-        arg_str = "-c {0} -t {1} {2}".format(
-            RUNTIME_VARS.TMP_CONF_DIR, timeout, arg_str
-        )
-        ret = self.run_script(
-            "salt",
-            arg_str,
-            with_retcode=with_retcode,
-            catch_stderr=catch_stderr,
-            timeout=timeout,
-            popen_kwargs=popen_kwargs,
-        )
-        log.debug("Result of run_salt for command '%s': %s", arg_str, ret)
-        return ret
-
-    def run_spm(
-        self, arg_str, with_retcode=False, catch_stderr=False, timeout=RUN_TIMEOUT
-    ):  # pylint: disable=arguments-differ
-        """
-        Execute spm
-        """
-        ret = self.run_script(
-            "spm",
-            arg_str,
-            with_retcode=with_retcode,
-            catch_stderr=catch_stderr,
-            timeout=timeout,
-        )
-        log.debug("Result of run_spm for command '%s': %s", arg_str, ret)
-        return ret
-
-    def run_ssh(  # pylint: disable=arguments-differ
-        self,
-        arg_str,
-        with_retcode=False,
-        catch_stderr=False,  # pylint: disable=W0221
-        timeout=RUN_TIMEOUT,
-        wipe=True,
-        raw=False,
-        roster_file=None,
-        ssh_opts="",
-        **kwargs
-    ):
-        """
-        Execute salt-ssh
-        """
-        if not roster_file:
-            roster_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "roster")
-
-        arg_str = "{0} -ldebug{1} -c {2} -i --priv {3} --roster-file {4} {5} --out=json localhost {6}".format(
-            " -W" if wipe else "",
-            " -r" if raw else "",
-            RUNTIME_VARS.TMP_CONF_DIR,
-            os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "key_test"),
-            roster_file,
-            ssh_opts,
-            arg_str,
-        )
-        ret = self.run_script(
-            "salt-ssh",
-            arg_str,
-            with_retcode=with_retcode,
-            catch_stderr=catch_stderr,
-            timeout=timeout,
-            raw=True,
-            **kwargs
-        )
-        log.debug("Result of run_ssh for command '%s %s': %s", arg_str, kwargs, ret)
-        return ret
-
-    def run_run(
-        self,
-        arg_str,
-        with_retcode=False,
-        catch_stderr=False,
-        asynchronous=False,
-        timeout=RUN_TIMEOUT,
-        config_dir=None,
-        **kwargs
-    ):
-        """
-        Execute salt-run
-        """
-        asynchronous = kwargs.get("async", asynchronous)
-        arg_str = "-c {0}{async_flag} -t {timeout} {1}".format(
-            config_dir or RUNTIME_VARS.TMP_CONF_DIR,
-            arg_str,
-            timeout=timeout,
-            async_flag=" --async" if asynchronous else "",
-        )
-        ret = self.run_script(
-            "salt-run",
-            arg_str,
-            with_retcode=with_retcode,
-            catch_stderr=catch_stderr,
-            timeout=timeout + 10,
-        )
-        log.debug("Result of run_run for command '%s': %s", arg_str, ret)
-        return ret
-
-    def run_run_plus(self, fun, *arg, **kwargs):
-        """
-        Execute the runner function and return the return data and output in a dict
-        """
-        # Late import
-        import salt.runner
-        import salt.output
-
-        ret = {"fun": fun}
-        from_scratch = bool(kwargs.pop("__reload_config", False))
-        # Have to create an empty dict and then update it, as the result from
-        # self.get_config() is an ImmutableDict which cannot be updated.
-        opts = {}
-        opts.update(self.get_config("client_config", from_scratch=from_scratch))
-        opts_arg = list(arg)
-        if kwargs:
-            opts_arg.append({"__kwarg__": True})
-            opts_arg[-1].update(kwargs)
-        opts.update({"doc": False, "fun": fun, "arg": opts_arg})
-        with RedirectStdStreams():
-            runner = salt.runner.Runner(opts)
-            ret["return"] = runner.run()
-            try:
-                ret["jid"] = runner.jid
-            except AttributeError:
-                ret["jid"] = None
-
-        # Compile output
-        # TODO: Support outputters other than nested
-        opts["color"] = False
-        opts["output_file"] = cStringIO()
-        try:
-            salt.output.display_output(ret["return"], opts=opts)
-            ret["out"] = opts["output_file"].getvalue().splitlines()
-        finally:
-            opts["output_file"].close()
-
-        log.debug(
-            "Result of run_run_plus for fun '%s' with arg '%s': %s", fun, opts_arg, ret
-        )
-        return ret
-
-    def run_key(  # pylint: disable=arguments-differ
-        self, arg_str, catch_stderr=False, with_retcode=False, timeout=RUN_TIMEOUT,
-    ):
-        """
-        Execute salt-key
-        """
-        arg_str = "-c {0} {1}".format(RUNTIME_VARS.TMP_CONF_DIR, arg_str)
-        ret = self.run_script(
-            "salt-key",
-            arg_str,
-            catch_stderr=catch_stderr,
-            with_retcode=with_retcode,
-            timeout=timeout,
-        )
-        log.debug("Result of run_key for command '%s': %s", arg_str, ret)
-        return ret
-
-    def run_cp(  # pylint: disable=arguments-differ
-        self, arg_str, with_retcode=False, catch_stderr=False, timeout=RUN_TIMEOUT,
-    ):
-        """
-        Execute salt-cp
-        """
-        # Note: not logging result of run_cp because it will log a bunch of
-        # bytes which will not be very helpful.
-        arg_str = "--config-dir {0} {1}".format(RUNTIME_VARS.TMP_CONF_DIR, arg_str)
-        return self.run_script(
-            "salt-cp",
-            arg_str,
-            with_retcode=with_retcode,
-            catch_stderr=catch_stderr,
-            timeout=timeout,
-        )
-
-    def run_call(
-        self,
-        arg_str,
-        with_retcode=False,
-        catch_stderr=False,
-        local=False,
-        timeout=RUN_TIMEOUT,
-        config_dir=None,
-    ):
-        """
-        Execute salt-call.
-        """
-        if not config_dir:
-            config_dir = RUNTIME_VARS.TMP_MINION_CONF_DIR
-        arg_str = "{0} --config-dir {1} {2}".format(
-            "--local" if local else "", config_dir, arg_str
-        )
-        ret = self.run_script(
-            "salt-call",
-            arg_str,
-            with_retcode=with_retcode,
-            catch_stderr=catch_stderr,
-            timeout=timeout,
-        )
-        log.debug("Result of run_call for command '%s': %s", arg_str, ret)
-        return ret
-
-    # pylint: enable=arguments-differ
-
-    def run_cloud(self, arg_str, catch_stderr=False, timeout=RUN_TIMEOUT):
-        """
-        Execute salt-cloud
-        """
-        arg_str = "-c {0} {1}".format(RUNTIME_VARS.TMP_CONF_DIR, arg_str)
-        ret = self.run_script("salt-cloud", arg_str, catch_stderr, timeout=timeout)
-        log.debug("Result of run_cloud for command '%s': %s", arg_str, ret)
-        return ret
 
 
 class SPMTestUserInterface(object):
