@@ -647,6 +647,8 @@ def get_system_info():
             ret["processors"] += 1
             ret["processors_logical"] += processor.NumberOfLogicalProcessors
             ret["processor_cores"] += processor.NumberOfCores
+            # Older versions of Windows do not have the NumberOfEnabledCore
+            # property. In that case, we'll just skip it
             try:
                 ret["processor_cores_enabled"] += processor.NumberOfEnabledCore
             except (AttributeError, TypeError):
