@@ -9,7 +9,8 @@ import time
 import salt.utils.stringutils
 import zmq
 from salt.log.handlers.logstash_mod import DatagramLogstashHandler, ZMQLogstashHander
-from tests.support.helpers import get_unused_localhost_port, slowTest
+from saltfactories.utils.ports import get_unused_localhost_port
+from tests.support.helpers import slowTest
 from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
