@@ -2,17 +2,12 @@
 """
 :codeauthor: Shane Lee <slee@saltstack.com>
 """
-
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import glob
 import os
 
-# Import Salt Libs
 import salt.config
-
-# Import 3rd Party Libs
 import salt.ext.six as six
 import salt.loader
 import salt.modules.win_lgpo as win_lgpo
@@ -20,9 +15,7 @@ import salt.states.win_lgpo
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
-
-# Import Salt Testing Libs
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.unit import TestCase, skipIf
@@ -789,7 +782,7 @@ class WinLGPOGetPointAndPrintENTestCase(TestCase, LoaderModuleMockMixin):
             return results
         return "Policy Not Found"
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_point_and_print_enabled(self):
         result = self._get_policy_adm_setting(
             policy_name="Point and Print Restrictions",
@@ -850,7 +843,7 @@ class WinLGPOGetPointAndPrintENTestCase(TestCase, LoaderModuleMockMixin):
         }
         self.assertDictEqual(result, expected)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_point_and_print_enabled_full_names_hierarchical(self):
         result = self._get_policy_adm_setting(
             policy_name="Point and Print Restrictions",

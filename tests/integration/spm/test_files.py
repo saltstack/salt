@@ -9,8 +9,7 @@ import shutil
 
 import pytest
 from tests.support.case import SPMCase
-from tests.support.helpers import destructiveTest
-from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest, slowTest
 
 
 @destructiveTest
@@ -24,7 +23,7 @@ class SPMFilesTest(SPMCase):
         self.config = self._spm_config()
         self._spm_build_files(self.config)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_spm_files(self):
         """
         test spm files

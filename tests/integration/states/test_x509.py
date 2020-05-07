@@ -8,7 +8,7 @@ import textwrap
 import salt.utils.files
 from salt.ext import six
 from tests.support.case import ModuleCase
-from tests.support.helpers import with_tempfile
+from tests.support.helpers import slowTest, with_tempfile
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
@@ -77,7 +77,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         self.run_function("saltutil.refresh_pillar")
 
     @with_tempfile(suffix=".pem", create=False)
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_issue_49027(self, pemfile):
         ret = self.run_state("x509.pem_managed", name=pemfile, text=self.x509_cert_text)
         assert isinstance(ret, dict), ret
@@ -89,7 +89,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
 
     @with_tempfile(suffix=".crt", create=False)
     @with_tempfile(suffix=".key", create=False)
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_issue_49008(self, keyfile, crtfile):
         ret = self.run_function(
             "state.apply",
@@ -102,7 +102,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         assert os.path.exists(keyfile)
         assert os.path.exists(crtfile)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_cert_signing(self):
         ret = self.run_function(
             "state.apply", ["x509.cert_signing"], pillar={"tmp_dir": RUNTIME_VARS.TMP}

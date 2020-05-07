@@ -16,8 +16,8 @@ import salt.utils.files
 import salt.utils.jid
 import salt.utils.yaml
 from tests.support.case import ShellCase
+from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 
 @pytest.mark.windows_whitelisted
@@ -78,7 +78,7 @@ class RunnerReturnsTest(ShellCase):
         self.conf.flush()
         self.conf.close()
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_runner_returns_disabled(self):
         """
         Test with runner_returns disabled
@@ -97,7 +97,7 @@ class RunnerReturnsTest(ShellCase):
         )
         self.assertFalse(os.path.isfile(serialized_return))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_runner_returns_enabled(self):
         """
         Test with runner_returns enabled

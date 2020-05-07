@@ -6,7 +6,7 @@ import os
 
 import pytest
 from tests.support.case import ShellCase, SPMCase
-from tests.support.unit import skipIf
+from tests.support.helpers import slowTest
 
 
 @pytest.mark.windows_whitelisted
@@ -15,7 +15,7 @@ class SPMTest(ShellCase, SPMCase):
     Test spm script
     """
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_spm_help(self):
         """
         test --help argument for spm
@@ -25,7 +25,7 @@ class SPMTest(ShellCase, SPMCase):
         for arg in expected_args:
             self.assertIn(arg, "".join(output))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_spm_bad_arg(self):
         """
         test correct output when bad argument passed
@@ -35,7 +35,7 @@ class SPMTest(ShellCase, SPMCase):
         for arg in expected_args:
             self.assertIn(arg, "".join(output))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_spm_assume_yes(self):
         """
         test spm install with -y arg
@@ -53,7 +53,7 @@ class SPMTest(ShellCase, SPMCase):
             os.path.exists(os.path.join(config["formula_path"], "apache", "apache.sls"))
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_spm_force(self):
         """
         test spm install with -f arg
