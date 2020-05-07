@@ -21,15 +21,12 @@ import salt.utils.path
 import salt.utils.yaml
 from salt.fileserver import gitfs
 from salt.pillar import git_pillar
+from saltfactories.utils.ports import get_unused_localhost_port
 from saltfactories.utils.processes.bases import FactoryDaemonScriptBase
 from saltfactories.utils.processes.helpers import start_daemon, terminate_process
 from saltfactories.utils.processes.sshd import SshdDaemon
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    get_unused_localhost_port,
-    patched_environ,
-    requires_system_grains,
-)
+from tests.support.helpers import patched_environ, requires_system_grains
 from tests.support.mixins import (
     AdaptedConfigurationTestCaseMixin,
     LoaderModuleMockMixin,
@@ -183,7 +180,7 @@ class SSHDMixin(SaltClientMixin, SaltReturnAssertsMixin):
             cls.sshd_bin = salt.utils.path.which("sshd")
             cls.sshd_config_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
             cls.sshd_config = os.path.join(cls.sshd_config_dir, "sshd_config")
-            cls.sshd_port = get_unused_localhost_port()
+            cls.sshd_port = get_unused_localhost_port(cached_seconds=120)
             cls.url = "ssh://{username}@127.0.0.1:{port}/~/repo.git".format(
                 username=cls.username, port=cls.sshd_port
             )
@@ -333,11 +330,8 @@ class WebserverMixin(SaltClientMixin, SaltReturnAssertsMixin):
         cls.repo_dir = os.path.join(cls.git_dir, "repos")
         cls.venv_dir = os.path.join(cls.root_dir, "venv")
         cls.uwsgi_bin = os.path.join(cls.venv_dir, "bin", "uwsgi")
-        cls.nginx_port = cls.uwsgi_port = get_unused_localhost_port()
-        while cls.uwsgi_port == cls.nginx_port:
-            # Ensure we don't hit a corner case in which two sucessive calls to
-            # get_unused_localhost_port() return identical port numbers.
-            cls.uwsgi_port = get_unused_localhost_port()
+        cls.nginx_port = cls.uwsgi_port = get_unused_localhost_port(cached_seconds=120)
+        cls.uwsgi_port = get_unused_localhost_port(cached_seconds=120)
         cls.url = "http://127.0.0.1:{port}/repo.git".format(port=cls.nginx_port)
         cls.url_extra_repo = "http://127.0.0.1:{port}/extra_repo.git".format(
             port=cls.nginx_port
