@@ -107,27 +107,21 @@ def destructiveTest(caller):
     if RUNTIME_VARS.PYTEST_SESSION:
         setattr(caller, "__destructive_test__", True)
 
-    if inspect.isclass(caller):
-        # We're decorating a class
-        old_setup = getattr(caller, "setUp", None)
+    if os.environ.get("DESTRUCTIVE_TESTS", "False").lower() == "false":
+        reason = "Destructive tests are disabled"
 
-        def setUp(self, *args, **kwargs):
-            if os.environ.get("DESTRUCTIVE_TESTS", "False").lower() == "false":
-                self.skipTest("Destructive tests are disabled")
-            if old_setup is not None:
-                old_setup(self, *args, **kwargs)
+        if not isinstance(caller, type):
 
-        caller.setUp = setUp
-        return caller
+            @functools.wraps(caller)
+            def skip_wrapper(*args, **kwargs):
+                raise SkipTest(reason)
 
-    # We're simply decorating functions
-    @functools.wraps(caller)
-    def wrap(cls):
-        if os.environ.get("DESTRUCTIVE_TESTS", "False").lower() == "false":
-            cls.skipTest("Destructive tests are disabled")
-        return caller(cls)
+            caller = skip_wrapper
 
-    return wrap
+        caller.__unittest_skip__ = True
+        caller.__unittest_skip_why__ = reason
+
+    return caller
 
 
 def expensiveTest(caller):
@@ -149,27 +143,52 @@ def expensiveTest(caller):
     if RUNTIME_VARS.PYTEST_SESSION:
         setattr(caller, "__expensive_test__", True)
 
-    if inspect.isclass(caller):
-        # We're decorating a class
-        old_setup = getattr(caller, "setUp", None)
+    if os.environ.get("EXPENSIVE_TESTS", "False").lower() == "false":
+        reason = "Expensive tests are disabled"
 
-        def setUp(self, *args, **kwargs):
-            if os.environ.get("EXPENSIVE_TESTS", "False").lower() == "false":
-                self.skipTest("Expensive tests are disabled")
-            if old_setup is not None:
-                old_setup(self, *args, **kwargs)
+        if not isinstance(caller, type):
 
-        caller.setUp = setUp
-        return caller
+            @functools.wraps(caller)
+            def skip_wrapper(*args, **kwargs):
+                raise SkipTest(reason)
 
-    # We're simply decorating functions
-    @functools.wraps(caller)
-    def wrap(cls):
-        if os.environ.get("EXPENSIVE_TESTS", "False").lower() == "false":
-            cls.skipTest("Expensive tests are disabled")
-        return caller(cls)
+            caller = skip_wrapper
 
-    return wrap
+        caller.__unittest_skip__ = True
+        caller.__unittest_skip_why__ = reason
+
+    return caller
+
+
+def slowTest(caller):
+    """
+    Mark a test case as a slow test.
+    .. code-block:: python
+        class MyTestCase(TestCase):
+            @slowTest
+            def test_that_takes_much_time(self):
+                pass
+    """
+    # Late import
+    from tests.support.runtests import RUNTIME_VARS
+
+    if RUNTIME_VARS.PYTEST_SESSION:
+        setattr(caller, "__slow_test__", True)
+
+    if os.environ.get("SLOW_TESTS", "False").lower() == "false":
+        reason = "Slow tests are disabled"
+
+        if not isinstance(caller, type):
+
+            @functools.wraps(caller)
+            def skip_wrapper(*args, **kwargs):
+                raise SkipTest(reason)
+
+            caller = skip_wrapper
+
+        caller.__unittest_skip__ = True
+        caller.__unittest_skip_why__ = reason
+    return caller
 
 
 def flaky(caller=None, condition=True, attempts=4):
@@ -590,7 +609,7 @@ def requires_network(only_local_network=False):
 
     def decorator(func):
         @functools.wraps(func)
-        def wrapper(cls):
+        def wrapper(cls, *args, **kwargs):
             has_local_network = False
             # First lets try if we have a local network. Inspired in
             # verify_socket
@@ -658,7 +677,7 @@ def requires_network(only_local_network=False):
                     cls.skipTest("No internet network connection was detected")
                 finally:
                     sock.close()
-            return func(cls)
+            return func(cls, *args, **kwargs)
 
         return wrapper
 
@@ -1083,33 +1102,23 @@ def runs_on(grains=None, **kwargs):
     Skip the test if grains don't match the values passed into **kwargs
     if a kwarg value is a list then skip if the grains don't match any item in the list
     """
-
-    def decorator(caller):
-        @functools.wraps(caller)
-        def wrapper(cls):
-            reason = kwargs.pop("reason", None)
-            for kw, value in kwargs.items():
-                if isinstance(value, list):
-                    if not any(
-                        str(grains.get(kw)).lower() != str(v).lower() for v in value
-                    ):
-                        if reason is None:
-                            reason = "This test does not run on {}={}".format(
-                                kw, grains.get(kw)
-                            )
-                        raise SkipTest(reason)
-                else:
-                    if str(grains.get(kw)).lower() != str(value).lower():
-                        if reason is None:
-                            reason = "This test runs on {}={}, not {}".format(
-                                kw, value, grains.get(kw)
-                            )
-                        raise SkipTest(reason)
-            return caller(cls)
-
-        return wrapper
-
-    return decorator
+    reason = kwargs.pop("reason", None)
+    for kw, value in kwargs.items():
+        if isinstance(value, list):
+            if not any(str(grains.get(kw)).lower() != str(v).lower() for v in value):
+                if reason is None:
+                    reason = "This test does not run on {}={}".format(
+                        kw, grains.get(kw)
+                    )
+                return skip(reason)
+        else:
+            if str(grains.get(kw)).lower() != str(value).lower():
+                if reason is None:
+                    reason = "This test runs on {}={}, not {}".format(
+                        kw, value, grains.get(kw)
+                    )
+                return skip(reason)
+    return _id
 
 
 @requires_system_grains
@@ -1119,33 +1128,23 @@ def not_runs_on(grains=None, **kwargs):
     Skip the test if any grains match the values passed into **kwargs
     if a kwarg value is a list then skip if the grains match any item in the list
     """
-
-    def decorator(caller):
-        @functools.wraps(caller)
-        def wrapper(cls):
-            reason = kwargs.pop("reason", None)
-            for kw, value in kwargs.items():
-                if isinstance(value, list):
-                    if any(
-                        str(grains.get(kw)).lower() == str(v).lower() for v in value
-                    ):
-                        if reason is None:
-                            reason = "This test does not run on {}={}".format(
-                                kw, grains.get(kw)
-                            )
-                        raise SkipTest(reason)
-                else:
-                    if str(grains.get(kw)).lower() == str(value).lower():
-                        if reason is None:
-                            reason = "This test does not run on {}={}, got {}".format(
-                                kw, value, grains.get(kw)
-                            )
-                        raise SkipTest(reason)
-            return caller(cls)
-
-        return wrapper
-
-    return decorator
+    reason = kwargs.pop("reason", None)
+    for kw, value in kwargs.items():
+        if isinstance(value, list):
+            if any(str(grains.get(kw)).lower() == str(v).lower() for v in value):
+                if reason is None:
+                    reason = "This test does not run on {}={}".format(
+                        kw, grains.get(kw)
+                    )
+                return skip(reason)
+        else:
+            if str(grains.get(kw)).lower() == str(value).lower():
+                if reason is None:
+                    reason = "This test does not run on {}={}, got {}".format(
+                        kw, value, grains.get(kw)
+                    )
+                return skip(reason)
+    return _id
 
 
 def _check_required_sminion_attributes(sminion_attr, *required_items):
@@ -1191,32 +1190,9 @@ def requires_salt_states(*names):
     .. versionadded:: 3000
     """
     not_available = _check_required_sminion_attributes("states", *names)
-
-    def decorator(caller):
-        if inspect.isclass(caller):
-            # We're decorating a class
-            old_setup = getattr(caller, "setUp", None)
-
-            def setUp(self, *args, **kwargs):
-                if not_available:
-                    raise SkipTest("Unavailable salt states: {}".format(*not_available))
-
-                if old_setup is not None:
-                    old_setup(self, *args, **kwargs)
-
-            caller.setUp = setUp
-            return caller
-
-        # We're simply decorating functions
-        @functools.wraps(caller)
-        def wrapper(cls):
-            if not_available:
-                raise SkipTest("Unavailable salt states: {}".format(*not_available))
-            return caller(cls)
-
-        return wrapper
-
-    return decorator
+    if not_available:
+        return skip("Unavailable salt states: {}".format(*not_available))
+    return _id
 
 
 def requires_salt_modules(*names):
@@ -1226,33 +1202,9 @@ def requires_salt_modules(*names):
     .. versionadded:: 0.5.2
     """
     not_available = _check_required_sminion_attributes("functions", *names)
-
-    def decorator(caller):
-        if inspect.isclass(caller):
-            # We're decorating a class
-            old_setup = getattr(caller, "setUp", None)
-
-            def setUp(self, *args, **kwargs):
-                if not_available:
-                    raise SkipTest(
-                        "Unavailable salt modules: {}".format(*not_available)
-                    )
-                if old_setup is not None:
-                    old_setup(self, *args, **kwargs)
-
-            caller.setUp = setUp
-            return caller
-
-        # We're simply decorating functions
-        @functools.wraps(caller)
-        def wrapper(cls):
-            if not_available:
-                raise SkipTest("Unavailable salt modules: {}".format(*not_available))
-            return caller(cls)
-
-        return wrapper
-
-    return decorator
+    if not_available:
+        return skip("Unavailable salt modules: {}".format(*not_available))
+    return _id
 
 
 def skip_if_binaries_missing(*binaries, **kwargs):
