@@ -16,7 +16,6 @@ import logging
 import os
 import pprint
 import shutil
-import socket
 import stat
 import sys
 import tempfile
@@ -129,13 +128,8 @@ def pytest_addoption(parser):
     """
     register argparse-style options and ini-style config values.
     """
-    parser.addoption(
-        "--sysinfo",
-        default=False,
-        action="store_true",
-        help="Print some system information.",
-    )
-    parser.addoption(
+    test_selection_group = parser.getgroup("Tests Selection")
+    test_selection_group.addoption(
         "--transport",
         default="zeromq",
         choices=("zeromq", "tcp"),
@@ -144,7 +138,6 @@ def pytest_addoption(parser):
             "zeromq or tcp. Default: %default"
         ),
     )
-    test_selection_group = parser.getgroup("Tests Selection")
     test_selection_group.addoption(
         "--ssh",
         "--ssh-tests",
@@ -163,23 +156,13 @@ def pytest_addoption(parser):
         default=False,
         help="Run proxy tests",
     )
-    test_selection_group.addoption(
-        "--run-destructive",
-        action="store_true",
-        default=False,
-        help="Run destructive tests. These tests can include adding "
-        "or removing users from your system for example. "
-        "Default: False",
-    )
-    test_selection_group.addoption(
-        "--run-expensive",
-        action="store_true",
-        default=False,
-        help="Run expensive tests. These tests usually involve costs "
-        "like for example bootstrapping a cloud VM. "
-        "Default: False",
-    )
     output_options_group = parser.getgroup("Output Options")
+    output_options_group.addoption(
+        "--sysinfo",
+        default=False,
+        action="store_true",
+        help="Print some system information.",
+    )
     output_options_group.addoption(
         "--output-columns",
         default=80,
@@ -228,25 +211,6 @@ def pytest_configure(config):
             config.addinivalue_line("norecursedirs", os.path.join(CODE_DIR, dirname))
 
     # Expose the markers we use to pytest CLI
-    config.addinivalue_line(
-        "markers",
-        "destructive_test: Run destructive tests. These tests can include adding "
-        "or removing users from your system for example.",
-    )
-    config.addinivalue_line(
-        "markers", "skip_if_not_root: Skip if the current user is not `root`."
-    )
-    config.addinivalue_line(
-        "markers",
-        "skip_if_binaries_missing(*binaries, check_all=False, message=None): Skip if "
-        "any of the passed binaries are not found in path. If 'check_all' is "
-        "'True', then all binaries must be found.",
-    )
-    config.addinivalue_line(
-        "markers",
-        "requires_network(only_local_network=False): Skip if no networking is set up. "
-        "If 'only_local_network' is 'True', only the local network is checked.",
-    )
     config.addinivalue_line(
         "markers",
         "requires_salt_modules(*required_module_names): Skip if at least one module is not available.",
@@ -476,139 +440,6 @@ def pytest_runtest_setup(item):
     ):
         item._skipped_by_mark = True
         pytest.skip(PRE_PYTEST_SKIP_REASON)
-
-    destructive_tests_marker = item.get_closest_marker("destructive_test")
-    if destructive_tests_marker is not None or _has_unittest_attr(
-        item, "__destructive_test__"
-    ):
-        if item.config.getoption("--run-destructive") is False:
-            item._skipped_by_mark = True
-            pytest.skip("Destructive tests are disabled")
-    os.environ[str("DESTRUCTIVE_TESTS")] = str(
-        item.config.getoption("--run-destructive")
-    )
-
-    expensive_tests_marker = item.get_closest_marker("expensive_test")
-    if expensive_tests_marker is not None or _has_unittest_attr(
-        item, "__expensive_test__"
-    ):
-        if item.config.getoption("--run-expensive") is False:
-            item._skipped_by_mark = True
-            pytest.skip("Expensive tests are disabled")
-    os.environ[str("EXPENSIVE_TESTS")] = str(item.config.getoption("--run-expensive"))
-
-    skip_if_not_root_marker = item.get_closest_marker("skip_if_not_root")
-    if skip_if_not_root_marker is not None or _has_unittest_attr(
-        item, "__skip_if_not_root__"
-    ):
-        if not sys.platform.startswith("win"):
-            if os.getuid() != 0:
-                item._skipped_by_mark = True
-                pytest.skip("You must be logged in as root to run this test")
-        else:
-            current_user = salt.utils.win_functions.get_current_user()
-            if current_user != "SYSTEM":
-                if not salt.utils.win_functions.is_admin(current_user):
-                    item._skipped_by_mark = True
-                    pytest.skip(
-                        "You must be logged in as an Administrator to run this test"
-                    )
-
-    skip_if_binaries_missing_marker = item.get_closest_marker(
-        "skip_if_binaries_missing"
-    )
-    if skip_if_binaries_missing_marker is not None:
-        binaries = skip_if_binaries_missing_marker.args
-        if len(binaries) == 1:
-            if isinstance(binaries[0], (list, tuple, set, frozenset)):
-                binaries = binaries[0]
-        check_all = skip_if_binaries_missing_marker.kwargs.get("check_all", False)
-        message = skip_if_binaries_missing_marker.kwargs.get("message", None)
-        if check_all:
-            for binary in binaries:
-                if salt.utils.path.which(binary) is None:
-                    item._skipped_by_mark = True
-                    pytest.skip(
-                        '{0}The "{1}" binary was not found'.format(
-                            message and "{0}. ".format(message) or "", binary
-                        )
-                    )
-        elif salt.utils.path.which_bin(binaries) is None:
-            item._skipped_by_mark = True
-            pytest.skip(
-                "{0}None of the following binaries was found: {1}".format(
-                    message and "{0}. ".format(message) or "", ", ".join(binaries)
-                )
-            )
-
-    requires_network_marker = item.get_closest_marker("requires_network")
-    if requires_network_marker is not None:
-        only_local_network = requires_network_marker.kwargs.get(
-            "only_local_network", False
-        )
-        has_local_network = False
-        # First lets try if we have a local network. Inspired in verify_socket
-        try:
-            pubsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            retsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            pubsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            pubsock.bind(("", 18000))
-            pubsock.close()
-            retsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            retsock.bind(("", 18001))
-            retsock.close()
-            has_local_network = True
-        except socket.error:
-            # I wonder if we just have IPV6 support?
-            try:
-                pubsock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-                retsock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-                pubsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                pubsock.bind(("", 18000))
-                pubsock.close()
-                retsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                retsock.bind(("", 18001))
-                retsock.close()
-                has_local_network = True
-            except socket.error:
-                # Let's continue
-                pass
-
-        if only_local_network is True:
-            if has_local_network is False:
-                # Since we're only supposed to check local network, and no
-                # local network was detected, skip the test
-                item._skipped_by_mark = True
-                pytest.skip("No local network was detected")
-
-        # We are using the google.com DNS records as numerical IPs to avoid
-        # DNS lookups which could greatly slow down this check
-        for addr in (
-            "173.194.41.198",
-            "173.194.41.199",
-            "173.194.41.200",
-            "173.194.41.201",
-            "173.194.41.206",
-            "173.194.41.192",
-            "173.194.41.193",
-            "173.194.41.194",
-            "173.194.41.195",
-            "173.194.41.196",
-            "173.194.41.197",
-        ):
-            try:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.settimeout(0.25)
-                sock.connect((addr, 80))
-                sock.close()
-                # We connected? Stop the loop
-                break
-            except socket.error:
-                # Let's check the next IP
-                continue
-            else:
-                item._skipped_by_mark = True
-                pytest.skip("No internet network connection was detected")
 
     requires_salt_modules_marker = item.get_closest_marker("requires_salt_modules")
     if requires_salt_modules_marker is not None:
