@@ -186,7 +186,7 @@ CentOS
 
 These images have been prepared for OpenNebula but should work without issue with
 Salt Virt, only the raw qcow image file is needed:
-http://wiki.centos.org/Cloud/OpenNebula
+https://wiki.centos.org/Cloud/OpenNebula
 
 Fedora Linux
 ~~~~~~~~~~~~

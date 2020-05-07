@@ -36,10 +36,12 @@ from nox.command import CommandFailed  # isort:skip
 IS_PY3 = sys.version_info > (2,)
 
 # Be verbose when runing under a CI context
-PIP_INSTALL_SILENT = (
-    os.environ.get("JENKINS_URL") or os.environ.get("CI") or os.environ.get("DRONE")
-) is None
-
+CI_RUN = (
+    os.environ.get("JENKINS_URL")
+    or os.environ.get("CI")
+    or os.environ.get("DRONE") is not None
+)
+PIP_INSTALL_SILENT = CI_RUN is False
 
 # Global Path Definitions
 REPO_ROOT = os.path.abspath(os.path.dirname(__file__))
@@ -680,6 +682,9 @@ def pytest_parametrized(session, coverage, transport, crypto):
     # Install requirements
     _install_requirements(session, transport)
 
+    session.run(
+        "pip", "uninstall", "-y", "pytest-salt", silent=True,
+    )
     if crypto:
         session.run(
             "pip",
@@ -886,6 +891,14 @@ def _pytest(session, coverage, cmd_args):
         # Don't nuke our multiprocessing efforts objc!
         # https://stackoverflow.com/questions/50168647/multiprocessing-causes-python-to-crash-and-gives-an-error-may-have-been-in-progr
         env = {"OBJC_DISABLE_INITIALIZE_FORK_SAFETY": "YES"}
+
+    if CI_RUN:
+        # We'll print out the collected tests on CI runs.
+        # This will show a full list of what tests are going to run, in the right order, which, in case
+        # of a test suite hang, helps us pinpoint which test is hanging
+        session.run(
+            "python", "-m", "pytest", *(cmd_args + ["--collect-only", "-qqq"]), env=env
+        )
 
     try:
         if coverage is True:
