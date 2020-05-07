@@ -88,7 +88,7 @@ class MockWMI_OperatingSystem(object):
         pass
 
 
-class MockWMI_ComputerSystemProduct():
+class MockWMI_ComputerSystemProduct:
     def __init__(self):
         self.SKUNumber = None
 
@@ -512,7 +512,9 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.object(
             self.WMI, "Win32_ComputerSystem", return_value=[MockWMI_ComputerSystem()]
         ), patch.object(
-            self.WMI, "Win32_ComputerSystemProduct", return_value=[MockWMI_ComputerSystemProduct()]
+            self.WMI,
+            "Win32_ComputerSystemProduct",
+            return_value=[MockWMI_ComputerSystemProduct()],
         ), patch.object(
             self.WMI,
             "Win32_Processor",
@@ -589,9 +591,13 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.object(
             self.WMI, "Win32_ComputerSystem", return_value=[MockWMI_ComputerSystem()]
         ), patch.object(
-            self.WMI, "Win32_ComputerSystemProduct", return_value=[MockWMI_ComputerSystemProduct()]
+            self.WMI,
+            "Win32_ComputerSystemProduct",
+            return_value=[MockWMI_ComputerSystemProduct()],
         ), patch.object(
-            self.WMI, "Win32_Processor", return_value=[MockWMIProcessor(), MockWMIProcessor()],
+            self.WMI,
+            "Win32_Processor",
+            return_value=[MockWMIProcessor(), MockWMIProcessor()],
         ), patch.object(
             self.WMI, "Win32_BIOS", return_value=[MockWMI_BIOS()]
         ), patch.object(
