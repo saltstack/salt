@@ -14,9 +14,9 @@ from tests.support.unit import skipIf
 log = logging.getLogger(__name__)
 
 
-class ManageTest(ShellCase):
+class CacheTest(ShellCase):
     """
-    Test the manage runner
+    Test the cache runner.
     """
 
     @skipIf(True, "SLOWTEST skip")

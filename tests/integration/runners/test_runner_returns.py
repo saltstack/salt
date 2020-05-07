@@ -32,7 +32,7 @@ class RunnerReturnsTest(ShellCase):
         """
         self.job_dir = os.path.join(self.master_opts["cachedir"], "jobs")
         self.hash_type = self.master_opts["hash_type"]
-        self.master_d_dir = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "master.d")
+        self.master_d_dir = os.path.join(self.config_dir, "master.d")
         try:
             os.makedirs(self.master_d_dir)
         except OSError as exc:
@@ -64,9 +64,11 @@ class RunnerReturnsTest(ShellCase):
             **data["return"]["kwargs"]
         )
 
-        # Pop off the timestamp (do not provide a 2nd argument, if the stamp is
-        # missing we want to know!)
+        # Pop off dynamic keys in the return schema that are impossible to test.
+        # Do not supply the default arguments because we want to know if we are
+        # missing some aspect of the schema.
         data.pop("_stamp")
+        data.pop("pid")
 
     def write_conf(self, data):
         """
@@ -79,7 +81,7 @@ class RunnerReturnsTest(ShellCase):
     @skipIf(True, "SLOWTEST skip")
     def test_runner_returns_disabled(self):
         """
-        Test with runner_returns enabled
+        Test with runner_returns disabled
         """
         self.write_conf({"runner_returns": False})
         ret = self.run_run_plus("test.arg", "foo", bar="hello world!")
@@ -114,7 +116,7 @@ class RunnerReturnsTest(ShellCase):
         )
         serial = salt.payload.Serial(self.master_opts)
         with salt.utils.files.fopen(serialized_return, "rb") as fp_:
-            deserialized = serial.loads(fp_.read())
+            deserialized = serial.loads(fp_.read(), encoding="utf-8")
 
         self.clean_return(deserialized["return"])
 
