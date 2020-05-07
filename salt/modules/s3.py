@@ -324,6 +324,8 @@ def put(
     role_arn=None,
     path_style=None,
     https_enable=None,
+    headers=None,
+    full_headers=False,
 ):
     """
     Create a new bucket, or upload an object to a bucket.
@@ -336,6 +338,12 @@ def put(
 
         salt myminion s3.put mybucket remotepath local_file=/path/to/file
     """
+
+    if not headers:
+        headers = {}
+    else:
+        full_headers = True
+
     (
         key,
         keyid,
@@ -374,6 +382,8 @@ def put(
         role_arn=role_arn,
         path_style=path_style,
         https_enable=https_enable,
+        headers=headers,
+        full_headers=full_headers,
     )
 
 
