@@ -88,6 +88,11 @@ class MockWMI_OperatingSystem(object):
         pass
 
 
+class MockWMI_ComputerSystemProduct():
+    def __init__(self):
+        self.SKUNumber = None
+
+
 class MockWMI_Processor(object):
     """
     Mock WMI Win32_Processor Class
@@ -507,6 +512,8 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.object(
             self.WMI, "Win32_ComputerSystem", return_value=[MockWMI_ComputerSystem()]
         ), patch.object(
+            self.WMI, "Win32_ComputerSystemProduct", return_value=[MockWMI_ComputerSystemProduct()]
+        ), patch.object(
             self.WMI,
             "Win32_Processor",
             return_value=[MockWMI_Processor(), MockWMI_Processor()],
@@ -554,3 +561,46 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         ]
         self.assertIn(ret["chassis_bootup_state"], warning_states)
         self.assertIn(ret["thermal_state"], warning_states)
+
+    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    def test_get_system_info_no_number_of_enabled_core(self):
+        """
+        Tests get_system_info when there is no `NumberOfEnabledCore` property in
+        the WMI Class Win32_Processor. Older versions of Windows are missing
+        this property
+        """
+        # Create a mock processor class that does not have the
+        # NumberOfCoresEnabled property
+        class MockWMIProcessor(object):
+            """
+            Mock WMI Win32_Processor Class
+            """
+
+            def __init__(self):
+                self.Manufacturer = "Intel"
+                self.MaxClockSpeed = 2301
+                self.NumberOfLogicalProcessors = 8
+                self.NumberOfCores = 4
+
+        with patch("salt.utils.win_system.get_computer_name", MagicMock()), patch(
+            "salt.utils.winapi.Com", MagicMock()
+        ), patch.object(
+            self.WMI, "Win32_OperatingSystem", return_value=[MockWMI_OperatingSystem()]
+        ), patch.object(
+            self.WMI, "Win32_ComputerSystem", return_value=[MockWMI_ComputerSystem()]
+        ), patch.object(
+            self.WMI, "Win32_ComputerSystemProduct", return_value=[MockWMI_ComputerSystemProduct()]
+        ), patch.object(
+            self.WMI, "Win32_Processor", return_value=[MockWMIProcessor(), MockWMIProcessor()],
+        ), patch.object(
+            self.WMI, "Win32_BIOS", return_value=[MockWMI_BIOS()]
+        ), patch.object(
+            wmi, "WMI", Mock(return_value=self.WMI)
+        ):
+            ret = win_system.get_system_info()
+            self.assertIn("processors", ret)
+            self.assertIn("processors_logical", ret)
+            self.assertIn("processor_cores", ret)
+            self.assertIn("processor_manufacturer", ret)
+            self.assertIn("processor_max_clock_speed", ret)
+            self.assertNotIn("processor_cores_enabled", ret)
