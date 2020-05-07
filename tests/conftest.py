@@ -924,22 +924,104 @@ def _get_virtualenv_binary_path():
         return virtualenv_binary
 
 
-# @pytest.fixture(scope='session')
-# def salt_syndic_master_config(request, salt_factories):
-#     return salt_factories.configure_master(request, 'syndic_master', order_masters=True)
-
-# @pytest.fixture(scope='session')
-# def salt_syndic_config(request, salt_factories, salt_syndic_master_config):
-#     return salt_factories.configure_syndic(request, 'syndic', master_of_masters_id='syndic_master')
-
-# @pytest.fixture(scope='session')
-# def salt_master_config(request, salt_factories, salt_syndic_master_config):
-#     return salt_factories.configure_master(request, 'master', master_of_masters_id='syndic_master')
+@pytest.fixture(scope="session")
+def integration_files_dir(salt_factories):
+    """
+    Fixture which returns the salt integration files directory path.
+    Creates the directory if it does not yet exist.
+    """
+    dirname = salt_factories.root_dir.join("integration-files")
+    dirname.ensure(dir=True)
+    return dirname
 
 
 @pytest.fixture(scope="session")
-def salt_master_config(request, salt_factories):
-    return salt_factories.configure_master(request, "master")
+def state_tree_root_dir(integration_files_dir):
+    """
+    Fixture which returns the salt state tree root directory path.
+    Creates the directory if it does not yet exist.
+    """
+    dirname = integration_files_dir.join("state-tree")
+    dirname.ensure(dir=True)
+    return dirname
+
+
+@pytest.fixture(scope="session")
+def pillar_tree_root_dir(integration_files_dir):
+    """
+    Fixture which returns the salt pillar tree root directory path.
+    Creates the directory if it does not yet exist.
+    """
+    dirname = integration_files_dir.join("pillar-tree")
+    dirname.ensure(dir=True)
+    return dirname
+
+
+@pytest.fixture(scope="session")
+def base_env_state_tree_root_dir(state_tree_root_dir):
+    """
+    Fixture which returns the salt base environment state tree directory path.
+    Creates the directory if it does not yet exist.
+    """
+    dirname = state_tree_root_dir.join("base")
+    dirname.ensure(dir=True)
+    RUNTIME_VARS.TMP_STATE_TREE = dirname.realpath().strpath
+    return dirname
+
+
+@pytest.fixture(scope="session")
+def prod_env_state_tree_root_dir(state_tree_root_dir):
+    """
+    Fixture which returns the salt prod environment state tree directory path.
+    Creates the directory if it does not yet exist.
+    """
+    dirname = state_tree_root_dir.join("prod")
+    dirname.ensure(dir=True)
+    RUNTIME_VARS.TMP_PRODENV_STATE_TREE = dirname.realpath().strpath
+    return dirname
+
+
+@pytest.fixture(scope="session")
+def base_env_pillar_tree_root_dir(pillar_tree_root_dir):
+    """
+    Fixture which returns the salt base environment pillar tree directory path.
+    Creates the directory if it does not yet exist.
+    """
+    dirname = pillar_tree_root_dir.join("base")
+    dirname.ensure(dir=True)
+    RUNTIME_VARS.TMP_PILLAR_TREE = dirname.realpath().strpath
+    return dirname
+
+
+@pytest.fixture(scope="session")
+def prod_env_pillar_tree_root_dir(pillar_tree_root_dir):
+    """
+    Fixture which returns the salt prod environment pillar tree directory path.
+    Creates the directory if it does not yet exist.
+    """
+    dirname = pillar_tree_root_dir.join("prod")
+    dirname.ensure(dir=True)
+    RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE = dirname.realpath().strpath
+    return dirname
+
+
+@pytest.fixture(scope="session")
+def salt_syndic_master_config(request, salt_factories):
+    return salt_factories.configure_master(request, "syndic_master", order_masters=True)
+
+
+@pytest.fixture(scope="session")
+def salt_syndic_config(request, salt_factories, salt_syndic_master_config):
+    return salt_factories.configure_syndic(
+        request, "syndic", master_of_masters_id="syndic_master"
+    )
+
+
+@pytest.fixture(scope="session")
+def salt_master_config(request, salt_factories, salt_syndic_master_config):
+    return salt_factories.configure_master(
+        request, "master", master_of_masters_id="syndic_master"
+    )
 
 
 @pytest.fixture(scope="session")
@@ -1240,44 +1322,6 @@ def pytest_saltfactories_syndic_configuration_overrides(
     """
 
 
-@pytest.hookspec(firstresult=True)
-def pytest_saltfactories_generate_default_proxy_minion_configuration(
-    request, factories_manager, proxy_minion_id, master_port
-):
-    """
-    Hook which should return a dictionary tailored for the provided proxy_minion_id
-
-    Stops at the first non None result
-    """
-
-
-@pytest.hookspec(firstresult=True)
-def pytest_saltfactories_proxy_minion_configuration_overrides(
-    request, factories_manager, root_dir, proxy_minion_id, default_options
-):
-    """
-    Hook which should return a dictionary tailored for the provided proxy_minion_id.
-    This dictionary will override the default_options dictionary.
-
-    Stops at the first non None result
-    """
-    if proxy_minion_id == "proxy":
-        with salt.utils.files.fopen(
-            os.path.join(RUNTIME_VARS.CONF_DIR, "proxy")
-        ) as rfh:
-            opts = yaml.deserialize(rfh.read())
-    else:
-        raise RuntimeError(
-            "Not prepared to handle proxy minion_id '{}'".format(proxy_minion_id)
-        )
-
-    opts["hosts.file"] = root_dir.join("hosts").strpath
-    opts["aliases.file"] = root_dir.join("aliases").strpath
-    opts["transport"] = request.config.getoption("--transport")
-
-    return opts
-
-
 @pytest.fixture(scope="session", autouse=True)
 def bridge_pytest_and_runtests(
     reap_stray_processes,
@@ -1286,8 +1330,8 @@ def bridge_pytest_and_runtests(
     base_env_pillar_tree_root_dir,
     prod_env_pillar_tree_root_dir,
     salt_factories,
-    # salt_syndic_master_config,
-    # salt_syndic_config,
+    salt_syndic_master_config,
+    salt_syndic_config,
     salt_master_config,
     salt_minion_config,
     salt_sub_minion_config,
@@ -1296,8 +1340,8 @@ def bridge_pytest_and_runtests(
     RUNTIME_VARS.RUNTIME_CONFIGS["master"] = freeze(salt_master_config)
     RUNTIME_VARS.RUNTIME_CONFIGS["minion"] = freeze(salt_minion_config)
     RUNTIME_VARS.RUNTIME_CONFIGS["sub_minion"] = freeze(salt_sub_minion_config)
-    # RUNTIME_VARS.RUNTIME_CONFIGS['syndic_master'] = freeze(salt_syndic_master_config)
-    # RUNTIME_VARS.RUNTIME_CONFIGS['syndic'] = freeze(salt_syndic_config)
+    RUNTIME_VARS.RUNTIME_CONFIGS["syndic_master"] = freeze(salt_syndic_master_config)
+    RUNTIME_VARS.RUNTIME_CONFIGS["syndic"] = freeze(salt_syndic_config)
     RUNTIME_VARS.RUNTIME_CONFIGS["client_config"] = freeze(
         salt.config.client_config(salt_master_config["conf_file"])
     )
@@ -1309,8 +1353,23 @@ def bridge_pytest_and_runtests(
     RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR = os.path.dirname(
         salt_sub_minion_config["conf_file"]
     )
-    # RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR = os.path.dirname(salt_syndic_master_config['conf_file'])
-    # RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR = os.path.dirname(salt_syndic_config['conf_file'])
+    RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR = os.path.dirname(
+        salt_syndic_master_config["conf_file"]
+    )
+    RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR = os.path.dirname(
+        salt_syndic_config["conf_file"]
+    )
+
+    # Let's copy over the test cloud config files and directories into the running master config directory
+    for entry in os.listdir(RUNTIME_VARS.CONF_DIR):
+        if not entry.startswith("cloud"):
+            continue
+        source = os.path.join(RUNTIME_VARS.CONF_DIR, entry)
+        dest = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, entry)
+        if os.path.isdir(source):
+            shutil.copytree(source, dest)
+        else:
+            shutil.copyfile(source, dest)
 
 
 # <---- Salt Configuration -------------------------------------------------------------------------------------------
