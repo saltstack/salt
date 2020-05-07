@@ -3,7 +3,6 @@
 Base classes for gitfs/git_pillar integration tests
 """
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
@@ -19,20 +18,17 @@ import textwrap
 import threading
 import time
 
-# Import 3rd-party libs
 import psutil
 import salt.ext.six as six
-
-# Import Salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.yaml
-from pytestsalt.utils import SaltDaemonScriptBase as _SaltDaemonScriptBase
-from pytestsalt.utils import terminate_process
 from salt.fileserver import gitfs
 from salt.pillar import git_pillar
-
-# Import Salt Testing libs
+from saltfactories.utils.processes.helpers import terminate_process
+from saltfactories.utils.processes.salts import (
+    SaltDaemonScriptBase as _SaltDaemonScriptBase,
+)
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     get_unused_localhost_port,
