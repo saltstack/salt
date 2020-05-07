@@ -16,12 +16,9 @@ Function Get-Settings {
         $Settings = @{
             "SaltRepo"    = "https://repo.saltstack.com/windows/dependencies"
             "SaltDir"     = "C:\salt"
-            "Python2Dir"   = "C:\Python27"
-            "Scripts2Dir"  = "C:\Python27\Scripts"
-            "SitePkgs2Dir" = "C:\Python27\Lib\site-packages"
-            "Python3Dir"   = "C:\Python35"
-            "Scripts3Dir"  = "C:\Python35\Scripts"
-            "SitePkgs3Dir" = "C:\Python35\Lib\site-packages"
+            "PythonDir"   = "C:\Python37"
+            "ScriptsDir"  = "C:\Python37\Scripts"
+            "SitePkgsDir" = "C:\Python37\Lib\site-packages"
             "DownloadDir" = "$env:Temp\DevSalt"
             }
 
@@ -31,7 +28,6 @@ Function Get-Settings {
         # Prerequisite software
         $Prerequisites = @{
             "NSIS"           = "nsis-3.03-setup.exe"
-            "VCforPython"    = "VCForPython27.msi"
             "VCppBuildTools" = "visualcppbuildtools_full.exe"
         }
         $ini.Add("Prerequisites", $Prerequisites)
@@ -54,15 +50,13 @@ Function Get-Settings {
 
         # Filenames for 64 bit Windows
         $64bitPrograms = @{
-            "Python2"   = "python-2.7.15.amd64.msi"
-            "Python3"   = "python-3.5.4-amd64.exe"
+            "Python"   = "python-3.7.4-amd64.exe"
         }
         $ini.Add("64bitPrograms", $64bitPrograms)
 
         # Filenames for 32 bit Windows
         $32bitPrograms = @{
-            "Python2"   = "python-2.7.15.msi"
-            "Python3"   = "python-3.5.4.exe"
+            "Python"   = "python-3.7.4.exe"
         }
         $ini.Add("32bitPrograms", $32bitPrograms)
 

@@ -20,7 +20,7 @@ import salt.utils.stringutils
 from salt.ext import six
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from tests.support.case import ModuleCase
-from tests.support.helpers import with_tempdir
+from tests.support.helpers import slowTest, with_tempdir
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
@@ -64,7 +64,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         else:
             cls.TIMEOUT = 10
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_show_highstate(self):
         """
         state.show_highstate
@@ -75,7 +75,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(destpath in high)
         self.assertEqual(high[destpath]["__env__"], "base")
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_show_lowstate(self):
         """
         state.show_lowstate
@@ -84,7 +84,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(isinstance(low, list))
         self.assertTrue(isinstance(low[0], dict))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_show_states(self):
         """
         state.show_states
@@ -97,7 +97,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(isinstance(states, list))
         self.assertTrue(isinstance(states[0], six.string_types))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_show_states_missing_sls(self):
         """
         Test state.show_states with a sls file
@@ -118,7 +118,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         assert isinstance(states, list)
         assert states == ["No matching sls found for 'doesnotexist' in env 'base'"]
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_catch_recurse(self):
         """
         state.show_sls used to catch a recursive ref
@@ -126,7 +126,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         err = self.run_function("state.sls", mods="recurse_fail")
         self.assertIn("recursive", err[0])
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_no_recurse(self):
         """
         verify that a sls structure is NOT a recursive ref
@@ -134,7 +134,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         sls = self.run_function("state.show_sls", mods="recurse_ok")
         self.assertIn("snmpd", sls)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_no_recurse_two(self):
         """
         verify that a sls structure is NOT a recursive ref
@@ -142,7 +142,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         sls = self.run_function("state.show_sls", mods="recurse_ok_two")
         self.assertIn("/etc/nagios/nrpe.cfg", sls)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_running_dictionary_consistency(self):
         """
         Test the structure of the running dictionary so we don't change it
@@ -168,7 +168,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             for field in running_dict_fields:
                 self.assertIn(field, ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_running_dictionary_key_sls(self):
         """
         Ensure the __sls__ key is either null or a string
@@ -193,7 +193,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         if os.path.exists(cache_file):
             os.remove(cache_file)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_request(self):
         """
         verify sending a state request to the minion(s)
@@ -204,7 +204,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         result = ret["cmd_|-count_root_dir_contents_|-ls -a / | wc -l_|-run"]["result"]
         self.assertEqual(result, None)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_check_request(self):
         """
         verify checking a state request sent to the minion(s)
@@ -218,7 +218,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         ]["result"]
         self.assertEqual(result, None)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_clear_request(self):
         """
         verify clearing a state request sent to the minion(s)
@@ -229,7 +229,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function("state.clear_request")
         self.assertTrue(ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_run_request_succeeded(self):
         """
         verify running a state request sent to the minion(s)
@@ -251,7 +251,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         result = ret[key]["result"]
         self.assertTrue(result)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_run_request_failed_no_request_staged(self):
         """
         verify not running a state request sent to the minion(s)
@@ -264,7 +264,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret, {})
 
     @with_tempdir()
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_issue_1896_file_append_source(self, base_dir):
         """
         Verify that we can append a file's contents
@@ -320,7 +320,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         self.assertMultiLineEqual(contents, testfile_contents)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_issue_1876_syntax_error(self):
         """
         verify that we catch the following syntax error::
@@ -344,7 +344,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             sls,
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_issue_1879_too_simple_contains_check(self):
         expected = textwrap.dedent(
             """\
@@ -404,7 +404,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             if os.path.exists(testfile):
                 os.unlink(testfile)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_include(self):
         tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, tempdir, ignore_errors=True)
@@ -417,7 +417,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(os.path.isfile(pillar["to-include-test"]))
         self.assertFalse(os.path.isfile(pillar["exclude-test"]))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_exclude(self):
         tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, tempdir, ignore_errors=True)
@@ -434,7 +434,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None,
         "virtualenv not installed",
     )
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_issue_2068_template_str(self):
         venv_dir = os.path.join(RUNTIME_VARS.TMP, "issue-2068-template-str")
 
@@ -491,7 +491,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function("state.template", [template_path], timeout=120)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_template_invalid_items(self):
         TEMPLATE = textwrap.dedent(
             """\
@@ -516,7 +516,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 ret,
             )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_pydsl(self):
         """
         Test the basics of the pydsl
@@ -524,7 +524,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function("state.sls", mods="pydsl-1")
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_issues_7905_and_8174_sls_syntax_error(self):
         """
         Call sls file with yaml syntax error.
@@ -541,7 +541,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             ret, ["State 'C' in SLS 'syntax.badlist2' is not formed as a list"]
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_requisites_mixed_require_prereq_use(self):
         """
         Call sls file containing several requisites.
@@ -671,7 +671,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         # result = self.normalize_ret(ret)
         # self.assertEqual(expected_result, result)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_watch_in(self):
         """
         test watch_in requisite when there is a success
@@ -688,7 +688,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             "Something pretended to change", ret[changes]["changes"]["testing"]["new"]
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_watch_in_failure(self):
         """
         test watch_in requisite when there is a failure
@@ -717,7 +717,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             }
         return result
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_requisites_require_ordering_and_errors(self):
         """
         Call sls file containing several require_in and require.
@@ -823,7 +823,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             ],
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_requisites_require_any(self):
         """
         Call sls file containing several require_in and require.
@@ -861,7 +861,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertReturnNonEmptySaltType(ret)
         self.assertEqual(expected_result, result)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_requisites_require_any_fail(self):
         """
         Call sls file containing several require_in and require.
@@ -875,7 +875,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             "One or more requisite failed", result["cmd_|-D_|-echo D_|-run"]["comment"]
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_requisites_watch_any(self):
         """
         Call sls file containing several require_in and require.
@@ -943,7 +943,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertReturnNonEmptySaltType(ret)
         self.assertEqual(expected_result, result)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_requisites_watch_any_fail(self):
         """
         Call sls file containing several require_in and require.
@@ -957,7 +957,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             "One or more requisite failed", result["cmd_|-A_|-true_|-wait"]["comment"]
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_requisites_onchanges_any(self):
         """
         Call sls file containing several require_in and require.
@@ -1007,7 +1007,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertReturnNonEmptySaltType(ret)
         self.assertEqual(expected_result, result)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_requisites_onfail_any(self):
         """
         Call sls file containing several require_in and require.
@@ -1069,7 +1069,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertReturnNonEmptySaltType(ret)
         self.assertEqual(expected_result, result)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_requisites_onfail_all(self):
         """
         Call sls file containing several onfail-all
@@ -1143,7 +1143,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertReturnNonEmptySaltType(ret)
         self.assertEqual(expected_result, result)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_requisites_full_sls(self):
         """
         Teste the sls special command in requisites
@@ -1178,7 +1178,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         # ret = self.run_function('state.sls', mods='requisites.fullsls_prereq')
         # self.assertEqual(['sls command can only be used with require requisite'], ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_requisites_require_no_state_module(self):
         """
         Call sls file containing several require_in and require.
@@ -1238,7 +1238,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertReturnNonEmptySaltType(ret)
         self.assertEqual(expected_result, result)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_requisites_prereq_simple_ordering_and_errors(self):
         """
         Call sls file containing several prereq_in and prereq.
@@ -1455,14 +1455,14 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         result = self.normalize_ret(ret)
         self.assertEqual(expected_result_simple_no_state_module, result)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_infinite_recursion_sls_prereq(self):
         ret = self.run_function(
             "state.sls", mods="requisites.prereq_sls_infinite_recursion"
         )
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_requisites_use(self):
         """
         Call sls file containing several use_in and use.
@@ -1495,7 +1495,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         #    + ' ID "A" ID "A"'
         # ])
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_requisites_use_no_state_module(self):
         """
         Call sls file containing several use_in and use.
@@ -1506,7 +1506,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         for item, descr in six.iteritems(ret):
             self.assertEqual(descr["comment"], "onlyif condition is false")
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_onlyif_req(self):
         ret = self.run_function(
             "state.single",
@@ -1544,7 +1544,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(ret["changes"])
         self.assertEqual(ret["comment"], "Success!")
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_onlyif_req_retcode(self):
         ret = self.run_function(
             "state.single",
@@ -1565,7 +1565,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(ret["changes"])
         self.assertEqual(ret["comment"], "Success!")
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_unless_req(self):
         ret = self.run_function(
             "state.single",
@@ -1603,7 +1603,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(ret["changes"])
         self.assertEqual(ret["comment"], "Success!")
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_unless_req_retcode(self):
         ret = self.run_function(
             "state.single",
@@ -1624,7 +1624,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(ret["changes"])
         self.assertEqual(ret["comment"], "unless condition is true")
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_get_file_from_env_in_top_match(self):
         tgt = os.path.join(RUNTIME_VARS.TMP, "prod-cheese-file")
         try:
@@ -1641,7 +1641,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     # onchanges tests
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_onchanges_requisite(self):
         """
         Tests a simple state using the onchanges requisite
@@ -1664,7 +1664,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         expected_result = "State was not run because none of the onchanges reqs changed"
         self.assertIn(expected_result, test_data)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_onchanges_requisite_multiple(self):
         """
         Tests a simple state using the onchanges requisite
@@ -1694,7 +1694,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         expected_result = 'Command "echo "Success!"" run'
         self.assertIn(expected_result, test_data)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_onchanges_in_requisite(self):
         """
         Tests a simple state using the onchanges_in requisite
@@ -1719,7 +1719,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         expected_result = "State was not run because none of the onchanges reqs changed"
         self.assertIn(expected_result, test_data)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_onchanges_requisite_no_state_module(self):
         """
         Tests a simple state using the onchanges requisite without state modules
@@ -1734,7 +1734,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         expected_result = 'Command "echo "Success!"" run'
         self.assertIn(expected_result, test_data)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_onchanges_requisite_with_duration(self):
         """
         Tests a simple state using the onchanges requisite
@@ -1753,7 +1753,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     # onfail tests
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_onfail_requisite(self):
         """
         Tests a simple state using the onfail requisite
@@ -1776,7 +1776,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         expected_result = "State was not run because onfail req did not change"
         self.assertIn(expected_result, test_data)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_multiple_onfail_requisite(self):
         """
         test to ensure state is run even if only one
@@ -1794,7 +1794,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         stdout = state_run["cmd_|-c_|-echo itworked_|-run"]["changes"]["stdout"]
         self.assertEqual(stdout, "itworked")
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_onfail_in_requisite(self):
         """
         Tests a simple state using the onfail_in requisite
@@ -1817,7 +1817,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         expected_result = "State was not run because onfail req did not change"
         self.assertIn(expected_result, test_data)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_onfail_requisite_no_state_module(self):
         """
         Tests a simple state using the onfail requisite
@@ -1842,7 +1842,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         expected_result = "State was not run because onfail req did not change"
         self.assertIn(expected_result, test_data)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_onfail_requisite_with_duration(self):
         """
         Tests a simple state using the onfail requisite
@@ -1857,7 +1857,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         ]
         self.assertIn("duration", test_data)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_multiple_onfail_requisite_with_required(self):
         """
         test to ensure multiple states are run
@@ -1894,7 +1894,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         stdout = state_run["cmd_|-f_|-echo f_|-run"]["changes"]["stdout"]
         self.assertEqual(stdout, "f")
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_multiple_onfail_requisite_with_required_no_run(self):
         """
         test to ensure multiple states are not run
@@ -1921,7 +1921,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     # listen tests
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_listen_requisite(self):
         """
         Tests a simple state using the listen requisite
@@ -1938,7 +1938,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         absent_state = 'cmd_|-listener_test_listening_non_changing_state_|-echo "Only run once"_|-mod_watch'
         self.assertNotIn(absent_state, state_run)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_listen_in_requisite(self):
         """
         Tests a simple state using the listen_in requisite
@@ -1955,7 +1955,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         absent_state = 'cmd_|-listener_test_listening_non_changing_state_|-echo "Only run once"_|-mod_watch'
         self.assertNotIn(absent_state, state_run)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_listen_in_requisite_resolution(self):
         """
         Verify listen_in requisite lookups use ID declaration to check for changes
@@ -1968,7 +1968,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         listener_state = 'cmd_|-listener_test_listen_in_resolution_|-echo "Successful listen_in resolution"_|-mod_watch'
         self.assertIn(listener_state, state_run)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_listen_requisite_resolution(self):
         """
         Verify listen requisite lookups use ID declaration to check for changes
@@ -1984,7 +1984,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         listener_state = 'cmd_|-listener_test_listening_resolution_two_|-echo "Successful listen resolution"_|-mod_watch'
         self.assertIn(listener_state, state_run)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_listen_requisite_no_state_module(self):
         """
         Tests a simple state using the listen requisite
@@ -2002,7 +2002,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         absent_state = 'cmd_|-listener_test_listening_non_changing_state_|-echo "Only run once"_|-mod_watch'
         self.assertNotIn(absent_state, state_run)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_listen_in_requisite_resolution_names(self):
         """
         Verify listen_in requisite lookups use ID declaration to check for changes
@@ -2014,7 +2014,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertIn("test_|-listener_service_|-nginx_|-mod_watch", state_run)
         self.assertIn("test_|-listener_service_|-crond_|-mod_watch", state_run)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_listen_requisite_resolution_names(self):
         """
         Verify listen requisite lookups use ID declaration to check for changes
@@ -2028,7 +2028,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertIn("test_|-listener_service_|-nginx_|-mod_watch", state_run)
         self.assertIn("test_|-listener_service_|-crond_|-mod_watch", state_run)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_issue_30820_requisite_in_match_by_name(self):
         """
         This tests the case where a requisite_in matches by name instead of ID
@@ -2043,7 +2043,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertIn(bar_state, state_run)
         self.assertEqual(state_run[bar_state]["comment"], 'Command "echo bar" run')
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_retry_option_defaults(self):
         """
         test the retry option on a simple state with defaults
@@ -2061,7 +2061,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(state_run[retry_state]["duration"] > 30)
         self.assertEqual(state_run[retry_state]["result"], False)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_retry_option_custom(self):
         """
         test the retry option on a simple state with custom retry values
@@ -2085,7 +2085,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(state_run[retry_state]["duration"] > 40)
         self.assertEqual(state_run[retry_state]["result"], False)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_retry_option_success(self):
         """
         test a state with the retry option that should return True immedietly (i.e. no retries)
@@ -2110,7 +2110,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         with salt.utils.files.fopen(testfile, "a"):
             pass
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_retry_option_eventual_success(self):
         """
         test a state with the retry option that should return True after at least 4 retry attmempt
@@ -2130,7 +2130,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertNotIn("Attempt 15:", state_run[retry_state]["comment"])
         self.assertEqual(state_run[retry_state]["result"], True)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_issue_38683_require_order_failhard_combination(self):
         """
         This tests the case where require, order, and failhard are all used together in a state definition.
@@ -2150,7 +2150,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(state_run[state_id]["comment"], "Failure!")
         self.assertFalse(state_run[state_id]["result"])
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_issue_46762_prereqs_on_a_state_with_unfulfilled_requirements(self):
         """
         This tests the case where state C requires state A, which fails.
@@ -2184,7 +2184,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertFalse(state_run[state_id]["result"])
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_state_nonbase_environment(self):
         """
         test state.sls with saltenv using a nonbase environment
@@ -2210,7 +2210,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
     @skipIf(
         salt.utils.platform.is_darwin() and six.PY2, "This test hangs on OS X on Py2"
     )
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_parallel_state_with_long_tag(self):
         """
         This tests the case where the state being executed has a long ID dec or
@@ -2265,7 +2265,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.run_function("saltutil.refresh_pillar")
         self.run_function("test.sleep", [5])
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_state_sls_id_test(self):
         """
         test state.sls_id when test is set
@@ -2282,7 +2282,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual(val["comment"], comment)
             self.assertEqual(val["changes"], {"newfile": testfile})
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_state_sls_id_test_state_test_post_run(self):
         """
         test state.sls_id when test is set to
@@ -2303,7 +2303,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             )
             self.assertEqual(val["changes"], {})
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_state_sls_id_test_true(self):
         """
         test state.sls_id when test=True is passed as arg
@@ -2319,7 +2319,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             )
             self.assertEqual(val["changes"], {"newfile": file_name})
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_state_sls_id_test_true_post_run(self):
         """
         test state.sls_id when test is set to true as an
@@ -2339,7 +2339,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             )
             self.assertEqual(val["changes"], {})
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_state_sls_id_test_false_pillar_true(self):
         """
         test state.sls_id when test is set to false as an
@@ -2388,7 +2388,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
     @skipIf(
         six.PY3 and salt.utils.platform.is_darwin(), "Test is broken on macosx and PY3"
     )
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_issue_30161_unless_and_onlyif_together(self):
         """
         test cmd.run using multiple unless options where the first cmd in the
@@ -2452,7 +2452,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
     @skipIf(
         six.PY3 and salt.utils.platform.is_darwin(), "Test is broken on macosx and PY3"
     )
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_state_sls_unicode_characters(self):
         """
         test state.sls when state file contains non-ascii characters
@@ -2466,7 +2466,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
     @skipIf(
         six.PY3 and salt.utils.platform.is_darwin(), "Test is broken on macosx and PY3"
     )
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_state_sls_unicode_characters_cmd_output(self):
         """
         test the output from running and echo command with non-ascii
@@ -2502,7 +2502,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.run_function("saltutil.refresh_pillar")
         self.run_function("test.sleep", [5])
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_state_sls_integer_name(self):
         """
         This tests the case where the state file is named
@@ -2515,7 +2515,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(state_run[state_id]["comment"], "Success!")
         self.assertTrue(state_run[state_id]["result"])
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_state_sls_lazyloader_allows_recursion(self):
         """
         This tests that referencing dunders like __salt__ work
@@ -2528,7 +2528,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(state_run[state_id]["comment"], "Success!")
         self.assertTrue(state_run[state_id]["result"])
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_issue_56131(self):
         module_path = os.path.join(RUNTIME_VARS.CODE_DIR, "pip.py")
         if six.PY3:
@@ -2557,7 +2557,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         assert state_run is not False
         assert os.path.exists(unzip_path)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_jinja_renderer_argline(self):
         """
         This is a test case for https://github.com/saltstack/salt/issues/55124

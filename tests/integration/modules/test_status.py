@@ -8,7 +8,7 @@ import pytest
 import salt.utils.platform
 from salt.ext import six
 from tests.support.case import ModuleCase
-from tests.support.helpers import flaky
+from tests.support.helpers import flaky, slowTest
 from tests.support.unit import skipIf
 
 
@@ -31,7 +31,7 @@ class StatusModuleTest(ModuleCase):
         self.assertIn(random_pid, grep_salt)
 
     @skipIf(not salt.utils.platform.is_windows(), "windows only test")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_status_cpuload(self):
         """
         status.cpuload
@@ -40,7 +40,7 @@ class StatusModuleTest(ModuleCase):
         self.assertTrue(isinstance(ret, float))
 
     @skipIf(not salt.utils.platform.is_windows(), "windows only test")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_status_saltmem(self):
         """
         status.saltmem
@@ -48,7 +48,7 @@ class StatusModuleTest(ModuleCase):
         ret = self.run_function("status.saltmem")
         self.assertTrue(isinstance(ret, int))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_status_diskusage(self):
         """
         status.diskusage
@@ -62,7 +62,7 @@ class StatusModuleTest(ModuleCase):
             self.assertIn("total", str(ret))
             self.assertIn("available", str(ret))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_status_procs(self):
         """
         status.procs
@@ -71,7 +71,7 @@ class StatusModuleTest(ModuleCase):
         for x, y in six.iteritems(ret):
             self.assertIn("cmd", y)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_status_uptime(self):
         """
         status.uptime

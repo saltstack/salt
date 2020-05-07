@@ -17,8 +17,11 @@ Refer to :mod:`junos <salt.proxy.junos>` for information on connecting to junos 
 # Import Python libraries
 from __future__ import absolute_import, print_function, unicode_literals
 
+import glob
+import json
 import logging
 import os
+import traceback
 from functools import wraps
 
 # Import Salt libs
@@ -26,6 +29,8 @@ import salt.utils.args
 import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
+import yaml
+from salt.exceptions import MinionError
 from salt.ext import six
 
 try:
@@ -45,6 +50,11 @@ try:
     import jnpr.junos.utils
     import jnpr.junos.cfg
     import jxmlease
+    from jnpr.junos.factory.optable import OpTable
+    import jnpr.junos.op as tables_dir
+    from jnpr.junos.factory.factory_loader import FactoryLoader
+    import yamlordereddictloader
+    from jnpr.junos.exception import ConnectClosedError, LockError
 
     # pylint: enable=W0611
     HAS_JUNOS = True
@@ -71,8 +81,9 @@ def __virtual__():
     else:
         return (
             False,
-            "The junos module could not be loaded: "
-            "junos-eznc or jxmlease or proxy could not be loaded.",
+            "The junos or dependent module could not be loaded: "
+            "junos-eznc or jxmlease or yamlordereddictloader or "
+            "proxy could not be loaded.",
         )
 
 
@@ -181,11 +192,10 @@ def rpc(cmd=None, dest=None, **kwargs):
 
     .. code-block:: bash
 
-        salt 'device' junos.rpc get_config /var/log/config.txt format=text filter='<configuration><system/></configuration>'
-        salt 'device' junos.rpc get-interface-information /home/user/interface.xml interface_name='lo0' terse=True
+        salt 'device' junos.rpc get_config dest=/var/log/config.txt format=text filter='<configuration><system/></configuration>'
+        salt 'device' junos.rpc get-interface-information dest=/home/user/interface.xml interface_name='lo0' terse=True
         salt 'device' junos.rpc get-chassis-inventory
     """
-
     conn = __proxy__["junos.conn"]()
     ret = {}
     ret["out"] = True
@@ -194,10 +204,6 @@ def rpc(cmd=None, dest=None, **kwargs):
         ret["message"] = "Please provide the rpc to execute."
         ret["out"] = False
         return ret
-
-    format_ = kwargs.pop("format", "xml")
-    if not format_:
-        format_ = "xml"
 
     op = dict()
     if "__pub_arg" in kwargs:
@@ -210,11 +216,20 @@ def rpc(cmd=None, dest=None, **kwargs):
                 op[key] = value
     else:
         op.update(kwargs)
+    format_ = op.pop("format", "xml")
+    # when called from state, dest becomes part of op via __pub_arg
+    dest = dest or op.pop("dest", None)
 
     if cmd in ["get-config", "get_config"]:
         filter_reply = None
         if "filter" in op:
-            filter_reply = etree.XML(op["filter"])
+            try:
+                filter_reply = etree.XML(op["filter"])
+            except etree.XMLSyntaxError as ex:
+                ret["message"] = "Invalid filter: {0}".format(str(ex))
+                ret["out"] = False
+                return ret
+
             del op["filter"]
 
         op.update({"format": format_})
@@ -264,11 +279,11 @@ def set_hostname(hostname=None, **kwargs):
     hostname
         The name to be set
 
-    dev_timeout : 30
-        The NETCONF RPC timeout (in seconds)
-
     comment
         Provide a comment to the commit
+
+    dev_timeout : 30
+        The NETCONF RPC timeout (in seconds)
 
     confirm
       Provide time in minutes for commit confirmation. If this option is
@@ -332,6 +347,7 @@ def set_hostname(hostname=None, **kwargs):
         ret["out"] = False
         ret["message"] = "Successfully loaded host-name but pre-commit check failed."
         conn.cu.rollback()
+
     return ret
 
 
@@ -419,6 +435,7 @@ def commit(**kwargs):
         ret["out"] = False
         ret["message"] = "Pre-commit check failed."
         conn.cu.rollback()
+
     return ret
 
 
@@ -451,7 +468,7 @@ def rollback(**kwargs):
 
     .. code-block:: bash
 
-        salt 'device_name' junos.rollback 10
+        salt 'device_name' junos.rollback id=10
     """
     id_ = kwargs.pop("id", 0)
 
@@ -526,7 +543,7 @@ def diff(**kwargs):
 
     .. code-block:: bash
 
-        salt 'device_name' junos.diff 3
+        salt 'device_name' junos.diff id=3
     """
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     id_ = kwargs.pop("id", 0)
@@ -633,7 +650,6 @@ def cli(command=None, **kwargs):
     .. code-block:: bash
 
         salt 'device_name' junos.cli 'show system commit'
-        salt 'device_name' junos.cli 'show version' dev_timeout=40
         salt 'device_name' junos.cli 'show system alarms' format=xml dest=/home/user/cli_output.txt
     """
     conn = __proxy__["junos.conn"]()
@@ -670,8 +686,13 @@ def cli(command=None, **kwargs):
         ret["message"] = jxmlease.parse(result)
 
     if "dest" in op and op["dest"] is not None:
-        with salt.utils.files.fopen(op["dest"], "w") as fp:
-            fp.write(salt.utils.stringutils.to_str(result))
+        try:
+            with salt.utils.files.fopen(op["dest"], "w") as fp:
+                fp.write(salt.utils.stringutils.to_str(result))
+        except IOError:
+            ret["message"] = 'Unable to open "{0}" to write'.format(op["dest"])
+            ret["out"] = False
+            return ret
 
     ret["out"] = True
     return ret
@@ -803,7 +824,9 @@ def install_config(path=None, **kwargs):
     diffs_file
       Path to the file where the diff (difference in old configuration and the
       committed configuration) will be stored. Note that the file will be
-      stored on the proxy minion. To push the files to the master use
+      stored on the proxy minion. To push the files to the master
+
+      use
       :py:func:`cp.push <salt.modules.cp.push>`.
 
     template_vars
@@ -848,8 +871,18 @@ def install_config(path=None, **kwargs):
     if "template_vars" in op:
         template_vars = op["template_vars"]
 
-    template_cached_path = salt.utils.files.mkstemp()
-    __salt__["cp.get_template"](path, template_cached_path, template_vars=template_vars)
+    try:
+        template_cached_path = salt.utils.files.mkstemp()
+        __salt__["cp.get_template"](
+            path, template_cached_path, template_vars=template_vars
+        )
+    except Exception as ex:  # pylint: disable=broad-except
+        ret["message"] = (
+            "Salt failed to render the template, please check file path and syntax."
+            "\nError: {0}".format(str(ex))
+        )
+        ret["out"] = False
+        return ret
 
     if not os.path.isfile(template_cached_path):
         ret["message"] = "Invalid file path."
@@ -888,77 +921,94 @@ def install_config(path=None, **kwargs):
         del op["overwrite"]
 
     db_mode = op.pop("mode", "exclusive")
-    with Config(conn, mode=db_mode) as cu:
-        try:
-            cu.load(**op)
+    if write_diff and db_mode == "dynamic":
+        ret["message"] = "Write diff is not supported with dynamic configuration mode"
+        ret["out"] = False
+        return ret
 
-        except Exception as exception:  # pylint: disable=broad-except
-            ret["message"] = 'Could not load configuration due to : "{0}"'.format(
-                exception
-            )
-            ret["format"] = op["format"]
-            ret["out"] = False
-            return ret
-
-        finally:
-            salt.utils.files.safe_rm(template_cached_path)
-
-        config_diff = cu.diff()
-        if config_diff is None:
-            ret["message"] = "Configuration already applied!"
-            ret["out"] = True
-            return ret
-
-        commit_params = {}
-        if "confirm" in op:
-            commit_params["confirm"] = op["confirm"]
-        if "comment" in op:
-            commit_params["comment"] = op["comment"]
-
-        try:
-            check = cu.commit_check()
-        except Exception as exception:  # pylint: disable=broad-except
-            ret["message"] = 'Commit check threw the following exception: "{0}"'.format(
-                exception
-            )
-
-            ret["out"] = False
-            return ret
-
-        if check and not test:
+    try:
+        with Config(conn, mode=db_mode) as cu:
             try:
-                cu.commit(**commit_params)
-                ret["message"] = "Successfully loaded and committed!"
+                cu.load(**op)
             except Exception as exception:  # pylint: disable=broad-except
+                ret["message"] = 'Could not load configuration due to : "{0}"'.format(
+                    exception
+                )
+                ret["format"] = op["format"]
+                ret["out"] = False
+                return ret
+            finally:
+                salt.utils.files.safe_rm(template_cached_path)
+
+            if db_mode != "dynamic":
+                config_diff = cu.diff()
+                if config_diff is None:
+                    ret["message"] = "Configuration already applied!"
+                    ret["out"] = True
+                    return ret
+
+            commit_params = {}
+            if "confirm" in op:
+                commit_params["confirm"] = op["confirm"]
+            if "comment" in op:
+                commit_params["comment"] = op["comment"]
+
+            # Assume commit_check succeeds and initialize variable check
+            check = True
+            if db_mode != "dynamic":
+                try:
+                    check = cu.commit_check()
+                except Exception as exception:  # pylint: disable=broad-except
+                    ret[
+                        "message"
+                    ] = 'Commit check threw the following exception: "{0}"'.format(
+                        exception
+                    )
+                    ret["out"] = False
+                    return ret
+
+            if check and not test:
+                try:
+                    cu.commit(**commit_params)
+                    ret["message"] = "Successfully loaded and committed!"
+                except Exception as exception:  # pylint: disable=broad-except
+                    ret[
+                        "message"
+                    ] = 'Commit check successful but commit failed with "{0}"'.format(
+                        exception
+                    )
+                    ret["out"] = False
+                    return ret
+            elif not check:
+                cu.rollback()
                 ret[
                     "message"
-                ] = 'Commit check successful but commit failed with "{0}"'.format(
+                ] = "Loaded configuration but commit check failed, hence rolling back configuration."
+                ret["out"] = False
+            else:
+                cu.rollback()
+                ret[
+                    "message"
+                ] = "Commit check passed, but skipping commit for dry-run and rolling back configuration."
+                ret["out"] = True
+            try:
+                if write_diff and config_diff is not None:
+                    with salt.utils.files.fopen(write_diff, "w") as fp:
+                        fp.write(salt.utils.stringutils.to_str(config_diff))
+            except Exception as exception:  # pylint: disable=broad-except
+                ret["message"] = 'Could not write into diffs_file due to: "{0}"'.format(
                     exception
                 )
                 ret["out"] = False
-                return ret
-        elif not check:
-            cu.rollback()
-            ret[
-                "message"
-            ] = "Loaded configuration but commit check failed, hence rolling back configuration."
-            ret["out"] = False
-        else:
-            cu.rollback()
-            ret[
-                "message"
-            ] = "Commit check passed, but skipping commit for dry-run and rolling back configuration."
-            ret["out"] = True
-
-        try:
-            if write_diff and config_diff is not None:
-                with salt.utils.files.fopen(write_diff, "w") as fp:
-                    fp.write(salt.utils.stringutils.to_str(config_diff))
-        except Exception as exception:  # pylint: disable=broad-except
-            ret["message"] = 'Could not write into diffs_file due to: "{0}"'.format(
-                exception
-            )
-            ret["out"] = False
+    except ValueError:
+        ret[
+            "message"
+        ] = "Invalid mode. Modes supported: private, dynamic, batch, exclusive"
+        ret["out"] = False
+    except LockError as ex:
+        log.error("Configuration database is locked")
+        ret["message"] = ex.message
+        ret["out"] = False
 
     return ret
 
@@ -966,6 +1016,13 @@ def install_config(path=None, **kwargs):
 def zeroize():
     """
     Resets the device to default factory settings
+
+    .. note::
+        In case of non-root user, proxy_reconnect will not be able
+        to re-connect to the device as zeroize will delete the local
+        user's configuration.
+        For more details on zeroize functionality, please refer
+        https://www.juniper.net/documentation/en_US/junos/topics/reference/command-summary/request-system-zeroize.html
 
     CLI Example:
 
@@ -989,14 +1046,13 @@ def zeroize():
 @timeoutDecorator
 def install_os(path=None, **kwargs):
     """
-    Installs the given image on the device. After the installation is complete\
-     the device is rebooted,
-    if reboot=True is given as a keyworded argument.
+    Installs the given image on the device. After the installation is complete
+    the device is rebooted, if reboot=True is given as a keyworded argument.
 
     path (required)
         Path where the image file is present on the proxy minion
 
-    remote_path :
+    remote_path : /var/tmp
         If the value of path  is a file path on the local
         (Salt host's) filesystem, then the image is copied from the local
         filesystem to the :remote_path: directory on the target Junos
@@ -1020,18 +1076,29 @@ def install_os(path=None, **kwargs):
         When ``True`` this method will perform a config validation against
         the new image
 
-    bool issu:
+    bool issu: False
         When ``True`` allows unified in-service software upgrade
         (ISSU) feature enables you to upgrade between two different Junos OS
         releases with no disruption on the control plane and with minimal
         disruption of traffic.
 
-    bool nssu:
+    bool nssu: False
         When ``True`` allows nonstop software upgrade (NSSU)
         enables you to upgrade the software running on a Juniper Networks
         EX Series Virtual Chassis or a Juniper Networks EX Series Ethernet
         Switch with redundant Routing Engines with a single command and
         minimal disruption to network traffic.
+
+    bool all_re: True
+        When True (default), executes the software install on all Routing Engines of the Junos
+        device. When False, execute the software install only on the current Routing Engine.
+
+        .. versionadded:: Sodium
+
+    .. note::
+        Any additional keyword arguments specified are passed down to PyEZ sw.install() as is.
+        Please refer to below URl for PyEZ sw.install() documentaion:
+        https://pyez.readthedocs.io/en/latest/jnpr.junos.utils.html#jnpr.junos.utils.sw.SW.install
 
     CLI Examples:
 
@@ -1052,6 +1119,14 @@ def install_os(path=None, **kwargs):
     else:
         op.update(kwargs)
 
+    # timeout value is not honoured by sw.install if not passed as argument
+    # currently, timeout is set to be maximum of default 1800 and user passed timeout value
+    # For info: https://github.com/Juniper/salt/issues/116
+    op.pop("dev_timeout", None)
+    timeout = max(1800, conn.timeout)
+    # Reboot should not be passed as a keyword argument to install(),
+    # Please refer to https://github.com/Juniper/salt/issues/115 for more details
+    reboot = op.pop("reboot", False)
     no_copy_ = op.get("no_copy", False)
 
     if path is None:
@@ -1062,22 +1137,29 @@ def install_os(path=None, **kwargs):
         return ret
 
     if not no_copy_:
-        image_cached_path = salt.utils.files.mkstemp()
-        __salt__["cp.get_file"](path, image_cached_path)
+        # To handle invalid image path scenario
+        try:
+            image_cached_path = salt.utils.files.mkstemp()
+            __salt__["cp.get_file"](path, image_cached_path)
 
-        if not os.path.isfile(image_cached_path):
-            ret["message"] = "Invalid image path."
+            if not os.path.isfile(image_cached_path):
+                ret["message"] = "Invalid image path."
+                ret["out"] = False
+                return ret
+
+            if os.path.getsize(image_cached_path) == 0:
+                ret["message"] = "Failed to copy image"
+                ret["out"] = False
+                return ret
+            path = image_cached_path
+        except MinionError:
+            ret["message"] = "Invalid path. Please provide a valid image path"
             ret["out"] = False
             return ret
 
-        if os.path.getsize(image_cached_path) == 0:
-            ret["message"] = "Failed to copy image"
-            ret["out"] = False
-            return ret
-        path = image_cached_path
-
+    # install() should not reboot the device, reboot is handled in the next block
     try:
-        conn.sw.install(path, progress=True, **op)
+        conn.sw.install(path, progress=True, timeout=timeout, **op)
         ret["message"] = "Installed the os."
     except Exception as exception:  # pylint: disable=broad-except
         ret["message"] = 'Installation failed due to: "{0}"'.format(exception)
@@ -1087,7 +1169,8 @@ def install_os(path=None, **kwargs):
         if not no_copy_:
             salt.utils.files.safe_rm(image_cached_path)
 
-    if "reboot" in op and op["reboot"] is True:
+    # Handle reboot, after the install has finished
+    if reboot is True:
         try:
             conn.sw.reboot()
         except Exception as exception:  # pylint: disable=broad-except
@@ -1223,6 +1306,9 @@ def load(path=None, **kwargs):
         ``True``, only those statements under the ``replace`` tag will be
         changed.
 
+    merge : False
+        If set to ``True`` will set the load-config action to merge.
+
     format
         Determines the format of the contents
 
@@ -1275,12 +1361,20 @@ def load(path=None, **kwargs):
     else:
         op.update(kwargs)
 
-    template_vars = {}
+    kwargs = {}
     if "template_vars" in op:
-        template_vars = op["template_vars"]
+        kwargs = op["template_vars"]
 
-    template_cached_path = salt.utils.files.mkstemp()
-    __salt__["cp.get_template"](path, template_cached_path, template_vars=template_vars)
+    try:
+        template_cached_path = salt.utils.files.mkstemp()
+        __salt__["cp.get_template"](path, template_cached_path, **kwargs)
+    except Exception as ex:  # pylint: disable=broad-except
+        ret["message"] = (
+            "Salt failed to render the template, please check file path and syntax."
+            "\nError: {0}".format(str(ex))
+        )
+        ret["out"] = False
+        return ret
 
     if not os.path.isfile(template_cached_path):
         ret["message"] = "Invalid file path."
@@ -1304,11 +1398,27 @@ def load(path=None, **kwargs):
 
         op["format"] = template_format
 
+    # Currently, four config_actions are supported: overwrite, replace, update, merge
+    # Allow only one config_action, providing multiple config_action value is not allowed
+    actions = [
+        item
+        for item in ("overwrite", "replace", "update", "merge")
+        if op.get(item, False)
+    ]
+    if len(list(actions)) > 1:
+        ret["message"] = "Only one config_action is allowed. Provided: {0}".format(
+            actions
+        )
+        ret["out"] = False
+        return ret
+
     if "replace" in op and op["replace"]:
         op["merge"] = False
         del op["replace"]
     elif "overwrite" in op and op["overwrite"]:
         op["overwrite"] = True
+    elif "merge" in op and op["merge"]:
+        op["merge"] = True
     elif "overwrite" in op and not op["overwrite"]:
         op["merge"] = True
         del op["overwrite"]
@@ -1347,4 +1457,135 @@ def commit_check():
         ret["message"] = "Commit check failed with {0}".format(exception)
         ret["out"] = False
 
+    return ret
+
+
+def get_table(
+    table,
+    table_file,
+    path=None,
+    target=None,
+    key=None,
+    key_items=None,
+    filters=None,
+    template_args=None,
+):
+    """
+    .. versionadded:: Sodium
+
+    Retrieve data from a Junos device using Tables/Views
+
+    table (required)
+        Name of PyEZ Table
+
+    table_file (required)
+        YAML file that has the table specified in table parameter
+
+    path:
+        Path of location of the YAML file.
+        defaults to op directory in jnpr.junos.op
+
+    target:
+        if command need to run on FPC, can specify fpc target
+
+    key:
+        To overwrite key provided in YAML
+
+    key_items:
+        To select only given key items
+
+    filters:
+        To select only filter for the dictionary from columns
+
+    template_args:
+        key/value pair which should render Jinja template command
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'device_name' junos.get_table
+    """
+    conn = __proxy__["junos.conn"]()
+    ret = {}
+    ret["out"] = True
+    ret["hostname"] = conn._hostname
+    ret["tablename"] = table
+    get_kvargs = {}
+    if target is not None:
+        get_kvargs["target"] = target
+    if key is not None:
+        get_kvargs["key"] = key
+    if key_items is not None:
+        get_kvargs["key_items"] = key_items
+    if filters is not None:
+        get_kvargs["filters"] = filters
+    if template_args is not None and isinstance(template_args, dict):
+        get_kvargs["args"] = template_args
+    pyez_tables_path = os.path.dirname(os.path.abspath(tables_dir.__file__))
+    try:
+        if path is not None:
+            file_loc = glob.glob(os.path.join(path, "{}".format(table_file)))
+        else:
+            file_loc = glob.glob(
+                os.path.join(pyez_tables_path, "{}".format(table_file))
+            )
+        if len(file_loc) == 1:
+            file_name = file_loc[0]
+        else:
+            ret["message"] = "Given table file {} cannot be located".format(table_file)
+            ret["out"] = False
+            return ret
+        try:
+            with salt.utils.files.fopen(file_name) as fp:
+                ret["table"] = yaml.load(fp.read(), Loader=yamlordereddictloader.Loader)
+                globals().update(FactoryLoader().load(ret["table"]))
+        except IOError as err:
+            ret[
+                "message"
+            ] = "Uncaught exception during YAML Load - please report: {0}".format(
+                six.text_type(err)
+            )
+            ret["out"] = False
+            return ret
+        try:
+            data = globals()[table](conn)
+            data.get(**get_kvargs)
+        except KeyError as err:
+            ret[
+                "message"
+            ] = "Uncaught exception during get API call - please report: {0}".format(
+                six.text_type(err)
+            )
+            ret["out"] = False
+            return ret
+        except ConnectClosedError:
+            ret[
+                "message"
+            ] = "Got ConnectClosedError exception. Connection lost with {}".format(conn)
+            ret["out"] = False
+            return ret
+        ret["reply"] = json.loads(data.to_json())
+        if data.__class__.__bases__[0] == OpTable:
+            # Sets key value if not present in YAML. To be used by returner
+            if ret["table"][table].get("key") is None:
+                ret["table"][table]["key"] = data.ITEM_NAME_XPATH
+            # If key is provided from salt state file.
+            if key is not None:
+                ret["table"][table]["key"] = data.KEY
+        else:
+            if target is not None:
+                ret["table"][table]["target"] = data.TARGET
+            if key is not None:
+                ret["table"][table]["key"] = data.KEY
+            if key_items is not None:
+                ret["table"][table]["key_items"] = data.KEY_ITEMS
+            if template_args is not None:
+                ret["table"][table]["args"] = data.CMD_ARGS
+                ret["table"][table]["command"] = data.GET_CMD
+    except Exception as err:  # pylint: disable=broad-except
+        ret["message"] = "Uncaught exception - please report: {0}".format(str(err))
+        traceback.print_exc()
+        ret["out"] = False
+        return ret
     return ret
