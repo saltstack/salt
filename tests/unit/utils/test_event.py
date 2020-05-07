@@ -20,11 +20,11 @@ import salt.utils.event
 import salt.utils.stringutils
 import zmq
 import zmq.eventloop.ioloop
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import range
 from salt.ext.tornado.testing import AsyncTestCase
+from saltfactories.utils.processes.helpers import terminate_process
 from tests.support.events import eventpublisher_process, eventsender_process
 from tests.support.helpers import slowTest
-from tests.support.processes import terminate_process
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, expectedFailure, skipIf
 
