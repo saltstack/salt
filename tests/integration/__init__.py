@@ -3,8 +3,6 @@
 """
 Set up the Salt integration test suite
 """
-
-# Import Python libs
 from __future__ import absolute_import, print_function
 
 import atexit
@@ -26,7 +24,6 @@ import threading
 import time
 from datetime import datetime, timedelta
 
-# Import Salt libs
 import salt
 import salt.config
 import salt.log.setup as salt_log_setup
@@ -44,12 +41,9 @@ import salt.utils.stringutils
 import salt.utils.yaml
 import salt.version
 from salt.exceptions import SaltClientError
-
-# Import 3rd-party libs
 from salt.ext import six
 from salt.utils.immutabletypes import freeze
 from salt.utils.verify import verify_env
-from tests.support.case import ShellTestCase
 from tests.support.cli_scripts import ScriptPathMixin
 from tests.support.helpers import RedirectStdStreams, requires_sshd_server
 from tests.support.mixins import (
@@ -63,8 +57,6 @@ from tests.support.mixins import (
 from tests.support.parser import PNUM, SaltTestcaseParser, print_header
 from tests.support.paths import *  # pylint: disable=wildcard-import
 from tests.support.processes import *  # pylint: disable=wildcard-import
-
-# Import salt tests support libs
 from tests.support.processes import SaltMaster, SaltMinion, SaltSyndic
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase

@@ -5,15 +5,29 @@ Tests for the salt-run command
 from __future__ import absolute_import, print_function, unicode_literals
 
 import pytest
+
+# pylint: disable=3rd-party-module-not-gated
+from salt.ext import six
+
+# Import Salt Testing libs
 from tests.support.case import ShellCase
 from tests.support.unit import skipIf
 
 
 @pytest.mark.windows_whitelisted
-class ManageTest(ShellCase):
+class JobsTest(ShellCase):
     """
-    Test the manage runner
+    Test the jobs runner.
     """
+
+    @skipIf(True, "SLOWTEST skip")
+    def test_master(self):
+        """
+        jobs.master
+        """
+        ret = self.run_run_plus("jobs.master")
+        res = any(ele for ele in ret["return"] if ele["fun"] == "runner.jobs.master")
+        self.assertTrue(res)
 
     @skipIf(True, "SLOWTEST skip")
     def test_active(self):
@@ -21,8 +35,12 @@ class ManageTest(ShellCase):
         jobs.active
         """
         ret = self.run_run_plus("jobs.active")
-        self.assertEqual(ret["return"], {})
-        self.assertEqual(ret["out"], [])
+        res = any(
+            ele
+            for ele, val in six.iteritems(ret["return"])
+            if val["Function"] == "runner.jobs.active"
+        )
+        self.assertTrue(res)
 
     @skipIf(True, "SLOWTEST skip")
     def test_lookup_jid(self):
