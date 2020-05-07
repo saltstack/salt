@@ -29,3 +29,11 @@
 	compress
 	notifempty
 }
+
+/var/log/salt/syndic {
+	weekly
+	missingok
+	rotate 7
+	compress
+	notifempty
+}
