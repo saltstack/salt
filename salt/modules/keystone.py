@@ -1256,13 +1256,17 @@ def user_verify_password(
     if "connection_endpoint" in connection_args:
         auth_url = connection_args.get("connection_endpoint")
     else:
+        auth_url_opt = "keystone.auth_url"
+        if __salt__["config.option"]("keystone.token"):
+            auth_url_opt = "keystone.endpoint"
+
         if _OS_IDENTITY_API_VERSION > 2:
             auth_url = __salt__["config.option"](
-                "keystone.endpoint", "http://127.0.0.1:35357/v3"
+                auth_url_opt, "http://127.0.0.1:35357/v3"
             )
         else:
             auth_url = __salt__["config.option"](
-                "keystone.endpoint", "http://127.0.0.1:35357/v2.0"
+                auth_url_opt, "http://127.0.0.1:35357/v2.0"
             )
 
     if user_id:
