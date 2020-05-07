@@ -728,6 +728,26 @@ def temp_pillar_file(name, contents, saltenv="base", strip_first_newline=True):
 
 
 # ----- Fixtures Overrides ------------------------------------------------------------------------------------------>
+@pytest.fixture(scope="session")
+def salt_factories_config():
+    """
+    Return a dictionary with the keyworkd arguments for SaltFactoriesManager
+    """
+    return {
+        "executable": sys.executable,
+        "code_dir": CODE_DIR,
+        "inject_coverage": MAYBE_RUN_COVERAGE,
+        "inject_sitecustomize": MAYBE_RUN_COVERAGE,
+        "start_timeout": 120
+        if (os.environ.get("JENKINS_URL") or os.environ.get("CI"))
+        else 60,
+    }
+
+
+# <---- Pytest Helpers -----------------------------------------------------------------------------------------------
+
+
+# ----- Fixtures Overrides ------------------------------------------------------------------------------------------>
 def _get_virtualenv_binary_path():
     try:
         return _get_virtualenv_binary_path.__virtualenv_binary__
@@ -945,6 +965,7 @@ def salt_syndic_config(request, salt_factories, salt_syndic_master_config):
 @pytest.fixture(scope="session")
 def salt_master_config(request, salt_factories, salt_syndic_master_config):
     root_dir = salt_factories._get_root_dir_for_daemon("master")
+    conf_dir = root_dir.join("conf").ensure(dir=True)
 
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, "master")) as rfh:
         config_defaults = yaml.deserialize(rfh.read())
@@ -1027,6 +1048,17 @@ def salt_master_config(request, salt_factories, salt_syndic_master_config):
             },
         }
     )
+
+    # Let's copy over the test cloud config files and directories into the running master config directory
+    for entry in os.listdir(RUNTIME_VARS.CONF_DIR):
+        if not entry.startswith("cloud"):
+            continue
+        source = os.path.join(RUNTIME_VARS.CONF_DIR, entry)
+        dest = conf_dir.join(entry).strpath
+        if os.path.isdir(source):
+            shutil.copytree(source, dest)
+        else:
+            shutil.copyfile(source, dest)
 
     return salt_factories.configure_master(
         request,
@@ -1204,17 +1236,6 @@ def bridge_pytest_and_runtests(
     RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR = os.path.dirname(
         salt_syndic_config["conf_file"]
     )
-
-    # Let's copy over the test cloud config files and directories into the running master config directory
-    for entry in os.listdir(RUNTIME_VARS.CONF_DIR):
-        if not entry.startswith("cloud"):
-            continue
-        source = os.path.join(RUNTIME_VARS.CONF_DIR, entry)
-        dest = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, entry)
-        if os.path.isdir(source):
-            shutil.copytree(source, dest)
-        else:
-            shutil.copyfile(source, dest)
 
 
 # <---- Salt Configuration -------------------------------------------------------------------------------------------
