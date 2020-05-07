@@ -172,6 +172,34 @@ def expensiveTest(caller):
     return wrap
 
 
+def slowTest(caller):
+    """
+    Mark a test case as a slow test.
+
+    .. code-block:: python
+
+        class MyTestCase(TestCase):
+
+            @slowTest
+            def test_that_takes_much_time(self):
+                pass
+    """
+    # Late import
+    from tests.support.runtests import RUNTIME_VARS
+
+    if RUNTIME_VARS.PYTEST_SESSION:
+        setattr(caller, "__slow_test__", True)
+
+    # We're simply decorating functions
+    @functools.wraps(caller)
+    def wrap(cls):
+        if os.environ.get("SLOW_TESTS", "False").lower() == "false":
+            raise SkipTest("Slow tests are disabled")
+        return caller(cls)
+
+    return wrap
+
+
 def flaky(caller=None, condition=True, attempts=4):
     """
     Mark a test as flaky. The test will attempt to run five times,

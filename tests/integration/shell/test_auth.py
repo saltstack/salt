@@ -20,6 +20,7 @@ from tests.support.helpers import (
     requires_salt_modules,
     requires_salt_states,
     skip_if_not_root,
+    slowTest,
 )
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
@@ -68,7 +69,7 @@ class UserAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
         ret = self.run_state("user.absent", name=self.user)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_pam_auth_valid_user(self):
         """
         test that pam auth mechanism works with a valid user
@@ -94,7 +95,7 @@ class UserAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
         log.debug("resp = %s", resp)
         self.assertIn("minion", [r.strip(": ") for r in resp])
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_pam_auth_invalid_user(self):
         """
         test pam auth mechanism errors for an invalid user
@@ -141,7 +142,7 @@ class GroupAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
         self.assertSaltTrueReturn(ret0)
         self.assertSaltTrueReturn(ret1)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_pam_auth_valid_group(self):
         """
         test that pam auth mechanism works for a valid group

@@ -9,7 +9,6 @@ Time sync do the following:
     - Select options at the top and 'More Options' on the left
     - Set time to 'Do not sync'
 """
-
 from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
@@ -22,6 +21,7 @@ from tests.support.helpers import (
     runs_on,
     skip_if_binaries_missing,
     skip_if_not_root,
+    slowTest,
 )
 from tests.support.unit import skipIf
 
@@ -86,7 +86,7 @@ class MacTimezoneModuleTest(ModuleCase):
             "Invalid Date/Time Format: 13/12/2014",
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_get_time(self):
         """
         Test timezone.get_time
@@ -177,7 +177,7 @@ class MacTimezoneModuleTest(ModuleCase):
         )
         self.assertEqual(self.run_function("timezone.get_zonecode"), "WAKT")
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_list_zones(self):
         """
         Test timezone.list_zones
