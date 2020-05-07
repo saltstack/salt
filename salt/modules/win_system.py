@@ -598,7 +598,10 @@ def get_system_info():
             "os_version": system.Version,
             "windows_directory": system.WindowsDirectory,
         }
-
+        # Must get chassis_sku_number this way for backwards compatibility
+        # system.ChassisSKUNumber is only available on Windows 10/2016 and newer
+        product = conn.Win32_ComputerSystemProduct()[0]
+        ret.update({"chassis_sku_number": product.SKUNumber})
         system = conn.Win32_ComputerSystem()[0]
         # Get pc_system_type depending on Windows version
         if platform.release() in ["Vista", "7", "8"]:
@@ -613,7 +616,6 @@ def get_system_info():
                 "bootup_state": system.BootupState,
                 "caption": system.Caption,
                 "chassis_bootup_state": warning_states[system.ChassisBootupState],
-                "chassis_sku_number": system.ChassisSKUNumber,
                 "dns_hostname": system.DNSHostname,
                 "domain": system.Domain,
                 "domain_role": domain_role[system.DomainRole],
@@ -645,7 +647,12 @@ def get_system_info():
             ret["processors"] += 1
             ret["processors_logical"] += processor.NumberOfLogicalProcessors
             ret["processor_cores"] += processor.NumberOfCores
-            ret["processor_cores_enabled"] += processor.NumberOfEnabledCore
+            try:
+                ret["processor_cores_enabled"] += processor.NumberOfEnabledCore
+            except (AttributeError, TypeError):
+                pass
+        if ret["processor_cores_enabled"] == 0:
+            ret.pop("processor_cores_enabled", False)
 
         bios = conn.Win32_BIOS()[0]
         ret.update(
