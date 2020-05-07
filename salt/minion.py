@@ -2670,7 +2670,10 @@ class Minion(MinionBase):
                 else:
                     # delete the scheduled job to don't interfere with the failover process
                     if self.opts["transport"] != "tcp":
-                        self.schedule.delete_job(name=master_event(type="alive"))
+                        self.schedule.delete_job(
+                            name=master_event(type="alive", master=self.opts["master"]),
+                            persist=True,
+                        )
 
                     log.info("Trying to tune in to next master from master-list")
 
