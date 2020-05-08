@@ -197,9 +197,7 @@ class SaltLoggingClass(
         """
         instance = super(SaltLoggingClass, cls).__new__(cls)
 
-        max_logger_length = len(
-            max(list(logging.Logger.manager.loggerDict), key=len)
-        )
+        max_logger_length = len(max(list(logging.Logger.manager.loggerDict), key=len))
         for handler in logging.root.handlers:
             try:
                 if handler in (

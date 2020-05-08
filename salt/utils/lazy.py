@@ -9,8 +9,8 @@ from __future__ import absolute_import, unicode_literals
 from collections.abc import MutableMapping
 import time
 
-import salt.log.setup as logging
 import salt.exceptions
+import salt.log.setup as logging
 
 log = logging.getLogger(__name__)
 

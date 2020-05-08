@@ -604,9 +604,7 @@ class SSH:
                 )
                 try:
                     logging._acquireLock()
-                    routine = Process(
-                                    target=self.handle_routine,
-                                    args=args)
+                    routine = Process(target=self.handle_routine, args=args)
                     routine.start()
                 except:
                     pass
