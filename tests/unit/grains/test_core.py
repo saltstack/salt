@@ -1193,6 +1193,41 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             assert core.dns() == ret
 
+    def test_enablefqdnsFalse(self):
+        """
+        tests enable_fqdns_grains is set to False
+        """
+        with patch.dict("salt.grains.core.__opts__", {"enable_fqdns_grains": False}):
+            assert core.fqdns() == {"fqdns": []}
+
+    def test_enablefqdnsTrue(self):
+        """
+        testing that grains uses network.fqdns module
+        """
+        with patch.dict(
+            "salt.grains.core.__salt__",
+            {"network.fqdns": MagicMock(return_value="my.fake.domain")},
+        ):
+            with patch.dict("salt.grains.core.__opts__", {"enable_fqdns_grains": True}):
+                assert core.fqdns() == "my.fake.domain"
+
+    def test_enablefqdnsNone(self):
+        """
+        testing default fqdns grains is returned when enable_fqdns_grains is None
+        """
+        with patch.dict("salt.grains.core.__opts__", {"enable_fqdns_grains": None}):
+            assert core.fqdns() == {"fqdns": []}
+
+    def test_enablefqdnswithoutpaching(self):
+        """
+        testing fqdns grains is enabled by default
+        """
+        with patch.dict(
+            "salt.grains.core.__salt__",
+            {"network.fqdns": MagicMock(return_value="my.fake.domain")},
+        ):
+            assert core.fqdns() == "my.fake.domain"
+
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     @patch(
         "salt.utils.network.ip_addrs", MagicMock(return_value=["1.2.3.4", "5.6.7.8"])
@@ -1241,20 +1276,26 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
 
         for errno in (0, core.HOST_NOT_FOUND, core.NO_DATA):
             mock_log = MagicMock()
-            with patch.object(
-                socket, "gethostbyaddr", side_effect=_gen_gethostbyaddr(errno)
+            with patch.dict(
+                core.__salt__, {"network.fqdns": salt.modules.network.fqdns}
             ):
-                with patch("salt.grains.core.log", mock_log):
-                    self.assertEqual(core.fqdns(), {"fqdns": []})
-                    mock_log.debug.assert_called_once()
-                    mock_log.error.assert_not_called()
+                with patch.object(
+                    socket, "gethostbyaddr", side_effect=_gen_gethostbyaddr(errno)
+                ):
+                    with patch("salt.modules.network.log", mock_log):
+                        self.assertEqual(core.fqdns(), {"fqdns": []})
+                        mock_log.debug.assert_called()
+                        mock_log.error.assert_not_called()
 
         mock_log = MagicMock()
-        with patch.object(socket, "gethostbyaddr", side_effect=_gen_gethostbyaddr(-1)):
-            with patch("salt.grains.core.log", mock_log):
-                self.assertEqual(core.fqdns(), {"fqdns": []})
-                mock_log.debug.assert_not_called()
-                mock_log.error.assert_called_once()
+        with patch.dict(core.__salt__, {"network.fqdns": salt.modules.network.fqdns}):
+            with patch.object(
+                socket, "gethostbyaddr", side_effect=_gen_gethostbyaddr(-1)
+            ):
+                with patch("salt.modules.network.log", mock_log):
+                    self.assertEqual(core.fqdns(), {"fqdns": []})
+                    mock_log.debug.assert_called_once()
+                    mock_log.error.assert_called()
 
     def test_core_virtual(self):
         """
