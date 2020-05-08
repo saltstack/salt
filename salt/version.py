@@ -2,43 +2,16 @@
 """
 Set up the version of Salt
 """
-
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import platform
 import re
 import sys
-import warnings
 
-# pylint: disable=invalid-name,redefined-builtin
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import map
+from distro import linux_distribution
 
-# linux_distribution deprecated in py3.7
-try:
-    from platform import linux_distribution as _deprecated_linux_distribution
-
-    def linux_distribution(**kwargs):
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            return _deprecated_linux_distribution(**kwargs)
-
-
-except ImportError:
-    from distro import linux_distribution
-
-
-# Don't rely on external packages in this module since it's used at install time
-if sys.version_info[0] == 3:
-    MAX_SIZE = sys.maxsize
-    string_types = (str,)
-else:
-    MAX_SIZE = sys.maxint
-    string_types = (six.string_types,)
+MAX_SIZE = sys.maxsize
 VERSION_LIMIT = MAX_SIZE - 200
-# pylint: enable=invalid-name,redefined-builtin
 
 # ----- ATTENTION --------------------------------------------------------------------------------------------------->
 #
@@ -94,8 +67,6 @@ class SaltStackVersion(object):
     )
     git_sha_regex = r"^" + git_sha_regex
 
-    if six.PY2:
-        git_sha_regex = git_sha_regex.decode(__salt_system_encoding__)
     git_sha_regex = re.compile(git_sha_regex)
 
     # Salt versions after 0.17.0 will be numbered like:
@@ -242,10 +213,10 @@ class SaltStackVersion(object):
         sha=None,
     ):
 
-        if isinstance(major, string_types):
+        if isinstance(major, str):
             major = int(major)
 
-        if isinstance(minor, string_types):
+        if isinstance(minor, str):
             if not minor:
                 # Empty string
                 minor = None
@@ -254,7 +225,7 @@ class SaltStackVersion(object):
 
         if bugfix is None and not self.new_version(major=major):
             bugfix = 0
-        elif isinstance(bugfix, string_types):
+        elif isinstance(bugfix, str):
             if not bugfix:
                 bugfix = None
             else:
@@ -262,21 +233,21 @@ class SaltStackVersion(object):
 
         if mbugfix is None:
             mbugfix = 0
-        elif isinstance(mbugfix, string_types):
+        elif isinstance(mbugfix, str):
             mbugfix = int(mbugfix)
 
         if pre_type is None:
             pre_type = ""
         if pre_num is None:
             pre_num = 0
-        elif isinstance(pre_num, string_types):
+        elif isinstance(pre_num, str):
             pre_num = int(pre_num)
 
         if noc is None:
             noc = 0
-        elif isinstance(noc, string_types) and noc == "n/a":
+        elif isinstance(noc, str) and noc == "n/a":
             noc = -1
-        elif isinstance(noc, string_types):
+        elif isinstance(noc, str):
             noc = int(noc)
 
         self.major = major
@@ -451,7 +422,7 @@ class SaltStackVersion(object):
 
     def __compare__(self, other, method):
         if not isinstance(other, SaltStackVersion):
-            if isinstance(other, string_types):
+            if isinstance(other, str):
                 other = SaltStackVersion.parse(other)
             elif isinstance(other, (list, tuple)):
                 other = SaltStackVersion(*other)
@@ -585,11 +556,8 @@ def __discover_version(saltstack_version):
                 **kwargs
             )
             out, err = process.communicate()
-        if six.PY3:
-            out = out.decode()
-            err = err.decode()
-        out = out.strip()
-        err = err.strip()
+        out = out.decode().strip()
+        err = err.decode().strip()
 
         if not out or err:
             return saltstack_version
