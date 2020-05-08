@@ -1564,19 +1564,20 @@ class AESFuncs(TransportMethods):
             return False
         if not salt.utils.verify.valid_id(self.opts, load["id"]):
             return False
-        file_recv_max_size = 1024 * 1024 * self.opts["file_recv_max_size"]
-
         if "loc" in load and load["loc"] < 0:
             log.error("Invalid file pointer: load[loc] < 0")
             return False
 
-        if len(load["data"]) + load.get("loc", 0) > file_recv_max_size:
+        if (
+            len(load["data"]) + load.get("loc", 0)
+            > self.opts["file_recv_max_size"] * 0x100000
+        ):
             log.error(
                 "file_recv_max_size limit of %d MB exceeded! %s will be "
                 "truncated. To successfully push this file, adjust "
                 "file_recv_max_size to an integer (in MB) large enough to "
                 "accommodate it.",
-                file_recv_max_size,
+                self.opts["file_recv_max_size"],
                 load["path"],
             )
             return False
