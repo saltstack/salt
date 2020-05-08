@@ -16,9 +16,9 @@ Function Get-Settings {
         $Settings = @{
             "SaltRepo"    = "https://repo.saltstack.com/windows/dependencies"
             "SaltDir"     = "C:\salt"
-            "PythonDir"   = "C:\Python37"
-            "ScriptsDir"  = "C:\Python37\Scripts"
-            "SitePkgsDir" = "C:\Python37\Lib\site-packages"
+            "Python3Dir"   = "C:\Python37"
+            "Scripts3Dir"  = "C:\Python37\Scripts"
+            "SitePkgs3Dir" = "C:\Python37\Lib\site-packages"
             "DownloadDir" = "$env:Temp\DevSalt"
             }
 
@@ -50,13 +50,13 @@ Function Get-Settings {
 
         # Filenames for 64 bit Windows
         $64bitPrograms = @{
-            "Python"   = "python-3.7.4-amd64.exe"
+            "Python3"   = "python-3.7.4-amd64.exe"
         }
         $ini.Add("64bitPrograms", $64bitPrograms)
 
         # Filenames for 32 bit Windows
         $32bitPrograms = @{
-            "Python"   = "python-3.7.4.exe"
+            "Python3"   = "python-3.7.4.exe"
         }
         $ini.Add("32bitPrograms", $32bitPrograms)
 

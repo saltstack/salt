@@ -168,18 +168,18 @@ If (Test-Path "$($ini[$bitPaths]['VCppBuildToolsDir'])\vcbuildtools.bat") {
 # Install Python
 #------------------------------------------------------------------------------
 Write-Output " - Checking for Python 3 installation . . ."
-If (Test-Path "$($ini['Settings']['PythonDir'])\python.exe") {
+If (Test-Path "$($ini['Settings']['Python3Dir'])\python.exe") {
     # Found Python 3.5, do nothing
     Write-Output " - Python 3 Found . . ."
 } Else {
-    Write-Output " - Downloading $($ini[$bitPrograms]['Python']) . . ."
-    $file = "$($ini[$bitPrograms]['Python'])"
+    Write-Output " - Downloading $($ini[$bitPrograms]['Python3']) . . ."
+    $file = "$($ini[$bitPrograms]['Python3'])"
     $url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
     $file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
     DownloadFileWithProgress $url $file
 
-    Write-Output " - $script_name :: Installing $($ini[$bitPrograms]['Python']) . . ."
-    $p    = Start-Process $file -ArgumentList "/Quiet InstallAllUsers=1 TargetDir=`"$($ini['Settings']['PythonDir'])`" Include_doc=0 Include_tcltk=0 Include_test=0 Include_launcher=1 PrependPath=1 Shortcuts=0" -Wait -NoNewWindow -PassThru
+    Write-Output " - $script_name :: Installing $($ini[$bitPrograms]['Python3']) . . ."
+    $p    = Start-Process $file -ArgumentList "/Quiet InstallAllUsers=1 TargetDir=`"$($ini['Settings']['Python3Dir'])`" Include_doc=0 Include_tcltk=0 Include_test=0 Include_launcher=1 PrependPath=1 Shortcuts=0" -Wait -NoNewWindow -PassThru
 }
 
 #------------------------------------------------------------------------------
@@ -187,8 +187,8 @@ If (Test-Path "$($ini['Settings']['PythonDir'])\python.exe") {
 #------------------------------------------------------------------------------
 Write-Output " - Updating Environment Variables . . ."
 $Path = (Get-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\Environment' -Name PATH).Path
-If (!($Path.ToLower().Contains("$($ini['Settings']['ScriptsDir'])".ToLower()))) {
-    $newPath  = "$($ini['Settings']['ScriptsDir']);$Path"
+If (!($Path.ToLower().Contains("$($ini['Settings']['Scripts3Dir'])".ToLower()))) {
+    $newPath  = "$($ini['Settings']['Scripts3Dir']);$Path"
     Set-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\Environment' -Name PATH -Value $newPath
     $env:Path = $newPath
 }
@@ -199,7 +199,7 @@ If (!($Path.ToLower().Contains("$($ini['Settings']['ScriptsDir'])".ToLower()))) 
 Write-Output " ----------------------------------------------------------------"
 Write-Output " - $script_name :: Updating PIP and SetupTools . . ."
 Write-Output " ----------------------------------------------------------------"
-Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['PythonDir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req_pip.txt" "python pip"
+Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req_pip.txt" "python pip"
 
 
 #==============================================================================
@@ -208,7 +208,7 @@ Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['PythonDir'])\pytho
 Write-Output " ----------------------------------------------------------------"
 Write-Output " - $script_name :: Installing windows specific pypi resources using pip . . ."
 Write-Output " ----------------------------------------------------------------"
-Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['PythonDir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req_win.txt" "pip install"
+Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req_win.txt" "pip install"
 
 #==============================================================================
 # Install pypi resources using pip
@@ -217,10 +217,10 @@ If ($NoPipDependencies -eq $false) {
   Write-Output " ----------------------------------------------------------------"
   Write-Output " - $script_name :: Installing pypi resources using pip . . ."
   Write-Output " ----------------------------------------------------------------"
-  Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['PythonDir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req.txt" "pip install"
+  Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req.txt" "pip install"
 }
 
-If (Test-Path "$($ini['Settings']['SitePkgsDir'])\pywin32_system32" -PathType Container )
+If (Test-Path "$($ini['Settings']['SitePkgs3Dir'])\pywin32_system32" -PathType Container )
 {
     #==============================================================================
     # Cleaning Up PyWin32
@@ -232,20 +232,20 @@ If (Test-Path "$($ini['Settings']['SitePkgsDir'])\pywin32_system32" -PathType Co
     # Move DLL's to Python Root
     # The dlls have to be in Python directory and the site-packages\win32 directory
     Write-Output " - $script_name :: Moving PyWin32 DLLs . . ."
-    Copy-Item "$( $ini['Settings']['SitePkgsDir'] )\pywin32_system32\*.dll" "$( $ini['Settings']['PythonDir'] )" -Force
-    Move-Item "$( $ini['Settings']['SitePkgsDir'] )\pywin32_system32\*.dll" "$( $ini['Settings']['SitePkgsDir'] )\win32" -Force
+    Copy-Item "$( $ini['Settings']['SitePkgs3Dir'] )\pywin32_system32\*.dll" "$( $ini['Settings']['Python3Dir'] )" -Force
+    Move-Item "$( $ini['Settings']['SitePkgs3Dir'] )\pywin32_system32\*.dll" "$( $ini['Settings']['SitePkgs3Dir'] )\win32" -Force
 
     # Create gen_py directory
     Write-Output " - $script_name :: Creating gen_py Directory . . ."
-    New-Item -Path "$( $ini['Settings']['SitePkgsDir'] )\win32com\gen_py" -ItemType Directory -Force | Out-Null
+    New-Item -Path "$( $ini['Settings']['SitePkgs3Dir'] )\win32com\gen_py" -ItemType Directory -Force | Out-Null
 
     # Remove pywin32_system32 directory
     Write-Output " - $script_name :: Removing pywin32_system32 Directory . . ."
-    Remove-Item "$( $ini['Settings']['SitePkgsDir'] )\pywin32_system32"
+    Remove-Item "$( $ini['Settings']['SitePkgs3Dir'] )\pywin32_system32"
 
     # Remove PyWin32 PostInstall and testall Scripts
     Write-Output " - $script_name :: Removing PyWin32 scripts . . ."
-    Remove-Item "$( $ini['Settings']['ScriptsDir'] )\pywin32_*" -Force -Recurse
+    Remove-Item "$( $ini['Settings']['Scripts3Dir'] )\pywin32_*" -Force -Recurse
 }
 
 #==============================================================================
@@ -261,7 +261,7 @@ ForEach($key in $ini[$bitDLLs].Keys) {
     $url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
     $file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
     DownloadFileWithProgress $url $file
-    Copy-Item $file  -destination $($ini['Settings']['PythonDir'])
+    Copy-Item $file  -destination $($ini['Settings']['Python3Dir'])
 }
 
 #------------------------------------------------------------------------------
