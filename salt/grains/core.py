@@ -2023,8 +2023,16 @@ def os_data():
                                 )
                 elif os.path.isfile("/etc/centos-release"):
                     log.trace("Parsing distrib info from /etc/centos-release")
-                    # CentOS Linux
-                    grains["lsb_distrib_id"] = "CentOS"
+                    # Maybe CentOS Linux; could also be SUSE Expanded Support.
+                    # SUSE ES has both, centos-release and redhat-release.
+                    if os.path.isfile("/etc/redhat-release"):
+                        with salt.utils.files.fopen("/etc/redhat-release") as ifile:
+                            for line in ifile:
+                                if "red hat enterprise linux server" in line.lower():
+                                    # This is a SUSE Expanded Support Rhel installation
+                                    grains["lsb_distrib_id"] = "RedHat"
+                                    break
+                    grains.setdefault("lsb_distrib_id", "CentOS")
                     with salt.utils.files.fopen("/etc/centos-release") as ifile:
                         for line in ifile:
                             # Need to pull out the version and codename
