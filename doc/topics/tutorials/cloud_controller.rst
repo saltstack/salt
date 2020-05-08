@@ -161,7 +161,7 @@ prone to errors.
 Virtual Machine generation applications are available for many platforms:
 
 kiwi: (openSUSE, SLES, RHEL, CentOS)
-  https://suse.github.io/kiwi/
+  https://opensuse.github.io/kiwi/
 
 vm-builder:
   https://wiki.debian.org/VMBuilder
@@ -186,7 +186,7 @@ CentOS
 
 These images have been prepared for OpenNebula but should work without issue with
 Salt Virt, only the raw qcow image file is needed:
-http://wiki.centos.org/Cloud/OpenNebula
+https://wiki.centos.org/Cloud/OpenNebula
 
 Fedora Linux
 ~~~~~~~~~~~~
@@ -197,9 +197,7 @@ https://alt.fedoraproject.org/cloud
 openSUSE
 ~~~~~~~~
 
-http://download.opensuse.org/repositories/openSUSE:/Leap:/42.1:/Images/images
-
-(look for JeOS-for-kvm-and-xen variant)
+https://download.opensuse.org/distribution/leap/15.1/jeos/openSUSE-Leap-15.1-JeOS.x86_64-15.1.0-kvm-and-xen-Current.qcow2.meta4
 
 SUSE
 ~~~~

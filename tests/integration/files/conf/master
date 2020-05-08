@@ -29,6 +29,7 @@ tcp_master_workers: 64515
 peer:
   '.*':
     - '(x509|test).*'
+    - 'match.*'
 
 ext_pillar:
   - ext_pillar_opts:
@@ -128,3 +129,5 @@ peer_run:
   - vault.generate_token
 sdbvault:
   driver: vault
+venafi:
+  fake: "true"

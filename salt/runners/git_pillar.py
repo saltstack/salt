@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Runner module to directly manage the git external pillar
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 
 
 def update(branch=None, repo=None):
-    '''
+    """
     .. versionadded:: 2014.1.0
 
     .. versionchanged:: 2015.8.4
@@ -59,11 +59,11 @@ def update(branch=None, repo=None):
         salt-run git_pillar.update
         # Run with debug logging
         salt-run git_pillar.update -l debug
-    '''
+    """
     ret = {}
-    for ext_pillar in __opts__.get('ext_pillar', []):
+    for ext_pillar in __opts__.get("ext_pillar", []):
         pillar_type = next(iter(ext_pillar))
-        if pillar_type != 'git':
+        if pillar_type != "git":
             continue
         pillar_conf = ext_pillar[pillar_type]
         pillar = salt.utils.gitfs.GitPillar(
@@ -71,7 +71,8 @@ def update(branch=None, repo=None):
             pillar_conf,
             per_remote_overrides=salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
             per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY,
-            global_only=salt.pillar.git_pillar.GLOBAL_ONLY)
+            global_only=salt.pillar.git_pillar.GLOBAL_ONLY,
+        )
         for remote in pillar.remotes:
             # Skip this remote if it doesn't match the search criteria
             if branch is not None:
@@ -82,11 +83,12 @@ def update(branch=None, repo=None):
                     continue
             try:
                 result = remote.fetch()
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.error(
-                    'Exception \'%s\' caught while fetching git_pillar '
-                    'remote \'%s\'', exc, remote.id,
-                    exc_info_on_loglevel=logging.DEBUG
+                    "Exception '%s' caught while fetching git_pillar " "remote '%s'",
+                    exc,
+                    remote.id,
+                    exc_info_on_loglevel=logging.DEBUG,
                 )
                 result = False
             finally:
@@ -96,9 +98,9 @@ def update(branch=None, repo=None):
     if not ret:
         if branch is not None or repo is not None:
             raise SaltRunnerError(
-                'Specified git branch/repo not found in ext_pillar config'
+                "Specified git branch/repo not found in ext_pillar config"
             )
         else:
-            raise SaltRunnerError('No git_pillar remotes are configured')
+            raise SaltRunnerError("No git_pillar remotes are configured")
 
     return ret

@@ -1,4 +1,4 @@
-id: sub_master
+id: mm-sub-master
 publish_port: 64507
 ret_port: 64508
 

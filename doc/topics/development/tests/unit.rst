@@ -99,8 +99,8 @@ Salt loader modules use a series of globally available dunder variables,
 ``__salt__``, ``__opts__``, ``__pillar__``, etc. To facilitate testing these
 modules a mixin class was created, ``LoaderModuleMockMixin`` which can be found
 in ``tests/support/mixins.py``. The reason for the existence of this class is
-because historiclly and because it was easier, one would add these dunder
-variables directly on the imported module. This however, introduces unexpected
+because historically one would add these dunder
+variables directly on the imported module. This, however, introduces unexpected
 behavior when running the full test suite since those attributes would not be
 removed once we were done testing the module and would therefore leak to other
 modules being tested with unpredictable results. This is the kind of work that
@@ -132,12 +132,10 @@ Consider this more extensive example from
 
    # Import Salt Testing Libs
    from tests.support.mixins import LoaderModuleMockMixin
-   from tests.support.unit import TestCase, skipIf
+   from tests.support.unit import TestCase
    from tests.support.mock import (
        patch,
        MagicMock,
-       NO_MOCK,
-       NO_MOCK_REASON
    )
    import salt.modules.libcloud_dns as libcloud_dns
 
@@ -151,7 +149,6 @@ Consider this more extensive example from
        return MockDNSDriver()
 
 
-   @skipIf(NO_MOCK, NO_MOCK_REASON)
    @patch('salt.modules.libcloud_dns._get_driver',
           MagicMock(return_value=MockDNSDriver()))
    class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
@@ -179,7 +176,6 @@ execution of the tests. Additionally, if the ``libcloud`` library is not
 available, since that's not actually part of what's being tested, we mocked that
 import by patching ``sys.modules`` when tests are running.
 
-
 Mocking Filehandles
 -------------------
 
@@ -196,17 +192,14 @@ a separate implementation which has additional functionality.
 
 .. code-block:: python
 
-    from tests.support.unit import TestCase, skipIf
+    from tests.support.unit import TestCase
     from tests.support.mock import (
         patch
         mock_open,
-        NO_MOCK,
-        NO_MOCK_REASON,
     )
 
     import salt.modules.mymod as mymod
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     class MyAwesomeTestCase(TestCase):
 
         def test_something(self):
@@ -251,17 +244,14 @@ those cases, you can pass ``read_data`` as a dictionary:
 
     import textwrap
 
-    from tests.support.unit import TestCase, skipIf
+    from tests.support.unit import TestCase
     from tests.support.mock import (
         patch
         mock_open,
-        NO_MOCK,
-        NO_MOCK_REASON,
     )
 
     import salt.modules.mymod as mymod
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     class MyAwesomeTestCase(TestCase):
 
         def test_something(self):
@@ -324,17 +314,14 @@ Instead of a string, an exception can also be used as the ``read_data``:
 
     import errno
 
-    from tests.support.unit import TestCase, skipIf
+    from tests.support.unit import TestCase
     from tests.support.mock import (
         patch
         mock_open,
-        NO_MOCK,
-        NO_MOCK_REASON,
     )
 
     import salt.modules.mymod as mymod
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     class MyAwesomeTestCase(TestCase):
 
         def test_something(self):
@@ -353,7 +340,7 @@ Multiple File Contents
 
 For cases in which a file is being read more than once, and it is necessary to
 test a function's behavior based on what the file looks like the second (or
-third, etc.) time it is read, just specify the the contents for that file as a
+third, etc.) time it is read, just specify the contents for that file as a
 list. Each time the file is opened, ``mock_open`` will cycle through the list
 and produce a mocked filehandle with the specified contents. For example:
 
@@ -362,17 +349,14 @@ and produce a mocked filehandle with the specified contents. For example:
     import errno
     import textwrap
 
-    from tests.support.unit import TestCase, skipIf
+    from tests.support.unit import TestCase
     from tests.support.mock import (
         patch
         mock_open,
-        NO_MOCK,
-        NO_MOCK_REASON,
     )
 
     import salt.modules.mymod as mymod
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     class MyAwesomeTestCase(TestCase):
 
         def test_something(self):
@@ -463,18 +447,15 @@ several useful attributes:
 
   .. code-block:: python
 
-      from tests.support.unit import TestCase, skipIf
+      from tests.support.unit import TestCase
       from tests.support.mock import (
           patch
           mock_open,
           MockCall,
-          NO_MOCK,
-          NO_MOCK_REASON,
       )
 
       import salt.modules.mymod as mymod
 
-      @skipIf(NO_MOCK, NO_MOCK_REASON)
       class MyAwesomeTestCase(TestCase):
 
           def test_something(self):
@@ -607,13 +588,13 @@ Most commonly, the following imports are necessary to create a unit test:
 
 .. code-block:: python
 
-    from tests.support.unit import TestCase, skipIf
+    from tests.support.unit import TestCase
 
 If you need mock support to your tests, please also import:
 
 .. code-block:: python
 
-    from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
+    from tests.support.mock import MagicMock, patch, call
 
 
 Evaluating Truth
@@ -622,7 +603,7 @@ Evaluating Truth
 A longer discussion on the types of assertions one can make can be found by
 reading `Python's documentation on unit testing`__.
 
-.. __: http://docs.python.org/2/library/unittest.html#unittest.TestCase
+.. __: https://docs.python.org/2/library/unittest.html#unittest.TestCase
 
 
 Tests Using Mock Objects
@@ -673,11 +654,10 @@ additional imports for MagicMock:
     from salt.modules import db
 
     # Import Mock libraries
-    from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
+    from tests.support.mock import MagicMock, patch, call
 
     # Create test case class and inherit from Salt's customized TestCase
     # Skip this test case if we don't have access to mock!
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     class DbTestCase(TestCase):
         def test_create_user(self):
             # First, we replace 'execute_query' with our own mock function
@@ -699,7 +679,7 @@ additional imports for MagicMock:
                 # assertion.
                 db_exq.assert_has_calls(expected_call)
 
-.. __: http://www.voidspace.org.uk/python/mock/index.html
+.. __: https://docs.python.org/3/library/unittest.mock.html
 
 
 Modifying ``__salt__`` In Place
@@ -824,16 +804,13 @@ will also redefine the ``__salt__`` dictionary such that it only contains
 
     # Import Salt Testing Libs
     from tests.support.mixins import LoaderModuleMockMixin
-    from tests.support.unit import skipIf, TestCase
+    from tests.support.unit import TestCase
     from tests.support.mock import (
         MagicMock,
         patch,
-        NO_MOCK,
-        NO_MOCK_REASON
     )
 
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
         '''
         TestCase for salt.modules.linux_sysctl module
@@ -926,16 +903,13 @@ with.
 
     # Import Salt Testing Libs
     from tests.support.mixins import LoaderModuleMockMixin
-    from tests.support.unit import skipIf, TestCase
+    from tests.support.unit import TestCase
     from tests.support.mock import (
         MagicMock,
         patch,
-        NO_MOCK,
-        NO_MOCK_REASON
     )
 
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
         '''
         TestCase for salt.modules.linux_sysctl module

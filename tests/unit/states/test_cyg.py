@@ -4,7 +4,7 @@
 
 # # Import Salt Testing libs
 # from tests.support.unit import skipIf, TestCase
-# from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+# from tests.support.mock import MagicMock, patch
 
 # # Late import so mock can do its job
 # import salt.states.cyg as cyg
@@ -12,7 +12,6 @@
 # cyg.__opts__ = {'test': False}
 
 
-# @skipIf(NO_MOCK, NO_MOCK_REASON)
 # class TestGemState(TestCase):
 
 #     def test_installed(self):

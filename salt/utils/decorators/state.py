@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Decorators for salt.state
 
 :codeauthor: :email:`Bo Maryniuk (bo@suse.de)`
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, unicode_literals
+
 import logging
 
 # Import salt libs
@@ -21,7 +22,7 @@ class OutputUnifier(object):
         self.policies = []
         for pls in policies:
             if not hasattr(self, pls):
-                raise SaltException('Unknown policy: {0}'.format(pls))
+                raise SaltException("Unknown policy: {0}".format(pls))
             else:
                 self.policies.append(getattr(self, pls))
 
@@ -31,37 +32,45 @@ class OutputUnifier(object):
             for pls in self.policies:
                 try:
                     result = pls(result)
-                except Exception as exc:
-                    log.debug('An exception occurred in this state: %s', exc,
-                              exc_info_on_loglevel=logging.DEBUG)
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.debug(
+                        "An exception occurred in this state: %s",
+                        exc,
+                        exc_info_on_loglevel=logging.DEBUG,
+                    )
                     result = {
-                        'result': False,
-                        'name': 'later',
-                        'changes': {},
-                        'comment': 'An exception occurred in this state: {0}'.format(exc)
+                        "result": False,
+                        "name": "later",
+                        "changes": {},
+                        "comment": "An exception occurred in this state: {0}".format(
+                            exc
+                        ),
                     }
             return result
+
         return _func
 
     def content_check(self, result):
-        '''
+        """
         Checks for specific types in the state output.
         Raises an Exception in case particular rule is broken.
 
         :param result:
         :return:
-        '''
+        """
         if not isinstance(result, dict):
-            err_msg = 'Malformed state return. Data must be a dictionary type.'
-        elif not isinstance(result.get('changes'), dict):
+            err_msg = "Malformed state return. Data must be a dictionary type."
+        elif not isinstance(result.get("changes"), dict):
             err_msg = "'Changes' should be a dictionary."
         else:
             missing = []
-            for val in ['name', 'result', 'changes', 'comment']:
+            for val in ["name", "result", "changes", "comment"]:
                 if val not in result:
                     missing.append(val)
             if missing:
-                err_msg = 'The following keys were not present in the state return: {0}.'.format(', '.join(missing))
+                err_msg = "The following keys were not present in the state return: {0}.".format(
+                    ", ".join(missing)
+                )
             else:
                 err_msg = None
 
@@ -71,7 +80,7 @@ class OutputUnifier(object):
         return result
 
     def unify(self, result):
-        '''
+        """
         While comments as a list are allowed,
         comments needs to be strings for backward compatibility.
         See such claim here: https://github.com/saltstack/salt/pull/43070
@@ -82,12 +91,12 @@ class OutputUnifier(object):
 
         :param result:
         :return:
-        '''
-        if isinstance(result.get('comment'), list):
-            result['comment'] = u'\n'.join([
-                salt.utils.stringutils.to_unicode(elm) for elm in result['comment']
-            ])
-        if result.get('result') is not None:
-            result['result'] = bool(result['result'])
+        """
+        if isinstance(result.get("comment"), list):
+            result["comment"] = "\n".join(
+                [salt.utils.stringutils.to_unicode(elm) for elm in result["comment"]]
+            )
+        if result.get("result") is not None:
+            result["result"] = bool(result["result"])
 
         return result

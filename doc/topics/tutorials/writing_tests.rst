@@ -467,10 +467,10 @@ can be used
 .. code-block:: python
 
     # Import logging handler
-    from tests.support.helpers import TestsLoggingHandler
+    from tests.support.helpers import TstSuiteLoggingHandler
 
     # .. inside test
-    with TestsLoggingHandler() as handler:
+    with TstSuiteLoggingHandler() as handler:
         for message in handler.messages:
             if message.startswith('ERROR: This is the error message we seek'):
                 break
@@ -482,7 +482,7 @@ Automated Test Runs
 ===================
 
 SaltStack maintains a Jenkins server which can be viewed at
-https://jenkins.saltstack.com. The tests executed from this Jenkins server
+https://jenkinsci.saltstack.com. The tests executed from this Jenkins server
 create fresh virtual machines for each test run, then execute the destructive
 tests on the new, clean virtual machine. This allows for the execution of tests
 across supported platforms.
@@ -502,6 +502,6 @@ Python testing documentation. Please see the follow references for more informat
 * `Python Unittest`_
 * `Python's Assert Functions`_
 
-.. _MagicMock: http://www.voidspace.org.uk/python/mock/index.html
+.. _MagicMock: https://docs.python.org/3/library/unittest.mock.html
 .. _Python Unittest: https://docs.python.org/2/library/unittest.html
 .. _Python's Assert Functions: https://docs.python.org/2/library/unittest.html#assert-methods

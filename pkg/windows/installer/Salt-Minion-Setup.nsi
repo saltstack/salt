@@ -11,7 +11,7 @@
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
 !define PRODUCT_UNINST_KEY_OTHER "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME_OTHER}"
 !define PRODUCT_UNINST_ROOT_KEY "HKLM"
-!define OUTFILE "Salt-Minion-${PRODUCT_VERSION}-Py${PYTHON_VERSION}-${CPUARCH}-Setup.exe"
+!define OUTFILE "Salt-Minion-${PRODUCT_VERSION}-${CPUARCH}-Setup.exe"
 
 # Import Libraries
 !include "MUI2.nsh"
@@ -29,12 +29,6 @@ ${StrStrAdv}
     !define PRODUCT_VERSION "${SaltVersion}"
 !else
     !define PRODUCT_VERSION "Undefined Version"
-!endif
-
-!ifdef PythonVersion
-    !define PYTHON_VERSION "${PythonVersion}"
-!else
-    !define PYTHON_VERSION "2"
 !endif
 
 !if "$%PROCESSOR_ARCHITECTURE%" == "AMD64"
@@ -72,21 +66,6 @@ ${StrStrAdv}
 !define MUI_WELCOMEFINISHPAGE_BITMAP "panel.bmp"
 !define MUI_UNWELCOMEFINISHPAGE_BITMAP "panel.bmp"
 
-
-# This entire if block can be removed for the Sodium release... including the !define MUI_WELCOMEPAGE_TEXT
-# NSIS will just use the default like it does for Python 3, which should be the same test
-!if "${PYTHON_VERSION}" == "2"
-    !define MUI_WELCOMEPAGE_TEXT "\
-        WARNING: Python 2 Support will be discontinued in Sodium. Salt will only ship Python 3 \
-        installers starting with the Sodium release.$\r$\n\
-        $\r$\n\
-        Setup will guide you through the installation of ${PRODUCT_NAME} ${PRODUCT_VERSION}.$\r$\n\
-        $\r$\n\
-        It is recommended that you close all other applications before starting Setup. This will make it possible to \
-        update relevant system files without having to reboot your computer.$\r$\n\
-        $\r$\n\
-        Click Next to continue."
-!endif
 
 # Welcome page
 !insertmacro MUI_PAGE_WELCOME
@@ -410,11 +389,7 @@ FunctionEnd
 ###############################################################################
 # Installation Settings
 ###############################################################################
-!if ${PYTHON_VERSION} == 3
-    Name "${PRODUCT_NAME} ${PRODUCT_VERSION} (Python ${PYTHON_VERSION})"
-!else
-    Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-!endif
+Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
 OutFile "${OutFile}"
 InstallDir "c:\salt"
 InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
@@ -423,7 +398,7 @@ ShowUnInstDetails show
 
 Section -copy_prereqs
     # Copy prereqs to the Plugins Directory
-    # These files will be vcredist 2008 and KB2999226 for Win8.1 and below
+    # These files will be KB2999226 for Win8.1 and below
     # These files are downloaded by build_pkg.bat
     # This directory gets removed upon completion
     SetOutPath "$PLUGINSDIR\"
@@ -438,9 +413,6 @@ Section -install_ucrt
 
     Var /GLOBAL MsuPrefix
     Var /GLOBAL MsuFileName
-
-    # UCRT only needs to be installed for Python 3
-    StrCmp ${PYTHON_VERSION} 2 lbl_done
 
     # Get the Major.Minor version Number
     # Windows 10 introduced CurrentMajorVersionNumber
@@ -523,84 +495,6 @@ Section -install_ucrt
 SectionEnd
 
 
-# Check and install Visual C++ redist packages
-# See http://blogs.msdn.com/b/astebner/archive/2009/01/29/9384143.aspx for more info
-# Hidden section (-) to install VCRedist
-Section -install_vcredist
-
-    Var /GLOBAL VcRedistName
-    Var /GLOBAL VcRedistGuid
-    Var /GLOBAL NeedVcRedist
-    Var /GLOBAL CheckVcRedist
-    StrCpy $CheckVcRedist "False"
-
-    # Visual C++ 2008 SP1 MFC Security Update redist packages
-    !define PY2_VC_REDIST_NAME "VC_Redist_2008_SP1_MFC"
-    !define PY2_VC_REDIST_X64_GUID "{5FCE6D76-F5DC-37AB-B2B8-22AB8CEDB1D4}"
-    !define PY2_VC_REDIST_X86_GUID "{9BE518E6-ECC6-35A9-88E4-87755C07200F}"
-
-    # VCRedist only needs to be installed for Python 2
-    ${If} ${PYTHON_VERSION} == 2
-
-        StrCpy $VcRedistName ${PY2_VC_REDIST_NAME}
-        ${If} ${CPUARCH} == "AMD64"
-            StrCpy $VcRedistGuid ${PY2_VC_REDIST_X64_GUID}
-        ${Else}
-            StrCpy $VcRedistGuid ${PY2_VC_REDIST_X86_GUID}
-        ${EndIf}
-
-        # VCRedist 2008 only needed on Windows Server 2008R2/Windows 7 and below
-        ${If} ${AtMostWin2008R2}
-            StrCpy $CheckVcRedist "True"
-        ${EndIf}
-
-    ${EndIf}
-
-    ${If} $CheckVcRedist == "True"
-
-        Push $VcRedistGuid
-        Call MsiQueryProductState
-        ${If} $NeedVcRedist == "True"
-            MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 \
-                "$VcRedistName is currently not installed. Would you like to install?" \
-                /SD IDYES IDNO endVcRedist
-
-            # If an output variable is specified ($0 in the case below),
-            # ExecWait sets the variable with the exit code (and only sets the
-            # error flag if an error occurs; if an error occurs, the contents
-            # of the user variable are undefined).
-            # http://nsis.sourceforge.net/Reference/ExecWait
-            ClearErrors
-            ExecWait '"$PLUGINSDIR\vcredist.exe" /q' $0
-            IfErrors 0 CheckVcRedistErrorCode
-                MessageBox MB_OK \
-                    "$VcRedistName failed to install. Try installing the package manually." \
-                    /SD IDOK
-                Goto endVcRedist
-
-            CheckVcRedistErrorCode:
-            # Check for Reboot Error Code (3010)
-            ${If} $0 == 3010
-                MessageBox MB_OK \
-                    "$VcRedistName installed but requires a restart to complete." \
-                    /SD IDOK
-
-            # Check for any other errors
-            ${ElseIfNot} $0 == 0
-                MessageBox MB_OK \
-                    "$VcRedistName failed with ErrorCode: $0. Try installing the package manually." \
-                    /SD IDOK
-            ${EndIf}
-
-            endVcRedist:
-
-        ${EndIf}
-
-    ${EndIf}
-
-SectionEnd
-
-
 Section "MainSection" SEC01
 
     SetOutPath "$INSTDIR\"
@@ -616,6 +510,23 @@ SectionEnd
 Function .onInit
 
     Call parseCommandLineSwitches
+
+    # Uninstall msi-installed salt
+    # Source    https://nsis-dev.github.io/NSIS-Forums/html/t-303468.html
+    !define upgradecode {FC6FB3A2-65DE-41A9-AD91-D10A402BD641}    ;Salt upgrade code
+    StrCpy $0 0
+    loop:
+    System::Call 'MSI::MsiEnumRelatedProducts(t "${upgradecode}",i0,i r0,t.r1)i.r2'
+    ${If} $2 = 0
+	# Now $1 contains the product code
+        DetailPrint product:$1
+        push $R0
+          StrCpy $R0 $1
+          Call UninstallMSI
+        pop $R0
+        IntOp $0 $0 + 1
+        goto loop
+    ${Endif}
 
     # If custom config passed, verify its existence before continuing so we
     # don't uninstall an existing installation and then fail
@@ -890,18 +801,6 @@ FunctionEnd
 ###############################################################################
 # Helper Functions
 ###############################################################################
-Function MsiQueryProductState
-    # Used for detecting VCRedist Installation
-    !define INSTALLSTATE_DEFAULT "5"
-
-    Pop $R0
-    StrCpy $NeedVcRedist "False"
-    System::Call "msi::MsiQueryProductStateA(t '$R0') i.r0"
-    StrCmp $0 ${INSTALLSTATE_DEFAULT} +2 0
-    StrCpy $NeedVcRedist "True"
-
-FunctionEnd
-
 
 #------------------------------------------------------------------------------
 # Trim Function
@@ -1267,6 +1166,30 @@ Function un.RemoveFromPath
         Pop $2
         Pop $1
         Pop $0
+
+FunctionEnd
+
+#------------------------------------------------------------------------------
+# UninstallMSI Function
+# - Uninstalls MSI by product code
+#
+# Usage:
+#   Push product code
+#   Call UninstallMSI
+#
+# Source:
+#   https://nsis.sourceforge.io/Uninstalling_a_previous_MSI_(Windows_installer_package)
+#------------------------------------------------------------------------------
+Function UninstallMSI
+    ; $R0 === product code
+    MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION \
+        "${PRODUCT_NAME} is already installed via MSI.$\n$\n\
+        Click `OK` to remove the existing installation." \
+        /SD IDOK IDOK UninstallMSI
+    Abort
+
+    UninstallMSI:
+        ExecWait '"msiexec.exe" /x $R0 /qb /quiet /norestart'
 
 FunctionEnd
 

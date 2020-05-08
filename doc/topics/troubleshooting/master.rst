@@ -19,7 +19,7 @@ Anyone wanting to run Salt daemons via a process supervisor such as `monit`_,
 `runit`_, or `supervisord`_, should omit the ``-d`` argument to the daemons and
 run them in the foreground.
 
-.. _`monit`: http://mmonit.com/monit/
+.. _`monit`: https://mmonit.com/monit/
 .. _`runit`: http://smarden.org/runit/
 .. _`supervisord`: http://supervisord.org/
 
@@ -38,7 +38,7 @@ check that no additional access control system such as `SELinux`_ or
 `AppArmor`_ is blocking Salt.
 
 .. _`SELinux`: https://en.wikipedia.org/wiki/Security-Enhanced_Linux
-.. _`AppArmor`: http://wiki.apparmor.net/index.php/Main_Page
+.. _`AppArmor`: https://gitlab.com/apparmor/apparmor/-/wikis/home
 
 Too many open files
 ===================
@@ -174,10 +174,33 @@ time one must send SIGUSR2 again to stop profiling and save results to file. If
 run in foreground salt-master will report filename for the results, which are
 usually located under ``/tmp`` on Unix-based OSes and ``c:\temp`` on windows.
 
+Make sure you have yappi installed.
+
 Results can then be analyzed with `kcachegrind`_ or similar tool.
 
 .. _`kcachegrind`: http://kcachegrind.sourceforge.net/html/Home.html
 
+Make sure you have yappi installed.
+
+On Windows, in the absence of kcachegrind, a simple file-based workflow to create
+profiling graphs could use `gprof2dot`_, `graphviz`_ and this batch file:
+
+.. _`gprof2dot`: https://pypi.org/project/gprof2dot
+.. _`graphviz`: https://graphviz.gitlab.io
+
+.. code-block:: bash
+
+    ::
+    :: Converts callgrind* profiler output to *.pdf, via *.dot
+    ::
+    @echo off
+    del *.dot.pdf
+    for /r %%f in (callgrind*) do (
+    echo "%%f"
+        gprof2dot.exe -f callgrind --show-samples  "%%f" -o "%%f.dot"
+        dot.exe "%%f.dot" -Tpdf -O
+        del "%%f.dot"
+    )
 
 Commands Time Out or Do Not Return Output
 =========================================

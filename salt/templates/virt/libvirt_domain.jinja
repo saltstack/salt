@@ -5,23 +5,54 @@
         <currentMemory unit='KiB'>{{ mem }}</currentMemory>
         <os>
                 <type arch='{{ arch }}'>{{ os_type }}</type>
-                {% if kernel %}<kernel>{{ kernel }}</kernel>{% endif %}
+                {% if boot %}
+                  {% if 'kernel' in boot %}
+                    <kernel>{{ boot.kernel }}</kernel>
+                  {% endif %}
+                  {% if 'initrd' in boot %}
+                    <initrd>{{ boot.initrd }}</initrd>
+                  {% endif %}
+                  {% if 'cmdline' in boot %}
+                    <cmdline>{{ boot.cmdline }}</cmdline>
+                  {% endif %}
+                  {% if 'loader' in boot %}
+                    <loader readonly='yes' type='pflash'>{{ boot.loader }}</loader>
+                  {% endif %}
+                  {% if 'nvram' in boot %}
+                    <nvram template='{{boot.nvram}}'></nvram>
+                  {% endif %}
+                {% endif %}
                 {% for dev in boot_dev %}
                 <boot dev='{{ dev }}' />
                 {% endfor %}
         </os>
         <devices>
                 {% for disk in disks %}
-                <disk type='file' device='{{ disk.device }}'>
-                        {% if 'source_file' in disk %}
+                <disk type='{{ disk.type }}' device='{{ disk.device }}'>
+                        {% if disk.type == 'file' and 'source_file' in disk -%}
                         <source file='{{ disk.source_file }}' />
                         {% endif %}
+                        {% if disk.type == 'volume' and 'pool' in disk -%}
+                        <source pool='{{ disk.pool }}' volume='{{ disk.volume }}' />
+                        {% endif %}
+                        {%- if disk.type == 'network' %}
+                        <source protocol='{{ disk.protocol }}' name='{{ disk.volume }}'{% if disk.get('query') %} query='{{ disk.query }}'{% endif %}>
+                          {%- for host in disk.get('hosts') %}
+                          <host name='{{ host.name }}'{% if host.get("port") %} port='{{ host.port }}'{% endif %}/>
+                          {%- endfor %}
+                          {%- if disk.get("auth") %}
+                          <auth username='{{ disk.auth.username }}'>
+                            <secret type='{{ disk.auth.type }}' usage='{{ disk.auth.usage}}'/>
+                          </auth>
+                          {%- endif %}
+                        </source>
+                        {%- endif %}
                         <target dev='{{ disk.target_dev }}' bus='{{ disk.disk_bus }}' />
                         {% if disk.address -%}
                         <address type='drive' controller='0' bus='0' target='0' unit='{{ disk.index }}' />
                         {% endif %}
                         {% if disk.driver -%}
-                        <driver name='qemu' type='{{ disk.type }}' cache='none' io='native'/>
+                        <driver name='qemu' type='{{ disk.format}}' cache='none' io='native'/>
                         {% endif %}
                 </disk>
                 {% endfor %}
@@ -33,7 +64,9 @@
                 {% for nic in nics %}
                 <interface type='{{ nic.type }}'>
                     <source {{ nic.type }}='{{ nic.source }}'/>
+                    {% if nic.get('mac') -%}
                     <mac address='{{ nic.mac }}'/>
+                    {%- endif %}
                     {% if nic.model %}<model type='{{ nic.model }}'/>{% endif %}
                 </interface>
                 {% endfor %}

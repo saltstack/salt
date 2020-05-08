@@ -1,4 +1,4 @@
-@Library('salt@master-1.5') _
+@Library('salt@master-1.7') _
 
 // Pre-nox pipeline
 runTestSuite(
@@ -9,9 +9,8 @@ runTestSuite(
     golden_images_branch: 'master',
     jenkins_slave_label: 'kitchen-slave-mac',
     kitchen_platforms_file: '/var/jenkins/workspace/pre-golden-nox-platforms.yml',
-    kitchen_verifier_file: '/var/jenkins/workspace/nox-verifier.yml',
     nox_env_name: 'runtests-zeromq',
-    nox_passthrough_opts: '',
+    nox_passthrough_opts: '--ssh-tests',
     python_version: 'py3',
     run_full: params.runFull,
     testrun_timeout: 6,

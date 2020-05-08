@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 A module to pull data from Cobbler via its API into the Pillar dictionary
 
 
@@ -23,34 +23,32 @@ modules.
 
 Module Documentation
 ====================
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
+
 import salt.ext.six.moves.xmlrpc_client  # pylint: disable=E0611
 
-
-__opts__ = {'cobbler.url': 'http://localhost/cobbler_api',
-            'cobbler.user': None,
-            'cobbler.password': None
-           }
+__opts__ = {
+    "cobbler.url": "http://localhost/cobbler_api",
+    "cobbler.user": None,
+    "cobbler.password": None,
+}
 
 
 # Set up logging
 log = logging.getLogger(__name__)
 
 
-def ext_pillar(minion_id,
-               pillar,  # pylint: disable=W0613
-               key=None,
-               only=()):
-    '''
+def ext_pillar(minion_id, pillar, key=None, only=()):  # pylint: disable=W0613
+    """
     Read pillar data from Cobbler via its API.
-    '''
-    url = __opts__['cobbler.url']
-    user = __opts__['cobbler.user']
-    password = __opts__['cobbler.password']
+    """
+    url = __opts__["cobbler.url"]
+    user = __opts__["cobbler.user"]
+    password = __opts__["cobbler.password"]
 
     log.info("Querying cobbler at %r for information for %r", url, minion_id)
     try:
@@ -58,10 +56,8 @@ def ext_pillar(minion_id,
         if user:
             server.login(user, password)
         result = server.get_blended_data(None, minion_id)
-    except Exception:
-        log.exception(
-            'Could not connect to cobbler.'
-        )
+    except Exception:  # pylint: disable=broad-except
+        log.exception("Could not connect to cobbler.")
         return {}
 
     if only:

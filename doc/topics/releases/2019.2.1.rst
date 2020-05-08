@@ -1,3 +1,5 @@
+.. _release-2019-2-1:
+
 ===========================
 Salt 2019.2.1 Release Notes
 ===========================
@@ -49,7 +51,7 @@ the YAML renderer that now require the new Jinja filter `tojson`.
 
 In 2019.2.1, we introduce a new configuration option for both the Salt master and Salt minion
 configurations to be able to support the older YAML renderer.  Using the option
-`use_yamlloader_old` will allow the YAML renderer to function as before.
+``use_yamlloader_old`` will allow the YAML renderer to function as before.
 
 Statistics
 ==========
@@ -307,7 +309,7 @@ Changelog for v2019.2.0..v2019.2.1
 
   * 23beab4 clean up renamed instances in the teardown
 
-* **PR** `#54252`_: (`s0undt3ch`_) [2019.2.1] More control on spun test deamons on git pillar tests
+* **PR** `#54252`_: (`s0undt3ch`_) [2019.2.1] More control on spun test daemons on git pillar tests
   @ *2019-08-22 22:13:08 UTC*
 
   * c181f5a Merge pull request `#54252`_ from s0undt3ch/hotfix/git-pillar-2019.2.1
@@ -2618,7 +2620,7 @@ Changelog for v2019.2.0..v2019.2.1
 
   * 0372718 Fix lint issues on salt
 
-  * 9eab9f4 Add nox session/env/target to run lint against Salt and it's test suite
+  * 9eab9f4 Add nox session/env/target to run lint against Salt and its test suite
 
   * 123f771 Lock lint requirements
 

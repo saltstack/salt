@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Arista pyeapi
 =============
 
@@ -64,37 +64,36 @@ Proxy Pillar Example
       host: router1.example.com
       username: example
       password: example
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python stdlib
 import logging
 
+# Import salt modules
+from salt.utils.args import clean_kwargs
+
 # Import third party libs
 try:
     import pyeapi
+
     HAS_PYEAPI = True
 except ImportError:
     HAS_PYEAPI = False
 
-# Import salt modules
-try:
-    from salt.utils.args import clean_kwargs
-except ImportError:
-    from salt.utils import clean_kwargs
 
 # -----------------------------------------------------------------------------
 # proxy properties
 # -----------------------------------------------------------------------------
 
-__proxyenabled__ = ['pyeapi']
+__proxyenabled__ = ["pyeapi"]
 # proxy name
 
 # -----------------------------------------------------------------------------
 # globals
 # -----------------------------------------------------------------------------
 
-__virtualname__ = 'pyeapi'
+__virtualname__ = "pyeapi"
 log = logging.getLogger(__name__)
 pyeapi_device = {}
 
@@ -104,12 +103,16 @@ pyeapi_device = {}
 
 
 def __virtual__():
-    '''
+    """
     Proxy module available only if pyeapi is installed.
-    '''
+    """
     if not HAS_PYEAPI:
-        return False, 'The pyeapi proxy module requires the pyeapi library to be installed.'
+        return (
+            False,
+            "The pyeapi proxy module requires the pyeapi library to be installed.",
+        )
     return __virtualname__
+
 
 # -----------------------------------------------------------------------------
 # proxy functions
@@ -117,46 +120,47 @@ def __virtual__():
 
 
 def init(opts):
-    '''
+    """
     Open the connection to the Arista switch over the eAPI.
-    '''
-    proxy_dict = opts.get('proxy', {})
+    """
+    proxy_dict = opts.get("proxy", {})
     conn_args = proxy_dict.copy()
-    conn_args.pop('proxytype', None)
-    opts['multiprocessing'] = conn_args.get('multiprocessing', True)
+    conn_args.pop("proxytype", None)
+    opts["multiprocessing"] = conn_args.get("multiprocessing", True)
     # This is not a SSH-based proxy, so it should be safe to enable
     # multiprocessing.
     try:
         conn = pyeapi.client.connect(**conn_args)
-        node = pyeapi.client.Node(conn, enablepwd=conn_args.get('enablepwd'))
-        pyeapi_device['connection'] = node
-        pyeapi_device['initialized'] = True
-        pyeapi_device['up'] = True
+        node = pyeapi.client.Node(conn, enablepwd=conn_args.get("enablepwd"))
+        pyeapi_device["connection"] = node
+        pyeapi_device["initialized"] = True
+        pyeapi_device["up"] = True
     except pyeapi.eapilib.ConnectionError as cerr:
-        log.error('Unable to connect to %s', conn_args['host'], exc_info=True)
+        log.error("Unable to connect to %s", conn_args["host"], exc_info=True)
         return False
     return True
 
 
 def ping():
-    '''
+    """
     Connection open successfully?
-    '''
-    return pyeapi_device.get('up', False)
+    """
+    return pyeapi_device.get("up", False)
 
 
 def initialized():
-    '''
+    """
     Connection finished initializing?
-    '''
-    return pyeapi_device.get('initialized', False)
+    """
+    return pyeapi_device.get("initialized", False)
 
 
 def shutdown(opts):
-    '''
+    """
     Closes connection with the device.
-    '''
-    log.debug('Shutting down the pyeapi Proxy Minion %s', opts['id'])
+    """
+    log.debug("Shutting down the pyeapi Proxy Minion %s", opts["id"])
+
 
 # -----------------------------------------------------------------------------
 # callable functions
@@ -164,15 +168,15 @@ def shutdown(opts):
 
 
 def conn():
-    '''
+    """
     Return the connection object.
-    '''
-    return pyeapi_device.get('connection')
+    """
+    return pyeapi_device.get("connection")
 
 
 def call(method, *args, **kwargs):
-    '''
+    """
     Calls an arbitrary pyeapi method.
-    '''
+    """
     kwargs = clean_kwargs(**kwargs)
-    return getattr(pyeapi_device['connection'], method)(*args, **kwargs)
+    return getattr(pyeapi_device["connection"], method)(*args, **kwargs)
