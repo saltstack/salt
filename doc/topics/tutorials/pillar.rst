@@ -141,7 +141,7 @@ This example sets up user data with a UID:
 
     The same directory lookups that exist in states exist in pillar, so the
     file ``users/init.sls`` can be referenced with ``users`` in the :term:`top
-    file`.
+    file <Top File>`.
 
 The top file will need to be updated to include this sls file:
 

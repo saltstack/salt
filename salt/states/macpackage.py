@@ -44,7 +44,7 @@ def __virtual__():
     """
     if salt.utils.platform.is_darwin():
         return __virtualname__
-    return False
+    return (False, "Only supported on Mac OS")
 
 
 def installed(
@@ -54,9 +54,6 @@ def installed(
     store=False,
     app=False,
     mpkg=False,
-    user=None,
-    onlyif=None,
-    unless=None,
     force=False,
     allow_untrusted=False,
     version_check=None,
@@ -84,17 +81,6 @@ def installed(
     mpkg
         Is the file a .mpkg? If so then we'll check all of the .pkg files found are installed
 
-    user
-        Name of the user performing the unless or onlyif checks
-
-    onlyif
-        A command to run as a check, run the named command only if the command
-        passed to the ``onlyif`` option returns true
-
-    unless
-        A command to run as a check, only run the named command if the command
-        passed to the ``unless`` option returns false
-
     force
         Force the package to be installed even if its already been found installed
 
@@ -114,17 +100,6 @@ def installed(
     installing = []
 
     real_pkg = name
-
-    # Check onlyif, unless first
-    run_check_cmd_kwargs = {"runas": user, "python_shell": True}
-    if "shell" in __grains__:
-        run_check_cmd_kwargs["shell"] = __grains__["shell"]
-
-    cret = _mod_run_check(run_check_cmd_kwargs, onlyif, unless)
-
-    if isinstance(cret, dict):
-        ret.update(cret)
-        return ret
 
     # Check version info
     if version_check is not None:
@@ -185,7 +160,7 @@ def installed(
                 pkg_ids = [os.path.basename(name)]
                 mount_point = os.path.dirname(name)
 
-            if onlyif is None and unless is None and version_check is None:
+            if version_check is None:
                 for p in pkg_ids:
                     if target[-4:] == ".app":
                         install_dir = target
@@ -262,31 +237,3 @@ def installed(
             __salt__["macpackage.unmount"](mount_point)
 
     return ret
-
-
-def _mod_run_check(cmd_kwargs, onlyif, unless):
-    """
-    Execute the onlyif and unless logic.
-    Return a result dict if:
-    * onlyif failed (onlyif != 0)
-    * unless succeeded (unless == 0)
-    else return True
-    """
-    if onlyif:
-        if __salt__["cmd.retcode"](onlyif, **cmd_kwargs) != 0:
-            return {
-                "comment": "onlyif condition is false",
-                "skip_watch": True,
-                "result": True,
-            }
-
-    if unless:
-        if __salt__["cmd.retcode"](unless, **cmd_kwargs) == 0:
-            return {
-                "comment": "unless condition is true",
-                "skip_watch": True,
-                "result": True,
-            }
-
-    # No reason to stop, return True
-    return True

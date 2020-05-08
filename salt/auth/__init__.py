@@ -310,7 +310,7 @@ class LoadAuth(object):
             return False
 
         if load["eauth"] not in self.opts["external_auth"]:
-            log.debug('The eauth system "%s" is not enabled', load["eauth"])
+            log.warning('The eauth system "%s" is not enabled', load["eauth"])
             log.warning('Authentication failure of type "eauth" occurred.')
             return False
 
@@ -347,6 +347,11 @@ class LoadAuth(object):
                 load["user"] == self.opts.get("user", "root") or load["user"] == "root"
             ):
                 if auth_key != key[self.opts.get("user", "root")]:
+                    log.warning(
+                        "Master runs as %r, but user in payload is %r",
+                        self.opts.get("user", "root"),
+                        load["user"],
+                    )
                     log.warning(error_msg)
                     return False
             elif auth_user.is_running_user():

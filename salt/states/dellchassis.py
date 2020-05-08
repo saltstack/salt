@@ -170,7 +170,9 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    return "chassis.cmd" in __salt__
+    if "chassis.cmd" in __salt__:
+        return True
+    return (False, "chassis module could not be loaded")
 
 
 def blade_idrac(

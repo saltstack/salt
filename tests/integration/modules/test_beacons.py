@@ -3,20 +3,19 @@
     :codeauthor: Justin Anderson <janderson@saltstack.com>
 """
 
-# Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Salt Libs
+import pytest
 from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
-
-# Salttesting libs
+from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
 
+@pytest.mark.windows_whitelisted
 class BeaconsAddDeleteTest(ModuleCase):
     """
     Tests the add and delete functions
@@ -32,6 +31,7 @@ class BeaconsAddDeleteTest(ModuleCase):
         self.beacons_config_file_path = os.path.join(
             self.minion_conf_d_dir, "beacons.conf"
         )
+        self.run_function("beacons.reset", f_timeout=300)
 
     def tearDown(self):
         if os.path.isfile(self.beacons_config_file_path):
@@ -40,6 +40,7 @@ class BeaconsAddDeleteTest(ModuleCase):
         # Reset beacons
         self.run_function("beacons.reset", f_timeout=300)
 
+    @slowTest
     def test_add_and_delete(self):
         """
         Test adding and deleting a beacon
@@ -62,6 +63,7 @@ class BeaconsAddDeleteTest(ModuleCase):
         # save the results
         self.run_function("beacons.save", f_timeout=300)
 
+    @slowTest
     def test_add_and_delete_beacon_module(self):
         """
         Test adding and deleting a beacon
@@ -72,21 +74,23 @@ class BeaconsAddDeleteTest(ModuleCase):
                 "watch_apache",
                 [{"processes": {"apache2": "stopped"}}, {"beacon_module": "ps"}],
             ],
+            f_timeout=300,
         )
         self.assertTrue(_add["result"])
 
         # save added beacon
-        _save = self.run_function("beacons.save")
+        _save = self.run_function("beacons.save", f_timeout=300)
         self.assertTrue(_save["result"])
 
         # delete the beacon
-        _delete = self.run_function("beacons.delete", ["watch_apache"])
+        _delete = self.run_function("beacons.delete", ["ps"], f_timeout=300)
         self.assertTrue(_delete["result"])
 
         # save the results
-        self.run_function("beacons.save")
+        self.run_function("beacons.save", f_timeout=300)
 
 
+@pytest.mark.windows_whitelisted
 class BeaconsTest(ModuleCase):
     """
     Tests the beacons execution module
@@ -112,6 +116,7 @@ class BeaconsTest(ModuleCase):
         self.__class__.beacons_config_file_path = os.path.join(
             self.minion_conf_d_dir, "beacons.conf"
         )
+        self.run_function("beacons.reset", f_timeout=300)
         try:
             # Add beacon to disable
             self.run_function(
@@ -131,6 +136,7 @@ class BeaconsTest(ModuleCase):
         # Reset beacons
         self.run_function("beacons.reset", f_timeout=300)
 
+    @slowTest
     def test_disable(self):
         """
         Test disabling beacons
@@ -157,6 +163,7 @@ class BeaconsTest(ModuleCase):
                 self.assertFalse(bdict["enabled"])
                 break
 
+    @slowTest
     def test_enable(self):
         """
         Test enabling beacons
@@ -190,6 +197,7 @@ class BeaconsTest(ModuleCase):
         _list = self.run_function("beacons.list", return_yaml=False, f_timeout=300)
         self.assertTrue(_list["ps"]["enabled"])
 
+    @slowTest
     def test_list(self):
         """
         Test listing the beacons
@@ -203,6 +211,7 @@ class BeaconsTest(ModuleCase):
         else:
             self.assertEqual(ret, {"ps": [{"processes": {"apache2": "stopped"}}]})
 
+    @slowTest
     def test_list_available(self):
         """
         Test listing the beacons
@@ -239,6 +248,7 @@ class BeaconsWithBeaconTypeTest(ModuleCase):
         self.__class__.beacons_config_file_path = os.path.join(
             self.minion_conf_d_dir, "beacons.conf"
         )
+        self.run_function("beacons.reset", f_timeout=300)
         try:
             # Add beacon to disable
             self.run_function(
@@ -247,56 +257,63 @@ class BeaconsWithBeaconTypeTest(ModuleCase):
                     "watch_apache",
                     [{"processes": {"apache2": "stopped"}}, {"beacon_module": "ps"}],
                 ],
+                f_timeout=300,
             )
-            self.run_function("beacons.save")
+            self.run_function("beacons.save", f_timeout=300)
         except CommandExecutionError:
             self.skipTest("Unable to add beacon")
 
     def tearDown(self):
         # delete added beacon
-        self.run_function("beacons.delete", ["watch_apache"])
-        self.run_function("beacons.save")
+        self.run_function("beacons.delete", ["watch_apache"], f_timeout=300)
+        self.run_function("beacons.save", f_timeout=300)
 
+    @slowTest
     def test_disable(self):
         """
         Test disabling beacons
         """
+        ret = self.run_function("beacons.enable", f_timeout=300)
+        self.assertTrue(ret["result"])
         # assert beacon exists
-        _list = self.run_function("beacons.list", return_yaml=False)
+        _list = self.run_function("beacons.list", return_yaml=False, f_timeout=300)
         self.assertIn("watch_apache", _list)
 
-        ret = self.run_function("beacons.disable")
+        ret = self.run_function("beacons.disable", f_timeout=300)
         self.assertTrue(ret["result"])
 
         # assert beacons are disabled
-        _list = self.run_function("beacons.list", return_yaml=False)
+        _list = self.run_function("beacons.list", return_yaml=False, f_timeout=300)
         self.assertFalse(_list["enabled"])
 
         # disable added beacon
-        ret = self.run_function("beacons.disable_beacon", ["watch_apache"])
+        ret = self.run_function(
+            "beacons.disable_beacon", ["watch_apache"], f_timeout=300
+        )
         self.assertTrue(ret["result"])
 
         # assert beacon ps is disabled
-        _list = self.run_function("beacons.list", return_yaml=False)
+        _list = self.run_function("beacons.list", return_yaml=False, f_timeout=300)
         for bdict in _list["watch_apache"]:
             if "enabled" in bdict:
                 self.assertFalse(bdict["enabled"])
                 break
 
+    @slowTest
     def test_enable(self):
         """
         Test enabling beacons
         """
         # assert beacon exists
-        _list = self.run_function("beacons.list", return_yaml=False)
+        _list = self.run_function("beacons.list", return_yaml=False, f_timeout=300)
         self.assertIn("watch_apache", _list)
 
         # enable beacons on minion
-        ret = self.run_function("beacons.enable")
+        ret = self.run_function("beacons.enable", f_timeout=300)
         self.assertTrue(ret["result"])
 
         # assert beacons are enabled
-        _list = self.run_function("beacons.list", return_yaml=False)
+        _list = self.run_function("beacons.list", return_yaml=False, f_timeout=300)
         self.assertTrue(_list["enabled"])
 
     @skipIf(
@@ -308,19 +325,22 @@ class BeaconsWithBeaconTypeTest(ModuleCase):
         Test enabled specific beacon
         """
         # enable added beacon
-        ret = self.run_function("beacons.enable_beacon", ["watch_apache"])
+        ret = self.run_function(
+            "beacons.enable_beacon", ["watch_apache"], f_timeout=300
+        )
         self.assertTrue(ret["result"])
 
         # assert beacon ps is enabled
-        _list = self.run_function("beacons.list", return_yaml=False)
+        _list = self.run_function("beacons.list", return_yaml=False, f_timeout=300)
         self.assertTrue(_list["watch_apache"]["enabled"])
 
+    @slowTest
     def test_list(self):
         """
-        Test lising the beacons
+        Test listing the beacons
         """
         # list beacons
-        ret = self.run_function("beacons.list", return_yaml=False)
+        ret = self.run_function("beacons.list", return_yaml=False, f_timeout=300)
         _expected = {
             "watch_apache": [
                 {"processes": {"apache2": "stopped"}},

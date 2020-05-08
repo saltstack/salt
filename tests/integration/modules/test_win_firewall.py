@@ -1,18 +1,16 @@
 # -*- coding: utf-8 -*-
 
-# Import Python libs
 from __future__ import absolute_import
 
-# Import Salt Libs
+import pytest
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, slowTest
 from tests.support.unit import skipIf
 
 
 @skipIf(not salt.utils.platform.is_windows(), "Tests for only Windows")
+@pytest.mark.windows_whitelisted
 class FirewallTest(ModuleCase):
     """
     Validate windows firewall module
@@ -31,6 +29,7 @@ class FirewallTest(ModuleCase):
                     self.assertTrue(self.run_function("firewall.disable", profile=net))
 
     @destructiveTest
+    @slowTest
     def test_firewall_get_config(self):
         """
         test firewall.get_config
@@ -45,6 +44,7 @@ class FirewallTest(ModuleCase):
         self._pre_firewall_status(pre_run)
 
     @destructiveTest
+    @slowTest
     def test_firewall_disable(self):
         """
         test firewall.disable
@@ -62,6 +62,7 @@ class FirewallTest(ModuleCase):
         self._pre_firewall_status(pre_run)
 
     @destructiveTest
+    @slowTest
     def test_firewall_enable(self):
         """
         test firewall.enable
@@ -78,6 +79,7 @@ class FirewallTest(ModuleCase):
         self.assertTrue(ret)
         self._pre_firewall_status(pre_run)
 
+    @slowTest
     def test_firewall_get_rule(self):
         """
         test firewall.get_rule
@@ -90,6 +92,7 @@ class FirewallTest(ModuleCase):
             self.assertIn(check, ret[rule])
 
     @destructiveTest
+    @slowTest
     def test_firewall_add_delete_rule(self):
         """
         test firewall.add_rule and delete_rule

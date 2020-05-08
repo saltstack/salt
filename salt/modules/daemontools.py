@@ -48,7 +48,7 @@ def __virtual__():
     BINS = frozenset(("svc", "supervise", "svok"))
     if all(salt.utils.path.which(b) for b in BINS) and SERVICE_DIR:
         return __virtualname__
-    return False
+    return (False, "Missing dependency: {0}".format(BINS))
 
 
 def _service_path(name):
@@ -235,7 +235,7 @@ def enabled(name, **kwargs):
         salt '*' daemontools.enabled <service name>
     """
     if not available(name):
-        log.error("Service {0} not found".format(name))
+        log.error("Service %s not found", name)
         return False
 
     run_file = os.path.join(SERVICE_DIR, name, "run")

@@ -147,34 +147,25 @@ def top(num_processes=5, interval=3):
     for pid in psutil.pids():
         try:
             process = psutil.Process(pid)
-            user, system = process.cpu_times()
-        except ValueError:
-            user, system, _, _ = process.cpu_times()
         except psutil.NoSuchProcess:
             continue
+        else:
+            user, system = process.cpu_times()[:2]
         start_usage[process] = user + system
     time.sleep(interval)
     usage = set()
     for process, start in six.iteritems(start_usage):
         try:
-            user, system = process.cpu_times()
-        except ValueError:
-            user, system, _, _ = process.cpu_times()
+            user, system = process.cpu_times()[:2]
         except psutil.NoSuchProcess:
             continue
         now = user + system
         diff = now - start
         usage.add((diff, process))
 
-    for idx, (diff, process) in enumerate(reversed(sorted(usage))):
-        if num_processes and idx >= num_processes:
-            break
-        if len(_get_proc_cmdline(process)) == 0:
-            cmdline = _get_proc_name(process)
-        else:
-            cmdline = _get_proc_cmdline(process)
+    for diff, process in sorted(usage, key=lambda x: x[0], reverse=True):
         info = {
-            "cmd": cmdline,
+            "cmd": _get_proc_cmdline(process) or _get_proc_name(process),
             "user": _get_proc_username(process),
             "status": _get_proc_status(process),
             "pid": _get_proc_pid(process),
@@ -182,11 +173,22 @@ def top(num_processes=5, interval=3):
             "cpu": {},
             "mem": {},
         }
-        for key, value in six.iteritems(process.cpu_times()._asdict()):
-            info["cpu"][key] = value
-        for key, value in six.iteritems(process.memory_info()._asdict()):
-            info["mem"][key] = value
+        try:
+            for key, value in six.iteritems(process.cpu_times()._asdict()):
+                info["cpu"][key] = value
+            for key, value in six.iteritems(process.memory_info()._asdict()):
+                info["mem"][key] = value
+        except psutil.NoSuchProcess:
+            # Process ended since psutil.pids() was run earlier in this
+            # function. Ignore this process and do not include this process in
+            # the return data.
+            continue
+
         result.append(info)
+
+        # Stop gathering process info since we've reached the desired number
+        if len(result) >= num_processes:
+            break
 
     return result
 

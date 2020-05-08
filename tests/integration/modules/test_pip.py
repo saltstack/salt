@@ -4,7 +4,6 @@ tests.integration.modules.pip
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
@@ -14,15 +13,13 @@ import shutil
 import sys
 import tempfile
 
-# Import salt libs
+import pytest
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from tests.support.case import ModuleCase
-from tests.support.helpers import patched_environ
-
-# Import Salt Testing libs
+from tests.support.helpers import patched_environ, slowTest
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -30,6 +27,7 @@ from tests.support.unit import skipIf
 @skipIf(
     salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, "virtualenv not installed"
 )
+@pytest.mark.windows_whitelisted
 class PipModuleTest(ModuleCase):
     def setUp(self):
         super(PipModuleTest, self).setUp()
@@ -113,6 +111,7 @@ class PipModuleTest(ModuleCase):
 
         return expect.issubset(set(success_for))
 
+    @slowTest
     def test_issue_2087_missing_pip(self):
         # Let's create the testing virtualenv
         self._create_virtualenv(self.venv_dir)
@@ -144,6 +143,7 @@ class PipModuleTest(ModuleCase):
                 ret,
             )
 
+    @slowTest
     def test_requirements_as_list_of_chains__cwd_set__absolute_file_path(self):
         self._create_virtualenv(self.venv_dir)
 
@@ -189,6 +189,7 @@ class PipModuleTest(ModuleCase):
                 )
             )
 
+    @slowTest
     def test_requirements_as_list_of_chains__cwd_not_set__absolute_file_path(self):
         self._create_virtualenv(self.venv_dir)
 
@@ -232,6 +233,7 @@ class PipModuleTest(ModuleCase):
                 )
             )
 
+    @slowTest
     def test_requirements_as_list__absolute_file_path(self):
         self._create_virtualenv(self.venv_dir)
 
@@ -267,6 +269,7 @@ class PipModuleTest(ModuleCase):
                 )
             )
 
+    @slowTest
     def test_requirements_as_list__non_absolute_file_path(self):
         self._create_virtualenv(self.venv_dir)
 
@@ -311,6 +314,7 @@ class PipModuleTest(ModuleCase):
                 )
             )
 
+    @slowTest
     def test_chained_requirements__absolute_file_path(self):
         self._create_virtualenv(self.venv_dir)
 
@@ -344,6 +348,7 @@ class PipModuleTest(ModuleCase):
                 )
             )
 
+    @slowTest
     def test_chained_requirements__non_absolute_file_path(self):
         self._create_virtualenv(self.venv_dir)
 
@@ -384,6 +389,7 @@ class PipModuleTest(ModuleCase):
                 )
             )
 
+    @slowTest
     def test_issue_4805_nested_requirements(self):
         self._create_virtualenv(self.venv_dir)
 
@@ -421,6 +427,7 @@ class PipModuleTest(ModuleCase):
                 )
             )
 
+    @slowTest
     def test_pip_uninstall(self):
         # Let's create the testing virtualenv
         self._create_virtualenv(self.venv_dir)
@@ -463,6 +470,7 @@ class PipModuleTest(ModuleCase):
                 )
             )
 
+    @slowTest
     def test_pip_install_upgrade(self):
         # Create the testing virtualenv
         self._create_virtualenv(self.venv_dir)
@@ -529,6 +537,7 @@ class PipModuleTest(ModuleCase):
                 )
             )
 
+    @slowTest
     def test_pip_install_multiple_editables(self):
         editables = [
             "git+https://github.com/jek/blinker.git#egg=Blinker",
@@ -563,6 +572,7 @@ class PipModuleTest(ModuleCase):
                 )
             )
 
+    @slowTest
     def test_pip_install_multiple_editables_and_pkgs(self):
         editables = [
             "git+https://github.com/jek/blinker.git#egg=Blinker",

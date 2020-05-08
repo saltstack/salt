@@ -51,7 +51,7 @@ import salt.utils.url
 
 # Explicit late import to avoid circular import. DO NOT MOVE THIS.
 import salt.utils.yamlloader as yamlloader
-from salt.exceptions import SaltRenderError, SaltReqTimeoutError
+from salt.exceptions import CommandExecutionError, SaltRenderError, SaltReqTimeoutError
 
 # Import third party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -75,6 +75,7 @@ STATE_REQUISITE_KEYWORDS = frozenset(
         "onchanges_any",
         "onfail",
         "onfail_any",
+        "onfail_all",
         "onfail_stop",
         "prereq",
         "prerequired",
@@ -96,6 +97,7 @@ STATE_RUNTIME_KEYWORDS = frozenset(
         "failhard",
         "onlyif",
         "unless",
+        "creates",
         "retry",
         "order",
         "parallel",
@@ -899,6 +901,14 @@ class State(object):
                 # If either result is True, the returned result should be True
                 ret["skip_watch"] = _ret["skip_watch"] or ret["skip_watch"]
 
+        if "creates" in low_data:
+            _ret = self._run_check_creates(low_data)
+            ret["result"] = _ret["result"] or ret["result"]
+            ret["comment"].append(_ret["comment"])
+            if "skip_watch" in _ret:
+                # If either result is True, the returned result should be True
+                ret["skip_watch"] = _ret["skip_watch"] or ret["skip_watch"]
+
         return ret
 
     def _run_check_function(self, entry):
@@ -934,9 +944,13 @@ class State(object):
 
         for entry in low_data_onlyif:
             if isinstance(entry, six.string_types):
-                cmd = self.functions["cmd.retcode"](
-                    entry, ignore_retcode=True, python_shell=True, **cmd_opts
-                )
+                try:
+                    cmd = self.functions["cmd.retcode"](
+                        entry, ignore_retcode=True, python_shell=True, **cmd_opts
+                    )
+                except CommandExecutionError:
+                    # Command failed, notify onlyif to skip running the item
+                    cmd = 100
                 log.debug("Last command return code: %s", cmd)
                 _check_cmd(cmd)
             elif isinstance(entry, dict):
@@ -993,10 +1007,14 @@ class State(object):
 
         for entry in low_data_unless:
             if isinstance(entry, six.string_types):
-                cmd = self.functions["cmd.retcode"](
-                    entry, ignore_retcode=True, python_shell=True, **cmd_opts
-                )
-                log.debug("Last command return code: %s", cmd)
+                try:
+                    cmd = self.functions["cmd.retcode"](
+                        entry, ignore_retcode=True, python_shell=True, **cmd_opts
+                    )
+                    log.debug("Last command return code: %s", cmd)
+                except CommandExecutionError:
+                    # Command failed, so notify unless to skip the item
+                    cmd = 0
                 _check_cmd(cmd)
             elif isinstance(entry, dict):
                 if "fun" not in entry:
@@ -1058,6 +1076,30 @@ class State(object):
                     }
                 )
                 return ret
+        return ret
+
+    def _run_check_creates(self, low_data):
+        """
+        Check that listed files exist
+        """
+        ret = {"result": False}
+
+        if isinstance(low_data["creates"], six.string_types) and os.path.exists(
+            low_data["creates"]
+        ):
+            ret["comment"] = "{0} exists".format(low_data["creates"])
+            ret["result"] = True
+            ret["skip_watch"] = True
+        elif isinstance(low_data["creates"], list) and all(
+            [os.path.exists(path) for path in low_data["creates"]]
+        ):
+            ret["comment"] = "All files in creates exist"
+            ret["result"] = True
+            ret["skip_watch"] = True
+        else:
+            ret["comment"] = "Creates files not found"
+            ret["result"] = False
+
         return ret
 
     def reset_run_num(self):
@@ -1181,7 +1223,7 @@ class State(object):
             elif data["fun"] == "symlink":
                 if "bin" in data["name"]:
                     self.module_refresh()
-        elif data["state"] in ("pkg", "ports"):
+        elif data["state"] in ("pkg", "ports", "pip"):
             self.module_refresh()
 
     def verify_data(self, data):
@@ -1683,6 +1725,9 @@ class State(object):
         )
         extend = {}
         errors = []
+        disabled_reqs = self.opts.get("disabled_requisites", [])
+        if not isinstance(disabled_reqs, list):
+            disabled_reqs = [disabled_reqs]
         for id_, body in six.iteritems(high):
             if not isinstance(body, dict):
                 continue
@@ -1700,6 +1745,11 @@ class State(object):
                         # Split out the components
                         key = next(iter(arg))
                         if key not in req_in:
+                            continue
+                        if key in disabled_reqs:
+                            log.warning(
+                                "The %s requisite has been disabled, Ignoring.", key
+                            )
                             continue
                         rkey = key.split("_")[0]
                         items = arg[key]
@@ -1906,6 +1956,7 @@ class State(object):
         # correctly calculate further down the chain
         utc_start_time = datetime.datetime.utcnow()
 
+        self.format_slots(cdata)
         tag = _gen_tag(low)
         try:
             ret = self.states[cdata["full"]](*cdata["args"], **cdata["kwargs"])
@@ -2058,11 +2109,9 @@ class State(object):
             # that's not found in cdata, we look for what we're being passed in
             # the original data, namely, the special dunder __env__. If that's
             # not found we default to 'base'
+            req_list = ("unless", "onlyif", "creates")
             if (
-                "unless" in low
-                and "{0[state]}.mod_run_check".format(low) not in self.states
-            ) or (
-                "onlyif" in low
+                any(req in low for req in req_list)
                 and "{0[state]}.mod_run_check".format(low) not in self.states
             ):
                 ret.update(self._run_check(low))
@@ -2215,7 +2264,7 @@ class State(object):
             else:
                 ret["comment"] = "  ".join(
                     [
-                        "" if not ret["comment"] else ret["comment"],
+                        "" if not ret["comment"] else six.text_type(ret["comment"]),
                         (
                             "The state would be retried every {1} seconds "
                             "(with a splay of up to {3} seconds) "
@@ -2541,6 +2590,9 @@ class State(object):
         Look into the running data to check the status of all requisite
         states
         """
+        disabled_reqs = self.opts.get("disabled_requisites", [])
+        if not isinstance(disabled_reqs, list):
+            disabled_reqs = [disabled_reqs]
         present = False
         # If mod_watch is not available make it a require
         if "watch" in low:
@@ -2571,6 +2623,8 @@ class State(object):
             present = True
         if "onfail_any" in low:
             present = True
+        if "onfail_all" in low:
+            present = True
         if "onchanges" in low:
             present = True
         if "onchanges_any" in low:
@@ -2586,6 +2640,7 @@ class State(object):
             "prereq": [],
             "onfail": [],
             "onfail_any": [],
+            "onfail_all": [],
             "onchanges": [],
             "onchanges_any": [],
         }
@@ -2593,6 +2648,11 @@ class State(object):
             reqs["prerequired"] = []
         for r_state in reqs:
             if r_state in low and low[r_state] is not None:
+                if r_state in disabled_reqs:
+                    log.warning(
+                        "The %s requisite has been disabled, Ignoring.", r_state
+                    )
+                    continue
                 for req in low[r_state]:
                     if isinstance(req, six.string_types):
                         req = {"id": req}
@@ -2680,7 +2740,7 @@ class State(object):
                 else:
                     if run_dict[tag].get("__state_ran__", True):
                         req_stats.add("met")
-            if r_state.endswith("_any"):
+            if r_state.endswith("_any") or r_state == "onfail":
                 if "met" in req_stats or "change" in req_stats:
                     if "fail" in req_stats:
                         req_stats.remove("fail")
@@ -2690,8 +2750,14 @@ class State(object):
                     if "fail" in req_stats:
                         req_stats.remove("fail")
                 if "onfail" in req_stats:
-                    if "fail" in req_stats:
+                    # a met requisite in this case implies a success
+                    if "met" in req_stats:
                         req_stats.remove("onfail")
+            if r_state.endswith("_all"):
+                if "onfail" in req_stats:
+                    # a met requisite in this case implies a failure
+                    if "met" in req_stats:
+                        req_stats.remove("met")
             fun_stats.update(req_stats)
 
         if "unmet" in fun_stats:
@@ -2703,8 +2769,8 @@ class State(object):
                 status = "met"
             else:
                 status = "pre"
-        elif "onfail" in fun_stats and "met" not in fun_stats:
-            status = "onfail"  # all onfail states are OK
+        elif "onfail" in fun_stats and "onchangesmet" not in fun_stats:
+            status = "onfail"
         elif "onchanges" in fun_stats and "onchangesmet" not in fun_stats:
             status = "onchanges"
         elif "change" in fun_stats:
@@ -3275,6 +3341,49 @@ class State(object):
         return self.call_high(high)
 
 
+class LazyAvailStates(object):
+    """
+    The LazyAvailStates lazily loads the list of states of available
+    environments.
+
+    This is particularly usefull when top_file_merging_strategy=same and there
+    are many environments.
+    """
+
+    def __init__(self, hs):
+        self._hs = hs
+        self._avail = {"base": None}
+        self._filled = False
+
+    def _fill(self):
+        if self._filled:
+            return
+        for saltenv in self._hs._get_envs():
+            if saltenv not in self._avail:
+                self._avail[saltenv] = None
+        self._filled = True
+
+    def __contains__(self, saltenv):
+        if saltenv == "base":
+            return True
+        self._fill()
+        return saltenv in self._avail
+
+    def __getitem__(self, saltenv):
+        if saltenv != "base":
+            self._fill()
+        if self._avail[saltenv] is None:
+            self._avail[saltenv] = self._hs.client.list_states(saltenv)
+        return self._avail[saltenv]
+
+    def items(self):
+        self._fill()
+        ret = []
+        for saltenv, states in self._avail:
+            ret.append((saltenv, self.__getitem__(saltenv)))
+        return ret
+
+
 class BaseHighState(object):
     """
     The BaseHighState is an abstract base class that is the foundation of
@@ -3293,12 +3402,9 @@ class BaseHighState(object):
 
     def __gather_avail(self):
         """
-        Gather the lists of available sls data from the master
+        Lazily gather the lists of available sls data from the master
         """
-        avail = {}
-        for saltenv in self._get_envs():
-            avail[saltenv] = self.client.list_states(saltenv)
-        return avail
+        return LazyAvailStates(self)
 
     def __gen_opts(self, opts):
         """

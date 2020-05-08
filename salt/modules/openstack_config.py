@@ -40,7 +40,7 @@ __func_alias__ = {"set_": "set"}
 
 def __virtual__():
     if _quote is None and not HAS_DEPS:
-        return False
+        return (False, "Missing dependencies")
     return True
 
 

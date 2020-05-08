@@ -28,9 +28,10 @@ from salt.utils.dns import (
     lookup,
 )
 from salt.utils.odict import OrderedDict
-from tests.support.mock import MagicMock, patch
 
 # Testing
+from tests.support.helpers import requires_network
+from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
 
@@ -311,6 +312,7 @@ class DNSlookupsCase(TestCase):
                     )
 
     @skipIf(not salt.utils.dns.HAS_NSLOOKUP, "nslookup is not available")
+    @requires_network()
     def test_lookup_with_servers(self):
         rights = {
             "A": [

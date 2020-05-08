@@ -2,7 +2,6 @@
 """
 Tests for runner_returns
 """
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
@@ -10,18 +9,18 @@ import os
 import socket
 import tempfile
 
-# Import salt libs
+import pytest
 import salt.payload
 import salt.utils.args
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.yaml
-
-# Import Salt Testing libs
 from tests.support.case import ShellCase
+from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
 
 
+@pytest.mark.windows_whitelisted
 class RunnerReturnsTest(ShellCase):
     """
     Test the "runner_returns" feature
@@ -48,10 +47,14 @@ class RunnerReturnsTest(ShellCase):
         """
         Close the tempfile.NamedTemporaryFile object, cleaning it up
         """
+        try:
+            self.conf.close()
+        except OSError:
+            pass
         salt.utils.files.rm_rf(self.master_d_dir)
         # Force a reload of the configuration now that our temp config file has
         # been removed.
-        self.run_run_plus("test.arg", __reload_config=True)
+        self.run_run_plus("test.arg")
 
     @staticmethod
     def clean_return(data):
@@ -65,9 +68,11 @@ class RunnerReturnsTest(ShellCase):
             **data["return"]["kwargs"]
         )
 
-        # Pop off the timestamp (do not provide a 2nd argument, if the stamp is
-        # missing we want to know!)
+        # Pop off dynamic keys in the return schema that are impossible to test.
+        # Do not supply the default arguments because we want to know if we are
+        # missing some aspect of the schema.
         data.pop("_stamp")
+        data.pop("pid")
 
     def write_conf(self, data):
         """
@@ -77,14 +82,13 @@ class RunnerReturnsTest(ShellCase):
         self.conf.flush()
         self.conf.close()
 
+    @slowTest
     def test_runner_returns_disabled(self):
         """
-        Test with runner_returns enabled
+        Test with runner_returns disabled
         """
         self.write_conf({"runner_returns": False})
-        ret = self.run_run_plus(
-            "test.arg", "foo", bar="hello world!", __reload_config=True
-        )
+        ret = self.run_run_plus("test.arg", "foo", bar="hello world!")
 
         jid = ret.get("jid")
         if jid is None:
@@ -97,14 +101,13 @@ class RunnerReturnsTest(ShellCase):
         )
         self.assertFalse(os.path.isfile(serialized_return))
 
+    @slowTest
     def test_runner_returns_enabled(self):
         """
         Test with runner_returns enabled
         """
         self.write_conf({"runner_returns": True})
-        ret = self.run_run_plus(
-            "test.arg", "foo", bar="hello world!", __reload_config=True
-        )
+        ret = self.run_run_plus("test.arg", "foo", bar="hello world!")
 
         jid = ret.get("jid")
         if jid is None:
@@ -117,7 +120,7 @@ class RunnerReturnsTest(ShellCase):
         )
         serial = salt.payload.Serial(self.master_opts)
         with salt.utils.files.fopen(serialized_return, "rb") as fp_:
-            deserialized = serial.loads(fp_.read())
+            deserialized = serial.loads(fp_.read(), encoding="utf-8")
 
         self.clean_return(deserialized["return"])
 

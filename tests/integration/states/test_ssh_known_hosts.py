@@ -15,7 +15,7 @@ from salt.ext import six
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import skip_if_binaries_missing
+from tests.support.helpers import skip_if_binaries_missing, slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 
@@ -38,6 +38,7 @@ class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
             os.remove(self.known_hosts)
         super(SSHKnownHostsStateTest, self).tearDown()
 
+    @slowTest
     def test_present(self):
         """
         ssh_known_hosts.present
@@ -109,6 +110,7 @@ class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
                 "Salt return '{0}' is in ('', None,".format(ret) + " {})"
             )
 
+    @slowTest
     def test_present_fail(self):
         # save something wrong
         ret = self.run_state(
@@ -120,6 +122,7 @@ class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltFalseReturn(ret)
 
+    @slowTest
     def test_absent(self):
         """
         ssh_known_hosts.absent
