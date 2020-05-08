@@ -22,10 +22,7 @@ class PycryptoTestCase(TestCase):
     TestCase for salt.utils.pycrypto module
     """
 
-    @skipIf(
-        not salt.utils.pycrypto.HAS_CRYPT or not salt.utils.pycrypto.HAS_PASSLIB,
-        "crypt not available",
-    )
+    @skipIf(not salt.utils.pycrypto.HAS_CRYPT, "crypt not available")
     def test_gen_hash(self):
         """
         Test gen_hash
@@ -34,13 +31,13 @@ class PycryptoTestCase(TestCase):
         expecteds = {
             "sha512": {
                 "hashed": "$6$rounds=656000$goodsalt$25xEV0IAcghzQbu8TF5KdDMYk3b4u9nR/38xYU/26xvPgirDavreGhtLfYRYW.RngLmRtD9i8S8XP3dPx4.PV.",
-                "salt": "goodsalt",
-                "badsalt": "badsalt",
+                "salt": "rounds=656000$goodsalt",
+                "badsalt": "rounds=656000$badsalt",
             },
             "sha256": {
                 "hashed": "$5$rounds=535000$goodsalt$2tSwAugenFhj2sHC1EHyGo.7razFvRhlK0c11k4.xG7",
-                "salt": "goodsalt",
-                "badsalt": "badsalt",
+                "salt": "rounds=535000$goodsalt",
+                "badsalt": "rounds=656000$badsalt",
             },
             "blowfish": {
                 "hashed": "$2b$12$goodsaltgoodsaltgoodsOaeGcaoZ.j.ugFo3vJZv5uk3W2zf2166",
@@ -86,17 +83,23 @@ class PycryptoTestCase(TestCase):
             )
             self.assertNotEqual(ret, expected["hashed"])
 
-            with self.assertRaises(ValueError, msg=algorithm):
-                ret = salt.utils.pycrypto.gen_hash(
-                    crypt_salt=invalid_salt,
-                    password=passwd,
-                    algorithm=algorithm,
-                    force=force,
-                )
-                self.assertNotEqual(ret, expected["hashed"])
+        with self.assertRaises(ValueError):
+            ret = salt.utils.pycrypto.gen_hash(
+                crypt_salt="long", password=passwd, algorithm="crypt", force=force,
+            )
 
         with self.assertRaises(SaltInvocationError):
             salt.utils.pycrypto.gen_hash(algorithm="garbage")
+
+        # Assert it works without arguments passed
+        self.assertIsNotNone(salt.utils.pycrypto.gen_hash())
+        # Assert it works without algorithm passed
+        default_algorithm = salt.utils.pycrypto.crypt.methods[0]
+        if default_algorithm in expecteds:
+            ret = salt.utils.pycrypto.gen_hash(
+                crypt_salt=expected["salt"], password=passwd,
+            )
+            self.assertEqual(ret, expected["hashed"])
 
     def test_secure_password(self):
         """

@@ -106,6 +106,10 @@ def gen_hash(crypt_salt=None, password=None, algorithm=None, force=False):
     if password is None:
         password = secure_password()
 
+    if algorithm is None:
+        # use the most secure natively supported method
+        algorithm = crypt.methods[0].name.lower() if HAS_CRYPT else known_methods[0]
+
     if algorithm not in methods:
         if force and HAS_PASSLIB:
             return _fallback_gen_hash(crypt_salt, password, algorithm)
@@ -115,10 +119,6 @@ def gen_hash(crypt_salt=None, password=None, algorithm=None, force=False):
                     algorithm
                 )
             )
-
-    if algorithm is None:
-        # use the most secure natively supported method
-        algorithm = crypt.methods[0].name.lower()
 
     if crypt_salt is None:
         crypt_salt = methods[algorithm]
