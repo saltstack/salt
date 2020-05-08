@@ -31,6 +31,7 @@ contextlib2==0.5.5        # via cherrypy
 croniter==0.3.29
 cryptography==2.6.1
 distlib==0.3.0            # via virtualenv
+distro==1.5.0
 dnspython==1.16.0
 docker-pycreds==0.4.0     # via docker
 docker==3.7.2
