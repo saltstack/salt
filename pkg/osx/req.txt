@@ -4,7 +4,7 @@ certifi
 cffi==1.13.2
 CherryPy==17.4.2
 click==7.0
-cryptography==2.6.1
+cryptography==2.9.2
 gitpython==2.1.15
 idna==2.8
 ipaddress==1.0.23
