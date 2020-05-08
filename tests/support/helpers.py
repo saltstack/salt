@@ -40,9 +40,9 @@ import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
-from pytestsalt.utils import get_unused_localhost_port
 from salt.ext import six
 from salt.ext.six.moves import builtins, range
+from saltfactories.utils.ports import get_unused_localhost_port
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
@@ -1654,8 +1654,24 @@ class VirtualEnv(object):
     def __exit__(self, *args):
         shutil.rmtree(self.venv_dir, ignore_errors=True)
 
-    def install(self, *args):
-        subprocess.check_call([self.venv_python, "-m", "pip", "install"] + list(args))
+    def install(self, *args, **kwargs):
+        return self.run(self.venv_python, "-m", "pip", "install", *args, **kwargs)
+
+    def run(self, *args, **kwargs):
+        kwargs.setdefault("cwd", self.venv_dir)
+        kwargs.setdefault("check", True)
+        kwargs.setdefault("stdout", subprocess.PIPE)
+        kwargs.setdefault("stderr", subprocess.PIPE)
+        kwargs.setdefault("universal_newlines", True)
+        try:
+            return subprocess.run(  # pylint: disable=subprocess-run-check
+                args, **kwargs
+            )
+        except subprocess.CalledProcessError as exc:
+            print(exc)
+            print(exc.stdout)
+            print(exc.stderr)
+            raise
 
     def _get_real_python(self):
         """

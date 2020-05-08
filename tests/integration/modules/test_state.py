@@ -2364,6 +2364,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             testfile
         )
         ret = self.run_function("state.test", ["core"])
+        self.assertIsInstance(ret, dict)
 
         for key, val in ret.items():
             self.assertEqual(val["comment"], comment)

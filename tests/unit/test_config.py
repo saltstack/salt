@@ -792,8 +792,15 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         if RUNTIME_VARS.PYTEST_SESSION is False:
             # Pytest assigns ports dynamically
             self.assertEqual(syndic_opts["master_port"], 54506)
-        self.assertEqual(syndic_opts["master"], "localhost")
-        self.assertEqual(syndic_opts["sock_dir"], os.path.join(root_dir, "syndic_sock"))
+            self.assertEqual(syndic_opts["master"], "localhost")
+            self.assertEqual(
+                syndic_opts["sock_dir"], os.path.join(root_dir, "syndic_sock")
+            )
+        else:
+            self.assertEqual(syndic_opts["master"], "127.0.0.1")
+            self.assertEqual(
+                syndic_opts["sock_dir"], os.path.join(root_dir, "run", "minion")
+            )
         self.assertEqual(syndic_opts["cachedir"], os.path.join(root_dir, "cache"))
         self.assertEqual(
             syndic_opts["log_file"], os.path.join(root_dir, "logs", "syndic.log")
@@ -1676,8 +1683,13 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         Tests that cloud.{providers,profiles}.d directories are loaded, even if not
         directly passed in through path
         """
-        log.warning("Clound config file path: %s", self.get_config_file_path("cloud"))
-        config = salt.config.cloud_config(self.get_config_file_path("cloud"))
+        config_file = self.get_config_file_path("cloud")
+        log.debug("Cloud config file path: %s", config_file)
+        self.assertTrue(
+            os.path.exists(config_file), "{} does not exist".format(config_file)
+        )
+        config = salt.config.cloud_config(config_file)
+        self.assertIn("providers", config)
         self.assertIn("ec2-config", config["providers"])
         self.assertIn("ec2-test", config["profiles"])
 

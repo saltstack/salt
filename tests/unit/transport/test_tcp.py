@@ -25,7 +25,8 @@ from salt.transport.tcp import (
     SaltMessageClientPool,
     TCPPubServerChannel,
 )
-from tests.support.helpers import flaky, get_unused_localhost_port, slowTest
+from saltfactories.utils.ports import get_unused_localhost_port
+from tests.support.helpers import flaky, slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf

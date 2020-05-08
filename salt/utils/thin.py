@@ -181,6 +181,62 @@ def gte():
     return salt.utils.json.dumps(tops, ensure_ascii=False)
 
 
+def get_tops_python(py_ver, exclude=None):
+    """
+    Get top directories for the ssh_ext_alternatives dependencies
+    automatically for the given python version. This allows
+    the user to add the dependency paths automatically.
+
+    :param py_ver:
+        python binary to use to detect binaries
+
+    :param exclude:
+        list of modules not to auto detect
+    """
+    files = {}
+    for mod in [
+        "jinja2",
+        "yaml",
+        "tornado",
+        "msgpack",
+        "certifi",
+        "singledispatch",
+        "concurrent",
+        "singledispatch_helpers",
+        "ssl_match_hostname",
+        "markupsafe",
+        "backports_abc",
+    ]:
+        if exclude and mod in exclude:
+            continue
+
+        if not salt.utils.path.which(py_ver):
+            log.error(
+                "{} does not exist. Could not auto detect dependencies".format(py_ver)
+            )
+            return {}
+        py_shell_cmd = "{0} -c 'import {1}; print({1}.__file__)'".format(py_ver, mod)
+        cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, shell=True)
+        stdout, _ = cmd.communicate()
+        mod_file = os.path.abspath(salt.utils.data.decode(stdout).rstrip("\n"))
+
+        if not stdout or not os.path.exists(mod_file):
+            log.error(
+                "Could not auto detect file location for module {} for python version {}".format(
+                    mod, py_ver
+                )
+            )
+            continue
+
+        if os.path.basename(mod_file).split(".")[0] == "__init__":
+            mod_file = os.path.dirname(mod_file)
+        else:
+            mod_file = mod_file.replace("pyc", "py")
+
+        files[mod] = mod_file
+    return files
+
+
 def get_ext_tops(config):
     """
     Get top directories for the dependencies, based on external configuration.
@@ -361,6 +417,76 @@ def _get_thintar_prefix(tarname):
     os.close(tfd)
 
     return tmp_tarname
+
+
+def _pack_alternative(extended_cfg, digest_collector, tfp):
+    # Pack alternative data
+    config = copy.deepcopy(extended_cfg)
+    # Check if auto_detect is enabled and update dependencies
+    for ns, cfg in _six.iteritems(config):
+        if cfg.get("auto_detect"):
+            py_ver = "python" + str(cfg.get("py-version", [""])[0])
+            if cfg.get("py_bin"):
+                py_ver = cfg["py_bin"]
+
+            exclude = []
+            # get any manually set deps
+            deps = config[ns].get("dependencies")
+            if deps:
+                for dep in deps.keys():
+                    exclude.append(dep)
+            else:
+                config[ns]["dependencies"] = {}
+
+            # get auto deps
+            auto_deps = get_tops_python(py_ver, exclude=exclude)
+            for dep in auto_deps:
+                config[ns]["dependencies"][dep] = auto_deps[dep]
+
+    for ns, cfg in _six.iteritems(get_ext_tops(config)):
+        tops = [cfg.get("path")] + cfg.get("dependencies")
+        py_ver_major, py_ver_minor = cfg.get("py-version")
+
+        for top in tops:
+            top = os.path.normpath(top)
+            base, top_dirname = os.path.basename(top), os.path.dirname(top)
+            os.chdir(top_dirname)
+            site_pkg_dir = (
+                _is_shareable(base) and "pyall" or "py{0}".format(py_ver_major)
+            )
+            log.debug(
+                'Packing alternative "%s" to "%s/%s" destination',
+                base,
+                ns,
+                site_pkg_dir,
+            )
+            if not os.path.exists(top):
+                log.error(
+                    "File path {} does not exist. Unable to add to salt-ssh thin".format(
+                        top
+                    )
+                )
+                continue
+            if not os.path.isdir(top):
+                # top is a single file module
+                if os.path.exists(os.path.join(top_dirname, base)):
+                    tfp.add(base, arcname=os.path.join(ns, site_pkg_dir, base))
+                continue
+            for root, dirs, files in salt.utils.path.os_walk(base, followlinks=True):
+                for name in files:
+                    if not name.endswith((".pyc", ".pyo")):
+                        digest_collector.add(os.path.join(root, name))
+                        arcname = os.path.join(ns, site_pkg_dir, root, name)
+                        if hasattr(tfp, "getinfo"):
+                            try:
+                                tfp.getinfo(os.path.join(site_pkg_dir, root, name))
+                                arcname = None
+                            except KeyError:
+                                log.debug(
+                                    'ZIP: Unable to add "%s" with "getinfo"', arcname
+                                )
+                        if arcname:
+                            tfp.add(os.path.join(root, name), arcname=arcname)
 
 
 def gen_thin(
@@ -597,44 +723,9 @@ def gen_thin(
                 shutil.rmtree(tempdir)
                 tempdir = None
 
-    # Pack alternative data
     if extended_cfg:
         log.debug("Packing libraries based on alternative Salt versions")
-    for ns, cfg in _six.iteritems(get_ext_tops(extended_cfg)):
-        tops = [cfg.get("path")] + cfg.get("dependencies")
-        py_ver_major, py_ver_minor = cfg.get("py-version")
-        for top in tops:
-            base, top_dirname = os.path.basename(top), os.path.dirname(top)
-            os.chdir(top_dirname)
-            site_pkg_dir = (
-                _is_shareable(base) and "pyall" or "py{0}".format(py_ver_major)
-            )
-            log.debug(
-                'Packing alternative "%s" to "%s/%s" destination',
-                base,
-                ns,
-                site_pkg_dir,
-            )
-            if not os.path.isdir(top):
-                # top is a single file module
-                if os.path.exists(os.path.join(top_dirname, base)):
-                    tfp.add(base, arcname=os.path.join(ns, site_pkg_dir, base))
-                continue
-            for root, dirs, files in salt.utils.path.os_walk(base, followlinks=True):
-                for name in files:
-                    if not name.endswith((".pyc", ".pyo")):
-                        digest_collector.add(os.path.join(root, name))
-                        arcname = os.path.join(ns, site_pkg_dir, root, name)
-                        if hasattr(tfp, "getinfo"):
-                            try:
-                                tfp.getinfo(os.path.join(site_pkg_dir, root, name))
-                                arcname = None
-                            except KeyError:
-                                log.debug(
-                                    'ZIP: Unable to add "%s" with "getinfo"', arcname
-                                )
-                        if arcname:
-                            tfp.add(os.path.join(root, name), arcname=arcname)
+        _pack_alternative(extended_cfg, digest_collector, tfp)
 
     os.chdir(thindir)
     with salt.utils.files.fopen(thinver, "w+") as fp_:
