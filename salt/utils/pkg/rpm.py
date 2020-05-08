@@ -54,6 +54,9 @@ ARCHES = (
 # EPOCHNUM can't be used until RHEL5 is EOL as it is not present
 QUERYFORMAT = "%{NAME}_|-%{EPOCH}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}_|-%{REPOID}_|-%{INSTALLTIME}"
 
+# on some archs, the rpm _host_cpu macro doesn't match the pkg name arch
+ARCHMAP = {"powerpc64le": "ppc64le"}
+
 
 def get_osarch():
     """
@@ -101,7 +104,10 @@ def resolve_name(name, arch, osarch=None):
     if osarch is None:
         osarch = get_osarch()
 
-    if not check_32(arch, osarch) and arch not in (osarch, "noarch"):
+    if not check_32(arch, osarch) and arch not in (
+        ARCHMAP.get(osarch, osarch),
+        "noarch",
+    ):
         name += ".{0}".format(arch)
     return name
 
