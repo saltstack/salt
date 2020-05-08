@@ -2338,10 +2338,14 @@ def fqdns():
     """
     Return all known FQDNs for the system by enumerating all interfaces and
     then trying to reverse resolve them (excluding 'lo' interface).
+    To disable the fqdns grain, set enable_fqdns_grains: False in the minion configuration file.
     """
     # Provides:
     # fqdns
-    return __salt__["network.fqdns"]()
+    opt = {"fqdns": []}
+    if __opts__.get("enable_fqdns_grains", True) == True:
+        opt = __salt__["network.fqdns"]()
+    return opt
 
 
 def ip_fqdn():
