@@ -562,14 +562,7 @@ class AsyncZeroMQPubChannel(
     def connect(self):
         if not self.auth.authenticated:
             yield self.auth.authenticate()
-
-        # if this is changed from the default, we assume it was intentional
-        if int(self.opts.get("publish_port", 4506)) != 4506:
-            self.publish_port = self.opts.get("publish_port")
-        # else take the relayed publish_port master reports
-        else:
-            self.publish_port = self.auth.creds["publish_port"]
-
+        self.publish_port = self.auth.creds["publish_port"]
         log.debug(
             "Connecting the Minion to the Master publish port, using the URI: %s",
             self.master_pub,
