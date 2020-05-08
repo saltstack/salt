@@ -11,6 +11,7 @@ runTestSuite(
     nox_passthrough_opts: '--ssh-tests',
     python_version: 'py3',
     testrun_timeout: 6,
+    kitchen_platforms_file: '/var/jenkins/workspace/nox-platforms-sodium.yml',
     use_spot_instances: true)
 
 // vim: ft=groovy
