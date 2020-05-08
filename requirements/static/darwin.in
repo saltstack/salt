@@ -1,5 +1,5 @@
 # This is a compilation of requirements installed on salt-jenkins git.salt state run
-boto3
+boto3>=1.13.5
 boto>=2.46.0
 clustershell
 croniter>=0.3.0,!=0.3.22
