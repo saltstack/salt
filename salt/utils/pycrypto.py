@@ -103,6 +103,7 @@ def gen_hash(crypt_salt=None, password=None, algorithm=None, force=False):
     """
     Generate /etc/shadow hash
     """
+    log.debug("gen_hash start with: %s", (crypt_salt, password, algorithm, force))
     if password is None:
         password = secure_password()
 
@@ -112,8 +113,10 @@ def gen_hash(crypt_salt=None, password=None, algorithm=None, force=False):
 
     if algorithm not in methods:
         if force and HAS_PASSLIB:
+            log.debug("gen_hash return fallback")
             return _fallback_gen_hash(crypt_salt, password, algorithm)
         else:
+            log.debug("gen_hash raise SaltInvocationError")
             raise SaltInvocationError(
                 "Algorithm '{}' is not natively supported by this platform, use force=True with passlib installed to override.".format(
                     algorithm
@@ -126,8 +129,10 @@ def gen_hash(crypt_salt=None, password=None, algorithm=None, force=False):
         crypt_salt = "${}${}".format(methods[algorithm].ident, crypt_salt)
     else:  # method is crypt (DES)
         if len(crypt_salt) != 2:
+            log.debug("gen_hash raise ValueError")
             raise ValueError(
                 "Invalid salt for hash, 'crypt' salt must be 2 characters."
             )
 
+    log.debug("gen_hash returning crypt for: %s, %s", password, crypt_salt)
     return crypt.crypt(password, crypt_salt)
