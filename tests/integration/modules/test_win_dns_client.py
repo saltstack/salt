@@ -5,7 +5,7 @@ from __future__ import absolute_import
 import pytest
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, slowTest
 from tests.support.unit import skipIf
 
 
@@ -17,7 +17,7 @@ class WinDNSTest(ModuleCase):
     """
 
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_add_remove_dns(self):
         """
         Test add and removing a dns server

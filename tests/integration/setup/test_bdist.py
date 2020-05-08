@@ -12,7 +12,7 @@ import salt.utils.path
 import salt.utils.platform
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from tests.support.case import ModuleCase
-from tests.support.helpers import VirtualEnv
+from tests.support.helpers import VirtualEnv, slowTest
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -25,7 +25,7 @@ class BdistSetupTest(ModuleCase):
     Tests for building and installing bdist_wheel packages
     """
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_wheel_build(self):
         """
         test building a bdist_wheel package

@@ -8,7 +8,7 @@ docker
 futures>=2.0; python_version < '3.0'
 jmespath
 jsonschema
-junos-eznc
+junos-eznc==2.4.0
 jxmlease
 keyring==5.7.1
 kubernetes<4.0

@@ -45,7 +45,6 @@
     .. _`pytest`: http://pytest.org
     .. _`nose`: https://nose.readthedocs.org
     """
-
 from __future__ import absolute_import, print_function
 
 import logging
@@ -61,7 +60,6 @@ try:
     import pwd
 except ImportError:
     import salt.utils.win_functions
-
 
 log = logging.getLogger(__name__)
 
@@ -191,6 +189,7 @@ RUNTIME_VARS = RuntimeVars(
     TMP_SUB_MINION_CONF_DIR=paths.TMP_SUB_MINION_CONF_DIR,
     TMP_SYNDIC_MASTER_CONF_DIR=paths.TMP_SYNDIC_MASTER_CONF_DIR,
     TMP_SYNDIC_MINION_CONF_DIR=paths.TMP_SYNDIC_MINION_CONF_DIR,
+    TMP_PROXY_CONF_DIR=paths.TMP_PROXY_CONF_DIR,
     TMP_MM_CONF_DIR=paths.TMP_MM_CONF_DIR,
     TMP_MM_MINION_CONF_DIR=paths.TMP_MM_MINION_CONF_DIR,
     TMP_MM_SUB_CONF_DIR=paths.TMP_MM_SUB_CONF_DIR,
