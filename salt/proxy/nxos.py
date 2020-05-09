@@ -27,7 +27,7 @@ To configure the proxy minion for ssh:
       ssh_args: '-o PubkeyAuthentication=no'
       key_accept: True
 
-To configure the proxy minon for nxapi:
+To configure the proxy minion for nxapi:
 
 .. code-block:: yaml
 

@@ -40,7 +40,7 @@ class AutosignGrainsTest(ShellCase):
         self.run_key("-d minion -y")
         self.run_call(
             "test.ping -l quiet"
-        )  # get minon to try to authenticate itself again
+        )  # get minion to try to authenticate itself again
 
         if "minion" in self.run_key("-l acc"):
             self.tearDown()
@@ -59,7 +59,7 @@ class AutosignGrainsTest(ShellCase):
         )
         os.chmod(self.autosign_file_path, self.autosign_file_permissions)
 
-        self.run_call("test.ping -l quiet")  # get minon to authenticate itself again
+        self.run_call("test.ping -l quiet")  # get minion to authenticate itself again
 
         try:
             if os.path.isdir(self.autosign_grains_dir):
@@ -76,7 +76,7 @@ class AutosignGrainsTest(ShellCase):
 
         self.run_call(
             "test.ping -l quiet"
-        )  # get minon to try to authenticate itself again
+        )  # get minion to try to authenticate itself again
         self.assertIn("minion", self.run_key("-l acc"))
 
     @slowTest
@@ -88,6 +88,6 @@ class AutosignGrainsTest(ShellCase):
 
         self.run_call(
             "test.ping -l quiet"
-        )  # get minon to try to authenticate itself again
+        )  # get minion to try to authenticate itself again
         self.assertNotIn("minion", self.run_key("-l acc"))
         self.assertIn("minion", self.run_key("-l un"))
