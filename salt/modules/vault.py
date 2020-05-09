@@ -313,7 +313,7 @@ def delete_secret(path):
         return False
 
 
-def destroy_secret(path, *args, **kwargs):
+def destroy_secret(path, *args):
     """
     .. versionadded:: Sodium
 
