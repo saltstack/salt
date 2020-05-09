@@ -55,6 +55,18 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
                     name + "/foo": {acl_type: [{acl_name: {"octal": 7}}]},
                 },
                 {name: {acl_type: ""}},
+                {
+                    name: { "defaults": { "users": [{acl_name: {"octal": 7}}]}},
+                    name + "/foo": { "defaults": { "users": [{acl_name: {"octal": 7}}]}}
+                },
+                {
+                    name: { "defaults": { "users": [{acl_name: {"octal": 7}}]}},
+                    name + "/foo": { "defaults": { "users": [{acl_name: {"octal": 7}}]}}
+                },
+                {
+                    name: { "defaults": { "users": [{acl_name: {"octal": 7}}]}},
+                    name + "/foo": { "defaults": { "users": [{acl_name: {"octal": 7}}]}}
+                }
             ]
         )
         mock_modfacl = MagicMock(return_value=True)
@@ -224,7 +236,7 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
 
                     self.assertDictEqual(
                         linux_acl.present(
-                            name, acl_type, acl_name, perms, recurse=False
+                            name, acl_type, acl_name, perms, recurse=True
                         ),
                         ret,
                     )
@@ -249,6 +261,49 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(
                 linux_acl.present(name, acl_type, acl_name, perms), ret
             )
+
+            # default recurse false - nothing to do
+            with patch.dict(linux_acl.__salt__, {"acl.getfacl": mock}):
+                # Update - test=True
+                with patch.dict(linux_acl.__opts__, {"test": True}):
+                    comt = "Permissions are in the desired state"
+                    ret = {"name": name, "comment": comt, "changes": {}, "result": True}
+
+                    self.assertDictEqual(
+                        linux_acl.present(
+                            name, "d:" + acl_type, acl_name, perms, recurse=False
+                        ),
+                        ret,
+                    )
+
+            # default recurse false - nothing to do
+            with patch.dict(linux_acl.__salt__, {"acl.getfacl": mock}):
+                # Update - test=True
+                with patch.dict(linux_acl.__opts__, {"test": True}):
+                    comt = "Permissions are in the desired state"
+                    ret = {"name": name, "comment": comt, "changes": {}, "result": True}
+
+                    self.assertDictEqual(
+                        linux_acl.present(
+                            name, "d:" + acl_type, acl_name, perms, recurse=False
+                        ),
+                        ret,
+                    )
+
+            # default recurse true - nothing to do
+            with patch.dict(linux_acl.__salt__, {"acl.getfacl": mock}):
+                # Update - test=True
+                with patch.dict(linux_acl.__opts__, {"test": True}):
+                    comt = "Permissions are in the desired state"
+                    ret = {"name": name, "comment": comt, "changes": {}, "result": True}
+
+                    self.assertDictEqual(
+                        linux_acl.present(
+                            name, "d:" + acl_type, acl_name, perms, recurse=True
+                        ),
+                        ret,
+                    )
+
 
     # 'absent' function tests: 2
 
