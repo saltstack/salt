@@ -12,6 +12,7 @@ import logging
 import signal
 import traceback
 import weakref
+from collections.abc import Mapping, MutableMapping
 
 # Import Salt libs
 import salt.exceptions
@@ -34,13 +35,6 @@ import salt.utils.state
 import salt.utils.user
 import salt.utils.versions
 from salt.ext import six
-
-try:
-    from collections.abc import Mapping, MutableMapping
-except ImportError:
-    # pylint: disable=no-name-in-module
-    from collections import Mapping, MutableMapping
-
 
 log = logging.getLogger(__name__)
 
