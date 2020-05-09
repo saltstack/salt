@@ -10,7 +10,6 @@
 from __future__ import absolute_import
 
 import logging
-from collections import OrderedDict
 
 import psutil
 import pytest
@@ -22,6 +21,11 @@ from tests.support.case import ShellCase
 from tests.support.helpers import slowTest
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.unit import skipIf
+
+try:
+    from salt.utils.odict import OrderedDict
+except ImportError:
+    from collections import OrderedDict
 
 log = logging.getLogger(__name__)
 

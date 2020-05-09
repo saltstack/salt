@@ -22,7 +22,6 @@ import sys
 import tempfile
 import time
 import types
-from collections import OrderedDict
 
 import salt.config
 import salt.exceptions
@@ -43,6 +42,11 @@ from salt.utils.verify import verify_env
 from tests.support.mock import patch
 from tests.support.paths import CODE_DIR
 from tests.support.runtests import RUNTIME_VARS
+
+try:
+    from salt.utils.odict import OrderedDict
+except ImportError:
+    from collections import OrderedDict
 
 log = logging.getLogger(__name__)
 
