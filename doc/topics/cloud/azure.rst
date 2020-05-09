@@ -14,7 +14,7 @@ More information about Azure is located at `http://www.windowsazure.com/
 
 Dependencies
 ============
-* `Microsoft Azure SDK for Python <https://pypi.python.org/pypi/azure/1.0.2>`_ >= 1.0.2
+* `Microsoft Azure SDK for Python <https://pypi.org/project/azure/1.0.2>`_ >= 1.0.2
 * The python-requests library, for Python < 2.7.9.
 * A Microsoft Azure account
 * OpenSSL (to generate the certificates)
@@ -640,7 +640,7 @@ on creating management certificates, see the following link:
 
 * `Create and Upload a Management Certificate for Azure`__
 
-.. __: https://msdn.microsoft.com/en-us/library/azure/gg551722.aspx
+.. __: https://docs.microsoft.com/en-us/azure/cloud-services/cloud-services-certs-create
 
 The following options are available.
 
@@ -765,7 +765,7 @@ following article for an explanation of this option.
 
 * `Load Balancing for Azure Infrastructure Services`__
 
-.. __: http://azure.microsoft.com/en-us/documentation/articles/virtual-machines-load-balance/
+.. __: https://docs.microsoft.com/en-us/azure/load-balancer/load-balancer-overview
 
 timeout_for_tcp_idle_connection
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -774,7 +774,7 @@ explanation of this option.
 
 * `Configurable Idle Timeout for Azure Load Balancer`__
 
-.. __: http://azure.microsoft.com/blog/2014/08/14/new-configurable-idle-timeout-for-azure-load-balancer/
+.. __: https://azure.microsoft.com/en-us/blog/new-configurable-idle-timeout-for-azure-load-balancer/
 
 CLI Example
 ~~~~~~~~~~~

@@ -26,6 +26,7 @@ IPADDR{{loop.index}}="{{i['ipaddr']}}"
 PREFIX{{loop.index}}="{{i['prefix']}}"
 {% endfor -%}
 {%endif%}{% if gateway %}GATEWAY="{{gateway}}"
+{%endif%}{% if arpcheck %}ARPCHECK="{{arpcheck}}"
 {%endif%}{% if enable_ipv6 %}IPV6INIT="yes"
 {% if ipv6_autoconf %}IPV6_AUTOCONF="{{ipv6_autoconf}}"
 {%endif%}{% if dhcpv6c %}DHCPV6C="{{dhcpv6c}}"

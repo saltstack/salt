@@ -46,7 +46,8 @@ run if **any** of the files do not exist:
 
 .. note::
 
-    The ``creates`` option was added to version 2014.7.0
+    The ``creates`` option was added to the cmd state in version 2014.7.0,
+    and made a global requisite in Sodium.
 
 Sometimes when running a command that starts up a daemon, the init script
 doesn't return properly which causes Salt to wait indefinitely for a response.
@@ -323,103 +324,8 @@ def _is_true(val):
     raise ValueError("Failed parsing boolean value: {0}".format(val))
 
 
-def mod_run_check(cmd_kwargs, onlyif, unless, creates):
-    """
-    Execute the onlyif and unless logic.
-    Return a result dict if:
-    * onlyif failed (onlyif != 0)
-    * unless succeeded (unless == 0)
-    else return True
-    """
-    # never use VT for onlyif/unless executions because this will lead
-    # to quote problems
-    cmd_kwargs = copy.deepcopy(cmd_kwargs)
-    cmd_kwargs["use_vt"] = False
-    cmd_kwargs["bg"] = False
-
-    if onlyif is not None:
-        if isinstance(onlyif, six.string_types):
-            cmd = __salt__["cmd.retcode"](
-                onlyif, ignore_retcode=True, python_shell=True, **cmd_kwargs
-            )
-            log.debug("Last command return code: {0}".format(cmd))
-            if cmd != 0:
-                return {
-                    "comment": "onlyif condition is false",
-                    "skip_watch": True,
-                    "result": True,
-                }
-        elif isinstance(onlyif, list):
-            for entry in onlyif:
-                cmd = __salt__["cmd.retcode"](
-                    entry, ignore_retcode=True, python_shell=True, **cmd_kwargs
-                )
-                log.debug("Last command '{0}' return code: {1}".format(entry, cmd))
-                if cmd != 0:
-                    return {
-                        "comment": "onlyif condition is false: {0}".format(entry),
-                        "skip_watch": True,
-                        "result": True,
-                    }
-        elif not isinstance(onlyif, six.string_types):
-            if not onlyif:
-                log.debug("Command not run: onlyif did not evaluate to string_type")
-                return {
-                    "comment": "onlyif condition is false",
-                    "skip_watch": True,
-                    "result": True,
-                }
-
-    if unless is not None:
-        if isinstance(unless, six.string_types):
-            cmd = __salt__["cmd.retcode"](
-                unless, ignore_retcode=True, python_shell=True, **cmd_kwargs
-            )
-            log.debug("Last command return code: {0}".format(cmd))
-            if cmd == 0:
-                return {
-                    "comment": "unless condition is true",
-                    "skip_watch": True,
-                    "result": True,
-                }
-        elif isinstance(unless, list):
-            cmd = []
-            for entry in unless:
-                cmd.append(
-                    __salt__["cmd.retcode"](
-                        entry, ignore_retcode=True, python_shell=True, **cmd_kwargs
-                    )
-                )
-                log.debug("Last command return code: {0}".format(cmd))
-            if all([c == 0 for c in cmd]):
-                return {
-                    "comment": "unless condition is true",
-                    "skip_watch": True,
-                    "result": True,
-                }
-        elif not isinstance(unless, six.string_types):
-            if unless:
-                log.debug("Command not run: unless did not evaluate to string_type")
-                return {
-                    "comment": "unless condition is true",
-                    "skip_watch": True,
-                    "result": True,
-                }
-
-    if isinstance(creates, six.string_types) and os.path.exists(creates):
-        return {"comment": "{0} exists".format(creates), "result": True}
-    elif isinstance(creates, list) and all([os.path.exists(path) for path in creates]):
-        return {"comment": "All files in creates exist", "result": True}
-
-    # No reason to stop, return True
-    return True
-
-
 def wait(
     name,
-    onlyif=None,
-    unless=None,
-    creates=None,
     cwd=None,
     root=None,
     runas=None,
@@ -444,14 +350,6 @@ def wait(
     name
         The command to execute, remember that the command will execute with the
         path and permissions of the salt-minion.
-
-    onlyif
-        A command to run as a check, run the named command only if the command
-        passed to the ``onlyif`` option returns true
-
-    unless
-        A command to run as a check, only run the named command if the command
-        passed to the ``unless`` option returns false
 
     cwd
         The current working directory to execute the command in, defaults to
@@ -562,8 +460,6 @@ def wait_script(
     name,
     source=None,
     template=None,
-    onlyif=None,
-    unless=None,
     cwd=None,
     runas=None,
     shell=None,
@@ -593,14 +489,6 @@ def wait_script(
     name
         The command to execute, remember that the command will execute with the
         path and permissions of the salt-minion.
-
-    onlyif
-        A command to run as a check, run the named command only if the command
-        passed to the ``onlyif`` option returns true
-
-    unless
-        A command to run as a check, only run the named command if the command
-        passed to the ``unless`` option returns false
 
     cwd
         The current working directory to execute the command in, defaults to
@@ -694,9 +582,6 @@ def wait_script(
 
 def run(
     name,
-    onlyif=None,
-    unless=None,
-    creates=None,
     cwd=None,
     root=None,
     runas=None,
@@ -720,14 +605,6 @@ def run(
     name
         The command to execute, remember that the command will execute with the
         path and permissions of the salt-minion.
-
-    onlyif
-        A command to run as a check, run the named command only if the command
-        passed to the ``onlyif`` option returns a zero exit status
-
-    unless
-        A command to run as a check, only run the named command if the command
-        passed to the ``unless`` option returns a non-zero exit status
 
     cwd
         The current working directory to execute the command in, defaults to
@@ -906,11 +783,6 @@ def run(
         }
     )
 
-    cret = mod_run_check(cmd_kwargs, onlyif, unless, creates)
-    if isinstance(cret, dict):
-        ret.update(cret)
-        return ret
-
     if __opts__["test"] and not test_name:
         ret["result"] = None
         ret["comment"] = 'Command "{0}" would have been executed'.format(name)
@@ -956,9 +828,6 @@ def script(
     name,
     source=None,
     template=None,
-    onlyif=None,
-    unless=None,
-    creates=None,
     cwd=None,
     runas=None,
     shell=None,
@@ -990,14 +859,6 @@ def script(
     name
         Either "cmd arg1 arg2 arg3..." (cmd is not used) or a source
         "salt://...".
-
-    onlyif
-        Run the named command only if the command passed to the ``onlyif``
-        option returns true
-
-    unless
-        Run the named command only if the command passed to the ``unless``
-        option returns false
 
     cwd
         The current working directory to execute the command in, defaults to
@@ -1153,8 +1014,6 @@ def script(
             "runas": runas,
             "shell": shell or __grains__["shell"],
             "env": env,
-            "onlyif": onlyif,
-            "unless": unless,
             "cwd": cwd,
             "template": template,
             "umask": umask,
@@ -1181,11 +1040,6 @@ def script(
     # If script args present split from name and define args
     if not cmd_kwargs.get("args", None) and len(name.split()) > 1:
         cmd_kwargs.update({"args": name.split(" ", 1)[1]})
-
-    cret = mod_run_check(run_check_cmd_kwargs, onlyif, unless, creates)
-    if isinstance(cret, dict):
-        ret.update(cret)
-        return ret
 
     if __opts__["test"] and not test_name:
         ret["result"] = None
@@ -1228,9 +1082,6 @@ def call(
     func,
     args=(),
     kws=None,
-    onlyif=None,
-    unless=None,
-    creates=None,
     output_loglevel="debug",
     hide_output=False,
     use_vt=False,
@@ -1240,13 +1091,6 @@ def call(
     Invoke a pre-defined Python function with arguments specified in the state
     declaration. This function is mainly used by the
     :mod:`salt.renderers.pydsl` renderer.
-
-    The interpretation of ``onlyif`` and ``unless`` arguments are identical to
-    those of :mod:`cmd.run <salt.states.cmd.run>`, and all other
-    arguments(``cwd``, ``runas``, ...) allowed by :mod:`cmd.run
-    <salt.states.cmd.run>` are allowed here, except that their effects apply
-    only to the commands specified in `onlyif` and `unless` rather than to the
-    function to be invoked.
 
     In addition, the ``stateful`` argument has no effects here.
 
@@ -1281,11 +1125,6 @@ def call(
         "umask": kwargs.get("umask"),
     }
 
-    cret = mod_run_check(cmd_kwargs, onlyif, unless, creates)
-    if isinstance(cret, dict):
-        ret.update(cret)
-        return ret
-
     if not kws:
         kws = {}
     result = func(*args, **kws)
@@ -1306,9 +1145,6 @@ def wait_call(
     func,
     args=(),
     kws=None,
-    onlyif=None,
-    unless=None,
-    creates=None,
     stateful=False,
     use_vt=False,
     output_loglevel="debug",

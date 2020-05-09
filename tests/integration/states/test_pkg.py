@@ -24,9 +24,9 @@ from tests.support.helpers import (
     requires_salt_states,
     requires_system_grains,
     runs_on,
+    slowTest,
 )
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
@@ -125,7 +125,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
     @requires_salt_modules("pkg.version")
     @requires_salt_states("pkg.installed", "pkg.removed")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_pkg_001_installed(self):
         """
         This is a destructive test as it installs and then removes a package
@@ -144,7 +144,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @requires_salt_states("pkg.installed", "pkg.removed")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_pkg_002_installed_with_version(self):
         """
         This is a destructive test as it installs and then removes a package
@@ -168,7 +168,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @requires_salt_states("pkg.installed", "pkg.removed")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_pkg_003_installed_multipkg(self):
         """
         This is a destructive test as it installs and then removes two packages
@@ -193,7 +193,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
 
     @requires_salt_states("pkg.installed", "pkg.removed")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_pkg_004_installed_multipkg_with_version(self):
         """
         This is a destructive test as it installs and then removes two packages
@@ -326,7 +326,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     @requires_salt_states("pkg.installed", "pkg.removed")
     @runs_on(kernel="linux")
     @not_runs_on(os="Amazon")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_pkg_009_latest_with_epoch(self):
         """
         This tests for the following issue:
@@ -344,7 +344,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(pkgquery in six.text_type(ret))
 
     @requires_salt_states("pkg.latest", "pkg.removed")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_pkg_010_latest(self):
         """
         This tests pkg.latest with a package that has no epoch (or a zero
@@ -366,7 +366,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     @requires_salt_modules("pkg.list_pkgs", "pkg.list_upgrades", "pkg.version")
     @requires_salt_states("pkg.latest")
     @runs_on(kernel="linux", os_family="Debian")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_pkg_011_latest_only_upgrade(self):
         """
         WARNING: This test will pick a package with an available upgrade (if
@@ -462,7 +462,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     @requires_salt_modules("pkg.version", "pkg.latest_version")
     @requires_salt_states("pkg.installed", "pkg.removed")
     @runs_on(kernel="linux", os_family=["Debian", "RedHat"])
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_pkg_013_installed_with_comparison_operator(self):
         """
         This is a destructive test as it installs and then removes a package
@@ -524,7 +524,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     @requires_salt_modules("pkg.hold", "pkg.unhold", "pkg.version", "pkg.list_pkgs")
     @requires_salt_states("pkg.installed", "pkg.removed")
     @requires_system_grains
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_pkg_015_installed_held(self, grains=None):
         """
         Tests that a package can be held even when the package is already installed.

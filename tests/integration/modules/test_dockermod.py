@@ -2,21 +2,16 @@
 """
 Integration tests for the docker_container states
 """
-
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import random
 import string
 import sys
 
-# Import Salt Libs
 import salt.utils.path
-
-# Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt Testing Libs
@@ -66,7 +61,7 @@ class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
         delattr(self, "random_name")
         delattr(self, "image_tag")
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_docker_call(self):
         """
         check that docker.call works, and works with a container not running as root
@@ -74,7 +69,7 @@ class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function("docker.call", [self.random_name, "test.ping"])
         assert ret is True
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_docker_sls(self):
         """
         check that docker.sls works, and works with a container not running as root
@@ -82,7 +77,7 @@ class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function("docker.apply", [self.random_name, "core"])
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_docker_highstate(self):
         """
         check that docker.highstate works, and works with a container not running as root

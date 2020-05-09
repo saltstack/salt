@@ -21,7 +21,7 @@ class Mock(object):
 
     This Mock class can be configured to return a specific values at specific names, if required.
 
-    http://read-the-docs.readthedocs.org/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
+    https://read-the-docs.readthedocs.io/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
     """
 
     def __init__(
@@ -504,8 +504,8 @@ linkcheck_ignore = [
     r"http://123.456.789.012:\d+",
     r"http://localhost",
     r"https://groups.google.com/forum/#!forum/salt-users",
-    r"http://logstash.net/docs/latest/inputs/udp",
-    r"http://logstash.net/docs/latest/inputs/zeromq",
+    r"https://www.elastic.co/logstash/docs/latest/inputs/udp",
+    r"https://www.elastic.co/logstash/docs/latest/inputs/zeromq",
     r"http://www.youtube.com/saltstack",
     r"https://raven.readthedocs.io",
     r"https://getsentry.com",

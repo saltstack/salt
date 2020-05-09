@@ -1,20 +1,16 @@
 # -tests/integration/daemons/test_masterapi.py:71*- coding: utf-8 -*-
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
 import stat
 
-# Import Salt libs
 import salt.utils.files
 import salt.utils.stringutils
 from tests.support.case import ShellCase
-
-# Import Salt Testing libs
+from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 # Import 3rd-party libs
 
@@ -71,7 +67,7 @@ class AutosignGrainsTest(ShellCase):
         except AttributeError:
             pass
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_autosign_grains_accept(self):
         grain_file_path = os.path.join(self.autosign_grains_dir, "test_grain")
         with salt.utils.files.fopen(grain_file_path, "w") as f:
@@ -83,7 +79,7 @@ class AutosignGrainsTest(ShellCase):
         )  # get minon to try to authenticate itself again
         self.assertIn("minion", self.run_key("-l acc"))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_autosign_grains_fail(self):
         grain_file_path = os.path.join(self.autosign_grains_dir, "test_grain")
         with salt.utils.files.fopen(grain_file_path, "w") as f:
