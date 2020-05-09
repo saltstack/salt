@@ -37,7 +37,7 @@ This module supports execution using a Proxy Minion or Native Minion:
         nxapi enabled
         HTTPS Listen on port 443
 
-Native minon configuration options:
+Native minion configuration options:
 
 .. code-block:: yaml
 
