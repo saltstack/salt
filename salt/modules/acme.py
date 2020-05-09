@@ -308,7 +308,9 @@ def certs():
         salt 'vhost.example.com' acme.certs
     """
     return [
-        item for item in __salt__["file.readdir"](LE_LIVE)[2:] if os.path.isdir(item)
+        item
+        for item in __salt__["file.readdir"](LE_LIVE)[2:]
+        if os.path.isdir(LE_LIVE + item)
     ]
 
 
