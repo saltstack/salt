@@ -3,19 +3,20 @@
 integration tests for mac_ports
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
-import salt.utils.path
-import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import (
+    destructiveTest,
+    runs_on,
+    skip_if_binaries_missing,
+    skip_if_not_root,
+)
 
 
 @skip_if_not_root
+@runs_on(kernel="Darwin")
+@skip_if_binaries_missing("port")
 class MacPortsModuleTest(ModuleCase):
     """
     Validate the mac_ports module
@@ -27,12 +28,6 @@ class MacPortsModuleTest(ModuleCase):
         """
         Get current settings
         """
-        if not salt.utils.platform.is_darwin():
-            self.skipTest("Test only available on macOS")
-
-        if not salt.utils.path.which("port"):
-            self.skipTest("Test requires port binary")
-
         self.AGREE_INSTALLED = "agree" in self.run_function("pkg.list_pkgs")
         self.run_function("pkg.refresh_db")
 

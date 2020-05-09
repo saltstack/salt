@@ -9,19 +9,15 @@
 
     Status beacon test cases
 """
-
-# Python libs
 from __future__ import absolute_import
 
-# Salt libs
 import salt.config
 import salt.loader
 import salt.modules.status as status_module
 from salt.beacons import status
+from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
-
-# Salt testing libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 class StatusBeaconTestCase(TestCase, LoaderModuleMockMixin):
@@ -40,7 +36,7 @@ class StatusBeaconTestCase(TestCase, LoaderModuleMockMixin):
         }
         return {status: module_globals, status_module: module_globals}
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_empty_config(self, *args, **kwargs):
         config = []
 
@@ -52,7 +48,7 @@ class StatusBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(sorted(list(ret[0]["data"])), expected)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_deprecated_dict_config(self):
         config = {"time": ["all"]}
 
@@ -61,7 +57,7 @@ class StatusBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret, (False, "Configuration for status beacon must be a list.")
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_list_config(self):
         config = [{"time": ["all"]}]
 
