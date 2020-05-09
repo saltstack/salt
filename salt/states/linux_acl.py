@@ -174,7 +174,7 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
                         break
 
             # Check the permissions from the already located file
-            elif user[_search_name]['octal'] == sum([_octal.get(i, i) for i in perms]):
+            elif user[_search_name]["octal"] == sum([_octal.get(i, i) for i in perms]):
                 need_refresh = False
             # If they don't match then refresh
             else:
