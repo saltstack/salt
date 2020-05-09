@@ -56,17 +56,17 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
                 },
                 {name: {acl_type: ""}},
                 {
-                    name: { "defaults": { "users": [{acl_name: {"octal": 7}}]}},
-                    name + "/foo": { "defaults": { "users": [{acl_name: {"octal": 7}}]}}
+                    name: {"defaults": {"users": [{acl_name: {"octal": 7}}]}},
+                    name + "/foo": {"defaults": {"users": [{acl_name: {"octal": 7}}]}},
                 },
                 {
-                    name: { "defaults": { "users": [{acl_name: {"octal": 7}}]}},
-                    name + "/foo": { "defaults": { "users": [{acl_name: {"octal": 7}}]}}
+                    name: {"defaults": {"users": [{acl_name: {"octal": 7}}]}},
+                    name + "/foo": {"defaults": {"users": [{acl_name: {"octal": 7}}]}},
                 },
                 {
-                    name: { "defaults": { "users": [{acl_name: {"octal": 7}}]}},
-                    name + "/foo": { "defaults": { "users": [{acl_name: {"octal": 7}}]}}
-                }
+                    name: {"defaults": {"users": [{acl_name: {"octal": 7}}]}},
+                    name + "/foo": {"defaults": {"users": [{acl_name: {"octal": 7}}]}},
+                },
             ]
         )
         mock_modfacl = MagicMock(return_value=True)
@@ -303,7 +303,6 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
                         ),
                         ret,
                     )
-
 
     # 'absent' function tests: 2
 
