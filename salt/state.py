@@ -2025,6 +2025,11 @@ class State(object):
         Call a state directly with the low data structure, verify data
         before processing.
         """
+        use_uptime = False
+        if os.path.isfile("/proc/uptime"):
+            use_uptime = True
+            with salt.utils.files.fopen("/proc/uptime", "r") as fp_:
+                start_uptime = float(fp_.readline().split()[0])
         utc_start_time = datetime.datetime.utcnow()
         local_start_time = utc_start_time - (
             datetime.datetime.utcnow() - datetime.datetime.now()
@@ -2209,14 +2214,20 @@ class State(object):
         self.__run_num += 1
         format_log(ret)
         self.check_refresh(low, ret)
+        if use_uptime:
+            with salt.utils.files.fopen("/proc/uptime", "r") as fp_:
+                finish_uptime = float(fp_.readline().split()[0])
         utc_finish_time = datetime.datetime.utcnow()
         timezone_delta = datetime.datetime.utcnow() - datetime.datetime.now()
         local_finish_time = utc_finish_time - timezone_delta
         local_start_time = utc_start_time - timezone_delta
         ret["start_time"] = local_start_time.time().isoformat()
-        delta = utc_finish_time - utc_start_time
-        # duration in milliseconds.microseconds
-        duration = (delta.seconds * 1000000 + delta.microseconds) / 1000.0
+        if use_uptime:
+            duration = (finish_uptime - start_uptime) * 1000.0
+        else:
+            delta = utc_finish_time - utc_start_time
+            # duration in milliseconds.microseconds
+            duration = (delta.seconds * 1000000 + delta.microseconds) / 1000.0
         ret["duration"] = duration
         ret["__id__"] = low["__id__"]
         log.info(
