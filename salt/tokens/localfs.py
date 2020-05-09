@@ -13,6 +13,7 @@ import os
 import salt.payload
 import salt.utils.files
 import salt.utils.path
+import salt.utils.verify
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -59,6 +60,8 @@ def get_token(opts, tok):
     :returns: Token data if successful. Empty dict if failed.
     """
     t_path = os.path.join(opts["token_dir"], tok)
+    if not salt.utils.verify.clean_path(opts["token_dir"], t_path):
+        return {}
     if not os.path.isfile(t_path):
         return {}
     serial = salt.payload.Serial(opts)

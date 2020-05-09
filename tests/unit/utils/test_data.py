@@ -227,6 +227,24 @@ class DataTestCase(TestCase):
             ),
         )
 
+        # Traverse and match integer key in a nested dict
+        # https://github.com/saltstack/salt/issues/56444
+        self.assertEqual(
+            "it worked",
+            salt.utils.data.traverse_dict_and_list(
+                {"foo": {1234: "it worked"}}, "foo:1234", "it didn't work",
+            ),
+        )
+        # Make sure that we properly return the default value when the initial
+        # attempt fails and YAML-loading the target key doesn't change its
+        # value.
+        self.assertEqual(
+            "default",
+            salt.utils.data.traverse_dict_and_list(
+                {"foo": {"baz": "didn't work"}}, "foo:bar", "default",
+            ),
+        )
+
     def test_compare_dicts(self):
         ret = salt.utils.data.compare_dicts(old={"foo": "bar"}, new={"foo": "bar"})
         self.assertEqual(ret, {})
@@ -344,6 +362,27 @@ class DataTestCase(TestCase):
         # Test binary blob
         self.assertEqual(salt.utils.data.decode(BYTES, keep=True), BYTES)
         self.assertRaises(UnicodeDecodeError, salt.utils.data.decode, BYTES, keep=False)
+
+    def test_circular_refs_dicts(self):
+        test_dict = {"key": "value", "type": "test1"}
+        test_dict["self"] = test_dict
+        ret = salt.utils.data._remove_circular_refs(ob=test_dict)
+        self.assertDictEqual(ret, {"key": "value", "type": "test1", "self": None})
+
+    def test_circular_refs_lists(self):
+        test_list = {
+            "foo": [],
+        }
+        test_list["foo"].append((test_list,))
+        ret = salt.utils.data._remove_circular_refs(ob=test_list)
+        self.assertDictEqual(ret, {"foo": [(None,)]})
+
+    def test_circular_refs_tuple(self):
+        test_dup = {"foo": "string 1", "bar": "string 1", "ham": 1, "spam": 1}
+        ret = salt.utils.data._remove_circular_refs(ob=test_dup)
+        self.assertDictEqual(
+            ret, {"foo": "string 1", "bar": "string 1", "ham": 1, "spam": 1}
+        )
 
     def test_decode_to_str(self):
         """

@@ -320,9 +320,9 @@ from salt.state import get_accumulator_dir as _get_accumulator_dir
 
 # pylint: disable=no-name-in-module
 try:
-    from collections import Iterable, Mapping
-except ImportError:
     from collections.abc import Iterable, Mapping
+except ImportError:
+    from collections import Iterable, Mapping
 # pylint: enable=no-name-in-module
 
 
@@ -4097,8 +4097,8 @@ def recurse(
         :ref:`backup_mode documentation <file-state-backups>` for more details.
 
     include_pat
-        When copying, include only this pattern from the source. Default
-        is glob match; if prefixed with 'E@', then regexp match.
+        When copying, include only this pattern, or list of patterns, from the
+        source. Default is glob match; if prefixed with 'E@', then regexp match.
         Example:
 
         .. code-block:: text
@@ -4108,9 +4108,19 @@ def recurse(
           - include_pat: E@hello      :: regexp matches 'otherhello',
                                          'hello01' ...
 
+        .. versionchanged:: Sodium
+
+            List patterns are now supported
+
+        .. code-block:: text
+
+            - include_pat:
+                - hello01
+                - hello02
+
     exclude_pat
-        Exclude this pattern from the source when copying. If both
-        `include_pat` and `exclude_pat` are supplied, then it will apply
+        Exclude this pattern, or list of patterns, from the source when copying.
+        If both `include_pat` and `exclude_pat` are supplied, then it will apply
         conditions cumulatively. i.e. first select based on include_pat, and
         then within that result apply exclude_pat.
 
@@ -4124,6 +4134,16 @@ def recurse(
                                                    APPDATA.02,.. for exclusion
           - exclude_pat: E@(APPDATA)|(TEMPDATA) :: regexp matches APPDATA
                                                    or TEMPDATA for exclusion
+
+        .. versionchanged:: Sodium
+
+            List patterns are now supported
+
+        .. code-block:: text
+
+            - exclude_pat:
+                - APPDATA.01
+                - APPDATA.02
 
     maxdepth
         When copying, only copy paths which are of depth `maxdepth` from the
@@ -4169,6 +4189,7 @@ def recurse(
         True to inherit permissions from parent, otherwise False
 
         .. versionadded:: 2017.7.7
+
     """
     if "env" in kwargs:
         # "env" is not supported; Use "saltenv".
@@ -4687,7 +4708,7 @@ def line(
 
             The differences are that multiple (and non-matching) lines are
             alloweed between ``before`` and ``after``, if they are
-            sepcified. The line will always be inserted right before
+            specified. The line will always be inserted right before
             ``before``. ``insert`` also allows the use of ``location`` to
             specify that the line should be added at the beginning or end of
             the file.
@@ -4893,7 +4914,7 @@ def line(
         insert before me
 
     With an ensure mode, this will insert ``thrice`` the first time and
-    make no changes for subsequent calls. For someting simple this is
+    make no changes for subsequent calls. For something simple this is
     fine, but if you have instead blocks like this:
 
     .. code-block:: text
@@ -5240,13 +5261,13 @@ def keyvalue(
         Return with success even if the file is not found (or not readable).
 
     count : 1
-        Number of occurences to allow (and correct), default is 1. Set to -1 to
+        Number of occurrences to allow (and correct), default is 1. Set to -1 to
         replace all, or set to 0 to remove all lines with this key regardsless
         of its value.
 
     .. note::
-        Any additional occurences after ``count`` are removed.
-        A count of -1 will only replace all occurences that are currently
+        Any additional occurrences after ``count`` are removed.
+        A count of -1 will only replace all occurrences that are currently
         uncommented already. Lines commented out will be left alone.
 
     uncomment : None
@@ -7315,7 +7336,7 @@ def copy_(
     return ret
 
 
-def rename(name, source, force=False, makedirs=False):
+def rename(name, source, force=False, makedirs=False, **kwargs):
     """
     If the source file exists on the system, rename it to the named file. The
     named file will not be overwritten if it already exists unless the force

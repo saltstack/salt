@@ -20,7 +20,7 @@ import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.yaml
 from tests.support.case import ModuleCase
-from tests.support.helpers import dedent, requires_system_grains
+from tests.support.helpers import dedent, requires_system_grains, slowTest
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -399,7 +399,7 @@ class DecryptGPGPillarTest(_CommonBase):
         self.assertEqual(ret, GPG_PILLAR_DECRYPTED)
 
     @requires_system_grains
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_decrypt_pillar_alternate_delimiter(self, grains=None):
         """
         Test recursive decryption of secrets:vault using a pipe instead of a
@@ -594,7 +594,7 @@ class RefreshPillarTest(ModuleCase):
             )
         self.addCleanup(self.cleanup_pillars, top_path, pillar_path)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_pillar_refresh_pillar_raw(self):
         """
         Validate the minion's pillar.raw call behavior for new pillars
@@ -618,7 +618,7 @@ class RefreshPillarTest(ModuleCase):
         val = self.run_function("pillar.raw", arg=(key,))
         assert val is True, repr(val)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_pillar_refresh_pillar_get(self):
         """
         Validate the minion's pillar.get call behavior for new pillars
@@ -646,7 +646,7 @@ class RefreshPillarTest(ModuleCase):
         val = self.run_function("pillar.get", arg=(key,))
         assert val is True, repr(val)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_pillar_refresh_pillar_item(self):
         """
         Validate the minion's pillar.item call behavior for new pillars
@@ -675,7 +675,7 @@ class RefreshPillarTest(ModuleCase):
         assert key in val
         assert val[key] is True
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_pillar_refresh_pillar_items(self):
         """
         Validate the minion's pillar.item call behavior for new pillars
@@ -694,7 +694,7 @@ class RefreshPillarTest(ModuleCase):
         assert key in val
         assert val[key] is True
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_pillar_refresh_pillar_ping(self):
         """
         Validate the minion's test.ping does not update pillars

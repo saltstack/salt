@@ -96,7 +96,7 @@ def condition_input(args, kwargs):
     return ret
 
 
-def parse_input(args, condition=True, no_parse=None):
+def parse_input(args, kwargs=None, condition=True, no_parse=None):
     """
     Parse out the args and kwargs from a list of input values. Optionally,
     return the args and kwargs without passing them to condition_input().
@@ -105,6 +105,8 @@ def parse_input(args, condition=True, no_parse=None):
     """
     if no_parse is None:
         no_parse = ()
+    if kwargs is None:
+        kwargs = {}
     _args = []
     _kwargs = {}
     for arg in args:
@@ -126,6 +128,7 @@ def parse_input(args, condition=True, no_parse=None):
                 _args.append(arg)
         else:
             _args.append(arg)
+    _kwargs.update(kwargs)
     if condition:
         return condition_input(_args, _kwargs)
     return _args, _kwargs
