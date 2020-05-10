@@ -869,8 +869,16 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         """
         contents = b"\xf4\x91"
         filemod.check_file_meta(
-            "test", "test", "salt://test", {}, "root", "root", "755", None,
-            "base", contents=contents
+            "test",
+            "test",
+            "salt://test",
+            {},
+            "root",
+            "root",
+            "755",
+            None,
+            "base",
+            contents=contents,
         )
 
     @skipIf(salt.utils.platform.is_windows(), "lsattr is not available on Windows")
