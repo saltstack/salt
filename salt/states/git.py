@@ -13,7 +13,6 @@ States to manage git repositories and git configuration
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
-import copy
 import errno
 import logging
 import os
@@ -261,8 +260,8 @@ def _not_fast_forward(
 
 def latest(
     name,
+    target,
     rev="HEAD",
-    target=None,
     branch=None,
     user=None,
     password=None,
@@ -281,8 +280,6 @@ def latest(
     identity=None,
     https_user=None,
     https_pass=None,
-    onlyif=None,
-    unless=None,
     refspec_branch="*",
     refspec_tag="*",
     output_encoding=None,
@@ -543,14 +540,6 @@ def latest(
 
         .. versionadded:: 2015.5.0
 
-    onlyif
-        A command to run as a check, run the named command only if the command
-        passed to the ``onlyif`` option returns true
-
-    unless
-        A command to run as a check, only run the named command if the command
-        passed to the ``unless`` option returns false
-
     refspec_branch : *
         A glob expression defining which branches to retrieve when fetching.
         See `git-fetch(1)`_ for more information on how refspecs work.
@@ -723,12 +712,6 @@ def latest(
     run_check_cmd_kwargs = {"runas": user, "password": password}
     if "shell" in __grains__:
         run_check_cmd_kwargs["shell"] = __grains__["shell"]
-
-    # check if git.latest should be applied
-    cret = mod_run_check(run_check_cmd_kwargs, onlyif, unless)
-    if isinstance(cret, dict):
-        ret.update(cret)
-        return ret
 
     refspecs = (
         [
@@ -2195,7 +2178,7 @@ def present(
 def detached(
     name,
     rev,
-    target=None,
+    target,
     remote="origin",
     user=None,
     password=None,
@@ -2207,8 +2190,6 @@ def detached(
     identity=None,
     https_user=None,
     https_pass=None,
-    onlyif=None,
-    unless=None,
     output_encoding=None,
     **kwargs
 ):
@@ -2280,14 +2261,6 @@ def detached(
 
     https_pass
         HTTP Basic Auth password for HTTPS (only) clones
-
-    onlyif
-        A command to run as a check, run the named command only if the command
-        passed to the ``onlyif`` option returns true
-
-    unless
-        A command to run as a check, only run the named command if the command
-        passed to the ``unless`` option returns false
 
     output_encoding
         Use this option to specify which encoding to use to decode the output
@@ -2368,15 +2341,6 @@ def detached(
         return _fail(ret, exc.__str__())
 
     redacted_fetch_url = salt.utils.url.redact_http_basic_auth(desired_fetch_url)
-
-    # Check if onlyif or unless conditions match
-    run_check_cmd_kwargs = {"runas": user}
-    if "shell" in __grains__:
-        run_check_cmd_kwargs["shell"] = __grains__["shell"]
-    cret = mod_run_check(run_check_cmd_kwargs, onlyif, unless)
-    if isinstance(cret, dict):
-        ret.update(cret)
-        return ret
 
     # Determine if supplied ref is a hash
     remote_rev_type = "ref"
@@ -2685,7 +2649,7 @@ def detached(
 
 def cloned(
     name,
-    target=None,
+    target,
     branch=None,
     user=None,
     password=None,
@@ -3337,76 +3301,3 @@ def config_set(
         value_comment,
     )
     return ret
-
-
-def mod_run_check(cmd_kwargs, onlyif, unless):
-    """
-    Execute the onlyif and unless logic. Return a result dict if:
-
-    * onlyif failed (onlyif != 0)
-    * unless succeeded (unless == 0)
-
-    Otherwise, returns ``True``
-    """
-    cmd_kwargs = copy.deepcopy(cmd_kwargs)
-    cmd_kwargs.update(
-        {"use_vt": False, "bg": False, "ignore_retcode": True, "python_shell": True}
-    )
-
-    if onlyif is not None:
-        if not isinstance(onlyif, list):
-            onlyif = [onlyif]
-
-        for command in onlyif:
-            if not isinstance(command, six.string_types) and command:
-                # Boolean or some other non-string which resolves to True
-                continue
-            try:
-                if __salt__["cmd.retcode"](command, **cmd_kwargs) == 0:
-                    # Command exited with a zero retcode
-                    continue
-            except Exception as exc:  # pylint: disable=broad-except
-                log.exception(
-                    "The following onlyif command raised an error: %s", command
-                )
-                return {
-                    "comment": "onlyif raised error ({0}), see log for "
-                    "more details".format(exc),
-                    "result": False,
-                }
-
-            return {
-                "comment": "onlyif condition is false",
-                "skip_watch": True,
-                "result": True,
-            }
-
-    if unless is not None:
-        if not isinstance(unless, list):
-            unless = [unless]
-
-        for command in unless:
-            if not isinstance(command, six.string_types) and not command:
-                # Boolean or some other non-string which resolves to False
-                break
-            try:
-                if __salt__["cmd.retcode"](command, **cmd_kwargs) != 0:
-                    # Command exited with a non-zero retcode
-                    break
-            except Exception as exc:  # pylint: disable=broad-except
-                log.exception(
-                    "The following unless command raised an error: %s", command
-                )
-                return {
-                    "comment": "unless raised error ({0}), see log for "
-                    "more details".format(exc),
-                    "result": False,
-                }
-        else:
-            return {
-                "comment": "unless condition is true",
-                "skip_watch": True,
-                "result": True,
-            }
-
-    return True

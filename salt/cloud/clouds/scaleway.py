@@ -78,7 +78,7 @@ def avail_images(call=None):
             "-f or --function, or with the --list-images option"
         )
 
-    items = query(method="images")
+    items = query(method="images", root="marketplace_root")
     ret = {}
     for image in items["images"]:
         ret[image["id"]] = {}
@@ -171,14 +171,14 @@ def get_image(server_):
 def create_node(args):
     """ Create a node.
     """
-    node = query(method="servers", args=args, http_method="post")
+    node = query(method="servers", args=args, http_method="POST")
 
     action = query(
         method="servers",
         server_id=node["server"]["id"],
         command="action",
         args={"action": "poweron"},
-        http_method="post",
+        http_method="POST",
     )
     return node
 
@@ -325,16 +325,27 @@ def create(server_):
     return ret
 
 
-def query(method="servers", server_id=None, command=None, args=None, http_method="get"):
+def query(
+    method="servers",
+    server_id=None,
+    command=None,
+    args=None,
+    http_method="GET",
+    root="api_root",
+):
     """ Make a call to the Scaleway API.
     """
+
+    if root == "api_root":
+        default_url = "https://cp-par1.scaleway.com"
+    else:
+        default_url = "https://api-marketplace.scaleway.com"
+
+    vm_ = get_configured_provider()
+
     base_path = six.text_type(
         config.get_cloud_config_value(
-            "api_root",
-            get_configured_provider(),
-            __opts__,
-            search_global=False,
-            default="https://api.cloud.online.net",
+            root, vm_, __opts__, search_global=False, default=default_url,
         )
     )
 
@@ -349,9 +360,7 @@ def query(method="servers", server_id=None, command=None, args=None, http_method
     if not isinstance(args, dict):
         args = {}
 
-    token = config.get_cloud_config_value(
-        "token", get_configured_provider(), __opts__, search_global=False
-    )
+    token = config.get_cloud_config_value("token", vm_, __opts__, search_global=False)
 
     data = salt.utils.json.dumps(args)
 
@@ -371,13 +380,11 @@ def query(method="servers", server_id=None, command=None, args=None, http_method
             "Error: '{1}'".format(request.status_code, request.text)
         )
 
-    log.debug(request.url)
-
     # success without data
-    if request.status_code == 204:
+    if request["status"] == 204:
         return True
 
-    return request.json()
+    return salt.utils.json.loads(request["body"])
 
 
 def script(server_):
@@ -448,7 +455,7 @@ def destroy(name, call=None):
         server_id=data["id"],
         command="action",
         args={"action": "terminate"},
-        http_method="post",
+        http_method="POST",
     )
 
     __utils__["cloud.fire_event"](

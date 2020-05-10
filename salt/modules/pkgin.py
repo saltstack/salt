@@ -694,4 +694,16 @@ def file_dict(*packages):
     return ret
 
 
+def normalize_name(pkgs, **kwargs):
+    """
+    Normalize package names
+
+    .. note::
+        Nothing special to do to normalize, just return
+        the original. (We do need it to be comaptible
+        with the pkg_resource provider.)
+    """
+    return pkgs
+
+
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

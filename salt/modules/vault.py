@@ -90,6 +90,32 @@ Functions to interact with Hashicorp Vault.
 
            export VAULT_TOKEN=11111111-1111-1111-1111-1111111111111
 
+        Configuration keys ``uses`` or ``ttl`` may also be specified under ``auth``
+        to configure the tokens generated on behalf of minions to be reused for the
+        defined number of uses or length of time in seconds. These settings may also be configured
+        on the minion when ``allow_minion_override`` is set to ``True`` in the master
+        config.
+
+        Defining ``uses`` will cause the salt master to generate a token with that number of uses rather
+        than a single use token. This multi-use token will be cached on the minion. The type of minion
+        cache can be specified with ``token_backend: session`` or ``token_backend: disk``. The value of
+        ``session`` is the default, and will store the vault information in memory only for that session.
+        The value of ``disk`` will write to an on disk file, and persist between state runs (most
+        helpful for multi-use tokens).
+
+        .. code-block:: bash
+
+          vault:
+            auth:
+              method: token
+              token: xxxxxx
+              uses: 10
+              ttl: 43200
+              allow_minion_override: True
+              token_backend: disk
+
+            .. versionchanged:: Sodium
+
     policies
         Policies that are assigned to minions when requesting a token. These can
         either be static, eg saltstack/minions, or templated with grain values,
@@ -139,6 +165,7 @@ Functions to interact with Hashicorp Vault.
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
+import os
 
 log = logging.getLogger(__name__)
 
@@ -332,3 +359,18 @@ def list_secrets(path):
     except Exception as err:  # pylint: disable=broad-except
         log.error("Failed to list secrets! %s: %s", type(err).__name__, err)
         return None
+
+
+def clear_token_cache():
+    """
+    Delete minion Vault token cache file
+    """
+    log.debug("Deleting cache file")
+    cache_file = os.path.join(__opts__["cachedir"], "salt_vault_token")
+
+    if os.path.exists(cache_file):
+        os.remove(cache_file)
+        return True
+    else:
+        log.info("Attempted to delete vault cache file, but it does not exist.")
+        return False

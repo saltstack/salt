@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
@@ -8,14 +7,11 @@ import textwrap
 
 import pytest
 import salt.exceptions
-
-# Import salt libs
 import salt.utils.network as network
 from salt._compat import ipaddress
+from tests.support.helpers import slowTest
 from tests.support.mock import MagicMock, create_autospec, mock_open, patch
-
-# Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
 
@@ -894,7 +890,7 @@ class NetworkTestCase(TestCase):
             b"\xf8\xe7\xd6\xc5\xb4\xa3", network.mac_str_to_bytes("f8e7d6c5b4a3")
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_generate_minion_id_with_long_hostname(self):
         """
         Validate the fix for:
