@@ -66,6 +66,7 @@ state modules
     boto_sqs
     boto_vpc
     bower
+    btrfs
     cabal
     ceph
     chef
@@ -224,6 +225,7 @@ state modules
     npm
     ntp
     nxos
+    nxos_upgrade
     openstack_config
     openvswitch_bridge
     openvswitch_port

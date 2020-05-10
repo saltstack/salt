@@ -6,10 +6,9 @@
     tests.unit.payload_test
     ~~~~~~~~~~~~~~~~~~~~~~~
 """
-
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import copy
 import datetime
 import errno
 import logging
@@ -18,16 +17,11 @@ import time
 
 import salt.exceptions
 import salt.payload
-
-# Import 3rd-party libs
 import zmq
 from salt.ext import six
-
-# Import Salt libs
 from salt.utils import immutabletypes
 from salt.utils.odict import OrderedDict
-
-# Import Salt Testing libs
+from tests.support.helpers import slowTest
 from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
@@ -165,6 +159,38 @@ class PayloadTestCase(TestCase):
         odata = payload.loads(sdata)
         self.assertTrue("recursion" in odata["data"].lower())
 
+    def test_recursive_dump_load_with_identical_non_recursive_types(self):
+        """
+        If identical objects are nested anywhere, they should not be
+        marked recursive unless they're one of the types we iterate
+        over.
+        """
+        payload = salt.payload.Serial("msgpack")
+        repeating = "repeating element"
+        data = {
+            "a": "a",  # Test CPython implementation detail. Short
+            "b": "a",  # strings are interned.
+            "c": 13,  # So are small numbers.
+            "d": 13,
+            "fnord": repeating,
+            # Let's go for broke and make a crazy nested structure
+            "repeating": [
+                [[[[{"one": repeating, "two": repeating}], repeating, 13, "a"]]],
+                repeating,
+                repeating,
+                repeating,
+            ],
+        }
+        # We need a nested dictionary to trigger the exception
+        data["repeating"][0][0][0].append(data)
+        # If we don't deepcopy the data it gets mutated
+        sdata = payload.dumps(copy.deepcopy(data))
+        odata = payload.loads(sdata)
+        # Delete the recursive piece - it's served its purpose, and our
+        # other test tests that it's actually marked as recursive.
+        del odata["repeating"][0][0][0][-1], data["repeating"][0][0][0][-1]
+        self.assertDictEqual(odata, data)
+
 
 class SREQTestCase(TestCase):
     port = 8845  # TODO: dynamically assign a port?
@@ -223,7 +249,7 @@ class SREQTestCase(TestCase):
     def get_sreq(self):
         return salt.payload.SREQ("tcp://127.0.0.1:{0}".format(SREQTestCase.port))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_send_auto(self):
         """
         Test creation, send/rect

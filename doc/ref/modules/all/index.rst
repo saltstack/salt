@@ -47,6 +47,7 @@ execution modules
     azurearm_network
     azurearm_resource
     bamboohr
+    baredoc
     bcache
     beacons
     bigip
@@ -331,6 +332,7 @@ execution modules
     nspawn
     nxos
     nxos_api
+    nxos_upgrade
     omapi
     openbsd_sysctl
     openbsdpkg

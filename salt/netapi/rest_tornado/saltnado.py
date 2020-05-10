@@ -131,7 +131,7 @@ The following example (in JSON format) causes Salt to execute two commands::
     }]
 
 Multiple commands in a Salt API request will be executed in serial and makes
-no gaurantees that all commands will run. Meaning that if test.fib (from the
+no guarantees that all commands will run. Meaning that if test.fib (from the
 example above) had an exception, the API would still execute "jobs.lookup_jid".
 
 Responses to these lowstates are an in-order list of dicts containing the

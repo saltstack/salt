@@ -3,44 +3,43 @@
 Integration tests for the vault execution module
 """
 
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-import inspect
 import logging
 import time
 
-# Import Salt Libs
 import salt.utils.path
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
-from tests.support.paths import FILES
-
-# Import Salt Testing Libs
-from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest, slowTest
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.sminion import create_sminion
+from tests.support.unit import SkipTest, skipIf
 
 log = logging.getLogger(__name__)
+
+VAULT_BINARY_PATH = salt.utils.path.which("vault")
 
 
 @destructiveTest
 @skipIf(not salt.utils.path.which("dockerd"), "Docker not installed")
-@skipIf(not salt.utils.path.which("vault"), "Vault not installed")
+@skipIf(not VAULT_BINARY_PATH, "Vault not installed")
 class VaultTestCase(ModuleCase):
     """
     Test vault module
     """
 
-    count = 0
-
-    def setUp(self):
-        """
-        SetUp vault container
-        """
-        if self.count == 0:
-            config = '{"backend": {"file": {"path": "/vault/file"}}, "default_lease_ttl": "168h", "max_lease_ttl": "720h", "disable_mlock": true}'
-            self.run_state("docker_image.present", name="vault", tag="0.9.6")
-            self.run_state(
-                "docker_container.running",
+    @classmethod
+    def setUpClass(cls):
+        cls.sminion = sminion = create_sminion()
+        config = '{"backend": {"file": {"path": "/vault/file"}}, "default_lease_ttl": "168h", "max_lease_ttl": "720h", "disable_mlock": true}'
+        sminion.states.docker_image.present(name="vault", tag="0.9.6")
+        login_attempts = 1
+        container_created = False
+        while True:
+            if container_created:
+                sminion.states.docker_container.stopped(name="vault")
+                sminion.states.docker_container.absent(name="vault")
+            ret = sminion.states.docker_container.running(
                 name="vault",
                 image="vault:0.9.6",
                 port_bindings="8200:8200",
@@ -49,40 +48,39 @@ class VaultTestCase(ModuleCase):
                     "VAULT_LOCAL_CONFIG": config,
                 },
             )
+            log.debug("docker_container.running return: %s", ret)
+            container_created = ret["result"]
             time.sleep(5)
-            ret = self.run_function(
-                "cmd.retcode",
-                cmd="/usr/local/bin/vault login token=testsecret",
+            ret = sminion.functions.cmd.run_all(
+                cmd="{} login token=testsecret".format(VAULT_BINARY_PATH),
                 env={"VAULT_ADDR": "http://127.0.0.1:8200"},
+                hide_output=False,
             )
-            if ret != 0:
-                self.skipTest("unable to login to vault")
-            ret = self.run_function(
-                "cmd.retcode",
-                cmd="/usr/local/bin/vault policy write testpolicy {0}/vault.hcl".format(
-                    FILES
-                ),
-                env={"VAULT_ADDR": "http://127.0.0.1:8200"},
-            )
-            if ret != 0:
-                self.skipTest("unable to assign policy to vault")
-        self.count += 1
+            if ret["retcode"] == 0:
+                break
+            log.debug("Vault login failed. Return: %s", ret)
+            login_attempts += 1
 
-    def tearDown(self):
-        """
-        TearDown vault container
-        """
+            if login_attempts >= 3:
+                raise SkipTest("unable to login to vault")
 
-        def count_tests(funcobj):
-            return inspect.ismethod(funcobj) and funcobj.__name__.startswith("test_")
+        ret = sminion.functions.cmd.retcode(
+            cmd="{} policy write testpolicy {}/vault.hcl".format(
+                VAULT_BINARY_PATH, RUNTIME_VARS.FILES
+            ),
+            env={"VAULT_ADDR": "http://127.0.0.1:8200"},
+        )
+        if ret != 0:
+            raise SkipTest("unable to assign policy to vault")
 
-        numtests = len(inspect.getmembers(VaultTestCase, predicate=count_tests))
-        if self.count >= numtests:
-            self.run_state("docker_container.stopped", name="vault")
-            self.run_state("docker_container.absent", name="vault")
-            self.run_state("docker_image.absent", name="vault", force=True)
+    @classmethod
+    def tearDownClass(cls):
+        cls.sminion.states.docker_container.stopped(name="vault")
+        cls.sminion.states.docker_container.absent(name="vault")
+        cls.sminion.states.docker_image.absent(name="vault", force=True)
+        cls.sminion = None
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_write_read_secret(self):
         write_return = self.run_function(
             "vault.write_secret", path="secret/my/secret", user="foo", password="bar"
@@ -97,7 +95,7 @@ class VaultTestCase(ModuleCase):
             == "foo"
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_write_raw_read_secret(self):
         assert (
             self.run_function(
@@ -112,7 +110,7 @@ class VaultTestCase(ModuleCase):
             "user2": "foo2",
         }
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_delete_secret(self):
         assert (
             self.run_function(
@@ -127,7 +125,7 @@ class VaultTestCase(ModuleCase):
             self.run_function("vault.delete_secret", arg=["secret/my/secret"]) is True
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_list_secrets(self):
         assert (
             self.run_function(
@@ -151,17 +149,18 @@ class VaultTestCaseCurrent(ModuleCase):
     Test vault module against current vault
     """
 
-    count = 0
-
-    def setUp(self):
-        """
-        SetUp vault container
-        """
-        if self.count == 0:
-            config = '{"backend": {"file": {"path": "/vault/file"}}, "default_lease_ttl": "168h", "max_lease_ttl": "720h", "disable_mlock": true}'
-            self.run_state("docker_image.present", name="vault", tag="1.3.1")
-            self.run_state(
-                "docker_container.running",
+    @classmethod
+    def setUpClass(cls):
+        cls.sminion = sminion = create_sminion()
+        config = '{"backend": {"file": {"path": "/vault/file"}}, "default_lease_ttl": "168h", "max_lease_ttl": "720h", "disable_mlock": true}'
+        sminion.states.docker_image.present(name="vault", tag="1.3.1")
+        login_attempts = 1
+        container_created = False
+        while True:
+            if container_created:
+                sminion.states.docker_container.stopped(name="vault")
+                sminion.states.docker_container.absent(name="vault")
+            ret = sminion.states.docker_container.running(
                 name="vault",
                 image="vault:1.3.1",
                 port_bindings="8200:8200",
@@ -170,40 +169,39 @@ class VaultTestCaseCurrent(ModuleCase):
                     "VAULT_LOCAL_CONFIG": config,
                 },
             )
+            log.debug("docker_container.running return: %s", ret)
+            container_created = ret["result"]
             time.sleep(5)
-            ret = self.run_function(
-                "cmd.retcode",
-                cmd="/usr/local/bin/vault login token=testsecret",
+            ret = sminion.functions.cmd.run_all(
+                cmd="{} login token=testsecret".format(VAULT_BINARY_PATH),
                 env={"VAULT_ADDR": "http://127.0.0.1:8200"},
+                hide_output=False,
             )
-            if ret != 0:
-                self.skipTest("unable to login to vault")
-            ret = self.run_function(
-                "cmd.retcode",
-                cmd="/usr/local/bin/vault policy write testpolicy {0}/vault.hcl".format(
-                    FILES
-                ),
-                env={"VAULT_ADDR": "http://127.0.0.1:8200"},
-            )
-            if ret != 0:
-                self.skipTest("unable to assign policy to vault")
-        self.count += 1
+            if ret["retcode"] == 0:
+                break
+            log.debug("Vault login failed. Return: %s", ret)
+            login_attempts += 1
 
-    def tearDown(self):
-        """
-        TearDown vault container
-        """
+            if login_attempts >= 3:
+                raise SkipTest("unable to login to vault")
 
-        def count_tests(funcobj):
-            return inspect.ismethod(funcobj) and funcobj.__name__.startswith("test_")
+        ret = sminion.functions.cmd.retcode(
+            cmd="{} policy write testpolicy {}/vault.hcl".format(
+                VAULT_BINARY_PATH, RUNTIME_VARS.FILES
+            ),
+            env={"VAULT_ADDR": "http://127.0.0.1:8200"},
+        )
+        if ret != 0:
+            raise SkipTest("unable to assign policy to vault")
 
-        numtests = len(inspect.getmembers(VaultTestCaseCurrent, predicate=count_tests))
-        if self.count >= numtests:
-            self.run_state("docker_container.stopped", name="vault")
-            self.run_state("docker_container.absent", name="vault")
-            self.run_state("docker_image.absent", name="vault", force=True)
+    @classmethod
+    def tearDownClass(cls):
+        cls.sminion.states.docker_container.stopped(name="vault")
+        cls.sminion.states.docker_container.absent(name="vault")
+        cls.sminion.states.docker_image.absent(name="vault", force=True)
+        cls.sminion = None
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_write_read_secret_kv2(self):
         write_return = self.run_function(
             "vault.write_secret", path="secret/my/secret", user="foo", password="bar"
@@ -232,7 +230,7 @@ class VaultTestCaseCurrent(ModuleCase):
         )
         self.assertEqual(read_return, "foo")
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_list_secrets_kv2(self):
         write_return = self.run_function(
             "vault.write_secret", path="secret/my/secret", user="foo", password="bar"
@@ -243,7 +241,7 @@ class VaultTestCaseCurrent(ModuleCase):
         list_return = self.run_function("vault.list_secrets", arg=["secret/my/"])
         self.assertIn("secret", list_return["keys"])
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_write_raw_read_secret_kv2(self):
         write_return = self.run_function(
             "vault.write_raw",
@@ -263,7 +261,7 @@ class VaultTestCaseCurrent(ModuleCase):
         expected_read = {"password2": "bar2", "user2": "foo2"}
         self.assertDictContainsSubset(expected_read, read_return)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_delete_secret_kv2(self):
         write_return = self.run_function(
             "vault.write_secret",
@@ -279,7 +277,7 @@ class VaultTestCaseCurrent(ModuleCase):
         )
         self.assertEqual(delete_return, True)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_destroy_secret_kv2(self):
         write_return = self.run_function(
             "vault.write_secret",

@@ -3,47 +3,32 @@
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
-import random
-import string
 
 import salt.ext.six as six
-import salt.ext.six as six
-
-# Import Salt Libs
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-
-# Import Salt Testing Libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
-from tests.support.unit import skipIf
-
-
-def __random_string(size=6):
-    """
-    Generates a random username
-    """
-    return "RS-" + "".join(
-        random.choice(string.ascii_uppercase + string.digits) for x in range(size)
-    )
-
+from tests.support.helpers import (
+    destructiveTest,
+    random_string,
+    runs_on,
+    skip_if_not_root,
+    slowTest,
+)
 
 # Create user strings for tests
-ADD_USER = __random_string()
-DEL_USER = __random_string()
-PRIMARY_GROUP_USER = __random_string()
-CHANGE_USER = __random_string()
+ADD_USER = random_string("RS-", lowercase=False)
+DEL_USER = random_string("RS-", lowercase=False)
+PRIMARY_GROUP_USER = random_string("RS-", lowercase=False)
+CHANGE_USER = random_string("RS-", lowercase=False)
 
 
 @destructiveTest
 @skip_if_not_root
+@runs_on(kernel="Darwin")
 class MacUserModuleTest(ModuleCase):
     """
     Integration tests for the mac_user module
@@ -58,7 +43,7 @@ class MacUserModuleTest(ModuleCase):
         if os_grain["kernel"] not in "Darwin":
             self.skipTest("Test not applicable to '{kernel}' kernel".format(**os_grain))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_mac_user_add(self):
         """
         Tests the add function
@@ -71,7 +56,7 @@ class MacUserModuleTest(ModuleCase):
             self.run_function("user.delete", [ADD_USER])
             raise
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_mac_user_delete(self):
         """
         Tests the delete function
@@ -86,7 +71,7 @@ class MacUserModuleTest(ModuleCase):
         ret = self.run_function("user.delete", [DEL_USER])
         self.assertTrue(ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_mac_user_primary_group(self):
         """
         Tests the primary_group function
@@ -109,7 +94,7 @@ class MacUserModuleTest(ModuleCase):
             self.run_function("user.delete", [PRIMARY_GROUP_USER])
             raise
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_mac_user_changes(self):
         """
         Tests mac_user functions that change user properties
@@ -154,7 +139,7 @@ class MacUserModuleTest(ModuleCase):
             self.run_function("user.delete", [CHANGE_USER])
             raise
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_mac_user_enable_auto_login(self):
         """
         Tests mac_user functions that enable auto login
@@ -207,7 +192,7 @@ class MacUserModuleTest(ModuleCase):
             if self.run_function("user.get_auto_login"):
                 raise Exception("Failed to disable auto login")
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_mac_user_disable_auto_login(self):
         """
         Tests mac_user functions that disable auto login

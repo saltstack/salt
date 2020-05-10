@@ -21,7 +21,7 @@ import salt.utils.path
 # Import salt libs
 import salt.version
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
-from tests.support.helpers import VirtualEnv, dedent
+from tests.support.helpers import VirtualEnv, dedent, requires_network, slowTest
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin, SaltReturnAssertsMixin
@@ -419,8 +419,9 @@ class PipStateUtilsTest(TestCase):
 @skipIf(
     salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, "virtualenv not installed"
 )
+@requires_network()
 class PipStateInstallationErrorTest(TestCase):
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_importable_installation_error(self):
         extra_requirements = []
         for name, version in salt.version.dependency_information():

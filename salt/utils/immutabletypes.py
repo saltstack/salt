@@ -11,15 +11,7 @@
 from __future__ import absolute_import, unicode_literals
 
 import copy
-
-# Import python libs
-try:
-    from collections.abc import Mapping, Sequence, Set
-except ImportError:
-    # pylint: disable=no-name-in-module
-    from collections import Mapping, Sequence, Set
-
-    # pylint: enable=no-name-in-module
+from collections.abc import Mapping, Sequence, Set
 
 
 class ImmutableDict(Mapping):
