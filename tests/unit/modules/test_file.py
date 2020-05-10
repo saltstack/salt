@@ -862,6 +862,17 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    def test_check_file_meta_binary_contents(self):
+        """
+        Ensure that using the check_file_meta function does not raise a
+        UnicodeDecodeError when used with binary contents (issue #57184).
+        """
+        contents = b"\xf4\x91"
+        filemod.check_file_meta(
+            "test", "test", "salt://test", {}, "root", "root", "755", None,
+            "base", contents=contents
+        )
+
     @skipIf(salt.utils.platform.is_windows(), "lsattr is not available on Windows")
     def test_check_file_meta_no_lsattr(self):
         """
