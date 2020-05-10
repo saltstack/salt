@@ -14,7 +14,6 @@ import salt.ext.tornado.concurrent
 import salt.ext.tornado.ioloop
 from salt.ext import six
 
-
 log = logging.getLogger(__name__)
 
 
