@@ -1146,12 +1146,13 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         """
         log.trace("Clear payload received with command %s", load["cmd"])
         cmd = load["cmd"]
-        if cmd.startswith("__"):
-            return False
+        method = self.clear_funcs.get_method(cmd)
+        if not method:
+            return {}, {"fun": "send_clear"}
         if self.opts["master_stats"]:
             start = time.time()
             self.stats[cmd]["runs"] += 1
-        ret = getattr(self.clear_funcs, cmd)(load), {"fun": "send_clear"}
+        ret = method(load), {"fun": "send_clear"}
         if self.opts["master_stats"]:
             self._post_stats(start, cmd)
         return ret
@@ -1169,8 +1170,9 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             return {}
         cmd = data["cmd"]
         log.trace("AES payload received with command %s", data["cmd"])
-        if cmd.startswith("__"):
-            return False
+        method = self.aes_funcs.get_method(cmd)
+        if not method:
+            return {}, {"fun": "send"}
         if self.opts["master_stats"]:
             start = time.time()
             self.stats[cmd]["runs"] += 1
@@ -1198,14 +1200,66 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         self.__bind()
 
 
+class TransportMethods(object):
+    """
+    Expose methods to the transport layer, methods with their names found in
+    the class attribute 'expose_methods' will be exposed to the transport layer
+    via 'get_method'.
+    """
+
+    expose_methods = ()
+
+    def get_method(self, name):
+        """
+        Get a method which should be exposed to the transport layer
+        """
+        if name in self.expose_methods:
+            try:
+                return getattr(self, name)
+            except AttributeError:
+                log.error("Requested method not exposed: %s", name)
+        else:
+            log.error("Requested method not exposed: %s", name)
+
+
 # TODO: rename? No longer tied to "AES", just "encrypted" or "private" requests
-class AESFuncs(object):
+class AESFuncs(TransportMethods):
     """
     Set up functions that are available when the load is encrypted with AES
     """
 
-    # The AES Functions:
-    #
+    expose_methods = (
+        "verify_minion",
+        "_master_tops",
+        "_ext_nodes",
+        "_master_opts",
+        "_mine_get",
+        "_mine",
+        "_mine_delete",
+        "_mine_flush",
+        "_file_recv",
+        "_pillar",
+        "_minion_event",
+        "_handle_minion_event",
+        "_return",
+        "_syndic_return",
+        "_minion_runner",
+        "pub_ret",
+        "minion_pub",
+        "minion_publish",
+        "revoke_auth",
+        "run_func",
+        "_serve_file",
+        "_file_find",
+        "_file_hash",
+        "_file_find_and_stat",
+        "_file_list",
+        "_file_list_emptydirs",
+        "_dir_list",
+        "_symlink_list",
+        "_file_envs",
+    )
+
     def __init__(self, opts):
         """
         Create a new AESFuncs
@@ -1937,11 +1991,22 @@ class AESFuncs(object):
         return ret, {"fun": "send"}
 
 
-class ClearFuncs(object):
+class ClearFuncs(TransportMethods):
     """
     Set up functions that are safe to execute when commands sent to the master
     without encryption and authentication
     """
+
+    # These methods will be exposed to the transport layer by
+    # MWorker._handle_clear
+    expose_methods = (
+        "ping",
+        "publish",
+        "get_token",
+        "mk_token",
+        "wheel",
+        "runner",
+    )
 
     # The ClearFuncs object encapsulates the functions that can be executed in
     # the clear:

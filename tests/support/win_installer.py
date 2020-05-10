@@ -12,7 +12,6 @@
 from __future__ import absolute_import
 
 import hashlib
-import re
 
 import requests
 
@@ -20,60 +19,11 @@ PREFIX = "Salt-Minion-"
 REPO = "https://repo.saltstack.com/windows"
 
 
-def iter_installers(content):
-    """
-    Parse a list of windows installer links and their corresponding md5
-    checksum links.
-    """
-    HREF_RE = '<a href="(.*?)">'
-    installer, md5 = None, None
-    for m in re.finditer(HREF_RE, content):
-        x = m.groups()[0]
-        if not x.startswith(PREFIX):
-            continue
-        if x.endswith(("zip", "sha256")):
-            continue
-        if installer:
-            if x != installer + ".md5":
-                raise Exception("Unable to parse response")
-            md5 = x
-            yield installer, md5
-            installer, md5 = None, None
-        else:
-            installer = x
-
-
-def split_installer(name):
-    """
-    Return a tuple of the salt version, python version and architecture from an
-    installer name.
-    """
-    x = name[len(PREFIX) :]
-    return x.split("-")[:3]
-
-
-def latest_version(repo=REPO):
-    """
-    Return the latest version found on the salt repository webpage.
-    """
-    content = requests.get(repo).content.decode("utf-8")
-    for name, md5 in iter_installers(content):
-        pass
-    return split_installer(name)[0]
-
-
-def installer_name(salt_ver, py_ver="Py2", arch="AMD64"):
+def latest_installer_name(arch="AMD64", **kwargs):
     """
     Create an installer file name
     """
-    return "Salt-Minion-{}-{}-{}-Setup.exe".format(salt_ver, py_ver, arch)
-
-
-def latest_installer_name(repo=REPO, **kwargs):
-    """
-    Fetch the latest installer name
-    """
-    return installer_name(latest_version(repo), **kwargs)
+    return "Salt-Minion-Latest-Py3-{}-Setup.exe".format(arch)
 
 
 def download_and_verify(fp, name, repo=REPO):

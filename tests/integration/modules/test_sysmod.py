@@ -5,7 +5,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import pytest
 from salt.ext import six
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
+from tests.support.helpers import slowTest
 
 
 @pytest.mark.windows_whitelisted
@@ -14,7 +14,7 @@ class SysModuleTest(ModuleCase):
     Validate the sys module
     """
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_valid_docs(self):
         """
         Make sure no functions are exposed that don't have valid docstrings

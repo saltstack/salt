@@ -1,4 +1,3 @@
-# Changelog
 All notable changes to Salt will be documented in this file.
 
 This changelog follows [keepachangelog](https://keepachangelog.com/en/1.0.0/) format, and is intended for human consumption.
@@ -6,7 +5,8 @@ This changelog follows [keepachangelog](https://keepachangelog.com/en/1.0.0/) fo
 This project versioning is _similar_ to [Semantic Versioning](https://semver.org), and is documented in [SEP 14](https://github.com/saltstack/salt-enhancement-proposals/pull/20/files).
 Versions are `MAJOR.PATCH`.
 
-## 3001 - Sodium
+# Changelog
+
 ## 3001 - Sodium [yyyy-mm-dd]
 
 ### Removed
@@ -16,6 +16,8 @@ Versions are `MAJOR.PATCH`.
 ### Changed
 
 ### Fixed
+- [#51872](https://github.com/saltstack/salt/issues/51872) - Additional fixes for using cron state with non-root Minion - [@Oloremo](https://github.com/Oloremo)
+- [#40491](https://github.com/saltstack/salt/issues/40491) - Fixed trim_output logic in archive.extracted state - [@Oloremo](https://github.com/Oloremo)
 
 ### Added
 - [#56637](https://github.com/saltstack/salt/pull/56637) - Add ``win_wua.installed`` to the ``win_wua`` execution module
