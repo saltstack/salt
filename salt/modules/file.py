@@ -599,6 +599,11 @@ def _cmp_attrs(path, attrs):
     new = set(attrs)
     old = set(lattrs)
 
+    # The "e" attribute can be set, but it cannot not be reset, so we add it to
+    # the new set if it is present in the old set.
+    if "e" in old:
+        new.add("e")
+
     return AttrChanges(
         added="".join(new - old) or None, removed="".join(old - new) or None,
     )
