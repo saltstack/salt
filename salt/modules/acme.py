@@ -310,7 +310,7 @@ def certs():
     return [
         item
         for item in __salt__["file.readdir"](LE_LIVE)[2:]
-        if os.path.isdir(LE_LIVE + item)
+        if os.path.isdir(os.path.join(LE_LIVE, item))
     ]
 
 
