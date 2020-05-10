@@ -2,33 +2,20 @@
 """
 Integration tests for the mac_desktop execution module.
 """
-
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import 3rd-party libs
 from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
-from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest, runs_on, skip_if_not_root, slowTest
 
 
 @destructiveTest
 @skip_if_not_root
+@runs_on(kernel="Darwin")
 class MacDesktopTestCase(ModuleCase):
     """
     Integration tests for the mac_desktop module.
     """
-
-    def setUp(self):
-        """
-        Sets up test requirements.
-        """
-        os_grain = self.run_function("grains.item", ["kernel"])
-        if os_grain["kernel"] not in "Darwin":
-            self.skipTest("Test not applicable to '{kernel}' kernel".format(**os_grain))
 
     def test_get_output_volume(self):
         """
@@ -37,7 +24,7 @@ class MacDesktopTestCase(ModuleCase):
         ret = self.run_function("desktop.get_output_volume")
         self.assertIsNotNone(ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_set_output_volume(self):
         """
         Tests the return of set_output_volume.
@@ -67,7 +54,7 @@ class MacDesktopTestCase(ModuleCase):
         """
         self.assertTrue(self.run_function("desktop.lock"))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_say(self):
         """
         Tests the return of the say function.

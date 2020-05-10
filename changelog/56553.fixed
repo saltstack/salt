@@ -1,0 +1,1 @@
+Relax version requirements for pdbedit, also handle Debian branding in the version string.

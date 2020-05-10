@@ -6,7 +6,7 @@ Libvirt is a toolkit to interact with the virtualization capabilities of recent 
 of Linux (and other OSes). This driver Salt cloud provider is currently geared towards
 libvirt with qemu-kvm.
 
-http://www.libvirt.org/
+https://libvirt.org/
 
 Host Dependencies
 =================
