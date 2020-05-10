@@ -2950,7 +2950,9 @@ def apply_cloud_providers_config(overrides, defaults=None):
         # Merge provided extends
         keep_looping = False
         for alias, entries in six.iteritems(providers.copy()):
-            for driver, details in six.iteritems(entries):
+            for driver in list(six.iterkeys(entries)):
+                # Don't use iteritems, because the values of the dictionary will be changed
+                details = entries[driver]
 
                 if "extends" not in details:
                     # Extends resolved or non existing, continue!

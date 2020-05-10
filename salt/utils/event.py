@@ -60,6 +60,7 @@ import logging
 # Import python libs
 import os
 import time
+from collections.abc import MutableMapping
 from multiprocessing.util import Finalize
 
 # Import salt libs
@@ -83,15 +84,6 @@ import salt.utils.zeromq
 # Import third party libs
 from salt.ext import six
 from salt.ext.six.moves import range
-
-try:
-    from collections.abc import MutableMapping
-except ImportError:
-    # pylint: disable=no-name-in-module
-    from collections import MutableMapping
-
-    # pylint: enable=no-name-in-module
-
 
 log = logging.getLogger(__name__)
 

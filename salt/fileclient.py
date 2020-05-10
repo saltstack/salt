@@ -14,6 +14,7 @@ import shutil
 import string
 
 import salt.client
+import salt.crypt
 import salt.ext.six.moves.BaseHTTPServer as BaseHTTPServer
 import salt.fileserver
 import salt.loader
@@ -343,6 +344,27 @@ class Client(object):
             return extrndest
 
         return ""
+
+    def cache_dest(self, url, saltenv="base", cachedir=None):
+        """
+        Return the expected cache location for the specified URL and
+        environment.
+        """
+        proto = urlparse(url).scheme
+
+        if proto == "":
+            # Local file path
+            return url
+
+        if proto == "salt":
+            url, senv = salt.utils.url.parse(url)
+            if senv:
+                saltenv = senv
+            return salt.utils.path.join(
+                self.opts["cachedir"], "files", saltenv, url.lstrip("|/")
+            )
+
+        return self._extrn_path(url, saltenv, cachedir=cachedir)
 
     def list_states(self, saltenv):
         """
@@ -1059,11 +1081,11 @@ class RemoteClient(Client):
         self.channel = salt.transport.client.ReqChannel.factory(self.opts)
         return self.channel
 
-    # pylint: disable=W1701
+    # pylint: disable=no-dunder-del
     def __del__(self):
         self.destroy()
 
-    # pylint: enable=W1701
+    # pylint: enable=no-dunder-del
 
     def destroy(self):
         if self._closing:

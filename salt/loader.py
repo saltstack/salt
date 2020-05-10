@@ -19,6 +19,7 @@ import threading
 import time
 import traceback
 import types
+from collections.abc import MutableMapping
 from zipimport import zipimporter
 
 # Import salt libs
@@ -54,13 +55,6 @@ else:
 
     USE_IMPORTLIB = False
 
-try:
-    from collections.abc import MutableMapping
-except ImportError:
-    # pylint: disable=no-name-in-module
-    from collections import MutableMapping
-
-    # pylint: enable=no-name-in-module
 
 try:
     import pkg_resources

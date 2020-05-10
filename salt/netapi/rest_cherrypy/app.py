@@ -68,12 +68,12 @@ A REST API for Salt
     debug : ``False``
         Starts the web server in development mode. It will reload itself when
         the underlying code is changed and will output more debugging info.
-    log_access_file
+    log.access_file
         Path to a file to write HTTP access logs.
 
         .. versionadded:: 2016.11.0
 
-    log_error_file
+    log.error_file
         Path to a file to write HTTP error logs.
 
         .. versionadded:: 2016.11.0
@@ -715,7 +715,7 @@ def salt_api_acl_tool(username, request):
     :type request: cherrypy.request
     """
     failure_str = "[api_acl] Authentication failed for " "user {0} from IP {1}"
-    success_str = "[api_acl] Authentication sucessful for " "user {0} from IP {1}"
+    success_str = "[api_acl] Authentication successful for user {0} from IP {1}"
     pass_str = "[api_acl] Authentication not checked for " "user {0} from IP {1}"
 
     acl = None

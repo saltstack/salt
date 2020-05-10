@@ -68,6 +68,15 @@ repos:
           - --platform=linux
 
       - id: pip-tools-compile
+        alias: compile-changelog-requirements
+        name: Changelog Py3.5 Requirements
+        files: ^requirements/static/changelog\.in$
+        args:
+          - -v
+          - --py-version=3.5
+          - --platform=linux
+
+      - id: pip-tools-compile
         alias: compile-linux-crypto-py3.5-requirements
         name: Linux Py3.5 Crypto Requirements
         files: ^requirements/(crypto\.txt|static/crypto\.in)$
@@ -167,6 +176,15 @@ repos:
           - --platform=linux
 
       - id: pip-tools-compile
+        alias: compile-changelog-requirements
+        name: Changelog Py3.6 Requirements
+        files: ^requirements/static/changelog\.in$
+        args:
+          - -v
+          - --py-version=3.6
+          - --platform=linux
+
+      - id: pip-tools-compile
         alias: compile-linux-crypto-py3.6-requirements
         name: Linux Py3.6 Crypto Requirements
         files: ^requirements/(crypto\.txt|static/crypto\.in)$
@@ -260,6 +278,15 @@ repos:
         alias: compile-doc-requirements
         name: Docs Py3.7 Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/docs\.in)$
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=linux
+
+      - id: pip-tools-compile
+        alias: compile-changelog-requirements
+        name: Changelog Py3.7 Requirements
+        files: ^requirements/static/changelog\.in$
         args:
           - -v
           - --py-version=3.7
@@ -505,6 +532,48 @@ repos:
           - --py-version=3.9
           - --platform=linux
 
+  # ----- Invoke ---------------------------------------------------------------------------------------------------->
+      - id: pip-tools-compile
+        alias: compile-py3.5-invoke-requirements
+        name: Linux Py3.5 Invoke Requirements
+        files: ^requirements/static/invoke\.in$
+        args:
+          - -v
+          - --py-version=3.5
+
+      - id: pip-tools-compile
+        alias: compile-py3.6-invoke-requirements
+        name: Linux Py3.6 Invoke Requirements
+        files: ^requirements/static/invoke\.in$
+        args:
+          - -v
+          - --py-version=3.6
+
+      - id: pip-tools-compile
+        alias: compile-py3.7-invoke-requirements
+        name: Linux Py3.7 Invoke Requirements
+        files: ^requirements/static/invoke\.in$
+        args:
+          - -v
+          - --py-version=3.7
+
+      - id: pip-tools-compile
+        alias: compile-py3.8-invoke-requirements
+        name: Linux Py3.8 Invoke Requirements
+        files: ^requirements/static/invoke\.in$
+        args:
+          - -v
+          - --py-version=3.8
+
+      - id: pip-tools-compile
+        alias: compile-py3.9-invoke-requirements
+        name: Linux Py3.9 Invoke Requirements
+        files: ^requirements/static/invoke\.in$
+        args:
+          - -v
+          - --py-version=3.9
+  # <---- Invoke -----------------------------------------------------------------------------------------------------
+
   - repo: https://github.com/timothycrosley/isort
     rev: "1e78a9acf3110e1f9721feb591f89a451fc9876a"
     hooks:
@@ -539,7 +608,7 @@ repos:
       - id: nox-py2
         alias: lint-salt
         name: Lint Salt
-        files: ^((setup|noxfile)|salt/.*)\.py$
+        files: ^((setup|noxfile)|(salt|tasks)/.*)\.py$
         args:
           - -e
           - lint-salt-pre-commit
@@ -556,3 +625,16 @@ repos:
           - -e
           - lint-tests-pre-commit
           - --
+
+  - repo: https://github.com/saltstack/salt-nox-pre-commit
+    rev: master
+    hooks:
+      - id: nox-py2
+        alias: check-docs
+        name: Check Docs
+        files: ^(salt/.*\.py|doc/ref/.*\.rst)$
+        args:
+          - -e
+          - invoke-pre-commit
+          - --
+          - docs.check

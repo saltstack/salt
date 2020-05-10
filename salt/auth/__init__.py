@@ -310,7 +310,7 @@ class LoadAuth(object):
             return False
 
         if load["eauth"] not in self.opts["external_auth"]:
-            log.debug('The eauth system "%s" is not enabled', load["eauth"])
+            log.warning('The eauth system "%s" is not enabled', load["eauth"])
             log.warning('Authentication failure of type "eauth" occurred.')
             return False
 
@@ -541,7 +541,7 @@ class Resolver(object):
             )
             print(
                 "Available eauth types: {0}".format(
-                    ", ".join(self.auth.file_mapping.keys())
+                    ", ".join([k[:-5] for k in self.auth if k.endswith(".auth")])
                 )
             )
             return ret

@@ -1,23 +1,18 @@
 # -*- coding: utf-8 -*-
-
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import threading
 import time
 
-# Import Salt Libs
 import salt.utils.json
 import salt.utils.stringutils
-
-# Import 3rd-party libs
 from salt.ext import six
 from salt.netapi.rest_tornado import saltnado
 from salt.utils.versions import StrictVersion
 from salt.utils.zeromq import ZMQDefaultLoop as ZMQIOLoop
 from salt.utils.zeromq import zmq
-from tests.support.helpers import flaky
+from tests.support.helpers import flaky, slowTest
 from tests.support.unit import skipIf
 
 # Import Salt Testing Libs
@@ -68,7 +63,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         )
         self.assertEqual(response_obj["return"], "Welcome")
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_post_no_auth(self):
         """
         Test post with no auth token, should 401
@@ -258,7 +253,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertEqual(ret[0]["minions"], sorted(["minion", "sub_minion"]))
         self.assertEqual(ret[1]["minions"], sorted(["minion", "sub_minion"]))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_multi_local_async_post_multitoken(self):
         low = [
             {"client": "local_async", "tgt": "*", "fun": "test.ping"},
@@ -308,7 +303,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertEqual(ret[0]["minions"], sorted(["minion", "sub_minion"]))
         self.assertEqual(ret[1]["minions"], sorted(["minion", "sub_minion"]))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_simple_local_async_post_no_tgt(self):
         low = [
             {"client": "local_async", "tgt": "minion_we_dont_have", "fun": "test.ping"}
@@ -361,7 +356,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertEqual(response_obj["return"], [{"minion": True, "sub_minion": True}])
 
     # runner tests
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_simple_local_runner_post(self):
         low = [{"client": "runner", "fun": "manage.up"}]
         response = self.fetch(
@@ -439,7 +434,7 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
             self.assertEqual(minion_id, grains["id"])
 
     @skipIf(True, "to be re-enabled when #23623 is merged")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_get(self):
         response = self.fetch(
             "/minions/minion",
@@ -474,7 +469,7 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertIn("jid", ret[0])
         self.assertEqual(ret[0]["minions"], sorted(["minion", "sub_minion"]))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_post_with_client(self):
         # get a token for this test
         low = [{"client": "local_async", "tgt": "*minion", "fun": "test.ping"}]
@@ -497,7 +492,7 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertIn("jid", ret[0])
         self.assertEqual(ret[0]["minions"], sorted(["minion", "sub_minion"]))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_post_with_incorrect_client(self):
         """
         The /minions endpoint is asynchronous only, so if you try something else
@@ -529,7 +524,7 @@ class TestJobsSaltAPIHandler(_SaltnadoIntegrationTestCase):
         return application
 
     @skipIf(True, "to be re-enabled when #23623 is merged")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_get(self):
         # test with no JID
         self.http_client.fetch(
@@ -586,7 +581,7 @@ class TestRunSaltAPIHandler(_SaltnadoIntegrationTestCase):
         return application
 
     @skipIf(True, "to be re-enabled when #23623 is merged")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_get(self):
         low = [{"client": "local", "tgt": "*", "fun": "test.ping"}]
         response = self.fetch(
@@ -616,7 +611,7 @@ class TestEventsSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.events_to_fire = 0
         return application
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_get(self):
         self.events_to_fire = 5
         response = self.fetch(

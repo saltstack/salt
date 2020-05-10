@@ -90,7 +90,7 @@ Finally, on line five, is the word ``require``. This is called a Requisite
 Statement, and it makes sure that the Apache service is only started after
 a successful installation of the apache package.
 
-.. _`YAML`: http://yaml.org/spec/1.1/
+.. _`YAML`: https://yaml.org/spec/1.1/
 
 
 Adding Configs and Users
@@ -336,10 +336,10 @@ provides a flexible, domain-specific language for authoring SLS data in Python;
 and the :mod:`pyobjects<salt.renderers.pyobjects>` renderer
 gives you a `"Pythonic"`_ interface to building state data.
 
-.. _`Jinja2`: http://jinja.pocoo.org/
-.. _`Mako`: http://www.makotemplates.org/
+.. _`Jinja2`: https://jinja.palletsprojects.com/en/2.11.x/
+.. _`Mako`: https://www.makotemplates.org/
 .. _`Wempy`: https://fossil.secution.com/u/gcw/wempy/doc/tip/README.wiki
-.. _`"Pythonic"`: http://legacy.python.org/dev/peps/pep-0008/
+.. _`"Pythonic"`: https://legacy.python.org/dev/peps/pep-0008/
 
 .. note::
 
@@ -356,7 +356,7 @@ Getting to Know the Default - jinja|yaml
 
 The default renderer - ``jinja|yaml``, allows for use of the jinja
 templating system. A guide to the Jinja templating system can be found here:
-http://jinja.pocoo.org/docs
+https://jinja.palletsprojects.com/en/2.11.x/
 
 When working with renderers a few very useful bits of data are passed in. In
 the case of templating engine based renderers, three critical components are

@@ -45,6 +45,7 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Import 3rd-party libs
 from salt.ext import six
+from salt.loader import _format_cached_grains
 from salt.runners.state import orchestrate as _orchestrate
 from salt.utils.odict import OrderedDict
 
@@ -348,7 +349,7 @@ def orchestrate(
     .. seealso:: More Orchestrate documentation
 
         * :ref:`Full Orchestrate Tutorial <orchestrate-runner>`
-        * :py:mod:`Docs for the ``salt`` state module <salt.states.saltmod>`
+        * Docs for the salt state module :py:mod:`salt.states.saltmod`
 
     CLI Examples:
 
@@ -2025,7 +2026,7 @@ def show_sls(mods, test=None, queue=False, **kwargs):
 
 def sls_exists(mods, test=None, queue=False, **kwargs):
     """
-    Tests for the existance the of a specific SLS or list of SLS files on the
+    Tests for the existence the of a specific SLS or list of SLS files on the
     master. Similar to :py:func:`state.show_sls <salt.modules.state.show_sls>`,
     rather than returning state details, returns True or False. The default
     environment is ``base``, use ``saltenv`` to specify a different environment.
@@ -2262,7 +2263,7 @@ def pkg(pkg_path, pkg_sum, hash_type, test=None, **kwargs):
     roster_grains_json = os.path.join(root, "roster_grains.json")
     if os.path.isfile(roster_grains_json):
         with salt.utils.files.fopen(roster_grains_json, "r") as fp_:
-            roster_grains = salt.utils.json.load(fp_)
+            roster_grains = _format_cached_grains(salt.utils.json.load(fp_))
 
     if os.path.isfile(roster_grains_json):
         popts["grains"] = roster_grains

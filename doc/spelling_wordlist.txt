@@ -445,7 +445,7 @@ Memcached
 metadata
 Metadata
 minionfs
-minon
+minion
 mirrorlist
 mkfile
 mkfs

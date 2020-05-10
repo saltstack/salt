@@ -805,7 +805,7 @@ Saltclass lets you define your nodes from simple ``yaml`` files (``.yml``) throu
   pillar module completely - will be logged
 
 An example subset of data is available here:
-http://git.mauras.ch/salt/saltclass/src/master/examples
+https://git.mauras.ch/salt/saltclass/src/branch/master/examples
 
 ==========================  ===========
 Terms usable in yaml files  Description
