@@ -5452,8 +5452,8 @@ def check_file_meta(
             tmp = salt.utils.files.mkstemp(
                 prefix=salt.utils.files.TEMPFILE_PREFIX, text=False
             )
-            with salt.utils.files.fopen(tmp, 'wb') as tmp_:
-                 tmp_.write(contents)
+            with salt.utils.files.fopen(tmp, "wb") as tmp_:
+                tmp_.write(contents)
         else:
             tmp = salt.utils.files.mkstemp(
                 prefix=salt.utils.files.TEMPFILE_PREFIX, text=True
