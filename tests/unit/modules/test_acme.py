@@ -42,7 +42,11 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
                     return_value=[".", "..", "README", "test_expired", "test_valid"]
                 )
             },
-        ), patch("os.path.isdir", side_effect=[False, True, True]):
+        ), patch(
+            "os.path.isdir",
+            side_effect=lambda path: path
+            in [acme.LE_LIVE + "/test_expired", acme.LE_LIVE + "/test_valid"],
+        ):
             self.assertEqual(acme.certs(), ["test_expired", "test_valid"])
 
     def test_has(self):
