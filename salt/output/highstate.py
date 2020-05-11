@@ -139,20 +139,39 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     The HighState Outputter is only meant to be used with the state.highstate
     function, or a function that returns highstate return data.
     """
-    # Discard retcode in dictionary as present in orchestrate data
-    local_masters = [key for key in data.keys() if key.endswith(".local_master")]
-    orchestrator_output = "retcode" in data.keys() and len(local_masters) == 1
-
-    if orchestrator_output:
-        del data["retcode"]
-
     # If additional information is passed through via the "data" dictionary to
     # the highstate outputter, such as "outputter" or "retcode", discard it.
     # We only want the state data that was passed through, if it is wrapped up
     # in the "data" key, as the orchestrate runner does. See Issue #31330,
     # pull request #27838, and pull request #27175 for more information.
-    if "data" in data:
-        data = data.pop("data")
+    # account for envelope data if being passed lookup_jid ret
+    if isinstance(data, dict) and "return" in data:
+        data = data["return"]
+
+    if isinstance(data, dict) and "data" in data:
+        data = data["data"]
+
+    # account for envelope data if being passed lookup_jid ret
+    if isinstance(data, dict) and len(data.keys()) == 1:
+        _data = next(iter(data.values()))
+
+        if isinstance(_data, dict):
+            if "jid" in _data and "fun" in _data:
+                data = _data.get("return", {}).get("data", data)
+
+    # output() is recursive, if we aren't passed a dict just return it
+    if isinstance(data, int) or isinstance(data, six.string_types):
+        return data
+
+    if data is None:
+        return "None"
+
+    # Discard retcode in dictionary as present in orchestrate data
+    local_masters = [key for key in data.keys() if key.endswith("_master")]
+    orchestrator_output = "retcode" in data.keys() and len(local_masters) == 1
+
+    if orchestrator_output:
+        del data["retcode"]
 
     indent_level = kwargs.get("indent_level", 1)
     ret = [
@@ -247,7 +266,7 @@ def _format_host(host, data, indent_level=1):
 
             tcolor = colors["GREEN"]
             if ret.get("name") in ["state.orch", "state.orchestrate", "state.sls"]:
-                nested = output(ret["changes"]["return"], indent_level=indent_level + 1)
+                nested = output(ret["changes"], indent_level=indent_level + 1)
                 ctext = re.sub(
                     "^", " " * 14 * indent_level, "\n" + nested, flags=re.MULTILINE
                 )
