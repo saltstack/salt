@@ -1,5 +1,6 @@
 /build
 /src
+__pycache__/
 *.py[co]
 pkg/arch/*.tar.xz
 *.sw[a-p]
@@ -104,6 +105,9 @@ tests/integration/cloud/providers/pki/minions
 # Ignore nox virtualenvs
 /.nox/
 
+# Ignore pyenv files
+.python-version
+
 # Kitchen tests files
 .kitchen.local.yml
 kitchen.local.yml
@@ -111,3 +115,4 @@ kitchen.local.yml
 .bundle/
 Gemfile.lock
 /artifacts/
+requirements/static/py*/*.log

@@ -4,14 +4,11 @@ salt for Windows with their corresponding licenses:
 
 | Module    | License |
 |-----------|---------|
-| backports-abc | --- |
 | backports.ssl-match-hostname | PSF |
 | certifi | ISC |
 | cffi | MIT |
 | CherryPy | BSD |
 | cryptography | BSD |
-| enum34 | BSD |
-| futures | BSD |
 | gitdb | BSD |
 | GitPython | BSD |
 | idna | BSD-like |
