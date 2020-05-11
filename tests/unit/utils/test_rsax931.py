@@ -25,7 +25,7 @@ from salt.utils.rsax931 import (
 from tests.support.mock import patch
 
 # salt testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class RSAX931Test(TestCase):
@@ -124,69 +124,114 @@ class RSAX931Test(TestCase):
         msg = verifier.verify(RSAX931Test.hello_world_sig)
         self.assertEqual(RSAX931Test.hello_world, msg)
 
-    def test_find_libcrypto(self):
+    # test_find_libcrypto_win32 (method)
+    # {{{
+    @skipIf(not salt.utils.platform.is_windows(), "Host OS is not Windows.")
+    def test_find_libcrypto_win32(self):
         """
-        Test _find_libcrypto.
+        Test find_libcrypto on Windows hosts.
         """
-        # Test supported systems.
         lib_path = _find_libcrypto()
         self.assertFalse(not lib_path)
-        if sys.platform.startswith("win"):
-            # For Microsoft Windows variants.
-            self.assertEqual(lib_path, "libeay32")
-        elif getattr(sys, "frozen", False) and salt.utils.platform.is_smartos():
-            # For SmartOS.
-            self.assertTrue(
-                fnmatch.fnmatch(
-                    lib_path,
-                    os.path.join(os.path.dirname(sys.executable), "libcrypto*"),
-                )
+        self.assertEqual(lib_path, "libeay32")
+
+    # }}}
+
+    # test_find_libcrypto_smartos (method)
+    # {{{
+    @skipIf(
+        not getattr(sys, "frozen", False) and not salt.utils.platform.is_smartos(),
+        "Host OS is not SmartOS.",
+    )
+    def test_find_libcrypto_smartos(self):
+        """
+        Test find_libcrypto on a SmartOS host.
+        """
+        lib_path = _find_libcrypto()
+        self.assertFalse(not lib_path)
+        self.assertTrue(
+            fnmatch.fnmatch(
+                lib_path, os.path.join(os.path.dirname(sys.executable), "libcrypto*")
             )
-        elif not lib_path:
-            if salt.utils.platform.is_sunos():
-                # For Solaris-like distributions.
-                passed = False
-                for i in (
-                    "/opt/local/lib/libcrypto.so*",
-                    "/opt/tools/lib/libcrypto.so*",
-                ):
-                    if fnmatch.fnmatch(lib_path, i):
-                        passed = True
-                        break
-                self.assertTrue(passed)
-            elif salt.utils.platform.is_aix():
-                # For IBM AIX.
-                if os.path.isdir("/opt/salt/lib"):
-                    self.assertTrue(
-                        fnmatch.fnmatch(lib_path, "/opt/salt/lib/libcrypto.so*")
-                    )
-                else:
-                    self.assertTrue(
-                        fnmatch.fnmatch(lib_path, "/opt/freeware/lib/libcrypto.so*")
-                    )
-        elif salt.utils.platform.is_darwin():
-            # For Darwin distributions/macOS.
-            passed = False
-            for i in (
-                "/usr/lib/libcrypto.*.dylib",
-                "/usr/local/opt/openssl/lib/libcrypto.dylib",
-                "/usr/local/opt/openssl@*/lib/libcrypto.dylib",
-            ):
-                if fnmatch.fnmatch(lib_path, i):
-                    passed = True
-                    break
-            self.assertTrue(passed)
-        # Test unsupported systems.
-        with patch.object(sys, "platform", "unknown"), patch.object(
-            glob, "glob", lambda a: []
-        ), patch.object(ctypes.util, "find_library", lambda a: None), self.assertRaises(
-            OSError
+        )
+
+    # }}}
+
+    # test_find_libcrypto_sunos (method)
+    # {{{
+    @skipIf(not salt.utils.platform.is_sunos(), "Host OS is not Solaris-like.")
+    def test_find_libcrypto_sunos(self):
+        """
+        Test find_libcrypto on a Solaris-like host.
+        """
+        lib_path = _find_libcrypto()
+        self.assertFalse(not lib_path)
+        passed = False
+        for i in ("/opt/local/lib/libcrypto.so*", "/opt/tools/lib/libcrypto.so*"):
+            if fnmatch.fnmatch(lib_path, i):
+                passed = True
+                break
+        self.assertTrue(passed)
+
+    # }}}
+
+    # test_find_libcrypto_aix (method)
+    # {{{
+    @skipIf(not salt.utils.platform.is_aix(), "Host OS is not IBM AIX.")
+    def test_find_libcrypto_aix(self):
+        """
+        Test find_libcrypto on an IBM AIX host.
+        """
+        lib_path = _find_libcrypto()
+        self.assertFalse(not lib_path)
+        if os.path.isdir("/opt/salt/lib"):
+            self.assertTrue(fnmatch.fnmatch(lib_path, "/opt/salt/lib/libcrypto.so*"))
+        else:
+            self.assertTrue(
+                fnmatch.fnmatch(lib_path, "/opt/freeware/lib/libcrypto.so*")
+            )
+
+    # }}}
+
+    # test_find_libcrypto_darwin (method)
+    # {{{
+    @skipIf(not salt.utils.platform.is_darwin(), "Host OS is not Darwin-like or macOS.")
+    def test_find_libcrypto_darwin(self):
+        """
+        Test find_libcrypto on a Darwin-like or macOS host.
+        """
+        lib_path = _find_libcrypto()
+        self.assertFalse(not lib_path)
+        passed = False
+        for i in (
+            "/usr/lib/libcrypto.*.dylib",
+            "/usr/local/opt/openssl/lib/libcrypto.dylib",
+            "/usr/local/opt/openssl@*/lib/libcrypto.dylib",
         ):
+            if fnmatch.fnmatch(lib_path, i):
+                passed = True
+                break
+        self.assertTrue(passed)
+
+    # }}}
+
+    # test_find_libcrypto_unsupported (method)
+    # {{{
+    @patch.object(ctypes.util, "find_library", lambda a: None)
+    @patch.object(glob, "glob", lambda a: [])
+    @patch.object(sys, "platform", "unknown")
+    def test_find_libcrypto_unsupported(self):
+        """
+        Ensure that find_libcrypto works correctly on an unsupported host OS.
+        """
+        with self.assertRaises(OSError):
             _find_libcrypto()
+
+    # }}}
 
     def test_load_libcrypto(self):
         """
-        Test _load_libcrypto.
+        Test _load_libcrypto generically.
         """
         lib = _load_libcrypto()
         self.assertTrue(isinstance(lib, ctypes.CDLL))
