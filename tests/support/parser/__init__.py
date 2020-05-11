@@ -510,6 +510,9 @@ class SaltTestingParser(optparse.OptionParser):
         return ret
 
     def parse_args(self, args=None, values=None):
+        # Always change to the Salt source code directory
+        os.chdir(tests.support.paths.CODE_DIR)
+
         self.options, self.args = optparse.OptionParser.parse_args(self, args, values)
 
         file_names = []
