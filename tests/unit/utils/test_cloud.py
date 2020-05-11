@@ -8,20 +8,16 @@
 
     Test the salt-cloud utilities module
 """
-
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
 import tempfile
 
-# Import salt libs
 import salt.utils.cloud as cloud
 import salt.utils.platform
 from salt.ext import six
-
-# Import Salt Testing libs
+from tests.support.helpers import change_cwd
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import SkipTest, TestCase, skipIf
 
@@ -29,57 +25,53 @@ from tests.support.unit import SkipTest, TestCase, skipIf
 class CloudUtilsTestCase(TestCase):
     @classmethod
     def setUpClass(cls):
-        old_cwd = os.getcwd()
         cls.gpg_keydir = gpg_keydir = os.path.join(RUNTIME_VARS.TMP, "gpg-keydir")
-        try:
-            # The keyring library uses `getcwd()`, let's make sure we in a good directory
-            # before importing keyring
-            if not os.path.isdir(gpg_keydir):
-                os.makedirs(gpg_keydir)
-            os.chdir(gpg_keydir)
+        if not os.path.isdir(gpg_keydir):
+            os.makedirs(gpg_keydir)
+        with change_cwd(gpg_keydir):
+            try:
+                # The keyring library uses `getcwd()`, let's make sure we in a good directory
+                # before importing keyring
+                # Late import because of the above reason
+                import keyring
+                import keyring.backend
 
-            # Late import because of the above reason
-            import keyring
-            import keyring.backend
+                class CustomKeyring(keyring.backend.KeyringBackend):
+                    """
+                    A test keyring which always outputs same password
+                    """
 
-            class CustomKeyring(keyring.backend.KeyringBackend):
-                """
-                A test keyring which always outputs same password
-                """
+                    def __init__(self):
+                        self.__storage = {}
 
-                def __init__(self):
-                    self.__storage = {}
+                    def supported(self):
+                        return 0
 
-                def supported(self):
-                    return 0
+                    def set_password(
+                        self, servicename, username, password
+                    ):  # pylint: disable=arguments-differ
+                        self.__storage.setdefault(servicename, {}).update(
+                            {username: password}
+                        )
+                        return 0
 
-                def set_password(
-                    self, servicename, username, password
-                ):  # pylint: disable=arguments-differ
-                    self.__storage.setdefault(servicename, {}).update(
-                        {username: password}
-                    )
-                    return 0
+                    def get_password(
+                        self, servicename, username
+                    ):  # pylint: disable=arguments-differ
+                        return self.__storage.setdefault(servicename, {}).get(
+                            username, None
+                        )
 
-                def get_password(
-                    self, servicename, username
-                ):  # pylint: disable=arguments-differ
-                    return self.__storage.setdefault(servicename, {}).get(
-                        username, None
-                    )
+                    def delete_password(
+                        self, servicename, username
+                    ):  # pylint: disable=arguments-differ
+                        self.__storage.setdefault(servicename, {}).pop(username, None)
+                        return 0
 
-                def delete_password(
-                    self, servicename, username
-                ):  # pylint: disable=arguments-differ
-                    self.__storage.setdefault(servicename, {}).pop(username, None)
-                    return 0
-
-            # set the keyring for keyring lib
-            keyring.set_keyring(CustomKeyring())
-        except ImportError:
-            raise SkipTest('The "keyring" python module is not installed')
-        finally:
-            os.chdir(old_cwd)
+                # set the keyring for keyring lib
+                keyring.set_keyring(CustomKeyring())
+            except ImportError:
+                raise SkipTest('The "keyring" python module is not installed')
 
     @classmethod
     def tearDownClass(cls):

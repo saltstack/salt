@@ -5,35 +5,27 @@
 
     Test the salt extend script, leave templates/test alone to keep this working!
 """
-
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
 from datetime import date
 
-# Import salt libs
 import salt.utils.extend
 import salt.utils.files
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 
 
 class ExtendTestCase(TestCase):
     def setUp(self):
-        self.starting_dir = os.getcwd()
-        os.chdir(RUNTIME_VARS.CODE_DIR)
         self.out = None
 
     def tearDown(self):
         if self.out is not None:
             if os.path.exists(self.out):
                 shutil.rmtree(self.out, True)
-        os.chdir(self.starting_dir)
 
     @skipIf(
         not os.path.exists(os.path.join(RUNTIME_VARS.CODE_DIR, "templates")),

@@ -17,6 +17,7 @@ import salt.fileserver.roots as roots
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.platform
+from tests.support.helpers import change_cwd
 
 # Import Salt Testing libs
 from tests.support.mixins import (
@@ -54,12 +55,9 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
             source_sym = os.path.join(root_dir, "source_sym")
             with salt.utils.files.fopen(source_sym, "w") as fp_:
                 fp_.write("hello world!\n")
-            cwd = os.getcwd()
-            try:
-                os.chdir(root_dir)
+
+            with change_cwd(root_dir):
                 win32file.CreateSymbolicLink("dest_sym", "source_sym", 0)
-            finally:
-                os.chdir(cwd)
             cls.test_symlink_list_file_roots = {"base": [root_dir]}
         else:
             dest_sym = os.path.join(RUNTIME_VARS.BASE_FILES, "dest_sym")
