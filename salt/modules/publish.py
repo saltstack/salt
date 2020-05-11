@@ -23,7 +23,7 @@ __virtualname__ = "publish"
 
 def __virtual__():
     return (
-        __virtualname__ if __opts__.get("transport", "") in ("zeromq", "tcp") else False
+        __virtualname__ if __opts__.get("transport", "") in ("zeromq", "tcp", "http") else False
     )
 
 

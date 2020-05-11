@@ -747,7 +747,7 @@ VALID_OPTS = immutabletypes.freeze(
         "sign_pub_messages": bool,
         # The size of key that should be generated when creating new keys
         "keysize": int,
-        # The transport system for this daemon. (i.e. zeromq, tcp, detect, etc)
+        # The transport system for this daemon. (i.e. zeromq, tcp, http, detect, etc)
         "transport": six.string_types,
         # The number of seconds to wait when the client is requesting information about running jobs
         "gather_job_timeout": int,

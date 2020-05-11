@@ -49,7 +49,7 @@ class NetapiClient(object):
         if salt.utils.platform.is_windows():
             return True
 
-        if self.opts["transport"] == "tcp":
+        if self.opts["transport"] in ("tcp", "http"):
             ipc_file = "publish_pull.ipc"
         else:
             ipc_file = "workers.ipc"

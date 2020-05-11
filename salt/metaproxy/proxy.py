@@ -233,7 +233,7 @@ def post_master_init(self, master):
         self.schedule.delete_job("__mine_interval", persist=True)
 
     # add master_alive job if enabled
-    if self.opts["transport"] != "tcp" and self.opts["master_alive_interval"] > 0:
+    if self.opts["transport"] not in ("tcp", "http") and self.opts["master_alive_interval"] > 0:
         self.schedule.add_job(
             {
                 salt.minion.master_event(type="alive", master=self.opts["master"]): {

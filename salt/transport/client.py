@@ -135,6 +135,10 @@ class AsyncReqChannel(AsyncChannel):
             import salt.transport.tcp
 
             return salt.transport.tcp.AsyncTCPReqChannel(opts, **kwargs)
+        elif ttype == "http":
+            import salt.transport.http
+
+            return salt.transport.http.AsyncHTTPReqChannel(opts, **kwargs)
         elif ttype == "local":
             raise Exception("There's no AsyncLocalChannel implementation yet")
             # import salt.transport.local
@@ -202,6 +206,10 @@ class AsyncPubChannel(AsyncChannel):
             import salt.transport.tcp
 
             return salt.transport.tcp.AsyncTCPPubChannel(opts, **kwargs)
+        elif ttype == "http":
+            import salt.transport.http
+
+            return salt.transport.http.AsyncHTTPPubChannel(opts, **kwargs)
         elif ttype == "local":  # TODO:
             raise Exception("There's no AsyncLocalPubChannel implementation yet")
             # import salt.transport.local

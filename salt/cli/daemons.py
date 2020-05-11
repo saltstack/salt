@@ -300,7 +300,7 @@ class Minion(
         transport = self.config.get("transport").lower()
 
         # TODO: AIO core is separate from transport
-        if transport in ("zeromq", "tcp", "detect"):
+        if transport in ("zeromq", "tcp", "http", "detect"):
             # Late import so logging works correctly
             import salt.minion
 

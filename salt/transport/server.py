@@ -37,6 +37,10 @@ class ReqServerChannel(object):
             import salt.transport.tcp
 
             return salt.transport.tcp.TCPReqServerChannel(opts)
+        elif ttype == "http":
+            import salt.transport.http
+
+            return salt.transport.http.HTTPReqServerChannel(opts)
         elif ttype == "local":
             import salt.transport.local
 
@@ -84,6 +88,10 @@ class PubServerChannel(object):
             import salt.transport.tcp
 
             return salt.transport.tcp.TCPPubServerChannel(opts)
+        elif ttype == "http":
+            import salt.transport.http
+
+            return salt.transport.http.HTTPPubServerChannel(opts)
         elif ttype == "local":  # TODO:
             import salt.transport.local
 
