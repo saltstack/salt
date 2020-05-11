@@ -31,7 +31,7 @@ import salt.utils.stringutils
 from salt.ext import six
 from salt.ext.six.moves import range
 from tests.support.case import ModuleCase
-from tests.support.mock import patch
+from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
@@ -1488,3 +1488,51 @@ class LoaderLoadCachedGrainsTest(TestCase):
         grains = salt.loader.grains(self.opts)
         osrelease_info = grains["osrelease_info"]
         assert isinstance(osrelease_info, tuple), osrelease_info
+
+
+class LazyLoaderRefreshFileMappingTest(TestCase):
+    """
+    Test that _refresh_file_mapping is called using acquiring LazyLoader._lock
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.opts = salt.config.minion_config(None)
+        cls.opts["grains"] = salt.loader.grains(cls.opts)
+        cls.utils = salt.loader.utils(copy.deepcopy(cls.opts))
+        cls.proxy = salt.loader.proxy(cls.opts)
+        cls.funcs = salt.loader.minion_mods(cls.opts, utils=cls.utils, proxy=cls.proxy)
+
+    def setUp(self):
+        self.LOADER_CLASS = salt.loader.LazyLoader
+
+    def __init_loader(self):
+        return self.LOADER_CLASS(
+            salt.loader._module_dirs(copy.deepcopy(self.opts), "modules", "module"),
+            copy.deepcopy(self.opts),
+            tag="module",
+            pack={
+                "__utils__": self.utils,
+                "__salt__": self.funcs,
+                "__proxy__": self.proxy,
+            },
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.opts
+        del cls.utils
+        del cls.funcs
+        del cls.proxy
+
+    def test_lazyloader_refresh_file_mapping_called_with_lock_at___init__(self):
+        func_mock = MagicMock()
+        lock_mock = MagicMock()
+        lock_mock.__enter__ = MagicMock()
+        self.LOADER_CLASS._refresh_file_mapping = func_mock
+        with patch("threading.RLock", MagicMock(return_value=lock_mock)):
+            loader = self.__init_loader()
+        lock_mock.__enter__.assert_called()
+        func_mock.assert_called()
+        assert len(func_mock.call_args_list) == len(lock_mock.__enter__.call_args_list)
+        del loader
