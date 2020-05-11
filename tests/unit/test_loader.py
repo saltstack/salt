@@ -1499,7 +1499,10 @@ class LazyLoaderRefreshFileMappingTest(TestCase):
         cls.funcs = salt.loader.minion_mods(cls.opts, utils=cls.utils, proxy=cls.proxy)
 
     def setUp(self):
-        self.LOADER_CLASS = salt.loader.LazyLoader
+        class LazyLoaderMock(salt.loader.LazyLoader):
+            pass
+
+        self.LOADER_CLASS = LazyLoaderMock
 
     def __init_loader(self):
         return self.LOADER_CLASS(
