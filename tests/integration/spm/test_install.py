@@ -9,7 +9,7 @@ import shutil
 
 import pytest
 from tests.support.case import SPMCase
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, slowTest
 
 
 @destructiveTest
@@ -23,6 +23,7 @@ class SPMInstallTest(SPMCase):
         self.config = self._spm_config()
         self._spm_build_files(self.config)
 
+    @slowTest
     def test_spm_install_local_dir(self):
         """
         test spm install from local directory
@@ -36,6 +37,7 @@ class SPMInstallTest(SPMCase):
 
         self.assertTrue(os.path.exists(sls))
 
+    @slowTest
     def test_spm_install_from_repo(self):
         """
         test spm install from repo

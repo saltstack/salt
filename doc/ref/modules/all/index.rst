@@ -47,6 +47,7 @@ execution modules
     azurearm_network
     azurearm_resource
     bamboohr
+    baredoc
     bcache
     beacons
     bigip
@@ -186,6 +187,7 @@ execution modules
     haproxyconn
     hashutil
     heat
+    helm
     hg
     highstate_doc
     hosts
@@ -330,6 +332,7 @@ execution modules
     nspawn
     nxos
     nxos_api
+    nxos_upgrade
     omapi
     openbsd_sysctl
     openbsdpkg

@@ -23,7 +23,7 @@ import salt.utils.args
 import salt.utils.files
 import salt.utils.stringutils
 import salt.utils.versions
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -270,6 +270,194 @@ def powered_off(name, connection=None, username=None, password=None):
     )
 
 
+def defined(
+    name,
+    cpu=None,
+    mem=None,
+    vm_type=None,
+    disk_profile=None,
+    disks=None,
+    nic_profile=None,
+    interfaces=None,
+    graphics=None,
+    seed=True,
+    install=True,
+    pub_key=None,
+    priv_key=None,
+    connection=None,
+    username=None,
+    password=None,
+    os_type=None,
+    arch=None,
+    boot=None,
+    update=True,
+):
+    """
+    Starts an existing guest, or defines and starts a new VM with specified arguments.
+
+    .. versionadded:: sodium
+
+    :param name: name of the virtual machine to run
+    :param cpu: number of CPUs for the virtual machine to create
+    :param mem: amount of memory in MiB for the new virtual machine
+    :param vm_type: force virtual machine type for the new VM. The default value is taken from
+        the host capabilities. This could be useful for example to use ``'qemu'`` type instead
+        of the ``'kvm'`` one.
+    :param disk_profile:
+        Name of the disk profile to use for the new virtual machine
+    :param disks:
+        List of disk to create for the new virtual machine.
+        See :ref:`init-disk-def` for more details on the items on this list.
+    :param nic_profile:
+        Name of the network interfaces profile to use for the new virtual machine
+    :param interfaces:
+        List of network interfaces to create for the new virtual machine.
+        See :ref:`init-nic-def` for more details on the items on this list.
+    :param graphics:
+        Graphics device to create for the new virtual machine.
+        See :ref:`init-graphics-def` for more details on this dictionary
+    :param saltenv:
+        Fileserver environment (Default: ``'base'``).
+        See :mod:`cp module for more details <salt.modules.cp>`
+    :param seed: ``True`` to seed the disk image. Only used when the ``image`` parameter is provided.
+                 (Default: ``True``)
+    :param install: install salt minion if absent (Default: ``True``)
+    :param pub_key: public key to seed with (Default: ``None``)
+    :param priv_key: public key to seed with (Default: ``None``)
+    :param seed_cmd: Salt command to execute to seed the image. (Default: ``'seed.apply'``)
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+    :param os_type:
+        type of virtualization as found in the ``//os/type`` element of the libvirt definition.
+        The default value is taken from the host capabilities, with a preference for ``hvm``.
+        Only used when creating a new virtual machine.
+    :param arch:
+        architecture of the virtual machine. The default value is taken from the host capabilities,
+        but ``x86_64`` is prefed over ``i686``. Only used when creating a new virtual machine.
+
+    :param boot:
+        Specifies kernel, initial ramdisk and kernel command line parameters for the virtual machine.
+        This is an optional parameter, all of the keys are optional within the dictionary.
+
+        Refer to :ref:`init-boot-def` for the complete boot parameters description.
+
+        To update any boot parameters, specify the new path for each. To remove any boot parameters,
+        pass a None object, for instance: 'kernel': ``None``.
+
+        .. versionadded:: 3000
+
+    :param update: set to ``False`` to prevent updating a defined domain. (Default: ``True``)
+
+        .. deprecated:: sodium
+
+    .. rubric:: Example States
+
+    Make sure a virtual machine called ``domain_name`` is defined:
+
+    .. code-block:: yaml
+
+        domain_name:
+          virt.defined:
+            - cpu: 2
+            - mem: 2048
+            - disk_profile: prod
+            - disks:
+              - name: system
+                size: 8192
+                overlay_image: True
+                pool: default
+                image: /path/to/image.qcow2
+              - name: data
+                size: 16834
+            - nic_profile: prod
+            - interfaces:
+              - name: eth0
+                mac: 01:23:45:67:89:AB
+              - name: eth1
+                type: network
+                source: admin
+            - graphics:
+                type: spice
+                listen:
+                    type: address
+                    address: 192.168.0.125
+
+    """
+
+    ret = {
+        "name": name,
+        "changes": {},
+        "result": True if not __opts__["test"] else None,
+        "comment": "",
+    }
+
+    try:
+        if name in __salt__["virt.list_domains"](
+            connection=connection, username=username, password=password
+        ):
+            status = {}
+            if update:
+                status = __salt__["virt.update"](
+                    name,
+                    cpu=cpu,
+                    mem=mem,
+                    disk_profile=disk_profile,
+                    disks=disks,
+                    nic_profile=nic_profile,
+                    interfaces=interfaces,
+                    graphics=graphics,
+                    live=True,
+                    connection=connection,
+                    username=username,
+                    password=password,
+                    boot=boot,
+                    test=__opts__["test"],
+                )
+            ret["changes"][name] = status
+            if not status.get("definition"):
+                ret["comment"] = "Domain {0} unchanged".format(name)
+                ret["result"] = True
+            elif status.get("errors"):
+                ret[
+                    "comment"
+                ] = "Domain {0} updated with live update(s) failures".format(name)
+            else:
+                ret["comment"] = "Domain {0} updated".format(name)
+        else:
+            if not __opts__["test"]:
+                __salt__["virt.init"](
+                    name,
+                    cpu=cpu,
+                    mem=mem,
+                    os_type=os_type,
+                    arch=arch,
+                    hypervisor=vm_type,
+                    disk=disk_profile,
+                    disks=disks,
+                    nic=nic_profile,
+                    interfaces=interfaces,
+                    graphics=graphics,
+                    seed=seed,
+                    install=install,
+                    pub_key=pub_key,
+                    priv_key=priv_key,
+                    connection=connection,
+                    username=username,
+                    password=password,
+                    boot=boot,
+                    start=False,
+                )
+            ret["changes"][name] = {"definition": True}
+            ret["comment"] = "Domain {0} defined".format(name)
+    except libvirt.libvirtError as err:
+        # Something bad happened when defining / updating the VM, report it
+        ret["comment"] = six.text_type(err)
+        ret["result"] = False
+
+    return ret
+
+
 def running(
     name,
     cpu=None,
@@ -349,9 +537,10 @@ def running(
     :param seed_cmd: Salt command to execute to seed the image. (Default: ``'seed.apply'``)
 
         .. versionadded:: 2019.2.0
-    :param update: set to ``True`` to update a defined module. (Default: ``False``)
+    :param update: set to ``True`` to update a defined domain. (Default: ``False``)
 
         .. versionadded:: 2019.2.0
+        .. deprecated:: sodium
     :param connection: libvirt connection URI, overriding defaults
 
         .. versionadded:: 2019.2.0
@@ -374,19 +563,13 @@ def running(
         .. versionadded:: 3000
 
     :param boot:
-        Specifies kernel for the virtual machine, as well as boot parameters
-        for the virtual machine. This is an optionl parameter, and all of the
-        keys are optional within the dictionary. If a remote path is provided
-        to kernel or initrd, salt will handle the downloading of the specified
-        remote fild, and will modify the XML accordingly.
+        Specifies kernel, initial ramdisk and kernel command line parameters for the virtual machine.
+        This is an optional parameter, all of the keys are optional within the dictionary.
 
-        .. code-block:: python
+        Refer to :ref:`init-boot-def` for the complete boot parameters description.
 
-            {
-                'kernel': '/root/f8-i386-vmlinuz',
-                'initrd': '/root/f8-i386-initrd',
-                'cmdline': 'console=ttyS0 ks=http://example.com/f8-i386/os/'
-            }
+        To update any boot parameters, specify the new path for each. To remove any boot parameters,
+        pass a None object, for instance: 'kernel': ``None``.
 
         .. versionadded:: 3000
 
@@ -430,101 +613,62 @@ def running(
                     address: 192.168.0.125
 
     """
+    merged_disks = disks
 
-    ret = {
-        "name": name,
-        "changes": {},
-        "result": True,
-        "comment": "{0} is running".format(name),
-    }
+    if not update:
+        salt.utils.versions.warn_until(
+            "Aluminium",
+            "'update' parameter has been deprecated. Future behavior will be the one of update=True"
+            "It will be removed in {version}.",
+        )
+    ret = defined(
+        name,
+        cpu=cpu,
+        mem=mem,
+        vm_type=vm_type,
+        disk_profile=disk_profile,
+        disks=merged_disks,
+        nic_profile=nic_profile,
+        interfaces=interfaces,
+        graphics=graphics,
+        seed=seed,
+        install=install,
+        pub_key=pub_key,
+        priv_key=priv_key,
+        os_type=os_type,
+        arch=arch,
+        boot=boot,
+        update=update,
+        connection=connection,
+        username=username,
+        password=password,
+    )
 
-    try:
+    result = True if not __opts__["test"] else None
+    if ret["result"] is None or ret["result"]:
+        changed = ret["changes"][name].get("definition", False)
         try:
             domain_state = __salt__["virt.vm_state"](name)
             if domain_state.get(name) != "running":
-                action_msg = "started"
-                if update:
-                    status = __salt__["virt.update"](
+                if not __opts__["test"]:
+                    __salt__["virt.start"](
                         name,
-                        cpu=cpu,
-                        mem=mem,
-                        disk_profile=disk_profile,
-                        disks=disks,
-                        nic_profile=nic_profile,
-                        interfaces=interfaces,
-                        graphics=graphics,
-                        live=False,
                         connection=connection,
                         username=username,
                         password=password,
-                        boot=boot,
                     )
-                    if status["definition"]:
-                        action_msg = "updated and started"
-                __salt__["virt.start"](name)
-                ret["changes"][name] = "Domain {0}".format(action_msg)
-                ret["comment"] = "Domain {0} {1}".format(name, action_msg)
-            else:
-                if update:
-                    status = __salt__["virt.update"](
-                        name,
-                        cpu=cpu,
-                        mem=mem,
-                        disk_profile=disk_profile,
-                        disks=disks,
-                        nic_profile=nic_profile,
-                        interfaces=interfaces,
-                        graphics=graphics,
-                        connection=connection,
-                        username=username,
-                        password=password,
-                        boot=boot,
-                    )
-                    ret["changes"][name] = status
-                    if status.get("errors", None):
-                        ret[
-                            "comment"
-                        ] = "Domain {0} updated, but some live update(s) failed".format(
-                            name
-                        )
-                    elif not status["definition"]:
-                        ret["comment"] = "Domain {0} exists and is running".format(name)
-                    else:
-                        ret[
-                            "comment"
-                        ] = "Domain {0} updated, restart to fully apply the changes".format(
-                            name
-                        )
-                else:
-                    ret["comment"] = "Domain {0} exists and is running".format(name)
-        except CommandExecutionError:
-            __salt__["virt.init"](
-                name,
-                cpu=cpu,
-                mem=mem,
-                os_type=os_type,
-                arch=arch,
-                hypervisor=vm_type,
-                disk=disk_profile,
-                disks=disks,
-                nic=nic_profile,
-                interfaces=interfaces,
-                graphics=graphics,
-                seed=seed,
-                install=install,
-                pub_key=pub_key,
-                priv_key=priv_key,
-                connection=connection,
-                username=username,
-                password=password,
-                boot=boot,
-            )
-            ret["changes"][name] = "Domain defined and started"
-            ret["comment"] = "Domain {0} defined and started".format(name)
-    except libvirt.libvirtError as err:
-        # Something bad happened when starting / updating the VM, report it
-        ret["comment"] = six.text_type(err)
-        ret["result"] = False
+                comment = "Domain {} started".format(name)
+                if not ret["comment"].endswith("unchanged"):
+                    comment = "{} and started".format(ret["comment"])
+                ret["comment"] = comment
+                ret["changes"][name]["started"] = True
+            elif not changed:
+                ret["comment"] = "Domain {0} exists and is running".format(name)
+
+        except libvirt.libvirtError as err:
+            # Something bad happened when starting / updating the VM, report it
+            ret["comment"] = six.text_type(err)
+            ret["result"] = False
 
     return ret
 
@@ -713,6 +857,113 @@ def reverted(
     return ret
 
 
+def network_defined(
+    name,
+    bridge,
+    forward,
+    vport=None,
+    tag=None,
+    ipv4_config=None,
+    ipv6_config=None,
+    autostart=True,
+    connection=None,
+    username=None,
+    password=None,
+):
+    """
+    Defines a new network with specified arguments.
+
+    :param bridge: Bridge name
+    :param forward: Forward mode(bridge, router, nat)
+    :param vport: Virtualport type (Default: ``'None'``)
+    :param tag: Vlan tag (Default: ``'None'``)
+    :param ipv4_config:
+        IPv4 network configuration. See the :py:func`virt.network_define
+        <salt.modules.virt.network_define>` function corresponding parameter documentation
+        for more details on this dictionary.
+        (Default: None).
+    :param ipv6_config:
+        IPv6 network configuration. See the :py:func`virt.network_define
+        <salt.modules.virt.network_define>` function corresponding parameter documentation
+        for more details on this dictionary.
+        (Default: None).
+    :param autostart: Network autostart (default ``'True'``)
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. versionadded:: sodium
+
+    .. code-block:: yaml
+
+        network_name:
+          virt.network_defined
+
+    .. code-block:: yaml
+
+        network_name:
+          virt.network_defined:
+            - bridge: main
+            - forward: bridge
+            - vport: openvswitch
+            - tag: 180
+            - autostart: True
+
+    .. code-block:: yaml
+
+        network_name:
+          virt.network_defined:
+            - bridge: natted
+            - forward: nat
+            - ipv4_config:
+                cidr: 192.168.42.0/24
+                dhcp_ranges:
+                  - start: 192.168.42.10
+                    end: 192.168.42.25
+                  - start: 192.168.42.100
+                    end: 192.168.42.150
+            - autostart: True
+
+    """
+    ret = {
+        "name": name,
+        "changes": {},
+        "result": True if not __opts__["test"] else None,
+        "comment": "",
+    }
+
+    try:
+        info = __salt__["virt.network_info"](
+            name, connection=connection, username=username, password=password
+        )
+        if info and info[name]:
+            ret["comment"] = "Network {0} exists".format(name)
+            ret["result"] = True
+        else:
+            if not __opts__["test"]:
+                __salt__["virt.network_define"](
+                    name,
+                    bridge,
+                    forward,
+                    vport=vport,
+                    tag=tag,
+                    ipv4_config=ipv4_config,
+                    ipv6_config=ipv6_config,
+                    autostart=autostart,
+                    start=False,
+                    connection=connection,
+                    username=username,
+                    password=password,
+                )
+            ret["changes"][name] = "Network defined"
+            ret["comment"] = "Network {0} defined".format(name)
+    except libvirt.libvirtError as err:
+        ret["result"] = False
+        ret["comment"] = err.get_error_message()
+
+    return ret
+
+
 def network_running(
     name,
     bridge,
@@ -760,13 +1011,13 @@ def network_running(
 
     .. code-block:: yaml
 
-        domain_name:
-          virt.network_define
+        network_name:
+          virt.network_running
 
     .. code-block:: yaml
 
         network_name:
-          virt.network_define:
+          virt.network_running:
             - bridge: main
             - forward: bridge
             - vport: openvswitch
@@ -776,7 +1027,7 @@ def network_running(
     .. code-block:: yaml
 
         network_name:
-          virt.network_define:
+          virt.network_running:
             - bridge: natted
             - forward: nat
             - ipv4_config:
@@ -789,46 +1040,57 @@ def network_running(
             - autostart: True
 
     """
-    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+    ret = network_defined(
+        name,
+        bridge,
+        forward,
+        vport=vport,
+        tag=tag,
+        ipv4_config=ipv4_config,
+        ipv6_config=ipv6_config,
+        autostart=autostart,
+        connection=connection,
+        username=username,
+        password=password,
+    )
 
-    try:
-        info = __salt__["virt.network_info"](
-            name, connection=connection, username=username, password=password
-        )
-        if info:
-            if info[name]["active"]:
-                ret["comment"] = "Network {0} exists and is running".format(name)
-            else:
-                __salt__["virt.network_start"](
-                    name, connection=connection, username=username, password=password
-                )
-                ret["changes"][name] = "Network started"
-                ret["comment"] = "Network {0} started".format(name)
-        else:
-            __salt__["virt.network_define"](
-                name,
-                bridge,
-                forward,
-                vport=vport,
-                tag=tag,
-                ipv4_config=ipv4_config,
-                ipv6_config=ipv6_config,
-                autostart=autostart,
-                start=True,
-                connection=connection,
-                username=username,
-                password=password,
+    defined = name in ret["changes"] and ret["changes"][name].startswith(
+        "Network defined"
+    )
+
+    result = True if not __opts__["test"] else None
+    if ret["result"] is None or ret["result"]:
+        try:
+            info = __salt__["virt.network_info"](
+                name, connection=connection, username=username, password=password
             )
-            ret["changes"][name] = "Network defined and started"
-            ret["comment"] = "Network {0} defined and started".format(name)
-    except libvirt.libvirtError as err:
-        ret["result"] = False
-        ret["comment"] = err.get_error_message()
+            # In the corner case where test=True and the network wasn't defined
+            # we may not get the network in the info dict and that is normal.
+            if info.get(name, {}).get("active", False):
+                ret["comment"] = "{} and is running".format(ret["comment"])
+            else:
+                if not __opts__["test"]:
+                    __salt__["virt.network_start"](
+                        name,
+                        connection=connection,
+                        username=username,
+                        password=password,
+                    )
+                change = "Network started"
+                if name in ret["changes"]:
+                    change = "{} and started".format(ret["changes"][name])
+                ret["changes"][name] = change
+                ret["comment"] = "{} and started".format(ret["comment"])
+            ret["result"] = result
+
+        except libvirt.libvirtError as err:
+            ret["result"] = False
+            ret["comment"] = err.get_error_message()
 
     return ret
 
 
-def pool_running(
+def pool_defined(
     name,
     ptype=None,
     target=None,
@@ -841,9 +1103,9 @@ def pool_running(
     password=None,
 ):
     """
-    Defines and starts a new pool with specified arguments.
+    Defines a new pool with specified arguments.
 
-    .. versionadded:: 2019.2.0
+    .. versionadded:: sodium
 
     :param ptype: libvirt pool type
     :param target: full path to the target device or folder. (Default: ``None``)
@@ -865,12 +1127,7 @@ def pool_running(
     .. code-block:: yaml
 
         pool_name:
-          virt.pool_define
-
-    .. code-block:: yaml
-
-        pool_name:
-          virt.pool_define:
+          virt.pool_defined:
             - ptype: netfs
             - target: /mnt/cifs
             - permissions:
@@ -945,53 +1202,28 @@ def pool_running(
                         password=password,
                     )
 
-                action = "started"
-                if info[name]["state"] == "running":
-                    action = "restarted"
+                action = ""
+                if info[name]["state"] != "running":
                     if not __opts__["test"]:
-                        __salt__["virt.pool_stop"](
+                        __salt__["virt.pool_build"](
                             name,
                             connection=connection,
                             username=username,
                             password=password,
                         )
+                    action = ", built"
 
-                if not __opts__["test"]:
-                    __salt__["virt.pool_build"](
-                        name,
-                        connection=connection,
-                        username=username,
-                        password=password,
-                    )
-                    __salt__["virt.pool_start"](
-                        name,
-                        connection=connection,
-                        username=username,
-                        password=password,
-                    )
-
-                autostart_str = ", autostart flag changed" if needs_autostart else ""
-                ret["changes"][name] = "Pool updated, built{0} and {1}".format(
-                    autostart_str, action
+                action = (
+                    "{}, autostart flag changed".format(action)
+                    if needs_autostart
+                    else action
                 )
-                ret["comment"] = "Pool {0} updated, built{1} and {2}".format(
-                    name, autostart_str, action
-                )
+                ret["changes"][name] = "Pool updated{0}".format(action)
+                ret["comment"] = "Pool {0} updated{1}".format(name, action)
 
             else:
-                if info[name]["state"] == "running":
-                    ret["comment"] = "Pool {0} unchanged and is running".format(name)
-                    ret["result"] = True
-                else:
-                    ret["changes"][name] = "Pool started"
-                    ret["comment"] = "Pool {0} started".format(name)
-                    if not __opts__["test"]:
-                        __salt__["virt.pool_start"](
-                            name,
-                            connection=connection,
-                            username=username,
-                            password=password,
-                        )
+                ret["comment"] = "Pool {0} unchanged".format(name)
+                ret["result"] = True
         else:
             needs_autostart = autostart
             if not __opts__["test"]:
@@ -1018,18 +1250,12 @@ def pool_running(
                 __salt__["virt.pool_build"](
                     name, connection=connection, username=username, password=password
                 )
-
-                __salt__["virt.pool_start"](
-                    name, connection=connection, username=username, password=password
-                )
             if needs_autostart:
-                ret["changes"][name] = "Pool defined, started and marked for autostart"
-                ret[
-                    "comment"
-                ] = "Pool {0} defined, started and marked for autostart".format(name)
+                ret["changes"][name] = "Pool defined, marked for autostart"
+                ret["comment"] = "Pool {0} defined, marked for autostart".format(name)
             else:
-                ret["changes"][name] = "Pool defined and started"
-                ret["comment"] = "Pool {0} defined and started".format(name)
+                ret["changes"][name] = "Pool defined"
+                ret["comment"] = "Pool {0} defined".format(name)
 
         if needs_autostart:
             if not __opts__["test"]:
@@ -1043,6 +1269,138 @@ def pool_running(
     except libvirt.libvirtError as err:
         ret["comment"] = err.get_error_message()
         ret["result"] = False
+
+    return ret
+
+
+def pool_running(
+    name,
+    ptype=None,
+    target=None,
+    permissions=None,
+    source=None,
+    transient=False,
+    autostart=True,
+    connection=None,
+    username=None,
+    password=None,
+):
+    """
+    Defines and starts a new pool with specified arguments.
+
+    .. versionadded:: 2019.2.0
+
+    :param ptype: libvirt pool type
+    :param target: full path to the target device or folder. (Default: ``None``)
+    :param permissions:
+        target permissions. See :ref:`pool-define-permissions` for more details on this structure.
+    :param source:
+        dictionary containing keys matching the ``source_*`` parameters in function
+        :func:`salt.modules.virt.pool_define`.
+    :param transient:
+        when set to ``True``, the pool will be automatically undefined after being stopped. (Default: ``False``)
+    :param autostart:
+        Whether to start the pool when booting the host. (Default: ``True``)
+    :param start:
+        When ``True``, define and start the pool, otherwise the pool will be left stopped.
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. code-block:: yaml
+
+        pool_name:
+          virt.pool_running
+
+    .. code-block:: yaml
+
+        pool_name:
+          virt.pool_running:
+            - ptype: netfs
+            - target: /mnt/cifs
+            - permissions:
+                - mode: 0770
+                - owner: 1000
+                - group: 100
+            - source:
+                dir: samba_share
+                hosts:
+                  - one.example.com
+                  - two.example.com
+                format: cifs
+            - autostart: True
+
+    """
+    ret = pool_defined(
+        name,
+        ptype=ptype,
+        target=target,
+        permissions=permissions,
+        source=source,
+        transient=transient,
+        autostart=autostart,
+        connection=connection,
+        username=username,
+        password=password,
+    )
+    defined = name in ret["changes"] and ret["changes"][name].startswith("Pool defined")
+    updated = name in ret["changes"] and ret["changes"][name].startswith("Pool updated")
+
+    result = True if not __opts__["test"] else None
+    if ret["result"] is None or ret["result"]:
+        try:
+            info = __salt__["virt.pool_info"](
+                name, connection=connection, username=username, password=password
+            )
+            action = "started"
+            # In the corner case where test=True and the pool wasn"t defined
+            # we may get not get our pool in the info dict and that is normal.
+            is_running = info.get(name, {}).get("state", "stopped") == "running"
+            if is_running:
+                if updated:
+                    action = "built, restarted"
+                    if not __opts__["test"]:
+                        __salt__["virt.pool_stop"](
+                            name,
+                            connection=connection,
+                            username=username,
+                            password=password,
+                        )
+                    if not __opts__["test"]:
+                        __salt__["virt.pool_build"](
+                            name,
+                            connection=connection,
+                            username=username,
+                            password=password,
+                        )
+                else:
+                    action = "already running"
+                    result = True
+
+            if not is_running or updated or defined:
+                if not __opts__["test"]:
+                    __salt__["virt.pool_start"](
+                        name,
+                        connection=connection,
+                        username=username,
+                        password=password,
+                    )
+
+            comment = "Pool {0}".format(name)
+            change = "Pool"
+            if name in ret["changes"]:
+                comment = "{0},".format(ret["comment"])
+                change = "{0},".format(ret["changes"][name])
+
+            if action != "already running":
+                ret["changes"][name] = "{0} {1}".format(change, action)
+
+            ret["comment"] = "{0} {1}".format(comment, action)
+            ret["result"] = result
+
+        except libvirt.libvirtError as err:
+            ret["comment"] = err.get_error_message()
+            ret["result"] = False
 
     return ret
 
@@ -1176,4 +1534,150 @@ def pool_deleted(name, purge=False, connection=None, username=None, password=Non
         ret["comment"] = "Failed deleting pool: {0}".format(err.get_error_message())
         ret["result"] = False
 
+    return ret
+
+
+def volume_defined(
+    pool,
+    name,
+    size,
+    allocation=0,
+    format=None,
+    type=None,
+    permissions=None,
+    backing_store=None,
+    nocow=False,
+    connection=None,
+    username=None,
+    password=None,
+):
+    """
+    Ensure a disk volume is existing.
+
+    :param pool: name of the pool containing the volume
+    :param name: name of the volume
+    :param size: capacity of the volume to define in MiB
+    :param allocation: allocated size of the volume in MiB. Defaults to 0.
+    :param format:
+        volume format. The allowed values are depending on the pool type.
+        Check the virt.pool_capabilities output for the possible values and the default.
+    :param type:
+        type of the volume. One of file, block, dir, network, netdiri, ploop or None.
+        By default, the type is guessed by libvirt from the pool type.
+    :param permissions:
+        Permissions to set on the target folder. This is mostly used for filesystem-based
+        pool types. See :ref:`pool-define-permissions` for more details on this structure.
+    :param backing_store:
+        dictionary describing a backing file for the volume. It must contain a ``path``
+        property pointing to the base volume and a ``format`` property defining the format
+        of the base volume.
+
+        The base volume format will not be guessed for security reasons and is thus mandatory.
+    :param nocow: disable COW for the volume.
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. rubric:: CLI Example:
+
+    Volume on ESX:
+
+    .. code-block:: yaml
+
+        esx_volume:
+          virt.volume_defined:
+            - pool: "[local-storage]"
+            - name: myvm/myvm.vmdk
+            - size: 8192
+
+    QCow2 volume with backing file:
+
+    .. code-block:: bash
+
+        myvolume:
+          virt.volume_defined:
+            - pool: default
+            - name: myvm.qcow2
+            - format: qcow2
+            - size: 8192
+            - permissions:
+                mode: '0775'
+                owner: '123'
+                group: '345'
+            - backing_store:
+                path: /path/to/base.img
+                format: raw
+            - nocow: True
+
+    .. versionadded:: Sodium
+    """
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+
+    pools = __salt__["virt.list_pools"](
+        connection=connection, username=username, password=password
+    )
+    if pool not in pools:
+        raise SaltInvocationError("Storage pool {} not existing".format(pool))
+
+    vol_infos = (
+        __salt__["virt.volume_infos"](
+            pool, name, connection=connection, username=username, password=password
+        )
+        .get(pool, {})
+        .get(name)
+    )
+
+    if vol_infos:
+        ret["comment"] = "volume is existing"
+        # if backing store or format are different, return an error
+        backing_store_info = vol_infos.get("backing_store") or {}
+        same_backing_store = backing_store_info.get("path") == (
+            backing_store or {}
+        ).get("path") and backing_store_info.get("format") == (backing_store or {}).get(
+            "format"
+        )
+        if not same_backing_store or (
+            vol_infos.get("format") != format and format is not None
+        ):
+            ret["result"] = False
+            ret[
+                "comment"
+            ] = "A volume with the same name but different backing store or format is existing"
+            return ret
+
+        # otherwise assume the volume has already been defined
+        # if the sizes don't match, issue a warning comment: too dangerous to do this for now
+        if int(vol_infos.get("capacity")) != int(size) * 1024 * 1024:
+            ret[
+                "comment"
+            ] = "The capacity of the volume is different, but no resize performed"
+        return ret
+
+    ret["result"] = None if __opts__["test"] else True
+    test_comment = "would be "
+    try:
+        if not __opts__["test"]:
+            __salt__["virt.volume_define"](
+                pool,
+                name,
+                size,
+                allocation=allocation,
+                format=format,
+                type=type,
+                permissions=permissions,
+                backing_store=backing_store,
+                nocow=nocow,
+                connection=connection,
+                username=username,
+                password=password,
+            )
+            test_comment = ""
+
+        ret["comment"] = "Volume {} {}defined in pool {}".format(
+            name, test_comment, pool
+        )
+        ret["changes"] = {"{}/{}".format(pool, name): {"old": "", "new": "defined"}}
+    except libvirt.libvirtError as err:
+        ret["comment"] = err.get_error_message()
+        ret["result"] = False
     return ret

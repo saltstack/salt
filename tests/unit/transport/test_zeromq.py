@@ -2,8 +2,6 @@
 """
     :codeauthor: Thomas Jackson <jacksontj.89@gmail.com>
 """
-
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import ctypes
@@ -13,7 +11,6 @@ import threading
 import time
 from concurrent.futures.thread import ThreadPoolExecutor
 
-# Import Salt libs
 import salt.config
 import salt.exceptions
 import salt.ext.tornado.gen
@@ -23,18 +20,15 @@ import salt.transport.client
 import salt.transport.server
 import salt.utils.platform
 import salt.utils.process
-
-# Import 3rd-party libs
 import zmq.eventloop.ioloop
 from salt.ext import six
 from salt.ext.six.moves import range
 from salt.ext.tornado.testing import AsyncTestCase
 from salt.transport.zeromq import AsyncReqMessageClientPool
-from tests.support.helpers import flaky, get_unused_localhost_port
+from saltfactories.utils.ports import get_unused_localhost_port
+from tests.support.helpers import flaky, not_runs_on, slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
-
-# Import test support libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 from tests.unit.transport.mixins import (
@@ -43,21 +37,9 @@ from tests.unit.transport.mixins import (
     run_loop_in_thread,
 )
 
-# linux_distribution deprecated in py3.7
-try:
-    from platform import linux_distribution
-except ImportError:
-    from distro import linux_distribution
-
-
 # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
 if not hasattr(zmq.eventloop.ioloop, "ZMQIOLoop"):
     zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
-
-
-ON_SUSE = False
-if "SuSE" in linux_distribution(full_distribution_name=False):
-    ON_SUSE = True
 
 
 class BaseZMQReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
@@ -169,6 +151,7 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         """
         raise salt.ext.tornado.gen.Return((payload, {"fun": "send_clear"}))
 
+    @slowTest
     def test_master_uri_override(self):
         """
         ensure master_uri kwarg is respected
@@ -184,8 +167,10 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
 
 
 @flaky
-@skipIf(
-    ON_SUSE, "Skipping until https://github.com/saltstack/salt/issues/32902 gets fixed"
+@not_runs_on(
+    kernel="linux",
+    os_familiy="Suse",
+    reason="Skipping until https://github.com/saltstack/salt/issues/32902 gets fixed",
 )
 class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
     def setUp(self):
@@ -211,6 +196,7 @@ class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
     # WARNING: This test will fail randomly on any system with > 1 CPU core!!!
     #
     #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    @slowTest
     def test_badload(self):
         """
         Test a variety of bad requests, make sure that we get some sort of error
@@ -476,7 +462,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         del cls.master_config
 
     def setUp(self):
-        # Start the event loop, even though we dont directly use this with
+        # Start the event loop, even though we don't directly use this with
         # ZeroMQPubServerChannel, having it running seems to increase the
         # likely hood of dropped messages.
         self.io_loop = salt.ext.tornado.ioloop.IOLoop()
@@ -529,6 +515,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
                 results.append(payload["jid"])
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
+    @slowTest
     def test_publish_to_pubserv_ipc(self):
         """
         Test sending 10K messags to ZeroMQPubServerChannel using IPC transport
@@ -560,6 +547,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         server_channel.pub_close()
         assert len(results) == send_num, (len(results), set(expect).difference(results))
 
+    @slowTest
     def test_zeromq_publish_port(self):
         """
         test when connecting that we
@@ -665,6 +653,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         assert res.result()["enc"] == "aes"
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
+    @slowTest
     def test_zeromq_filtering(self):
         """
         Test sending messags to publisher using UDP
@@ -712,6 +701,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         server_channel.pub_close()
         assert len(results) == send_num, (len(results), set(expect).difference(results))
 
+    @slowTest
     def test_publish_to_pubserv_tcp(self):
         """
         Test sending 10K messags to ZeroMQPubServerChannel using TCP transport
@@ -761,6 +751,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
             server_channel.publish(load)
         server_channel.close()
 
+    @slowTest
     def test_issue_36469_tcp(self):
         """
         Test sending both large and small messags to publisher using TCP

@@ -19,6 +19,7 @@ import salt.utils.platform
 import salt.utils.yaml
 from salt.ext import six
 from tests.support.case import ShellCase
+from tests.support.helpers import slowTest
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.runtests import RUNTIME_VARS
 
@@ -30,6 +31,7 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
 
     _call_binary_ = "salt-cp"
 
+    @slowTest
     def test_cp_testfile(self):
         """
         test salt-cp

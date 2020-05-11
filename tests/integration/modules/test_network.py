@@ -6,6 +6,7 @@ import pytest
 import salt.utils.path
 import salt.utils.platform
 from tests.support.case import ModuleCase
+from tests.support.helpers import slowTest
 from tests.support.unit import skipIf
 
 URL = "google-public-dns-a.google.com"
@@ -17,6 +18,7 @@ class NetworkTest(ModuleCase):
     Validate network module
     """
 
+    @slowTest
     def test_network_ping(self):
         """
         network.ping
@@ -27,6 +29,7 @@ class NetworkTest(ModuleCase):
             self.assertIn(out, ret.lower())
 
     @skipIf(salt.utils.platform.is_darwin(), "not supported on macosx")
+    @slowTest
     def test_network_netstat(self):
         """
         network.netstat
@@ -37,6 +40,7 @@ class NetworkTest(ModuleCase):
             for out in exp_out:
                 self.assertIn(out, val)
 
+    @slowTest
     def test_network_traceroute(self):
         """
         network.traceroute
@@ -52,6 +56,7 @@ class NetworkTest(ModuleCase):
             self.assertIn(out, exp_out)
 
     @skipIf(not salt.utils.platform.is_windows(), "windows only test")
+    @slowTest
     def test_network_nslookup(self):
         """
         network.nslookup

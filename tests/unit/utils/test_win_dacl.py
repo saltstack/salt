@@ -10,10 +10,12 @@ import tempfile
 import salt.utils.platform
 import salt.utils.win_dacl as win_dacl
 import salt.utils.win_reg as win_reg
+from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
-from tests.support.helpers import destructiveTest, generate_random_name, patch
+from tests.support.helpers import TstSuiteLoggingHandler, destructiveTest, random_string
 from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
 
 try:
@@ -24,7 +26,7 @@ try:
 except ImportError:
     HAS_WIN32 = False
 
-FAKE_KEY = "SOFTWARE\\{0}".format(generate_random_name("SaltTesting-"))
+FAKE_KEY = "SOFTWARE\\{0}".format(random_string("SaltTesting-", lowercase=False))
 
 
 @skipIf(not HAS_WIN32, "Requires pywin32")
@@ -70,18 +72,50 @@ class WinDaclTestCase(TestCase):
         self.assertTrue(isinstance(sid_obj, pywintypes.SIDType))
         self.assertEqual(win_dacl.get_sid_string(sid_obj), "S-1-0-0")
 
-    def test_get_name(self):
+    def test_get_name_odd_case(self):
         """
-        Get the name
+        Test get_name by passing a name with inconsistent case characters.
+        Should return the name in the correct case
         """
         # Case
         self.assertEqual(win_dacl.get_name("adMiniStrAtorS"), "Administrators")
+
+    def test_get_name_using_sid(self):
+        """
+        Test get_name passing a SID String. Should return the string name
+        """
         # SID String
         self.assertEqual(win_dacl.get_name("S-1-5-32-544"), "Administrators")
+
+    def test_get_name_using_sid_object(self):
+        """
+        Test get_name passing a SID Object. Should return the string name
+        """
         # SID Object
         sid_obj = win_dacl.get_sid("Administrators")
         self.assertTrue(isinstance(sid_obj, pywintypes.SIDType))
         self.assertEqual(win_dacl.get_name(sid_obj), "Administrators")
+
+    def test_get_name_capability_sid(self):
+        """
+        Test get_name with a compatibility SID. Should return `None` as we want
+        to ignore these SIDs
+        """
+        cap_sid = "S-1-15-3-1024-1065365936-1281604716-3511738428-1654721687-432734479-3232135806-4053264122-3456934681"
+        sid_obj = win32security.ConvertStringSidToSid(cap_sid)
+        self.assertIsNone(win_dacl.get_name(sid_obj))
+
+    def test_get_name_error(self):
+        """
+        Test get_name with an un mapped SID, should throw a
+        CommandExecutionError
+        """
+        test_sid = "S-1-2-3-4"
+        sid_obj = win32security.ConvertStringSidToSid(test_sid)
+        with TstSuiteLoggingHandler() as handler:
+            self.assertRaises(CommandExecutionError, win_dacl.get_name, sid_obj)
+            expected_message = 'ERROR:Error resolving "PySID:S-1-2-3-4"'
+            self.assertIn(expected_message, handler.messages[0])
 
 
 @skipIf(not HAS_WIN32, "Requires pywin32")

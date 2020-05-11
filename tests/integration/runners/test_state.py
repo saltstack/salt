@@ -2,8 +2,6 @@
 """
 Tests for the state runner
 """
-
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
@@ -16,7 +14,6 @@ import textwrap
 import threading
 import time
 
-# Import Salt Libs
 import salt.exceptions
 import salt.utils.event
 import salt.utils.files
@@ -24,15 +21,11 @@ import salt.utils.json
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.yaml
-
-# Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import queue
 from tests.support.case import ShellCase
-from tests.support.helpers import expensiveTest, flaky
+from tests.support.helpers import expensiveTest, flaky, slowTest
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -45,6 +38,8 @@ class StateRunnerTest(ShellCase):
     Test the state runner.
     """
 
+    RUN_TIMEOUT = 300
+
     def add_to_queue(self, q, cmd):
         """
         helper method to add salt-run
@@ -54,6 +49,7 @@ class StateRunnerTest(ShellCase):
         q.put(ret)
         q.task_done()
 
+    @slowTest
     def test_orchestrate_output(self):
         """
         Ensure the orchestrate runner outputs useful state data.
@@ -83,6 +79,7 @@ class StateRunnerTest(ShellCase):
         for item in good_out:
             assert item in ret_output
 
+    @slowTest
     def test_orchestrate_nested(self):
         """
         test salt-run state.orchestrate and failhard with nested orchestration
@@ -95,6 +92,7 @@ class StateRunnerTest(ShellCase):
         assert os.path.exists("/tmp/ewu-2016-12-13") is False
         assert code != 0
 
+    @slowTest
     def test_orchestrate_with_mine(self):
         """
         test salt-run state.orchestrate with mine.get call in sls
@@ -114,6 +112,7 @@ class StateRunnerTest(ShellCase):
                         '"{0}" was not found in the orchestration call'.format(exp_ret)
                     )
 
+    @slowTest
     def test_orchestrate_state_and_function_failure(self):
         """
         Ensure that returns from failed minions are in the changes dict where
@@ -165,6 +164,7 @@ class StateRunnerTest(ShellCase):
 
         self.assertEqual(func_ret, {"out": "highstate", "ret": {"minion": False}})
 
+    @slowTest
     def test_orchestrate_target_exists(self):
         """
         test orchestration when target exists
@@ -192,6 +192,7 @@ class StateRunnerTest(ShellCase):
             for item in out:
                 assert item in ret
 
+    @slowTest
     def test_orchestrate_retcode(self):
         """
         Test orchestration with nonzero retcode set in __context__
@@ -220,12 +221,13 @@ class StateRunnerTest(ShellCase):
         ):
             self.assertIn(result, ret)
 
-    def test_orchestrate_target_doesnt_exist(self):
+    @slowTest
+    def test_orchestrate_target_does_not_exist(self):
         """
         test orchestration when target doesn't exist
         while using multiple states
         """
-        ret = self.run_run("state.orchestrate orch.target-doesnt-exists")
+        ret = self.run_run("state.orchestrate orch.target-does-not-exist")
 
         first = [
             "No minions matched the target. No command was sent, no jid was assigned.",
@@ -252,6 +254,7 @@ class StateRunnerTest(ShellCase):
             for item in out:
                 assert item in ret
 
+    @slowTest
     def test_orchestrate_batch_with_failhard_error(self):
         """
         test orchestration properly stops with failhard and batch.
@@ -282,6 +285,7 @@ class StateRunnerTest(ShellCase):
             # The execution should stop after first error, so return dict should contain only one minion
             assert len(changes_ret) == 1
 
+    @slowTest
     def test_state_event(self):
         """
         test to ensure state.event
@@ -302,6 +306,7 @@ class StateRunnerTest(ShellCase):
 
         server_thread.join()
 
+    @slowTest
     def test_orchestrate_subset(self):
         """
         test orchestration state using subset
@@ -315,6 +320,7 @@ class StateRunnerTest(ShellCase):
         assert count("Succeeded: 1", ret) == 1
         assert count("Failed:    0", ret) == 1
 
+    @slowTest
     def test_orchestrate_salt_function_return_false_failure(self):
         """
         Ensure that functions that only return False in the return
@@ -346,9 +352,11 @@ class OrchEventTest(ShellCase):
     Tests for orchestration events
     """
 
+    RUN_TIMEOUT = 300
+
     def setUp(self):
         self.timeout = 60
-        self.master_d_dir = os.path.join(self.config_dir, "master.d")
+        self.master_d_dir = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "master.d")
         try:
             os.makedirs(self.master_d_dir)
         except OSError as exc:
@@ -365,7 +373,7 @@ class OrchEventTest(ShellCase):
             self.addCleanup(delattr, self, attr)
         # Force a reload of the configuration now that our temp config file has
         # been removed.
-        self.addCleanup(self.run_run_plus, "test.arg", __reload_config=True)
+        self.addCleanup(self.run_run_plus, "test.arg")
 
     def alarm_handler(self, signal, frame):
         raise Exception("Timeout of {0} seconds reached".format(self.timeout))
@@ -433,9 +441,7 @@ class OrchEventTest(ShellCase):
             opts=self.master_opts,
         )
 
-        jid = self.run_run_plus(
-            "state.orchestrate", "test_orch", __reload_config=True
-        ).get("jid")
+        jid = self.run_run_plus("state.orchestrate", "test_orch").get("jid")
 
         if jid is None:
             raise Exception("jid missing from run_run_plus output")
@@ -506,9 +512,7 @@ class OrchEventTest(ShellCase):
         )
 
         start_time = time.time()
-        jid = self.run_run_plus(
-            "state.orchestrate", "test_par_orch", __reload_config=True
-        ).get("jid")
+        jid = self.run_run_plus("state.orchestrate", "test_par_orch").get("jid")
 
         if jid is None:
             raise Exception("jid missing from run_run_plus output")
@@ -523,7 +527,7 @@ class OrchEventTest(ShellCase):
                     continue
 
                 # if we receive the ret for this job before self.timeout (60),
-                # the test is implicitly sucessful; if it were happening in serial it would be
+                # the test is implicitly successful; if it were happening in serial it would be
                 # atleast 110 seconds.
                 if event["tag"] == "salt/run/{0}/ret".format(jid):
                     received = True
@@ -578,9 +582,9 @@ class OrchEventTest(ShellCase):
         mock_jid = "20131219120000000000"
         self.run_run("state.soft_kill {0} stage_two".format(mock_jid))
         with patch("salt.utils.jid.gen_jid", MagicMock(return_value=mock_jid)):
-            jid = self.run_run_plus(
-                "state.orchestrate", "two_stage_orch_kill", __reload_config=True
-            ).get("jid")
+            jid = self.run_run_plus("state.orchestrate", "two_stage_orch_kill").get(
+                "jid"
+            )
 
         if jid is None:
             raise Exception("jid missing from run_run_plus output")
@@ -610,6 +614,7 @@ class OrchEventTest(ShellCase):
             del listener
             signal.alarm(0)
 
+    @slowTest
     def test_orchestration_with_pillar_dot_items(self):
         """
         Test to confirm when using a state file that includes other state file, if
@@ -677,9 +682,7 @@ class OrchEventTest(ShellCase):
             opts=self.master_opts,
         )
 
-        jid = self.run_run_plus("state.orchestrate", "main", __reload_config=True).get(
-            "jid"
-        )
+        jid = self.run_run_plus("state.orchestrate", "main").get("jid")
 
         if jid is None:
             raise salt.exceptions.SaltInvocationError(
@@ -709,6 +712,7 @@ class OrchEventTest(ShellCase):
             del listener
             signal.alarm(0)
 
+    @slowTest
     def test_orchestration_onchanges_and_prereq(self):
         """
         Test to confirm that the parallel state requisite works in orch
@@ -754,20 +758,14 @@ class OrchEventTest(ShellCase):
         )
 
         try:
-            jid1 = self.run_run_plus(
-                "state.orchestrate", "orch", test=True, __reload_config=True
-            ).get("jid")
+            jid1 = self.run_run_plus("state.orchestrate", "orch", test=True).get("jid")
 
             # Run for real to create the file
-            self.run_run_plus("state.orchestrate", "orch", __reload_config=True).get(
-                "jid"
-            )
+            self.run_run_plus("state.orchestrate", "orch").get("jid")
 
             # Run again in test mode. Since there were no changes, the
             # requisites should not fire.
-            jid2 = self.run_run_plus(
-                "state.orchestrate", "orch", test=True, __reload_config=True
-            ).get("jid")
+            jid2 = self.run_run_plus("state.orchestrate", "orch", test=True).get("jid")
         finally:
             try:
                 os.remove(os.path.join(RUNTIME_VARS.TMP, "orch.req_test"))

@@ -6,7 +6,7 @@ Changelog
 
 With the addition of `SEP 01`_ the `keepachangelog`_ format was introduced into
 our CHANGELOG.md file. The Salt project is using the `towncrier`_ tool to manage
-the Changelog.md file. The reason this tool was added to manage the changelog
+the CHANGELOG.md file. The reason this tool was added to manage the changelog
 was because we were previously managing the file manually and it would cause
 many merge conflicts. This tool allows us to add changelog entries into separate
 files and before a release we simply need to run ``towncrier --version=<version>``
@@ -40,9 +40,12 @@ The types are in alignment with keepachangelog:
 
 For example if you are fixing a bug for issue number #1234 your filename would
 look like this: changelog/1234.fixed. The contents of the file should contain
-a summary of what you are fixing.
+a summary of what you are fixing. If there is a legitimate reason to not include
+an issue number with a given contribution you can add the PR number as the file
+name (``<PR #>.<type>``).
 
-This does require that an issue be linked to all of the types above.
+If your PR does not align with any of the types, then you do not need to add a
+changelog entry.
 
 .. _generate-changelog:
 

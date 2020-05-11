@@ -6,7 +6,7 @@ The following can be retrieved:
     (1) List of added, removed, intersect elements
     (2) List of diffs having the following format:
         <key_val>: {<elem_key: {'old': <old_value>, 'new': <new_value>}}
-        A recursive diff is done between the the values (dicts) with the same
+        A recursive diff is done between the values (dicts) with the same
         key
     (3) List with the new values for each key
     (4) List with the old values for each key

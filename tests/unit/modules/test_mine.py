@@ -441,7 +441,11 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
         """
         config_mine_functions = {
             "network.ip_addrs": [],
-            "kernel": [{"mine_function": "grains.get"}, "kernel"],
+            "kernel": [
+                {"mine_function": "grains.get"},
+                "kernel",
+                {"os": "win32", "v": "2018"},
+            ],
             "fubar": [{"mine_function": "does.not_exist"}],
         }
         with patch.dict(
@@ -452,9 +456,16 @@ class MineTestCase(TestCase, LoaderModuleMockMixin):
                 "grains.get": lambda: True,
             },
         ):
+            ret = mine.valid()
+            # list cant be made to set "dict can't be hashed" and order changes
+            self.assertIsInstance(ret["kernel"]["grains.get"], list)
+            self.assertEqual(len(ret["kernel"]["grains.get"]), 3)
+            for item in ("kernel", {"os": "win32"}, {"v": "2018"}):
+                self.assertTrue(item in ret["kernel"]["grains.get"])
+            ret["kernel"]["grains.get"] = None
+
             self.assertEqual(
-                mine.valid(),
-                {"network.ip_addrs": [], "kernel": {"grains.get": ["kernel"]}},
+                ret, {"network.ip_addrs": [], "kernel": {"grains.get": None}}
             )
 
     def test_get_docker(self):

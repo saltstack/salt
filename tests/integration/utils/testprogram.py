@@ -29,9 +29,12 @@ import salt.utils.process
 import salt.utils.psutil_compat as psutils
 import salt.utils.yaml
 from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import range
+from saltfactories.utils.processes.helpers import (
+    terminate_process,
+    terminate_process_list,
+)
 from tests.support.cli_scripts import ScriptPathMixin
-from tests.support.processes import terminate_process, terminate_process_list
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
@@ -121,7 +124,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         self._parent_dir = parent_dir or None
         self.clean_on_exit = clean_on_exit
         self._root_dir = kwargs.pop("root_dir", self.name)
-        self.config_dir = kwargs.pop("config_dir", copy.copy(self.config_dir))
+        self.config_dir = kwargs.pop("config_dir", copy.copy(RUNTIME_VARS.TMP_CONF_DIR))
 
         config_attrs = copy.copy(self.config_attrs)
         config_attrs.update(kwargs.pop("config_attrs", set()))

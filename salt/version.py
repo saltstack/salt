@@ -55,7 +55,7 @@ VERSION_LIMIT = MAX_SIZE - 200
 # ONLY UPDATE CODENAMES AFTER BRANCHING
 #
 # As an example, The Helium codename must only be properly defined with "(2014, 7)" after Hydrogen, "(2014, 1)", has
-# been branched out into it's own branch.
+# been branched out into its own branch.
 #
 # ALL OTHER VERSION INFORMATION IS EXTRACTED FROM THE GIT TAGS
 #

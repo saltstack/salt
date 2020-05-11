@@ -2,20 +2,16 @@
 """
 Unit tests for the docker module
 """
-
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt Libs
 import salt.config
 import salt.loader
 import salt.modules.dockermod as docker_mod
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext.six.moves import range
-
-# Import Salt Testing Libs
+from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, call, patch
 from tests.support.unit import TestCase, skipIf
@@ -175,6 +171,64 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertIn("retcode", ret)
                     self.assertNotEqual(ret["retcode"], 0)
 
+    def test_logout_calls_docker_cli_logout_single(self):
+        client = Mock()
+        get_client_mock = MagicMock(return_value=client)
+        ref_out = {"stdout": "", "stderr": "", "retcode": 0}
+        registry_auth_data = {
+            "portus.example.com:5000": {
+                "username": "admin",
+                "password": "linux12345",
+                "email": "tux@example.com",
+            }
+        }
+        docker_mock = MagicMock(return_value=ref_out)
+        with patch.object(docker_mod, "_get_client", get_client_mock):
+            dunder_salt = {
+                "config.get": MagicMock(return_value=registry_auth_data),
+                "cmd.run_all": docker_mock,
+                "config.option": MagicMock(return_value={}),
+            }
+            with patch.dict(docker_mod.__salt__, dunder_salt):
+                ret = docker_mod.logout("portus.example.com:5000")
+                assert "retcode" in ret
+                assert ret["retcode"] == 0
+                docker_mock.assert_called_with(
+                    ["docker", "logout", "portus.example.com:5000"],
+                    python_shell=False,
+                    output_loglevel="quiet",
+                )
+
+    def test_logout_calls_docker_cli_logout_all(self):
+        client = Mock()
+        get_client_mock = MagicMock(return_value=client)
+        ref_out = {"stdout": "", "stderr": "", "retcode": 0}
+        registry_auth_data = {
+            "portus.example.com:5000": {
+                "username": "admin",
+                "password": "linux12345",
+                "email": "tux@example.com",
+            },
+            "portus2.example.com:5000": {
+                "username": "admin",
+                "password": "linux12345",
+                "email": "tux@example.com",
+            },
+        }
+
+        docker_mock = MagicMock(return_value=ref_out)
+        with patch.object(docker_mod, "_get_client", get_client_mock):
+            dunder_salt = {
+                "config.get": MagicMock(return_value=registry_auth_data),
+                "cmd.run_all": docker_mock,
+                "config.option": MagicMock(return_value={}),
+            }
+            with patch.dict(docker_mod.__salt__, dunder_salt):
+                ret = docker_mod.logout()
+                assert "retcode" in ret
+                assert ret["retcode"] == 0
+                assert docker_mock.call_count == 2
+
     def test_ps_with_host_true(self):
         """
         Check that docker.ps called with host is ``True``,
@@ -206,6 +260,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                 all=True, filters={"label": "KEY"}
             )
 
+    @slowTest
     def test_check_mine_cache_is_refreshed_on_container_change_event(self):
         """
         Every command that might modify docker containers state.
@@ -896,6 +951,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
             ret,
         )
 
+    @slowTest
     def test_call_success(self):
         """
         test module calling inside containers
