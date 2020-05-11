@@ -78,6 +78,44 @@ class SSHPasswordTests(ShellCase):
         self.assertIs(ret, handle_ssh_ret[0])
 
 
+@skipIf(not salt.utils.path.which("ssh"), "No ssh binary found in path")
+class SSHReturnEventTests(ShellCase):
+    def test_not_missing_fun_calling_wfuncs(self):
+        opts = salt.config.client_config(self.get_config_file_path("master"))
+        opts["list_hosts"] = False
+        opts["argv"] = ["state.show_highstate"]
+        opts["selected_target_option"] = "glob"
+        opts["tgt"] = "localhost"
+        opts["arg"] = []
+        roster = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "roster")
+        handle_ssh_ret = [
+            {"localhost": {}},
+        ]
+
+        expected = {"localhost": {}}
+        display_output = MagicMock()
+        with patch(
+            "salt.roster.get_roster_file", MagicMock(return_value=roster)
+        ), patch(
+            "salt.client.ssh.SSH.handle_ssh", MagicMock(return_value=handle_ssh_ret)
+        ), patch(
+            "salt.client.ssh.SSH.key_deploy", MagicMock(return_value=expected)
+        ), patch(
+            "salt.output.display_output", display_output
+        ):
+            client = ssh.SSH(opts)
+            client.event = MagicMock()
+            ret = next(client.run_iter())
+            assert "localhost" in ret
+            assert "fun" in ret["localhost"]
+            client.run()
+        display_output.assert_called_once_with(expected, "nested", opts)
+        self.assertIs(ret, handle_ssh_ret[0])
+        assert len(client.event.fire_event.call_args_list) == 2
+        assert "fun" in client.event.fire_event.call_args_list[0][0][0]
+        assert "fun" in client.event.fire_event.call_args_list[1][0][0]
+
+
 class SSHRosterDefaults(TestCase):
     def test_roster_defaults_flat(self):
         """
