@@ -176,6 +176,7 @@ pycparser==2.19           # via cffi
 pycryptodome==3.8.1       # via python-jose
 pycryptodomex==3.9.7
 pyeapi==0.8.3             # via napalm
+pycurl==7.43.0.5
 pygit2==1.2.0 ; python_version >= "3.8"
 pyinotify==0.9.6
 pyjwt==1.7.1              # via adal

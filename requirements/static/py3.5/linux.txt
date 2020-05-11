@@ -173,6 +173,7 @@ pyasn1==0.4.5             # via pyasn1-modules, rsa
 pycparser==2.19           # via cffi
 pycryptodome==3.8.1       # via python-jose
 pycryptodomex==3.9.7
+pycurl==7.43.0.5
 pygit2==0.28.2 ; python_version < "3.8"
 pyinotify==0.9.6
 pyjwt==1.7.1              # via adal
