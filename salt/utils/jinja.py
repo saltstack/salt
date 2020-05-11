@@ -13,6 +13,8 @@ import pipes
 import pprint
 import re
 import uuid
+import warnings
+from collections.abc import Hashable
 from functools import wraps
 from xml.dom import minidom
 from xml.etree.ElementTree import Element, SubElement, tostring
@@ -36,19 +38,14 @@ from salt.exceptions import TemplateError
 from salt.ext import six
 from salt.utils.decorators.jinja import jinja_filter, jinja_global, jinja_test
 from salt.utils.odict import OrderedDict
-
-try:
-    from collections.abc import Hashable
-except ImportError:
-    # pylint: disable=no-name-in-module
-    from collections import Hashable
-
+from salt.utils.versions import LooseVersion
 
 log = logging.getLogger(__name__)
 
 __all__ = ["SaltCacheLoader", "SerializerExtension"]
 
 GLOBAL_UUID = uuid.UUID("91633EBF-1C86-5E33-935A-28061F4B480E")
+JINJA_VERSION = LooseVersion(jinja2.__version__)
 
 
 class SaltCacheLoader(BaseLoader):
@@ -351,6 +348,48 @@ def to_bool(val):
     if not isinstance(val, Hashable):
         return len(val) > 0
     return False
+
+
+@jinja_filter("indent")
+def indent(s, width=4, first=False, blank=False, indentfirst=None):
+    """
+    A ported version of the "indent" filter containing a fix for indenting Markup
+    objects. If the minion has Jinja version 2.11 or newer, the "indent" filter
+    from upstream will be used, and this one will be ignored.
+    """
+    if indentfirst is not None:
+        warnings.warn(
+            "The 'indentfirst' argument is renamed to 'first' and will"
+            " be removed in Jinja 3.0.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        first = indentfirst
+
+    indention = " " * width
+    newline = "\n"
+
+    if isinstance(s, Markup):
+        indention = Markup(indention)
+        newline = Markup(newline)
+
+    s += newline  # this quirk is necessary for splitlines method
+
+    if blank:
+        rv = (newline + indention).join(s.splitlines())
+    else:
+        lines = s.splitlines()
+        rv = lines.pop(0)
+
+        if lines:
+            rv += newline + newline.join(
+                indention + line if line else line for line in lines
+            )
+
+    if first:
+        rv = indention + rv
+
+    return rv
 
 
 @jinja_filter("tojson")

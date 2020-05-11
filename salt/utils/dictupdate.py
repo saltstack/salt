@@ -10,6 +10,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import 3rd-party libs
 import copy
 import logging
+from collections.abc import Mapping
 
 # Import salt libs
 import salt.ext.six as six
@@ -18,15 +19,6 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltInvocationError
 from salt.utils.decorators.jinja import jinja_filter
 from salt.utils.odict import OrderedDict
-
-try:
-    from collections.abc import Mapping
-except ImportError:
-    # pylint: disable=no-name-in-module
-    from collections import Mapping
-
-    # pylint: enable=no-name-in-module
-
 
 log = logging.getLogger(__name__)
 

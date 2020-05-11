@@ -26,10 +26,6 @@ import uuid
 import warnings
 from errno import EACCES, EPERM
 
-# Extend the default list of supported distros. This will be used for the
-# /etc/DISTRO-release checking that is part of linux_distribution()
-from platform import _supported_dists
-
 # Import salt libs
 import salt.exceptions
 import salt.log
@@ -1331,14 +1327,18 @@ def _windows_os_release_grain(caption, product_type):
     version = "Unknown"
     release = ""
     if "Server" in caption:
-        for item in caption.split(" "):
-            # If it's all digits, then it's version
-            if re.match(r"\d+", item):
-                version = item
-            # If it starts with R and then numbers, it's the release
-            # ie: R2
-            if re.match(r"^R\d+$", item):
-                release = item
+        # Edge case here to handle MS Product that doesn't contain a year
+        if re.match(r"^Microsoft Hyper-V Server$", caption):
+            version = "2019"
+        else:
+            for item in caption.split(" "):
+                # If it's all digits, then it's version
+                if re.match(r"\d+", item):
+                    version = item
+                # If it starts with R and then numbers, it's the release
+                # ie: R2
+                if re.match(r"^R\d+$", item):
+                    release = item
         os_release = "{0}Server{1}".format(version, release)
     else:
         for item in caption.split(" "):

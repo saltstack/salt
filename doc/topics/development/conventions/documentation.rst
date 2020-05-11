@@ -26,8 +26,8 @@ writing guidelines. Those guidelines are not strictly enforced but rather serve
 as an excellent resource for technical writing questions. The `NCBI style
 guide`_ is another very approachable resource.
 
-.. _`IEEE style guide`: https://development.standards.ieee.org/myproject/Public/mytools/draft/styleman.pdf
-.. _`NCBI style guide`: http://www.ncbi.nlm.nih.gov/books/NBK993/
+.. _`IEEE style guide`: https://mentor.ieee.org/myproject/Public/mytools/draft/styleman.pdf
+.. _`NCBI style guide`: https://www.ncbi.nlm.nih.gov/books/NBK993/
 
 Point-of-view
 -------------

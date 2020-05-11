@@ -3,22 +3,17 @@
 tests.integration.setup.test_egg
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
-
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import re
 import shutil
 
-# Import salt libs
 import salt.utils.path
 import salt.utils.platform
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from tests.support.case import ModuleCase
-from tests.support.helpers import VirtualEnv, destructiveTest
-
-# Import Salt Testing libs
+from tests.support.helpers import VirtualEnv, destructiveTest, slowTest
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -49,7 +44,7 @@ class EggSetupTest(ModuleCase):
             if os.path.exists(_dir):
                 shutil.rmtree(_dir)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_egg_install(self):
         """
         test installing an egg package

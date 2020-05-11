@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
@@ -9,29 +8,17 @@ import random
 import string
 from tempfile import NamedTemporaryFile
 
-# Import Salt libs
 import salt.config
 import salt.loader
 import salt.modules.boto_lambda as boto_lambda
 import salt.utils.stringutils
 from salt.exceptions import SaltInvocationError
-
-# Import 3rd-party libs
 from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import range
 from salt.utils.versions import LooseVersion
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
-
-# linux_distribution deprecated in py3.7
-try:
-    from platform import linux_distribution
-except ImportError:
-    from distro import linux_distribution
-
 
 # pylint: disable=import-error,no-name-in-module
 try:
@@ -42,10 +29,6 @@ try:
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
-
-ON_SUSE = False
-if "SuSE" in linux_distribution(full_distribution_name=False):
-    ON_SUSE = True
 
 # pylint: enable=import-error,no-name-in-module
 

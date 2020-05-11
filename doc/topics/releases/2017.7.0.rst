@@ -563,7 +563,7 @@ of objects (users, databases, roles, etc.).
     <salt.states.docker_image.present>`, :py:func:`moby.inspect_container
     <salt.modules.dockermod.inspect_container>`, etc.)
 
-.. _`Moby announcement`: https://blog.docker.com/2017/04/introducing-the-moby-project/
+.. _`Moby announcement`: https://www.docker.com/blog/introducing-the-moby-project/
 .. _DockerCon: http://2017.dockercon.com/
 
 The old syntax will continue to work until the **2019.2.0** release of Salt.

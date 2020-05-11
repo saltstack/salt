@@ -15,7 +15,6 @@ import stat
 import sys
 import threading
 import time
-from collections import OrderedDict
 
 import salt.config
 import salt.log.setup as salt_log_setup
@@ -47,6 +46,11 @@ from tests.support.paths import (
 # Import salt tests support libs
 from tests.support.processes import SaltMaster, SaltMinion, start_daemon
 from tests.support.runtests import RUNTIME_VARS
+
+try:
+    from salt.utils.odict import OrderedDict
+except ImportError:
+    from collections import OrderedDict
 
 log = logging.getLogger(__name__)
 

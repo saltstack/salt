@@ -84,7 +84,7 @@ class VirtualboxCloudTestCase(ShellCase):
                 output.pop(0)
             else:
                 break
-        if len(output) is 0:
+        if len(output) == 0:
             return dict()
         else:
             return salt.utils.json.loads("".join(output))
