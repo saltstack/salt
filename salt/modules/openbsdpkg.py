@@ -4,7 +4,8 @@ Package support for OpenBSD
 
 .. note::
 
-    The package repository is configured on each host using ``/etc/pkg.conf``
+    The package repository is configured on each host using ``/etc/installurl``
+    from OpenBSD 6.1 onwards. Earlier releases relied on ``/etc/pkg.conf``.
 
 .. versionchanged:: 2016.3.5
 
@@ -21,7 +22,7 @@ Package support for OpenBSD
       - ruby%2.3
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
@@ -29,7 +30,8 @@ import re
 import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils.data
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
 
 log = logging.getLogger(__name__)
@@ -46,7 +48,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is OpenBSD
     '''
-    if __grains__['os'] == 'OpenBSD':
+    if __grains__.get('os') == 'OpenBSD':
         return __virtualname__
     return (False, 'The openbsdpkg execution module cannot be loaded: '
             'only available on OpenBSD systems.')
@@ -64,9 +66,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         salt '*' pkg.list_pkgs
     '''
-    versions_as_list = salt.utils.is_true(versions_as_list)
+    versions_as_list = salt.utils.data.is_true(versions_as_list)
     # not yet implemented or not applicable
-    if any([salt.utils.is_true(kwargs.get(x))
+    if any([salt.utils.data.is_true(kwargs.get(x))
             for x in ('removed', 'purge_desired')]):
         return {}
 
@@ -98,7 +100,12 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
 def latest_version(*names, **kwargs):
     '''
-    The available version of the package in the repository
+    Return the latest version of the named package available for upgrade or
+    installation. If more than one package name is specified, a dict of
+    name/version pairs is returned.
+
+    If the latest version of a given package is already installed, an empty
+    string will be returned for that package.
 
     CLI Example:
 
@@ -114,19 +121,43 @@ def latest_version(*names, **kwargs):
     for name in names:
         ret[name] = ''
 
-    cmd = 'pkg_info -q -I {0}'.format(' '.join(names))
-    out = __salt__['cmd.run_stdout'](cmd, python_shell=False, output_loglevel='trace')
-    for line in out.splitlines():
-        try:
-            pkgname, pkgver, flavor = __PKG_RE.match(line).groups()
-        except AttributeError:
-            continue
-        pkgname += '--{0}'.format(flavor) if flavor else ''
-        cur = pkgs.get(pkgname, '')
-        if not cur or salt.utils.compare_versions(ver1=cur,
-                                                  oper='<',
-                                                  ver2=pkgver):
-            ret[pkgname] = pkgver
+        # Query the repository for the package name
+        cmd = 'pkg_info -Q {0}'.format(name)
+        out = __salt__['cmd.run_stdout'](cmd, python_shell=False, output_loglevel='trace')
+
+        # Since we can only query instead of request the specific package
+        # we'll have to go through the returned list and find what we
+        # were looking for.
+        # Keep in mind the match may be flavored.
+        for line in out.splitlines():
+            try:
+                pkgname, pkgver, flavor = __PKG_RE.match(line).groups()
+            except AttributeError:
+                continue
+
+            match = re.match(r'.*\(installed\)$', pkgver)
+            if match:
+                # Package is explicitly marked as installed already,
+                # so skip any further comparison and move on to the
+                # next package to compare (if provided).
+                break
+
+            # First check if we need to look for flavors before
+            # looking at unflavored packages.
+            if "{0}--{1}".format(pkgname, flavor) == name:
+                pkgname += '--{0}'.format(flavor)
+            elif pkgname == name:
+                pass
+            else:
+                # No match just move on.
+                continue
+
+            cur = pkgs.get(pkgname, '')
+            if not cur or salt.utils.versions.compare(
+                ver1=cur,
+                oper='<',
+                ver2=pkgver):
+                ret[pkgname] = pkgver
 
     # Return a string if only one package name passed
     if len(names) == 1:
@@ -185,7 +216,7 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     old = list_pkgs()
@@ -208,7 +239,7 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -219,7 +250,7 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
     return ret
 
 
-def remove(name=None, pkgs=None, **kwargs):
+def remove(name=None, pkgs=None, purge=False, **kwargs):
     '''
     Remove a single package with pkg_delete
 
@@ -253,7 +284,12 @@ def remove(name=None, pkgs=None, **kwargs):
     if not targets:
         return {}
 
-    cmd = 'pkg_delete -xD dependencies {0}'.format(' '.join(targets))
+    cmd = ['pkg_delete', '-Ix', '-Ddependencies']
+
+    if purge:
+        cmd.append('-cqq')
+
+    cmd.extend(targets)
 
     out = __salt__['cmd.run_all'](
         cmd,
@@ -267,7 +303,7 @@ def remove(name=None, pkgs=None, **kwargs):
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -280,8 +316,7 @@ def remove(name=None, pkgs=None, **kwargs):
 
 def purge(name=None, pkgs=None, **kwargs):
     '''
-    Package purges are not supported, this function is identical to
-    ``remove()``.
+    Remove a package and extra configuration files.
 
     name
         The name of the package to be deleted.
@@ -306,4 +341,73 @@ def purge(name=None, pkgs=None, **kwargs):
         salt '*' pkg.purge <package1>,<package2>,<package3>
         salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
-    return remove(name=name, pkgs=pkgs)
+    return remove(name=name, pkgs=pkgs, purge=True)
+
+
+def upgrade_available(name, **kwargs):
+    '''
+    Check whether or not an upgrade is available for a given package
+
+    .. versionadded:: 2019.2.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.upgrade_available <package name>
+    '''
+    return latest_version(name) != ''
+
+
+def upgrade(name=None,
+            pkgs=None,
+            **kwargs):
+    '''
+    Run a full package upgrade (``pkg_add -u``), or upgrade a specific package
+    if ``name`` or ``pkgs`` is provided.
+    ``name`` is ignored when ``pkgs`` is specified.
+
+    Returns a dictionary containing the changes:
+
+    .. versionadded:: 2019.2.0
+
+    .. code-block:: python
+
+        {'<package>': {'old': '<old-version>',
+                       'new': '<new-version>'}}
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.upgrade
+        salt '*' pkg.upgrade python%2.7
+    '''
+    old = list_pkgs()
+
+    cmd = ['pkg_add', '-Ix', '-u']
+
+    if kwargs.get('noop', False):
+        cmd.append('-n')
+
+    if pkgs:
+        cmd.extend(pkgs)
+    elif name:
+        cmd.append(name)
+
+    # Now run the upgrade, compare the list of installed packages before and
+    # after and we have all the info we need.
+    result = __salt__['cmd.run_all'](cmd, output_loglevel='trace',
+                                     python_shell=False)
+
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    ret = salt.utils.data.compare_dicts(old, new)
+
+    if result['retcode'] != 0:
+        raise CommandExecutionError(
+                'Problem encountered upgrading packages',
+                info={'changes': ret, 'result': result}
+        )
+
+    return ret

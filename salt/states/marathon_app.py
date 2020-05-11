@@ -14,7 +14,7 @@ Configure Marathon apps via a salt proxy.
 
 .. versionadded:: 2015.8.2
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import logging
 

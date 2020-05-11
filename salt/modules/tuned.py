@@ -9,11 +9,11 @@ Interface to Red Hat tuned-adm module
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import re
 
 # Import Salt libs
-import salt.utils
+import salt.utils.path
 
 __func_alias__ = {
     'list_': 'list',
@@ -27,7 +27,7 @@ def __virtual__():
     Check to see if tuned-adm binary is installed on the system
 
     '''
-    tuned_adm = salt.utils.which('tuned-adm')
+    tuned_adm = salt.utils.path.which('tuned-adm')
     if not tuned_adm:
         return (False, 'The tuned execution module failed to load: the tuned-adm binary is not in the path.')
     return __virtualname__

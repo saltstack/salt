@@ -75,7 +75,7 @@ The default location for the pillar is in /srv/pillar.
 
 .. note::
 
-    The pillar location can be configured via the `pillar_roots` option inside
+    The pillar location can be configured via the ``pillar_roots`` option inside
     the master configuration file. It must not be in a subdirectory of the state
     tree or file_roots. If the pillar is under file_roots, any pillar targeting
     can be bypassed by minions.
@@ -242,7 +242,7 @@ set in the minion's pillar, then the default of ``httpd`` will be used.
 .. note::
 
     Under the hood, pillar is just a Python dict, so Python dict methods such
-    as `get` and `items` can be used.
+    as ``get`` and ``items`` can be used.
 
 Pillar Makes Simple States Grow Easily
 ======================================
@@ -303,6 +303,18 @@ Where the vimrc source location can now be changed via pillar:
 
 Ensuring that the right vimrc is sent out to the correct minions.
 
+The pillar top file must include a reference to the new sls pillar file:
+
+``/srv/pillar/top.sls``:
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - pkg
+        - edit.vim
+
+
 Setting Pillar Data on the Command Line
 =======================================
 
@@ -318,7 +330,13 @@ Nested pillar values can also be set via the command line:
 
 .. code-block:: bash
 
-   salt '*' state.sls my_sls_file pillar='{"foo": {"bar": "baz"}}'
+    salt '*' state.sls my_sls_file pillar='{"foo": {"bar": "baz"}}'
+
+Lists can be passed via command line pillar data as follows:
+
+.. code-block:: bash
+
+    salt '*' state.sls my_sls_file pillar='{"some_list": ["foo", "bar", "baz"]}'
 
 .. note::
 

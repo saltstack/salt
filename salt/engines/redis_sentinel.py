@@ -8,6 +8,9 @@ events based on the channels they are subscribed to.
 :configuration:
 
     Example configuration
+
+    .. code-block:: yaml
+
         engines:
           - redis_sentinel:
               hosts:
@@ -23,7 +26,7 @@ events based on the channels they are subscribed to.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
@@ -34,18 +37,20 @@ from salt.ext.six.moves import zip
 # Import third party libs
 try:
     import redis
-    HAS_REDIS = True
 except ImportError:
-    HAS_REDIS = False
+    redis = None
+
+log = logging.getLogger(__name__)
+
+__virtualname__ = 'redis'
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    if not HAS_REDIS:
-        return False
-    else:
-        return True
-
-log = logging.getLogger(__name__)
+    return __virtualname__ \
+        if redis is not None \
+        else (False, 'redis python module is not installed')
 
 
 class Listener(object):
@@ -60,7 +65,7 @@ class Listener(object):
             tag = 'salt/engine/redis_sentinel'
         super(Listener, self).__init__()
         self.tag = tag
-        self.redis = redis.StrictRedis(host=host, port=port)
+        self.redis = redis.StrictRedis(host=host, port=port, decode_responses=True)
         self.pubsub = self.redis.pubsub()
         self.pubsub.psubscribe(channels)
         self.fire_master = salt.utils.event.get_master_event(__opts__, __opts__['sock_dir']).fire_event
@@ -87,7 +92,7 @@ class Listener(object):
     def run(self):
         log.debug('Start Listener')
         for item in self.pubsub.listen():
-            log.debug('Item: \n{0}'.format(item))
+            log.debug('Item: %s', item)
             self.work(item)
 
 

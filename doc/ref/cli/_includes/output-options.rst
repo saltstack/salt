@@ -6,12 +6,9 @@ Output Options
     Pass in an alternative outputter to display the return of data. This
     outputter can be any of the available outputters:
 
-        ``grains``, ``highstate``, ``json``, ``key``, ``overstatestage``, ``pprint``, ``raw``, ``txt``, ``yaml``
+        ``highstate``, ``json``, ``key``, ``overstatestage``, ``pprint``, ``raw``, ``txt``, ``yaml``, and :ref:`many others <all-salt.output>`.
 
-    Some outputters are formatted only for data returned from specific
-    functions; for instance, the ``grains`` outputter will not work for non-grains
-    data.
-
+    Some outputters are formatted only for data returned from specific functions.
     If an outputter is used that does not support the data passed into it, then
     Salt will fall back on the ``pprint`` outputter and display the return data
     using the Python ``pprint`` standard library module.
@@ -33,6 +30,10 @@ Output Options
 
     Write the output to the specified file.
 
+.. option:: --out-file-append, --output-file-append
+
+    Append the output to the specified file.
+
 .. option:: --no-color
 
     Disable all colored output
@@ -46,3 +47,14 @@ Output Options
 
         ``green`` denotes success, ``red`` denotes failure, ``blue`` denotes
         changes and success and ``yellow`` denotes a expected future change in configuration.
+
+.. option:: --state-output=STATE_OUTPUT, --state_output=STATE_OUTPUT
+
+    Override the configured state_output value for minion
+    output. One of 'full', 'terse', 'mixed', 'changes' or
+    'filter'. Default: 'none'.
+
+.. option:: --state-verbose=STATE_VERBOSE, --state_verbose=STATE_VERBOSE
+
+    Override the configured state_verbose value for minion
+    output. Set to True or False. Default: none.

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -9,7 +9,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.modules.deb_postgres as deb_postgres
 
 LSCLUSTER = '''\
@@ -26,7 +26,7 @@ class PostgresClusterTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         self.cmd_run_all_mock = Mock(return_value={'stdout': LSCLUSTER})
         self.addCleanup(delattr, self, 'cmd_run_all_mock')
-        patcher = patch('salt.utils.which', Mock(return_value='/usr/bin/pg_createcluster'))
+        patcher = patch('salt.utils.path.which', Mock(return_value='/usr/bin/pg_createcluster'))
         patcher.start()
         self.addCleanup(patcher.stop)
         return {
@@ -55,6 +55,28 @@ class PostgresClusterTestCase(TestCase, LoaderModuleMockMixin):
             '9.3 main'
         self.assertEqual(cmdstr, self.cmd_run_all_mock.call_args[0][0])
 
+    def test_cluster_create_with_initdb_options(self):
+        deb_postgres.cluster_create(
+            '11',
+            'main',
+            port='5432',
+            locale='fr_FR',
+            encoding='UTF-8',
+            datadir='/opt/postgresql',
+            allow_group_access=True,
+            data_checksums=True,
+            wal_segsize='32'
+        )
+        cmdstr = '/usr/bin/pg_createcluster ' \
+            '--port 5432 --locale fr_FR --encoding UTF-8 ' \
+            '--datadir /opt/postgresql ' \
+            '11 main ' \
+            '-- ' \
+            '--allow-group-access ' \
+            '--data-checksums ' \
+            '--wal-segsize 32'
+        self.assertEqual(cmdstr, self.cmd_run_all_mock.call_args[0][0])
+
     # XXX version should be a string but from cmdline you get a float
     # def test_cluster_create_with_float(self):
     #     self.assertRaises(AssertionError, deb_postgres.cluster_create,
@@ -71,7 +93,7 @@ class PostgresLsClusterTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         self.cmd_run_all_mock = Mock(return_value={'stdout': LSCLUSTER})
         self.addCleanup(delattr, self, 'cmd_run_all_mock')
-        patcher = patch('salt.utils.which', Mock(return_value='/usr/bin/pg_lsclusters'))
+        patcher = patch('salt.utils.path.which', Mock(return_value='/usr/bin/pg_lsclusters'))
         patcher.start()
         self.addCleanup(patcher.stop)
         return {
@@ -127,7 +149,7 @@ class PostgresDeleteClusterTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         self.cmd_run_all_mock = Mock(return_value={'stdout': LSCLUSTER})
         self.addCleanup(delattr, self, 'cmd_run_all_mock')
-        patcher = patch('salt.utils.which', Mock(return_value='/usr/bin/pg_dropcluster'))
+        patcher = patch('salt.utils.path.which', Mock(return_value='/usr/bin/pg_dropcluster'))
         patcher.start()
         self.addCleanup(patcher.stop)
         return {

@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-Management of Mongodb users
+Management of MongoDB Users
 ===========================
 
-.. note::
-    This module requires PyMongo to be installed.
+:depends:   - pymongo Python module
 '''
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Define the module's virtual name
 __virtualname__ = 'mongodb_user'
@@ -96,9 +96,15 @@ def present(name,
 
     # check if user exists
     users = __salt__['mongodb.user_find'](name, user, password, host, port, database, authdb)
-    if len(users) > 0:
-        # check each user occurrence
-        users = __salt__['mongodb.user_find'](name, user, password, host, port, database, authdb)
+    if users:
+        # check for errors returned in users e.g.
+        #    users= (False, 'Failed to connect to MongoDB database localhost:27017')
+        #    users= (False, 'not authorized on admin to execute command { usersInfo: "root" }')
+        if not users[0]:
+            ret['result'] = False
+            ret['comment'] = "Mongo Err: {0}".format(users[1])
+            return ret
+
         # check each user occurrence
         for usr in users:
             # prepare empty list for current roles
@@ -112,8 +118,12 @@ def present(name,
             # fill changes if the roles and current roles differ
             if not set(current_roles) == set(roles):
                 ret['changes'].update({name: {'database': database, 'roles': {'old': current_roles, 'new': roles}}})
+                ret['comment'] = 'User {0} is already present, but has new roles'.format(name)
+                ret['result'] = None
 
-            __salt__['mongodb.user_create'](name, passwd, user, password, host, port, database=database, authdb=authdb, roles=roles)
+            if not __opts__['test']:
+                __salt__['mongodb.user_create'](name, passwd, user, password, host, port, database=database, authdb=authdb, roles=roles)
+                ret['result'] = True
         return ret
 
     # if the check does not return a boolean, return an error
@@ -197,6 +207,5 @@ def absent(name,
         return ret
 
     # fallback
-    ret['comment'] = ('User {0} is not present, so it cannot be removed'
-            ).format(name)
+    ret['comment'] = 'User {0} is not present'.format(name)
     return ret

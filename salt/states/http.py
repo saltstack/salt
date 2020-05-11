@@ -8,9 +8,9 @@ Perform an HTTP query and statefully return the result
 '''
 
 # Import python libs
-from __future__ import absolute_import
-import re
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
+import re
 import time
 
 __monitor__ = [
@@ -20,11 +20,12 @@ __monitor__ = [
 log = logging.getLogger(__name__)
 
 
-def query(name, match=None, match_type='string', status=None, wait_for=None, **kwargs):
+def query(name, match=None, match_type='string', status=None, status_type='string', wait_for=None, **kwargs):
     '''
     Perform an HTTP query and statefully return the result
 
-    .. versionadded:: 2015.5.0
+    Passes through all the parameters described in the
+    :py:func:`utils.http.query function <salt.utils.http.query>`:
 
     name
         The name of the query.
@@ -35,7 +36,7 @@ def query(name, match=None, match_type='string', status=None, wait_for=None, **k
         text.
 
     match_type
-        Specifies the type of pattern matching to use. Default is ``string``, but
+        Specifies the type of pattern matching to use on match. Default is ``string``, but
         can also be set to ``pcre`` to use regular expression matching if a more
         complex pattern matching is required.
 
@@ -48,6 +49,19 @@ def query(name, match=None, match_type='string', status=None, wait_for=None, **k
     status
         The status code for a URL for which to be checked. Can be used instead of
         or in addition to the ``match`` setting.
+
+    status_type
+        Specifies the type of pattern matching to use for status. Default is ``string``, but
+        can also be set to ``pcre`` to use regular expression matching if a more
+        complex pattern matching is required.
+
+        .. versionadded:: Neon
+
+        .. note::
+
+            Despite the name of ``match_type`` for this argument, this setting
+            actually uses Python's ``re.search()`` function rather than Python's
+            ``re.match()`` function.
 
     If both ``match`` and ``status`` options are set, both settings will be checked.
     However, note that if only one option is ``True`` and the other is ``False``,
@@ -93,14 +107,14 @@ def query(name, match=None, match_type='string', status=None, wait_for=None, **k
 
     if match is not None:
         if match_type == 'string':
-            if match in data.get('text', ''):
+            if str(match) in data.get('text', ''):
                 ret['result'] = True
                 ret['comment'] += ' Match text "{0}" was found.'.format(match)
             else:
                 ret['result'] = False
                 ret['comment'] += ' Match text "{0}" was not found.'.format(match)
         elif match_type == 'pcre':
-            if re.search(match, data.get('text', '')):
+            if re.search(str(match), str(data.get('text', ''))):
                 ret['result'] = True
                 ret['comment'] += ' Match pattern "{0}" was found.'.format(match)
             else:
@@ -108,13 +122,25 @@ def query(name, match=None, match_type='string', status=None, wait_for=None, **k
                 ret['comment'] += ' Match pattern "{0}" was not found.'.format(match)
 
     if status is not None:
-        if data.get('status', '') == status:
-            ret['comment'] += 'Status {0} was found, as specified.'.format(status)
-            if ret['result'] is None:
-                ret['result'] = True
-        else:
-            ret['comment'] += 'Status {0} was not found, as specified.'.format(status)
-            ret['result'] = False
+        if status_type == 'string':
+            if str(data.get('status', '')) == str(status):
+                ret['comment'] += ' Status {0} was found.'.format(status)
+                if ret['result'] is None:
+                    ret['result'] = True
+            else:
+                ret['comment'] += ' Status {0} was not found.'.format(status)
+                ret['result'] = False
+        elif status_type == 'pcre':
+            if re.search(str(status), str(data.get('status', ''))):
+                ret['comment'] += ' Status pattern "{0}" was found.'.format(status)
+                if ret['result'] is None:
+                    ret['result'] = True
+            else:
+                ret['comment'] += ' Status pattern "{0}" was not found.'.format(status)
+                ret['result'] = False
+
+    # cleanup spaces in comment
+    ret['comment'] = ret['comment'].strip()
 
     if __opts__['test'] is True:
         ret['result'] = None
@@ -132,8 +158,18 @@ def wait_for_successful_query(name, wait_for=300, **kwargs):
     Like query but, repeat and wait until match/match_type or status is fulfilled. State returns result from last
     query state in case of success or if no successful query was made within wait_for timeout.
 
+    name
+        The name of the query.
+
+    wait_for
+        Total time to wait for requests that succeed.
+
     request_interval
         Optional interval to delay requests by N seconds to reduce the number of requests sent.
+
+    .. note::
+
+        All other arguments are passed to the http.query state.
     '''
     starttime = time.time()
 
@@ -141,7 +177,7 @@ def wait_for_successful_query(name, wait_for=300, **kwargs):
         caught_exception = None
         ret = None
         try:
-            ret = query(name, wait_for=wait_for, **kwargs)
+            ret = query(name, **kwargs)
             if ret['result']:
                 return ret
         except Exception as exc:
@@ -155,5 +191,5 @@ def wait_for_successful_query(name, wait_for=300, **kwargs):
         else:
             # Space requests out by delaying for an interval
             if 'request_interval' in kwargs:
-                log.debug("delaying query for {0} seconds.".format(kwargs['request_interval']))
+                log.debug('delaying query for %s seconds.', kwargs['request_interval'])
                 time.sleep(kwargs['request_interval'])

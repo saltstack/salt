@@ -17,12 +17,14 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 import xml.dom.minidom
 
 # Import Salt libs
 import salt.loader
+
+from salt.ext import six
 
 # Import third party libs
 try:
@@ -61,8 +63,8 @@ def _handle_request(r):
     r.close()
 
     if r.status_code > 299:
-        log.error(str(r))
-        raise Exception(str(r))
+        log.error(six.text_type(r))
+        raise Exception(six.text_type(r))
 
     response_xml = xml.dom.minidom.parseString(r.text)
     apiresponse = response_xml.getElementsByTagName("ApiResponse")[0]
@@ -84,11 +86,11 @@ def xml_to_dict(xml):
     if xml.nodeType == xml.CDATA_SECTION_NODE:
         return xml.data
     result = atts_to_dict(xml)
-    if len([n for n in xml.childNodes if n.nodeType != xml.TEXT_NODE]) == 0:
-        if len(result) > 0:
-            if xml.firstChild is not None and len(xml.firstChild.data) > 0:
+    if not [n for n in xml.childNodes if n.nodeType != xml.TEXT_NODE]:
+        if result > 0:
+            if xml.firstChild is not None and xml.firstChild.data:
                 result['data'] = xml.firstChild.data
-        elif xml.firstChild is not None and len(xml.firstChild.data) > 0:
+        elif xml.firstChild is not None and xml.firstChild.data:
             return xml.firstChild.data
         else:
             return None

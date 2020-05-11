@@ -37,7 +37,7 @@ the location of composer in the state.
         - php: /usr/local/bin/php
         - no_dev: true
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
 from salt.exceptions import SaltException
@@ -62,21 +62,22 @@ def installed(name,
               no_dev=None,
               quiet=False,
               composer_home='/root',
-              always_check=True):
+              always_check=True,
+              env=None):
     '''
     Verify that the correct versions of composer dependencies are present.
 
-    dir
-        Directory location of the composer.json file.
+    name
+        Directory location of the ``composer.json`` file.
 
     composer
-        Location of the composer.phar file. If not set composer will
-        just execute "composer" as if it is installed globally.
-        (i.e. /path/to/composer.phar)
+        Location of the ``composer.phar`` file. If not set composer will
+        just execute ``composer`` as if it is installed globally.
+        (i.e. ``/path/to/composer.phar``)
 
     php
         Location of the php executable to use with composer.
-        (i.e. /usr/bin/php)
+        (i.e. ``/usr/bin/php``)
 
     user
         Which system user to run composer as.
@@ -84,33 +85,36 @@ def installed(name,
         .. versionadded:: 2014.1.4
 
     prefer_source
-        --prefer-source option of composer.
+        ``--prefer-source`` option of composer.
 
     prefer_dist
-        --prefer-dist option of composer.
+        ``--prefer-dist`` option of composer.
 
     no_scripts
-        --no-scripts option of composer.
+        ``--no-scripts`` option of composer.
 
     no_plugins
-        --no-plugins option of composer.
+        ``--no-plugins`` option of composer.
 
     optimize
-        --optimize-autoloader option of composer. Recommended for production.
+        ``--optimize-autoloader`` option of composer. Recommended for production.
 
     no_dev
-        --no-dev option for composer. Recommended for production.
+        ``--no-dev`` option for composer. Recommended for production.
 
     quiet
-        --quiet option for composer. Whether or not to return output from composer.
+        ``--quiet`` option for composer. Whether or not to return output from composer.
 
     composer_home
-        $COMPOSER_HOME environment variable
+        ``$COMPOSER_HOME`` environment variable
 
     always_check
-        If True, _always_ run `composer install` in the directory.  This is the
-        default behavior.  If False, only run `composer install` if there is no
+        If ``True``, *always* run ``composer install`` in the directory.  This is the
+        default behavior.  If ``False``, only run ``composer install`` if there is no
         vendor directory present.
+
+    env
+        A list of environment variables to be set prior to execution.
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
@@ -153,7 +157,8 @@ def installed(name,
             optimize=optimize,
             no_dev=no_dev,
             quiet=quiet,
-            composer_home=composer_home
+            composer_home=composer_home,
+            env=env
         )
     except (SaltException) as err:
         ret['result'] = False
@@ -188,22 +193,23 @@ def update(name,
            optimize=None,
            no_dev=None,
            quiet=False,
-           composer_home='/root'):
+           composer_home='/root',
+           env=None):
     '''
     Composer update the directory to ensure we have the latest versions
     of all project dependencies.
 
-    dir
-        Directory location of the composer.json file.
+    name
+        Directory location of the ``composer.json`` file.
 
     composer
-        Location of the composer.phar file. If not set composer will
-        just execute "composer" as if it is installed globally.
+        Location of the ``composer.phar`` file. If not set composer will
+        just execute ``composer`` as if it is installed globally.
         (i.e. /path/to/composer.phar)
 
     php
         Location of the php executable to use with composer.
-        (i.e. /usr/bin/php)
+        (i.e. ``/usr/bin/php``)
 
     user
         Which system user to run composer as.
@@ -211,28 +217,31 @@ def update(name,
         .. versionadded:: 2014.1.4
 
     prefer_source
-        --prefer-source option of composer.
+        ``--prefer-source`` option of composer.
 
     prefer_dist
-        --prefer-dist option of composer.
+        ``--prefer-dist`` option of composer.
 
     no_scripts
-        --no-scripts option of composer.
+        ``--no-scripts`` option of composer.
 
     no_plugins
-        --no-plugins option of composer.
+        ``--no-plugins`` option of composer.
 
     optimize
-        --optimize-autoloader option of composer. Recommended for production.
+        ``--optimize-autoloader`` option of composer. Recommended for production.
 
     no_dev
-        --no-dev option for composer. Recommended for production.
+        ``--no-dev`` option for composer. Recommended for production.
 
     quiet
-        --quiet option for composer. Whether or not to return output from composer.
+        ``--quiet`` option for composer. Whether or not to return output from composer.
 
     composer_home
-        $COMPOSER_HOME environment variable
+        ``$COMPOSER_HOME`` environment variable
+
+    env
+        A list of environment variables to be set prior to execution.
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
@@ -267,7 +276,8 @@ def update(name,
             optimize=optimize,
             no_dev=no_dev,
             quiet=quiet,
-            composer_home=composer_home
+            composer_home=composer_home,
+            env=env
         )
     except (SaltException) as err:
         ret['result'] = False

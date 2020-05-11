@@ -33,7 +33,7 @@ at midnight.
     may not include the path for any scripts or commands used by Salt, and it
     may be necessary to set the PATH accordingly in the crontab:
 
-    .. code-block:: cron
+    .. code-block:: text
 
         PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/opt/bin
 

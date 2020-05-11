@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -314,7 +314,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
                                             'keystone.endpoint_create': mock}):
 
             comt = ('Endpoint for service "{0}" already exists'.format(name))
-            ret.update({'comment': comt, 'result': None, 'changes': {}})
+            ret.update({'comment': comt, 'result': True, 'changes': {}})
             self.assertDictEqual(keystone.endpoint_present(name), ret)
 
             with patch.dict(keystone.__opts__, {'test': True}):
@@ -323,7 +323,7 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertDictEqual(keystone.endpoint_present(name), ret)
 
                 comt = ('Endpoint for service "{0}" already exists'.format(name))
-                ret.update({'comment': comt, 'result': None, 'changes': {}})
+                ret.update({'comment': comt, 'result': True, 'changes': {}})
                 self.assertDictEqual(keystone.endpoint_present(name), ret)
 
             with patch.dict(keystone.__opts__, {'test': False}):

@@ -6,12 +6,12 @@ Management of the GPG keychains
 .. versionadded:: 2016.3.0
 
 '''
-
-
-from __future__ import absolute_import
-from salt.ext.six import string_types
-
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
+
+# Import 3rd-party libs
+from salt.ext import six
+
 log = logging.getLogger(__name__)
 
 _VALID_TRUST_VALUES = ['expired',
@@ -48,7 +48,7 @@ def present(name,
         The keyId or keyIds to add to the GPG keychain.
 
     user
-        Add GPG keys to the user's keychain
+        Add GPG keys to the specified user's keychain
 
     keyserver
         The keyserver to retrieve the keys from.
@@ -70,7 +70,7 @@ def present(name,
            'changes': {},
            'comment': []}
 
-    _current_keys = __salt__['gpg.list_keys']()
+    _current_keys = __salt__['gpg.list_keys'](user=user, gnupghome=gnupghome)
 
     current_keys = {}
     for key in _current_keys:
@@ -81,7 +81,7 @@ def present(name,
     if not keys:
         keys = name
 
-    if isinstance(keys, string_types):
+    if isinstance(keys, six.string_types):
         keys = [keys]
 
     for key in keys:
@@ -151,7 +151,7 @@ def absent(name,
         The keyId or keyIds to add to the GPG keychain.
 
     user
-        Add GPG keys to the user's keychain
+        Remove GPG keys from the specified user's keychain
 
     gnupghome
         Override GNUPG Home directory
@@ -172,7 +172,7 @@ def absent(name,
     if not keys:
         keys = name
 
-    if isinstance(keys, string_types):
+    if isinstance(keys, six.string_types):
         keys = [keys]
 
     for key in keys:

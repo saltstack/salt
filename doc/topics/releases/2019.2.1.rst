@@ -1,0 +1,34 @@
+========================================
+In Progress: Salt 2019.2.1 Release Notes
+========================================
+
+Version 2019.2.1 is an **unreleased** bugfix release for :ref:`2019.2.0 <release-2019-2-0>`.
+This release is still in progress and has not been released yet.
+
+Change to YAML Renderer
+=======================
+
+.. code-block:: jinja
+
+    /etc/foo.conf:
+      file.managed:
+        - source: salt://foo.conf.jinja
+        - template: jinja
+        - context:
+            data: {{ data }}
+
+In 2019.2.0, the above SLS will result in an error message following changes to
+the YAML renderer that now require the new Jinja filter `tojson`.
+
+.. code-block:: jinja
+
+    /etc/foo.conf:
+      file.managed:
+        - source: salt://foo.conf.jinja
+        - template: jinja
+        - context:
+            data: {{ data|tojson }}
+
+In 2019.2.1, we introduce a new configuration option for both the Salt master and Salt minion
+configurations to be able to support the older YAML renderer.  Using the option
+`use_yamlloader_old` will allow the YAML renderer to function as before.

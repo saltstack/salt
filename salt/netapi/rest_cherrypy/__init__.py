@@ -4,7 +4,7 @@ A script to start the CherryPy WSGI server
 
 This is run by ``salt-api`` and started in a multiprocess.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # pylint: disable=C0103
 
 # Import Python libs
@@ -20,7 +20,7 @@ try:
 except ImportError as exc:
     cpy_error = exc
 
-__virtualname__ = os.path.abspath(__file__).rsplit('/')[-2] or 'rest_cherrypy'
+__virtualname__ = os.path.abspath(__file__).rsplit(os.sep)[-2] or 'rest_cherrypy'
 
 logger = logging.getLogger(__virtualname__)
 cpy_min = '3.2.2'

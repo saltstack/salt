@@ -37,7 +37,8 @@ Adding a Formula as a GitFS remote
 One design goal of Salt's GitFS fileserver backend was to facilitate reusable
 States. GitFS is a quick and natural way to use Formulas.
 
-1.  :ref:`Install and configure GitFS <tutorial-gitfs>`.
+1.  :ref:`Install any necessary dependencies and configure GitFS
+    <tutorial-gitfs>`.
 
 2.  Add one or more Formula repository URLs as remotes in the
     :conf_master:`gitfs_remotes` list in the Salt Master configuration file:
@@ -56,6 +57,13 @@ States. GitFS is a quick and natural way to use Formulas.
     upstream with a quick pull request!
 
 3.  Restart the Salt master.
+
+Beginning with the 2018.3.0 release, using formulas with GitFS is now much more
+convenient for deployments which use many different fileserver environments
+(i.e. saltenvs). Using the :ref:`all_saltenvs <gitfs-global-remotes>`
+parameter, files from a single git branch/tag will appear in all environments.
+See :ref:`here <gitfs-global-remotes>` for more information on this feature.
+
 
 Adding a Formula directory manually
 -----------------------------------
@@ -206,18 +214,37 @@ Writing Formulas
 Each Formula is a separate repository in the `saltstack-formulas`_ organization
 on GitHub.
 
-.. note:: Get involved creating new Formulas
+Get involved creating new Formulas
+----------------------------------
 
-    The best way to create new Formula repositories for now is to create a
-    repository in your own account on GitHub and notify a SaltStack employee
-    when it is ready. We will add you to the contributors team on the
-    `saltstack-formulas`_ organization and help you transfer the repository
-    over. Ping a SaltStack employee on IRC (``#salt`` on Freenode) or send an
-    email to the `salt-users`_ mailing list.
+The best way to create new Formula repositories for now is to create a
+repository in your own account on GitHub and notify a SaltStack employee when
+it is ready. We will add you to the Contributors team on the
+`saltstack-formulas`_ organization and help you transfer the repository over.
+Ping a SaltStack employee on IRC (``#salt`` on Freenode), join the
+``#formulas`` channel on the `salt-slack`_ (bridged to ``#saltstack-formulas``
+on Freenode) or send an email to the `salt-users`_ mailing list.  Note that the
+IRC logs are available at https://freenode.logbot.info/salt and
+https://freenode.logbot.info/saltstack-formulas respectively.
 
-    There are a lot of repositories in that organization! Team members can
-    manage which repositories they are subscribed to on GitHub's watching page:
-    https://github.com/watching.
+There are a lot of repositories in that organization! Team members can manage
+which repositories they are subscribed to on GitHub's watching page:
+https://github.com/watching.
+
+Members of the Contributors team are welcome to participate in reviewing pull
+requests across the Organization. Some repositories will have regular
+contributors and some repositories will not. As you get involved in a
+repository be sure to communicate with any other contributors there on pull
+requests that are large or have breaking changes.
+
+In general it is best to have another Contributor review and merge any pull
+requests that you open. Feel free to `at-mention`_ other regular contributors
+to a repository and request a review. However, there are a lot of formula
+repositories so if a repository does not yet have regular contributors or if
+your pull request has stayed open for more than a couple days feel free to
+"selfie-merge" your own pull request.
+
+.. _`at-mention`: https://help.github.com/articles/basic-writing-and-formatting-syntax/#mentioning-users-and-teams
 
 Style
 -----
@@ -225,7 +252,7 @@ Style
 Maintainability, readability, and reusability are all marks of a good Salt sls
 file. This section contains several suggestions and examples.
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     # Deploy the stable master branch unless version overridden by passing
     # Pillar at the CLI or via the Reactor.
@@ -447,7 +474,7 @@ lookups.
 
 Below is a simple example of a readable loop:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% for user in salt.pillar.get('list_of_users', []) %}
 
@@ -464,7 +491,7 @@ Readability suffers and the correct YAML indentation is difficult to see in the
 surrounding visual noise. Parametrization (discussed below) and variables are
 both useful techniques to avoid this. For example:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {# ---- Bad example ---- #}
 
@@ -505,7 +532,7 @@ easily combined and merged. And they can be directly serialized into YAML which
 is often easier than trying to create valid YAML through templating. For
 example:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {# ---- Bad example ---- #}
 
@@ -599,7 +626,10 @@ example is a state tree of two sls files, one simple and one complicated.
 
     common_users:
       user.present:
-        - names: [larry, curly, moe]
+        - names:
+          - larry
+          - curly
+          - moe
 
 ``/srv/salt/roles_configuration``:
 
@@ -651,7 +681,7 @@ above).
 
 Macros are useful for creating reusable, parameterized states. For example:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% macro user_state(state_id, user_name, shell='/bin/bash', groups=[]) %}
     {{ state_id }}:
@@ -671,7 +701,7 @@ example, the following macro could be used to write a php.ini config file:
 
 ``/srv/salt/php.sls``:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     php_ini:
       file.managed:
@@ -768,7 +798,7 @@ syntax for referencing a value is a normal dictionary lookup in Jinja, such as
 Values defined in the map file can be fetched for the current platform in any
 state file using the following syntax:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% from "mysql/map.jinja" import mysql with context %}
 
@@ -962,7 +992,7 @@ XML.)
 
 ``/srv/salt/tomcat/server_xml.sls``:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% import_yaml 'tomcat/defaults.yaml' as server_xml_defaults %}
     {% set server_xml_final_values = salt.pillar.get(
@@ -981,10 +1011,10 @@ The :py:func:`file.serialize <salt.states.file.serialize>` state can provide a
 shorthand for creating some files from data structures. There are also many
 examples within Salt Formulas of creating one-off "serializers" (often as Jinja
 macros) that reformat a data structure to a specific config file format. For
-example, `Nginx vhosts`__ or the `php.ini`__
+example, look at the`Nginx vhosts`_ states or the `php.ini`_ file template.
 
-__: https://github.com/saltstack-formulas/nginx-formula/blob/5cad4512/nginx/ng/vhosts_config.sls
-__: https://github.com/saltstack-formulas/php-formula/blob/82e2cd3a/php/ng/files/php.ini
+.. _`Nginx vhosts`: https://github.com/saltstack-formulas/nginx-formula/blob/5cad4512/nginx/ng/vhosts_config.sls
+.. _`php.ini`: https://github.com/saltstack-formulas/php-formula/blob/82e2cd3a/php/ng/files/php.ini
 
 Environment specific information
 ................................
@@ -997,18 +1027,18 @@ example:
 
 ``/srv/salt/app/deploy.sls``:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {# Load the map file. #}
     {% import_yaml 'app/defaults.yaml' as app_defaults %}
 
     {# Extract the relevant subset for the app configured on the current
        machine (configured via a grain in this example). #}
-    {% app = app_defaults.get(salt.grains.get('role') %}
+    {% app = app_defaults.get(salt.grains.get('role')) %}
 
     {# Allow values from Pillar to (optionally) update values from the lookup
        table. #}
-    {% do app_defaults.update(salt.pillar.get('myapp', {}) %}
+    {% do app_defaults.update(salt.pillar.get('myapp', {})) %}
 
     deploy_application:
       git.latest:
@@ -1056,7 +1086,7 @@ The following is a best-practice example for a reusable Apache formula. (This
 skips platform-specific options for brevity. See the full
 :formula_url:`apache-formula` for more.)
 
-.. code-block:: yaml
+.. code-block:: text
 
     # apache/init.sls
     apache:
@@ -1234,7 +1264,7 @@ target platform, and any other installation or usage instructions or tips.
 
 A sample skeleton for the ``README.rst`` file:
 
-.. code-block:: rest
+.. code-block:: restructuredtext
 
     ===
     foo
@@ -1242,10 +1272,10 @@ A sample skeleton for the ``README.rst`` file:
 
     Install and configure the FOO service.
 
-    .. note::
+    **NOTE**
 
-        See the full `Salt Formulas installation and usage instructions
-        <http://docs.saltstack.com/en/latest/topics/development/conventions/formulas.html>`_.
+    See the full `Salt Formulas installation and usage instructions
+    <https://docs.saltstack.com/en/latest/topics/development/conventions/formulas.html>`_.
 
     Available states
     ================
@@ -1274,7 +1304,7 @@ A sample skeleton for the `CHANGELOG.rst` file:
 
 :file:`CHANGELOG.rst`:
 
-.. code-block:: rest
+.. code-block:: restructuredtext
 
     foo formula
     ===========

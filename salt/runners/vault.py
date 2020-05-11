@@ -7,16 +7,20 @@
 Runner functions supporting the Vault modules. Configuration instructions are
 documented in the execution module docs.
 '''
-
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import base64
+import json
 import logging
 import string
 import requests
 
+# Import Salt libs
 import salt.crypt
 import salt.exceptions
 
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -36,14 +40,31 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
         If the master needs to create a token on behalf of the minion, this is
         True. This happens when the master generates minion pillars.
     '''
-    log.debug('Token generation request for {0} (impersonated by master: {1})'.
-              format(minion_id, impersonated_by_master))
+    log.debug(
+        'Token generation request for %s (impersonated by master: %s)',
+        minion_id, impersonated_by_master
+    )
     _validate_signature(minion_id, signature, impersonated_by_master)
 
     try:
         config = __opts__['vault']
+        verify = config.get('verify', None)
 
-        url = '{0}/v1/auth/token/create'.format(config['url'])
+        if config['auth']['method'] == 'approle':
+            if _selftoken_expired():
+                log.debug('Vault token expired. Recreating one')
+                # Requesting a short ttl token
+                url = '{0}/v1/auth/approle/login'.format(config['url'])
+
+                payload = {'role_id': config['auth']['role_id']}
+                if 'secret_id' in config['auth']:
+                    payload['secret_id'] = config['auth']['secret_id']
+                response = requests.post(url, json=payload, verify=verify)
+                if response.status_code != 200:
+                    return {'error': response.reason}
+                config['auth']['token'] = response.json()['auth']['client_token']
+
+        url = _get_token_create_url(config)
         headers = {'X-Vault-Token': config['auth']['token']}
         audit_data = {
             'saltstack-jid': globals().get('__jid__', '<no jid set>'),
@@ -53,19 +74,56 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
         payload = {
                     'policies': _get_policies(minion_id, config),
                     'num_uses': 1,
-                    'metadata': audit_data
+                    'meta': audit_data
                   }
 
+        if payload['policies'] == []:
+            return {'error': 'No policies matched minion'}
+
         log.trace('Sending token creation request to Vault')
-        response = requests.post(url, headers=headers, json=payload)
+        response = requests.post(url, headers=headers, json=payload, verify=verify)
 
         if response.status_code != 200:
             return {'error': response.reason}
 
-        authData = response.json()['auth']
-        return {'token': authData['client_token'], 'url': config['url']}
+        auth_data = response.json()['auth']
+        return {
+            'token': auth_data['client_token'],
+            'url': config['url'],
+            'verify': verify,
+        }
     except Exception as e:
-        return {'error': str(e)}
+        return {'error': six.text_type(e)}
+
+
+def unseal():
+    '''
+    Unseal Vault server
+
+    This function uses the 'keys' from the 'vault' configuration to unseal vault server
+
+    vault:
+      keys:
+        - n63/TbrQuL3xaIW7ZZpuXj/tIfnK1/MbVxO4vT3wYD2A
+        - S9OwCvMRhErEA4NVVELYBs6w/Me6+urgUr24xGK44Uy3
+        - F1j4b7JKq850NS6Kboiy5laJ0xY8dWJvB3fcwA+SraYl
+        - 1cYtvjKJNDVam9c7HNqJUfINk4PYyAXIpjkpN/sIuzPv
+        - 3pPK5X6vGtwLhNOFv1U2elahECz3HpRUfNXJFYLw6lid
+
+    .. note: This function will send unsealed keys until the api returns back
+             that the vault has been unsealed
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt-run vault.unseal
+    '''
+    for key in __opts__['vault']['keys']:
+        ret = __utils__['vault.make_request']('PUT', 'v1/sys/unseal', data=json.dumps({'key': key})).json()
+        if ret['sealed'] is False:
+            return True
+    return False
 
 
 def show_policies(minion_id):
@@ -96,7 +154,7 @@ def _validate_signature(minion_id, signature, impersonated_by_master):
     else:
         public_key = '{0}/minions/{1}'.format(pki_dir, minion_id)
 
-    log.trace('Validating signature for {0}'.format(minion_id))
+    log.trace('Validating signature for %s', minion_id)
     signature = base64.b64decode(signature)
     if not salt.crypt.verify_signature(public_key, minion_id, signature):
         raise salt.exceptions.AuthenticationError(
@@ -125,9 +183,9 @@ def _get_policies(minion_id, config):
                                                 .lower()  # Vault requirement
                                )
         except KeyError:
-            log.warning('Could not resolve policy pattern {0}'.format(pattern))
+            log.warning('Could not resolve policy pattern %s', pattern)
 
-    log.debug('{0} policies: {1}'.format(minion_id, policies))
+    log.debug('%s policies: %s', minion_id, policies)
     return policies
 
 
@@ -173,9 +231,39 @@ def _expand_pattern_lists(pattern, **mappings):
         (value, _) = f.get_field(field_name, None, mappings)
         if isinstance(value, list):
             token = '{{{0}}}'.format(field_name)
-            expanded = [pattern.replace(token, str(elem)) for elem in value]
+            expanded = [pattern.replace(token, six.text_type(elem)) for elem in value]
             for expanded_item in expanded:
                 result = _expand_pattern_lists(expanded_item, **mappings)
                 expanded_patterns += result
             return expanded_patterns
     return [pattern]
+
+
+def _selftoken_expired():
+    '''
+    Validate the current token exists and is still valid
+    '''
+    try:
+        verify = __opts__['vault'].get('verify', None)
+        url = '{0}/v1/auth/token/lookup-self'.format(__opts__['vault']['url'])
+        if 'token' not in __opts__['vault']['auth']:
+            return True
+        headers = {'X-Vault-Token': __opts__['vault']['auth']['token']}
+        response = requests.get(url, headers=headers, verify=verify)
+        if response.status_code != 200:
+            return True
+        return False
+    except Exception as e:
+        raise salt.exceptions.CommandExecutionError(
+            'Error while looking up self token : {0}'.format(six.text_type(e))
+            )
+
+
+def _get_token_create_url(config):
+    '''
+    Create Vault url for token creation
+    '''
+    role_name = config.get('role_name', None)
+    auth_path = '/v1/auth/token/create'
+    base_url = config['url']
+    return '/'.join(x.strip('/') for x in (base_url, auth_path, role_name) if x)

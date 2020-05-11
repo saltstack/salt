@@ -28,6 +28,7 @@ hit `Enter`. Also, you can convert tabs to 2 spaces by these commands in Vim:
 
 Indentation
 ===========
+
 The suggested syntax for YAML files is to use 2 spaces for indentation,
 but YAML will follow whatever indentation system that the individual file
 uses. Indentation of two spaces works very well for SLS files given the
@@ -38,10 +39,10 @@ fact that the data is uniform and not deeply nested.
 Nested Dictionaries
 -------------------
 
-When :ref:`dicts <python2:typesmapping>` are nested within other data
-structures (particularly lists), the indentation logic sometimes changes.
-Examples of where this might happen include ``context`` and ``default`` options
-from the :mod:`file.managed <salt.states.file>` state:
+When dictionaries are nested within other data structures (particularly lists),
+the indentation logic sometimes changes.  Examples of where this might happen
+include ``context`` and ``default`` options from the :mod:`file.managed
+<salt.states.file>` state:
 
 .. code-block:: yaml
 
@@ -112,8 +113,24 @@ PyYAML will load these values as boolean ``True`` or ``False``. Un-capitalized
 versions will also be loaded as booleans (``true``, ``false``, ``yes``, ``no``,
 ``on``, and ``off``). This can be especially problematic when constructing
 Pillar data. Make sure that your Pillars which need to use the string versions
-of these values are enclosed in quotes.  Pillars will be parsed twice by salt,
-so you'll need to wrap your values in multiple quotes, for example '"false"'.
+of these values are enclosed in quotes. Pillars will be parsed twice by salt,
+so you'll need to wrap your values in multiple quotes, including double quotation
+marks (``" "``) and single quotation marks (``' '``). Note that spaces are included
+in the quotation type examples for clarity.
+
+Multiple quoting examples looks like this:
+
+.. code-block:: yaml
+
+    - '"false"'
+    - "'True'"
+    - "'YES'"
+    - '"No"'
+
+.. note::
+
+    When using multiple quotes in this manner, they must be different. Using ``"" ""``
+    or ``'' ''`` won't work in this case (spaces are included in examples for clarity).
 
 The '%' Sign
 ============
@@ -143,7 +160,7 @@ them.
     When using a jinja ``load_yaml`` map, items must be quoted twice. For
     example:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {% load_yaml as wsus_schedule %}
 
@@ -248,8 +265,10 @@ Alternatively,  they can be defined the "old way",  or with multiple
         - require:
           - user: fred
 
-YAML support only plain ASCII
-=============================
+.. _yaml_plain_ascii:
+
+YAML supports only plain ASCII
+==============================
 
 According to YAML specification, only ASCII characters can be used.
 

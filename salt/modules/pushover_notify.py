@@ -17,7 +17,7 @@ Module for sending messages to Pushover (https://www.pushover.net)
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import 3rd-party libs

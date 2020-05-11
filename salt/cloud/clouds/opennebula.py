@@ -61,7 +61,7 @@ to find the IP of the new VM.
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import pprint
@@ -76,9 +76,11 @@ from salt.exceptions import (
     SaltCloudNotFound,
     SaltCloudSystemExit
 )
-import salt.utils
+import salt.utils.data
+import salt.utils.files
 
 # Import Third Party Libs
+from salt.ext import six
 try:
     import salt.ext.six.moves.xmlrpc_client  # pylint: disable=E0611
     from lxml import etree
@@ -445,7 +447,7 @@ def reboot(name, call=None):
             'The start action must be called with -a or --action.'
         )
 
-    log.info('Rebooting node {0}'.format(name))
+    log.info('Rebooting node %s', name)
 
     return vm_action(name, kwargs={'action': 'reboot'}, call=call)
 
@@ -470,7 +472,7 @@ def start(name, call=None):
             'The start action must be called with -a or --action.'
         )
 
-    log.info('Starting node {0}'.format(name))
+    log.info('Starting node %s', name)
 
     return vm_action(name, kwargs={'action': 'resume'}, call=call)
 
@@ -495,7 +497,7 @@ def stop(name, call=None):
             'The start action must be called with -a or --action.'
         )
 
-    log.info('Stopping node {0}'.format(name))
+    log.info('Stopping node %s', name)
 
     return vm_action(name, kwargs={'action': 'stop'}, call=call)
 
@@ -643,7 +645,7 @@ def get_image(vm_):
         The VM dictionary for which to obtain an image.
     '''
     images = avail_images()
-    vm_image = str(config.get_cloud_config_value(
+    vm_image = six.text_type(config.get_cloud_config_value(
         'image', vm_, __opts__, search_global=False
     ))
     for image in images:
@@ -698,7 +700,7 @@ def get_location(vm_):
         The VM dictionary for which to obtain a location.
     '''
     locations = avail_locations()
-    vm_location = str(config.get_cloud_config_value(
+    vm_location = six.text_type(config.get_cloud_config_value(
         'location', vm_, __opts__, search_global=False
     ))
 
@@ -756,7 +758,7 @@ def get_template_image(kwargs=None, call=None):
     '''
     Returns a template's image from the given template name.
 
-    .. versionadded:: oxygen
+    .. versionadded:: 2018.3.0
 
     .. code-block:: bash
 
@@ -780,7 +782,7 @@ def get_template_image(kwargs=None, call=None):
         ret = list_templates()[name]['template']['disk']['image']
     except KeyError:
         raise SaltCloudSystemExit(
-            'The image for template \'{1}\' could not be found.'.format(name)
+            'The image for template \'{0}\' could not be found.'.format(name)
         )
 
     return ret
@@ -832,7 +834,7 @@ def get_template(vm_):
         The VM dictionary for which to obtain a template.
     '''
 
-    vm_template = str(config.get_cloud_config_value(
+    vm_template = six.text_type(config.get_cloud_config_value(
         'template', vm_, __opts__, search_global=False
     ))
     try:
@@ -919,7 +921,7 @@ def _get_device_template(disk, disk_info, template=None):
     '''
     Returns the template format to create a disk in open nebula
 
-    .. versionadded:: oxygen
+    .. versionadded:: 2018.3.0
 
     '''
     def _require_disk_opts(*args):
@@ -969,7 +971,7 @@ def create(vm_):
     vm\_
         The dictionary use to create a VM.
 
-    Optional vm_ dict options for overwriting template:
+    Optional vm\_ dict options for overwriting template:
 
     region_id
         Optional - OpenNebula Zone ID
@@ -1010,7 +1012,7 @@ def create(vm_):
         transport=__opts__['transport']
     )
 
-    log.info('Creating Cloud VM {0}'.format(vm_['name']))
+    log.info('Creating Cloud VM %s', vm_['name'])
     kwargs = {
         'name': vm_['name'],
         'template_id': get_template(vm_),
@@ -1029,7 +1031,7 @@ def create(vm_):
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         args={
-            'kwargs': __utils__['cloud.filter_event']('requesting', kwargs, kwargs.keys()),
+            'kwargs': __utils__['cloud.filter_event']('requesting', kwargs, list(kwargs)),
         },
         sock_dir=__opts__['sock_dir'],
     )
@@ -1049,7 +1051,7 @@ def create(vm_):
         for disk in get_disks:
             template.append(_get_device_template(disk, get_disks[disk],
                                  template=template_name))
-        if 'CLONE' not in str(template):
+        if 'CLONE' not in six.text_type(template):
             raise SaltCloudSystemExit(
                 'Missing an image disk to clone. Must define a clone disk alongside all other disk definitions.'
             )
@@ -1066,24 +1068,20 @@ def create(vm_):
                                         template_args)
         if not cret[0]:
             log.error(
-                'Error creating {0} on OpenNebula\n\n'
+                'Error creating %s on OpenNebula\n\n'
                 'The following error was returned when trying to '
-                'instantiate the template: {1}'.format(
-                    vm_['name'],
-                    cret[1]
-                ),
+                'instantiate the template: %s',
+                vm_['name'], cret[1],
                 # Show the traceback if the debug logging level is enabled
                 exc_info_on_loglevel=logging.DEBUG
             )
             return False
     except Exception as exc:
         log.error(
-            'Error creating {0} on OpenNebula\n\n'
+            'Error creating %s on OpenNebula\n\n'
             'The following exception was thrown when trying to '
-            'run the initial deployment: {1}'.format(
-                vm_['name'],
-                str(exc)
-            ),
+            'run the initial deployment: %s',
+            vm_['name'], exc,
             # Show the traceback if the debug logging level is enabled
             exc_info_on_loglevel=logging.DEBUG
         )
@@ -1119,7 +1117,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(str(exc))
+            raise SaltCloudSystemExit(six.text_type(exc))
 
     key_filename = config.get_cloud_config_value(
         'private_key', vm_, __opts__, search_global=False, default=None
@@ -1144,7 +1142,6 @@ def create(vm_):
                 # if IPv6 is used try this as last resort
                 # OpenNebula does not yet show ULA address here so take global
                 private_ip = data['template']['nic']['ip6_global']
-
             vm_['ssh_host'] = private_ip
 
     ssh_username = config.get_cloud_config_value(
@@ -1164,11 +1161,10 @@ def create(vm_):
     ret['private_ips'] = private_ip
     ret['public_ips'] = []
 
-    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
+    log.info('Created Cloud VM \'%s\'', vm_['name'])
     log.debug(
-        '\'{0[name]}\' VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data)
-        )
+        '\'%s\' VM creation details:\n%s',
+        vm_['name'], pprint.pformat(data)
     )
 
     __utils__['cloud.fire_event'](
@@ -1310,7 +1306,7 @@ def image_allocate(call=None, kwargs=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        with salt.utils.fopen(path, mode='r') as rfh:
+        with salt.utils.files.fopen(path, mode='r') as rfh:
             data = rfh.read()
     else:
         raise SaltCloudSystemExit(
@@ -1574,7 +1570,7 @@ def image_persistent(call=None, kwargs=None):
 
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
-    response = server.one.image.persistent(auth, int(image_id), salt.utils.is_true(persist))
+    response = server.one.image.persistent(auth, int(image_id), salt.utils.data.is_true(persist))
 
     data = {
         'action': 'image.persistent',
@@ -1876,7 +1872,7 @@ def image_update(call=None, kwargs=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        with salt.utils.fopen(path, mode='r') as rfh:
+        with salt.utils.files.fopen(path, mode='r') as rfh:
             data = rfh.read()
     else:
         raise SaltCloudSystemExit(
@@ -1969,7 +1965,7 @@ def secgroup_allocate(call=None, kwargs=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        with salt.utils.fopen(path, mode='r') as rfh:
+        with salt.utils.files.fopen(path, mode='r') as rfh:
             data = rfh.read()
     else:
         raise SaltCloudSystemExit(
@@ -2269,7 +2265,7 @@ def secgroup_update(call=None, kwargs=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        with salt.utils.fopen(path, mode='r') as rfh:
+        with salt.utils.files.fopen(path, mode='r') as rfh:
             data = rfh.read()
     else:
         raise SaltCloudSystemExit(
@@ -2335,7 +2331,7 @@ def template_allocate(call=None, kwargs=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        with salt.utils.fopen(path, mode='r') as rfh:
+        with salt.utils.files.fopen(path, mode='r') as rfh:
             data = rfh.read()
     else:
         raise SaltCloudSystemExit(
@@ -2372,6 +2368,9 @@ def template_clone(call=None, kwargs=None):
     template_name
         The name of the template to be cloned. Can be used instead of ``template_id``.
 
+    clone_images
+        Optional, defaults to False. Indicates if the images attached to the template should be cloned as well.
+
     CLI Example:
 
     .. code-block:: bash
@@ -2390,6 +2389,7 @@ def template_clone(call=None, kwargs=None):
     name = kwargs.get('name', None)
     template_id = kwargs.get('template_id', None)
     template_name = kwargs.get('template_name', None)
+    clone_images = kwargs.get('clone_images', False)
 
     if name is None:
         raise SaltCloudSystemExit(
@@ -2413,7 +2413,7 @@ def template_clone(call=None, kwargs=None):
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
 
-    response = server.one.template.clone(auth, int(template_id), name)
+    response = server.one.template.clone(auth, int(template_id), name, clone_images)
 
     data = {
         'action': 'template.clone',
@@ -2650,7 +2650,7 @@ def template_update(call=None, kwargs=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        with salt.utils.fopen(path, mode='r') as rfh:
+        with salt.utils.files.fopen(path, mode='r') as rfh:
             data = rfh.read()
     else:
         raise SaltCloudSystemExit(
@@ -2728,7 +2728,7 @@ def vm_action(name, kwargs=None, call=None):
     response = server.one.vm.action(auth, action, vm_id)
 
     data = {
-        'action': 'vm.action.' + str(action),
+        'action': 'vm.action.' + six.text_type(action),
         'actioned': response[0],
         'vm_id': response[1],
         'error_code': response[2],
@@ -2783,7 +2783,7 @@ def vm_allocate(call=None, kwargs=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        with salt.utils.fopen(path, mode='r') as rfh:
+        with salt.utils.files.fopen(path, mode='r') as rfh:
             data = rfh.read()
     else:
         raise SaltCloudSystemExit(
@@ -2793,7 +2793,7 @@ def vm_allocate(call=None, kwargs=None):
 
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
-    response = server.one.vm.allocate(auth, data, salt.utils.is_true(hold))
+    response = server.one.vm.allocate(auth, data, salt.utils.data.is_true(hold))
 
     ret = {
         'action': 'vm.allocate',
@@ -2849,7 +2849,7 @@ def vm_attach(name, kwargs=None, call=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        with salt.utils.fopen(path, mode='r') as rfh:
+        with salt.utils.files.fopen(path, mode='r') as rfh:
             data = rfh.read()
     else:
         raise SaltCloudSystemExit(
@@ -2916,7 +2916,7 @@ def vm_attach_nic(name, kwargs=None, call=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        with salt.utils.fopen(path, mode='r') as rfh:
+        with salt.utils.files.fopen(path, mode='r') as rfh:
             data = rfh.read()
     else:
         raise SaltCloudSystemExit(
@@ -3025,7 +3025,7 @@ def vm_deploy(name, kwargs=None, call=None):
     response = server.one.vm.deploy(auth,
                                     int(vm_id),
                                     int(host_id),
-                                    salt.utils.is_true(capacity_maintained),
+                                    salt.utils.data.is_true(capacity_maintained),
                                     int(datastore_id))
 
     data = {
@@ -3494,8 +3494,8 @@ def vm_migrate(name, kwargs=None, call=None):
     response = server.one.vm.migrate(auth,
                                      vm_id,
                                      int(host_id),
-                                     salt.utils.is_true(live_migration),
-                                     salt.utils.is_true(capacity_maintained),
+                                     salt.utils.data.is_true(live_migration),
+                                     salt.utils.data.is_true(capacity_maintained),
                                      int(datastore_id))
 
     data = {
@@ -3603,7 +3603,7 @@ def vm_resize(name, kwargs=None, call=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        with salt.utils.fopen(path, mode='r') as rfh:
+        with salt.utils.files.fopen(path, mode='r') as rfh:
             data = rfh.read()
     else:
         raise SaltCloudSystemExit(
@@ -3614,7 +3614,7 @@ def vm_resize(name, kwargs=None, call=None):
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
     vm_id = int(get_vm_id(kwargs={'name': name}))
-    response = server.one.vm.resize(auth, vm_id, data, salt.utils.is_true(capacity_maintained))
+    response = server.one.vm.resize(auth, vm_id, data, salt.utils.data.is_true(capacity_maintained))
 
     ret = {
         'action': 'vm.resize',
@@ -3831,7 +3831,7 @@ def vm_update(name, kwargs=None, call=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        with salt.utils.fopen(path, mode='r') as rfh:
+        with salt.utils.files.fopen(path, mode='r') as rfh:
             data = rfh.read()
     else:
         raise SaltCloudSystemExit(
@@ -3919,7 +3919,7 @@ def vn_add_ar(call=None, kwargs=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        with salt.utils.fopen(path, mode='r') as rfh:
+        with salt.utils.files.fopen(path, mode='r') as rfh:
             data = rfh.read()
     else:
         raise SaltCloudSystemExit(
@@ -3992,7 +3992,7 @@ def vn_allocate(call=None, kwargs=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        with salt.utils.fopen(path, mode='r') as rfh:
+        with salt.utils.files.fopen(path, mode='r') as rfh:
             data = rfh.read()
     else:
         raise SaltCloudSystemExit(
@@ -4217,7 +4217,7 @@ def vn_hold(call=None, kwargs=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        with salt.utils.fopen(path, mode='r') as rfh:
+        with salt.utils.files.fopen(path, mode='r') as rfh:
             data = rfh.read()
     else:
         raise SaltCloudSystemExit(
@@ -4362,7 +4362,7 @@ def vn_release(call=None, kwargs=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        with salt.utils.fopen(path, mode='r') as rfh:
+        with salt.utils.files.fopen(path, mode='r') as rfh:
             data = rfh.read()
     else:
         raise SaltCloudSystemExit(
@@ -4449,7 +4449,7 @@ def vn_reserve(call=None, kwargs=None):
                 '\'data\' will take precedence.'
             )
     elif path:
-        with salt.utils.fopen(path, mode='r') as rfh:
+        with salt.utils.files.fopen(path, mode='r') as rfh:
             data = rfh.read()
     else:
         raise SaltCloudSystemExit(
@@ -4487,10 +4487,8 @@ def _get_node(name):
         except KeyError:
             attempts -= 1
             log.debug(
-                'Failed to get the data for node \'{0}\'. Remaining '
-                'attempts: {1}'.format(
-                    name, attempts
-                )
+                'Failed to get the data for node \'%s\'. Remaining '
+                'attempts: %s', name, attempts
             )
 
             # Just a little delay between attempts...
@@ -4571,7 +4569,8 @@ def _list_nodes(full=False):
                 pass
 
         vms[name]['id'] = vm.find('ID').text
-        vms[name]['image'] = vm.find('TEMPLATE').find('TEMPLATE_ID').text
+        if 'TEMPLATE_ID' in vm.find('TEMPLATE'):
+            vms[name]['image'] = vm.find('TEMPLATE').find('TEMPLATE_ID').text
         vms[name]['name'] = name
         vms[name]['size'] = {'cpu': cpu_size, 'memory': memory_size}
         vms[name]['state'] = vm.find('STATE').text
@@ -4596,7 +4595,7 @@ def _xml_to_dict(xml):
         key = item.tag.lower()
         idx = 1
         while key in dicts:
-            key += str(idx)
+            key += six.text_type(idx)
             idx += 1
         if item.text is None:
             dicts[key] = _xml_to_dict(item)

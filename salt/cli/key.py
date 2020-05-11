@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 
-from salt.utils import parsers
+import salt.utils.parsers
 from salt.utils.verify import check_user, verify_log
 
 
-class SaltKey(parsers.SaltKeyOptionParser):
+class SaltKey(salt.utils.parsers.SaltKeyOptionParser):
     '''
     Initialize the Salt key manager
     '''
@@ -18,16 +17,10 @@ class SaltKey(parsers.SaltKeyOptionParser):
         '''
         import salt.key
         self.parse_args()
-        multi = False
-        if self.config.get('zmq_behavior') and self.config.get('transport') == 'raet':
-            multi = True
 
         self.setup_logfile_logger()
         verify_log(self.config)
 
-        if multi:
-            key = salt.key.MultiKeyCLI(self.config)
-        else:
-            key = salt.key.KeyCLI(self.config)
+        key = salt.key.KeyCLI(self.config)
         if check_user(self.config['user']):
             key.run()

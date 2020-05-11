@@ -15,14 +15,16 @@ This state is used to manage NTP servers. Currently only Windows is supported.
           - pool.ntp.org
           - us.pool.ntp.org
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
+# Import Python libs
 import logging
 
-# Import salt libs
-from salt.ext.six import string_types
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
+
+# Import 3rd-party libs
+from salt.ext import six
 
 
 log = logging.getLogger(__name__)
@@ -32,7 +34,7 @@ def __virtual__():
     '''
     This only supports Windows
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False
     return 'ntp'
 
@@ -41,7 +43,7 @@ def _check_servers(servers):
     if not isinstance(servers, list):
         return False
     for server in servers:
-        if not isinstance(server, string_types):
+        if not isinstance(server, six.string_types):
             return False
     return True
 

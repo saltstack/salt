@@ -60,7 +60,7 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
     salt '*' test.ping --return mongo --return_kwargs '{"db": "another-salt"}'
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -68,13 +68,13 @@ import logging
 # import Salt libs
 import salt.utils.jid
 import salt.returners
-import salt.ext.six as six
+from salt.ext import six
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import third party libs
 try:
     import pymongo
-    version = pymongo.version
-    version = '.'.join(version.split('.')[:2])
+    PYMONGO_VERSION = _LooseVersion(pymongo.version)
     HAS_PYMONGO = True
 except ImportError:
     HAS_PYMONGO = False
@@ -141,7 +141,7 @@ def _get_conn(ret):
     # pymongo versions < 2.3 until then there are
     # a bunch of these sections that need to be supported
 
-    if float(version) > 2.3:
+    if PYMONGO_VERSION > _LooseVersion('2.3'):
         conn = pymongo.MongoClient(host, port)
     else:
         conn = pymongo.Connection(host, port)
@@ -151,7 +151,7 @@ def _get_conn(ret):
         mdb.authenticate(user, password)
 
     if indexes:
-        if float(version) > 2.3:
+        if PYMONGO_VERSION > _LooseVersion('2.3'):
             mdb.saltReturns.create_index('minion')
             mdb.saltReturns.create_index('jid')
 
@@ -193,7 +193,7 @@ def returner(ret):
 
     # again we run into the issue with deprecated code from previous versions
 
-    if float(version) > 2.3:
+    if PYMONGO_VERSION > _LooseVersion('2.3'):
         #using .copy() to ensure original data for load is unchanged
         mdb.saltReturns.insert_one(sdata.copy())
     else:
@@ -231,7 +231,7 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)
 
 
 def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument

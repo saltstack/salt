@@ -26,7 +26,7 @@ SoftLayer salt.cloud modules. See: https://pypi.python.org/pypi/SoftLayer
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
 import decimal
@@ -246,7 +246,7 @@ def create(vm_):
         transport=__opts__['transport']
     )
 
-    log.info('Creating Cloud VM {0}'.format(name))
+    log.info('Creating Cloud VM %s', name)
     conn = get_conn(service='SoftLayer_Product_Order')
     kwargs = {
         'complexType': 'SoftLayer_Container_Product_Order_Hardware_Server',
@@ -326,7 +326,7 @@ def create(vm_):
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(name),
         args={
-            'kwargs': __utils__['cloud.filter_event']('requesting', kwargs, kwargs.keys()),
+            'kwargs': __utils__['cloud.filter_event']('requesting', kwargs, list(kwargs)),
         },
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
@@ -338,11 +338,9 @@ def create(vm_):
         #response = conn.verifyOrder(kwargs)
     except Exception as exc:
         log.error(
-            'Error creating {0} on SoftLayer\n\n'
+            'Error creating %s on SoftLayer\n\n'
             'The following exception was thrown when trying to '
-            'run the initial deployment: \n{1}'.format(
-                name, str(exc)
-            ),
+            'run the initial deployment: \n%s', name, exc,
             # Show the traceback if the debug logging level is enabled
             exc_info_on_loglevel=logging.DEBUG
         )
@@ -392,7 +390,7 @@ def create(vm_):
         for node in node_info:
             if node['id'] == response['id'] \
                     and 'passwords' in node['operatingSystem'] \
-                    and len(node['operatingSystem']['passwords']) > 0:
+                    and node['operatingSystem']['passwords']:
                 return node['operatingSystem']['passwords'][0]['password']
         time.sleep(5)
         return False
@@ -525,9 +523,6 @@ def destroy(name, call=None):
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
-
-    # If the VM was created with use_fqdn, the short hostname will be used instead.
-    name = name.split('.')[0]
 
     node = show_instance(name, call='action')
     conn = get_conn(service='SoftLayer_Ticket')

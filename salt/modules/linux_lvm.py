@@ -2,15 +2,19 @@
 '''
 Support for Linux LVM2
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
+import logging
 import os.path
 
 # Import salt libs
-import salt.utils
-import salt.ext.six as six
+import salt.utils.path
+from salt.ext import six
 from salt.exceptions import CommandExecutionError
+
+# Set up logger
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'lvm'
@@ -20,7 +24,7 @@ def __virtual__():
     '''
     Only load the module if lvm is installed
     '''
-    if salt.utils.which('lvm'):
+    if salt.utils.path.which('lvm'):
         return __virtualname__
     return (False, 'The linux_lvm execution module cannot be loaded: the lvm binary is not in the path.')
 
@@ -60,16 +64,20 @@ def fullversion():
     return ret
 
 
-def pvdisplay(pvname='', real=False):
+def pvdisplay(pvname='', real=False, quiet=False):
     '''
     Return information about the physical volume(s)
 
     pvname
         physical device name
+
     real
         dereference any symlinks and report the real device
 
         .. versionadded:: 2015.8.7
+
+    quiet
+        if the physical volume is not present, do not show any error
 
 
     CLI Examples:
@@ -83,7 +91,8 @@ def pvdisplay(pvname='', real=False):
     cmd = ['pvdisplay', '-c']
     if pvname:
         cmd.append(pvname)
-    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False,
+                                      ignore_retcode=quiet)
 
     if cmd_ret['retcode'] != 0:
         return {}
@@ -114,9 +123,15 @@ def pvdisplay(pvname='', real=False):
     return ret
 
 
-def vgdisplay(vgname=''):
+def vgdisplay(vgname='', quiet=False):
     '''
     Return information about the volume group(s)
+
+    vgname
+        volume group name
+
+    quiet
+        if the volume group is not present, do not show any error
 
     CLI Examples:
 
@@ -129,7 +144,8 @@ def vgdisplay(vgname=''):
     cmd = ['vgdisplay', '-c']
     if vgname:
         cmd.append(vgname)
-    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False,
+                                      ignore_retcode=quiet)
 
     if cmd_ret['retcode'] != 0:
         return {}
@@ -159,9 +175,15 @@ def vgdisplay(vgname=''):
     return ret
 
 
-def lvdisplay(lvname=''):
+def lvdisplay(lvname='', quiet=False):
     '''
     Return information about the logical volume(s)
+
+    lvname
+        logical device name
+
+    quiet
+        if the logical volume is not present, do not show any error
 
     CLI Examples:
 
@@ -174,7 +196,8 @@ def lvdisplay(lvname=''):
     cmd = ['lvdisplay', '-c']
     if lvname:
         cmd.append(lvname)
-    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False,
+                                      ignore_retcode=quiet)
 
     if cmd_ret['retcode'] != 0:
         return {}
@@ -223,7 +246,7 @@ def pvcreate(devices, override=True, **kwargs):
     for device in devices:
         if not os.path.exists(device):
             raise CommandExecutionError('{0} does not exist'.format(device))
-        if not pvdisplay(device):
+        if not pvdisplay(device, quiet=True):
             cmd.append(device)
         elif not override:
             raise CommandExecutionError('Device "{0}" is already an LVM physical volume.'.format(device))
@@ -236,10 +259,13 @@ def pvcreate(devices, override=True, **kwargs):
              'pvmetadatacopies', 'metadatacopies', 'metadataignore',
              'restorefile', 'norestorefile', 'labelsector',
              'setphysicalvolumesize')
+    no_parameter = ('force', 'norestorefile')
     for var in kwargs:
         if kwargs[var] and var in valid:
+            cmd.extend(['--{0}'.format(var), kwargs[var]])
+        elif kwargs[var] and var in no_parameter:
             cmd.append('--{0}'.format(var))
-            cmd.append(kwargs[var])
+
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
     if out.get('retcode'):
         raise CommandExecutionError(out.get('stderr'))
@@ -285,7 +311,7 @@ def pvremove(devices, override=True):
 
     # Verify pvcremove was successful
     for device in devices:
-        if pvdisplay(device):
+        if pvdisplay(device, quiet=True):
             raise CommandExecutionError('Device "{0}" was not affected.'.format(device))
 
     return True
@@ -354,6 +380,7 @@ def lvcreate(lvname,
              pv=None,
              thinvolume=False,
              thinpool=False,
+             force=False,
              **kwargs):
     '''
     Create a new logical volume, with option for which physical volume to be used
@@ -398,7 +425,7 @@ def lvcreate(lvname,
             elif k in valid:
                 extra_arguments.extend(['--{0}'.format(k), '{0}'.format(v)])
 
-    cmd = [salt.utils.which('lvcreate')]
+    cmd = [salt.utils.path.which('lvcreate')]
 
     if thinvolume:
         cmd.extend(['--thin', '-n', lvname])
@@ -427,6 +454,9 @@ def lvcreate(lvname,
         cmd.append(pv)
     if extra_arguments:
         cmd.extend(extra_arguments)
+
+    if force:
+        cmd.append('--yes')
 
     out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     lvdev = '/dev/{0}/{1}'.format(vgname, lvname)
@@ -466,7 +496,7 @@ def lvremove(lvname, vgname):
     return out.strip()
 
 
-def lvresize(size, lvpath):
+def lvresize(size=None, lvpath=None, extents=None):
     '''
     Return information about the logical volume(s)
 
@@ -476,10 +506,23 @@ def lvresize(size, lvpath):
 
 
         salt '*' lvm.lvresize +12M /dev/mapper/vg1-test
+        salt '*' lvm.lvresize lvpath=/dev/mapper/vg1-test extents=+100%FREE
+
     '''
-    ret = {}
-    cmd = ['lvresize', '-L', str(size), lvpath]
-    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if cmd_ret['retcode'] != 0:
+    if size and extents:
+        log.error('Error: Please specify only one of size or extents')
         return {}
-    return ret
+
+    cmd = ['lvresize']
+
+    if size:
+        cmd.extend(['-L', '{0}'.format(size)])
+    elif extents:
+        cmd.extend(['-l', '{0}'.format(extents)])
+    else:
+        log.error('Error: Either size or extents must be specified')
+        return {}
+
+    cmd.append(lvpath)
+    cmd_ret = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
+    return {'Output from lvresize': cmd_ret[0].strip()}

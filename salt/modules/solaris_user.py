@@ -12,7 +12,7 @@ Manage users with the useradd command
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 try:
     import pwd
     HAS_PWD = True
@@ -22,8 +22,9 @@ import copy
 import logging
 
 # Import salt libs
-import salt.utils
-import salt.ext.six as six
+import salt.utils.data
+import salt.utils.user
+from salt.ext import six
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -36,7 +37,7 @@ def __virtual__():
     '''
     Set the user module if the kernel is SunOS
     '''
-    if __grains__['kernel'] == 'SunOS' and HAS_PWD:
+    if __grains__.get('kernel') == 'SunOS' and HAS_PWD:
         return __virtualname__
     return (False, 'The solaris_user execution module failed to load: '
             'only available on Solaris systems with pwd module installed.')
@@ -53,10 +54,10 @@ def _get_gecos(name):
         # Assign empty strings for any unspecified trailing GECOS fields
         while len(gecos_field) < 4:
             gecos_field.append('')
-        return {'fullname': str(gecos_field[0]),
-                'roomnumber': str(gecos_field[1]),
-                'workphone': str(gecos_field[2]),
-                'homephone': str(gecos_field[3])}
+        return {'fullname': six.text_type(gecos_field[0]),
+                'roomnumber': six.text_type(gecos_field[1]),
+                'workphone': six.text_type(gecos_field[2]),
+                'homephone': six.text_type(gecos_field[3])}
 
 
 def _build_gecos(gecos_dict):
@@ -75,7 +76,7 @@ def _update_gecos(name, key, value):
     Common code to change a user's GECOS information
     '''
     if not isinstance(value, six.string_types):
-        value = str(value)
+        value = six.text_type(value)
     pre_info = _get_gecos(name)
     if not pre_info:
         return False
@@ -111,7 +112,7 @@ def add(name,
 
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     '''
-    if salt.utils.is_true(kwargs.pop('system', False)):
+    if salt.utils.data.is_true(kwargs.pop('system', False)):
         log.warning('solaris_user module does not support the \'system\' '
                     'argument')
     if kwargs:
@@ -168,7 +169,7 @@ def delete(name, remove=False, force=False):
 
         salt '*' user.delete name remove=True force=True
     '''
-    if salt.utils.is_true(force):
+    if salt.utils.data.is_true(force):
         log.warning(
             'userdel does not support force-deleting user while user is '
             'logged in'
@@ -431,14 +432,17 @@ def list_groups(name):
 
         salt '*' user.list_groups foo
     '''
-    return salt.utils.get_group_list(name)
+    return salt.utils.user.get_group_list(name)
 
 
 def list_users():
     '''
     Return a list of all users
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' user.list_users
     '''
     return sorted([user.pw_name for user in pwd.getpwall()])

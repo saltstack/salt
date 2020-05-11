@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
+Control concurrency of steps within state execution using zookeeper
+===================================================================
+
 :depends: kazoo
 :configuration: See :py:mod:`salt.modules.zookeeper` for setup instructions.
 
-Control concurrency of steps within state execution using zookeeper
-===================================================================
 
 This module allows you to "wrap" a state's execution with concurrency control.
 This is useful to protect against all hosts executing highstate simultaneously
@@ -44,6 +45,9 @@ steps are executing with a single path.
 This example would allow the file state to change, but would limit the
 concurrency of the trafficserver service restart to 4.
 '''
+
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 
 # TODO: use depends decorator to make these per function deps, instead of all or nothing
 REQUIRED_FUNCS = (
@@ -182,7 +186,7 @@ def min_party(name,
     num_nodes = len(nodes)
 
     if num_nodes >= min_nodes or blocking:
-        ret['result'] = None if __opts__['test'] else True
+        ret['result'] = True
         if not blocking:
             ret['comment'] = 'Currently {0} nodes, which is >= {1}'.format(num_nodes, min_nodes)
         else:

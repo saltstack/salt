@@ -95,19 +95,19 @@ Minion configuration:
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import datetime
 from datetime import tzinfo, timedelta
 import uuid
 import logging
-import json
 
 # Import Salt libs
 import salt.returners
 import salt.utils.jid
+import salt.utils.json
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 __virtualname__ = 'elasticsearch'
 
@@ -220,14 +220,16 @@ def returner(ret):
 
     if job_fun in options['functions_blacklist']:
         log.info(
-            'Won\'t push new data to Elasticsearch, job with jid={0} and '
-            'function={1} which is in the user-defined list of ignored '
-            'functions'.format(job_id, job_fun))
+            'Won\'t push new data to Elasticsearch, job with jid=%s and '
+            'function=%s which is in the user-defined list of ignored '
+            'functions', job_id, job_fun
+        )
         return
-
-    if ret.get('return', None) is None:
-        log.info('Won\'t push new data to Elasticsearch, job with jid={0} was '
-                 'not succesful'.format(job_id))
+    if ret.get('data', None) is None and ret.get('return') is None:
+        log.info(
+            'Won\'t push new data to Elasticsearch, job with jid=%s was '
+            'not successful', job_id
+        )
         return
 
     # Build the index name
@@ -251,44 +253,44 @@ def returner(ret):
                 'failed':   0,
             }
 
-        # Prepend each state execution key in ret['return'] with a zero-padded
+        # Prepend each state execution key in ret['data'] with a zero-padded
         # version of the '__run_num__' field allowing the states to be ordered
         # more easily. Change the index to be
         # index to be '<index>-ordered' so as not to clash with the unsorted
         # index data format
-        if options['states_order_output'] and isinstance(ret['return'], dict):
+        if options['states_order_output'] and isinstance(ret['data'], dict):
             index = '{0}-ordered'.format(index)
-            max_chars = len(str(len(ret['return'])))
+            max_chars = len(six.text_type(len(ret['data'])))
 
-            for uid, data in six.iteritems(ret['return']):
+            for uid, data in six.iteritems(ret['data']):
                 # Skip keys we've already prefixed
                 if uid.startswith(tuple('0123456789')):
                     continue
 
                 # Store the function being called as it's a useful key to search
                 decoded_uid = uid.split('_|-')
-                ret['return'][uid]['_func'] = '{0}.{1}'.format(
+                ret['data'][uid]['_func'] = '{0}.{1}'.format(
                     decoded_uid[0],
                     decoded_uid[-1]
                 )
 
                 # Prefix the key with the run order so it can be sorted
                 new_uid = '{0}_|-{1}'.format(
-                    str(data['__run_num__']).zfill(max_chars),
+                    six.text_type(data['__run_num__']).zfill(max_chars),
                     uid,
                 )
 
-                ret['return'][new_uid] = ret['return'].pop(uid)
+                ret['data'][new_uid] = ret['data'].pop(uid)
 
         # Catch a state output that has failed and where the error message is
         # not in a dict as expected. This prevents elasticsearch from
         # complaining about a mapping error
-        elif not isinstance(ret['return'], dict):
-            ret['return'] = {'return': ret['return']}
+        elif not isinstance(ret['data'], dict):
+            ret['data'] = {job_fun_escaped: {'return': ret['data']}}
 
         # Need to count state successes and failures
         if options['states_count']:
-            for state_data in ret['return'].values():
+            for state_data in ret['data'].values():
                 if state_data['result'] is False:
                     counts['failed'] += 1
                 else:
@@ -317,16 +319,16 @@ def returner(ret):
         'fun': job_fun,
         'jid': job_id,
         'counts': counts,
-        'data': _convert_keys(ret['return'])
+        'data': _convert_keys(ret['data'])
     }
 
     if options['debug_returner_payload']:
-        log.debug('Payload: {0}'.format(data))
+        log.debug('elasicsearch payload: %s', data)
 
     # Post the payload
     ret = __salt__['elasticsearch.document_create'](index=index,
                                                     doc_type=options['doc_type'],
-                                                    body=json.dumps(data))
+                                                    body=salt.utils.json.dumps(data))
 
 
 def event_return(events):
@@ -355,14 +357,14 @@ def event_return(events):
     ret = __salt__['elasticsearch.document_create'](index=index,
                                                     doc_type=doc_type,
                                                     id=uuid.uuid4(),
-                                                    body=json.dumps(data))
+                                                    body=salt.utils.json.dumps(data))
 
 
 def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)
 
 
 def save_load(jid, load, minions=None):
@@ -376,7 +378,20 @@ def save_load(jid, load, minions=None):
     index = options['master_job_cache_index']
     doc_type = options['master_job_cache_doc_type']
 
+    if options['index_date']:
+        index = '{0}-{1}'.format(index,
+            datetime.date.today().strftime('%Y.%m.%d'))
+
     _ensure_index(index)
+
+    # addressing multiple types (bool, string, dict, ...) issue in master_job_cache index for return key (#20826)
+    if not load.get('return', None) is None:
+        # if load.return is not a dict, moving the result to load.return.<job_fun_escaped>.return
+        if not isinstance(load['return'], dict):
+            job_fun_escaped = load['fun'].replace('.', '_')
+            load['return'] = {job_fun_escaped: {'return': load['return']}}
+        # rename load.return to load.data in order to have the same key in all indices (master_job_cache, job)
+        load['data'] = load.pop('return')
 
     data = {
         'jid': jid,
@@ -386,7 +401,7 @@ def save_load(jid, load, minions=None):
     ret = __salt__['elasticsearch.document_create'](index=index,
                                                     doc_type=doc_type,
                                                     id=jid,
-                                                    body=json.dumps(data))
+                                                    body=salt.utils.json.dumps(data))
 
 
 def get_load(jid):
@@ -400,9 +415,14 @@ def get_load(jid):
     index = options['master_job_cache_index']
     doc_type = options['master_job_cache_doc_type']
 
+    if options['index_date']:
+        index = '{0}-{1}'.format(index,
+            datetime.date.today().strftime('%Y.%m.%d'))
+
     data = __salt__['elasticsearch.document_get'](index=index,
                                                   id=jid,
                                                   doc_type=doc_type)
     if data:
-        return json.loads(data)
+        # Use salt.utils.json.dumps to convert elasticsearch unicode json to standard json
+        return salt.utils.json.loads(salt.utils.json.dumps(data))
     return {}

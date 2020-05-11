@@ -103,23 +103,24 @@
 # pylint: disable=too-few-public-methods,too-many-public-methods
 
 # Import python libs
-from __future__ import absolute_import
-import logging
+from __future__ import absolute_import, print_function, unicode_literals
+import copy
 import datetime
-from copy import copy
+import logging
 
 
 # Import Salt Libs
 from salt.serializers import DeserializationError, SerializationError
 from salt.utils.aggregation import aggregate, Map, Sequence
 from salt.utils.odict import OrderedDict
+from salt.utils.thread_local_proxy import ThreadLocalProxy
 
 # Import 3rd-party libs
 import yaml
 from yaml.nodes import MappingNode
 from yaml.constructor import ConstructorError
 from yaml.scanner import ScannerError
-import salt.ext.six as six
+from salt.ext import six
 
 __all__ = ['deserialize', 'serialize', 'available']
 
@@ -128,9 +129,18 @@ log = logging.getLogger(__name__)
 available = True
 
 # prefer C bindings over python when available
-# CSafeDumper causes test failures under python3
 BaseLoader = getattr(yaml, 'CSafeLoader', yaml.SafeLoader)
-BaseDumper = yaml.SafeDumper if six.PY3 else getattr(yaml, 'CSafeDumper', yaml.SafeDumper)
+if six.PY3:
+    # CSafeDumper causes repr errors in python3, so use the pure Python one
+    try:
+        # Depending on how PyYAML was built, yaml.SafeDumper may actually be
+        # yaml.cyaml.CSafeDumper (i.e. the C dumper instead of pure Python).
+        BaseDumper = yaml.dumper.SafeDumper
+    except AttributeError:
+        # Here just in case, but yaml.dumper.SafeDumper should always exist
+        BaseDumper = yaml.SafeDumper
+else:
+    BaseDumper = getattr(yaml, 'CSafeDumper', yaml.SafeDumper)
 
 ERROR_MAP = {
     ("found character '\\t' "
@@ -150,14 +160,17 @@ def deserialize(stream_or_string, **options):
     try:
         return yaml.load(stream_or_string, **options)
     except ScannerError as error:
+        log.exception('Error encountered while deserializing')
         err_type = ERROR_MAP.get(error.problem, 'Unknown yaml render error')
         line_num = error.problem_mark.line + 1
         raise DeserializationError(err_type,
                                    line_num,
                                    error.problem_mark.buffer)
     except ConstructorError as error:
+        log.exception('Error encountered while deserializing')
         raise DeserializationError(error)
     except Exception as error:
+        log.exception('Error encountered while deserializing')
         raise DeserializationError(error)
 
 
@@ -170,6 +183,7 @@ def serialize(obj, **options):
     '''
 
     options.setdefault('Dumper', Dumper)
+    options.setdefault('default_flow_style', None)
     try:
         response = yaml.dump(obj, **options)
         if response.endswith('\n...\n'):
@@ -178,6 +192,7 @@ def serialize(obj, **options):
             return response[:-1]
         return response
     except Exception as error:
+        log.exception('Error encountered while serializing')
         raise SerializationError(error)
 
 
@@ -215,11 +230,11 @@ class Loader(BaseLoader):  # pylint: disable=W0232
 
             # !reset instruction applies on document only.
             # It tells to reset previous decoded value for this present key.
-            reset = key_node.tag == u'!reset'
+            reset = key_node.tag == '!reset'
 
             # even if !aggregate tag apply only to values and not keys
             # it's a reason to act as a such nazi.
-            if key_node.tag == u'!aggregate':
+            if key_node.tag == '!aggregate':
                 log.warning('!aggregate applies on values only, not on keys')
                 value_node.tag = key_node.tag
                 key_node.tag = self.resolve_sls_tag(key_node)[0]
@@ -267,10 +282,10 @@ class Loader(BaseLoader):  # pylint: disable=W0232
     def construct_sls_aggregate(self, node):
         try:
             tag, deep = self.resolve_sls_tag(node)
-        except:
+        except Exception:
             raise ConstructorError('unable to build reset')
 
-        node = copy(node)
+        node = copy.copy(node)
         node.tag = tag
         obj = self.construct_object(node, deep)
         if obj is None:
@@ -284,10 +299,10 @@ class Loader(BaseLoader):  # pylint: disable=W0232
     def construct_sls_reset(self, node):
         try:
             tag, deep = self.resolve_sls_tag(node)
-        except:
+        except Exception:
             raise ConstructorError('unable to build reset')
 
-        node = copy(node)
+        node = copy.copy(node)
         node.tag = tag
 
         return self.construct_object(node, deep)
@@ -322,7 +337,6 @@ Loader.add_multi_constructor('tag:yaml.org,2002:pairs', Loader.construct_yaml_pa
 Loader.add_multi_constructor('tag:yaml.org,2002:set', Loader.construct_yaml_set)
 Loader.add_multi_constructor('tag:yaml.org,2002:seq', Loader.construct_yaml_seq)
 Loader.add_multi_constructor('tag:yaml.org,2002:map', Loader.construct_yaml_map)
-Loader.add_multi_constructor(None, Loader.construct_undefined)
 
 
 class SLSMap(OrderedDict):
@@ -386,11 +400,12 @@ class Dumper(BaseDumper):  # pylint: disable=W0232
     def represent_odict(self, data):
         return self.represent_mapping('tag:yaml.org,2002:map', list(data.items()))
 
+
 Dumper.add_multi_representer(type(None), Dumper.represent_none)
 if six.PY2:
     Dumper.add_multi_representer(six.binary_type, Dumper.represent_str)
     Dumper.add_multi_representer(six.text_type, Dumper.represent_unicode)
-    Dumper.add_multi_representer(long, Dumper.represent_long)  # pylint: disable=incompatible-py3-code
+    Dumper.add_multi_representer(long, Dumper.represent_long)  # pylint: disable=incompatible-py3-code,undefined-variable
 else:
     Dumper.add_multi_representer(six.binary_type, Dumper.represent_binary)
     Dumper.add_multi_representer(six.text_type, Dumper.represent_str)
@@ -404,6 +419,10 @@ Dumper.add_multi_representer(set, Dumper.represent_set)
 Dumper.add_multi_representer(datetime.date, Dumper.represent_date)
 Dumper.add_multi_representer(datetime.datetime, Dumper.represent_datetime)
 Dumper.add_multi_representer(None, Dumper.represent_undefined)
+Dumper.add_representer(
+    ThreadLocalProxy,
+    lambda dumper, proxy:
+        dumper.represent_data(ThreadLocalProxy.unproxy(proxy)))
 
 
 def merge_recursive(obj_a, obj_b, level=False):

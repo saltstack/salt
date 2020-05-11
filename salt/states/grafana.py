@@ -166,12 +166,17 @@ add rows if they do not exist in existing dashboards, and to update rows if
 they exist in dashboards. The module will not manage rows that are not defined,
 allowing users to manage their own custom rows.
 '''
-from __future__ import absolute_import
-from salt.exceptions import SaltInvocationError
-from salt.ext.six import string_types
-from salt.utils.dictdiffer import DictDiffer
-import json
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
+
+# Import Salt libs
+import salt.utils.json
+from salt.exceptions import SaltInvocationError
+from salt.utils.dictdiffer import DictDiffer
+
+# Import 3rd-party
+from salt.ext.six import string_types
 
 
 def __virtual__():
@@ -281,7 +286,7 @@ def dashboard_present(
             index=index, id=name, doc_type='dashboard', hosts=hosts
         )
         _dashboard = _dashboard.get('_source', {}).get('dashboard')
-        _dashboard = json.loads(_dashboard)
+        _dashboard = salt.utils.json.loads(_dashboard)
     else:
         if not dashboard:
             raise SaltInvocationError('Grafana dashboard does not exist and no'
@@ -338,10 +343,10 @@ def dashboard_present(
         ret['comment'] = msg
         return ret
     body = {
-        "user":  "guest",
-        "group": "guest",
-        "title": name,
-        "dashboard": json.dumps(_dashboard)
+        'user':  'guest',
+        'group': 'guest',
+        'title': name,
+        'dashboard': salt.utils.json.dumps(_dashboard)
     }
     updated = __salt__['elasticsearch.index'](
         index=index, doc_type='dashboard', body=body, id=name,

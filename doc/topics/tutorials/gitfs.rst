@@ -27,7 +27,7 @@ Installing Dependencies
 =======================
 
 Both pygit2_ and GitPython_ are supported Python interfaces to git. If
-compatible versions of both are installed, pygit2_ will preferred. In these
+compatible versions of both are installed, pygit2_ will be preferred. In these
 cases, GitPython_ can be forced using the :conf_master:`gitfs_provider`
 parameter in the master config file.
 
@@ -70,6 +70,7 @@ packages. Additionally, keep in mind that :ref:`SSH authentication in pygit2
 <pygit2-authentication-ssh>` requires libssh2_ (*not* libssh) development
 libraries to be present before libgit2_ is built. On some Debian-based distros
 ``pkg-config`` is also required to link libgit2_ with libssh2.
+
 .. note::
     If you are receiving the error "Unsupported URL Protocol" in the Salt Master
     log when making a connection using SSH, review the libssh2 details listed
@@ -103,8 +104,8 @@ RedHat Pygit2 Issues
 
 The release of RedHat/CentOS 7.3 upgraded both ``python-cffi`` and
 ``http-parser``, both of which are dependencies for pygit2_/libgit2_. Both
-pygit2_ and libgit2_ (which are from the EPEL repository and not managed
-directly by RedHat) need to be rebuilt against these updated dependencies.
+``pygit2`` and ``libgit2`` packages (which are from the EPEL repository) should
+be upgraded to the most recent versions, at least to ``0.24.2``.
 
 The below errors will show up in the master log if an incompatible
 ``python-pygit2`` package is installed:
@@ -123,30 +124,8 @@ package is installed:
 
     2017-02-15 18:04:45,211 [salt.utils.gitfs ][ERROR   ][6211] Error occurred fetching gitfs remote 'https://foo.com/bar.git': No Content-Type header in response
 
-As of 15 February 2017, ``python-pygit2`` has been rebuilt and is in the stable
-EPEL repository. However, ``libgit2`` remains broken (a `bug report`_ has been
-filed to get it rebuilt).
-
-In the meantime, you can work around this by downgrading ``http-parser``. To do
-this, go to `this page`_ and download the appropriate ``http-parser`` RPM for
-the OS architecture you are using (x86_64, etc.). Then downgrade using the
-``rpm`` command. For example:
-
-.. code-block:: bash
-
-    [root@784e8a8c5028 /]# curl --silent -O https://kojipkgs.fedoraproject.org//packages/http-parser/2.0/5.20121128gitcd01361.el7/x86_64/http-parser-2.0-5.20121128gitcd01361.el7.x86_64.rpm
-    [root@784e8a8c5028 /]# rpm -Uvh --oldpackage http-parser-2.0-5.20121128gitcd01361.el7.x86_64.rpm
-    Preparing...                          ################################# [100%]
-    Updating / installing...
-       1:http-parser-2.0-5.20121128gitcd01################################# [ 50%]
-    Cleaning up / removing...
-       2:http-parser-2.7.1-3.el7          ################################# [100%]
-
-A restart of the salt-master daemon may be required to allow http(s)
-repositories to continue to be fetched.
-
-.. _`this page`: https://koji.fedoraproject.org/koji/buildinfo?buildID=703753
-.. _`bug report`: https://bugzilla.redhat.com/show_bug.cgi?id=1422583
+A restart of the ``salt-master`` daemon and gitfs cache directory clean up may
+be required to allow http(s) repositories to continue to be fetched.
 
 
 GitPython
@@ -166,13 +145,15 @@ Ubuntu 14.04 LTS and Debian Wheezy (7.x) also have a compatible version packaged
 
     # apt-get install python-git
 
-If your master is running an older version (such as Ubuntu 12.04 LTS or Debian
-Squeeze), then you will need to install GitPython using either pip_ or
-easy_install (it is recommended to use pip). Version 0.3.2.RC1 is now marked as
-the stable release in PyPI, so it should be a simple matter of running ``pip
-install GitPython`` (or ``easy_install GitPython``) as root.
+GitPython_ requires the ``git`` CLI utility to work. If installed from a system
+package, then git should already be installed, but if installed via pip_ then
+it may still be necessary to install git separately. For MacOS users,
+GitPython_ comes bundled in with the Salt installer, but git must still be
+installed for it to work properly. Git can be installed in several ways,
+including by installing XCode_.
 
-.. _`pip`: http://www.pip-installer.org/
+.. _pip: http://www.pip-installer.org/
+.. _XCode: https://developer.apple.com/xcode/
 
 .. warning::
 
@@ -207,13 +188,17 @@ Simple Configuration
 To use the gitfs backend, only two configuration changes are required on the
 master:
 
-1. Include ``git`` in the :conf_master:`fileserver_backend` list in the master
-   config file:
+1. Include ``gitfs`` in the :conf_master:`fileserver_backend` list in the
+   master config file:
 
    .. code-block:: yaml
 
        fileserver_backend:
-         - git
+         - gitfs
+
+   .. note::
+       ``git`` also works here. Prior to the 2018.3.0 release, *only* ``git``
+       would work.
 
 2. Specify one or more ``git://``, ``https://``, ``file://``, or ``ssh://``
    URLs in :conf_master:`gitfs_remotes` to configure which repositories to
@@ -321,6 +306,7 @@ configured gitfs remotes):
 
 * :conf_master:`gitfs_base`
 * :conf_master:`gitfs_root`
+* :conf_master:`gitfs_ssl_verify`
 * :conf_master:`gitfs_mountpoint` (new in 2014.7.0)
 * :conf_master:`gitfs_user` (**pygit2 only**, new in 2014.7.0)
 * :conf_master:`gitfs_password` (**pygit2 only**, new in 2014.7.0)
@@ -328,7 +314,14 @@ configured gitfs remotes):
 * :conf_master:`gitfs_pubkey` (**pygit2 only**, new in 2014.7.0)
 * :conf_master:`gitfs_privkey` (**pygit2 only**, new in 2014.7.0)
 * :conf_master:`gitfs_passphrase` (**pygit2 only**, new in 2014.7.0)
-* :conf_master:`gitfs_refspecs` (new in Nitrogen)
+* :conf_master:`gitfs_refspecs` (new in 2017.7.0)
+* :conf_master:`gitfs_disable_saltenv_mapping` (new in 2018.3.0)
+* :conf_master:`gitfs_ref_types` (new in 2018.3.0)
+* :conf_master:`gitfs_update_interval` (new in 2018.3.0)
+
+.. note::
+    pygit2 only supports disabling SSL verification in versions 0.23.2 and
+    newer.
 
 These parameters can now be overridden on a per-remote basis. This allows for a
 tremendous amount of customization. Here's some example usage:
@@ -344,16 +337,26 @@ tremendous amount of customization. Here's some example usage:
         - root: salt
         - mountpoint: salt://bar
         - base: salt-base
+        - ssl_verify: False
+        - update_interval: 120
       - https://foo.com/bar.git:
         - name: second_bar_repo
         - root: other/salt
         - mountpoint: salt://other/bar
         - base: salt-base
+        - ref_types:
+          - branch
       - http://foo.com/baz.git:
         - root: salt/states
         - user: joe
         - password: mysupersecretpassword
         - insecure_auth: True
+        - disable_saltenv_mapping: True
+        - saltenv:
+          - foo:
+            - ref: foo
+      - http://foo.com/quux.git:
+        - all_saltenvs: master
 
 .. important::
 
@@ -365,8 +368,10 @@ tremendous amount of customization. Here's some example usage:
 
     2. Per-remote configuration parameters are named like the global versions,
        with the ``gitfs_`` removed from the beginning. The exception being the
-       ``name`` and ``saltenv`` parameters, which are only available to
-       per-remote configurations.
+       ``name``, ``saltenv``, and ``all_saltenvs`` parameters, which are only
+       available to per-remote configurations.
+
+    The ``all_saltenvs`` parameter is new in the 2018.3.0 release.
 
 In the example configuration above, the following is true:
 
@@ -381,17 +386,33 @@ In the example configuration above, the following is true:
    will only serve files from the ``salt/states`` directory (and its
    subdirectories).
 
-3. The first and fourth remotes will have files located under the root of the
+3. The third remote will only serve files from branches, and not from tags or
+   SHAs.
+
+4. The fourth remote will only have two saltenvs available: ``base`` (pointed
+   at ``develop``), and ``foo`` (pointed at ``foo``).
+
+5. The first and fourth remotes will have files located under the root of the
    Salt fileserver namespace (``salt://``). The files from the second remote
    will be located under ``salt://bar``, while the files from the third remote
    will be located under ``salt://other/bar``.
 
-4. The second and third remotes reference the same repository and unique names
+6. The second and third remotes reference the same repository and unique names
    need to be declared for duplicate gitfs remotes.
 
-5. The fourth remote overrides the default behavior of :ref:`not authenticating
+7. The fourth remote overrides the default behavior of :ref:`not authenticating
    to insecure (non-HTTPS) remotes <gitfs-insecure-auth>`.
 
+8. Because ``all_saltenvs`` is configured for the fifth remote, files from the
+   branch/tag ``master`` will appear in every fileserver environment.
+
+   .. note::
+       The use of ``http://`` (instead of ``https://``) is permitted here
+       *only* because authentication is not being used. Otherwise, the
+       ``insecure_auth`` parameter must be used (as in the fourth remote) to
+       force Salt to authenticate to an ``http://`` remote.
+
+9. The first remote will wait 120 seconds between updates instead of 60.
 
 .. _gitfs-per-saltenv-config:
 
@@ -453,7 +474,7 @@ Given the above configuration, the following is true:
 Custom Refspecs
 ===============
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 GitFS will by default fetch remote branches and tags. However, sometimes it can
 be useful to fetch custom refs (such as those created for `GitHub pull
@@ -500,6 +521,66 @@ would only fetch branches and tags (the default).
           - '+refs/pull/*/head:refs/remotes/origin/pr/*'
           - '+refs/pull/*/merge:refs/remotes/origin/merge/*'
 
+
+.. _gitfs-global-remotes:
+
+Global Remotes
+==============
+
+.. versionadded:: 2018.3.0
+
+The ``all_saltenvs`` per-remote configuration parameter overrides the logic
+Salt uses to map branches/tags to fileserver environments (i.e. saltenvs). This
+allows a single branch/tag to appear in *all* GitFS saltenvs.
+
+.. note::
+   ``all_saltenvs`` only works *within* GitFS. That is, files in a branch
+   configured using ``all_saltenvs`` will *not* show up in a fileserver
+   environment defined via some other fileserver backend (e.g.
+   :conf_master:`file_roots`).
+
+This is very useful in particular when working with :ref:`salt formulas
+<conventions-formula>`. Prior to the addition of this feature, it was necessary
+to push a branch/tag to the remote repo for each saltenv in which that formula
+was to be used. If the formula needed to be updated, this update would need to
+be reflected in all of the other branches/tags. This is both inconvenient and
+not scalable.
+
+With ``all_saltenvs``, it is now possible to define your formula once, in a
+single branch.
+
+.. code-block:: yaml
+
+    gitfs_remotes:
+      - http://foo.com/quux.git:
+        - all_saltenvs: anything
+
+.. _gitfs-update-intervals:
+
+Update Intervals
+================
+
+Prior to the 2018.3.0 release, GitFS would update its fileserver backends as part
+of a dedicated "maintenance" process, in which various routine maintenance
+tasks were performed. This tied the update interval to the
+:conf_master:`loop_interval` config option, and also forced all fileservers to
+update at the same interval.
+
+Now it is possible to make GitFS update at its own interval, using
+:conf_master:`gitfs_update_interval`:
+
+.. code-block:: yaml
+
+    gitfs_update_interval: 180
+
+    gitfs_remotes:
+      - https://foo.com/foo.git
+      - https://foo.com/bar.git:
+        - update_interval: 120
+
+Using the above configuration, the first remote would update every three
+minutes, while the second remote would update every two minutes.
+
 Configuration Order of Precedence
 =================================
 
@@ -522,9 +603,8 @@ overrides all levels below it):
    .. code-block:: yaml
 
        gitfs_saltenv:
-         - saltenv:
-           - dev:
-             - mountpoint: salt://bar
+         - dev:
+           - mountpoint: salt://bar
 
 3. Per-remote configuration parameter
 
@@ -540,6 +620,17 @@ overrides all levels below it):
 
        gitfs_mountpoint: salt://bar
 
+.. note::
+    The one exception to the above is when :ref:`all_saltenvs
+    <gitfs-global-remotes>` is used. This value overrides all logic for mapping
+    branches/tags to fileserver environments. So, even if
+    :conf_master:`gitfs_saltenv` is used to globally override the mapping for a
+    given saltenv, :ref:`all_saltenvs <gitfs-global-remotes>` would take
+    precedence for any remote which uses it.
+
+    It's important to note however that any ``root`` and ``mountpoint`` values
+    configured in :conf_master:`gitfs_saltenv` (or :ref:`per-saltenv
+    configuration <gitfs-per-saltenv-config>`) would be unaffected by this.
 
 .. _gitfs-walkthrough-root:
 
@@ -614,15 +705,24 @@ repository to be served up from the Salt fileserver path
 Mountpoints can also be configured on a :ref:`per-remote basis
 <gitfs-per-remote-config>`.
 
+
+Using gitfs in Masterless Mode
+==============================
+
+Since 2014.7.0, gitfs can be used in masterless mode. To do so, simply add the
+gitfs configuration parameters (and set :conf_master:`fileserver_backend`) in
+the _minion_ config file instead of the master config file.
+
+
 Using gitfs Alongside Other Backends
 ====================================
 
 Sometimes it may make sense to use multiple backends; for instance, if ``sls``
 files are stored in git but larger files are stored directly on the master.
 
-The cascading lookup logic used for multiple remotes is also used with
-multiple backends. If the ``fileserver_backend`` option contains
-multiple backends:
+The cascading lookup logic used for multiple remotes is also used with multiple
+backends. If the :conf_master:`fileserver_backend` option contains multiple
+backends:
 
 .. code-block:: yaml
 
@@ -634,6 +734,18 @@ Then the ``roots`` backend (the default backend of files in ``/srv/salt``) will
 be searched first for the requested file; then, if it is not found on the
 master, each configured git remote will be searched.
 
+.. note::
+
+    This can be used together with `file_roots` accepting `__env__` as a catch-all
+    environment, since 2018.3.5 and 2019.2.1:
+
+    .. code-block:: yaml
+
+        file_roots:
+          base:
+            - /srv/salt
+          __env__:
+            - /srv/salt
 
 Branches, Environments, and Top Files
 =====================================
@@ -676,16 +788,16 @@ Environment Whitelist/Blacklist
 
 .. versionadded:: 2014.7.0
 
-The :conf_master:`gitfs_env_whitelist` and :conf_master:`gitfs_env_blacklist`
-parameters allow for greater control over which branches/tags are exposed as
-fileserver environments. Exact matches, globs, and regular expressions are
-supported, and are evaluated in that order. If using a regular expression,
-``^`` and ``$`` must be omitted, and the expression must match the entire
-branch/tag.
+The :conf_master:`gitfs_saltenv_whitelist` and
+:conf_master:`gitfs_saltenv_blacklist` parameters allow for greater control
+over which branches/tags are exposed as fileserver environments. Exact matches,
+globs, and regular expressions are supported, and are evaluated in that order.
+If using a regular expression, ``^`` and ``$`` must be omitted, and the
+expression must match the entire branch/tag.
 
 .. code-block:: yaml
 
-    gitfs_env_whitelist:
+    gitfs_saltenv_whitelist:
       - base
       - v1.*
       - 'mybranch\d+'
@@ -699,11 +811,12 @@ branch/tag.
 The behavior of the blacklist/whitelist will differ depending on which
 combination of the two options is used:
 
-* If only :conf_master:`gitfs_env_whitelist` is used, then **only** branches/tags
-  which match the whitelist will be available as environments
+* If only :conf_master:`gitfs_saltenv_whitelist` is used, then **only**
+  branches/tags which match the whitelist will be available as environments
 
-* If only :conf_master:`gitfs_env_blacklist` is used, then the branches/tags
-  which match the blacklist will **not** be available as environments
+* If only :conf_master:`gitfs_saltenv_blacklist` is used, then the
+  branches/tags which match the blacklist will **not** be available as
+  environments
 
 * If both are used, then the branches/tags which match the whitelist, but do
   **not** match the blacklist, will be available as environments.
@@ -783,11 +896,57 @@ simply ``passphrase`` if being configured :ref:`per-remote
 Finally, the SSH host key must be :ref:`added to the known_hosts file
 <gitfs-ssh-fingerprint>`.
 
+.. note::
+    There is a known issue with public-key SSH authentication to Microsoft
+    Visual Studio (VSTS) with pygit2. This is due to a bug or lack of support
+    for VSTS in older libssh2 releases. Known working releases include libssh2
+    1.7.0 and later, and known incompatible releases include 1.5.0 and older.
+    At the time of this writing, 1.6.0 has not been tested.
+
+    Since upgrading libssh2 would require rebuilding many other packages (curl,
+    etc.), followed by a rebuild of libgit2 and a reinstall of pygit2, an
+    easier workaround for systems with older libssh2 is to use GitPython with a
+    passphraseless key for authentication.
+
 GitPython
 ---------
 
-With GitPython_, only passphrase-less SSH public key authentication is
-supported. **The auth parameters (pubkey, privkey, etc.) shown in the pygit2
+HTTPS
+~~~~~
+
+For HTTPS repositories which require authentication, the username and password
+can be configured in one of two ways. The first way is to include them in the
+URL using the format ``https://<user>:<password>@<url>``, like so:
+
+.. code-block:: yaml
+
+    gitfs_remotes:
+      - https://git:mypassword@domain.tld/myrepo.git
+
+The other way would be to configure the authentication in ``~/.netrc``:
+
+.. code-block:: text
+
+    machine domain.tld
+    login git
+    password mypassword
+
+
+If the repository is served over HTTP instead of HTTPS, then Salt will by
+default refuse to authenticate to it. This behavior can be overridden by adding
+an ``insecure_auth`` parameter:
+
+.. code-block:: yaml
+
+    gitfs_remotes:
+      - http://git:mypassword@domain.tld/insecure_repo.git:
+        - insecure_auth: True
+
+SSH
+~~~
+
+Only passphrase-less SSH public key authentication is supported using
+GitPython. **The auth parameters (pubkey, privkey, etc.) shown in the pygit2
 authentication examples above do not work with GitPython.**
 
 .. code-block:: yaml
@@ -861,7 +1020,7 @@ If not, then the easiest way to add the key is to su to the user (usually
 ``root``) under which the salt-master runs and attempt to login to the
 server via SSH:
 
-.. code-block:: bash
+.. code-block:: text
 
     $ su -
     Password:
@@ -990,15 +1149,8 @@ Using Git as an External Pillar Source
 The git external pillar (a.k.a. git_pillar) has been rewritten for the 2015.8.0
 release. This rewrite brings with it pygit2_ support (allowing for access to
 authenticated repositories), as well as more granular support for per-remote
-configuration.
-
-To make use of the new features, changes to the git ext_pillar configuration
-must be made. The new configuration schema is detailed :ref:`here
-<git-pillar-2015-8-0-and-later>`.
-
-For Salt releases before 2015.8.0, click :ref:`here <git-pillar-pre-2015-8-0>`
-for documentation.
-
+configuration. This configuration schema is detailed :ref:`here
+<git-pillar-configuration>`.
 
 .. _faq-gitfs-bug:
 

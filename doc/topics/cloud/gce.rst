@@ -15,9 +15,10 @@ at https://cloud.google.com.
 
 Dependencies
 ============
+
 * LibCloud >= 1.0.0
 
-.. versionchanged:: Nitrogen
+.. versionchanged:: 2017.7.0
 
 * A Google Cloud Platform account with Compute Engine enabled
 * A registered Service Account for authorization
@@ -115,6 +116,12 @@ Set up the provider cloud config at ``/etc/salt/cloud.providers`` or
 
 .. note::
 
+    Empty strings as values for ``service_account_private_key`` and ``service_account_email_address``
+    can be used on GCE instances. This will result in the service account assigned to the GCE instance
+    being used.
+
+.. note::
+
     The value provided for ``project`` must not contain underscores or spaces and
     is labeled as "Project ID" on the Google Developers Console.
 
@@ -163,7 +170,7 @@ it can be verified with Salt:
 
 .. code-block:: bash
 
-    salt gce-instance test.ping
+    salt gce-instance test.version
 
 
 GCE Specific Settings
@@ -224,9 +231,9 @@ subnetwork
 
 Use this setting to define the subnetwork an instance will be created in.
 This requires that the network your instance is created under has a mode of 'custom' or 'auto'.
-Additionally, the subnetwork your instance is created under is associated with the location you provide. Required.
+Additionally, the subnetwork your instance is created under is associated with the location you provide.
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 tags
 ----
@@ -526,7 +533,7 @@ not possible to add/remove existing instances to a network.
     salt-cloud -f create_network gce name=mynet cidr=10.10.10.0/24
     salt-cloud -f create_network gce name=mynet mode=auto description=some optional info.
 
-.. versionchanged:: Nitrogen
+.. versionchanged:: 2017.7.0
 
 Destroy network
 ---------------
@@ -546,7 +553,8 @@ Specify the network name to view information about the network.
     salt-cloud -f show_network gce name=mynet
 
 Create subnetwork
---------------
+-----------------
+
 New subnetworks require a name, region, and CIDR range.
 Optionally, 'description' can be provided to add an extra note to your subnetwork.
 New instances can be created and added to this subnetwork by setting the subnetwork name during create. It is
@@ -557,10 +565,11 @@ not possible to add/remove existing instances to a subnetwork.
     salt-cloud -f create_subnetwork gce name=mynet network=mynet region=us-central1 cidr=10.0.10.0/24
     salt-cloud -f create_subnetwork gce name=mynet network=mynet region=us-central1 cidr=10.10.10.0/24 description=some info about my subnet.
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Destroy subnetwork
----------------
+------------------
+
 Destroy a subnetwork by specifying the name and region. If a resource is currently using
 the target subnetwork an exception will be raised.
 
@@ -568,17 +577,18 @@ the target subnetwork an exception will be raised.
 
     salt-cloud -f delete_subnetwork gce name=mynet region=us-central1
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Show subnetwork
-------------
+---------------
+
 Specify the subnetwork name to view information about the subnetwork.
 
 .. code-block:: bash
 
     salt-cloud -f show_subnetwork gce name=mynet
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Create address
 --------------

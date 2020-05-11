@@ -1,5 +1,5 @@
-salt.cache.consul module
-========================
+salt.cache.consul
+=================
 
 .. automodule:: salt.cache.consul
     :members:

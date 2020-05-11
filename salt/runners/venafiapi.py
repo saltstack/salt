@@ -14,7 +14,7 @@ Open up ``/etc/salt/master`` and add:
     venafi:
       api_key: None
 
-Then register your email address with Venagi using the following command:
+Then register your email address with Venafi using the following command:
 
 .. code-block:: bash
 
@@ -29,18 +29,31 @@ file and set the ``api_key`` to it:
     venafi:
       api_key: abcdef01-2345-6789-abcd-ef0123456789
 '''
-from __future__ import absolute_import
-import os
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
+import os
 import tempfile
-from Crypto.PublicKey import RSA
-import json
-import salt.syspaths as syspaths
+
+try:
+    from M2Crypto import RSA
+    HAS_M2 = True
+except ImportError:
+    HAS_M2 = False
+    try:
+        from Cryptodome.PublicKey import RSA
+    except ImportError:
+        from Crypto.PublicKey import RSA
+
+# Import Salt libs
 import salt.cache
-import salt.utils
-import salt.utils.http
-import salt.ext.six as six
+import salt.syspaths as syspaths
+import salt.utils.files
+import salt.utils.json
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party libs
+from salt.ext import six
 
 __virtualname__ = 'venafi'
 log = logging.getLogger(__name__)
@@ -90,7 +103,7 @@ def gen_key(minion_id, dns_name=None, zone='default', password=None):
     # The /v1/zones/tag/{name} API call is a shortcut to get the zoneID
     # directly from the name
 
-    qdata = salt.utils.http.query(
+    qdata = __utils__['http.query'](
         '{0}/zones/tag/{1}'.format(_base_url(), zone),
         method='GET',
         decode=True,
@@ -106,7 +119,7 @@ def gen_key(minion_id, dns_name=None, zone='default', password=None):
     # the /v1/certificatepolicies?zoneId API call returns the default
     # certificate use and certificate identity policies
 
-    qdata = salt.utils.http.query(
+    qdata = __utils__['http.query'](
         '{0}/certificatepolicies?zoneId={1}'.format(_base_url(), zone_id),
         method='GET',
         decode=True,
@@ -134,8 +147,12 @@ def gen_key(minion_id, dns_name=None, zone='default', password=None):
         key_len = 2048
 
     if keygen_type == "RSA":
-        gen = RSA.generate(bits=key_len)
-        private_key = gen.exportKey('PEM', password)
+        if HAS_M2:
+            gen = RSA.gen_key(key_len, 65537)
+            private_key = gen.as_pem(cipher='des_ede3_cbc', callback=lambda x: six.b(password))
+        else:
+            gen = RSA.generate(bits=key_len)
+            private_key = gen.exportKey('PEM', password)
         if dns_name is not None:
             bank = 'venafi/domains'
             cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
@@ -189,8 +206,8 @@ def gen_csr(
 
     tmppriv = '{0}/priv'.format(tmpdir)
     tmpcsr = '{0}/csr'.format(tmpdir)
-    with salt.utils.fopen(tmppriv, 'w') as if_:
-        if_.write(data['private_key'])
+    with salt.utils.files.fopen(tmppriv, 'w') as if_:
+        if_.write(salt.utils.stringutils.to_str(data['private_key']))
 
     if country is None:
         country = __opts__.get('venafi', {}).get('country')
@@ -221,6 +238,8 @@ def gen_csr(
         tmpcsr,
         subject
     )
+    if password is not None:
+        cmd += ' -passin pass:{0}'.format(password)
     output = __salt__['salt.cmd']('cmd.run', cmd)
 
     if 'problems making Certificate Request' in output:
@@ -231,8 +250,8 @@ def gen_csr(
             'country, state, loc, org, org_unit'
         )
 
-    with salt.utils.fopen(tmpcsr, 'r') as of_:
-        csr = of_.read()
+    with salt.utils.files.fopen(tmpcsr, 'r') as of_:
+        csr = salt.utils.stringutils.to_unicode(of_.read())
 
     data['minion_id'] = minion_id
     data['csr'] = csr
@@ -296,14 +315,15 @@ def request(
         loc=loc,
         org=org,
         org_unit=org_unit,
+        password=password,
     )
 
-    pdata = json.dumps({
+    pdata = salt.utils.json.dumps({
         'zoneId': zone_id,
         'certificateSigningRequest': csr,
     })
 
-    qdata = salt.utils.http.query(
+    qdata = __utils__['http.query'](
         '{0}/certificaterequests'.format(_base_url()),
         method='POST',
         data=pdata,
@@ -369,10 +389,10 @@ def register(email):
 
         salt-run venafi.register email@example.com
     '''
-    data = salt.utils.http.query(
+    data = __utils__['http.query'](
         '{0}/useraccounts'.format(_base_url()),
         method='POST',
-        data=json.dumps({
+        data=salt.utils.json.dumps({
             'username': email,
             'userAccountType': 'API',
         }),
@@ -384,7 +404,7 @@ def register(email):
         },
     )
     status = data['status']
-    if str(status).startswith('4') or str(status).startswith('5'):
+    if six.text_type(status).startswith('4') or six.text_type(status).startswith('5'):
         raise CommandExecutionError(
             'There was an API error: {0}'.format(data['error'])
         )
@@ -401,7 +421,7 @@ def show_company(domain):
 
         salt-run venafi.show_company example.com
     '''
-    data = salt.utils.http.query(
+    data = __utils__['http.query'](
         '{0}/companies/domain/{1}'.format(_base_url(), domain),
         status=True,
         decode=True,
@@ -411,7 +431,7 @@ def show_company(domain):
         },
     )
     status = data['status']
-    if str(status).startswith('4') or str(status).startswith('5'):
+    if six.text_type(status).startswith('4') or six.text_type(status).startswith('5'):
         raise CommandExecutionError(
             'There was an API error: {0}'.format(data['error'])
         )
@@ -428,7 +448,7 @@ def show_csrs():
 
         salt-run venafi.show_csrs
     '''
-    data = salt.utils.http.query(
+    data = __utils__['http.query'](
         '{0}/certificaterequests'.format(_base_url()),
         status=True,
         decode=True,
@@ -438,7 +458,7 @@ def show_csrs():
         },
     )
     status = data['status']
-    if str(status).startswith('4') or str(status).startswith('5'):
+    if six.text_type(status).startswith('4') or six.text_type(status).startswith('5'):
         raise CommandExecutionError(
             'There was an API error: {0}'.format(data['error'])
         )
@@ -455,7 +475,7 @@ def get_zone_id(zone_name):
 
         salt-run venafi.get_zone_id default
     '''
-    data = salt.utils.http.query(
+    data = __utils__['http.query'](
         '{0}/zones/tag/{1}'.format(_base_url(), zone_name),
         status=True,
         decode=True,
@@ -466,7 +486,7 @@ def get_zone_id(zone_name):
     )
 
     status = data['status']
-    if str(status).startswith('4') or str(status).startswith('5'):
+    if six.text_type(status).startswith('4') or six.text_type(status).startswith('5'):
         raise CommandExecutionError(
             'There was an API error: {0}'.format(data['error'])
         )
@@ -483,7 +503,7 @@ def show_policies():
 
         salt-run venafi.show_zones
     '''
-    data = salt.utils.http.query(
+    data = __utils__['http.query'](
         '{0}/certificatepolicies'.format(_base_url()),
         status=True,
         decode=True,
@@ -493,7 +513,7 @@ def show_policies():
         },
     )
     status = data['status']
-    if str(status).startswith('4') or str(status).startswith('5'):
+    if six.text_type(status).startswith('4') or six.text_type(status).startswith('5'):
         raise CommandExecutionError(
             'There was an API error: {0}'.format(data['error'])
         )
@@ -510,7 +530,7 @@ def show_zones():
 
         salt-run venafi.show_zones
     '''
-    data = salt.utils.http.query(
+    data = __utils__['http.query'](
         '{0}/zones'.format(_base_url()),
         status=True,
         decode=True,
@@ -520,7 +540,7 @@ def show_zones():
         },
     )
     status = data['status']
-    if str(status).startswith('4') or str(status).startswith('5'):
+    if six.text_type(status).startswith('4') or six.text_type(status).startswith('5'):
         raise CommandExecutionError(
             'There was an API error: {0}'.format(data['error'])
         )
@@ -537,7 +557,7 @@ def show_cert(id_):
 
         salt-run venafi.show_cert 01234567-89ab-cdef-0123-456789abcdef
     '''
-    data = salt.utils.http.query(
+    data = __utils__['http.query'](
         '{0}/certificaterequests/{1}/certificate'.format(_base_url(), id_),
         params={
             'format': 'PEM',
@@ -548,12 +568,12 @@ def show_cert(id_):
         header_dict={'tppl-api-key': _api_key()},
     )
     status = data['status']
-    if str(status).startswith('4') or str(status).startswith('5'):
+    if six.text_type(status).startswith('4') or six.text_type(status).startswith('5'):
         raise CommandExecutionError(
             'There was an API error: {0}'.format(data['error'])
         )
     data = data.get('body', '')
-    csr_data = salt.utils.http.query(
+    csr_data = __utils__['http.query'](
         '{0}/certificaterequests/{1}'.format(_base_url(), id_),
         status=True,
         decode=True,
@@ -561,7 +581,7 @@ def show_cert(id_):
         header_dict={'tppl-api-key': _api_key()},
     )
     status = csr_data['status']
-    if str(status).startswith('4') or str(status).startswith('5'):
+    if six.text_type(status).startswith('4') or six.text_type(status).startswith('5'):
         raise CommandExecutionError(
             'There was an API error: {0}'.format(csr_data['error'])
         )

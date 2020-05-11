@@ -7,7 +7,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 try:
     import libcloud.security
@@ -36,8 +36,14 @@ DUMMY_TOKEN = {
 # Use certifi if installed
 try:
     if HAS_LIBCLOUD:
-        import certifi
-        libcloud.security.CA_CERTS_PATH.append(certifi.where())
+        # This work-around for Issue #32743 is no longer needed for libcloud >=
+        # 1.4.0. However, older versions of libcloud must still be supported
+        # with this work-around. This work-around can be removed when the
+        # required minimum version of libcloud is 2.0.0 (See PR #40837 - which
+        # is implemented in Salt 2018.3.0).
+        if LooseVersion(libcloud.__version__) < LooseVersion('1.4.0'):
+            import certifi
+            libcloud.security.CA_CERTS_PATH.append(certifi.where())
 except ImportError:
     pass
 
@@ -100,7 +106,7 @@ class GCETestCase(TestCase, LoaderModuleMockMixin):
             get_deps = gce.get_dependencies()
             self.assertEqual(get_deps, True)
             if LooseVersion(mock_version) >= LooseVersion('2.0.0'):
-                p.assert_called_once()
+                self.assert_called_once(p)
 
     def test_provider_matches(self):
         """

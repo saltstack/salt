@@ -4,19 +4,22 @@ Setup of Python virtualenv sandboxes.
 
 .. versionadded:: 0.17.0
 '''
-from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 
-# Import salt libs
+# Import Salt libs
 import salt.version
-import salt.utils
-
+import salt.utils.functools
+import salt.utils.platform
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
+# Import 3rd-party libs
 from salt.ext import six
+
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -39,7 +42,6 @@ def managed(name,
             never_download=None,
             prompt=None,
             user=None,
-            no_chown=False,
             cwd=None,
             index_url=None,
             extra_index_url=None,
@@ -57,12 +59,18 @@ def managed(name,
             pip_pkgs=None,
             pip_no_cache_dir=False,
             pip_cache_dir=None,
-            process_dependency_links=False):
+            process_dependency_links=False,
+            no_binary=None,
+            **kwargs):
     '''
     Create a virtualenv and optionally manage it with pip
 
     name
         Path to the virtualenv.
+
+    venv_bin: virtualenv
+        The name (and optionally path) of the virtualenv command. This can also
+        be set globally in the minion config file as ``virtualenv.venv_bin``.
 
     requirements: None
         Path to a pip requirements file. If the path begins with ``salt://``
@@ -76,11 +84,6 @@ def managed(name,
 
     user: None
         The user under which to run virtualenv and pip.
-
-    no_chown: False
-        When user is given, do not attempt to copy and chown a requirements file
-        (needed if the requirements file refers to other files via relative
-        paths, as the copy-and-chown procedure does not account for such files)
 
     cwd: None
         Path to the working directory where `pip install` is executed.
@@ -103,6 +106,11 @@ def managed(name,
     no_use_wheel: False
         Force to not use wheel archives (requires pip>=1.4)
 
+    no_binary
+        Force to not use binary packages (requires pip >= 7.0.0)
+        Accepts either :all: to disable all binary packages, :none: to empty the set,
+        or a list of one or more packages
+
     pip_upgrade: False
         Pass `--upgrade` to `pip install`.
 
@@ -113,7 +121,7 @@ def managed(name,
     process_dependency_links: False
         Run pip install with the --process_dependency_links flag.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     Also accepts any kwargs that the virtualenv module will. However, some
     kwargs, such as the ``pip`` option, require ``- distribute: True``.
@@ -134,7 +142,7 @@ def managed(name,
         ret['comment'] = 'Virtualenv was not detected on this system'
         return ret
 
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         venv_py = os.path.join(name, 'Scripts', 'python.exe')
     else:
         venv_py = os.path.join(name, 'bin', 'python')
@@ -178,7 +186,6 @@ def managed(name,
             ret['comment'] = 'Virtualenv {0} is set to be cleared'.format(name)
             return ret
         if venv_exists and not clear:
-            #ret['result'] = None
             ret['comment'] = 'Virtualenv {0} is already created'.format(name)
             return ret
         ret['result'] = None
@@ -199,6 +206,7 @@ def managed(name,
                 prompt=prompt,
                 user=user,
                 use_vt=use_vt,
+                **kwargs
             )
         except CommandNotFoundError as err:
             ret['result'] = False
@@ -222,27 +230,44 @@ def managed(name,
     elif venv_exists:
         ret['comment'] = 'virtualenv exists'
 
+    # Check that the pip binary supports the 'use_wheel' option
     if use_wheel:
         min_version = '1.4'
+        max_version = '9.0.3'
         cur_version = __salt__['pip.version'](bin_env=name)
-        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
-                                           ver2=min_version):
+        too_low = salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version)
+        too_high = salt.utils.versions.compare(ver1=cur_version, oper='>', ver2=max_version)
+        if too_low or too_high:
             ret['result'] = False
             ret['comment'] = ('The \'use_wheel\' option is only supported in '
-                              'pip {0} and newer. The version of pip detected '
-                              'was {1}.').format(min_version, cur_version)
+                              'pip between {0} and {1}. The version of pip detected '
+                              'was {2}.').format(min_version, max_version, cur_version)
             return ret
 
+    # Check that the pip binary supports the 'no_use_wheel' option
     if no_use_wheel:
         min_version = '1.4'
+        max_version = '9.0.3'
         cur_version = __salt__['pip.version'](bin_env=name)
-        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
-                                           ver2=min_version):
+        too_low = salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version)
+        too_high = salt.utils.versions.compare(ver1=cur_version, oper='>', ver2=max_version)
+        if too_low or too_high:
             ret['result'] = False
-            ret['comment'] = ('The \'no_use_wheel\' option is only supported '
-                              'in pip {0} and newer. The version of pip '
-                              'detected was {1}.').format(min_version,
-                                                          cur_version)
+            ret['comment'] = ('The \'no_use_wheel\' option is only supported in '
+                              'pip between {0} and {1}. The version of pip detected '
+                              'was {2}.').format(min_version, max_version, cur_version)
+            return ret
+
+    # Check that the pip binary supports the 'no_binary' option
+    if no_binary:
+        min_version = '7.0.0'
+        cur_version = __salt__['pip.version'](bin_env=name)
+        too_low = salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version)
+        if too_low:
+            ret['result'] = False
+            ret['comment'] = ('The \'no_binary\' option is only supported in '
+                              'pip {0} and newer. The version of pip detected '
+                              'was {1}.').format(min_version, cur_version)
             return ret
 
     # Populate the venv via a requirements file
@@ -275,13 +300,13 @@ def managed(name,
             bin_env=name,
             use_wheel=use_wheel,
             no_use_wheel=no_use_wheel,
+            no_binary=no_binary,
             user=user,
             cwd=cwd,
             index_url=index_url,
             extra_index_url=extra_index_url,
             download=pip_download,
             download_cache=pip_download_cache,
-            no_chown=no_chown,
             pre_releases=pre_releases,
             exists_action=pip_exists_action,
             ignore_installed=pip_ignore_installed,
@@ -291,7 +316,8 @@ def managed(name,
             use_vt=use_vt,
             env_vars=env_vars,
             no_cache_dir=pip_no_cache_dir,
-            cache_dir=pip_cache_dir
+            cache_dir=pip_cache_dir,
+            **kwargs
         )
         ret['result'] &= pip_ret['retcode'] == 0
         if pip_ret['retcode'] > 0:
@@ -310,4 +336,5 @@ def managed(name,
                 'old': old if old else ''}
     return ret
 
-manage = salt.utils.alias_function(managed, 'manage')
+
+manage = salt.utils.functools.alias_function(managed, 'manage')

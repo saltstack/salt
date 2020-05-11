@@ -2,14 +2,15 @@
 '''
 Use composer to install PHP dependencies for a directory
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
 import os.path
 
 # Import salt libs
-import salt.utils
+import salt.utils.args
+import salt.utils.path
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
@@ -35,7 +36,7 @@ def _valid_composer(composer):
     '''
     Validate the composer file is indeed there.
     '''
-    if salt.utils.which(composer):
+    if salt.utils.path.which(composer):
         return True
     return False
 
@@ -72,7 +73,8 @@ def _run_composer(action,
                   no_dev=None,
                   quiet=False,
                   composer_home='/root',
-                  extra_flags=None):
+                  extra_flags=None,
+                  env=None):
     '''
     Run PHP's composer with a specific action.
 
@@ -125,6 +127,9 @@ def _run_composer(action,
 
     extra_flags
         None, or a string containing extra flags to pass to composer.
+
+    env
+        A list of environment variables to be set prior to execution.
     '''
     if composer is not None:
         if php is None:
@@ -152,7 +157,7 @@ def _run_composer(action,
     cmd = [composer, action, '--no-interaction', '--no-ansi']
 
     if extra_flags is not None:
-        cmd.extend(salt.utils.shlex_split(extra_flags))
+        cmd.extend(salt.utils.args.shlex_split(extra_flags))
 
     # If php is set, prepend it
     if php is not None:
@@ -184,9 +189,15 @@ def _run_composer(action,
     if optimize is True:
         cmd.append('--optimize-autoloader')
 
+    if env is not None:
+        env = salt.utils.data.repack_dictlist(env)
+        env['COMPOSER_HOME'] = composer_home
+    else:
+        env = {'COMPOSER_HOME': composer_home}
+
     result = __salt__['cmd.run_all'](cmd,
                                      runas=runas,
-                                     env={'COMPOSER_HOME': composer_home},
+                                     env=env,
                                      python_shell=False)
 
     if result['retcode'] != 0:
@@ -209,7 +220,8 @@ def install(directory,
             optimize=None,
             no_dev=None,
             quiet=False,
-            composer_home='/root'):
+            composer_home='/root',
+            env=None):
     '''
     Install composer dependencies for a directory.
 
@@ -256,6 +268,9 @@ def install(directory,
     composer_home
         $COMPOSER_HOME environment variable
 
+    env
+        A list of environment variables to be set prior to execution.
+
     CLI Example:
 
     .. code-block:: bash
@@ -277,7 +292,8 @@ def install(directory,
                            optimize=optimize,
                            no_dev=no_dev,
                            quiet=quiet,
-                           composer_home=composer_home)
+                           composer_home=composer_home,
+                           env=env)
     return result
 
 
@@ -292,7 +308,8 @@ def update(directory,
            optimize=None,
            no_dev=None,
            quiet=False,
-           composer_home='/root'):
+           composer_home='/root',
+           env=None):
     '''
     Update composer dependencies for a directory.
 
@@ -342,6 +359,9 @@ def update(directory,
     composer_home
         $COMPOSER_HOME environment variable
 
+    env
+        A list of environment variables to be set prior to execution.
+
     CLI Example:
 
     .. code-block:: bash
@@ -364,7 +384,8 @@ def update(directory,
                            optimize=optimize,
                            no_dev=no_dev,
                            quiet=quiet,
-                           composer_home=composer_home)
+                           composer_home=composer_home,
+                           env=env)
     return result
 
 

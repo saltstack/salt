@@ -2,13 +2,14 @@
 '''
 Module for Solaris' Role-Based Access Control
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -20,7 +21,7 @@ def __virtual__():
     '''
     Provides rbac if we are running on a solaris like system
     '''
-    if __grains__['kernel'] == 'SunOS' and salt.utils.which('profiles'):
+    if __grains__.get('kernel') == 'SunOS' and salt.utils.path.which('profiles'):
         return __virtualname__
     return (
         False,
@@ -47,15 +48,17 @@ def profile_list(default_only=False):
     default_profiles = ['All']
 
     ## lookup default profile(s)
-    with salt.utils.fopen('/etc/security/policy.conf', 'r') as policy_conf:
+    with salt.utils.files.fopen('/etc/security/policy.conf', 'r') as policy_conf:
         for policy in policy_conf:
+            policy = salt.utils.stringutils.to_unicode(policy)
             policy = policy.split('=')
             if policy[0].strip() == 'PROFS_GRANTED':
                 default_profiles.extend(policy[1].strip().split(','))
 
     ## read prof_attr file (profname:res1:res2:desc:attr)
-    with salt.utils.fopen('/etc/security/prof_attr', 'r') as prof_attr:
+    with salt.utils.files.fopen('/etc/security/prof_attr', 'r') as prof_attr:
         for profile in prof_attr:
+            profile = salt.utils.stringutils.to_unicode(profile)
             profile = profile.split(':')
 
             # skip comments and non complaint lines
@@ -92,8 +95,9 @@ def profile_get(user, default_hidden=True):
     user_profiles = []
 
     ## read user_attr file (user:qualifier:res1:res2:attr)
-    with salt.utils.fopen('/etc/user_attr', 'r') as user_attr:
+    with salt.utils.files.fopen('/etc/user_attr', 'r') as user_attr:
         for profile in user_attr:
+            profile = salt.utils.stringutils.to_unicode(profile)
             profile = profile.strip().split(':')
 
             # skip comments and non complaint lines
@@ -147,15 +151,14 @@ def profile_add(user, profile):
     known_profiles = profile_list().keys()
     valid_profiles = [p for p in profiles if p in known_profiles]
     log.debug(
-        'rbac.profile_add - profiles={0}, known_profiles={1}, valid_profiles={2}'.format(
-            profiles,
-            known_profiles,
-            valid_profiles,
-        )
+        'rbac.profile_add - profiles=%s, known_profiles=%s, valid_profiles=%s',
+        profiles,
+        known_profiles,
+        valid_profiles,
     )
 
     ## update user profiles
-    if len(valid_profiles) > 0:
+    if valid_profiles:
         res = __salt__['cmd.run_all']('usermod -P "{profiles}" {login}'.format(
             login=user,
             profiles=','.join(set(profile_get(user) + valid_profiles)),
@@ -203,15 +206,14 @@ def profile_rm(user, profile):
     known_profiles = profile_list().keys()
     valid_profiles = [p for p in profiles if p in known_profiles]
     log.debug(
-        'rbac.profile_rm - profiles={0}, known_profiles={1}, valid_profiles={2}'.format(
-            profiles,
-            known_profiles,
-            valid_profiles,
-        )
+        'rbac.profile_rm - profiles=%s, known_profiles=%s, valid_profiles=%s',
+        profiles,
+        known_profiles,
+        valid_profiles,
     )
 
     ## update user profiles
-    if len(valid_profiles) > 0:
+    if valid_profiles:
         res = __salt__['cmd.run_all']('usermod -P "{profiles}" {login}'.format(
             login=user,
             profiles=','.join([p for p in profile_get(user) if p not in valid_profiles]),
@@ -249,8 +251,9 @@ def role_list():
     roles = {}
 
     ## read user_attr file (user:qualifier:res1:res2:attr)
-    with salt.utils.fopen('/etc/user_attr', 'r') as user_attr:
+    with salt.utils.files.fopen('/etc/user_attr', 'r') as user_attr:
         for role in user_attr:
+            role = salt.utils.stringutils.to_unicode(role)
             role = role.split(':')
 
             # skip comments and non complaint lines
@@ -291,8 +294,9 @@ def role_get(user):
     user_roles = []
 
     ## read user_attr file (user:qualifier:res1:res2:attr)
-    with salt.utils.fopen('/etc/user_attr', 'r') as user_attr:
+    with salt.utils.files.fopen('/etc/user_attr', 'r') as user_attr:
         for role in user_attr:
+            role = salt.utils.stringutils.to_unicode(role)
             role = role.strip().strip().split(':')
 
             # skip comments and non complaint lines
@@ -340,15 +344,14 @@ def role_add(user, role):
     known_roles = role_list().keys()
     valid_roles = [r for r in roles if r in known_roles]
     log.debug(
-        'rbac.role_add - roles={0}, known_roles={1}, valid_roles={2}'.format(
-            roles,
-            known_roles,
-            valid_roles,
-        )
+        'rbac.role_add - roles=%s, known_roles=%s, valid_roles=%s',
+        roles,
+        known_roles,
+        valid_roles,
     )
 
     ## update user roles
-    if len(valid_roles) > 0:
+    if valid_roles:
         res = __salt__['cmd.run_all']('usermod -R "{roles}" {login}'.format(
             login=user,
             roles=','.join(set(role_get(user) + valid_roles)),
@@ -396,15 +399,14 @@ def role_rm(user, role):
     known_roles = role_list().keys()
     valid_roles = [r for r in roles if r in known_roles]
     log.debug(
-        'rbac.role_rm - roles={0}, known_roles={1}, valid_roles={2}'.format(
-            roles,
-            known_roles,
-            valid_roles,
-        )
+        'rbac.role_rm - roles=%s, known_roles=%s, valid_roles=%s',
+        roles,
+        known_roles,
+        valid_roles,
     )
 
     ## update user roles
-    if len(valid_roles) > 0:
+    if valid_roles:
         res = __salt__['cmd.run_all']('usermod -R "{roles}" {login}'.format(
             login=user,
             roles=','.join([r for r in role_get(user) if r not in valid_roles]),
@@ -442,8 +444,9 @@ def auth_list():
     auths = {}
 
     ## read auth_attr file (name:res1:res2:short_desc:long_desc:attr)
-    with salt.utils.fopen('/etc/security/auth_attr', 'r') as auth_attr:
+    with salt.utils.files.fopen('/etc/security/auth_attr', 'r') as auth_attr:
         for auth in auth_attr:
+            auth = salt.utils.stringutils.to_unicode(auth)
             auth = auth.split(':')
 
             # skip comments and non complaint lines
@@ -476,8 +479,9 @@ def auth_get(user, computed=True):
     user_auths = []
 
     ## read user_attr file (user:qualifier:res1:res2:attr)
-    with salt.utils.fopen('/etc/user_attr', 'r') as user_attr:
+    with salt.utils.files.fopen('/etc/user_attr', 'r') as user_attr:
         for auth in user_attr:
+            auth = salt.utils.stringutils.to_unicode(auth)
             auth = auth.strip().split(':')
 
             # skip comments and non complaint lines
@@ -535,15 +539,14 @@ def auth_add(user, auth):
     known_auths = auth_list().keys()
     valid_auths = [r for r in auths if r in known_auths]
     log.debug(
-        'rbac.auth_add - auths={0}, known_auths={1}, valid_auths={2}'.format(
-            auths,
-            known_auths,
-            valid_auths,
-        )
+        'rbac.auth_add - auths=%s, known_auths=%s, valid_auths=%s',
+        auths,
+        known_auths,
+        valid_auths,
     )
 
     ## update user auths
-    if len(valid_auths) > 0:
+    if valid_auths:
         res = __salt__['cmd.run_all']('usermod -A "{auths}" {login}'.format(
             login=user,
             auths=','.join(set(auth_get(user, False) + valid_auths)),
@@ -591,15 +594,14 @@ def auth_rm(user, auth):
     known_auths = auth_list().keys()
     valid_auths = [a for a in auths if a in known_auths]
     log.debug(
-        'rbac.auth_rm - auths={0}, known_auths={1}, valid_auths={2}'.format(
-            auths,
-            known_auths,
-            valid_auths,
-        )
+        'rbac.auth_rm - auths=%s, known_auths=%s, valid_auths=%s',
+        auths,
+        known_auths,
+        valid_auths,
     )
 
     ## update user auths
-    if len(valid_auths) > 0:
+    if valid_auths:
         res = __salt__['cmd.run_all']('usermod -A "{auths}" {login}'.format(
             login=user,
             auths=','.join([a for a in auth_get(user, False) if a not in valid_auths]),

@@ -2,11 +2,11 @@
 '''
 Module for gathering and managing bridging information
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import sys
 import re
-import salt.utils
+import salt.utils.path
 
 
 __func_alias__ = {
@@ -29,9 +29,9 @@ def __virtual__():
         'NetBSD': 'brconfig',
         'OpenBSD': 'ifconfig'
     }
-    cur_os = __grains__['kernel']
+    cur_os = __grains__.get('kernel')
     for _os in supported_os_tool:
-        if cur_os == _os and salt.utils.which(supported_os_tool[cur_os]):
+        if cur_os == _os and salt.utils.path.which(supported_os_tool[cur_os]):
             return True
     return (False, 'The bridge execution module failed to load: requires one of the following tool/os'
         ' combinations: ifconfig on FreeBSD/OpenBSD, brctl on Linux or brconfig on NetBSD.')
@@ -41,7 +41,7 @@ def _tool_path(ostool):
     '''
     Internal, returns tools path
     '''
-    return salt.utils.which(ostool)
+    return salt.utils.path.which(ostool)
 
 
 def _linux_brshow(br=None):

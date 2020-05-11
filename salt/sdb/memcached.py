@@ -18,8 +18,8 @@ requires very little. In the example:
 
     mymemcache:
       driver: memcached
-      host: localhost
-      port: 11211
+      memcached.host: localhost
+      memcached.port: 11211
 
 The ``driver`` refers to the memcached module, ``host`` and ``port`` the
 memcached server to connect to (defaults to ``localhost`` and ``11211``,
@@ -30,7 +30,7 @@ and ``mymemcached`` refers to the name that will appear in the URI:
     password: sdb://mymemcached/mykey
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # import python libs
 import logging

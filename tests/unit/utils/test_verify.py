@@ -4,19 +4,24 @@ Test the verification routines
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import getpass
 import os
 import sys
 import stat
 import shutil
-import resource
 import tempfile
 import socket
 
+# Import third party libs
+if sys.platform.startswith('win'):
+    import win32file
+else:
+    import resource
+
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf, TestCase
-from tests.support.paths import TMP
 from tests.support.helpers import (
     requires_network,
     TestsLoggingHandler
@@ -29,7 +34,7 @@ from tests.support.mock import (
 )
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 from salt.utils.verify import (
     check_user,
     verify_env,
@@ -42,6 +47,7 @@ from salt.utils.verify import (
 )
 
 # Import 3rd-party libs
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
@@ -57,6 +63,16 @@ class TestVerify(TestCase):
         '''
         opts = {'pki_dir': '/tmp/whatever'}
         self.assertFalse(valid_id(opts, None))
+
+    def test_valid_id_pathsep(self):
+        '''
+        Path separators in id should make it invalid
+        '''
+        opts = {'pki_dir': '/tmp/whatever'}
+        # We have to test both path separators because os.path.normpath will
+        # convert forward slashes to backslashes on Windows.
+        for pathsep in ('/', '\\'):
+            self.assertFalse(valid_id(opts, pathsep.join(('..', 'foobar'))))
 
     def test_zmq_verify(self):
         self.assertTrue(zmq_version())
@@ -82,7 +98,10 @@ class TestVerify(TestCase):
         writer = FakeWriter()
         sys.stderr = writer
         # Now run the test
-        self.assertFalse(check_user('nouser'))
+        if sys.platform.startswith('win'):
+            self.assertTrue(check_user('nouser'))
+        else:
+            self.assertFalse(check_user('nouser'))
         # Restore sys.stderr
         sys.stderr = stderr
         if writer.output != 'CRITICAL: User not found: "nouser"\n':
@@ -91,9 +110,10 @@ class TestVerify(TestCase):
 
     @skipIf(sys.platform.startswith('win'), 'No verify_env Windows')
     def test_verify_env(self):
-        root_dir = tempfile.mkdtemp(dir=TMP)
+        root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         var_dir = os.path.join(root_dir, 'var', 'log', 'salt')
-        verify_env([var_dir], getpass.getuser())
+        key_dir = os.path.join(root_dir, 'key_dir')
+        verify_env([var_dir], getpass.getuser(), root_dir=root_dir)
         self.assertTrue(os.path.exists(var_dir))
         dir_stat = os.stat(var_dir)
         self.assertEqual(dir_stat.st_uid, os.getuid())
@@ -118,7 +138,6 @@ class TestVerify(TestCase):
                 # not support IPv6.
                 pass
 
-    @skipIf(True, 'Skipping until we can find why Jenkins is bailing out')
     def test_max_open_files(self):
         with TestsLoggingHandler() as handler:
             logmsg_dbg = (
@@ -139,15 +158,31 @@ class TestVerify(TestCase):
                 'raise the salt\'s max_open_files setting. Please consider '
                 'raising this value.'
             )
+            if sys.platform.startswith('win'):
+                logmsg_crash = (
+                    '{0}:The number of accepted minion keys({1}) should be lower '
+                    'than 1/4 of the max open files soft setting({2}). '
+                    'salt-master will crash pretty soon! Please consider '
+                    'raising this value.'
+                )
 
-            mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
+            if sys.platform.startswith('win'):
+                # Check the Windows API for more detail on this
+                # http://msdn.microsoft.com/en-us/library/xt874334(v=vs.71).aspx
+                # and the python binding http://timgolden.me.uk/pywin32-docs/win32file.html
+                mof_s = mof_h = win32file._getmaxstdio()
+            else:
+                mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
             tempdir = tempfile.mkdtemp(prefix='fake-keys')
             keys_dir = os.path.join(tempdir, 'minions')
             os.makedirs(keys_dir)
 
             mof_test = 256
 
-            resource.setrlimit(resource.RLIMIT_NOFILE, (mof_test, mof_h))
+            if sys.platform.startswith('win'):
+                win32file._setmaxstdio(mof_test)
+            else:
+                resource.setrlimit(resource.RLIMIT_NOFILE, (mof_test, mof_h))
 
             try:
                 prev = 0
@@ -155,9 +190,9 @@ class TestVerify(TestCase):
                                       (127, 'WARNING'), (196, 'CRITICAL')):
 
                     for n in range(prev, newmax):
-                        kpath = os.path.join(keys_dir, str(n))
-                        with salt.utils.fopen(kpath, 'w') as fp_:
-                            fp_.write(str(n))
+                        kpath = os.path.join(keys_dir, six.text_type(n))
+                        with salt.utils.files.fopen(kpath, 'w') as fp_:
+                            fp_.write(str(n))  # future lint: disable=blacklisted-function
 
                     opts = {
                         'max_open_files': newmax,
@@ -181,7 +216,7 @@ class TestVerify(TestCase):
                                 level,
                                 newmax,
                                 mof_test,
-                                mof_h - newmax,
+                                mof_test - newmax if sys.platform.startswith('win') else mof_h - newmax,
                             ),
                             handler.messages
                         )
@@ -190,9 +225,9 @@ class TestVerify(TestCase):
 
                 newmax = mof_test
                 for n in range(prev, newmax):
-                    kpath = os.path.join(keys_dir, str(n))
-                    with salt.utils.fopen(kpath, 'w') as fp_:
-                        fp_.write(str(n))
+                    kpath = os.path.join(keys_dir, six.text_type(n))
+                    with salt.utils.files.fopen(kpath, 'w') as fp_:
+                        fp_.write(str(n))  # future lint: disable=blacklisted-function
 
                 opts = {
                     'max_open_files': newmax,
@@ -206,7 +241,7 @@ class TestVerify(TestCase):
                         'CRITICAL',
                         newmax,
                         mof_test,
-                        mof_h - newmax,
+                        mof_test - newmax if sys.platform.startswith('win') else mof_h - newmax,
                     ),
                     handler.messages
                 )
@@ -217,8 +252,11 @@ class TestVerify(TestCase):
                     self.skipTest('We\'ve hit the max open files setting')
                 raise
             finally:
+                if sys.platform.startswith('win'):
+                    win32file._setmaxstdio(mof_h)
+                else:
+                    resource.setrlimit(resource.RLIMIT_NOFILE, (mof_s, mof_h))
                 shutil.rmtree(tempdir)
-                resource.setrlimit(resource.RLIMIT_NOFILE, (mof_s, mof_h))
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_verify_log(self):

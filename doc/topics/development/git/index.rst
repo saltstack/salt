@@ -68,11 +68,10 @@ related release branches.
 For more information, please see the :ref:`Which Salt Branch? <which-salt-branch>`
 section of Salt's :ref:`Contributing <contributing>` documentation.
 
-Determining when a point release is going to be made is up to the project
-leader (Thomas Hatch). Generally point releases are made every 2-4 weeks or
-if there is a security fix they can be made sooner.
+Generally point releases are made every 2 months or if there is a security fix
+they can be made sooner.
 
-The point release is only designated by tagging the commit on the release
-branch with a release number using the existing convention (version 2015.8.1
-is tagged with v2015.8.1). From the tag point a new source tarball is generated
-and published to PyPI, and a release announcement is made.
+The point release is designated by branching (ex 2019.2.1) and then tagging (v2019.2.1)
+from that newly created release branch when its determined the release is stable.
+From the tag point a new source tarball is generated and published to PyPI,
+and a release announcement is made.

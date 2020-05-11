@@ -5,7 +5,7 @@ Basic functions for accessing the SDB interface
 For configuration options, see the docs for specific sdb
 modules.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import random
@@ -25,12 +25,12 @@ def sdb_get(uri, opts, utils=None):
         return uri
 
     if utils is None:
-        utils = {}
+        utils = salt.loader.utils(opts)
 
     sdlen = len('sdb://')
     indx = uri.find('/', sdlen)
 
-    if (indx == -1) or len(uri[(indx+1):]) == 0:
+    if (indx == -1) or not uri[(indx + 1):]:
         return uri
 
     profile = opts.get(uri[sdlen:indx], {})
@@ -56,12 +56,12 @@ def sdb_set(uri, value, opts, utils=None):
         return False
 
     if utils is None:
-        utils = {}
+        utils = salt.loader.utils(opts)
 
     sdlen = len('sdb://')
     indx = uri.find('/', sdlen)
 
-    if (indx == -1) or len(uri[(indx+1):]) == 0:
+    if (indx == -1) or not uri[(indx + 1):]:
         return False
 
     profile = opts.get(uri[sdlen:indx], {})
@@ -87,12 +87,12 @@ def sdb_delete(uri, opts, utils=None):
         return False
 
     if utils is None:
-        utils = {}
+        utils = salt.loader.utils(opts)
 
     sdlen = len('sdb://')
     indx = uri.find('/', sdlen)
 
-    if (indx == -1) or len(uri[(indx+1):]) == 0:
+    if (indx == -1) or not uri[(indx + 1):]:
         return False
 
     profile = opts.get(uri[sdlen:indx], {})
@@ -122,7 +122,7 @@ def sdb_get_or_set_hash(uri,
         return False
 
     if utils is None:
-        utils = {}
+        utils = salt.loader.utils(opts)
 
     ret = sdb_get(uri, opts, utils=utils)
 

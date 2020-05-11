@@ -18,6 +18,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       user: myuser@pam or myuser@pve
       password: mypassword
       url: hypervisor.domain.tld
+      port: 8006
       driver: proxmox
       verify_ssl: True
 
@@ -27,28 +28,27 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import time
 import pprint
 import logging
 import re
-import json
 
 # Import salt libs
-import salt.ext.six as six
-import salt.utils
+import salt.utils.cloud
+import salt.utils.json
 
 # Import salt cloud libs
-import salt.utils.cloud
 import salt.config as config
 from salt.exceptions import (
     SaltCloudSystemExit,
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
 )
-from salt.ext.six.moves import range
 
-# Import Third Party Libs
+# Import 3rd-party Libs
+from salt.ext import six
+from salt.ext.six.moves import range
 try:
     import requests
     HAS_REQUESTS = True
@@ -106,6 +106,7 @@ def get_dependencies():
 
 
 url = None
+port = None
 ticket = None
 csrf = None
 verify_ssl = None
@@ -116,9 +117,13 @@ def _authenticate():
     '''
     Retrieve CSRF and API tickets for the Proxmox API
     '''
-    global url, ticket, csrf, verify_ssl
+    global url, port, ticket, csrf, verify_ssl
     url = config.get_cloud_config_value(
         'url', get_configured_provider(), __opts__, search_global=False
+    )
+    port = config.get_cloud_config_value(
+        'port', get_configured_provider(), __opts__,
+        default=8006, search_global=False
     )
     username = config.get_cloud_config_value(
         'user', get_configured_provider(), __opts__, search_global=False
@@ -132,13 +137,13 @@ def _authenticate():
     )
 
     connect_data = {'username': username, 'password': passwd}
-    full_url = 'https://{0}:8006/api2/json/access/ticket'.format(url)
+    full_url = 'https://{0}:{1}/api2/json/access/ticket'.format(url, port)
 
     returned_data = requests.post(
         full_url, verify=verify_ssl, data=connect_data).json()
 
     ticket = {'PVEAuthCookie': returned_data['data']['ticket']}
-    csrf = str(returned_data['data']['CSRFPreventionToken'])
+    csrf = six.text_type(returned_data['data']['CSRFPreventionToken'])
 
 
 def query(conn_type, option, post_data=None):
@@ -149,9 +154,9 @@ def query(conn_type, option, post_data=None):
         log.debug('Not authenticated yet, doing that now..')
         _authenticate()
 
-    full_url = 'https://{0}:8006/api2/json/{1}'.format(url, option)
+    full_url = 'https://{0}:{1}/api2/json/{2}'.format(url, port, option)
 
-    log.debug('{0}: {1} ({2})'.format(conn_type, full_url, post_data))
+    log.debug('%s: %s (%s)', conn_type, full_url, post_data)
 
     httpheaders = {'Accept': 'application/json',
                    'Content-Type': 'application/x-www-form-urlencoded',
@@ -200,7 +205,7 @@ def _get_vm_by_name(name, allDetails=False):
     if name in vms:
         return vms[name]
 
-    log.info('VM with name "{0}" could not be found.'.format(name))
+    log.info('VM with name "%s" could not be found.', name)
     return False
 
 
@@ -209,10 +214,10 @@ def _get_vm_by_id(vmid, allDetails=False):
     Retrieve a VM based on the ID.
     '''
     for vm_name, vm_details in six.iteritems(get_resources_vms(includeConfig=allDetails)):
-        if str(vm_details['vmid']) == str(vmid):
+        if six.text_type(vm_details['vmid']) == six.text_type(vmid):
             return vm_details
 
-    log.info('VM with ID "{0}" could not be found.'.format(vmid))
+    log.info('VM with ID "%s" could not be found.', vmid)
     return False
 
 
@@ -233,10 +238,10 @@ def _check_ip_available(ip_addr):
     for vm_name, vm_details in six.iteritems(get_resources_vms(includeConfig=True)):
         vm_config = vm_details['config']
         if ip_addr in vm_config['ip_address'] or vm_config['ip_address'] == ip_addr:
-            log.debug('IP "{0}" is already defined'.format(ip_addr))
+            log.debug('IP "%s" is already defined', ip_addr)
             return False
 
-    log.debug('IP \'{0}\' is available to be defined'.format(ip_addr))
+    log.debug('IP \'%s\' is available to be defined', ip_addr)
     return True
 
 
@@ -251,18 +256,18 @@ def _parse_proxmox_upid(node, vm_=None):
     # Parse node response
     node = node.split(':')
     if node[0] == 'UPID':
-        ret['node'] = str(node[1])
-        ret['pid'] = str(node[2])
-        ret['pstart'] = str(node[3])
-        ret['starttime'] = str(node[4])
-        ret['type'] = str(node[5])
-        ret['vmid'] = str(node[6])
-        ret['user'] = str(node[7])
+        ret['node'] = six.text_type(node[1])
+        ret['pid'] = six.text_type(node[2])
+        ret['pstart'] = six.text_type(node[3])
+        ret['starttime'] = six.text_type(node[4])
+        ret['type'] = six.text_type(node[5])
+        ret['vmid'] = six.text_type(node[6])
+        ret['user'] = six.text_type(node[7])
         # include the upid again in case we'll need it again
-        ret['upid'] = str(upid)
+        ret['upid'] = six.text_type(upid)
 
         if vm_ is not None and 'technology' in vm_:
-            ret['technology'] = str(vm_['technology'])
+            ret['technology'] = six.text_type(vm_['technology'])
 
     return ret
 
@@ -272,13 +277,13 @@ def _lookup_proxmox_task(upid):
     Retrieve the (latest) logs and retrieve the status for a UPID.
     This can be used to verify whether a task has completed.
     '''
-    log.debug('Getting creation status for upid: {0}'.format(upid))
+    log.debug('Getting creation status for upid: %s', upid)
     tasks = query('get', 'cluster/tasks')
 
     if tasks:
         for task in tasks:
             if task['upid'] == upid:
-                log.debug('Found upid task: {0}'.format(task))
+                log.debug('Found upid task: %s', task)
                 return task
 
     return False
@@ -293,7 +298,7 @@ def get_resources_nodes(call=None, resFilter=None):
 
         salt-cloud -f get_resources_nodes my-proxmox-config
     '''
-    log.debug('Getting resource: nodes.. (filter: {0})'.format(resFilter))
+    log.debug('Getting resource: nodes.. (filter: %s)', resFilter)
     resources = query('get', 'cluster/resources')
 
     ret = {}
@@ -303,11 +308,11 @@ def get_resources_nodes(call=None, resFilter=None):
             ret[name] = resource
 
     if resFilter is not None:
-        log.debug('Filter given: {0}, returning requested '
-                  'resource: nodes'.format(resFilter))
+        log.debug('Filter given: %s, returning requested '
+                  'resource: nodes', resFilter)
         return ret[resFilter]
 
-    log.debug('Filter not given: {0}, returning all resource: nodes'.format(ret))
+    log.debug('Filter not given: %s, returning all resource: nodes', ret)
     return ret
 
 
@@ -321,29 +326,49 @@ def get_resources_vms(call=None, resFilter=None, includeConfig=True):
 
         salt-cloud -f get_resources_vms my-proxmox-config
     '''
-    log.debug('Getting resource: vms.. (filter: {0})'.format(resFilter))
-    resources = query('get', 'cluster/resources')
 
-    ret = {}
-    for resource in resources:
-        if 'type' in resource and resource['type'] in ['openvz', 'qemu', 'lxc']:
-            name = resource['name']
-            ret[name] = resource
+    timeoutTime = time.time() + 60
+    while True:
+        log.debug('Getting resource: vms.. (filter: %s)', resFilter)
+        resources = query('get', 'cluster/resources')
+        ret = {}
+        badResource = False
+        for resource in resources:
+            if 'type' in resource and resource['type'] in ['openvz', 'qemu',
+                                                           'lxc']:
+                try:
+                    name = resource['name']
+                except KeyError:
+                    badResource = True
+                    log.debug('No name in VM resource %s', repr(resource))
+                    break
 
-            if includeConfig:
-                # Requested to include the detailed configuration of a VM
-                ret[name]['config'] = get_vmconfig(
-                    ret[name]['vmid'],
-                    ret[name]['node'],
-                    ret[name]['type']
-                )
+                ret[name] = resource
+
+                if includeConfig:
+                    # Requested to include the detailed configuration of a VM
+                    ret[name]['config'] = get_vmconfig(
+                        ret[name]['vmid'],
+                        ret[name]['node'],
+                        ret[name]['type']
+                    )
+
+        if time.time() > timeoutTime:
+            raise SaltCloudExecutionTimeout('FAILED to get the proxmox '
+                                            'resources vms')
+
+        # Carry on if there wasn't a bad resource return from Proxmox
+        if not badResource:
+            break
+
+        time.sleep(0.5)
 
     if resFilter is not None:
-        log.debug('Filter given: {0}, returning requested '
-                  'resource: nodes'.format(resFilter))
+        log.debug('Filter given: %s, returning requested '
+                  'resource: nodes', resFilter)
         return ret[resFilter]
 
-    log.debug('Filter not given: {0}, returning all resource: nodes'.format(ret))
+    log.debug('Filter not given: %s, returning all resource: nodes', ret)
     return ret
 
 
@@ -432,15 +457,15 @@ def list_nodes(call=None):
 
     ret = {}
     for vm_name, vm_details in six.iteritems(get_resources_vms(includeConfig=True)):
-        log.debug('VM_Name: {0}'.format(vm_name))
-        log.debug('vm_details: {0}'.format(vm_details))
+        log.debug('VM_Name: %s', vm_name)
+        log.debug('vm_details: %s', vm_details)
 
         # Limit resultset on what Salt-cloud demands:
         ret[vm_name] = {}
-        ret[vm_name]['id'] = str(vm_details['vmid'])
-        ret[vm_name]['image'] = str(vm_details['vmid'])
-        ret[vm_name]['size'] = str(vm_details['disk'])
-        ret[vm_name]['state'] = str(vm_details['status'])
+        ret[vm_name]['id'] = six.text_type(vm_details['vmid'])
+        ret[vm_name]['image'] = six.text_type(vm_details['vmid'])
+        ret[vm_name]['size'] = six.text_type(vm_details['disk'])
+        ret[vm_name]['state'] = six.text_type(vm_details['status'])
 
         # Figure out which is which to put it in the right column
         private_ips = []
@@ -450,9 +475,9 @@ def list_nodes(call=None):
             ips = vm_details['config']['ip_address'].split(' ')
             for ip_ in ips:
                 if IP(ip_).iptype() == 'PRIVATE':
-                    private_ips.append(str(ip_))
+                    private_ips.append(six.text_type(ip_))
                 else:
-                    public_ips.append(str(ip_))
+                    public_ips.append(six.text_type(ip_))
 
         ret[vm_name]['private_ips'] = private_ips
         ret[vm_name]['public_ips'] = public_ips
@@ -493,6 +518,41 @@ def list_nodes_select(call=None):
     )
 
 
+def _stringlist_to_dictionary(input_string):
+    '''
+    Convert a stringlist (comma separated settings) to a dictionary
+
+    The result of the string setting1=value1,setting2=value2 will be a python dictionary:
+
+    {'setting1':'value1','setting2':'value2'}
+    '''
+    li = str(input_string).split(',')
+    ret = {}
+    for item in li:
+        pair = str(item).replace(' ', '').split('=')
+        if len(pair) != 2:
+            log.warning('Cannot process stringlist item %s', item)
+            continue
+
+        ret[pair[0]] = pair[1]
+    return ret
+
+
+def _dictionary_to_stringlist(input_dict):
+    '''
+    Convert a dictionary to a stringlist (comma separated settings)
+
+    The result of the dictionary {'setting1':'value1','setting2':'value2'} will be:
+
+    setting1=value1,setting2=value2
+    '''
+    string_value = ""
+    for s in input_dict:
+        string_value += "{0}={1},".format(s, input_dict[s])
+    string_value = string_value[:-1]
+    return string_value
+
+
 def create(vm_):
     '''
     Create a single VM from a data dict
@@ -519,34 +579,34 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
+        args=__utils__['cloud.filter_event'](
+            'creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
-    log.info('Creating Cloud VM {0}'.format(vm_['name']))
+    log.info('Creating Cloud VM %s', vm_['name'])
 
     if 'use_dns' in vm_ and 'ip_address' not in vm_:
         use_dns = vm_['use_dns']
         if use_dns:
             from socket import gethostbyname, gaierror
             try:
-                ip_address = gethostbyname(str(vm_['name']))
+                ip_address = gethostbyname(six.text_type(vm_['name']))
             except gaierror:
-                log.debug('Resolving of {hostname} failed'.format(hostname=str(vm_['name'])))
+                log.debug('Resolving of %s failed', vm_['name'])
             else:
-                vm_['ip_address'] = str(ip_address)
+                vm_['ip_address'] = six.text_type(ip_address)
 
     try:
         newid = _get_next_vmid()
         data = create_node(vm_, newid)
     except Exception as exc:
         log.error(
-            'Error creating {0} on PROXMOX\n\n'
+            'Error creating %s on PROXMOX\n\n'
             'The following exception was thrown when trying to '
-            'run the initial deployment: \n{1}'.format(
-                vm_['name'], str(exc)
-            ),
+            'run the initial deployment: \n%s',
+            vm_['name'], exc,
             # Show the traceback if the debug logging level is enabled
             exc_info_on_loglevel=logging.DEBUG
         )
@@ -561,31 +621,217 @@ def create(vm_):
     host = data['node']       # host which we have received
     nodeType = data['technology']  # VM tech (Qemu / OpenVZ)
 
-    # Determine which IP to use in order of preference:
-    if 'ip_address' in vm_:
-        ip_address = str(vm_['ip_address'])
-    elif 'public_ips' in data:
-        ip_address = str(data['public_ips'][0])  # first IP
-    elif 'private_ips' in data:
-        ip_address = str(data['private_ips'][0])  # first IP
-    else:
-        raise SaltCloudExecutionFailure  # err.. not a good idea i reckon
-
-    log.debug('Using IP address {0}'.format(ip_address))
+    if 'agent_get_ip' not in vm_ or vm_['agent_get_ip'] == 0:
+        # Determine which IP to use in order of preference:
+        if 'ip_address' in vm_:
+            ip_address = six.text_type(vm_['ip_address'])
+        elif 'public_ips' in data:
+            ip_address = six.text_type(data['public_ips'][0])  # first IP
+        elif 'private_ips' in data:
+            ip_address = six.text_type(data['private_ips'][0])  # first IP
+        else:
+            raise SaltCloudExecutionFailure("Could not determine an IP address to use")
 
     # wait until the vm has been created so we can start it
     if not wait_for_created(data['upid'], timeout=300):
         return {'Error': 'Unable to create {0}, command timed out'.format(name)}
 
+    if 'clone' in vm_ and vm_['clone'] is True and vm_['technology'] == 'qemu':
+        # If we cloned a machine, see if we need to reconfigure any of the options such as net0,
+        # ide2, etc. This enables us to have a different cloud-init ISO mounted for each VM that's
+        # brought up
+
+        log.info('Configuring cloned VM')
+
+        # Modify the settings for the VM one at a time so we can see any problems with the values
+        # as quickly as possible
+        for setting in 'sockets', 'cores', 'cpulimit', 'memory', 'onboot', 'agent':
+            if setting in vm_:  # if the property is set, use it for the VM request
+                postParams = {}
+                postParams[setting] = vm_[setting]
+                query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
+
+        # cloud-init settings
+        for setting in 'ciuser', 'cipassword', 'sshkeys', 'nameserver', 'searchdomain':
+            if setting in vm_:  # if the property is set, use it for the VM request
+                postParams = {}
+                postParams[setting] = vm_[setting]
+                query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
+
+        for setting_number in range(3):
+            setting = 'ide{0}'.format(setting_number)
+            if setting in vm_:
+                postParams = {}
+                postParams[setting] = vm_[setting]
+                query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
+
+        for setting_number in range(5):
+            setting = 'sata{0}'.format(setting_number)
+            if setting in vm_:
+                vm_config = query('get', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid))
+                if setting in vm_config:
+                    setting_params = vm_[setting]
+                    setting_storage = setting_params.split(':')[0]
+                    setting_size = _stringlist_to_dictionary(setting_params)['size']
+                    vm_disk_params = vm_config[setting]
+                    vm_disk_storage = vm_disk_params.split(':')[0]
+                    vm_disk_size = _stringlist_to_dictionary(vm_disk_params)['size']
+                    # if storage is different, move the disk
+                    if setting_storage != vm_disk_storage:
+                        postParams = {}
+                        postParams['disk'] = setting
+                        postParams['storage'] = setting_storage
+                        postParams['delete'] = 1
+                        node = query('post', 'nodes/{0}/qemu/{1}/move_disk'.format(
+                            vm_['host'], vmid), postParams)
+                        data = _parse_proxmox_upid(node, vm_)
+                        # wait until the disk has been moved
+                        if not wait_for_task(data['upid'], timeout=300):
+                            return {'Error': 'Unable to move disk {0}, command timed out'.format(
+                                setting)}
+                    # if storage is different, move the disk
+                    if setting_size != vm_disk_size:
+                        postParams = {}
+                        postParams['disk'] = setting
+                        postParams['size'] = setting_size
+                        query('put', 'nodes/{0}/qemu/{1}/resize'.format(
+                            vm_['host'], vmid), postParams)
+                else:
+                    postParams = {}
+                    postParams[setting] = vm_[setting]
+                    query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
+
+        for setting_number in range(13):
+            setting = 'scsi{0}'.format(setting_number)
+            if setting in vm_:
+                vm_config = query('get', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid))
+                if setting in vm_config:
+                    setting_params = vm_[setting]
+                    setting_storage = setting_params.split(':')[0]
+                    setting_size = _stringlist_to_dictionary(setting_params)['size']
+                    vm_disk_params = vm_config[setting]
+                    vm_disk_storage = vm_disk_params.split(':')[0]
+                    vm_disk_size = _stringlist_to_dictionary(vm_disk_params)['size']
+                    # if storage is different, move the disk
+                    if setting_storage != vm_disk_storage:
+                        postParams = {}
+                        postParams['disk'] = setting
+                        postParams['storage'] = setting_storage
+                        postParams['delete'] = 1
+                        node = query('post', 'nodes/{0}/qemu/{1}/move_disk'.format(
+                            vm_['host'], vmid), postParams)
+                        data = _parse_proxmox_upid(node, vm_)
+                        # wait until the disk has been moved
+                        if not wait_for_task(data['upid'], timeout=300):
+                            return {'Error': 'Unable to move disk {0}, command timed out'.format(
+                                setting)}
+                    # if storage is different, move the disk
+                    if setting_size != vm_disk_size:
+                        postParams = {}
+                        postParams['disk'] = setting
+                        postParams['size'] = setting_size
+                        query('put', 'nodes/{0}/qemu/{1}/resize'.format(
+                            vm_['host'], vmid), postParams)
+                else:
+                    postParams = {}
+                    postParams[setting] = vm_[setting]
+                    query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
+
+        # net strings are a list of comma seperated settings. We need to merge the settings so that
+        # the setting in the profile only changes the settings it touches and the other settings
+        # are left alone. An example of why this is necessary is because the MAC address is set
+        # in here and generally you don't want to alter or have to know the MAC address of the new
+        # instance, but you may want to set the VLAN bridge for example
+        for setting_number in range(20):
+            setting = 'net{0}'.format(setting_number)
+            if setting in vm_:
+                data = query('get', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid))
+
+                # Generate a dictionary of settings from the existing string
+                new_setting = {}
+                if setting in data:
+                    new_setting.update(_stringlist_to_dictionary(data[setting]))
+
+                # Merge the new settings (as a dictionary) into the existing dictionary to get the
+                # new merged settings
+                new_setting.update(_stringlist_to_dictionary(vm_[setting]))
+
+                # Convert the dictionary back into a string list
+                postParams = {setting: _dictionary_to_stringlist(new_setting)}
+                query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
+
+        for setting_number in range(20):
+            setting = 'ipconfig{0}'.format(setting_number)
+            if setting in vm_:
+                data = query('get', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid))
+
+                # Generate a dictionary of settings from the existing string
+                new_setting = {}
+                if setting in data:
+                    new_setting.update(_stringlist_to_dictionary(data[setting]))
+
+                # Merge the new settings (as a dictionary) into the existing dictionary to get the
+                # new merged settings
+                if setting_number == 0 and 'ip_address' in vm_:
+                    if 'gw' in _stringlist_to_dictionary(vm_[setting]):
+                        new_setting.update(_stringlist_to_dictionary(
+                            'ip={0}/24,gw={1}'.format(
+                                vm_['ip_address'], _stringlist_to_dictionary(vm_[setting])['gw'])))
+                    else:
+                        new_setting.update(
+                            _stringlist_to_dictionary('ip={0}/24'.format(vm_['ip_address'])))
+                else:
+                    new_setting.update(_stringlist_to_dictionary(vm_[setting]))
+
+                # Convert the dictionary back into a string list
+                postParams = {setting: _dictionary_to_stringlist(new_setting)}
+                query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
+
     # VM has been created. Starting..
     if not start(name, vmid, call='action'):
-        log.error('Node {0} ({1}) failed to start!'.format(name, vmid))
+        log.error('Node %s (%s) failed to start!', name, vmid)
         raise SaltCloudExecutionFailure
 
     # Wait until the VM has fully started
-    log.debug('Waiting for state "running" for vm {0} on {1}'.format(vmid, host))
+    log.debug('Waiting for state "running" for vm %s on %s', vmid, host)
     if not wait_for_state(vmid, 'running'):
         return {'Error': 'Unable to start {0}, command timed out'.format(name)}
+
+    # For QEMU VMs, we can get the IP Address from qemu-agent
+    if 'agent_get_ip' in vm_ and vm_['agent_get_ip'] == 1:
+        def __find_agent_ip(vm_):
+            log.debug("Waiting for qemu-agent to start...")
+            endpoint = 'nodes/{0}/qemu/{1}/agent/network-get-interfaces'.format(vm_['host'], vmid)
+            interfaces = query('get', endpoint)
+            # If we get a result from the agent, parse it
+            if 'result' in interfaces:
+                for interface in interfaces['result']:
+                    if_name = interface['name']
+                    # Only check ethernet type interfaces, as they are not returned in any order
+                    if if_name.startswith('eth') or if_name.startswith('ens'):
+                        for if_addr in interface['ip-addresses']:
+                            ip_addr = if_addr['ip-address']
+                            # Ensure interface has a valid IPv4 address
+                            if if_addr['ip-address-type'] == 'ipv4' and ip_addr is not None:
+                                return six.text_type(ip_addr)
+            raise SaltCloudExecutionFailure
+
+        # We have to wait for a bit for qemu-agent to start
+        try:
+            ip_address = __utils__['cloud.wait_for_fun'](
+                __find_agent_ip,
+                vm_=vm_
+            )
+        except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
+            try:
+                # If VM was created but we can't connect, destroy it.
+                destroy(vm_['name'])
+            except SaltCloudSystemExit:
+                pass
+            finally:
+                raise SaltCloudSystemExit(six.text_type(exc))
+
+    log.debug('Using IP address %s', ip_address)
 
     ssh_username = config.get_cloud_config_value(
         'ssh_username', vm_, __opts__, default='root'
@@ -603,18 +849,18 @@ def create(vm_):
     ret = __utils__['cloud.bootstrap'](vm_, __opts__)
 
     # Report success!
-    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
+    log.info('Created Cloud VM \'%s\'', vm_['name'])
     log.debug(
-        '\'{0[name]}\' VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data)
-        )
+        '\'%s\' VM creation details:\n%s',
+        vm_['name'], pprint.pformat(data)
     )
 
     __utils__['cloud.fire_event'](
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
+        args=__utils__['cloud.filter_event'](
+            'created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
     )
 
@@ -628,12 +874,12 @@ def _import_api():
     Load this json content into global variable "api"
     '''
     global api
-    full_url = 'https://{0}:8006/pve-docs/api-viewer/apidoc.js'.format(url)
+    full_url = 'https://{0}:{1}/pve-docs/api-viewer/apidoc.js'.format(url, port)
     returned_data = requests.get(full_url, verify=verify_ssl)
 
     re_filter = re.compile('(?<=pveapi =)(.*)(?=^;)', re.DOTALL | re.MULTILINE)
     api_json = re_filter.findall(returned_data.text)[0]
-    api = json.loads(api_json)
+    api = salt.utils.json.loads(api_json)
 
 
 def _get_properties(path="", method="GET", forced_params=None):
@@ -651,7 +897,7 @@ def _get_properties(path="", method="GET", forced_params=None):
     # Browse all path elements but last
     for elem in path_levels[:-1]:
         search_path += '/' + elem
-        # Lookup for a dictionnary with path = "requested path" in list" and return its children
+        # Lookup for a dictionary with path = "requested path" in list" and return its children
         sub = (item for item in sub if item["path"] == search_path).next()['children']
     # Get leaf element in path
     search_path += '/' + path_levels[-1]
@@ -660,16 +906,14 @@ def _get_properties(path="", method="GET", forced_params=None):
         # get list of properties for requested method
         props = sub['info'][method]['parameters']['properties'].keys()
     except KeyError as exc:
-        log.error('method not found: "{0}"'.format(str(exc)))
-    except:
-        raise
+        log.error('method not found: "%s"', exc)
     for prop in props:
         numerical = re.match(r'(\w+)\[n\]', prop)
         # generate (arbitrarily) 10 properties for duplicatable properties identified by:
         # "prop[n]"
         if numerical:
             for i in range(10):
-                parameters.add(numerical.group(1) + str(i))
+                parameters.add(numerical.group(1) + six.text_type(i))
         else:
             parameters.add(prop)
     return parameters
@@ -714,7 +958,8 @@ def create_node(vm_, newid):
         newnode['ostemplate'] = vm_['image']
 
         # optional VZ settings
-        for prop in 'cpus', 'disk', 'ip_address', 'nameserver', 'password', 'swap', 'poolid', 'storage':
+        for prop in ['cpus', 'disk', 'ip_address', 'nameserver',
+                     'password', 'swap', 'poolid', 'storage']:
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
 
@@ -723,13 +968,16 @@ def create_node(vm_, newid):
         newnode['hostname'] = vm_['name']
         newnode['ostemplate'] = vm_['image']
 
-        static_props = ('cpuunits', 'description', 'memory', 'onboot', 'net0',
-                        'password', 'nameserver', 'swap', 'storage', 'rootfs')
+        static_props = ('cpuunits', 'cpulimit', 'rootfs', 'cores', 'description', 'memory',
+                        'onboot', 'net0', 'password', 'nameserver', 'swap', 'storage', 'rootfs')
         for prop in _get_properties('/nodes/{node}/lxc',
                                     'POST',
                                     static_props):
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
+
+        if 'pubkey' in vm_:
+            newnode['ssh-public-keys'] = vm_['pubkey']
 
         # inform user the "disk" option is not supported for LXC hosts
         if 'disk' in vm_:
@@ -749,7 +997,8 @@ def create_node(vm_, newid):
 
     elif vm_['technology'] == 'qemu':
         # optional Qemu settings
-        static_props = ('acpi', 'cores', 'cpu', 'pool', 'storage', 'sata0', 'ostype', 'ide2', 'net0')
+        static_props = (
+            'acpi', 'cores', 'cpu', 'pool', 'storage', 'sata0', 'ostype', 'ide2', 'net0')
         for prop in _get_properties('/nodes/{node}/qemu',
                                     'POST',
                                     static_props):
@@ -762,13 +1011,12 @@ def create_node(vm_, newid):
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         args={
-            'kwargs': __utils__['cloud.filter_event']('requesting', newnode, newnode.keys()),
+            'kwargs': __utils__['cloud.filter_event']('requesting', newnode, list(newnode)),
         },
         sock_dir=__opts__['sock_dir'],
     )
 
-    log.debug('Preparing to generate a node using these parameters: {0} '.format(
-              newnode))
+    log.debug('Preparing to generate a node using these parameters: %s ', newnode)
     if 'clone' in vm_ and vm_['clone'] is True and vm_['technology'] == 'qemu':
         postParams = {}
         postParams['newid'] = newnode['vmid']
@@ -777,7 +1025,18 @@ def create_node(vm_, newid):
             if 'clone_' + prop in vm_:  # if the property is set, use it for the VM request
                 postParams[prop] = vm_['clone_' + prop]
 
-        node = query('post', 'nodes/{0}/qemu/{1}/clone'.format(vmhost, vm_['clone_from']), postParams)
+        if 'host' in vm_:
+            postParams['target'] = vm_['host']
+
+        try:
+            int(vm_['clone_from'])
+        except ValueError:
+            if ':' in vm_['clone_from']:
+                vmhost = vm_['clone_from'].split(':')[0]
+                vm_['clone_from'] = vm_['clone_from'].split(':')[1]
+
+        node = query('post', 'nodes/{0}/qemu/{1}/clone'.format(
+            vmhost, vm_['clone_from']), postParams)
     else:
         node = query('post', 'nodes/{0}/{1}'.format(vmhost, vm_['technology']), newnode)
     return _parse_proxmox_upid(node, vm_)
@@ -848,18 +1107,38 @@ def wait_for_state(vmid, state, timeout=300):
 
     while True:
         if node['status'] == state:
-            log.debug('Host {0} is now in "{1}" state!'.format(
-                node['name'], state
-            ))
+            log.debug('Host %s is now in "%s" state!', node['name'], state)
             return True
         time.sleep(1)
         if time.time() - start_time > timeout:
-            log.debug('Timeout reached while waiting for {0} to '
-                      'become {1}'.format(node['name'], state))
+            log.debug('Timeout reached while waiting for %s to become %s',
+                      node['name'], state)
             return False
         node = get_vm_status(vmid=vmid)
-        log.debug('State for {0} is: "{1}" instead of "{2}"'.format(
-                  node['name'], node['status'], state))
+        log.debug('State for %s is: "%s" instead of "%s"',
+                  node['name'], node['status'], state)
+
+
+def wait_for_task(upid, timeout=300):
+    '''
+    Wait until a the task has been finished successfully
+    '''
+    start_time = time.time()
+    info = _lookup_proxmox_task(upid)
+    if not info:
+        log.error('wait_for_task: No task information '
+                  'retrieved based on given criteria.')
+        raise SaltCloudExecutionFailure
+
+    while True:
+        if 'status' in info and info['status'] == 'OK':
+            log.debug('Task has been finished!')
+            return True
+        time.sleep(3)  # Little more patience, we're not in a hurry
+        if time.time() - start_time > timeout:
+            log.debug('Timeout reached while waiting for task to be finished')
+            return False
+        info = _lookup_proxmox_task(upid)
 
 
 def destroy(name, call=None):
@@ -899,7 +1178,7 @@ def destroy(name, call=None):
 
         # required to wait a bit here, otherwise the VM is sometimes
         # still locked and destroy fails.
-        time.sleep(1)
+        time.sleep(3)
 
         query('delete', 'nodes/{0}/{1}'.format(
             vmobj['node'], vmobj['id']
@@ -913,7 +1192,8 @@ def destroy(name, call=None):
             transport=__opts__['transport']
         )
         if __opts__.get('update_cachedir', False) is True:
-            __utils__['cloud.delete_minion_cachedir'](name, __active_provider_name__.split(':')[0], __opts__)
+            __utils__['cloud.delete_minion_cachedir'](
+                name, __active_provider_name__.split(':')[0], __opts__)
 
         return {'Destroyed': '{0} was destroyed.'.format(name)}
 
@@ -922,30 +1202,30 @@ def set_vm_status(status, name=None, vmid=None):
     '''
     Convenience function for setting VM status
     '''
-    log.debug('Set status to {0} for {1} ({2})'.format(status, name, vmid))
+    log.debug('Set status to %s for %s (%s)', status, name, vmid)
 
     if vmid is not None:
-        log.debug('set_vm_status: via ID - VMID {0} ({1}): {2}'.format(
-                  vmid, name, status))
+        log.debug('set_vm_status: via ID - VMID %s (%s): %s',
+                  vmid, name, status)
         vmobj = _get_vm_by_id(vmid)
     else:
-        log.debug('set_vm_status: via name - VMID {0} ({1}): {2}'.format(
-                  vmid, name, status))
+        log.debug('set_vm_status: via name - VMID %s (%s): %s',
+                  vmid, name, status)
         vmobj = _get_vm_by_name(name)
 
     if not vmobj or 'node' not in vmobj or 'type' not in vmobj or 'vmid' not in vmobj:
-        log.error('Unable to set status {0} for {1} ({2})'.format(
-                  status, name, vmid))
+        log.error('Unable to set status %s for %s (%s)',
+                  status, name, vmid)
         raise SaltCloudExecutionTimeout
 
-    log.debug("VM_STATUS: Has desired info ({0}). Setting status..".format(vmobj))
+    log.debug("VM_STATUS: Has desired info (%s). Setting status..", vmobj)
     data = query('post', 'nodes/{0}/{1}/{2}/status/{3}'.format(
-                 vmobj['node'], vmobj['type'], vmobj['vmid'], status))
+        vmobj['node'], vmobj['type'], vmobj['vmid'], status))
 
     result = _parse_proxmox_upid(data, vmobj)
 
     if result is not False and result is not None:
-        log.debug('Set_vm_status action result: {0}'.format(result))
+        log.debug('Set_vm_status action result: %s', result)
         return True
 
     return False
@@ -956,22 +1236,22 @@ def get_vm_status(vmid=None, name=None):
     Get the status for a VM, either via the ID or the hostname
     '''
     if vmid is not None:
-        log.debug('get_vm_status: VMID {0}'.format(vmid))
+        log.debug('get_vm_status: VMID %s', vmid)
         vmobj = _get_vm_by_id(vmid)
     elif name is not None:
-        log.debug('get_vm_status: name {0}'.format(name))
+        log.debug('get_vm_status: name %s', name)
         vmobj = _get_vm_by_name(name)
     else:
         log.debug("get_vm_status: No ID or NAME given")
         raise SaltCloudExecutionFailure
 
-    log.debug('VM found: {0}'.format(vmobj))
+    log.debug('VM found: %s', vmobj)
 
     if vmobj is not None and 'node' in vmobj:
-        log.debug("VM_STATUS: Has desired info. Retrieving.. ({0})".format(
-                  vmobj['name']))
+        log.debug("VM_STATUS: Has desired info. Retrieving.. (%s)",
+                  vmobj['name'])
         data = query('get', 'nodes/{0}/{1}/{2}/status/current'.format(
-                     vmobj['node'], vmobj['type'], vmobj['vmid']))
+            vmobj['node'], vmobj['type'], vmobj['vmid']))
         return data
 
     log.error('VM or requested status not found..')
@@ -993,9 +1273,9 @@ def start(name, vmid=None, call=None):
             'The start action must be called with -a or --action.'
         )
 
-    log.debug('Start: {0} ({1}) = Start'.format(name, vmid))
+    log.debug('Start: %s (%s) = Start', name, vmid)
     if not set_vm_status('start', name, vmid=vmid):
-        log.error('Unable to bring VM {0} ({1}) up..'.format(name, vmid))
+        log.error('Unable to bring VM %s (%s) up..', name, vmid)
         raise SaltCloudExecutionFailure
 
     # xxx: TBD: Check here whether the status was actually changed to 'started'
@@ -1019,7 +1299,7 @@ def stop(name, vmid=None, call=None):
         )
 
     if not set_vm_status('stop', name, vmid=vmid):
-        log.error('Unable to bring VM {0} ({1}) down..'.format(name, vmid))
+        log.error('Unable to bring VM %s (%s) down..', name, vmid)
         raise SaltCloudExecutionFailure
 
     # xxx: TBD: Check here whether the status was actually changed to 'stopped'
@@ -1043,7 +1323,7 @@ def shutdown(name=None, vmid=None, call=None):
         )
 
     if not set_vm_status('shutdown', name, vmid=vmid):
-        log.error('Unable to shut VM {0} ({1}) down..'.format(name, vmid))
+        log.error('Unable to shut VM %s (%s) down..', name, vmid)
         raise SaltCloudExecutionFailure
 
     # xxx: TBD: Check here whether the status was actually changed to 'stopped'

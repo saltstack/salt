@@ -8,13 +8,14 @@ Module for running fmadm and fmdump on Solaris
 
 .. versionadded:: 2016.3.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils.path
+import salt.utils.platform
 import salt.utils.decorators as decorators
 from salt.utils.odict import OrderedDict
 
@@ -34,21 +35,21 @@ def _check_fmadm():
     '''
     Looks to see if fmadm is present on the system
     '''
-    return salt.utils.which('fmadm')
+    return salt.utils.path.which('fmadm')
 
 
 def _check_fmdump():
     '''
     Looks to see if fmdump is present on the system
     '''
-    return salt.utils.which('fmdump')
+    return salt.utils.path.which('fmdump')
 
 
 def __virtual__():
     '''
     Provides fmadm only on Solaris
     '''
-    if salt.utils.is_sunos() and \
+    if salt.utils.platform.is_sunos() and \
         _check_fmadm() and _check_fmdump():
         return __virtualname__
     return (
@@ -97,14 +98,14 @@ def _parse_fmdump_verbose(output):
     for line in output:
         if line.startswith('TIME'):
             fault.append(line)
-            if len(verbose_fault) > 0:
+            if verbose_fault:
                 result.append(verbose_fault)
                 verbose_fault = {}
         elif len(fault) == 1:
             fault.append(line)
             verbose_fault = _parse_fmdump("\n".join(fault))[0]
             fault = []
-        elif len(verbose_fault) > 0:
+        elif verbose_fault:
             if 'details' not in verbose_fault:
                 verbose_fault['details'] = ""
             if line.strip() == '':
@@ -113,7 +114,7 @@ def _parse_fmdump_verbose(output):
                 verbose_fault['details'],
                 line
             )
-    if len(verbose_fault) > 0:
+    if verbose_fault:
         result.append(verbose_fault)
 
     return result

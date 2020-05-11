@@ -26,7 +26,7 @@
 
 
 # The level of messages to send to the console.
-# One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
+# One of 'garbage', 'trace', 'debug', 'info', 'warning', 'error', 'critical'.
 #
 # The following log levels are considered INSECURE and may log sensitive data:
 # ['garbage', 'trace', 'debug']
@@ -97,3 +97,14 @@
 #
 #delete_sshkeys: False
 
+# Whether or not to include grains information in the /etc/salt/minion file
+# which is generated when the minion is provisioned.  For example...
+#   grains:
+#     salt-cloud:
+#       driver: ec2
+#       provider: my_ec2:ec2
+#       profile: micro_ec2
+#
+# Default: 'True'
+#
+#enable_cloud_grains: 'True'

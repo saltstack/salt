@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Manage groups on Solaris
+Manage groups on AIX
 
 .. important::
     If you feel that Salt should be using this module to manage groups on a
@@ -8,7 +8,7 @@ Manage groups on Solaris
     *'group.info' is not available*), see :ref:`here
     <module-provider-override>`.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -30,7 +30,7 @@ def __virtual__():
     '''
     Set the group module if the kernel is AIX
     '''
-    if __grains__['kernel'] == 'AIX':
+    if __grains__.get('kernel') == 'AIX':
         return __virtualname__
     return (False, 'The aix_group execution module failed to load: '
             'only available on AIX systems.')

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -120,7 +120,8 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         Test whether a given rabbitmq-internal user exists based
         on rabbitmqctl list_users.
         '''
-        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'Listing users ...\nsaltstack\t[administrator]\n...done', 'stderr': ''})
+        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'Listing users ...\n'
+                                                                   'saltstack\t[administrator]\n...done', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
             self.assertTrue(rabbitmq.user_exists('saltstack'))
 
@@ -129,7 +130,8 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         Negative test of whether rabbitmq-internal user exists based
         on rabbitmqctl list_users.
         '''
-        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'Listing users ...\nsaltstack\t[administrator]\n...done', 'stderr': ''})
+        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'Listing users ...\n'
+                                                                   'saltstack\t[administrator]\n...done', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
             self.assertFalse(rabbitmq.user_exists('salt'))
 
@@ -359,7 +361,8 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it returns queue details of the / virtual host
         '''
-        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack\t0\nceleryev.234-234\t10', 'stderr': ''})
+        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack\t0\nceleryev.234-234\t10',
+                                           'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
             self.assertDictEqual(rabbitmq.list_queues(), {'saltstack': ['0'], 'celeryev.234-234': ['10']})
 
@@ -369,11 +372,13 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it returns queue details of specified virtual host.
         '''
-        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack\t0\nceleryev.234-234\t10', 'stderr': ''})
+        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack\t0\nceleryev.234-234\t10',
+                                           'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertDictEqual(rabbitmq.list_queues_vhost('consumers'), {'saltstack': ['0'], 'celeryev.234-234': ['10']})
+            self.assertDictEqual(rabbitmq.list_queues_vhost('consumers'), {'saltstack': ['0'],
+                                                                           'celeryev.234-234': ['10']})
 
-    # 'list_policies' function tests: 1
+    # 'list_policies' function tests: 3
 
     def test_list_policies(self):
         '''
@@ -381,7 +386,31 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         and name based on the data returned from rabbitmqctl list_policies.
         '''
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
-        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
+        mock_pkg = MagicMock(return_value='3.7')
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run, 'pkg.version': mock_pkg}), \
+             patch.dict(rabbitmq.__grains__, {'os_family': ''}):
+            self.assertDictEqual(rabbitmq.list_policies(), {})
+
+    def test_list_policies_freebsd(self):
+        '''
+        Test if it return a dictionary of policies nested by vhost
+        and name based on the data returned from rabbitmqctl list_policies.
+        '''
+        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
+        mock_pkg = MagicMock(return_value='3.7')
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run, 'pkg.version': mock_pkg}), \
+             patch.dict(rabbitmq.__grains__, {'os_family': 'FreeBSD'}):
+            self.assertDictEqual(rabbitmq.list_policies(), {})
+
+    def test_list_policies_old_version(self):
+        '''
+        Test if it return a dictionary of policies nested by vhost
+        and name based on the data returned from rabbitmqctl list_policies.
+        '''
+        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
+        mock_pkg = MagicMock(return_value='3.0')
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run, 'pkg.version': mock_pkg}), \
+             patch.dict(rabbitmq.__grains__, {'os_family': ''}):
             self.assertDictEqual(rabbitmq.list_policies(), {})
 
     # 'set_policy' function tests: 1
@@ -415,7 +444,9 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         based on rabbitmqctl list_policies.
         '''
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
-        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
+        mock_pkg = MagicMock(return_value='3.0')
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run, 'pkg.version': mock_pkg}), \
+             patch.dict(rabbitmq.__grains__, {'os_family': ''}):
             self.assertFalse(rabbitmq.policy_exists('/', 'HA'))
 
     # 'list_available_plugins' function tests: 2

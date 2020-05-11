@@ -4,12 +4,12 @@ unit tests for the cache runner
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import TMP
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -31,7 +31,7 @@ class QueueTest(TestCase, LoaderModuleMockMixin):
         return {
             queue_mod: {
                 '__opts__': {
-                    'sock_dir': os.path.join(TMP, 'queue-runner-sock-dir'),
+                    'sock_dir': os.path.join(RUNTIME_VARS.TMP, 'queue-runner-sock-dir'),
                     'transport': 'zeromq'
                 }
             }
@@ -64,6 +64,6 @@ class QueueTest(TestCase, LoaderModuleMockMixin):
         with patch.dict(queue_mod.__salt__, {'test.stdout_print': test_stdout_print}):
             with patch.object(queue_mod, 'pop', queue_pop):
                 queue_mod.process_runner(queue='salt')
-            queue_pop.assert_called_once_with(queue='salt', quantity=1, backend='pgjsonb')
+            queue_pop.assert_called_once_with(is_runner=True, queue='salt', quantity=1, backend='pgjsonb')
             test_stdout_print.assert_called_once_with()
-            queue_pop.assert_called_once_with(queue='salt', quantity=1, backend='pgjsonb')
+            queue_pop.assert_called_once_with(is_runner=True, queue='salt', quantity=1, backend='pgjsonb')

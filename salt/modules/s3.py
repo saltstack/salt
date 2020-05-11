@@ -64,7 +64,7 @@ Connection module for Amazon S3
 
 :depends: requests
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging
@@ -247,7 +247,7 @@ def head(bucket, path='', key=None, keyid=None, service_url=None,
 def put(bucket, path=None, return_bin=False, action=None, local_file=None,
         key=None, keyid=None, service_url=None, verify_ssl=None,
         kms_keyid=None, location=None, role_arn=None, path_style=None,
-        https_enable=None):
+        https_enable=None, headers=None, full_headers=False):
     '''
     Create a new bucket, or upload an object to a bucket.
 
@@ -263,6 +263,12 @@ def put(bucket, path=None, return_bin=False, action=None, local_file=None,
 
         salt myminion s3.put mybucket remotepath local_file=/path/to/file
     '''
+
+    if not headers:
+        headers = {}
+    else:
+        full_headers = True
+
     key, keyid, service_url, verify_ssl, kms_keyid, location, role_arn, path_style, https_enable = _get_key(
         key,
         keyid,
@@ -289,7 +295,9 @@ def put(bucket, path=None, return_bin=False, action=None, local_file=None,
                                  location=location,
                                  role_arn=role_arn,
                                  path_style=path_style,
-                                 https_enable=https_enable)
+                                 https_enable=https_enable,
+                                 headers=headers,
+                                 full_headers=full_headers)
 
 
 def _get_key(key, keyid, service_url, verify_ssl, kms_keyid, location, role_arn, path_style, https_enable):

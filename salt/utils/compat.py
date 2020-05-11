@@ -4,10 +4,12 @@ Compatibility functions for utils
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import sys
 import copy
+import importlib
 import types
+import importlib
 
 # Import salt libs
 import salt.loader
@@ -46,3 +48,25 @@ def deepcopy_bound(name):
     finally:
         copy._deepcopy_dispatch = pre_dispatch
     return ret
+
+
+def cmp(x, y):
+    '''
+    Compatibility helper function to replace the ``cmp`` function from Python 2. The
+    ``cmp`` function is no longer available in Python 3.
+
+    cmp(x, y) -> integer
+
+    Return negative if x<y, zero if x==y, positive if x>y.
+    '''
+    return (x > y) - (x < y)
+
+
+def reload(mod):
+    '''
+    Compatibility helper function to replace the ``reload`` builtin from Python 2.
+    '''
+    try:
+        return importlib.reload(mod)
+    except AttributeError:
+        return reload(mod)

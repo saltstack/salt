@@ -16,10 +16,10 @@ In the minion configuration file, the following block is required:
     api_key: <API_KEY>
     page_id: <PAGE_ID>
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # import python std lib
 import logging
@@ -173,9 +173,6 @@ def create(endpoint='incidents',
     api_url
         Custom API URL in case the user has a StatusPage service running in a custom environment.
 
-    **kwargs
-        Other params.
-
     CLI Example:
 
     .. code-block:: bash
@@ -184,7 +181,7 @@ def create(endpoint='incidents',
 
     Example output:
 
-    .. code-block:: yaml
+    .. code-block:: bash
 
         minion:
             ----------
@@ -277,7 +274,7 @@ def retrieve(endpoint='incidents',
 
     Example output:
 
-    .. code-block:: yaml
+    .. code-block:: bash
 
         minion:
             ----------
@@ -417,7 +414,7 @@ def update(endpoint='incidents',
 
     Example output:
 
-    .. code-block:: yaml
+    .. code-block:: bash
 
         minion:
             ----------
@@ -447,7 +444,7 @@ def update(endpoint='incidents',
     '''
     endpoint_sg = endpoint[:-1]  # singular
     if not id:
-        log.error('Invalid {endpoint} ID'.format(endpoint=endpoint_sg))
+        log.error('Invalid %s ID', endpoint_sg)
         return {
             'result': False,
             'comment': 'Please specify a valid {endpoint} ID'.format(endpoint=endpoint_sg)
@@ -518,7 +515,7 @@ def delete(endpoint='incidents',
 
     Example output:
 
-    .. code-block:: yaml
+    .. code-block:: bash
 
         minion:
             ----------
@@ -541,7 +538,7 @@ def delete(endpoint='incidents',
         }
     endpoint_sg = endpoint[:-1]  # singular
     if not id:
-        log.error('Invalid {endpoint} ID'.format(endpoint=endpoint_sg))
+        log.error('Invalid %s ID', endpoint_sg)
         return {
             'result': False,
             'comment': 'Please specify a valid {endpoint} ID'.format(endpoint=endpoint_sg)

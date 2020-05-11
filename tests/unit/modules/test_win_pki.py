@@ -3,11 +3,11 @@
     :synopsis: Unit Tests for Windows PKI Module 'module.win_pki'
     :platform: Windows
     :maturity: develop
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Libs
 import salt.modules.win_pki as win_pki

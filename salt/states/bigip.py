@@ -6,12 +6,13 @@ A state module designed to enforce load-balancing configurations for F5 Big-IP e
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
-import json
+# Import Salt libs
+import salt.utils.json
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 #set up virtual function
@@ -85,7 +86,7 @@ def _check_for_changes(entity_type, ret, existing, modified):
         if 'generation' in existing['content'].keys():
             del existing['content']['generation']
 
-        if cmp(modified['content'], existing['content']) == 0:
+        if modified['content'] == existing['content']:
             ret['comment'] = '{entity_type} is currently enforced to the desired state.  No changes made.'.format(entity_type=entity_type)
         else:
             ret['comment'] = '{entity_type} was enforced to the desired state.  Note: Only parameters specified ' \
@@ -94,7 +95,7 @@ def _check_for_changes(entity_type, ret, existing, modified):
             ret['changes']['new'] = modified['content']
 
     else:
-        if cmp(modified, existing) == 0:
+        if modified == existing:
             ret['comment'] = '{entity_type} is currently enforced to the desired state.  No changes made.'.format(entity_type=entity_type)
         else:
             ret['comment'] = '{entity_type} was enforced to the desired state.  Note: Only parameters specified ' \
@@ -123,7 +124,7 @@ def _test_output(ret, action, params):
         ret['comment'] += 'The modify action will attempt to modify an existing entity only if it exists.\n'
 
     ret['comment'] += 'An iControl REST Request will be made using the parameters:\n'
-    ret['comment'] += json.dumps(params, indent=4)
+    ret['comment'] += salt.utils.json.dumps(params, indent=4)
 
     ret['changes'] = {}
     # Return ``None`` when running with ``test=true``.
@@ -2490,7 +2491,7 @@ def delete_virtual(hostname, username, password, name):
 
 def list_monitor(hostname, username, password, monitor_type, name):
     '''
-    A function to list an exsiting monitor.
+    A function to list an existing monitor.
 
     hostname
         The host/address of the bigip device

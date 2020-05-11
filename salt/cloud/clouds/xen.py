@@ -7,6 +7,7 @@ XenServer Cloud Driver
 The XenServer driver is designed to work with a Citrix XenServer.
 
 Requires XenServer SDK
+(can be downloaded from https://www.citrix.com/downloads/xenserver/product-software/ )
 
 Place a copy of the XenAPI.py in the Python site-packages folder.
 
@@ -59,13 +60,14 @@ Example profile configuration:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from datetime import datetime
 import logging
 import time
 
 # Import salt libs
 import salt.config as config
+from salt.ext import six
 
 # Import Salt-Cloud Libs
 import salt.utils.cloud
@@ -150,13 +152,32 @@ def _get_session():
         __opts__,
         search_global=False
     )
-    session = XenAPI.Session(url)
-    log.debug('url: {} user: {} password: {}, originator: {}'.format(
-        url,
-        user,
-        'XXX-pw-redacted-XXX',
-        originator))
-    session.xenapi.login_with_password(user, password, api_version, originator)
+    ignore_ssl = config.get_cloud_config_value(
+        'ignore_ssl',
+        get_configured_provider(),
+        __opts__,
+        default=False,
+        search_global=False
+    )
+    try:
+        session = XenAPI.Session(url, ignore_ssl=ignore_ssl)
+        log.debug(
+            'url: %s user: %s password: %s, originator: %s',
+            url, user, 'XXX-pw-redacted-XXX', originator
+        )
+        session.xenapi.login_with_password(
+            user, password, api_version, originator)
+    except XenAPI.Failure as ex:
+        pool_master_addr = six.text_type(ex.__dict__['details'][1])
+        slash_parts = url.split('/')
+        new_url = '/'.join(slash_parts[:2]) + '/' + pool_master_addr
+        session = XenAPI.Session(new_url)
+        log.debug(
+            'session is -> url: %s user: %s password: %s, originator:%s',
+            new_url, user, 'XXX-pw-redacted-XXX', originator
+        )
+        session.xenapi.login_with_password(
+            user, password, api_version, originator)
     return session
 
 
@@ -175,14 +196,21 @@ def list_nodes():
     for vm in vms:
         record = session.xenapi.VM.get_record(vm)
         if not record['is_a_template'] and not record['is_control_domain']:
-            ret[record['name_label']] = {
-                'id': record['uuid'],
-                'image': record['other_config']['base_template_name'],
-                'name': record['name_label'],
-                'size': record['memory_dynamic_max'],
-                'state': record['power_state'],
-                'private_ips': get_vm_ip(record['name_label'], session),
-                'public_ips': None}
+            try:
+                base_template_name = record['other_config']['base_template_name']
+            except Exception:
+                base_template_name = None
+                log.debug(
+                    'VM %s, doesnt have base_template_name attribute',
+                    record['name_label']
+                )
+            ret[record['name_label']] = {'id': record['uuid'],
+                                         'image': base_template_name,
+                                         'name': record['name_label'],
+                                         'size': record['memory_dynamic_max'],
+                                         'state': record['power_state'],
+                                         'private_ips': get_vm_ip(record['name_label'], session),
+                                         'public_ips': None}
     return ret
 
 
@@ -210,11 +238,11 @@ def get_vm_ip(name=None, session=None, call=None):
     vifs = session.xenapi.VM.get_VIFs(vm)
     if vifs is not None:
         for vif in vifs:
-            if len(session.xenapi.VIF.get_ipv4_addresses(vif)) != 0:
+            if session.xenapi.VIF.get_ipv4_addresses(vif):
                 cidr = session.xenapi.VIF.get_ipv4_addresses(vif).pop()
                 ret, subnet = cidr.split('/')
                 log.debug(
-                    'VM vif returned for instance: {} ip: {}'.format(name, ret))
+                    'VM vif returned for instance: %s ip: %s', name, ret)
                 return ret
     # -- try to get ip from get tools metrics
     vgm = session.xenapi.VM.get_guest_metrics(vm)
@@ -222,9 +250,9 @@ def get_vm_ip(name=None, session=None, call=None):
         net = session.xenapi.VM_guest_metrics.get_networks(vgm)
         if "0/ip" in net.keys():
             log.debug(
-                'VM guest metrics returned for instance: {} 0/ip: {}'.format(
-                    name,
-                    net["0/ip"]))
+                'VM guest metrics returned for instance: %s 0/ip: %s',
+                name, net["0/ip"]
+            )
             ret = net["0/ip"]
     # except Exception as ex:
     except XenAPI.Failure:
@@ -247,8 +275,10 @@ def set_vm_ip(name=None,
         raise SaltCloudException(
             'The function must be called with -a or --action.')
 
-    log.debug('Setting name: {} ipv4_cidr: {} ipv4_gw: {} mode: {}'.format(
-        name, ipv4_cidr, ipv4_gw, mode))
+    log.debug(
+        'Setting name: %s ipv4_cidr: %s ipv4_gw: %s mode: %s',
+        name, ipv4_cidr, ipv4_gw, mode
+    )
     if session is None:
         log.debug('New session being created')
         session = _get_session()
@@ -259,8 +289,8 @@ def set_vm_ip(name=None,
     #       multiple interface(vif) VMs
     vifs = session.xenapi.VM.get_VIFs(vm)
     if vifs is not None:
+        log.debug('There are %s vifs.', len(vifs))
         for vif in vifs:
-            log.debug('There are {} vifs.'.format(len(vifs)))
             record = session.xenapi.VIF.get_record(vif)
             log.debug(record)
             try:
@@ -289,10 +319,19 @@ def list_nodes_full(session=None):
     for vm in vms:
         record = session.xenapi.VM.get_record(vm)
         if not record['is_a_template'] and not record['is_control_domain']:
+            # deal with cases where the VM doesn't have 'base_template_name' attribute
+            try:
+                base_template_name = record['other_config']['base_template_name']
+            except Exception:
+                base_template_name = None
+                log.debug(
+                    'VM %s, doesnt have base_template_name attribute',
+                    record['name_label']
+                )
             vm_cfg = session.xenapi.VM.get_record(vm)
             vm_cfg['id'] = record['uuid']
             vm_cfg['name'] = record['name_label']
-            vm_cfg['image'] = record['other_config']['base_template_name']
+            vm_cfg['image'] = base_template_name
             vm_cfg['size'] = None
             vm_cfg['state'] = record['power_state']
             vm_cfg['private_ips'] = get_vm_ip(record['name_label'], session)
@@ -305,9 +344,9 @@ def list_nodes_full(session=None):
     if ':' in provider:
         comps = provider.split(':')
         provider = comps[0]
-    log.debug('ret: {}'.format(ret))
-    log.debug('provider: {}'.format(provider))
-    log.debug('__opts__: {}'.format(__opts__))
+    log.debug('ret: %s', ret)
+    log.debug('provider: %s', provider)
+    log.debug('__opts__: %s', __opts__)
     __utils__['cloud.cache_node_list'](ret, provider, __opts__)
     return ret
 
@@ -344,7 +383,7 @@ def vdi_list(call=None, kwargs=None):
     if call == 'action':
         raise SaltCloudException(
             'This function must be called with -f or --function.')
-    log.debug('kwargs is {}'.format(kwargs))
+    log.debug('kwargs is %s', kwargs)
     if kwargs is not None:
         if 'terse' in kwargs:
             if kwargs['terse'] == 'True':
@@ -391,7 +430,7 @@ def avail_locations(session=None, call=None):
 
 def avail_sizes(session=None, call=None):
     '''
-    Return a list of Xen templat definitions
+    Return a list of Xen template definitions
 
     .. code-block:: bash
 
@@ -442,14 +481,22 @@ def show_instance(name, session=None, call=None):
         raise SaltCloudException(
             'The show_instnce function must be called with -a or --action.'
         )
-    log.debug('show_instance-> name: {} session: {}'.format(name, session))
+    log.debug('show_instance-> name: %s session: %s', name, session)
     if session is None:
         session = _get_session()
     vm = _get_vm(name, session=session)
     record = session.xenapi.VM.get_record(vm)
     if not record['is_a_template'] and not record['is_control_domain']:
+        try:
+            base_template_name = record['other_config']['base_template_name']
+        except Exception:
+            base_template_name = None
+            log.debug(
+                'VM %s, doesnt have base_template_name attribute',
+                record['name_label']
+            )
         ret = {'id': record['uuid'],
-               'image': record['other_config']['base_template_name'],
+               'image': base_template_name,
                'name': record['name_label'],
                'size': record['memory_dynamic_max'],
                'state': record['power_state'],
@@ -473,13 +520,13 @@ def _determine_resource_pool(session, vm_):
         resource_pool = _get_pool(vm_['resource_pool'], session)
     else:
         pool = session.xenapi.pool.get_all()
-        if len(pool) <= 0:
+        if not pool:
             resource_pool = None
         else:
             first_pool = session.xenapi.pool.get_all()[0]
             resource_pool = first_pool
     pool_record = session.xenapi.pool.get_record(resource_pool)
-    log.debug('resource pool: {}'.format(pool_record['name_label']))
+    log.debug('resource pool: %s', pool_record['name_label'])
     return resource_pool
 
 
@@ -495,11 +542,11 @@ def _determine_storage_repo(session, resource_pool, vm_):
         if resource_pool:
             default_sr = session.xenapi.pool.get_default_SR(resource_pool)
             sr_record = session.xenapi.SR.get_record(default_sr)
-            log.debug('storage repository: {}'.format(sr_record['name_label']))
+            log.debug('storage repository: %s', sr_record['name_label'])
             storage_repo = default_sr
         else:
             storage_repo = None
-    log.debug('storage repository: {}'.format(storage_repo))
+    log.debug('storage repository: %s', storage_repo)
     return storage_repo
 
 
@@ -518,11 +565,6 @@ def create(vm_):
     record = {}
     ret = {}
 
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in vm_:
-        vm_['driver'] = vm_.pop('provider')
-
     # fire creating event
     __utils__['cloud.fire_event'](
         'event',
@@ -536,7 +578,7 @@ def create(vm_):
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
-    log.debug('Adding {} to cloud cache.'.format(name))
+    log.debug('Adding %s to cloud cache.', name)
     __utils__['cloud.cachedir_index_add'](
         vm_['name'], vm_['profile'], 'xen', vm_['driver']
     )
@@ -555,7 +597,7 @@ def create(vm_):
     clone = vm_.get('clone')
     if clone is None:
         clone = True
-    log.debug('Clone: {} '.format(clone))
+    log.debug('Clone: %s ', clone)
 
     # fire event to read new vm properties (requesting)
     __utils__['cloud.fire_event'](
@@ -590,15 +632,15 @@ def create(vm_):
 
     # if not deploying salt then exit
     deploy = vm_.get('deploy', True)
-    log.debug('delopy is set to {}'.format(deploy))
+    log.debug('delopy is set to %s', deploy)
     if deploy:
         record = session.xenapi.VM.get_record(vm)
         if record is not None:
             _deploy_salt_minion(name, session, vm_)
     else:
         log.debug(
-            'The Salt minion will not be installed, deploy: {}'.format(
-                vm_['deploy'])
+            'The Salt minion will not be installed, deploy: %s',
+            vm_['deploy']
         )
     record = session.xenapi.VM.get_record(vm)
     ret = show_instance(name)
@@ -627,12 +669,13 @@ def _deploy_salt_minion(name, session, vm_):
     vm_['ssh_host'] = get_vm_ip(name, session)
     vm_['user'] = vm_.get('user', 'root')
     vm_['password'] = vm_.get('password', 'p@ssw0rd!')
-    log.debug('{} has IP of {}'.format(name, vm_['ssh_host']))
+    vm_['provider'] = vm_.get('provider', 'xen')
+    log.debug('%s has IP of %s', name, vm_['ssh_host'])
     # Bootstrap Salt minion!
     if vm_['ssh_host'] is not None:
-        log.info('Installing Salt minion  on {0}'.format(name))
+        log.info('Installing Salt minion on %s', name)
         boot_ret = __utils__['cloud.bootstrap'](vm_, __opts__)
-        log.debug('boot return: {}'.format(boot_ret))
+        log.debug('boot return: %s', boot_ret)
 
 
 def _set_static_ip(name, session, vm_):
@@ -665,27 +708,29 @@ def _wait_for_ip(name, session):
                 status = None
         check_time = datetime.now()
         delta = check_time - start_time
-        log.debug('Waited {} seconds for {} to report ip address...'.format(
-            delta.seconds, name))
+        log.debug(
+            'Waited %s seconds for %s to report ip address...',
+            delta.seconds, name
+        )
         if delta.seconds > 180:
-            log.warn('Timeout getting IP address')
+            log.warning('Timeout getting IP address')
             break
         time.sleep(5)
 
 
 def _run_async_task(task=None, session=None):
     '''
-    Run  XenAPI task in async mode to prevent timeouts
+    Run  XenAPI task in asynchronous mode to prevent timeouts
     '''
     if task is None or session is None:
         return None
     task_name = session.xenapi.task.get_name_label(task)
-    log.debug('Running {}'.format(task_name))
+    log.debug('Running %s', task_name)
     while session.xenapi.task.get_status(task) == 'pending':
         progress = round(session.xenapi.task.get_progress(task), 2) * 100
-        log.debug('Task progress {}%'.format(str(progress)))
+        log.debug('Task progress %.2f%%', progress)
         time.sleep(1)
-    log.debug('Cleaning up task {}'.format(task_name))
+    log.debug('Cleaning up task %s', task_name)
     session.xenapi.task.destroy(task)
 
 
@@ -699,7 +744,7 @@ def _clone_vm(image=None, name=None, session=None):
     '''
     if session is None:
         session = _get_session()
-    log.debug('Creating VM {0} by cloning {1}'.format(name, image))
+    log.debug('Creating VM %s by cloning %s', name, image)
     source = _get_vm(image, session)
     task = session.xenapi.Async.VM.clone(source, name)
     _run_async_task(task, session)
@@ -709,7 +754,7 @@ def _copy_vm(template=None, name=None, session=None, sr=None):
     '''
     Create VM by copy
 
-    This is faster and should be used if source and target are
+    This is slower and should be used if source and target are
     NOT in the same storage repository
 
     template = object reference
@@ -719,7 +764,7 @@ def _copy_vm(template=None, name=None, session=None, sr=None):
     '''
     if session is None:
         session = _get_session()
-    log.debug('Creating VM {0} by copying {1}'.format(name, template))
+    log.debug('Creating VM %s by copying %s', name, template)
     source = _get_vm(template, session)
     task = session.xenapi.Async.VM.copy(source, name, sr)
     _run_async_task(task, session)
@@ -731,7 +776,7 @@ def _provision_vm(name=None, session=None):
     '''
     if session is None:
         session = _get_session()
-    log.info('Provisioning VM {0}'.format(name))
+    log.info('Provisioning VM %s', name)
     vm = _get_vm(name, session)
     task = session.xenapi.Async.VM.provision(vm)
     _run_async_task(task, session)
@@ -752,7 +797,7 @@ def start(name, call=None, session=None):
         )
     if session is None:
         session = _get_session()
-    log.info('Starting VM {0}'.format(name))
+    log.info('Starting VM %s', name)
     vm = _get_vm(name, session)
     task = session.xenapi.Async.VM.start(vm, False, True)
     _run_async_task(task, session)
@@ -774,7 +819,7 @@ def pause(name, call=None, session=None):
         )
     if session is None:
         session = _get_session()
-    log.info('Pausing VM {0}'.format(name))
+    log.info('Pausing VM %s', name)
     vm = _get_vm(name, session)
     task = session.xenapi.Async.VM.pause(vm)
     _run_async_task(task, session)
@@ -796,7 +841,7 @@ def unpause(name, call=None, session=None):
         )
     if session is None:
         session = _get_session()
-    log.info('Unpausing VM {0}'.format(name))
+    log.info('Unpausing VM %s', name)
     vm = _get_vm(name, session)
     task = session.xenapi.Async.VM.unpause(vm)
     _run_async_task(task, session)
@@ -818,7 +863,7 @@ def suspend(name, call=None, session=None):
         )
     if session is None:
         session = _get_session()
-    log.info('Suspending VM {0}'.format(name))
+    log.info('Suspending VM %s', name)
     vm = _get_vm(name, session)
     task = session.xenapi.Async.VM.suspend(vm)
     _run_async_task(task, session)
@@ -840,7 +885,7 @@ def resume(name, call=None, session=None):
         )
     if session is None:
         session = _get_session()
-    log.info('Resuming VM {0}'.format(name))
+    log.info('Resuming VM %s', name)
     vm = _get_vm(name, session)
     task = session.xenapi.Async.VM.resume(vm, False, True)
     _run_async_task(task, session)
@@ -879,7 +924,7 @@ def shutdown(name, call=None, session=None):
         )
     if session is None:
         session = _get_session()
-    log.info('Starting VM {0}'.format(name))
+    log.info('Starting VM %s', name)
     vm = _get_vm(name, session)
     task = session.xenapi.Async.VM.shutdown(vm)
     _run_async_task(task, session)
@@ -901,7 +946,7 @@ def reboot(name, call=None, session=None):
         )
     if session is None:
         session = _get_session()
-    log.info('Starting VM {0}'.format(name))
+    log.info('Starting VM %s', name)
     vm = _get_vm(name, session)
     power_state = session.xenapi.VM.get_power_state(vm)
     if power_state == 'Running':
@@ -978,7 +1023,7 @@ def destroy(name=None, call=None):
     if vm:
         # get vm
         record = session.xenapi.VM.get_record(vm)
-        log.debug('power_state: ' + record['power_state'])
+        log.debug('power_state: %s', record['power_state'])
         # shut down
         if record['power_state'] != 'Halted':
             task = session.xenapi.Async.VM.hard_shutdown(vm)
@@ -1242,3 +1287,55 @@ def destroy_template(name=None, call=None, kwargs=None):
     if not found:
         ret[name] = {'status': 'not found'}
     return ret
+
+
+def get_pv_args(name, session=None, call=None):
+    '''
+    Get PV arguments for a VM
+
+    .. code-block:: bash
+
+        salt-cloud -a get_pv_args xenvm01
+
+    '''
+    if call == 'function':
+        raise SaltCloudException(
+            'This function must be called with -a or --action.'
+        )
+    if session is None:
+        log.debug('New session being created')
+        session = _get_session()
+    vm = _get_vm(name, session=session)
+    pv_args = session.xenapi.VM.get_PV_args(vm)
+    if pv_args:
+        return pv_args
+    return None
+
+
+def set_pv_args(name, kwargs=None, session=None, call=None):
+    '''
+    Set PV arguments for a VM
+
+    .. code-block:: bash
+
+        salt-cloud -a set_pv_args xenvm01 pv_args="utf-8 graphical"
+
+    '''
+    if call == 'function':
+        raise SaltCloudException(
+            'This function must be called with -a or --action.'
+        )
+    if session is None:
+        log.debug('New session being created')
+        session = _get_session()
+    vm = _get_vm(name, session=session)
+    try:
+        log.debug('Setting PV Args: %s', kwargs['pv_args'])
+        session.xenapi.VM.set_PV_args(vm, str(kwargs['pv_args']))
+    except KeyError:
+        log.error('No pv_args parameter found.')
+        return False
+    except XenAPI.Failure:
+        log.info('Setting PV Args failed.')
+        return False
+    return True

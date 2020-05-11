@@ -18,18 +18,6 @@ Generic Troubleshooting Steps
 This section describes a set of instructions that are useful to a large number
 of situations, and are likely to solve most issues that arise.
 
-.. admonition:: Version Compatibility
-
-    One of the most common issues that Salt Cloud users run into is import
-    errors. These are often caused by version compatibility issues with Salt.
-
-    Salt 0.16.x works with Salt Cloud 0.8.9 or greater.
-
-    Salt 0.17.x requires Salt Cloud 0.8.11.
-
-    Releases after 0.17.x (0.18 or greater) should not encounter issues as Salt
-    Cloud has been merged into Salt itself.
-
 Debug Mode
 ----------
 Frequently, running Salt Cloud in debug mode will reveal information about a

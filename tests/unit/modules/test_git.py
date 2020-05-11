@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Erik Johnson <erik@saltstack.com>`
+    :codeauthor: Erik Johnson <erik@saltstack.com>
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import logging
 import os
@@ -14,6 +14,7 @@ import subprocess
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
+    Mock,
     MagicMock,
     patch,
     NO_MOCK,
@@ -67,7 +68,7 @@ def _git_version():
     if not git_version:
         log.error('Git not installed')
         return False
-    log.debug('Detected git version ' + git_version)
+    log.debug('Detected git version %s', git_version)
     return LooseVersion(git_version.split()[-1])
 
 
@@ -77,7 +78,13 @@ class GitTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for salt.modules.git
     '''
     def setup_loader_modules(self):
-        return {git_mod: {}}
+        return {
+            git_mod: {
+                '__utils__': {
+                    'ssh.key_is_encrypted': Mock(return_value=False)
+                },
+            }
+        }
 
     def test_list_worktrees(self):
         '''
@@ -164,3 +171,50 @@ class GitTestCase(TestCase, LoaderModuleMockMixin):
                     dict([(x, worktree_ret[x]) for x in WORKTREE_INFO
                           if WORKTREE_INFO[x].get('stale', False)])
                 )
+
+    def test__git_run_tmp_wrapper(self):
+        '''
+        When an identity file is specified, make sure we don't attempt to
+        remove a temp wrapper that wasn't created. Windows doesn't use temp
+        wrappers, and *NIX won't unless no username was specified and the path
+        is not executable.
+        '''
+        file_remove_mock = Mock()
+        mock_true = Mock(return_value=True)
+        mock_false = Mock(return_value=False)
+        cmd_mock = MagicMock(return_value={
+            'retcode': 0,
+            'stdout': '',
+            'stderr': '',
+        })
+        with patch.dict(git_mod.__salt__, {'file.file_exists': mock_true,
+                                           'file.remove': file_remove_mock,
+                                           'cmd.run_all': cmd_mock,
+                                           'ssh.key_is_encrypted': mock_false}):
+
+            # Non-windows
+            with patch('salt.utils.platform.is_windows', mock_false), \
+                    patch.object(git_mod, '_path_is_executable_others',
+                                 mock_true):
+
+                # Command doesn't really matter here since we're mocking
+                git_mod._git_run(
+                    ['git', 'rev-parse', 'HEAD'],
+                    cwd='/some/path',
+                    user=None,
+                    identity='/root/.ssh/id_rsa')
+
+                file_remove_mock.assert_not_called()
+
+            file_remove_mock.reset_mock()
+            with patch('salt.utils.platform.is_windows', mock_true), \
+                    patch.object(git_mod, '_find_ssh_exe',
+                                 MagicMock(return_value=r'C:\Git\ssh.exe')):
+                # Command doesn't really matter here since we're mocking
+                git_mod._git_run(
+                    ['git', 'rev-parse', 'HEAD'],
+                    cwd=r'C:\some\path',
+                    user=None,
+                    identity=r'C:\ssh\id_rsa')
+
+                file_remove_mock.assert_not_called()

@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
-import json
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 
@@ -10,10 +9,11 @@ import os
 import tests.integration.cloud.helpers
 from tests.support.case import ShellCase
 from tests.support.unit import TestCase, skipIf
-from tests.support.paths import FILES
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
+import salt.utils.json
 import salt.utils.virtualbox
 
 # Create the cloud instance name to be used throughout the tests
@@ -57,7 +57,7 @@ class VirtualboxCloudTestCase(ShellCase):
         @return:
         @rtype: dict
         """
-        config_path = os.path.join(FILES, 'conf')
+        config_path = os.path.join(RUNTIME_VARS.FILES, 'conf')
         arg_str = '--out=json -c {0} {1}'.format(config_path, arg_str)
         # arg_str = "{0} --log-level=error".format(arg_str)
         log.debug("running salt-cloud with %s", arg_str)
@@ -70,14 +70,14 @@ class VirtualboxCloudTestCase(ShellCase):
         # Attempt to clean json output before fix of https://github.com/saltstack/salt/issues/27629
         valid_initial_chars = ['{', '[', '"']
         for line in output[:]:
-            if len(line) == 0 or (line[0] not in valid_initial_chars):
+            if not line or (line[0] not in valid_initial_chars):
                 output.pop(0)
             else:
                 break
         if len(output) is 0:
             return dict()
         else:
-            return json.loads("".join(output))
+            return salt.utils.json.loads(''.join(output))
 
     def run_cloud_function(self, function, kw_function_args=None, **kwargs):
         """

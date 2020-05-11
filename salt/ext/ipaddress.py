@@ -12,8 +12,18 @@ Source: https://bitbucket.org/kwi/py2-ipaddress/
 # s/class \(\w\+\):/class \1(object):/
 
 # Use iterator versions of map and range:
-from itertools import imap as map
-range = xrange
+# from itertools import imap as map
+# range = xrange
+
+try:
+  from itertools import imap
+except ImportError:
+  imap=map
+
+try:
+  xrange
+except NameError:
+  xrange = range
 
 # Except that xrange only supports machine integers, not longs, so...
 def long_range(start, end):
@@ -27,9 +37,6 @@ bytes = bytearray
 
 # Python 2 does not support exception chaining.
 # s/ from None$//
-
-# Python 2 ranges need to fit in a C long
-# 'fix' hosts() for IPv6Network
 
 # When checking for instances of int, also allow Python 2's long.
 _builtin_isinstance = isinstance
@@ -204,7 +211,7 @@ def v4_int_to_packed(address):
     """
     try:
         return _int_to_bytes(address, 4, 'big')
-    except:
+    except Exception:
         raise ValueError("Address negative or too large for IPv4")
 
 
@@ -220,7 +227,7 @@ def v6_int_to_packed(address):
     """
     try:
         return _int_to_bytes(address, 16, 'big')
-    except:
+    except Exception:
         raise ValueError("Address negative or too large for IPv6")
 
 
@@ -2259,7 +2266,7 @@ class IPv6Network(_BaseV6, _BaseNetwork):
         """
         network = int(self.network_address)
         broadcast = int(self.broadcast_address)
-        for x in range(1, broadcast - network + 1):
+        for x in long_range(1, broadcast - network + 1):
             yield self._address_class(network + x)
 
     @property

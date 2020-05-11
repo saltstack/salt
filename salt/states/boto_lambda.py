@@ -61,17 +61,17 @@ config:
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
-import os.path
 import hashlib
-import json
 
 # Import Salt Libs
-import salt.ext.six as six
+from salt.ext import six
+import salt.utils.data
 import salt.utils.dictupdate as dictupdate
-import salt.utils
+import salt.utils.files
+import salt.utils.json
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -152,15 +152,16 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None,
         to the same VPC.  This is a dict of the form:
 
         .. code-block:: yaml
+
             VpcConfig:
-                SecurityGroupNames:
+              SecurityGroupNames:
                 - mysecgroup1
                 - mysecgroup2
-                SecurityGroupIds:
+              SecurityGroupIds:
                 - sg-abcdef1234
-                SubnetNames:
+              SubnetNames:
                 - mysubnet1
-                SubnetIds:
+              SubnetIds:
                 - subnet-1234abcd
                 - subnet-abcd1234
 
@@ -177,13 +178,16 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None,
     Environment
         The parent object that contains your environment's configuration
         settings.  This is a dictionary of the form:
-        {
-            'Variables': {
-                'VariableName': 'VariableValue'
-            }
-        }
 
-        .. versionadded:: Nitrogen
+        .. code-block:: python
+
+            {
+                'Variables': {
+                    'VariableName': 'VariableValue'
+                }
+            }
+
+        .. versionadded:: 2017.7.0
 
     region
         Region to connect to.
@@ -206,9 +210,9 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None,
 
     if Permissions is not None:
         if isinstance(Permissions, six.string_types):
-            Permissions = json.loads(Permissions)
+            Permissions = salt.utils.json.loads(Permissions)
         required_keys = set(('Action', 'Principal'))
-        optional_keys = set(('SourceArn', 'SourceAccount'))
+        optional_keys = set(('SourceArn', 'SourceAccount', 'Qualifier'))
         for sid, permission in six.iteritems(Permissions):
             keyset = set(permission.keys())
             if not keyset.issuperset(required_keys):
@@ -319,9 +323,12 @@ def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
 
 def _resolve_vpcconfig(conf, region=None, key=None, keyid=None, profile=None):
     if isinstance(conf, six.string_types):
-        conf = json.loads(conf)
+        conf = salt.utils.json.loads(conf)
     if not conf:
-        return None
+        # if the conf is None, we should explicitly set the VpcConfig to
+        # {'SubnetIds': [], 'SecurityGroupIds': []} to take the lambda out of
+        # the VPC it was in
+        return {'SubnetIds': [], 'SecurityGroupIds': []}
     if not isinstance(conf, dict):
         raise SaltInvocationError('VpcConfig must be a dict.')
     sns = [__salt__['boto_vpc.get_resource_id']('subnet', s, region=region, key=key,
@@ -340,19 +347,18 @@ def _function_config_present(FunctionName, Role, Handler, Description, Timeout,
     func = __salt__['boto_lambda.describe_function'](
         FunctionName, region=region,
         key=key, keyid=keyid, profile=profile)['function']
-    role_arn = _get_role_arn(Role, region, key, keyid, profile)
     need_update = False
-    options = {'Role': 'role_arn',
-               'Handler': 'Handler',
-               'Description': 'Description',
-               'Timeout': 'Timeout',
-               'MemorySize': 'MemorySize'}
+    options = {'Role': _get_role_arn(Role, region, key, keyid, profile),
+               'Handler': Handler,
+               'Description': Description,
+               'Timeout': Timeout,
+               'MemorySize': MemorySize}
 
-    for val, var in six.iteritems(options):
-        if func[val] != locals()[var]:
+    for key, val in six.iteritems(options):
+        if func[key] != val:
             need_update = True
-            ret['changes'].setdefault('new', {})[var] = locals()[var]
-            ret['changes'].setdefault('old', {})[var] = func[val]
+            ret['changes'].setdefault('old', {})[key] = func[key]
+            ret['changes'].setdefault('new', {})[key] = val
     # VpcConfig returns the extra value 'VpcId' so do a special compare
     oldval = func.get('VpcConfig')
     if oldval is not None:
@@ -360,7 +366,7 @@ def _function_config_present(FunctionName, Role, Handler, Description, Timeout,
     fixed_VpcConfig = _resolve_vpcconfig(VpcConfig, region, key, keyid, profile)
     if __utils__['boto3.ordered'](oldval) != __utils__['boto3.ordered'](fixed_VpcConfig):
         need_update = True
-        ret['changes'].setdefault('new', {})['VpcConfig'] = VpcConfig
+        ret['changes'].setdefault('new', {})['VpcConfig'] = fixed_VpcConfig
         ret['changes'].setdefault(
             'old', {})['VpcConfig'] = func.get('VpcConfig')
 
@@ -375,14 +381,13 @@ def _function_config_present(FunctionName, Role, Handler, Description, Timeout,
         ret['comment'] = os.linesep.join(
             [ret['comment'], 'Function config to be modified'])
         if __opts__['test']:
-            msg = 'Function {0} set to be modified.'.format(FunctionName)
-            ret['comment'] = msg
+            ret['comment'] = 'Function {0} set to be modified.'.format(FunctionName)
             ret['result'] = None
             return ret
         _r = __salt__['boto_lambda.update_function_config'](
             FunctionName=FunctionName, Role=Role, Handler=Handler,
             Description=Description, Timeout=Timeout, MemorySize=MemorySize,
-            VpcConfig=VpcConfig, Environment=Environment, region=region,
+            VpcConfig=fixed_VpcConfig, Environment=Environment, region=region,
             key=key, keyid=keyid, profile=profile, WaitForRole=True,
             RoleRetries=RoleRetries)
         if not _r.get('updated'):
@@ -401,10 +406,17 @@ def _function_code_present(FunctionName, ZipFile, S3Bucket, S3Key,
         key=key, keyid=keyid, profile=profile)['function']
     update = False
     if ZipFile:
+        if '://' in ZipFile:  # Looks like a remote URL to me...
+            dlZipFile = __salt__['cp.cache_file'](path=ZipFile)
+            if dlZipFile is False:
+                ret['result'] = False
+                ret['comment'] = 'Failed to cache ZipFile `{0}`.'.format(ZipFile)
+                return ret
+            ZipFile = dlZipFile
         size = os.path.getsize(ZipFile)
         if size == func['CodeSize']:
             sha = hashlib.sha256()
-            with salt.utils.fopen(ZipFile, 'rb') as f:
+            with salt.utils.files.fopen(ZipFile, 'rb') as f:
                 sha.update(f.read())
             hashed = sha.digest().encode('base64').strip()
             if hashed != func['CodeSha256']:
@@ -418,8 +430,7 @@ def _function_code_present(FunctionName, ZipFile, S3Bucket, S3Key,
         update = True
     if update:
         if __opts__['test']:
-            msg = 'Function {0} set to be modified.'.format(FunctionName)
-            ret['comment'] = msg
+            ret['comment'] = 'Function {0} set to be modified.'.format(FunctionName)
             ret['result'] = None
             return ret
         ret['changes']['old'] = {
@@ -459,13 +470,12 @@ def _function_permissions_present(FunctionName, Permissions,
     if curr_permissions is None:
         curr_permissions = {}
     need_update = False
-    diffs = salt.utils.compare_dicts(curr_permissions, Permissions or {})
+    diffs = salt.utils.data.compare_dicts(curr_permissions, Permissions or {})
     if bool(diffs):
         ret['comment'] = os.linesep.join(
             [ret['comment'], 'Function permissions to be modified'])
         if __opts__['test']:
-            msg = 'Function {0} set to be modified.'.format(FunctionName)
-            ret['comment'] = msg
+            ret['comment'] = 'Function {0} set to be modified.'.format(FunctionName)
             ret['result'] = None
             return ret
         for sid, diff in six.iteritems(diffs):
@@ -638,20 +648,19 @@ def alias_present(name, FunctionName, Name, FunctionVersion, Description='',
         profile=profile)['alias']
 
     need_update = False
-    options = {'FunctionVersion': 'FunctionVersion',
-               'Description': 'Description'}
+    options = {'FunctionVersion': FunctionVersion,
+               'Description': Description}
 
-    for val, var in six.iteritems(options):
-        if _describe[val] != locals()[var]:
+    for key, val in six.iteritems(options):
+        if _describe[key] != val:
             need_update = True
-            ret['changes'].setdefault('new', {})[var] = locals()[var]
-            ret['changes'].setdefault('old', {})[var] = _describe[val]
+            ret['changes'].setdefault('old', {})[key] = _describe[key]
+            ret['changes'].setdefault('new', {})[key] = val
     if need_update:
         ret['comment'] = os.linesep.join(
             [ret['comment'], 'Alias config to be modified'])
         if __opts__['test']:
-            msg = 'Alias {0} set to be modified.'.format(Name)
-            ret['comment'] = msg
+            ret['comment'] = 'Alias {0} set to be modified.'.format(Name)
             ret['result'] = None
             return ret
         _r = __salt__['boto_lambda.update_alias'](
@@ -848,13 +857,13 @@ def event_source_mapping_present(name, EventSourceArn, FunctionName,
         profile=profile)['event_source_mapping']
 
     need_update = False
-    options = {'BatchSize': 'BatchSize'}
+    options = {'BatchSize': BatchSize}
 
-    for val, var in six.iteritems(options):
-        if _describe[val] != locals()[var]:
+    for key, val in six.iteritems(options):
+        if _describe[key] != val:
             need_update = True
-            ret['changes'].setdefault('new', {})[var] = locals()[var]
-            ret['changes'].setdefault('old', {})[var] = _describe[val]
+            ret['changes'].setdefault('old', {})[key] = _describe[key]
+            ret['changes'].setdefault('new', {})[key] = val
     # verify FunctionName against FunctionArn
     function_arn = _get_function_arn(FunctionName, region=region,
                                      key=key, keyid=keyid, profile=profile)
@@ -869,9 +878,11 @@ def event_source_mapping_present(name, EventSourceArn, FunctionName,
         ret['comment'] = os.linesep.join(
             [ret['comment'], 'Event source mapping to be modified'])
         if __opts__['test']:
-            msg = ('Event source mapping {0} set to be '
-                   'modified.'.format(_describe['UUID']))
-            ret['comment'] = msg
+            ret['comment'] = (
+                'Event source mapping {0} set to be modified.'.format(
+                    _describe['UUID']
+                )
+            )
             ret['result'] = None
             return ret
         _r = __salt__['boto_lambda.update_event_source_mapping'](

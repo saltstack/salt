@@ -2,7 +2,7 @@
 from __future__ import print_function
 
 import sys
-import os.path
+import os
 import getopt
 
 
@@ -16,7 +16,9 @@ def display_help():
     print('# Parameters:                                                      #')
     print('#   -f, --file    :  target file                                   #')
     print('#   -s, --search  :  term to search for                            #')
-    print('#                    default is "C:\Python"                        #')
+    print('#                    Default is the base path for the python       #')
+    print('#                    executable that is running this script.       #')
+    print('#                    In Py2 that would be C:\\Python27             #')
     print('#   -r, --replace :  replace with this                             #')
     print('#                    default is ".."                               #')
     print('#                                                                  #')
@@ -29,16 +31,12 @@ def display_help():
 
 def main(argv):
     target = ''
-    python_dir = 'Python{0}{1}'.format(sys.version_info[0], sys.version_info[1])
-    if sys.version_info >= (3, 5):
-        from win32com.shell import shellcon, shell
-        search = shell.SHGetFolderPath(0, shellcon.CSIDL_PROGRAM_FILES, 0, 0)
-        search = os.path.join(search, python_dir)
-    else:
-        search = os.path.join('C:\\', python_dir)
+    search = os.path.dirname(sys.executable)
     replace = '..'
     try:
-        opts, args = getopt.getopt(argv,"hf:s:r:",["file=","search=", "replace="])
+        opts, args = getopt.getopt(argv,
+                                   "hf:s:r:",
+                                   ["file=", "search=", "replace="])
     except getopt.GetoptError:
         display_help()
     for opt, arg in opts:
@@ -56,10 +54,10 @@ def main(argv):
     if sys.version_info >= (3, 0):
         search = search.encode('utf-8')
         replace = replace.encode('utf-8')
-    f = open( target, 'rb' ).read()
-    f = f.replace( search, replace )
-    f = f.replace( search.lower(), replace )
-    open( target, 'wb' ).write(f)
+    f = open(target, 'rb').read()
+    f = f.replace(search, replace)
+    f = f.replace(search.lower(), replace)
+    open(target, 'wb').write(f)
 
 
 if __name__ == "__main__":

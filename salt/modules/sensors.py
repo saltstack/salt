@@ -4,20 +4,20 @@ Read lm-sensors
 
 .. versionadded:: 2014.1.3
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
-#Import python libs
+# Import python libs
 import logging
 
-#import salt libs
-import salt.utils
+# import Salt libs
+import salt.utils.path
 
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    if salt.utils.which('sensors'):
+    if salt.utils.path.which('sensors'):
         return True
     return (False, 'sensors does not exist in the path')
 

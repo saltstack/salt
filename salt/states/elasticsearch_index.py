@@ -3,14 +3,15 @@
 State module to manage Elasticsearch indices
 
 .. versionadded:: 2015.8.0
-.. deprecated:: Nitrogen Use elasticsearch state instead
+.. deprecated:: 2017.7.0 Use elasticsearch state instead
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
-# Import salt libs
+# Import Salt libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -41,9 +42,9 @@ def absent(name):
                     ret['comment'] = 'Failed to remove index {0} for unknown reasons'.format(name)
         else:
             ret['comment'] = 'Index {0} is already absent'.format(name)
-    except Exception as e:
+    except Exception as err:
         ret['result'] = False
-        ret['comment'] = str(e)
+        ret['comment'] = six.text_type(err)
 
     return ret
 
@@ -65,6 +66,7 @@ def present(name, definition=None):
     **Example:**
 
     .. code-block:: yaml
+
         # Default settings
         mytestindex:
           elasticsearch_index.present
@@ -97,8 +99,8 @@ def present(name, definition=None):
                     ret['comment'] = 'Cannot create index {0}, {1}'.format(name, output)
         else:
             ret['comment'] = 'Index {0} is already present'.format(name)
-    except Exception as e:
+    except Exception as err:
         ret['result'] = False
-        ret['comment'] = str(e)
+        ret['comment'] = six.text_type(err)
 
     return ret

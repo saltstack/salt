@@ -1,3 +1,5 @@
+.. _misc-salt-cloud-options:
+
 ================================
 Miscellaneous Salt Cloud Options
 ================================
@@ -25,7 +27,7 @@ This has also been tested to work with pipes, if needed:
 
 .. code-block:: yaml
 
-    script_args: | head
+    script_args: '| head'
 
 
 Selecting the File Transport
@@ -127,17 +129,6 @@ By default ssh port is set to port 22. If you want to use a custom port in
 provider, profile, or map blocks use ssh_port option.
 
 .. versionadded:: 2015.5.0
-
-.. code-block:: yaml
-
-    ssh_port: 2222
-
-
-SSH Port
-========
-
-By default ssh port is set to port 22. If you want to use a custom port in
-provider, profile, or map blocks use ssh_port option.
 
 .. code-block:: yaml
 
@@ -386,3 +377,42 @@ script, a cloud profile using ``file_map`` might look like:
       file_map:
         /local/path/to/custom/script: /remote/path/to/use/custom/script
         /local/path/to/package: /remote/path/to/store/package
+
+Running Pre-Flight Commands
+===========================
+
+.. versionadded:: 2018.3.0
+
+To execute specified preflight shell commands on a VM before the deploy script is
+run, use the ``preflight_cmds`` option. These must be defined as a list in a cloud
+configuration file. For example:
+
+.. code-block:: yaml
+
+       my-cloud-profile:
+         provider: linode-config
+         image: Ubuntu 16.04 LTS
+         size: Linode 2048
+         preflight_cmds:
+           - whoami
+           - echo 'hello world!'
+
+These commands will run in sequence **before** the bootstrap script is executed.
+
+Force Minion Config
+===================
+
+.. versionadded:: 2018.3.0
+
+The ``force_minion_config`` option requests the bootstrap process to overwrite
+an existing minion configuration file and public/private key files.
+Default: False
+
+This might be important for drivers (such as ``saltify``) which are expected to
+take over a connection from a former salt master.
+
+.. code-block:: yaml
+
+    my_saltify_provider:
+      driver: saltify
+      force_minion_config: true

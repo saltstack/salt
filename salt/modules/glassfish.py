@@ -4,7 +4,7 @@ Module for working with the Glassfish/Payara 4.x management API
 .. versionadded:: Carbon
 :depends: requests
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 try:  # python2
     from urllib import quote, unquote
@@ -12,9 +12,9 @@ except ImportError:  # python3
     from urllib.parse import quote, unquote
 
 try:
-    import json
     import requests
     import salt.defaults.exitcodes
+    import salt.utils.json
     from salt.exceptions import CommandExecutionError
     HAS_LIBS = True
 except ImportError:
@@ -97,7 +97,7 @@ def _api_response(response):
         raise CommandExecutionError('Bad username or password')
     elif response.status_code == 200 or response.status_code == 500:
         try:
-            data = json.loads(response.content)
+            data = salt.utils.json.loads(response.content)
             if data['exit_code'] != 'SUCCESS':
                 __context__['retcode'] = salt.defaults.exitcodes.SALT_BUILD_FAIL
                 raise CommandExecutionError(data['message'])
@@ -132,7 +132,7 @@ def _api_post(path, data, server=None):
             url=_get_url(server['ssl'], server['url'], server['port'], path),
             auth=_get_auth(server['user'], server['password']),
             headers=_get_headers(),
-            data=json.dumps(data),
+            data=salt.utils.json.dumps(data),
             verify=False
     )
     return _api_response(response)
@@ -646,3 +646,34 @@ def delete_jdbc_resource(name, target='server', server=None):
     Delete a JDBC resource
     '''
     return _delete_element(name, 'resources/jdbc-resource', {'target': target}, server)
+
+
+# System properties
+def get_system_properties(server=None):
+    '''
+    Get system properties
+    '''
+    properties = {}
+    data = _api_get('system-properties', server)
+
+    # Get properties into a dict
+    if any(data['extraProperties']['systemProperties']):
+        for element in data['extraProperties']['systemProperties']:
+            properties[element['name']] = element['value']
+        return properties
+    return {}
+
+
+def update_system_properties(data, server=None):
+    '''
+    Update system properties
+    '''
+    _api_post('system-properties', _clean_data(data), server)
+    return data
+
+
+def delete_system_properties(name, server=None):
+    '''
+    Delete a system property
+    '''
+    _api_delete('system-properties/{0}'.format(name), None, server)

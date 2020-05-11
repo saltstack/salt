@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -13,7 +13,8 @@ from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
-    NO_MOCK_REASON
+    NO_MOCK_REASON,
+    call
 )
 
 # Import Salt Libs
@@ -124,13 +125,21 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it enable an interface.
         '''
-        mock_cmd = MagicMock(return_value=ETHERNET_ENABLE)
-        with patch.dict(win_ip.__salt__, {'cmd.run': mock_cmd}):
+        # Test with enabled interface
+        with patch.object(win_ip, 'is_enabled', return_value=True):
             self.assertTrue(win_ip.enable('Ethernet'))
 
-        mock_cmd = MagicMock(return_value='Connect state: Disconnected')
-        with patch.dict(win_ip.__salt__, {'cmd.run': mock_cmd}):
-            self.assertFalse(win_ip.enable('Ethernet'))
+        mock_cmd = MagicMock()
+        with patch.object(win_ip, 'is_enabled', side_effect=[False, True]), \
+                patch.dict(win_ip.__salt__, {'cmd.run': mock_cmd}):
+            self.assertTrue(win_ip.enable('Ethernet'))
+
+        mock_cmd.called_once_with(
+            ['netsh', 'interface', 'set', 'interface',
+             'name=Ethernet',
+             'admin=ENABLED'],
+            python_shell=False
+        )
 
     # 'disable' function tests: 1
 
@@ -138,13 +147,20 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it disable an interface.
         '''
-        mock_cmd = MagicMock(return_value=ETHERNET_ENABLE)
-        with patch.dict(win_ip.__salt__, {'cmd.run': mock_cmd}):
-            self.assertFalse(win_ip.disable('Ethernet'))
-
-        mock_cmd = MagicMock(return_value='Connect state: Disconnected')
-        with patch.dict(win_ip.__salt__, {'cmd.run': mock_cmd}):
+        with patch.object(win_ip, 'is_disabled', return_value=True):
             self.assertTrue(win_ip.disable('Ethernet'))
+
+        mock_cmd = MagicMock()
+        with patch.object(win_ip, 'is_disabled', side_effect=[False, True]),\
+                patch.dict(win_ip.__salt__, {'cmd.run': mock_cmd}):
+            self.assertTrue(win_ip.disable('Ethernet'))
+
+        mock_cmd.called_once_with(
+            ['netsh', 'interface', 'set', 'interface',
+             'name=Ethernet',
+             'admin=DISABLED'],
+            python_shell=False
+        )
 
     # 'get_subnet_length' function tests: 1
 
@@ -203,7 +219,7 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it set static DNS configuration on a Windows NIC.
         '''
-        mock_cmd = MagicMock(return_value=ETHERNET_CONFIG)
+        mock_cmd = MagicMock()
         with patch.dict(win_ip.__salt__, {'cmd.run': mock_cmd}):
             self.assertDictEqual(win_ip.set_static_dns('Ethernet',
                                                        '192.168.1.252',
@@ -211,6 +227,54 @@ class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
                                  {'DNS Server': ('192.168.1.252',
                                                  '192.168.1.253'),
                                   'Interface': 'Ethernet'})
+            mock_cmd.assert_has_calls([
+                call(['netsh', 'interface', 'ip', 'set', 'dns',
+                      'name=Ethernet',
+                      'source=static',
+                      'address=192.168.1.252',
+                      'register=primary'],
+                     python_shell=False),
+                call(['netsh', 'interface', 'ip', 'add', 'dns',
+                      'name=Ethernet',
+                      'address=192.168.1.253',
+                      'index=2'],
+                     python_shell=False)]
+            )
+
+    def test_set_static_dns_clear(self):
+        '''
+        Test if it set static DNS configuration on a Windows NIC.
+        '''
+        mock_cmd = MagicMock()
+        with patch.dict(win_ip.__salt__, {'cmd.run': mock_cmd}):
+            self.assertDictEqual(win_ip.set_static_dns('Ethernet', []),
+                                 {'DNS Server': [],
+                                  'Interface': 'Ethernet'})
+            mock_cmd.assert_called_once_with(
+                ['netsh', 'interface', 'ip', 'set', 'dns',
+                 'name=Ethernet',
+                 'source=static',
+                 'address=none'],
+                python_shell=False
+            )
+
+    def test_set_static_dns_no_action(self):
+        '''
+        Test if it set static DNS configuration on a Windows NIC.
+        '''
+        # Test passing nothing
+        self.assertDictEqual(win_ip.set_static_dns('Ethernet'),
+                             {'DNS Server': 'No Changes',
+                              'Interface': 'Ethernet'})
+        # Test passing None
+        self.assertDictEqual(win_ip.set_static_dns('Ethernet', None),
+                             {'DNS Server': 'No Changes',
+                              'Interface': 'Ethernet'})
+
+        # Test passing string None
+        self.assertDictEqual(win_ip.set_static_dns('Ethernet', 'None'),
+                             {'DNS Server': 'No Changes',
+                              'Interface': 'Ethernet'})
 
     # 'set_dhcp_dns' function tests: 1
 

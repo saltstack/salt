@@ -6,7 +6,7 @@ cache Module
 :maturity:      New
 :platform:      all
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 This module provides access to Salt's cache subsystem.
 
@@ -46,7 +46,7 @@ it must be specified in the URI:
 '''
 
 # import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import salt.cache
 
 __func_alias__ = {
@@ -69,7 +69,7 @@ def set_(key, value, service=None, profile=None):  # pylint: disable=W0613
     '''
     key, profile = _parse_key(key, profile)
     cache = salt.cache.Cache(__opts__)
-    cache.set(profile['bank'], key=key, value=value)
+    cache.store(profile['bank'], key, value)
     return get(key, service, profile)
 
 

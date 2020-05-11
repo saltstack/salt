@@ -1,7 +1,7 @@
 # coding: utf-8
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
@@ -133,3 +133,14 @@ class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
                 'quuz': 'on',
             },
         })
+
+    def test_invalid_kwargs_are_ignored(self):
+        low = {
+            'client': 'runner',
+            'fun': 'test.metasyntactic',
+            'thiskwargisbad': 'justpretendimnothere',
+        }
+        low.update(self.eauth_creds)
+
+        ret = self.runner.cmd_sync(low)
+        self.assertEqual(ret[0], 'foo')

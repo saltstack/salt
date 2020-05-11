@@ -23,18 +23,18 @@ pkg.installed state for the package which provides cabal
 
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
-import salt.utils
+import salt.utils.path
 
 
 def __virtual__():
     '''
     Only work when cabal-install is installed.
     '''
-    return (salt.utils.which('cabal') is not None) and \
-        (salt.utils.which('ghc-pkg') is not None)
+    return (salt.utils.path.which('cabal') is not None) and \
+        (salt.utils.path.which('ghc-pkg') is not None)
 
 
 def _parse_pkg_string(pkg):

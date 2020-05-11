@@ -9,7 +9,6 @@ on a single system to test scale capabilities
 # Import Python Libs
 from __future__ import absolute_import, print_function
 import os
-import pwd
 import time
 import signal
 import optparse
@@ -23,11 +22,13 @@ import uuid
 
 # Import salt libs
 import salt
+import salt.utils.files
+import salt.utils.yaml
 
 # Import third party libs
-import yaml
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+import tests.support.helpers
 
 
 OSES = [
@@ -147,7 +148,7 @@ def parse():
         '-c', '--config-dir', default='',
         help=('Pass in a configuration directory containing base configuration.')
         )
-    parser.add_option('-u', '--user', default=pwd.getpwuid(os.getuid()).pw_name)
+    parser.add_option('-u', '--user', default=tests.support.helpers.this_user())
 
     options, _args = parser.parse_args()
 
@@ -165,7 +166,6 @@ class Swarm(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        self.raet_port = 4550
 
         # If given a temp_dir, use it for temporary files
         if opts['temp_dir']:
@@ -255,7 +255,8 @@ class Swarm(object):
             pidfile = '{0}.pid'.format(path)
             try:
                 try:
-                    pid = int(open(pidfile).read().strip())
+                    with salt.utils.files.fopen(pidfile) as fp_:
+                        pid = int(fp_.read().strip())
                     os.kill(pid, signal.SIGTERM)
                 except ValueError:
                     pass
@@ -271,9 +272,6 @@ class MinionSwarm(Swarm):
     '''
     Create minions
     '''
-    def __init__(self, opts):
-        super(MinionSwarm, self).__init__(opts)
-
     def start_minions(self):
         '''
         Iterate over the config files and start up the minions
@@ -298,8 +296,8 @@ class MinionSwarm(Swarm):
         data = {}
         if self.opts['config_dir']:
             spath = os.path.join(self.opts['config_dir'], 'minion')
-            with open(spath) as conf:
-                data = yaml.load(conf) or {}
+            with salt.utils.files.fopen(spath) as conf:
+                data = salt.utils.yaml.safe_load(conf) or {}
         minion_id = '{0}-{1}'.format(
                 self.opts['name'],
                 str(idx).zfill(self.zfill)
@@ -327,12 +325,6 @@ class MinionSwarm(Swarm):
                 shutil.copy(minion_pem, minion_pkidir)
                 shutil.copy(minion_pub, minion_pkidir)
             data['pki_dir'] = minion_pkidir
-        elif self.opts['transport'] == 'raet':
-            data['transport'] = 'raet'
-            data['sock_dir'] = os.path.join(dpath, 'sock')
-            data['raet_port'] = self.raet_port
-            data['pki_dir'] = os.path.join(dpath, 'pki')
-            self.raet_port += 1
         elif self.opts['transport'] == 'tcp':
             data['transport'] = 'tcp'
 
@@ -357,8 +349,8 @@ class MinionSwarm(Swarm):
         if self.opts['rand_uuid']:
             data['grains']['uuid'] = str(uuid.uuid4())
 
-        with open(path, 'w+') as fp_:
-            yaml.dump(data, fp_)
+        with salt.utils.files.fopen(path, 'w+') as fp_:
+            salt.utils.yaml.safe_dump(data, fp_)
         self.confs.add(dpath)
 
     def prep_configs(self):
@@ -411,8 +403,8 @@ class MasterSwarm(Swarm):
         data = {}
         if self.opts['config_dir']:
             spath = os.path.join(self.opts['config_dir'], 'master')
-            with open(spath) as conf:
-                data = yaml.load(conf)
+            with salt.utils.files.fopen(spath) as conf:
+                data = salt.utils.yaml.safe_load(conf)
         data.update({
             'log_file': os.path.join(self.conf, 'master.log'),
             'open_mode': True  # TODO Pre-seed keys
@@ -421,8 +413,8 @@ class MasterSwarm(Swarm):
         os.makedirs(self.conf)
         path = os.path.join(self.conf, 'master')
 
-        with open(path, 'w+') as fp_:
-            yaml.dump(data, fp_)
+        with salt.utils.files.fopen(path, 'w+') as fp_:
+            salt.utils.yaml.safe_dump(data, fp_)
 
     def shutdown(self):
         print('Killing master')
@@ -431,6 +423,7 @@ class MasterSwarm(Swarm):
                 shell=True
         )
         print('Master killed')
+
 
 # pylint: disable=C0103
 if __name__ == '__main__':

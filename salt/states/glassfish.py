@@ -7,6 +7,7 @@ Management of glassfish using it's RESTful API
 You can setup connection parameters like this
 
 .. code-block:: yaml
+
     - server:
       - ssl: true
       - url: localhost
@@ -14,12 +15,13 @@ You can setup connection parameters like this
       - user: admin
       - password: changeit
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 try:
-    import json
+    import salt.utils.json
     from salt.ext import six
     from salt.exceptions import CommandExecutionError
+    import requests
     HAS_LIBS = True
 except ImportError:
     HAS_LIBS = False
@@ -42,7 +44,7 @@ def _json_to_unicode(data):
             if isinstance(value, dict):
                 ret[key] = _json_to_unicode(value)
             else:
-                ret[key] = six.u(str(value).lower())
+                ret[key] = six.text_type(value).lower()
         else:
             ret[key] = value
     return ret
@@ -55,13 +57,14 @@ def _is_updated(old_conf, new_conf):
     changed = {}
 
     # Dirty json hacking to get parameters in the same format
-    new_conf = _json_to_unicode(json.loads(json.dumps(new_conf, ensure_ascii=False)))
-    old_conf = json.loads(json.dumps(old_conf, ensure_ascii=False))
+    new_conf = _json_to_unicode(salt.utils.json.loads(
+        salt.utils.json.dumps(new_conf, ensure_ascii=False)))
+    old_conf = salt.utils.json.loads(salt.utils.json.dumps(old_conf, ensure_ascii=False))
 
     for key, value in old_conf.items():
-        oldval = str(value).lower()
+        oldval = six.text_type(value).lower()
         if key in new_conf:
-            newval = str(new_conf[key]).lower()
+            newval = six.text_type(new_conf[key]).lower()
         if oldval == 'null' or oldval == 'none':
             oldval = ''
         if key in new_conf and newval != oldval:
@@ -74,7 +77,16 @@ def _do_element_present(name, elem_type, data, server=None):
     Generic function to create or update an element
     '''
     ret = {'changes': {}, 'update': False, 'create': False, 'error': None}
-    elements = __salt__['glassfish.enum_{0}'.format(elem_type)]()
+    try:
+        elements = __salt__['glassfish.enum_{0}'.format(elem_type)]()
+    except requests.ConnectionError as error:
+        if __opts__['test']:
+            ret['changes'] = {'Name': name, 'Params': data}
+            ret['create'] = True
+            return ret
+        else:
+            ret['error'] = "Can't connect to the server"
+            return ret
 
     if not elements or name not in elements:
         ret['changes'] = {'Name': name, 'Params': data}
@@ -104,7 +116,15 @@ def _do_element_absent(name, elem_type, data, server=None):
     Generic function to delete an element
     '''
     ret = {'delete': False, 'error': None}
-    elements = __salt__['glassfish.enum_{0}'.format(elem_type)]()
+    try:
+        elements = __salt__['glassfish.enum_{0}'.format(elem_type)]()
+    except requests.ConnectionError as error:
+        if __opts__['test']:
+            ret['create'] = True
+            return ret
+        else:
+            ret['error'] = "Can't connect to the server"
+            return ret
 
     if elements and name in elements:
         ret['delete'] = True
@@ -231,7 +251,7 @@ def connection_factory_present(name,
                 ret['comment'] = 'Connection factory updated'
         else:
             ret['result'] = True
-            ret['changes'] = None
+            ret['changes'] = {}
             ret['comment'] = 'Connection factory is already up-to-date'
     else:
         ret['result'] = False
@@ -509,7 +529,7 @@ def jdbc_datasource_present(name,
                 ret['comment'] = 'JDBC Datasource updated'
         else:
             ret['result'] = True
-            ret['changes'] = None
+            ret['changes'] = {}
             ret['comment'] = 'JDBC Datasource is already up-to-date'
     else:
         ret['result'] = False
@@ -542,4 +562,87 @@ def jdbc_datasource_absent(name, both=True, server=None):
     else:
         ret['result'] = False
         ret['comment'] = 'Error: {0}'.format(pool_ret['error'])
+    return ret
+
+
+def system_properties_present(server=None, **kwargs):
+    '''
+    Ensures that the system properties are present
+
+    properties
+        The system properties
+    '''
+    ret = {'name': '', 'result': None, 'comment': None, 'changes': {}}
+
+    del kwargs['name']
+    try:
+        data = __salt__['glassfish.get_system_properties'](server=server)
+    except requests.ConnectionError as error:
+        if __opts__['test']:
+            ret['changes'] = kwargs
+            ret['result'] = None
+            return ret
+        else:
+            ret['error'] = "Can't connect to the server"
+            return ret
+
+    ret['changes'] = {'data': data, 'kwargs': kwargs}
+    if not data == kwargs:
+        data.update(kwargs)
+        if not __opts__['test']:
+            try:
+                __salt__['glassfish.update_system_properties'](data, server=server)
+                ret['changes'] = kwargs
+                ret['result'] = True
+                ret['comment'] = 'System properties updated'
+            except CommandExecutionError as error:
+                ret['comment'] = error
+                ret['result'] = False
+        else:
+            ret['result'] = None
+            ret['changes'] = kwargs
+            ret['coment'] = 'System properties would have been updated'
+    else:
+        ret['changes'] = {}
+        ret['result'] = True
+        ret['comment'] = 'System properties are already up-to-date'
+    return ret
+
+
+def system_properties_absent(name, server=None):
+    '''
+    Ensures that the system property doesn't exists
+
+    name
+        Name of the system property
+    '''
+    ret = {'name': '', 'result': None, 'comment': None, 'changes': {}}
+
+    try:
+        data = __salt__['glassfish.get_system_properties'](server=server)
+    except requests.ConnectionError as error:
+        if __opts__['test']:
+            ret['changes'] = {'Name': name}
+            ret['result'] = None
+            return ret
+        else:
+            ret['error'] = "Can't connect to the server"
+            return ret
+
+    if name in data:
+        if not __opts__['test']:
+            try:
+                __salt__['glassfish.delete_system_properties'](name, server=server)
+                ret['result'] = True
+                ret['comment'] = 'System properties deleted'
+            except CommandExecutionError as error:
+                ret['comment'] = error
+                ret['result'] = False
+        else:
+            ret['result'] = None
+            ret['comment'] = 'System properties would have been deleted'
+        ret['changes'] = {'Name': name}
+    else:
+        ret['result'] = True
+        ret['comment'] = 'System properties are already absent'
     return ret

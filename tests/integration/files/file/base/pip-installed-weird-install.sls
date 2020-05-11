@@ -5,6 +5,8 @@
   virtualenv.managed:
     - system_site_packages: False
     - distribute: True
+    {#- Provide the real path for the python executable in case tests are running inside a virtualenv #}
+    - python: {{ salt.runtests_helpers.get_python_executable() }}
 
 install_older_venv:
   pip.installed:
@@ -29,7 +31,7 @@ setup_test_virtualenv:
 
 carbon-weird-setup:
   pip.installed:
-    - name: carbon
+    - name: 'carbon < 1.1'
     - no_deps: True
     - bin_env: {{ virtualenv_test }}
     - onchanges:

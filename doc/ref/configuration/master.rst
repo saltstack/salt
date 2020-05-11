@@ -6,16 +6,19 @@ Configuring the Salt Master
 
 The Salt system is amazingly simple and easy to configure, the two components
 of the Salt system each have a respective configuration file. The
-:command:`salt-master` is configured via the master configuration file, and the
-:command:`salt-minion` is configured via the minion configuration file.
+``salt-master`` is configured via the master configuration file, and the
+``salt-minion`` is configured via the minion configuration file.
 
 .. seealso::
+
     :ref:`Example master configuration file <configuration-examples-master>`.
 
-The configuration file for the salt-master is located at
-:file:`/etc/salt/master` by default.  A notable exception is FreeBSD, where the
-configuration file is located at :file:`/usr/local/etc/salt`.  The available
-options are as follows:
+The configuration file for the salt-master is located at ``/etc/salt/master``
+by default. A notable exception is FreeBSD, where the configuration file is
+located at ``/usr/local/etc/salt``. The available options are as follows:
+
+
+.. _primary-master-configuration:
 
 Primary Master Configuration
 ============================
@@ -91,65 +94,24 @@ The user to run the Salt processes
 
     user: root
 
-.. conf_master:: max_open_files
+.. conf_master:: ret_port
 
-``max_open_files``
-------------------
+``enable_ssh_minions``
+----------------------
 
-Default: ``100000``
 
-Each minion connecting to the master uses AT LEAST one file descriptor, the
-master subscription connection. If enough minions connect you might start
-seeing on the console(and then salt-master crashes):
+Default: ``False``
 
-.. code-block:: bash
-
-    Too many open files (tcp_listener.cpp:335)
-    Aborted (core dumped)
+Tell the master to also use salt-ssh when running commands against minions.
 
 .. code-block:: yaml
 
-    max_open_files: 100000
-
-By default this value will be the one of `ulimit -Hn`, i.e., the hard limit for
-max open files.
-
-To set a different value than the default one, uncomment, and configure this
-setting. Remember that this value CANNOT be higher than the hard limit. Raising
-the hard limit depends on the OS and/or distribution, a good way to find the
-limit is to search the internet for something like this:
-
-.. code-block:: text
-
-    raise max open files hard limit debian
-
-.. conf_master:: worker_threads
-
-``worker_threads``
-------------------
-
-Default: ``5``
-
-The number of threads to start for receiving commands and replies from minions.
-If minions are stalling on replies because you have many minions, raise the
-worker_threads value.
-
-Worker threads should not be put below 3 when using the peer system, but can
-drop down to 1 worker otherwise.
+    enable_ssh_minions: True
 
 .. note::
-    When the master daemon starts, it is expected behaviour to see
-    multiple salt-master processes, even if 'worker_threads' is set to '1'. At
-    a minimum, a controlling process will start along with a Publisher, an
-    EventPublisher, and a number of MWorker processes will be started. The
-    number of MWorker processes is tuneable by the 'worker_threads'
-    configuration value while the others are not.
 
-.. code-block:: yaml
-
-    worker_threads: 5
-
-.. conf_master:: ret_port
+    Cross-minion communication is still not possible.  The Salt mine and
+    publish.publish do not work between minion types.
 
 ``ret_port``
 ------------
@@ -195,7 +157,8 @@ an alternative root.
     This directory is prepended to the following options:
     :conf_master:`pki_dir`, :conf_master:`cachedir`, :conf_master:`sock_dir`,
     :conf_master:`log_file`, :conf_master:`autosign_file`,
-    :conf_master:`autoreject_file`, :conf_master:`pidfile`.
+    :conf_master:`autoreject_file`, :conf_master:`pidfile`,
+    :conf_master:`autosign_grains_dir`.
 
 .. conf_master:: conf_file
 
@@ -238,17 +201,20 @@ The directory to store the pki authentication keys.
 
 Directory for custom modules. This directory can contain subdirectories for
 each of Salt's module types such as ``runners``, ``output``, ``wheel``,
-``modules``, ``states``, ``returners``, ``engines``, etc. This path is appended to
-:conf_master:`root_dir`.
+``modules``, ``states``, ``returners``, ``engines``, ``utils``, etc.
+This path is appended to :conf_master:`root_dir`.
 
 .. code-block:: yaml
 
     extension_modules: /root/salt_extmods
 
-``extmod_whitelist/extmod_blacklist``
---------------------
+.. conf_master:: extmod_whitelist
+.. conf_master:: extmod_blacklist
 
-.. versionadded:: Nitrogen
+``extmod_whitelist/extmod_blacklist``
+-------------------------------------
+
+.. versionadded:: 2017.7.0
 
 By using this dictionary, the modules that are synced to the master's extmod cache using `saltutil.sync_*` can be
 limited.  If nothing is set to a specific type, then all modules are accepted.  To block all modules of a specific type,
@@ -283,6 +249,10 @@ Valid options:
   - utils
   - sdb
   - cache
+  - clouds
+  - tops
+  - roster
+  - tokens
 
 .. conf_master:: module_dirs
 
@@ -387,6 +357,19 @@ Default: ``nested``
 
 Set the default outputter used by the salt command.
 
+.. conf_master:: outputter_dirs
+
+``outputter_dirs``
+------------------
+
+Default: ``[]``
+
+A list of additional directories to search for salt outputters in.
+
+.. code-block:: yaml
+
+    outputter_dirs: []
+
 .. conf_master:: output_file
 
 ``output_file``
@@ -402,6 +385,32 @@ CLI option, only sets this to a single file for all salt commands.
 
     output_file: /path/output/file
 
+.. conf_master:: show_timeout
+
+``show_timeout``
+----------------
+
+Default: ``True``
+
+Tell the client to show minions that have timed out.
+
+.. code-block:: yaml
+
+    show_timeout: True
+
+.. conf_master:: show_jid
+
+``show_jid``
+------------
+
+Default: ``False``
+
+Tell the client to display the jid when a job is published.
+
+.. code-block:: yaml
+
+    show_jid: False
+
 .. conf_master:: color
 
 ``color``
@@ -415,6 +424,19 @@ to False.
 .. code-block:: yaml
 
     color: False
+
+.. conf_master:: color_theme
+
+``color_theme``
+---------------
+
+Default: ``""``
+
+Specifies a path to the color theme to use for colored command line output.
+
+.. code-block:: yaml
+
+    color_theme: /etc/salt/color_theme
 
 .. conf_master:: cli_summary
 
@@ -450,11 +472,15 @@ communication.
 ``enable_gpu_grains``
 ---------------------
 
-Default: ``True``
+Default: ``False``
 
 Enable GPU hardware data for your master. Be aware that the master can
 take a while to start up when lspci and/or dmidecode is used to populate the
 grains for the master.
+
+.. code-block:: yaml
+
+    enable_gpu_grains: True
 
 .. conf_master:: job_cache
 
@@ -529,7 +555,7 @@ Default: ``0``
 
 Memcache is an additional cache layer that keeps a limited amount of data
 fetched from the minion data cache for a limited period of time in memory that
-makes cache operations faster. It doesn't make much sence for the ``localfs``
+makes cache operations faster. It doesn't make much sense for the ``localfs``
 cache driver but helps for more complex drivers like ``consul``.
 
 This option sets the memcache items expiration time. By default is set to ``0``
@@ -706,31 +732,6 @@ master event bus. The value is expressed in bytes.
 
     max_event_size: 1048576
 
-.. conf_master:: ping_on_rotate
-
-``ping_on_rotate``
-------------------
-
-.. versionadded:: 2014.7.0
-
-Default:  ``False``
-
-By default, the master AES key rotates every 24 hours. The next command
-following a key rotation will trigger a key refresh from the minion which may
-result in minions which do not respond to the first command after a key refresh.
-
-To tell the master to ping all minions immediately after an AES key refresh, set
-ping_on_rotate to ``True``. This should mitigate the issue where a minion does not
-appear to initially respond after a key is rotated.
-
-Note that ping_on_rotate may cause high load on the master immediately after
-the key rotation event as minions reconnect. Consider this carefully if this
-salt master is managing a large number of minions.
-
-.. code-black:: yaml
-
-    ping_on_rotate: False
-
 .. conf_master:: master_job_cache
 
 ``master_job_cache``
@@ -747,6 +748,22 @@ accessible from the minions.
 .. code-block:: yaml
 
     master_job_cache: redis
+
+.. conf_master:: job_cache_store_endtime
+
+``job_cache_store_endtime``
+---------------------------
+
+.. versionadded:: 2015.8.0
+
+Default: ``False``
+
+Specify whether the Salt Master should store end times for jobs as returns
+come in.
+
+.. code-block:: yaml
+
+    job_cache_store_endtime: False
 
 .. conf_master:: enforce_mine_cache
 
@@ -806,12 +823,39 @@ Causes the master to periodically look for actively connected minions.
 :ref:`Presence events <event-master_presence>` are fired on the event bus on a
 regular interval with a list of connected minions, as well as events with lists
 of newly connected or disconnected minions. This is a master-only operation
-that does not send executions to minions. Note, this does not detect minions
-that connect to a master via localhost.
+that does not send executions to minions.
 
 .. code-block:: yaml
 
     presence_events: False
+
+.. conf_master:: ping_on_rotate
+
+``ping_on_rotate``
+------------------
+
+.. versionadded:: 2014.7.0
+
+Default: ``False``
+
+By default, the master AES key rotates every 24 hours. The next command
+following a key rotation will trigger a key refresh from the minion which may
+result in minions which do not respond to the first command after a key refresh.
+
+To tell the master to ping all minions immediately after an AES key refresh,
+set ``ping_on_rotate`` to ``True``. This should mitigate the issue where a
+minion does not appear to initially respond after a key is rotated.
+
+Note that enabling this may cause high load on the master immediately after the
+key rotation event as minions reconnect. Consider this carefully if this salt
+master is managing a large number of minions.
+
+If disabled, it is recommended to handle this event by listening for the
+``aes_key_rotate`` event with the ``key`` tag and acting appropriately.
+
+.. code-block:: yaml
+
+    ping_on_rotate: False
 
 .. conf_master:: transport
 
@@ -822,24 +866,24 @@ Default: ``zeromq``
 
 Changes the underlying transport layer. ZeroMQ is the recommended transport
 while additional transport layers are under development. Supported values are
-``zeromq``, ``raet`` (experimental), and ``tcp`` (experimental). This setting has
-a significant impact on performance and should not be changed unless you know
-what you are doing! Transports are explained in :ref:`Salt Transports
-<transports>`.
+``zeromq`` and ``tcp`` (experimental). This setting has a significant impact on
+performance and should not be changed unless you know what you are doing!
 
 .. code-block:: yaml
 
     transport: zeromq
+
+.. conf_master:: transport_opts
 
 ``transport_opts``
 ------------------
 
 Default: ``{}``
 
-(experimental) Starts multiple transports and overrides options for each transport with the provided dictionary
-This setting has a significant impact on performance and should not be changed unless you know
-what you are doing! Transports are explained in :ref:`Salt Transports
-<transports>`. The following example shows how to start a TCP transport alongside a ZMQ transport.
+(experimental) Starts multiple transports and overrides options for each
+transport with the provided dictionary This setting has a significant impact on
+performance and should not be changed unless you know what you are doing!  The
+following example shows how to start a TCP transport alongside a ZMQ transport.
 
 .. code-block:: yaml
 
@@ -849,8 +893,219 @@ what you are doing! Transports are explained in :ref:`Salt Transports
         ret_port: 4606
       zeromq: []
 
+.. conf_master:: master_stats
+
+``master_stats``
+----------------
+
+Default: False
+
+Turning on the master stats enables runtime throughput and statistics events
+to be fired from the master event bus. These events will report on what
+functions have been run on the master along with their average latency and
+duration, taken over a given period of time.
+
+.. conf_master:: master_stats_event_iter
+
+``master_stats_event_iter``
+---------------------------
+
+Default: 60
+
+The time in seconds to fire master_stats events. This will only fire in
+conjunction with receiving a request to the master, idle masters will not
+fire these events.
+
+.. conf_master:: sock_pool_size
+
+``sock_pool_size``
+------------------
+
+Default: 1
+
+To avoid blocking waiting while writing a data to a socket, we support
+socket pool for Salt applications. For example, a job with a large number
+of target host list can cause long period blocking waiting. The option
+is used by ZMQ and TCP transports, and the other transport methods don't
+need the socket pool by definition. Most of Salt tools, including CLI,
+are enough to use a single bucket of socket pool. On the other hands,
+it is highly recommended to set the size of socket pool larger than 1
+for other Salt applications, especially Salt API, which must write data
+to socket concurrently.
+
+.. code-block:: yaml
+
+    sock_pool_size: 15
+
+.. conf_master:: ipc_mode
+
+``ipc_mode``
+------------
+
+Default: ``ipc``
+
+The ipc strategy. (i.e., sockets versus tcp, etc.) Windows platforms lack
+POSIX IPC and must rely on TCP based inter-process communications. ``ipc_mode``
+is set to ``tcp`` by default on Windows.
+
+.. code-block:: yaml
+
+    ipc_mode: ipc
+
+.. conf_master:: tcp_master_pub_port
+
+``tcp_master_pub_port``
+-----------------------
+
+Default: ``4512``
+
+The TCP port on which events for the master should be published if ``ipc_mode`` is TCP.
+
+.. code-block:: yaml
+
+    tcp_master_pub_port: 4512
+
+.. conf_master:: tcp_master_pull_port
+
+``tcp_master_pull_port``
+------------------------
+
+Default: ``4513``
+
+The TCP port on which events for the master should be pulled if ``ipc_mode`` is TCP.
+
+.. code-block:: yaml
+
+    tcp_master_pull_port: 4513
+
+.. conf_master:: tcp_master_publish_pull
+
+``tcp_master_publish_pull``
+---------------------------
+
+Default: ``4514``
+
+The TCP port on which events for the master should be pulled fom and then republished onto
+the event bus on the master.
+
+.. code-block:: yaml
+
+    tcp_master_publish_pull: 4514
+
+.. conf_master:: tcp_master_workers
+
+``tcp_master_workers``
+----------------------
+
+Default: ``4515``
+
+The TCP port for ``mworkers`` to connect to on the master.
+
+.. code-block:: yaml
+
+    tcp_master_workers: 4515
+
+.. conf_master:: auth_events
+
+``auth_events``
+--------------------
+
+.. versionadded:: 2017.7.3
+
+Default: ``True``
+
+Determines whether the master will fire authentication events.
+:ref:`Authentication events <event-master_auth>` are fired when
+a minion performs an authentication check with the master.
+
+.. code-block:: yaml
+
+    auth_events: True
+
+.. conf_master:: minion_data_cache_events
+
+``minion_data_cache_events``
+----------------------------
+
+.. versionadded:: 2017.7.3
+
+Default: ``True``
+
+Determines whether the master will fire minion data cache events.  Minion data
+cache events are fired when a minion requests a minion data cache refresh.
+
+.. code-block:: yaml
+
+    minion_data_cache_events: True
+
+.. conf_master:: http_connect_timeout
+
+``http_connect_timeout``
+------------------------
+
+.. versionadded:: 2019.2.0
+
+Default: ``20``
+
+HTTP connection timeout in seconds.
+Applied when fetching files using tornado back-end.
+Should be greater than overall download time.
+
+.. code-block:: yaml
+
+    http_connect_timeout: 20
+
+.. conf_master:: http_request_timeout
+
+``http_request_timeout``
+------------------------
+
+.. versionadded:: 2015.8.0
+
+Default: ``3600``
+
+HTTP request timeout in seconds.
+Applied when fetching files using tornado back-end.
+Should be greater than overall download time.
+
+.. code-block:: yaml
+
+    http_request_timeout: 3600
+
+.. _salt-ssh-configuration:
+
 Salt-SSH Configuration
 ======================
+
+.. conf_master:: roster
+
+``roster``
+---------------
+
+Default: ``flat``
+
+Define the default salt-ssh roster module to use
+
+.. code-block:: yaml
+
+    roster: cache
+
+.. conf_master:: roster_defaults
+
+``roster_defaults``
+-------------------
+
+.. versionadded:: 2017.7.0
+
+Default settings which will be inherited by all rosters.
+
+.. code-block:: yaml
+
+    roster_defaults:
+      user: daniel
+      sudo: True
+      priv: /root/.ssh/id_rsa
+      tty: True
 
 .. conf_master:: roster_file
 
@@ -859,11 +1114,137 @@ Salt-SSH Configuration
 
 Default: ``/etc/salt/roster``
 
-Pass in an alternative location for the salt-ssh roster file.
+Pass in an alternative location for the salt-ssh :py:mod:`flat
+<salt.roster.flat>` roster file.
 
 .. code-block:: yaml
 
     roster_file: /root/roster
+
+.. conf_master:: rosters
+
+``rosters``
+-----------
+
+Default: ``None``
+
+Define locations for :py:mod:`flat <salt.roster.flat>` roster files so they can
+be chosen when using Salt API. An administrator can place roster files into
+these locations. Then, when calling Salt API, the :conf_master:`roster_file`
+parameter should contain a relative path to these locations. That is,
+``roster_file=/foo/roster`` will be resolved as
+``/etc/salt/roster.d/foo/roster`` etc. This feature prevents passing insecure
+custom rosters through the Salt API.
+
+.. code-block:: yaml
+
+    rosters:
+     - /etc/salt/roster.d
+     - /opt/salt/some/more/rosters
+
+.. conf_master:: ssh_passwd
+
+``ssh_passwd``
+--------------
+
+Default: ``''``
+
+The ssh password to log in with.
+
+.. code-block:: yaml
+
+    ssh_passwd: ''
+
+.. conf_master:: ssh_priv_passwd
+
+``ssh_priv_passwd``
+-------------------
+
+Default: ``''``
+
+Passphrase for ssh private key file.
+
+.. code-block:: yaml
+
+    ssh_priv_passwd: ''
+
+.. conf_master:: ssh_port
+
+``ssh_port``
+------------
+
+Default: ``22``
+
+The target system's ssh port number.
+
+.. code-block:: yaml
+
+    ssh_port: 22
+
+.. conf_master:: ssh_scan_ports
+
+``ssh_scan_ports``
+------------------
+
+Default: ``22``
+
+Comma-separated list of ports to scan.
+
+.. code-block:: yaml
+
+    ssh_scan_ports: 22
+
+.. conf_master:: ssh_scan_timeout
+
+``ssh_scan_timeout``
+--------------------
+
+Default: ``0.01``
+
+Scanning socket timeout for salt-ssh.
+
+.. code-block:: yaml
+
+    ssh_scan_timeout: 0.01
+
+.. conf_master:: ssh_sudo
+
+``ssh_sudo``
+------------
+
+Default: ``False``
+
+Boolean to run command via sudo.
+
+.. code-block:: yaml
+
+    ssh_sudo: False
+
+.. conf_master:: ssh_timeout
+
+``ssh_timeout``
+---------------
+
+Default: ``60``
+
+Number of seconds to wait for a response when establishing an SSH connection.
+
+.. code-block:: yaml
+
+    ssh_timeout: 60
+
+.. conf_master:: ssh_user
+
+``ssh_user``
+------------
+
+Default: ``root``
+
+The user to log in as.
+
+.. code-block:: yaml
+
+    ssh_user: root
 
 .. conf_master:: ssh_log_file
 
@@ -896,6 +1277,8 @@ overridden on a per-minion basis in the roster (``minion_opts``)
     ssh_minion_opts:
       gpg_keydir: /root/gpg
 
+.. conf_master:: ssh_use_home_key
+
 ``ssh_use_home_key``
 --------------------
 
@@ -907,6 +1290,41 @@ authentication with minions
 .. code-block:: yaml
 
     ssh_use_home_key: False
+
+.. conf_master:: ssh_identities_only
+
+``ssh_identities_only``
+-----------------------
+
+Default: ``False``
+
+Set this to ``True`` to default salt-ssh to run with ``-o IdentitiesOnly=yes``. This
+option is intended for situations where the ssh-agent offers many different identities
+and allows ssh to ignore those identities and use the only one specified in options.
+
+.. code-block:: yaml
+
+    ssh_identities_only: False
+
+.. conf_master:: ssh_list_nodegroups
+
+``ssh_list_nodegroups``
+-----------------------
+
+Default: ``{}``
+
+List-only nodegroups for salt-ssh. Each group must be formed as either a comma-separated
+list, or a YAML list. This option is useful to group minions into easy-to-target groups
+when using salt-ssh. These groups can then be targeted with the normal -N argument to
+salt-ssh.
+
+.. code-block:: yaml
+
+    ssh_list_nodegroups:
+      groupA: minion1,minion2
+      groupB: minion1,minion3
+
+.. conf_master:: thin_extra_mods
 
 ``thin_extra_mods``
 -------------------
@@ -925,6 +1343,8 @@ Default: None
 
 Identical as `thin_extra_mods`, only applied to the Salt Minimal.
 
+
+.. _master-security-settings:
 
 Master Security Settings
 ========================
@@ -962,6 +1382,19 @@ public keys from minions.
 
     auto_accept: False
 
+.. conf_master:: keysize
+
+``keysize``
+-----------
+
+Default: ``2048``
+
+The size of key that should be generated when creating new keys.
+
+.. code-block:: yaml
+
+    keysize: 2048
+
 .. conf_master:: autosign_timeout
 
 ``autosign_timeout``
@@ -992,6 +1425,12 @@ comparison, then by globbing, then by full-string regex matching.
 This should still be considered a less than secure option, due to the fact
 that trust is based on just the requesting minion id.
 
+.. versionchanged:: 2018.3.0
+    For security reasons the file must be readonly except for it's owner.
+    If :conf_master:`permissive_pki_access` is ``True`` the owning group can also
+    have write access, but if Salt is running as ``root`` it must be a member of that group.
+    A less strict requirement also existed in previous version.
+
 .. conf_master:: autoreject_file
 
 ``autoreject_file``
@@ -1005,6 +1444,50 @@ Works like :conf_master:`autosign_file`, but instead allows you to specify
 minion IDs for which keys will automatically be rejected. Will override both
 membership in the :conf_master:`autosign_file` and the
 :conf_master:`auto_accept` setting.
+
+.. conf_master:: autosign_grains_dir
+
+``autosign_grains_dir``
+-----------------------
+
+.. versionadded:: 2018.3.0
+
+Default: ``not defined``
+
+If the ``autosign_grains_dir`` is specified, incoming keys from minions with
+grain values that match those defined in files in the autosign_grains_dir
+will be accepted automatically. Grain values that should be accepted automatically
+can be defined by creating a file named like the corresponding grain in the
+autosign_grains_dir and writing the values into that file, one value per line.
+Lines starting with a ``#`` will be ignored.
+Minion must be configured to send the corresponding grains on authentication.
+This should still be considered a less than secure option, due to the fact
+that trust is based on just the requesting minion.
+
+Please see the :ref:`Autoaccept Minions from Grains <tutorial-autoaccept-grains>`
+documentation for more information.
+
+.. code-block:: yaml
+
+    autosign_grains_dir: /etc/salt/autosign_grains
+
+.. conf_master:: permissive_pki_access
+
+``permissive_pki_access``
+-------------------------
+
+Default: ``False``
+
+Enable permissive access to the salt keys. This allows you to run the
+master or minion as root, but have a non-root group be given access to
+your pki_dir. To make the access explicit, root must belong to the group
+you've given access to. This is potentially quite insecure. If an autosign_file
+is specified, enabling permissive_pki_access will allow group access to that
+specific file.
+
+.. code-block:: yaml
+
+    permissive_pki_access: False
 
 .. conf_master:: publisher_acl
 
@@ -1045,7 +1528,22 @@ This is completely disabled by default.
         - root
         - '^(?!sudo_).*$'   #  all non sudo users
       modules:
-        - cmd
+        - cmd.*
+        - test.echo
+
+.. conf_master:: sudo_acl
+
+``sudo_acl``
+------------
+
+Default: ``False``
+
+Enforce ``publisher_acl`` and ``publisher_acl_blacklist`` when users have sudo
+access to the salt command.
+
+.. code-block:: yaml
+
+    sudo_acl: False
 
 .. conf_master:: external_auth
 
@@ -1118,7 +1616,7 @@ from the eauth driver each time.
 .. conf_master:: eauth_acl_module
 
 ``eauth_acl_module``
----------------------
+--------------------
 
 Default: ``''``
 
@@ -1215,7 +1713,6 @@ signature. The :conf_master:`master_pubkey_signature` must also be set for this.
 
     master_use_pubkey_signature: True
 
-
 .. conf_master:: rotate_aes_key
 
 ``rotate_aes_key``
@@ -1232,6 +1729,18 @@ Do not disable this unless it is absolutely clear what this does.
 
     rotate_aes_key: True
 
+.. conf_master:: publish_session
+
+``publish_session``
+-------------------
+
+Default: ``86400``
+
+The number of seconds between AES key rotations on the master.
+
+.. code-block:: yaml
+
+    publish_session: Default: 86400
 
 .. conf_master:: ssl
 
@@ -1258,6 +1767,148 @@ constant names without ssl module prefix: ``CERT_REQUIRED`` or ``PROTOCOL_SSLv23
         certfile: <path_to_certfile>
         ssl_version: PROTOCOL_TLSv1_2
 
+.. conf_master:: preserve_minion_cache
+
+``preserve_minion_cache``
+-------------------------
+
+Default: ``False``
+
+By default, the master deletes its cache of minion data when the key for that
+minion is removed. To preserve the cache after key deletion, set
+``preserve_minion_cache`` to True.
+
+WARNING: This may have security implications if compromised minions auth with
+a previous deleted minion ID.
+
+.. code-block:: yaml
+
+    preserve_minion_cache: False
+
+.. conf_master:: allow_minion_key_revoke
+
+``allow_minion_key_revoke``
+---------------------------
+
+Default: ``True``
+
+Controls whether a minion can request its own key revocation.  When True
+the master will honor the minion's request and revoke its key.  When False,
+the master will drop the request and the minion's key will remain accepted.
+
+
+.. code-block:: yaml
+
+    allow_minion_key_revoke: False
+
+.. conf_master:: optimization_order
+
+``optimization_order``
+----------------------
+
+Default: ``[0, 1, 2]``
+
+In cases where Salt is distributed without .py files, this option determines
+the priority of optimization level(s) Salt's module loader should prefer.
+
+.. note::
+    This option is only supported on Python 3.5+.
+
+.. code-block:: yaml
+
+    optimization_order:
+      - 2
+      - 0
+      - 1
+
+Master Large Scale Tuning Settings
+==================================
+
+.. conf_master:: max_open_files
+
+``max_open_files``
+------------------
+
+Default: ``100000``
+
+Each minion connecting to the master uses AT LEAST one file descriptor, the
+master subscription connection. If enough minions connect you might start
+seeing on the console(and then salt-master crashes):
+
+.. code-block:: bash
+
+    Too many open files (tcp_listener.cpp:335)
+    Aborted (core dumped)
+
+.. code-block:: yaml
+
+    max_open_files: 100000
+
+By default this value will be the one of `ulimit -Hn`, i.e., the hard limit for
+max open files.
+
+To set a different value than the default one, uncomment, and configure this
+setting. Remember that this value CANNOT be higher than the hard limit. Raising
+the hard limit depends on the OS and/or distribution, a good way to find the
+limit is to search the internet for something like this:
+
+.. code-block:: text
+
+    raise max open files hard limit debian
+
+.. conf_master:: worker_threads
+
+``worker_threads``
+------------------
+
+Default: ``5``
+
+The number of threads to start for receiving commands and replies from minions.
+If minions are stalling on replies because you have many minions, raise the
+worker_threads value.
+
+Worker threads should not be put below 3 when using the peer system, but can
+drop down to 1 worker otherwise.
+
+.. note::
+    When the master daemon starts, it is expected behaviour to see
+    multiple salt-master processes, even if 'worker_threads' is set to '1'. At
+    a minimum, a controlling process will start along with a Publisher, an
+    EventPublisher, and a number of MWorker processes will be started. The
+    number of MWorker processes is tuneable by the 'worker_threads'
+    configuration value while the others are not.
+
+.. code-block:: yaml
+
+    worker_threads: 5
+
+.. conf_master:: pub_hwm
+
+``pub_hwm``
+-----------
+
+Default: ``1000``
+
+The zeromq high water mark on the publisher interface.
+
+.. code-block:: yaml
+
+    pub_hwm: 1000
+
+.. conf_master:: zmq_backlog
+
+``zmq_backlog``
+---------------
+
+Default: ``1000``
+
+The listen queue size of the ZeroMQ backlog.
+
+.. code-block:: yaml
+
+    zmq_backlog: 1000
+
+.. _master-module-management:
 
 Master Module Management
 ========================
@@ -1276,6 +1927,22 @@ Set additional directories to search for runner modules.
     runner_dirs:
       - /var/lib/salt/runners
 
+.. conf_master:: utils_dirs
+
+``utils_dirs``
+---------------
+
+.. versionadded:: 2018.3.0
+
+Default: ``[]``
+
+Set additional directories to search for util modules.
+
+.. code-block:: yaml
+
+    utils_dirs:
+      - /var/lib/salt/utils
+
 .. conf_master:: cython_enable
 
 ``cython_enable``
@@ -1291,6 +1958,8 @@ the Salt master.
     cython_enable: False
 
 
+.. _master-state-system-settings:
+
 Master State System Settings
 ============================
 
@@ -1303,7 +1972,8 @@ Default: ``top.sls``
 
 The state system uses a "top" file to tell the minions what environment to
 use and what modules to use. The state_top file is defined relative to the
-root of the base environment.
+root of the base environment. The value of "state_top" is also used for the
+pillar top file
 
 .. code-block:: yaml
 
@@ -1420,35 +2090,18 @@ following configuration:
     master_tops:
       ext_nodes: <Shell command which returns yaml>
 
-.. conf_master:: external_nodes
-
-``external_nodes``
-------------------
-
-Default: None
-
-The external_nodes option allows Salt to gather data that would normally be
-placed in a top file from and external node controller. The external_nodes
-option is the executable that will return the ENC data. Remember that Salt
-will look for external nodes AND top files and combine the results if both
-are enabled and available!
-
-.. code-block:: yaml
-
-    external_nodes: cobbler-ext-nodes
-
 .. conf_master:: renderer
 
 ``renderer``
 ------------
 
-Default: ``yaml_jinja``
+Default: ``jinja|yaml``
 
 The renderer to use on the minions to render the state data.
 
 .. code-block:: yaml
 
-    renderer: yaml_jinja
+    renderer: jinja|json
 
 .. conf_master:: userdata_template
 
@@ -1467,10 +2120,120 @@ the cloud profile or master config file, no templating will be performed.
 
     userdata_template: jinja
 
+.. conf_master:: jinja_env
+
+``jinja_env``
+-------------
+
+.. versionadded:: 2018.3.0
+
+Default: ``{}``
+
+jinja_env overrides the default Jinja environment options for
+**all templates except sls templates**.
+To set the options for sls templates use :conf_master:`jinja_sls_env`.
+
+.. note::
+
+    The `Jinja2 Environment documentation <http://jinja.pocoo.org/docs/api/#jinja2.Environment>`_ is the official source for the default values.
+    Not all the options listed in the jinja documentation can be overridden using :conf_master:`jinja_env` or :conf_master:`jinja_sls_env`.
+
+The default options are:
+
+.. code-block:: yaml
+
+    jinja_env:
+      block_start_string: '{%'
+      block_end_string: '%}'
+      variable_start_string: '{{'
+      variable_end_string: '}}'
+      comment_start_string: '{#'
+      comment_end_string: '#}'
+      line_statement_prefix:
+      line_comment_prefix:
+      trim_blocks: False
+      lstrip_blocks: False
+      newline_sequence: '\n'
+      keep_trailing_newline: False
+
+.. conf_master:: jinja_sls_env
+
+``jinja_sls_env``
+-----------------
+
+.. versionadded:: 2018.3.0
+
+Default: ``{}``
+
+jinja_sls_env sets the Jinja environment options for **sls templates**.
+The defaults and accepted options are exactly the same as they are
+for :conf_master:`jinja_env`.
+
+The default options are:
+
+.. code-block:: yaml
+
+    jinja_sls_env:
+      block_start_string: '{%'
+      block_end_string: '%}'
+      variable_start_string: '{{'
+      variable_end_string: '}}'
+      comment_start_string: '{#'
+      comment_end_string: '#}'
+      line_statement_prefix:
+      line_comment_prefix:
+      trim_blocks: False
+      lstrip_blocks: False
+      newline_sequence: '\n'
+      keep_trailing_newline: False
+
+Example using line statements and line comments to increase ease of use:
+
+If your configuration options are
+
+.. code-block:: yaml
+
+    jinja_sls_env:
+      line_statement_prefix: '%'
+      line_comment_prefix: '##'
+
+With these options jinja will interpret anything after a ``%`` at the start of a line (ignoreing whitespace)
+as a jinja statement and will interpret anything after a ``##`` as a comment.
+
+This allows the following more convenient syntax to be used:
+
+.. code-block:: jinja
+
+    ## (this comment will not stay once rendered)
+    # (this comment remains in the rendered template)
+    ## ensure all the formula services are running
+    % for service in formula_services:
+    enable_service_{{ service }}:
+      service.running:
+        name: {{ service }}
+    % endfor
+
+The following less convenient but equivalent syntax would have to
+be used if you had not set the line_statement and line_comment options:
+
+.. code-block:: jinja
+
+    {# (this comment will not stay once rendered) #}
+    # (this comment remains in the rendered template)
+    {# ensure all the formula services are running #}
+    {% for service in formula_services %}
+    enable_service_{{ service }}:
+      service.running:
+        name: {{ service }}
+    {% endfor %}
+
 .. conf_master:: jinja_trim_blocks
 
 ``jinja_trim_blocks``
 ---------------------
+
+.. deprecated:: 2018.3.0
+    Replaced by :conf_master:`jinja_env` and :conf_master:`jinja_sls_env`
 
 .. versionadded:: 2014.1.0
 
@@ -1488,6 +2251,9 @@ to the Jinja environment init variable ``trim_blocks``.
 
 ``jinja_lstrip_blocks``
 -----------------------
+
+.. deprecated:: 2018.3.0
+    Replaced by :conf_master:`jinja_env` and :conf_master:`jinja_sls_env`
 
 .. versionadded:: 2014.1.0
 
@@ -1537,15 +2303,33 @@ output for states that failed or states that have changes.
 
 Default: ``full``
 
-The state_output setting changes if the output is the full multi line
-output for each changed state if set to 'full', but if set to 'terse'
-the output will be shortened to a single line.  If set to 'mixed', the output
-will be terse unless a state failed, in which case that output will be full.
-If set to 'changes', the output will be full unless the state didn't change.
+The state_output setting controls which results will be output full multi line:
+
+* ``full``, ``terse`` - each state will be full/terse
+* ``mixed`` - only states with errors will be full
+* ``changes`` - states with changes and errors will be full
+
+``full_id``, ``mixed_id``, ``changes_id`` and ``terse_id`` are also allowed;
+when set, the state ID will be used as name in the output.
 
 .. code-block:: yaml
 
     state_output: full
+
+.. conf_master:: state_output_diff
+
+``state_output_diff``
+---------------------
+
+Default: ``False``
+
+The state_output_diff setting changes whether or not the output from
+successful states is returned. Useful when even the terse output of these
+states is cluttering the logs. Set it to True to ignore them.
+
+.. code-block:: yaml
+
+    state_output_diff: False
 
 .. conf_master:: state_aggregate
 
@@ -1607,6 +2391,9 @@ If set to ``True``, runner jobs will be saved to job cache (defined by
 
     runner_returns: True
 
+
+.. _master-file-server-settings:
+
 Master File Server Settings
 ===========================
 
@@ -1630,7 +2417,7 @@ Example:
 
     fileserver_backend:
       - roots
-      - git
+      - gitfs
 
 .. note::
     For masterless Salt, this parameter must be specified in the minion config
@@ -1676,6 +2463,12 @@ Master will not be returned to the Minion.
 ------------------------------
 
 .. versionadded:: 2014.1.0
+.. deprecated:: 2018.3.4
+   This option is now ignored. Firstly, it only traversed
+   :conf_master:`file_roots`, which means it did not work for the other
+   fileserver backends. Secondly, since this option was added we have added
+   caching to the code that traverses the file_roots (and gitfs, etc.), which
+   greatly reduces the amount of traversal that is done.
 
 Default: ``False``
 
@@ -1713,8 +2506,9 @@ on a large number of minions.
 
 .. note::
     Rather than altering this configuration parameter, it may be advisable to
-    use the :mod:`fileserver.clear_list_cache
-    <salt.runners.fileserver.clear_list_cache>` runner to clear these caches.
+    use the :mod:`fileserver.clear_file_list_cache
+    <salt.runners.fileserver.clear_file_list_cache>` runner to clear these
+    caches.
 
 .. code-block:: yaml
 
@@ -1723,9 +2517,9 @@ on a large number of minions.
 .. conf_master:: fileserver_verify_config
 
 ``fileserver_verify_config``
-------------------------------
+----------------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``True``
 
@@ -1813,6 +2607,19 @@ nothing is ignored.
     fileserver, it is good practice to include ``'\*.swp'`` in the
     :conf_master:`file_ignore_glob`.
 
+.. conf_master:: master_roots
+
+``master_roots``
+----------------
+
+Default: ``/srv/salt-master``
+
+A master-only copy of the :conf_master:`file_roots` dictionary, used by the
+state compiler.
+
+.. code-block:: yaml
+
+    master_roots: /srv/salt-master
 
 roots: Master's Local File Server
 ---------------------------------
@@ -1838,6 +2645,8 @@ can have multiple root directories. The subdirectories in the multiple file
 roots cannot match, otherwise the downloaded files will not be able to be
 reliably ensured. A base environment is required to house the top file.
 
+As of 2018.3.5 and 2019.2.1, it is possible to have `__env__` as a catch-all environment.
+
 Example:
 
 .. code-block:: yaml
@@ -1851,13 +2660,35 @@ Example:
       prod:
         - /srv/salt/prod/services
         - /srv/salt/prod/states
+      __env__:
+        - /srv/salt/default
 
 .. note::
     For masterless Salt, this parameter must be specified in the minion config
     file.
 
-git: Git Remote File Server Backend
------------------------------------
+.. conf_master:: roots_update_interval
+
+``roots_update_interval``
+*************************
+
+.. versionadded:: 2018.3.0
+
+Default: ``60``
+
+This option defines the update interval (in seconds) for
+:conf_master:`file_roots`.
+
+.. note::
+    Since ``file_roots`` consists of files local to the minion, the update
+    process for this fileserver backend just reaps the cache for this backend.
+
+.. code-block:: yaml
+
+    roots_update_interval: 120
+
+gitfs: Git Remote File Server Backend
+-------------------------------------
 
 .. conf_master:: gitfs_remotes
 
@@ -1912,22 +2743,29 @@ be the provider that is used.
 ``gitfs_ssl_verify``
 ********************
 
-.. versionchanged:: 2016.11.0
-
 Default: ``True``
 
-Specifies whether or not to ignore SSL certificate errors when contacting the
-remote repository. The ``False`` setting is useful if you're using a
-git repo that uses a self-signed certificate. However, keep in mind that
-setting this to anything other ``True`` is a considered insecure, and using an
-SSH-based transport (if available) may be a better option.
-
-In the 2016.11.0 release, the default config value changed from ``False`` to
-``True``.
+Specifies whether or not to ignore SSL certificate errors when fetching from
+the repositories configured in :conf_master:`gitfs_remotes`. The ``False``
+setting is useful if you're using a git repo that uses a self-signed
+certificate. However, keep in mind that setting this to anything other ``True``
+is a considered insecure, and using an SSH-based transport (if available) may
+be a better option.
 
 .. code-block:: yaml
 
-    gitfs_ssl_verify: True
+    gitfs_ssl_verify: False
+
+.. note::
+    pygit2 only supports disabling SSL verification in versions 0.23.2 and
+    newer.
+
+.. versionchanged:: 2015.8.0
+    This option can now be configured on individual repositories as well. See
+    :ref:`here <gitfs-per-remote-config>` for more info.
+
+.. versionchanged:: 2016.11.0
+    The default config value changed from ``False`` to ``True``.
 
 .. conf_master:: gitfs_mountpoint
 
@@ -1940,8 +2778,8 @@ Default: ``''``
 
 Specifies a path on the salt fileserver which will be prepended to all files
 served by gitfs. This option can be used in conjunction with
-:conf_master:`gitfs_root`. It can also be configured on a per-remote basis, see
-:ref:`here <gitfs-per-remote-config>` for more info.
+:conf_master:`gitfs_root`. It can also be configured for an individual
+repository, see :ref:`here <gitfs-per-remote-config>` for more info.
 
 .. code-block:: yaml
 
@@ -1973,8 +2811,8 @@ directories above the one specified will be ignored and the relative path will
     gitfs_root: somefolder/otherfolder
 
 .. versionchanged:: 2014.7.0
-   Ability to specify gitfs roots on a per-remote basis was added. See
-   :ref:`here <gitfs-per-remote-config>` for more info.
+    This option can now be configured on individual repositories as well. See
+    :ref:`here <gitfs-per-remote-config>` for more info.
 
 .. conf_master:: gitfs_base
 
@@ -1990,9 +2828,8 @@ Defines which branch/tag should be used as the ``base`` environment.
     gitfs_base: salt
 
 .. versionchanged:: 2014.7.0
-
-    Ability to specify the base on a per-remote basis was added. See :ref:`here
-    <gitfs-per-remote-config>` for more info.
+    This option can now be configured on individual repositories as well. See
+    :ref:`here <gitfs-per-remote-config>` for more info.
 
 .. conf_master:: gitfs_saltenv
 
@@ -2017,12 +2854,68 @@ gitfs remotes.
       - dev:
         - ref: develop
 
-.. conf_master:: gitfs_env_whitelist
+.. conf_master:: gitfs_disable_saltenv_mapping
 
-``gitfs_env_whitelist``
-***********************
+``gitfs_disable_saltenv_mapping``
+*********************************
+
+.. versionadded:: 2018.3.0
+
+Default: ``False``
+
+When set to ``True``, all saltenv mapping logic is disregarded (aside from
+which branch/tag is mapped to the ``base`` saltenv). To use any other
+environments, they must then be defined using :ref:`per-saltenv configuration
+parameters <gitfs-per-saltenv-config>`.
+
+.. code-block:: yaml
+
+    gitfs_disable_saltenv_mapping: True
+
+.. note::
+    This is is a global configuration option, see :ref:`here
+    <gitfs-per-remote-config>` for examples of configuring it for individual
+    repositories.
+
+.. conf_master:: gitfs_ref_types
+
+``gitfs_ref_types``
+*******************
+
+.. versionadded:: 2018.3.0
+
+Default: ``['branch', 'tag', 'sha']``
+
+This option defines what types of refs are mapped to fileserver environments
+(i.e. saltenvs). It also sets the order of preference when there are
+ambiguously-named refs (i.e. when a branch and tag both have the same name).
+The below example disables mapping of both tags and SHAs, so that only branches
+are mapped as saltenvs:
+
+.. code-block:: yaml
+
+    gitfs_ref_types:
+      - branch
+
+.. note::
+    This is is a global configuration option, see :ref:`here
+    <gitfs-per-remote-config>` for examples of configuring it for individual
+    repositories.
+
+.. note::
+    ``sha`` is special in that it will not show up when listing saltenvs (e.g.
+    with the :py:func:`fileserver.envs <salt.runners.fileserver.envs>` runner),
+    but works within states and with :py:func:`cp.cache_file
+    <salt.modules.cp.cache_file>` to retrieve a file from a specific git SHA.
+
+.. conf_master:: gitfs_saltenv_whitelist
+
+``gitfs_saltenv_whitelist``
+***************************
 
 .. versionadded:: 2014.7.0
+.. versionchanged:: 2018.3.0
+    Renamed from ``gitfs_env_whitelist`` to ``gitfs_saltenv_whitelist``
 
 Default: ``[]``
 
@@ -2033,17 +2926,19 @@ information can be found in the :ref:`GitFS Walkthrough
 
 .. code-block:: yaml
 
-    gitfs_env_whitelist:
+    gitfs_saltenv_whitelist:
       - base
       - v1.*
       - 'mybranch\d+'
 
-.. conf_master:: gitfs_env_blacklist
+.. conf_master:: gitfs_saltenv_blacklist
 
-``gitfs_env_blacklist``
-***********************
+``gitfs_saltenv_blacklist``
+***************************
 
 .. versionadded:: 2014.7.0
+.. versionchanged:: 2018.3.0
+    Renamed from ``gitfs_env_blacklist`` to ``gitfs_saltenv_blacklist``
 
 Default: ``[]``
 
@@ -2054,7 +2949,7 @@ information can be found in the :ref:`GitFS Walkthrough
 
 .. code-block:: yaml
 
-    gitfs_env_blacklist:
+    gitfs_saltenv_blacklist:
       - base
       - v1.*
       - 'mybranch\d+'
@@ -2089,6 +2984,22 @@ they were created by a different master.
 
 .. __: http://www.gluster.org/
 
+.. conf_master:: gitfs_update_interval
+
+``gitfs_update_interval``
+*************************
+
+.. versionadded:: 2018.3.0
+
+Default: ``60``
+
+This option defines the default update interval (in seconds) for gitfs remotes.
+The update interval can also be set for a single repository via a
+:ref:`per-remote config option <gitfs-per-remote-config>`
+
+.. code-block:: yaml
+
+    gitfs_update_interval: 120
 
 GitFS Authentication Options
 ****************************
@@ -2113,6 +3024,11 @@ remotes.
 
     gitfs_user: git
 
+.. note::
+    This is is a global configuration option, see :ref:`here
+    <gitfs-per-remote-config>` for examples of configuring it for individual
+    repositories.
+
 .. conf_master:: gitfs_password
 
 ``gitfs_password``
@@ -2128,6 +3044,11 @@ This parameter is not required if the repository does not use authentication.
 .. code-block:: yaml
 
     gitfs_password: mypassword
+
+.. note::
+    This is is a global configuration option, see :ref:`here
+    <gitfs-per-remote-config>` for examples of configuring it for individual
+    repositories.
 
 .. conf_master:: gitfs_insecure_auth
 
@@ -2145,6 +3066,11 @@ parameter enables authentication over HTTP. **Enable this at your own risk.**
 
     gitfs_insecure_auth: True
 
+.. note::
+    This is is a global configuration option, see :ref:`here
+    <gitfs-per-remote-config>` for examples of configuring it for individual
+    repositories.
+
 .. conf_master:: gitfs_pubkey
 
 ``gitfs_pubkey``
@@ -2155,13 +3081,17 @@ parameter enables authentication over HTTP. **Enable this at your own risk.**
 Default: ``''``
 
 Along with :conf_master:`gitfs_privkey` (and optionally
-:conf_master:`gitfs_passphrase`), is used to authenticate to SSH remotes. This
-parameter (or its :ref:`per-remote counterpart <gitfs-per-remote-config>`) is
-required for SSH remotes.
+:conf_master:`gitfs_passphrase`), is used to authenticate to SSH remotes.
+Required for SSH remotes.
 
 .. code-block:: yaml
 
     gitfs_pubkey: /path/to/key.pub
+
+.. note::
+    This is is a global configuration option, see :ref:`here
+    <gitfs-per-remote-config>` for examples of configuring it for individual
+    repositories.
 
 .. conf_master:: gitfs_privkey
 
@@ -2173,13 +3103,17 @@ required for SSH remotes.
 Default: ``''``
 
 Along with :conf_master:`gitfs_pubkey` (and optionally
-:conf_master:`gitfs_passphrase`), is used to authenticate to SSH remotes. This
-parameter (or its :ref:`per-remote counterpart <gitfs-per-remote-config>`) is
-required for SSH remotes.
+:conf_master:`gitfs_passphrase`), is used to authenticate to SSH remotes.
+Required for SSH remotes.
 
 .. code-block:: yaml
 
     gitfs_privkey: /path/to/key
+
+.. note::
+    This is is a global configuration option, see :ref:`here
+    <gitfs-per-remote-config>` for examples of configuring it for individual
+    repositories.
 
 .. conf_master:: gitfs_passphrase
 
@@ -2197,12 +3131,17 @@ authenticate is protected by a passphrase.
 
     gitfs_passphrase: mypassphrase
 
+.. note::
+    This is is a global configuration option, see :ref:`here
+    <gitfs-per-remote-config>` for examples of configuring it for individual
+    repositories.
+
 .. conf_master:: gitfs_refspecs
 
 ``gitfs_refspecs``
 ~~~~~~~~~~~~~~~~~~
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``['+refs/heads/*:refs/remotes/origin/*', '+refs/tags/*:refs/tags/*']``
 
@@ -2219,8 +3158,8 @@ can be found in the :ref:`GitFS Walkthrough <gitfs-custom-refspecs>`.
       - '+refs/pull/*/head:refs/remotes/origin/pr/*'
       - '+refs/pull/*/merge:refs/remotes/origin/merge/*'
 
-hg: Mercurial Remote File Server Backend
-----------------------------------------
+hgfs: Mercurial Remote File Server Backend
+------------------------------------------
 
 .. conf_master:: hgfs_remotes
 
@@ -2359,12 +3298,14 @@ bookmark should be used as the ``base`` environment.
 
     hgfs_base: salt
 
-.. conf_master:: hgfs_env_whitelist
+.. conf_master:: hgfs_saltenv_whitelist
 
-``hgfs_env_whitelist``
-**********************
+``hgfs_saltenv_whitelist``
+**************************
 
 .. versionadded:: 2014.7.0
+.. versionchanged:: 2018.3.0
+    Renamed from ``hgfs_env_whitelist`` to ``hgfs_saltenv_whitelist``
 
 Default: ``[]``
 
@@ -2376,23 +3317,25 @@ expression must match the entire minion ID.
 If used, only branches/bookmarks/tags which match one of the specified
 expressions will be exposed as fileserver environments.
 
-If used in conjunction with :conf_master:`hgfs_env_blacklist`, then the subset
+If used in conjunction with :conf_master:`hgfs_saltenv_blacklist`, then the subset
 of branches/bookmarks/tags which match the whitelist but do *not* match the
 blacklist will be exposed as fileserver environments.
 
 .. code-block:: yaml
 
-    hgfs_env_whitelist:
+    hgfs_saltenv_whitelist:
       - base
       - v1.*
       - 'mybranch\d+'
 
-.. conf_master:: hgfs_env_blacklist
+.. conf_master:: hgfs_saltenv_blacklist
 
-``hgfs_env_blacklist``
-**********************
+``hgfs_saltenv_blacklist``
+**************************
 
 .. versionadded:: 2014.7.0
+.. versionchanged:: 2018.3.0
+    Renamed from ``hgfs_env_blacklist`` to ``hgfs_saltenv_blacklist``
 
 Default: ``[]``
 
@@ -2404,19 +3347,35 @@ expression must match the entire minion ID.
 If used, branches/bookmarks/tags which match one of the specified expressions
 will *not* be exposed as fileserver environments.
 
-If used in conjunction with :conf_master:`hgfs_env_whitelist`, then the subset
+If used in conjunction with :conf_master:`hgfs_saltenv_whitelist`, then the subset
 of branches/bookmarks/tags which match the whitelist but do *not* match the
 blacklist will be exposed as fileserver environments.
 
 .. code-block:: yaml
 
-    hgfs_env_blacklist:
+    hgfs_saltenv_blacklist:
       - base
       - v1.*
       - 'mybranch\d+'
 
-svn: Subversion Remote File Server Backend
-------------------------------------------
+.. conf_master:: hgfs_update_interval
+
+``hgfs_update_interval``
+************************
+
+.. versionadded:: 2018.3.0
+
+Default: ``60``
+
+This option defines the update interval (in seconds) for
+:conf_master:`hgfs_remotes`.
+
+.. code-block:: yaml
+
+    hgfs_update_interval: 120
+
+svnfs: Subversion Remote File Server Backend
+--------------------------------------------
 
 .. conf_master:: svnfs_remotes
 
@@ -2566,12 +3525,14 @@ also be configured on a per-remote basis, see :conf_master:`here
 
     svnfs_tags: tags
 
-.. conf_master:: svnfs_env_whitelist
+.. conf_master:: svnfs_saltenv_whitelist
 
-``svnfs_env_whitelist``
-***********************
+``svnfs_saltenv_whitelist``
+***************************
 
 .. versionadded:: 2014.7.0
+.. versionchanged:: 2018.3.0
+    Renamed from ``svnfs_env_whitelist`` to ``svnfs_saltenv_whitelist``
 
 Default: ``[]``
 
@@ -2583,23 +3544,25 @@ must match the entire minion ID.
 If used, only branches/tags which match one of the specified expressions will
 be exposed as fileserver environments.
 
-If used in conjunction with :conf_master:`svnfs_env_blacklist`, then the subset
+If used in conjunction with :conf_master:`svnfs_saltenv_blacklist`, then the subset
 of branches/tags which match the whitelist but do *not* match the blacklist
 will be exposed as fileserver environments.
 
 .. code-block:: yaml
 
-    svnfs_env_whitelist:
+    svnfs_saltenv_whitelist:
       - base
       - v1.*
       - 'mybranch\d+'
 
-.. conf_master:: svnfs_env_blacklist
+.. conf_master:: svnfs_saltenv_blacklist
 
-``svnfs_env_blacklist``
-***********************
+``svnfs_saltenv_blacklist``
+***************************
 
 .. versionadded:: 2014.7.0
+.. versionchanged:: 2018.3.0
+    Renamed from ``svnfs_env_blacklist`` to ``svnfs_saltenv_blacklist``
 
 Default: ``[]``
 
@@ -2611,19 +3574,35 @@ expression must match the entire minion ID.
 If used, branches/tags which match one of the specified expressions will *not*
 be exposed as fileserver environments.
 
-If used in conjunction with :conf_master:`svnfs_env_whitelist`, then the subset
+If used in conjunction with :conf_master:`svnfs_saltenv_whitelist`, then the subset
 of branches/tags which match the whitelist but do *not* match the blacklist
 will be exposed as fileserver environments.
 
 .. code-block:: yaml
 
-    svnfs_env_blacklist:
+    svnfs_saltenv_blacklist:
       - base
       - v1.*
       - 'mybranch\d+'
 
-minion: MinionFS Remote File Server Backend
--------------------------------------------
+.. conf_master:: svnfs_update_interval
+
+``svnfs_update_interval``
+*************************
+
+.. versionadded:: 2018.3.0
+
+Default: ``60``
+
+This option defines the update interval (in seconds) for
+:conf_master:`svnfs_remotes`.
+
+.. code-block:: yaml
+
+    svnfs_update_interval: 120
+
+minionfs: MinionFS Remote File Server Backend
+---------------------------------------------
 
 .. conf_master:: minionfs_env
 
@@ -2712,6 +3691,72 @@ exposed.
       - dev*
       - 'mail\d+.mydomain.tld'
 
+.. conf_master:: minionfs_update_interval
+
+``minionfs_update_interval``
+****************************
+
+.. versionadded:: 2018.3.0
+
+Default: ``60``
+
+This option defines the update interval (in seconds) for :ref:`MinionFS
+<tutorial-minionfs>`.
+
+.. note::
+    Since :ref:`MinionFS <tutorial-minionfs>` consists of files local to the
+    master, the update process for this fileserver backend just reaps the cache
+    for this backend.
+
+.. code-block:: yaml
+
+    minionfs_update_interval: 120
+
+azurefs: Azure File Server Backend
+----------------------------------
+
+.. versionadded:: 2015.8.0
+
+See the :mod:`azurefs documentation <salt.fileserver.azurefs>` for usage
+examples.
+
+.. conf_master:: azurefs_update_interval
+
+``azurefs_update_interval``
+***************************
+
+.. versionadded:: 2018.3.0
+
+Default: ``60``
+
+This option defines the update interval (in seconds) for azurefs.
+
+.. code-block:: yaml
+
+    azurefs_update_interval: 120
+
+s3fs: S3 File Server Backend
+----------------------------
+
+.. versionadded:: 0.16.0
+
+See the :mod:`s3fs documentation <salt.fileserver.s3fs>` for usage examples.
+
+.. conf_master:: s3fs_update_interval
+
+``s3fs_update_interval``
+************************
+
+.. versionadded:: 2018.3.0
+
+Default: ``60``
+
+This option defines the update interval (in seconds) for s3fs.
+
+.. code-block:: yaml
+
+    s3fs_update_interval: 120
+
 
 .. _pillar-configuration-master:
 
@@ -2748,7 +3793,7 @@ configuration is the same as :conf_master:`file_roots`:
 ``on_demand_ext_pillar``
 ------------------------
 
-.. versionadded:: 2016.3.6,2016.11.3,Nitrogen
+.. versionadded:: 2016.3.6,2016.11.3,2017.7.0
 
 Default: ``['libvirt', 'virtkey']``
 
@@ -2776,7 +3821,7 @@ The external pillars permitted to be used on-demand using :py:func:`pillar.ext
 ``decrypt_pillar``
 ------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``[]``
 
@@ -2798,7 +3843,7 @@ specified by :conf_master:`decrypt_pillar_default` will be used.
 ``decrypt_pillar_delimiter``
 ----------------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``:``
 
@@ -2817,7 +3862,7 @@ The delimiter used to distinguish nested data structures in the
 ``decrypt_pillar_default``
 --------------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``gpg``
 
@@ -2833,7 +3878,7 @@ pillar key in :conf_master:`decrypt_pillar`.
 ``decrypt_pillar_renderers``
 ----------------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``['gpg']``
 
@@ -2864,6 +3909,26 @@ configuration.
 .. code-block:: yaml
 
     pillar_opts: False
+
+.. conf_master:: pillar_safe_render_error
+
+``pillar_safe_render_error``
+----------------------------
+
+Default: ``True``
+
+The pillar_safe_render_error option prevents the master from passing pillar
+render errors to the minion. This is set on by default because the error could
+contain templating data which would give that minion information it shouldn't
+have, like a password! When set ``True`` the error message will only show:
+
+.. code-block:: shell
+
+    Rendering SLS 'my.sls' failed. Please see master log for details.
+
+.. code-block:: yaml
+
+    pillar_safe_render_error: True
 
 .. _master-configuration-ext-pillar:
 
@@ -3118,6 +4183,10 @@ In the 2016.11.0 release, the default config value changed from ``False`` to
 
     git_pillar_ssl_verify: True
 
+.. note::
+    pygit2 only supports disabling SSL verification in versions 0.23.2 and
+    newer.
+
 .. conf_master:: git_pillar_global_lock
 
 ``git_pillar_global_lock``
@@ -3153,12 +4222,12 @@ they were created by a different master.
 ``git_pillar_includes``
 ***********************
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``True``
 
 Normally, when processing :ref:`git_pillar remotes
-<git-pillar-2015-8-0-and-later>`, if more than one repo under the same ``git``
+<git-pillar-configuration>`, if more than one repo under the same ``git``
 section in the ``ext_pillar`` configuration refers to the same pillar
 environment, then each repo in a given environment will have access to the
 other repos' files to be referenced in their top files. However, it may be
@@ -3284,14 +4353,14 @@ authenticate is protected by a passphrase.
 ``git_pillar_refspecs``
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``['+refs/heads/*:refs/remotes/origin/*', '+refs/tags/*:refs/tags/*']``
 
 When fetching from remote repositories, by default Salt will fetch branches and
 tags. This parameter can be used to override the default and specify
 alternate refspecs to be fetched. This parameter works similarly to its
-:ref:`GitFS counterpart <git_pillar-custom-refspecs>`, in that it can be
+:ref:`GitFS counterpart <gitfs-custom-refspecs>`, in that it can be
 configured both globally and for individual remotes.
 
 .. code-block:: yaml
@@ -3307,7 +4376,7 @@ configured both globally and for individual remotes.
 ``git_pillar_verify_config``
 ----------------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``True``
 
@@ -3339,12 +4408,14 @@ The pillar_source_merging_strategy option allows you to configure merging
 strategy between different sources. It accepts 5 values:
 
 * ``none``:
-.. versionadded:: 2016.3.4
+
   It will not do any merging at all and only parse the pillar data from the passed environment and 'base' if no environment was specified.
+
+  .. versionadded:: 2016.3.4
 
 * ``recurse``:
 
-  it will merge recursively mapping of data. For example, theses 2 sources:
+  It will recursively merge data. For example, theses 2 sources:
 
   .. code-block:: yaml
 
@@ -3437,6 +4508,11 @@ strategy between different sources. It accepts 5 values:
 
   Guesses the best strategy based on the "renderer" setting.
 
+.. note::
+    In order for yamlex based features such as ``!aggregate`` to work as expected
+    across documents using the default ``smart`` merge strategy, the :conf_master:`renderer`
+    config option must be set to ``jinja|yamlex`` or similar.
+
 .. conf_master:: pillar_merge_lists
 
 ``pillar_merge_lists``
@@ -3451,6 +4527,25 @@ Recursively merge lists by aggregating them instead of replacing them.
 .. code-block:: yaml
 
     pillar_merge_lists: False
+
+.. conf_master:: pillar_includes_override_sls
+
+``pillar_includes_override_sls``
+********************************
+
+.. versionadded:: 2017.7.6,2018.3.1
+
+Default: ``False``
+
+Prior to version 2017.7.3, keys from :ref:`pillar includes <pillar-include>`
+would be merged on top of the pillar SLS. Since 2017.7.3, the includes are
+merged together and then the pillar SLS is merged on top of that.
+
+Set this option to ``True`` to return to the old behavior.
+
+.. code-block:: yaml
+
+    pillar_includes_override_sls: True
 
 .. _pillar-cache-opts:
 
@@ -3494,7 +4589,7 @@ Default: ``3600``
 
 If and only if a master has set ``pillar_cache: True``, the cache TTL controls the amount
 of time, in seconds, before the cache is considered invalid by a master and a fresh
-pillar is recompiled and stored.
+pillar is recompiled and stored. A value of 0 will cause the cache to always be valid.
 
 .. conf_master:: pillar_cache_backend
 
@@ -3529,6 +4624,117 @@ can be utilized:
 .. code-block:: yaml
 
     pillar_cache_backend: disk
+
+
+Master Reactor Settings
+=======================
+
+.. conf_master:: reactor
+
+``reactor``
+-----------
+
+Default: ``[]``
+
+Defines a salt reactor. See the :ref:`Reactor <reactor>` documentation for more
+information.
+
+.. code-block:: yaml
+
+    reactor:
+      - 'salt/minion/*/start':
+        - salt://reactor/startup_tasks.sls
+
+.. conf_master:: reactor_refresh_interval
+
+``reactor_refresh_interval``
+----------------------------
+
+Default: ``60``
+
+The TTL for the cache of the reactor configuration.
+
+.. code-block:: yaml
+
+    reactor_refresh_interval: 60
+
+.. conf_master:: reactor_worker_threads
+
+``reactor_worker_threads``
+--------------------------
+
+Default: ``10``
+
+The number of workers for the runner/wheel in the reactor.
+
+.. code-block:: yaml
+
+    reactor_worker_threads: 10
+
+.. conf_master:: reactor_worker_hwm
+
+``reactor_worker_hwm``
+----------------------
+
+Default: ``10000``
+
+The queue size for workers in the reactor.
+
+.. code-block:: yaml
+
+    reactor_worker_hwm: 10000
+
+
+.. _salt-api-master-settings:
+
+Salt-API Master Settings
+========================
+
+There are some settings for :ref:`salt-api <netapi-introduction>` that can be
+configured on the Salt Master.
+
+.. conf_master:: api_logfile
+
+``api_logfile``
+---------------
+
+Default: ``/var/log/salt/api``
+
+The logfile location for ``salt-api``.
+
+.. code-block:: yaml
+
+    api_logfile: /var/log/salt/api
+
+.. conf_master:: api_pidfile
+
+``api_pidfile``
+---------------
+
+Default: /var/run/salt-api.pid
+
+If this master will be running ``salt-api``, specify the pidfile of the
+``salt-api`` daemon.
+
+.. code-block:: yaml
+
+    api_pidfile: /var/run/salt-api.pid
+
+.. conf_master:: rest_timeout
+
+``rest_timeout``
+----------------
+
+Default: ``300``
+
+Used by ``salt-api`` for the master requests timeout.
+
+.. code-block:: yaml
+
+    rest_timeout: 300
+
+
+.. _syndic-server-settings:
 
 Syndic Server Settings
 ======================
@@ -3665,9 +4871,9 @@ check in with their lists of expected minions before giving up.
 .. conf_master:: syndic_forward_all_events
 
 ``syndic_forward_all_events``
--------------------
+-----------------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``False``
 
@@ -3678,6 +4884,8 @@ send events to all connected masters.
 
     syndic_forward_all_events: False
 
+
+.. _peer-publish-settings:
 
 Peer Publish Settings
 =====================
@@ -3793,7 +5001,6 @@ The level of messages to send to the console. See also :conf_log:`log_level`.
 
     log_level: warning
 
-
 .. conf_master:: log_level_logfile
 
 ``log_level_logfile``
@@ -3809,7 +5016,6 @@ it will inherit the level set by :conf_log:`log_level` option.
 
     log_level_logfile: warning
 
-
 .. conf_master:: log_datefmt
 
 ``log_datefmt``
@@ -3824,7 +5030,6 @@ The date and time format used in console log messages. See also
 
     log_datefmt: '%H:%M:%S'
 
-
 .. conf_master:: log_datefmt_logfile
 
 ``log_datefmt_logfile``
@@ -3838,7 +5043,6 @@ The date and time format used in log file messages. See also
 .. code-block:: yaml
 
     log_datefmt_logfile: '%Y-%m-%d %H:%M:%S'
-
 
 .. conf_master:: log_fmt_console
 
@@ -3872,7 +5076,6 @@ The format of the console logging messages. See also
     log_fmt_console: '%(colorlevel)s %(colormsg)s'
     log_fmt_console: '[%(levelname)-8s] %(message)s'
 
-
 .. conf_master:: log_fmt_logfile
 
 ``log_fmt_logfile``
@@ -3887,7 +5090,6 @@ The format of the log file logging messages. See also
 
     log_fmt_logfile: '%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s] %(message)s'
 
-
 .. conf_master:: log_granular_levels
 
 ``log_granular_levels``
@@ -3898,10 +5100,43 @@ Default: ``{}``
 This can be used to control logging levels more specifically. See also
 :conf_log:`log_granular_levels`.
 
+
+.. conf_master:: log_rotate_max_bytes
+
+``log_rotate_max_bytes``
+------------------------
+
+Default:  ``0``
+
+The maximum number of bytes a single log file may contain before it is rotated.
+A value of 0 disables this feature. Currently only supported on Windows. On
+other platforms, use an external tool such as 'logrotate' to manage log files.
+:conf_log:`log_rotate_max_bytes`
+
+
+.. conf_master:: log_rotate_backup_count
+
+``log_rotate_backup_count``
+---------------------------
+
+Default:  ``0``
+
+The number of backup files to keep when rotating log files. Only used if
+:conf_master:`log_rotate_max_bytes` is greater than 0. Currently only supported
+on Windows. On other platforms, use an external tool such as 'logrotate' to
+manage log files.
+:conf_log:`log_rotate_backup_count`
+
+
+.. _node-groups:
+
 Node Groups
 ===========
 
 .. conf_master:: nodegroups
+
+``nodegroups``
+--------------
 
 Default: ``{}``
 
@@ -3915,12 +5150,14 @@ A group consists of a group name and a compound target.
       group2: 'G@os:Debian and foo.domain.com'
       group3: 'G@os:Debian and N@group1'
       group4:
-	- 'G@foo:bar'
-	- 'or'
-	- 'G@foo:baz'
+        - 'G@foo:bar'
+        - 'or'
+        - 'G@foo:baz'
 
 More information on using nodegroups can be found :ref:`here <targeting-nodegroups>`.
 
+
+.. _range-cluster-settings:
 
 Range Cluster Settings
 ======================
@@ -3937,11 +5174,28 @@ https://github.com/ytoolshed/range/wiki/%22yamlfile%22-module-file-spec
 
 .. code-block:: yaml
 
-  range_server: range:80
+    range_server: range:80
 
+
+.. _include-configuration:
 
 Include Configuration
 =====================
+
+Configuration can be loaded from multiple files. The order in which this is
+done is:
+
+1. The master config file itself
+
+2. The files matching the glob in :conf_master:`default_include`
+
+3. The files matching the glob in :conf_master:`include` (if defined)
+
+Each successive step overrides any values defined in the previous steps.
+Therefore, any config options defined in one of the
+:conf_master:`default_include` files would override the same value in the
+master config file, and any options defined in :conf_master:`include` would
+override both.
 
 .. conf_master:: default_include
 
@@ -3960,7 +5214,6 @@ file.
     Salt creates files in the ``master.d`` directory for its own use. These
     files are prefixed with an underscore. A common example of this is the
     ``_schedule.conf`` file.
-
 
 .. conf_master:: include
 
@@ -3990,6 +5243,64 @@ option then the master will log a warning message.
       - extra_config
       - master.d/*
       - /etc/roles/webserver
+
+
+Keepalive Settings
+==================
+
+.. conf_master:: tcp_keepalive
+
+``tcp_keepalive``
+-----------------
+
+Default: ``True``
+
+The tcp keepalive interval to set on TCP ports. This setting can be used to tune Salt
+connectivity issues in messy network environments with misbehaving firewalls.
+
+.. code-block:: yaml
+
+    tcp_keepalive: True
+
+.. conf_master:: tcp_keepalive_cnt
+
+``tcp_keepalive_cnt``
+---------------------
+
+Default: ``-1``
+
+Sets the ZeroMQ TCP keepalive count. May be used to tune issues with minion disconnects.
+
+.. code-block:: yaml
+
+    tcp_keepalive_cnt: -1
+
+.. conf_master:: tcp_keepalive_idle
+
+``tcp_keepalive_idle``
+----------------------
+
+Default: ``300``
+
+Sets ZeroMQ TCP keepalive idle. May be used to tune issues with minion disconnects.
+
+.. code-block:: yaml
+
+    tcp_keepalive_idle: 300
+
+.. conf_master:: tcp_keepalive_intvl
+
+``tcp_keepalive_intvl``
+-----------------------
+
+Default: ``-1``
+
+Sets ZeroMQ TCP keepalive interval. May be used to tune issues with minion disconnects.
+
+.. code-block:: yaml
+
+    tcp_keepalive_intvl': -1
+
 
 .. _winrepo-master-config-opts:
 
@@ -4129,7 +5440,7 @@ URL of the repository:
 
 .. code-block:: yaml
 
-    winrepo_remotes:
+    winrepo_remotes_ng:
       - '<commit_id> https://github.com/saltstack/salt-winrepo-ng.git'
 
 Replace ``<commit_id>`` with the SHA1 hash of a commit ID. Specifying a commit
@@ -4154,11 +5465,10 @@ branch/tag.
 
     winrepo_branch: winrepo
 
-    ext_pillar:
-      - git:
-        - https://mygitserver/winrepo1.git
-        - https://mygitserver/winrepo2.git:
-        - foo https://mygitserver/winrepo3.git
+    winrepo_remotes:
+      - https://mygitserver/winrepo1.git
+      - https://mygitserver/winrepo2.git:
+      - foo https://mygitserver/winrepo3.git
 
 .. conf_master:: winrepo_ssl_verify
 
@@ -4294,14 +5604,14 @@ authenticate is protected by a passphrase.
 ``winrepo_refspecs``
 ~~~~~~~~~~~~~~~~~~~~
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``['+refs/heads/*:refs/remotes/origin/*', '+refs/tags/*:refs/tags/*']``
 
 When fetching from remote repositories, by default Salt will fetch branches and
 tags. This parameter can be used to override the default and specify
 alternate refspecs to be fetched. This parameter works similarly to its
-:ref:`GitFS counterpart <winrepo-custom-refspecs>`, in that it can be
+:ref:`GitFS counterpart <gitfs-custom-refspecs>`, in that it can be
 configured both globally and for individual remotes.
 
 .. code-block:: yaml
@@ -4311,3 +5621,82 @@ configured both globally and for individual remotes.
       - '+refs/tags/*:refs/tags/*'
       - '+refs/pull/*/head:refs/remotes/origin/pr/*'
       - '+refs/pull/*/merge:refs/remotes/origin/merge/*'
+
+
+.. _configure-master-on-windows:
+
+Configure Master on Windows
+===========================
+
+The master on Windows requires no additional configuration. You can modify the
+master configuration by creating/editing the master config file located at
+``c:\salt\conf\master``. The same configuration options available on Linux are
+available in Windows, as long as they apply. For example, SSH options wouldn't
+apply in Windows. The main differences are the file paths. If you are familiar
+with common salt paths, the following table may be useful:
+
+=============  =========  =================
+linux Paths               Windows Paths
+=============  =========  =================
+``/etc/salt``  ``<--->``  ``c:\salt\conf``
+``/``          ``<--->``  ``c:\salt``
+=============  =========  =================
+
+So, for example, the master config file in Linux is ``/etc/salt/master``. In
+Windows the master config file is ``c:\salt\conf\master``. The Linux path
+``/etc/salt`` becomes ``c:\salt\conf`` in Windows.
+
+Common File Locations
+---------------------
+
+======================================  =============================================
+Linux Paths                             Windows Paths
+======================================  =============================================
+``conf_file: /etc/salt/master``         ``conf_file: c:\salt\conf\master``
+``log_file: /var/log/salt/master``      ``log_file: c:\salt\var\log\salt\master``
+``pidfile: /var/run/salt-master.pid``   ``pidfile: c:\salt\var\run\salt-master.pid``
+======================================  =============================================
+
+Common Directories
+------------------
+
+======================================================  ============================================
+Linux Paths                                             Windows Paths
+======================================================  ============================================
+``cachedir: /var/cache/salt/master``                    ``cachedir: c:\salt\var\cache\salt\master``
+``extension_modules: /var/cache/salt/master/extmods``   ``c:\salt\var\cache\salt\master\extmods``
+``pki_dir: /etc/salt/pki/master``                       ``pki_dir: c:\salt\conf\pki\master``
+``root_dir: /``                                         ``root_dir: c:\salt``
+``sock_dir: /var/run/salt/master``                      ``sock_dir: c:\salt\var\run\salt\master``
+======================================================  ============================================
+
+Roots
+-----
+
+**file_roots**
+
+==================  =========================
+Linux Paths         Windows Paths
+==================  =========================
+``/srv/salt``       ``c:\salt\srv\salt``
+``/srv/spm/salt``   ``c:\salt\srv\spm\salt``
+==================  =========================
+
+**pillar_roots**
+
+====================  ===========================
+Linux Paths           Windows Paths
+====================  ===========================
+``/srv/pillar``       ``c:\salt\srv\pillar``
+``/srv/spm/pillar``   ``c:\salt\srv\spm\pillar``
+====================  ===========================
+
+Win Repo Settings
+-----------------
+
+==========================================  =================================================
+Linux Paths                                 Windows Paths
+==========================================  =================================================
+``winrepo_dir: /srv/salt/win/repo``         ``winrepo_dir: c:\salt\srv\salt\win\repo``
+``winrepo_dir_ng: /srv/salt/win/repo-ng``   ``winrepo_dir_ng: c:\salt\srv\salt\win\repo-ng``
+==========================================  =================================================

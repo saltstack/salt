@@ -3,7 +3,7 @@
 NET Finder
 ==========
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 A runner to find network details easily and fast.
 It's smart enough to know what you are looking for.
@@ -38,24 +38,24 @@ Configuration
     By default the following options can be configured on the master.
     They are not necessary, but available in case the user has different requirements.
 
-    target: '*'
-        From what minions will collect the mine data. Default: `*`  - will collect from all minions.
+    target: ``*``
+        From what minions will collect the mine data. Default: ``*`` (collect from all minions).
 
-    expr_form: 'glob'
-        Minion matching expression form. Default: `glob`.
+    expr_form: ``glob``
+        Minion matching expression form. Default: ``glob``.
 
-    ignore_interfaces: []
+    ignore_interfaces
         A list of interfaces name to ignore. By default will consider all interfaces.
 
-    display: True
-        Display on the screen or return structured object? Default: `True`, will return on the CLI.
+    display: ``True``
+        Display on the screen or return structured object? Default: ``True`` (return on the CLI).
 
-    outputter: table
-        Specify the outputter name when displaying on the CLI. Default: `table`.
+    outputter: ``table``
+        Specify the outputter name when displaying on the CLI. Default: :mod:`table <salt.output.napalm_bgp>`.
 
     Configuration example:
 
-    .. code-block: yaml
+    .. code-block:: yaml
 
         runners:
           net.find:
@@ -68,13 +68,11 @@ Configuration
               - fxp0
             outputter: yaml
 '''
-
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt lib
 import salt.output
+import salt.utils.network
 from salt.ext import six
 from salt.ext.six.moves import map
 
@@ -269,12 +267,12 @@ def interfaces(device=None,
     ipnet
         Return interfaces whose IP networks associated include this IP network.
 
-    best: True
-        When `ipnet` is specified, this argument says if the runner should return only the best match
-        (the output will contain at most one row). Default: `True`, return only the best match.
+    best: ``True``
+        When ``ipnet`` is specified, this argument says if the runner should return only the best match
+        (the output will contain at most one row). Default: ``True`` (return only the best match).
 
     display: True
-        Display on the screen or return structured object? Default: `True`, will return on the CLI.
+        Display on the screen or return structured object? Default: ``True`` (return on the CLI).
 
     title
         Display a custom title for the table.
@@ -339,7 +337,7 @@ def interfaces(device=None,
         if device:
             title += ' on device {0}'.format(device)
         if ipnet:
-            title += ' that include network {net}'.format(net=str(ipnet))
+            title += ' that include network {net}'.format(net=six.text_type(ipnet))
             if best:
                 title += ' - only best match returned'
 
@@ -348,6 +346,9 @@ def interfaces(device=None,
 
     if device:
         all_interfaces = {device: all_interfaces.get(device, {})}
+
+    if ipnet and not isinstance(ipnet, IPNetwork):
+        ipnet = _get_network_obj(ipnet)
 
     best_row = {}
     best_net_match = None
@@ -399,7 +400,7 @@ def interfaces(device=None,
                         interf_entry['ips'] = '\n'.join(interf_entry['ips'])
                     if ipnet:
                         inet_ips = [
-                            str(ip) for ip in ips if _ipnet_belongs(ip)
+                            six.text_type(ip) for ip in ips if _ipnet_belongs(ip)
                         ]  # filter and get only IP include ipnet
                         if inet_ips:  # if any
                             if best:
@@ -454,8 +455,8 @@ def findarp(device=None,
     ip
         Search using a specific IP Address.
 
-    display: True
-        Display on the screen or return structured object? Default: `True`, will return on the CLI.
+    display: ``True``
+        Display on the screen or return structured object? Default: ``True``, will return on the CLI.
 
     CLI Example:
 
@@ -540,8 +541,8 @@ def findmac(device=None, mac=None, interface=None, vlan=None, display=_DEFAULT_D
     vlan
         Search using a VLAN ID.
 
-    display: True
-        Display on the screen or return structured object? Default: `True`, will return on the CLI.
+    display: ``True``
+        Display on the screen or return structured object? Default: ``True``, will return on the CLI.
 
     CLI Example:
 
@@ -596,7 +597,7 @@ def findmac(device=None, mac=None, interface=None, vlan=None, display=_DEFAULT_D
                 napalm_helpers.convert(napalm_helpers.mac, mac_entry.get('mac', '')) ==
                 napalm_helpers.convert(napalm_helpers.mac, mac)) or
                 (interface and interface in mac_entry.get('interface', '')) or
-               (vlan and str(mac_entry.get('vlan', '')) == str(vlan))):
+               (vlan and six.text_type(mac_entry.get('vlan', '')) == six.text_type(vlan))):
                 rows.append({
                     'device': device,
                     'interface': mac_entry.get('interface'),
@@ -641,11 +642,11 @@ def lldp(device=None,
     chassis
         Search using a specific Chassis ID.
 
-    display: True
-        Display on the screen or return structured object? Default: `True`, will return on the CLI.
+    display: ``True``
+        Display on the screen or return structured object? Default: ``True`` (return on the CLI).
 
-    display: True
-        Display on the screen or return structured object? Default: `True`, will return on the CLI.
+    display: ``True``
+        Display on the screen or return structured object? Default: ``True`` (return on the CLI).
 
     title
         Display a custom title for the table.
@@ -767,12 +768,12 @@ def find(addr, best=True, display=_DEFAULT_DISPLAY):
 
     Optional arguments:
 
-    best: True
+    best: ``True``
         Return only the best match with the interfaces IP networks
         when the saerching pattern is a valid IP Address or Network.
 
-    display: True
-        Display on the screen or return structured object? Default: `True`, will return on the CLI.
+    display: ``True``
+        Display on the screen or return structured object? Default: ``True`` (return on the CLI).
 
     CLI Example:
 
@@ -809,7 +810,25 @@ def find(addr, best=True, display=_DEFAULT_DISPLAY):
     ip = ''  # pylint: disable=invalid-name
     ipnet = None
 
-    results = {}
+    results = {
+        'int_net': [],
+        'int_descr': [],
+        'int_name': [],
+        'int_ip': [],
+        'int_mac': [],
+        'int_device': [],
+        'lldp_descr': [],
+        'lldp_int': [],
+        'lldp_device': [],
+        'lldp_mac': [],
+        'lldp_device_int': [],
+        'mac_device': [],
+        'mac_int': [],
+        'arp_device': [],
+        'arp_int': [],
+        'arp_mac': [],
+        'arp_ip': []
+    }
 
     if isinstance(addr, int):
         results['mac'] = findmac(vlan=addr, display=display)
@@ -823,6 +842,8 @@ def find(addr, best=True, display=_DEFAULT_DISPLAY):
     except IndexError:
         # no problem, let's keep searching
         pass
+    if salt.utils.network.is_ipv6(addr):
+        mac = False
     if not mac:
         try:
             ip = napalm_helpers.convert(napalm_helpers.ip, addr)  # pylint: disable=invalid-name
@@ -894,12 +915,12 @@ def multi_find(*patterns, **kwargs):
 
     Optional arguments:
 
-    best: True
+    best: ``True``
         Return only the best match with the interfaces IP networks
         when the saerching pattern is a valid IP Address or Network.
 
-    display: True
-        Display on the screen or return structured object? Default: `True`, will return on the CLI.
+    display: ``True``
+        Display on the screen or return structured object? Default: `True` (return on the CLI).
 
 
     CLI Example:

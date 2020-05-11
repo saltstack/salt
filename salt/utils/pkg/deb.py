@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-Common functions for working with RPM packages
+Common functions for working with deb packages
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -19,10 +19,22 @@ def combine_comments(comments):
     if isinstance(comments, list):
         for idx in range(len(comments)):
             if not isinstance(comments[idx], six.string_types):
-                comments[idx] = str(comments[idx])
+                comments[idx] = six.text_type(comments[idx])
     else:
         if not isinstance(comments, six.string_types):
-            comments = [str(comments)]
+            comments = [six.text_type(comments)]
         else:
             comments = [comments]
     return ' '.join(comments).strip()
+
+
+def strip_uri(repo):
+    '''
+    Remove the trailing slash from the URI in a repo definition
+    '''
+    splits = repo.split()
+    for idx in range(len(splits)):
+        if any(splits[idx].startswith(x)
+               for x in ('http://', 'https://', 'ftp://')):
+            splits[idx] = splits[idx].rstrip('/')
+    return ' '.join(splits)

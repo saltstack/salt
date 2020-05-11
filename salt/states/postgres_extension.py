@@ -13,7 +13,7 @@ A module used to install and manage PostgreSQL extensions.
 
 .. versionadded:: 2014.7.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging
@@ -121,14 +121,15 @@ def present(name,
             if flag in mtdata:
                 toupgrade = True
                 mode = 'upgrade'
-    if __opts__['test']:
-        ret['result'] = None
-        if mode:
-            ret['comment'] = 'Extension {0} is set to be {1}ed'.format(
-                name, mode).replace('eed', 'ed')
-        return ret
     cret = None
     if toinstall or toupgrade:
+        if __opts__['test']:
+            ret['result'] = None
+            if mode:
+                ret['comment'] = 'Extension {0} is set to be {1}ed'.format(
+                    name, mode).replace('eed', 'ed')
+            return ret
+
         cret = __salt__['postgres.create_extension'](
             name=name,
             if_not_exists=if_not_exists,

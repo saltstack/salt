@@ -5,9 +5,9 @@ NAPALM YANG
 
 NAPALM YANG basic operations.
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python stdlib
 import logging
@@ -28,7 +28,7 @@ from salt.utils.napalm import proxy_napalm_wrap
 # -----------------------------------------------------------------------------
 
 __virtualname__ = 'napalm_yang'
-__proxyenabled__ = ['napalm']
+__proxyenabled__ = ['*']
 # uses NAPALM-based proxy to interact with network devices
 
 log = logging.getLogger(__file__)
@@ -52,7 +52,7 @@ def __virtual__():
 # -----------------------------------------------------------------------------
 
 
-def _get_root_object(*models):
+def _get_root_object(models):
     '''
     Read list of models and returns a Root object with the proper models added.
     '''
@@ -119,9 +119,12 @@ def diff(candidate, running, *models):
             }
         }
     '''
-    first = _get_root_object(*models)
+    if isinstance(models, tuple) and isinstance(models[0], list):
+        models = models[0]
+
+    first = _get_root_object(models)
     first.load_dict(candidate)
-    second = _get_root_object(*models)
+    second = _get_root_object(models)
     second.load_dict(running)
     return napalm_yang.utils.diff(first, second)
 
@@ -152,7 +155,7 @@ def parse(*models, **kwargs):
 
     Output Example:
 
-    .. code-block:: json
+    .. code-block:: python
 
         {
             "interfaces": {
@@ -340,21 +343,25 @@ def parse(*models, **kwargs):
             }
         }
     '''
+    if isinstance(models, tuple) and isinstance(models[0], list):
+        models = models[0]
     config = kwargs.pop('config', False)
     state = kwargs.pop('state', False)
     profiles = kwargs.pop('profiles', [])
     if not profiles and hasattr(napalm_device, 'profile'):  # pylint: disable=undefined-variable
         profiles = napalm_device.profile  # pylint: disable=undefined-variable
-    root = _get_root_object(*models)
+    if not profiles:
+        profiles = [__grains__.get('os')]
+    root = _get_root_object(models)
     parser_kwargs = {
-        'device': napalm_device,  # pylint: disable=undefined-variable
+        'device': napalm_device.get('DRIVER'),  # pylint: disable=undefined-variable
         'profile': profiles
     }
     if config:
         root.parse_config(**parser_kwargs)
     if state:
         root.parse_state(**parser_kwargs)
-    return root
+    return root.to_dict(filter=True)
 
 
 @proxy_napalm_wrap
@@ -391,15 +398,22 @@ def get_config(data, *models, **kwargs):
             description Uplink2
             mtu 9000
     '''
+    if isinstance(models, tuple) and isinstance(models[0], list):
+        models = models[0]
     profiles = kwargs.pop('profiles', [])
     if not profiles and hasattr(napalm_device, 'profile'):  # pylint: disable=undefined-variable
         profiles = napalm_device.profile  # pylint: disable=undefined-variable
+    if not profiles:
+        profiles = [__grains__.get('os')]
     parser_kwargs = {
         'profile': profiles
     }
-    root = _get_root_object(*models)
+    root = _get_root_object(models)
     root.load_dict(data)
-    return root.translate_config(**parser_kwargs)
+    native_config = root.translate_config(**parser_kwargs)
+    log.debug('Generated config')
+    log.debug(native_config)
+    return native_config
 
 
 @proxy_napalm_wrap
@@ -428,7 +442,7 @@ def load_config(data, *models, **kwargs):
 
     debug: ``False``
         Debug mode. Will insert a new key under the output dictionary,
-        as ``loaded_config`` contaning the raw configuration loaded on the device.
+        as ``loaded_config`` containing the raw configuration loaded on the device.
 
     replace: ``False``
         Should replace the config with the new generate one?
@@ -441,7 +455,7 @@ def load_config(data, *models, **kwargs):
 
     Output Example:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         device1:
             ----------
@@ -538,12 +552,14 @@ def load_config(data, *models, **kwargs):
             result:
                 True
     '''
+    if isinstance(models, tuple) and isinstance(models[0], list):
+        models = models[0]
     config = get_config(data, *models, **kwargs)
     test = kwargs.pop('test', False)
     debug = kwargs.pop('debug', False)
     commit = kwargs.pop('commit', True)
     replace = kwargs.pop('replace', False)
-    return __salt__['net.load_config'](config=config,
+    return __salt__['net.load_config'](text=config,
                                        test=test,
                                        debug=debug,
                                        commit=commit,
@@ -591,7 +607,9 @@ def compliance_report(data, *models, **kwargs):
           }
         }
     '''
+    if isinstance(models, tuple) and isinstance(models[0], list):
+        models = models[0]
     filepath = kwargs.pop('filepath', '')
-    root = _get_root_object(*models)
+    root = _get_root_object(models)
     root.load_dict(data)
     return root.compliance_report(filepath)

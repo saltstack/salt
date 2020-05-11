@@ -4,7 +4,7 @@ Salt package
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import warnings
 
 # All salt related deprecation warnings should be shown once each!
@@ -27,6 +27,12 @@ warnings.filterwarnings(
     'ignore',
     '^Module backports was already imported from (.*), but (.*) is being added to sys.path$',
     UserWarning
+)
+# Only show msgpack encoding deprecation warnings once
+warnings.filterwarnings(
+    'once',
+    r'encoding is deprecated, Use raw=False instead\.',
+    DeprecationWarning,
 )
 
 

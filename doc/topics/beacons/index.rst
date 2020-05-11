@@ -34,14 +34,15 @@ monitored, everything is configured using Salt.
 
 Beacons are typically enabled by placing a ``beacons:`` top level block in
 ``/etc/salt/minion`` or any file in ``/etc/salt/minion.d/`` such as
-``/etc/salt/minion.d/beacons.conf``:
+``/etc/salt/minion.d/beacons.conf`` or add it to pillars for that minion:
 
 .. code-block:: yaml
 
     beacons:
       inotify:
-        /etc/important_file: {}
-        /opt: {}
+        - files:
+            /etc/important_file: {}
+            /opt: {}
 
 The beacon system, like many others in Salt, can also be configured via the
 minion pillar, grains, or local config file.
@@ -49,6 +50,25 @@ minion pillar, grains, or local config file.
 .. note::
     The `inotify` beacon only works on OSes that have `inotify` kernel support.
     Currently this excludes FreeBSD, macOS, and Windows.
+
+All beacon configuration is done using list based configuration.
+
+.. versionadded:: Neon
+
+Multiple copies of a particular Salt beacon can be configured by including the ``beacon_module`` parameter in the beacon configuration.
+
+.. code-block:: yaml
+
+    beacons:
+      watch_importand_file:
+        - files:
+            /etc/important_file: {}
+        - beacon_module: inotify
+      watch_another_file:
+        - files:
+            /etc/another_file: {}
+        - beacon_module: inotify
+
 
 Beacon Monitoring Interval
 --------------------------
@@ -61,21 +81,23 @@ and 10-second intervals:
 
     beacons:
       inotify:
-        /etc/important_file: {}
-        /opt: {}
-        interval: 5
-        disable_during_state_run: True
+        - files:
+            /etc/important_file: {}
+            /opt: {}
+        - interval: 5
+        - disable_during_state_run: True
       load:
-        1m:
-          - 0.0
-          - 2.0
-        5m:
-          - 0.0
-          - 1.5
-        15m:
-          - 0.1
-          - 1.0
-        interval: 10
+        - averages:
+            1m:
+              - 0.0
+              - 2.0
+            5m:
+              - 0.0
+              - 1.5
+            15m:
+              - 0.1
+              - 1.0
+        - interval: 10
 
 .. _avoid-beacon-event-loops:
 
@@ -96,8 +118,9 @@ which point the normal beacon interval will resume.
 
     beacons:
       inotify:
-        /etc/important_file: {}
-        disable_during_state_run: True
+        - files:
+            /etc/important_file: {}
+        - disable_during_state_run: True
 
 .. _beacon-example:
 
@@ -137,10 +160,11 @@ On the Salt minion, add the following configuration to
 
     beacons:
       inotify:
-        /etc/important_file:
-          mask:
-            - modify
-        disable_during_state_run: True
+        - files:
+            /etc/important_file:
+              mask:
+                - modify
+        - disable_during_state_run: True
 
 Save the configuration file and restart the minion service. The beacon is now
 set up to notify salt upon modifications made to the file.
@@ -169,7 +193,7 @@ following on the event bus:
 
 .. code-block:: json
 
-    salt/beacon/larry/inotify//etc/important_file	{
+    {
      "_stamp": "2015-09-09T15:59:37.972753",
      "data": {
          "change": "IN_IGNORED",
@@ -253,9 +277,8 @@ in ``/etc/salt/master.d/reactor.conf``:
 
 .. note::
     You can have only one top level ``reactor`` section, so if one already
-    exists, add this code to the existing section. See :ref:`Understanding the
-    Structure of Reactor Formulas <reactor-structure>` to learn more about
-    reactor SLS syntax.
+    exists, add this code to the existing section. See :ref:`here
+    <reactor-sls>` to learn more about reactor SLS syntax.
 
 
 Start the Salt Master in Debug Mode
@@ -284,6 +307,8 @@ All beacons are configured using a similar process of enabling the beacon,
 writing a reactor SLS (and state SLS if needed), and mapping a beacon event to
 the reactor SLS.
 
+.. _writing-beacons:
+
 Writing Beacon Plugins
 ======================
 
@@ -297,7 +322,7 @@ the minion. The ``beacon`` function therefore cannot block and should be as
 lightweight as possible. The ``beacon`` also must return a list of dicts, each
 dict in the list will be translated into an event on the master.
 
-Beacons may also choose to implement a ``__validate__`` function which
+Beacons may also choose to implement a ``validate`` function which
 takes the beacon configuration as an argument and ensures that it
 is valid prior to continuing. This function is called automatically
 by the Salt loader when a beacon is loaded.
@@ -354,5 +379,5 @@ new execution modules and functions to back specific beacons.
 Distributing Custom Beacons
 ---------------------------
 
-Custom beacons can be distributed to minions using ``saltutil``, see
-:ref:`Dynamic Module Distribution <dynamic-module-distribution>`.
+Custom beacons can be distributed to minions via the standard methods, see
+:ref:`Modular Systems <modular-systems>`.

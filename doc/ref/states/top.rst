@@ -249,8 +249,8 @@ Match Type   Description
 ============ ================================================================================================================
 glob         Full minion ID or glob expression to match multiple minions (e.g. ``minion123`` or ``minion*``)
 pcre         Perl-compatible regular expression (PCRE) matching a minion ID (e.g.  ``web[0-3].domain.com``)
-grain        Match a :ref:`grain <grain>`, optionally using globbing (e.g. ``kernel:Linux`` or ``kernel:*BSD``)
-grain_pcre   Match a :ref:`grain <grain>` using PCRE (e.g. ``kernel:(Free|Open)BSD``)
+grain        Match a :ref:`grain <grains>`, optionally using globbing (e.g. ``kernel:Linux`` or ``kernel:*BSD``)
+grain_pcre   Match a :ref:`grain <grains>` using PCRE (e.g. ``kernel:(Free|Open)BSD``)
 list         Comma-separated list of minions (e.g. ``minion1,minion2,minion3``)
 pillar       :ref:`Pillar <pillar>` match, optionally using globbing (e.g. ``role:webserver`` or ``role:web*``)
 pillar_pcre  :ref:`Pillar <pillar>` match using PCRE (e.g. ``role:web(server|proxy)``

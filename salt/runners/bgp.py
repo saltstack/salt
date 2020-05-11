@@ -3,7 +3,7 @@
 BGP Finder
 ==========
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Runner to search BGP neighbors details.
 
@@ -17,10 +17,10 @@ Configuration
     .. code-block:: yaml
 
         mine_functions:
-            bgp.neighbors: []
+          bgp.neighbors: []
 
     Which instructs Salt to cache the data returned by the ``neighbors`` function
-    from the :mod:`NAPALM BGP module <salt.modules.napalm_bgp>`
+    from the :mod:`NAPALM BGP module <salt.modules.napalm_bgp.neighbors>`.
 
     How often the mines are refreshed, can be specified using:
 
@@ -31,24 +31,21 @@ Configuration
 - Master config
 
     By default the following options can be configured on the master.
-    They are not necessary, but available in case the user has different requirements.
+    They are not mandatory, but available in case the user has different requirements.
 
-    tgt: '*'
+    tgt: ``*``
         From what minions will collect the mine data.
-        Default: `*` (will collect mine data from all minions)
+        Default: ``*`` (collect mine data from all minions)
 
-    tgt_type: 'glob'
-        The type of ``tgt``. Default: `glob`.
+    tgt_type: ``glob``
+        Minion matching expression form. Default: ``glob``.
 
     return_fields
         What fields to return in the output.
-        At most, it can display all the fields from the ``neighbor`` function
-        from the :mod:`NAPALM BGP module <salt.modules.napalm_bgp>`.
-        There's one additional field called ``connection_stats`` returning
-        an output of the form ``State|#Active/Received/Accepted/Damped``, e.g.
-        ``Established 398/399/399/0`` similar to the usual output
-        from network devices.
-        There are also some fields that cannot be removed:
+        It can display all the fields from the ``neighbors`` function
+        from the :mod:`NAPALM BGP module <salt.modules.napalm_bgp.neighbors>`.
+
+        Some fields cannot be removed:
 
         - ``as_number``: the AS number of the neighbor
         - ``device``: the minion ID
@@ -56,36 +53,51 @@ Configuration
 
         By default, the following extra fields are returned (displayed):
 
-        - ``connection_stats``: connection stats, as descibed above
+        - ``connection_stats``: connection stats, as described below
         - ``import_policy``: the name of the import policy
         - ``export_policy``: the name of the export policy
 
-    display: True
-        Display on the screen or return structured object? Default: `True`, will return on the CLI.
+        Special fields:
 
-    outputter: table
-        Specify the outputter name when displaying on the CLI. Default: `table`.
+        - ``vrf``: return the name of the VRF.
+        - ``connection_stats``: returning an output of the form ``<State>
+          <Active>/<Received>/<Accepted>/<Damped>``, e.g.  ``Established
+          398/399/399/0`` similar to the usual output from network devices.
+        - ``interface_description``: matches the neighbor details with the
+          corresponding interface and returns its description. This will reuse
+          functionality from the :mod:`net runner
+          <salt.runners.net.interfaces>`, so the user needs to enable the mines
+          as specified in the documentation.
+        - ``interface_name``: matches the neighbor details with the
+          corresponding interface and returns the name.  Similar to
+          ``interface_description``, this will reuse functionality from the
+          :mod:`net runner <salt.runners.net.interfaces>`, so the user needs to
+          enable the mines as specified in the documentation.
+
+    display: ``True``
+        Display on the screen or return structured object? Default: ``True`` (return on the CLI).
+
+    outputter: ``table``
+        Specify the outputter name when displaying on the CLI. Default: :mod:`table <salt.output.table_out>`.
 
     Configuration example:
 
-    .. code-block: yaml
+    .. code-block:: yaml
 
         runners:
           bgp:
             tgt: 'edge*'
             tgt_type: 'glob'
             return_fields:
-                - up
-                - connection_state
-                - previous_connection_state
-                - suppress_4byte_as
-                - holdtime
-                - flap_count
+              - up
+              - connection_state
+              - previous_connection_state
+              - suppress_4byte_as
+              - holdtime
+              - flap_count
             outputter: yaml
 '''
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import third party libs
 try:
@@ -133,7 +145,8 @@ _DEFAULT_LABELS_MAPPING = {
     'neighbor_address': 'Neighbor IP',
     'connection_stats': 'State|#Active/Received/Accepted/Damped',
     'import_policy': 'Policy IN',
-    'export_policy': 'Policy OUT'
+    'export_policy': 'Policy OUT',
+    'vrf': 'VRF'
 }
 
 # -----------------------------------------------------------------------------
@@ -187,13 +200,16 @@ def _compare_match(dict1, dict2):
     return True
 
 
-def _display_runner(rows, labels, title, display=_DEFAULT_DISPLAY):
+def _display_runner(rows,
+                    labels,
+                    title,
+                    display=_DEFAULT_DISPLAY,
+                    outputter=_DEFAULT_OUTPUTTER):
     '''
     Display or return the rows.
     '''
     if display:
-        bgp_runner_opts = _get_bgp_runner_opts()
-        if bgp_runner_opts.get('outputter') == 'table':
+        if outputter == 'table':
             ret = salt.output.out_format({'rows': rows, 'labels': labels},
                                          'table',
                                          __opts__,
@@ -202,7 +218,7 @@ def _display_runner(rows, labels, title, display=_DEFAULT_DISPLAY):
                                          labels_key='labels')
         else:
             ret = salt.output.out_format(rows,
-                                         bgp_runner_opts.get('outputter'),
+                                         outputter,
                                          __opts__)
         print(ret)
     else:
@@ -219,7 +235,7 @@ def neighbors(*asns, **kwargs):
 
     Arguments:
 
-    *asns
+    asns
         A list of AS numbers to search for.
         The runner will return only the neighbors of these AS numbers.
 
@@ -237,11 +253,14 @@ def neighbors(*asns, **kwargs):
     title
         Custom title.
 
-    display: True
-        Display on the screen or return structured object? Default: `True`, will return on the CLI.
+    display: ``True``
+        Display on the screen or return structured object? Default: ``True`` (return on the CLI).
 
-    In addition, any field from the output of the `neighbors` function
-    from the :mod:`NAPALM BGP module <salt.modules.napalm_bgp>` can be used as a filter.
+    outputter: ``table``
+        Specify the outputter name when displaying on the CLI. Default: :mod:`table <salt.output.table_out>`.
+
+    In addition, any field from the output of the ``neighbors`` function
+    from the :mod:`NAPALM BGP module <salt.modules.napalm_bgp.neighbors>` can be used as a filter.
 
     CLI Example:
 
@@ -279,6 +298,7 @@ def neighbors(*asns, **kwargs):
     opts = _get_bgp_runner_opts()
     title = kwargs.pop('title', None)
     display = kwargs.pop('display', opts['display'])
+    outputter = kwargs.pop('outputter', opts['outputter'])
 
     # cleaning up the kwargs
     # __pub args not used in this runner (yet)
@@ -313,7 +333,7 @@ def neighbors(*asns, **kwargs):
         title_parts = []
         if asns:
             title_parts.append('BGP Neighbors for {asns}'.format(
-                asns=', '.join([str(asn) for asn in asns])
+                asns=', '.join([six.text_type(asn) for asn in asns])
             ))
         if neighbor_ip:
             title_parts.append('Selecting neighbors having the remote IP address: {ipaddr}'.format(ipaddr=neighbor_ip))
@@ -356,6 +376,8 @@ def neighbors(*asns, **kwargs):
                         'neighbor_address': neighbor.get('remote_address'),
                         'as_number': asn
                     }
+                    if 'vrf' in display_fields:
+                        row['vrf'] = vrf
                     if 'connection_stats' in display_fields:
                         connection_stats = '{state} {active}/{received}/{accepted}/{damped}'.format(
                             state=neighbor.get('connection_state', -1),
@@ -365,8 +387,23 @@ def neighbors(*asns, **kwargs):
                             damped=neighbor.get('suppressed_prefix_count', -1),
                         )
                         row['connection_stats'] = connection_stats
+                    if 'interface_description' in display_fields or 'interface_name' in display_fields:
+                        net_find = __salt__['net.interfaces'](device=minion,
+                                                              ipnet=neighbor.get('remote_address'),
+                                                              display=False)
+                        if net_find:
+                            if 'interface_description' in display_fields:
+                                row['interface_description'] = net_find[0]['interface_description']
+                            if 'interface_name' in display_fields:
+                                row['interface_name'] = net_find[0]['interface']
+                        else:
+                            # if unable to find anything, leave blank
+                            if 'interface_description' in display_fields:
+                                row['interface_description'] = ''
+                            if 'interface_name' in display_fields:
+                                row['interface_name'] = ''
                     for field in display_fields:
                         if field in neighbor:
                             row[field] = neighbor[field]
                     rows.append(row)
-    return _display_runner(rows, labels, title, display=display)
+    return _display_runner(rows, labels, title, display=display, outputter=outputter)

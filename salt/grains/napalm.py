@@ -3,7 +3,7 @@
 NAPALM Grains
 =============
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
@@ -16,12 +16,13 @@ Dependencies
 .. versionadded:: 2016.11.0
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 log = logging.getLogger(__name__)
 
 # Salt lib
+import salt.utils.dns
 import salt.utils.napalm
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -90,7 +91,7 @@ def _retrieve_device_cache(proxy=None):
                 DEVICE_CACHE = proxy['napalm.get_device']()
         elif not proxy and salt.utils.napalm.is_minion(__opts__):
             # if proxy var not passed and is running in a straight minion
-            DEVICE_CACHE = salt.utils.napalm.get_device_opts(__opts__)
+            DEVICE_CACHE = salt.utils.napalm.get_device(__opts__)
     return DEVICE_CACHE
 
 
@@ -265,7 +266,7 @@ def username(proxy=None):
     '''
     Return the username.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example - select all devices using `foobar` as username for connection:
 
@@ -325,12 +326,12 @@ def host(proxy=None):
 
     .. note::
 
-        The diference betwen ``host`` and ``hostname`` is that
+        The diference between ``host`` and ``hostname`` is that
         ``host`` provides the physical location - either domain name or IP address,
         while ``hostname`` provides the hostname as configured on the device.
         They are not necessarily the same.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -355,6 +356,72 @@ def host(proxy=None):
         return {'host': _get_device_grain('hostname', proxy=proxy)}
 
 
+def host_dns(proxy=None):
+    '''
+    Return the DNS information of the host.
+    This grain is a dictionary having two keys:
+
+    - ``A``
+    - ``AAAA``
+
+    .. note::
+        This grain is disabled by default, as the proxy startup may be slower
+        when the lookup fails.
+        The user can enable it using the ``napalm_host_dns_grain`` option (in
+        the pillar or proxy configuration file):
+
+        .. code-block:: yaml
+
+            napalm_host_dns_grain: true
+
+    .. versionadded:: 2017.7.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'device*' grains.get host_dns
+
+    Output:
+
+    .. code-block:: yaml
+
+        device1:
+            A:
+                - 172.31.9.153
+            AAAA:
+                - fd52:188c:c068::1
+        device2:
+            A:
+                - 172.31.46.249
+            AAAA:
+                - fdca:3b17:31ab::17
+        device3:
+            A:
+                - 172.31.8.167
+            AAAA:
+                - fd0f:9fd6:5fab::1
+    '''
+    if not __opts__.get('napalm_host_dns_grain', False):
+        return
+    device_host = host(proxy=proxy)
+    if device_host:
+        device_host_value = device_host['host']
+        host_dns_ret = {
+            'host_dns': {
+                'A': [],
+                'AAAA': []
+            }
+        }
+        dns_a = salt.utils.dns.lookup(device_host_value, 'A')
+        if dns_a:
+            host_dns_ret['host_dns']['A'] = dns_a
+        dns_aaaa = salt.utils.dns.lookup(device_host_value, 'AAAA')
+        if dns_aaaa:
+            host_dns_ret['host_dns']['AAAA'] = dns_aaaa
+        return host_dns_ret
+
+
 def optional_args(proxy=None):
     '''
     Return the connection optional args.
@@ -363,7 +430,7 @@ def optional_args(proxy=None):
 
         Sensible data will not be returned.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example - select all devices connecting via port 1234:
 
@@ -380,8 +447,8 @@ def optional_args(proxy=None):
         device2:
             True
     '''
-    opt_args = _get_device_grain('optional_args', proxy=proxy)
-    if _FORBIDDEN_OPT_ARGS:
+    opt_args = _get_device_grain('optional_args', proxy=proxy) or {}
+    if opt_args and _FORBIDDEN_OPT_ARGS:
         for arg in _FORBIDDEN_OPT_ARGS:
             opt_args.pop(arg, None)
     return {'optional_args': opt_args}

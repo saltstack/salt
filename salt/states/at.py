@@ -5,7 +5,7 @@ Configuration disposable regularly scheduled tasks for at.
 
 The at state can be add disposable regularly scheduled tasks for your system.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
@@ -25,7 +25,8 @@ def __virtual__():
 
 def present(name, timespec, tag=None, user=None, job=None, unique_tag=False):
     '''
-    .. versionchanged:: nitrogen
+    .. versionchanged:: 2017.7.0
+
     Add a job to queue.
 
     job : string
@@ -43,7 +44,7 @@ def present(name, timespec, tag=None, user=None, job=None, unique_tag=False):
 
     unique_tag : boolean
         If set to True job will not be added if a job with the tag exists.
-        .. versionadded:: nitrogen
+        .. versionadded:: 2017.7.0
 
     .. code-block:: yaml
 
@@ -79,7 +80,7 @@ def present(name, timespec, tag=None, user=None, job=None, unique_tag=False):
             ret['result'] = False
             ret['comment'] = 'no tag provided and unique_tag is set to True'
             return ret
-        elif len(__salt__['at.jobcheck'](tag=tag)['jobs']) > 0:
+        elif __salt__['at.jobcheck'](tag=tag)['jobs']:
             ret['comment'] = 'atleast one job with tag {tag} exists.'.format(
                 tag=tag
             )
@@ -115,7 +116,7 @@ def present(name, timespec, tag=None, user=None, job=None, unique_tag=False):
         )
 
     # set ret['changes']
-    if 'jobs' in res and len(res['jobs']) > 0:
+    if res.get('jobs'):
         ret['changes'] = res['jobs'][0]
     if 'error' in res:
         ret['result'] = False
@@ -126,7 +127,8 @@ def present(name, timespec, tag=None, user=None, job=None, unique_tag=False):
 
 def absent(name, jobid=None, **kwargs):
     '''
-    .. versionchanged:: nitrogen
+    .. versionchanged:: 2017.7.0
+
     Remove a job from queue
 
     jobid: string|int
@@ -138,7 +140,7 @@ def absent(name, jobid=None, **kwargs):
     runas : string
         Runs user-specified jobs
 
-    **kwags : *
+    kwargs
         Addition kwargs can be provided to filter jobs.
         See output of `at.jobcheck` for more.
 
@@ -199,7 +201,7 @@ def absent(name, jobid=None, **kwargs):
     # remove specific job
     if jobid:
         jobs = __salt__['at.atq'](jobid)
-        if 'jobs' in jobs and len(jobs['jobs']) == 0:
+        if jobs.get('jobs'):
             ret['result'] = True
             ret['comment'] = 'job with id {jobid} not present'.format(
                 jobid=jobid
@@ -235,7 +237,7 @@ def absent(name, jobid=None, **kwargs):
         # arguments to filter with, removing everything!
         res = __salt__['at.atrm']('all')
 
-    if len(res['jobs']['removed']) > 0:
+    if res['jobs']['removed']:
         ret['changes']['removed'] = res['jobs']['removed']
     ret['comment'] = 'removed {count} job(s)'.format(
         count=len(res['jobs']['removed'])
@@ -245,7 +247,8 @@ def absent(name, jobid=None, **kwargs):
 
 def watch(name, timespec, tag=None, user=None, job=None, unique_tag=False):
     '''
-    .. versionadded:: nitrogen
+    .. versionadded:: 2017.7.0
+
     Add an at job if trigger by watch
 
     job : string
@@ -263,7 +266,7 @@ def watch(name, timespec, tag=None, user=None, job=None, unique_tag=False):
 
     unique_tag : boolean
         If set to True job will not be added if a job with the tag exists.
-        .. versionadded:: nitrogen
+        .. versionadded:: 2017.7.0
 
     .. code-block:: yaml
 
@@ -288,6 +291,12 @@ def watch(name, timespec, tag=None, user=None, job=None, unique_tag=False):
 def mod_watch(name, **kwargs):
     '''
     The at watcher, called to invoke the watch command.
+
+    .. note::
+        This state exists to support special handling of the ``watch``
+        :ref:`requisite <requisites>`. It should not be called directly.
+
+        Parameters for this function should be set by the state being triggered.
 
     name
         The name of the atjob

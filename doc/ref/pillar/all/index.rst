@@ -17,9 +17,11 @@ pillar modules
     confidant
     consul_pillar
     csvpillar
+    digicert
     django_orm
     ec2_pillar
     etcd_pillar
+    extra_minion_data_in_pillar
     file_tree
     foreman
     git_pillar
@@ -32,15 +34,20 @@ pillar modules
     makostack
     mongo
     mysql
+    nacl
+    netbox
     neutron
     nodegroups
+    nsot
     pepa
     pillar_ldap
     postgres
     puppet
     reclass_adapter
     redismod
+    rethinkdb_pillar
     s3
+    saltclass
     sql_base
     sqlcipher
     sqlite3
@@ -51,4 +58,3 @@ pillar modules
     venafi
     virtkey
     vmware_pillar
-

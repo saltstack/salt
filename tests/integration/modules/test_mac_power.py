@@ -3,21 +3,23 @@
 integration tests for mac_power
 '''
 
-# Import python libs
-from __future__ import absolute_import, print_function
+# Import Python libs
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import destructiveTest, skip_if_not_root, flaky
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.path
+import salt.utils.platform
 
 
 @skip_if_not_root
-@skipIf(not salt.utils.is_darwin(), 'Test only available on macOS')
-@skipIf(not salt.utils.which('systemsetup'), '\'systemsetup\' binary not found in $PATH')
+@flaky
+@skipIf(not salt.utils.platform.is_darwin(), 'Test only available on macOS')
+@skipIf(not salt.utils.path.which('systemsetup'), '\'systemsetup\' binary not found in $PATH')
 class MacPowerModuleTest(ModuleCase):
     '''
     Validate the mac_power module
@@ -140,8 +142,9 @@ class MacPowerModuleTest(ModuleCase):
 
 
 @skip_if_not_root
-@skipIf(not salt.utils.is_darwin(), 'Test only available on macOS')
-@skipIf(not salt.utils.which('systemsetup'), '\'systemsetup\' binary not found in $PATH')
+@flaky
+@skipIf(not salt.utils.platform.is_darwin(), 'Test only available on macOS')
+@skipIf(not salt.utils.path.which('systemsetup'), '\'systemsetup\' binary not found in $PATH')
 class MacPowerModuleTestSleepOnPowerButton(ModuleCase):
     '''
     Test power.get_sleep_on_power_button
@@ -190,8 +193,9 @@ class MacPowerModuleTestSleepOnPowerButton(ModuleCase):
 
 
 @skip_if_not_root
-@skipIf(not salt.utils.is_darwin(), 'Test only available on macOS')
-@skipIf(not salt.utils.which('systemsetup'), '\'systemsetup\' binary not found in $PATH')
+@flaky
+@skipIf(not salt.utils.platform.is_darwin(), 'Test only available on macOS')
+@skipIf(not salt.utils.path.which('systemsetup'), '\'systemsetup\' binary not found in $PATH')
 class MacPowerModuleTestRestartPowerFailure(ModuleCase):
     '''
     Test power.get_restart_power_failure
@@ -239,8 +243,9 @@ class MacPowerModuleTestRestartPowerFailure(ModuleCase):
 
 
 @skip_if_not_root
-@skipIf(not salt.utils.is_darwin(), 'Test only available on macOS')
-@skipIf(not salt.utils.which('systemsetup'), '\'systemsetup\' binary not found in $PATH')
+@flaky
+@skipIf(not salt.utils.platform.is_darwin(), 'Test only available on macOS')
+@skipIf(not salt.utils.path.which('systemsetup'), '\'systemsetup\' binary not found in $PATH')
 class MacPowerModuleTestWakeOnNet(ModuleCase):
     '''
     Test power.get_wake_on_network
@@ -285,8 +290,9 @@ class MacPowerModuleTestWakeOnNet(ModuleCase):
 
 
 @skip_if_not_root
-@skipIf(not salt.utils.is_darwin(), 'Test only available on macOS')
-@skipIf(not salt.utils.which('systemsetup'), '\'systemsetup\' binary not found in $PATH')
+@flaky
+@skipIf(not salt.utils.platform.is_darwin(), 'Test only available on macOS')
+@skipIf(not salt.utils.path.which('systemsetup'), '\'systemsetup\' binary not found in $PATH')
 class MacPowerModuleTestWakeOnModem(ModuleCase):
     '''
     Test power.get_wake_on_modem

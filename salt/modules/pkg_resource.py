@@ -4,18 +4,20 @@ Resources needed by pkg providers
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+import copy
 import fnmatch
 import logging
 import os
 import pprint
 
 # Import third party libs
-import yaml
-import salt.ext.six as six
+from salt.ext import six
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
+import salt.utils.versions
+import salt.utils.yaml
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -33,8 +35,8 @@ def _repack_pkgs(pkgs, normalize=True):
         _normalize_name = lambda pkgname: pkgname
     return dict(
         [
-            (_normalize_name(str(x)), str(y) if y is not None else y)
-            for x, y in six.iteritems(salt.utils.repack_dictlist(pkgs))
+            (_normalize_name(six.text_type(x)), six.text_type(y) if y is not None else y)
+            for x, y in six.iteritems(salt.utils.data.repack_dictlist(pkgs))
         ]
     )
 
@@ -70,14 +72,14 @@ def pack_sources(sources, normalize=True):
 
     if isinstance(sources, six.string_types):
         try:
-            sources = yaml.safe_load(sources)
-        except yaml.parser.ParserError as err:
+            sources = salt.utils.yaml.safe_load(sources)
+        except salt.utils.yaml.parser.ParserError as err:
             log.error(err)
             return {}
     ret = {}
     for source in sources:
         if (not isinstance(source, dict)) or len(source) != 1:
-            log.error('Invalid input: {0}'.format(pprint.pformat(sources)))
+            log.error('Invalid input: %s', pprint.pformat(sources))
             log.error('Input must be a list of 1-element dicts')
             return {}
         else:
@@ -104,16 +106,13 @@ def parse_targets(name=None,
         salt '*' pkg_resource.parse_targets
     '''
     if '__env__' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'__env__\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('__env__')
 
     if __grains__['os'] == 'MacOS' and sources:
         log.warning('Parameter "sources" ignored on MacOS hosts.')
+
+    version = kwargs.get('version')
 
     if pkgs and sources:
         log.error('Only one of "pkgs" and "sources" can be used.')
@@ -129,6 +128,9 @@ def parse_targets(name=None,
             return [name], 'advisory'
 
     elif pkgs:
+        if version is not None:
+            log.warning('\'version\' argument will be ignored for multiple '
+                        'package targets')
         pkgs = _repack_pkgs(pkgs, normalize=normalize)
         if not pkgs:
             return None, None
@@ -136,6 +138,9 @@ def parse_targets(name=None,
             return pkgs, 'repository'
 
     elif sources and __grains__['os'] != 'MacOS':
+        if version is not None:
+            log.warning('\'version\' argument will be ignored for multiple '
+                        'package targets')
         sources = pack_sources(sources, normalize=normalize)
         if not sources:
             return None, None
@@ -162,9 +167,9 @@ def parse_targets(name=None,
         if normalize:
             _normalize_name = \
                 __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
-            packed = dict([(_normalize_name(x), None) for x in name.split(',')])
+            packed = dict([(_normalize_name(x), version) for x in name.split(',')])
         else:
-            packed = dict([(x, None) for x in name.split(',')])
+            packed = dict([(x, version) for x in name.split(',')])
         return packed, 'repository'
 
     else:
@@ -186,9 +191,9 @@ def version(*names, **kwargs):
     '''
     ret = {}
     versions_as_list = \
-        salt.utils.is_true(kwargs.pop('versions_as_list', False))
+        salt.utils.data.is_true(kwargs.pop('versions_as_list', False))
     pkg_glob = False
-    if len(names) != 0:
+    if names:
         pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
         for name in names:
             if '*' in name:
@@ -298,3 +303,43 @@ def check_extra_requirements(pkgname, pkgver):
         return __salt__['pkg.check_extra_requirements'](pkgname, pkgver)
 
     return True
+
+
+def format_pkg_list(packages, versions_as_list, attr):
+    '''
+    Formats packages according to parameters for list_pkgs.
+    '''
+    ret = copy.deepcopy(packages)
+    if attr:
+        requested_attr = {'epoch', 'version', 'release', 'arch', 'install_date', 'install_date_time_t'}
+
+        if attr != 'all':
+            requested_attr &= set(attr + ['version'])
+
+        for name in ret:
+            versions = []
+            for all_attr in ret[name]:
+                filtered_attr = {}
+                for key in requested_attr:
+                    if all_attr[key]:
+                        filtered_attr[key] = all_attr[key]
+                versions.append(filtered_attr)
+            ret[name] = versions
+        return ret
+
+    for name in ret:
+        ret[name] = [format_version(d['epoch'], d['version'], d['release'])
+                     for d in ret[name]]
+    if not versions_as_list:
+        stringify(ret)
+    return ret
+
+
+def format_version(epoch, version, release):
+    '''
+    Formats a version string for list_pkgs.
+    '''
+    full_version = '{0}:{1}'.format(epoch, version) if epoch else version
+    if release:
+        full_version += '-{0}'.format(release)
+    return full_version

@@ -11,10 +11,14 @@ config or pillar:
 
 :depends: pypureomapi Python module
 '''
-from __future__ import absolute_import
+
 # Import python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import struct
+
+# Import salt libs
+import salt.utils.stringutils
 
 
 log = logging.getLogger(__name__)
@@ -46,6 +50,10 @@ def _conn():
             __opts__.get('omapi.key', None))
     username = __pillar__.get('omapi.user',
             __opts__.get('omapi.user', None))
+    if key:
+        key = salt.utils.stringutils.to_bytes(key)
+    if username:
+        username = salt.utils.stringutils.to_bytes(username)
     return omapi.Omapi(server_ip, server_port, username=username, key=key)
 
 
@@ -69,22 +77,22 @@ def add_host(mac, name=None, ip=None, ddns=False, group=None,
     statements = ''
     o = _conn()
     msg = omapi.OmapiMessage.open(b'host')
-    msg.message.append(('create', struct.pack('!I', 1)))
-    msg.message.append(('exclusive', struct.pack('!I', 1)))
-    msg.obj.append(('hardware-address', omapi.pack_mac(mac)))
-    msg.obj.append(('hardware-type', struct.pack('!I', 1)))
+    msg.message.append((b'create', struct.pack(b'!I', 1)))
+    msg.message.append((b'exclusive', struct.pack(b'!I', 1)))
+    msg.obj.append((b'hardware-address', omapi.pack_mac(mac)))
+    msg.obj.append((b'hardware-type', struct.pack(b'!I', 1)))
     if ip:
-        msg.obj.append(('ip-address', omapi.pack_ip(ip)))
+        msg.obj.append((b'ip-address', omapi.pack_ip(ip)))
     if name:
-        msg.obj.append(('name', name))
+        msg.obj.append((b'name', salt.utils.stringutils.to_bytes(name)))
     if group:
-        msg.obj.append(('group', group))
+        msg.obj.append((b'group', salt.utils.stringutils.to_bytes(group)))
     if supersede_host:
         statements += 'option host-name "{0}"; '.format(name)
     if ddns and name:
         statements += 'ddns-hostname "{0}"; '.format(name)
     if statements:
-        msg.obj.append(('statements', statements))
+        msg.obj.append((b'statements', salt.utils.stringutils.to_bytes(statements)))
     response = o.query_server(msg)
     if response.opcode != omapi.OMAPI_OP_UPDATE:
         return False
@@ -107,10 +115,10 @@ def delete_host(mac=None, name=None):
     o = _conn()
     msg = omapi.OmapiMessage.open(b'host')
     if mac:
-        msg.obj.append(('hardware-address', omapi.pack_mac(mac)))
-        msg.obj.append(('hardware-type', struct.pack('!I', 1)))
+        msg.obj.append((b'hardware-address', omapi.pack_mac(mac)))
+        msg.obj.append((b'hardware-type', struct.pack(b'!I', 1)))
     if name:
-        msg.obj.append(('name', name))
+        msg.obj.append((b'name', salt.utils.stringutils.to_bytes(name)))
     response = o.query_server(msg)
     if response.opcode != omapi.OMAPI_OP_UPDATE:
         return None

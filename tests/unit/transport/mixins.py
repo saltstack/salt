@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
 import salt.transport.client
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 class ReqChannelMixin(object):

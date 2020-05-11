@@ -4,7 +4,7 @@ This module contains the function calls to execute command line scripts
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 import time
@@ -20,6 +20,7 @@ from random import randint
 # Import salt libs
 from salt.exceptions import SaltSystemExit, SaltClientError, SaltReqTimeoutError
 import salt.defaults.exitcodes  # pylint: disable=unused-import
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -43,7 +44,12 @@ def _handle_interrupt(exc, original_exc, hardfail=False, trace=''):
 
 
 def _handle_signals(client, signum, sigframe):
-    trace = traceback.format_exc()
+    try:
+        # This raises AttributeError on Python 3.4 and 3.5 if there is no current exception.
+        # Ref: https://bugs.python.org/issue23003
+        trace = traceback.format_exc()
+    except AttributeError:
+        trace = ''
     try:
         hardcrash = client.options.hard_crash
     except (AttributeError, KeyError):
@@ -53,14 +59,22 @@ def _handle_signals(client, signum, sigframe):
         exit_msg = '\nExiting gracefully on Ctrl-c'
         try:
             jid = client.local_client.pub_data['jid']
+            target = client.local_client.target_data
             exit_msg += (
                 '\n'
                 'This job\'s jid is: {0}\n'
                 'The minions may not have all finished running and any remaining '
-                'minions will return upon completion. To look up the return data '
-                'for this job later, run the following command:\n\n'
+                'minions will return upon completion.\n\n'
+                'To look up the return data for this job later, run the '
+                'following command:\n'
                 'salt-run jobs.lookup_jid {0}'.format(jid)
             )
+            if target:
+                exit_msg += (
+                    '\n\n'
+                    'To set up the state run to safely exit, run the following command:\n'
+                    'salt {0} state.soft_kill {1}'.format(target, jid)
+                )
         except (AttributeError, KeyError):
             pass
     else:
@@ -88,6 +102,16 @@ def salt_master():
     Start the salt master.
     '''
     import salt.cli.daemons
+# REMOVEME after Python 2.7 support is dropped (also the six import)
+    if six.PY2:
+        from salt.utils.versions import warn_until
+        # Message borrowed from pip's deprecation warning
+        warn_until('Sodium',
+                   'Python 2.7 will reach the end of its life on January 1st,'
+                   ' 2020. Please upgrade your Python as Python 2.7 won\'t be'
+                   ' maintained after that date.  Salt will drop support for'
+                   ' Python 2.7 in the Sodium release or later.')
+# END REMOVEME
     master = salt.cli.daemons.Master()
     master.start()
 
@@ -96,15 +120,18 @@ def minion_process():
     '''
     Start a minion process
     '''
-    import salt.utils
+    import salt.utils.platform
+    import salt.utils.process
     import salt.cli.daemons
 
     # salt_minion spawns this function in a new process
 
-    salt.utils.appendproctitle('KeepAlive')
+    salt.utils.process.appendproctitle('KeepAlive')
 
     def handle_hup(manager, sig, frame):
         manager.minion.reload()
+
+    lock = threading.RLock()
 
     def suicide_when_without_parent(parent_pid):
         '''
@@ -113,39 +140,42 @@ def minion_process():
         NOTE: small race issue where the parent PID could be replace
         with another process with same PID!
         '''
-        while True:
+        while lock.acquire(blocking=False):
+            lock.release()
             time.sleep(5)
             try:
                 # check pid alive (Unix only trick!)
-                if os.getuid() == 0 and not salt.utils.is_windows():
+                if os.getuid() == 0 and not salt.utils.platform.is_windows():
                     os.kill(parent_pid, 0)
             except OSError as exc:
                 # forcibly exit, regular sys.exit raises an exception-- which
                 # isn't sufficient in a thread
-                log.error('Minion process encountered exception: {0}'.format(exc))
+                log.error('Minion process encountered exception: %s', exc)
                 os._exit(salt.defaults.exitcodes.EX_GENERIC)
 
-    if not salt.utils.is_windows():
-        thread = threading.Thread(target=suicide_when_without_parent, args=(os.getppid(),))
-        thread.start()
-
-    minion = salt.cli.daemons.Minion()
-    signal.signal(signal.SIGHUP,
-                  functools.partial(handle_hup,
-                                    minion))
-
     try:
+        if not salt.utils.platform.is_windows():
+            thread = threading.Thread(target=suicide_when_without_parent, args=(os.getppid(),))
+            thread.start()
+
+        minion = salt.cli.daemons.Minion()
+        signal.signal(signal.SIGHUP,
+                      functools.partial(handle_hup,
+                                        minion))
         minion.start()
     except (SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
+        lock.acquire(blocking=True)
         log.warning('Fatal functionality error caught by minion handler:\n', exc_info=True)
         log.warning('** Restarting minion **')
         delay = 60
         if minion is not None and hasattr(minion, 'config'):
             delay = minion.config.get('random_reauth_delay', 60)
         delay = randint(1, delay)
-        log.info('waiting random_reauth_delay {0}s'.format(delay))
+        log.info('waiting random_reauth_delay %ss', delay)
         time.sleep(delay)
         sys.exit(salt.defaults.exitcodes.SALT_KEEPALIVE)
+    finally:
+        lock.acquire(blocking=True)
 
 
 def salt_minion():
@@ -155,6 +185,7 @@ def salt_minion():
     '''
     import signal
 
+    import salt.utils.platform
     import salt.utils.process
     salt.utils.process.notify_systemd()
 
@@ -163,10 +194,20 @@ def salt_minion():
     if '' in sys.path:
         sys.path.remove('')
 
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         minion = salt.cli.daemons.Minion()
         minion.start()
         return
+# REMOVEME after Python 2.7 support is dropped (also the six import)
+    elif six.PY2:
+        from salt.utils.versions import warn_until
+        # Message borrowed from pip's deprecation warning
+        warn_until('Sodium',
+                   'Python 2.7 will reach the end of its life on January 1st,'
+                   ' 2020. Please upgrade your Python as Python 2.7 won\'t be'
+                   ' maintained after that date.  Salt will drop support for'
+                   ' Python 2.7 in the Sodium release or later.')
+# END REMOVEME
 
     if '--disable-keepalive' in sys.argv:
         sys.argv.remove('--disable-keepalive')
@@ -230,7 +271,10 @@ def proxy_minion_process(queue):
     Start a proxy minion process
     '''
     import salt.cli.daemons
+    import salt.utils.platform
     # salt_minion spawns this function in a new process
+
+    lock = threading.RLock()
 
     def suicide_when_without_parent(parent_pid):
         '''
@@ -239,7 +283,8 @@ def proxy_minion_process(queue):
         NOTE: there is a small race issue where the parent PID could be replace
         with another process with the same PID!
         '''
-        while True:
+        while lock.acquire(blocking=False):
+            lock.release()
             time.sleep(5)
             try:
                 # check pid alive (Unix only trick!)
@@ -249,14 +294,14 @@ def proxy_minion_process(queue):
                 # isn't sufficient in a thread
                 os._exit(999)
 
-    if not salt.utils.is_windows():
-        thread = threading.Thread(target=suicide_when_without_parent, args=(os.getppid(),))
-        thread.start()
-
-    restart = False
-    proxyminion = None
-    status = salt.defaults.exitcodes.EX_OK
     try:
+        if not salt.utils.platform.is_windows():
+            thread = threading.Thread(target=suicide_when_without_parent, args=(os.getppid(),))
+            thread.start()
+
+        restart = False
+        proxyminion = None
+        status = salt.defaults.exitcodes.EX_OK
         proxyminion = salt.cli.daemons.ProxyMinion()
         proxyminion.start()
     except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
@@ -267,6 +312,8 @@ def proxy_minion_process(queue):
     except SystemExit as exc:
         restart = False
         status = exc.code
+    finally:
+        lock.acquire(blocking=True)
 
     if restart is True:
         log.warning('** Restarting proxy minion **')
@@ -275,7 +322,7 @@ def proxy_minion_process(queue):
             if hasattr(proxyminion, 'config'):
                 delay = proxyminion.config.get('random_reauth_delay', 60)
         random_delay = randint(1, delay)
-        log.info('Sleeping random_reauth_delay of {0} seconds'.format(random_delay))
+        log.info('Sleeping random_reauth_delay of %s seconds', random_delay)
         # preform delay after minion resources have been cleaned
         queue.put(random_delay)
     else:
@@ -283,16 +330,17 @@ def proxy_minion_process(queue):
     sys.exit(status)
 
 
-def salt_proxy_minion():
+def salt_proxy():
     '''
     Start a proxy minion.
     '''
     import salt.cli.daemons
+    import salt.utils.platform
     import multiprocessing
     if '' in sys.path:
         sys.path.remove('')
 
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         proxyminion = salt.cli.daemons.ProxyMinion()
         proxyminion.start()
         return
@@ -440,7 +488,7 @@ def salt_cloud():
         import salt.cloud.cli
     except ImportError as e:
         # No salt cloud on Windows
-        log.error("Error importing salt cloud {0}".format(e))
+        log.error('Error importing salt cloud: %s', e)
         print('salt-cloud is not available in this system')
         sys.exit(salt.defaults.exitcodes.EX_UNAVAILABLE)
     if '' in sys.path:
@@ -499,3 +547,17 @@ def salt_extend(extension, name, description, salt_dir, merge):
                           description=description,
                           salt_dir=salt_dir,
                           merge=merge)
+
+
+def salt_support():
+    '''
+    Run Salt Support that collects system data, logs etc for debug and support purposes.
+    :return:
+    '''
+
+    import salt.cli.support.collector
+    if '' in sys.path:
+        sys.path.remove('')
+    client = salt.cli.support.collector.SaltSupport()
+    _install_signal_handlers(client)
+    client.run()

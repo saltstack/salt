@@ -2,13 +2,12 @@
 '''
 A runner to access data from the salt mine
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python Libs
 import logging
 
 # Import salt libs
-import salt.utils
 import salt.utils.minions
 
 log = logging.getLevelName(__name__)
@@ -34,6 +33,8 @@ def update(tgt,
            clear=False,
            mine_functions=None):
     '''
+    .. versionadded:: 2017.7.0
+
     Update the mine data on a certain group of minions.
 
     tgt

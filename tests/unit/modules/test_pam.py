@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import sys
 
 # Import Salt Testing Libs
@@ -34,7 +34,8 @@ class PamTestCase(TestCase):
         '''
         Test if the parsing function works
         '''
-        with patch('salt.utils.fopen', mock_open(read_data=MOCK_FILE)):
+        with patch('os.path.exists', return_value=True), \
+                patch('salt.utils.files.fopen', mock_open(read_data=MOCK_FILE)):
             self.assertListEqual(pam.read_file('/etc/pam.d/login'),
                                  [{'arguments': [], 'control_flag': 'ok',
                                    'interface': 'ok', 'module': 'ignore'}])

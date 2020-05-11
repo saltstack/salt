@@ -4,6 +4,8 @@ Minion data cache plugin for Consul key/value data store.
 
 .. versionadded:: 2016.11.2
 
+:depends: python-consul >= 0.2.0
+
 It is up to the system administrator to set up and configure the Consul
 infrastructure. All is needed for this plugin is a working Consul agent
 with a read-write access to the key-value store.
@@ -44,7 +46,7 @@ value to ``consul``:
 .. _`python-consul documentation`: https://python-consul.readthedocs.io/en/latest/#consul
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 try:
     import consul
@@ -61,7 +63,7 @@ api = None
 # Define the module's virtual name
 __virtualname__ = 'consul'
 
-__func_alias__ = {'ls': 'list'}
+__func_alias__ = {'list_': 'list'}
 
 
 def __virtual__():
@@ -81,8 +83,11 @@ def __virtual__():
             'verify': __opts__.get('consul.verify', True),
             }
 
-    global api
-    api = consul.Consul(**consul_kwargs)
+    try:
+        global api
+        api = consul.Consul(**consul_kwargs)
+    except AttributeError:
+        return (False, "Failed to invoke consul.Consul, please make sure you have python-consul >= 0.2.0 installed")
 
     return __virtualname__
 
@@ -139,7 +144,7 @@ def flush(bank, key=None):
         )
 
 
-def ls(bank):
+def list_(bank):
     '''
     Return an iterable object containing all entries stored in the specified bank.
     '''

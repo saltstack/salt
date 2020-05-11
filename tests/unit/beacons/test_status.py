@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2017 by the SaltStack Team, see AUTHORS for more details.
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
+    :copyright: Copyright 2017 by the SaltStack Team, see AUTHORS for more details.
 
 
     tests.unit.beacons.test_status
@@ -30,7 +30,7 @@ class StatusBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
 
     def setup_loader_modules(self):
-        opts = salt.config.DEFAULT_MINION_OPTS
+        opts = salt.config.DEFAULT_MINION_OPTS.copy()
         module_globals = {
             '__opts__': opts,
             '__salt__': 'autoload',
@@ -43,16 +43,29 @@ class StatusBeaconTestCase(TestCase, LoaderModuleMockMixin):
         }
 
     def test_empty_config(self, *args, **kwargs):
-        config = {}
+        config = []
+
+        ret = status.validate(config)
+        self.assertEqual(ret, (True, 'Valid beacon configuration'))
+
         ret = status.beacon(config)
-        self.assertEqual(sorted(list(ret[0]['data'])), sorted(['loadavg', 'meminfo', 'cpustats', 'vmstats', 'time']))
+        expected = sorted(['loadavg', 'meminfo', 'cpustats', 'vmstats', 'time'])
+
+        self.assertEqual(sorted(list(ret[0]['data'])), expected)
 
     def test_deprecated_dict_config(self):
         config = {'time': ['all']}
-        ret = status.beacon(config)
-        self.assertEqual(list(ret[0]['data']), ['time'])
+
+        ret = status.validate(config)
+        self.assertEqual(ret, (False, 'Configuration for status beacon must be a list.'))
 
     def test_list_config(self):
         config = [{'time': ['all']}]
+
+        ret = status.validate(config)
+        self.assertEqual(ret, (True, 'Valid beacon configuration'))
+
         ret = status.beacon(config)
-        self.assertEqual(list(ret[0]['data']), ['time'])
+        expected = ['time']
+
+        self.assertEqual(list(ret[0]['data']), expected)

@@ -24,7 +24,7 @@ the marathon endpoint:
 
 .. versionadded:: 2015.8.2
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import salt.utils.http
@@ -62,7 +62,7 @@ def ping():
             decode=True,
         )
         log.debug(
-            'marathon.info returned succesfully: %s',
+            'marathon.info returned successfully: %s',
             response,
         )
         if 'text' in response and response['text'].strip() == 'pong':

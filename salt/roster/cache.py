@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-The `cache` roster provides a flexible interface to the Salt Masters' minion cache
+The ``cache`` roster provides a flexible interface to the Salt Masters' minion cache
 to access regular minions over ``salt-ssh``.
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
     - grains, pillar, mine data matching
     - SDB URLs
@@ -93,17 +93,19 @@ This should be especially useful for the other roster keys:
             - ssh:auth:private_key
 
 '''
-from __future__ import absolute_import
 
-# Python
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import re
+import copy
 
-# Salt libs
+# Import Salt libs
+import salt.utils.data
 import salt.utils.minions
 import salt.cache
 from salt._compat import ipaddress
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -116,7 +118,8 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
     The resulting roster can be configured using ``roster_order`` and ``roster_default``.
     '''
     minions = salt.utils.minions.CkMinions(__opts__)
-    minions = minions.check_minions(tgt, tgt_type)
+    _res = minions.check_minions(tgt, tgt_type)
+    minions = _res['minions']
 
     ret = {}
     if not minions:
@@ -128,21 +131,6 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
     roster_order = __opts__.get('roster_order', {
         'host': ('ipv6-private', 'ipv6-global', 'ipv4-private', 'ipv4-public')
     })
-    if isinstance(roster_order, (tuple, list)):
-        salt.utils.warn_until('Oxygen',
-                              'Using legacy syntax for roster_order')
-        roster_order = {
-            'host': roster_order
-        }
-    for config_key, order in roster_order.items():
-        for idx, key in enumerate(order):
-            if key in ('public', 'private', 'local'):
-                salt.utils.warn_until('Oxygen',
-                                      'roster_order {0} will include IPv6 soon. '
-                                      'Set order to ipv4-{0} if needed.'.format(key))
-                order[idx] = 'ipv4-' + key
-
-    # log.debug(roster_order)
 
     ret = {}
     for minion_id in minions:
@@ -151,7 +139,7 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
         except LookupError:
             continue
 
-        minion_res = __opts__.get('roster_defaults', {}).copy()
+        minion_res = copy.deepcopy(__opts__.get('roster_defaults', {}))
         for param, order in roster_order.items():
             if not isinstance(order, (list, tuple)):
                 order = [order]
@@ -164,9 +152,9 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
         if 'host' in minion_res:
             ret[minion_id] = minion_res
         else:
-            log.warning('Could not determine host information for minion {0}'.format(minion_id))
+            log.warning('Could not determine host information for minion %s', minion_id)
 
-    log.debug('Roster lookup result: {0}'.format(ret))
+    log.debug('Roster lookup result: %s', ret)
 
     return ret
 
@@ -175,15 +163,15 @@ def _load_minion(minion_id, cache):
     data_minion, grains, pillar = salt.utils.minions.get_minion_data(minion_id, __opts__)
 
     if minion_id != data_minion:
-        log.error('Asked for minion {0}, got {1}'.format(minion_id, data_minion))
+        log.error('Asked for minion %s, got %s', minion_id, data_minion)
         raise LookupError
 
     if not grains:
-        log.warning('No grain data for minion id {0}'.format(minion_id))
+        log.warning('No grain data for minion id %s', minion_id)
         grains = {}
 
     if not pillar:
-        log.warning('No pillar data for minion id {0}'.format(minion_id))
+        log.warning('No pillar data for minion id %s', minion_id)
         pillar = {}
 
     addrs = {
@@ -202,8 +190,8 @@ def _data_lookup(ref, lookup):
 
     res = []
     for data_key in lookup:
-        data = salt.utils.traverse_dict_and_list(ref, data_key, None)
-        # log.debug('Fetched {0} in {1}: {2}'.format(data_key, ref, data))
+        data = salt.utils.data.traverse_dict_and_list(ref, data_key, None)
+        # log.debug('Fetched %s in %s: %s', data_key, ref, data)
         if data:
             res.append(data)
 
@@ -238,12 +226,12 @@ def _minion_lookup(minion_id, key, minion):
         try:
             net = ipaddress.ip_network(key, strict=True)
         except ValueError:
-            log.error('{0} is an invalid CIDR network'.format(net))
+            log.error('%s is an invalid CIDR network', net)
             return None
 
         for addr in addrs[net.version]:
             if addr in net:
-                return str(addr)
+                return six.text_type(addr)
     else:
         # Take the addresses from the grains and filter them
         filters = {
@@ -262,6 +250,6 @@ def _minion_lookup(minion_id, key, minion):
             try:
                 for addr in addrs[ip_ver]:
                     if filters[key](addr):
-                        return str(addr)
+                        return six.text_type(addr)
             except KeyError:
                 raise KeyError('Invalid filter {0} specified in roster_order'.format(key))

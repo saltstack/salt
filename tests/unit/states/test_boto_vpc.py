@@ -1,23 +1,25 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import random
 import string
+import os.path
+import sys
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.runtests import RUNTIME_VARS
+
 
 # Import Salt libs
 import salt.config
-import salt.loader
-import salt.utils.boto
+import salt.utils.botomod as botomod
+from salt.ext import six
 from salt.utils.versions import LooseVersion
 import salt.states.boto_vpc as boto_vpc
-
-# Import test suite libs
 
 # pylint: disable=import-error,unused-import
 from tests.unit.modules.test_boto_vpc import BotoVpcTestCaseMixin
@@ -26,6 +28,7 @@ from tests.unit.modules.test_boto_vpc import BotoVpcTestCaseMixin
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 try:
     import boto
+    boto.ENDPOINTS_PATH = os.path.join(RUNTIME_VARS.TESTS_DIR, 'unit/files/endpoints.json')
     import boto3
     from boto.exception import BotoServerError
 
@@ -34,18 +37,18 @@ except ImportError:
     HAS_BOTO = False
 
 try:
-    from moto import mock_ec2
+    from moto import mock_ec2_deprecated
 
     HAS_MOTO = True
 except ImportError:
     HAS_MOTO = False
 
-    def mock_ec2(self):
+    def mock_ec2_deprecated(self):
         '''
-        if the mock_ec2 function is not available due to import failure
+        if the mock_ec2_deprecated function is not available due to import failure
         this replaces the decorated function with stub_function.
-        Allows boto_vpc unit tests to use the @mock_ec2 decorator
-        without a "NameError: name 'mock_ec2' is not defined" error.
+        Allows boto_vpc unit tests to use the @mock_ec2_deprecated decorator
+        without a "NameError: name 'mock_ec2_deprecated' is not defined" error.
         '''
 
         def stub_function(self):
@@ -86,7 +89,10 @@ def _has_required_boto():
 class BotoVpcStateTestCaseBase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         ctx = {}
-        utils = salt.loader.utils(self.opts, whitelist=['boto', 'boto3'], context=ctx)
+        utils = salt.loader.utils(
+            self.opts,
+            whitelist=['boto', 'boto3', 'args', 'systemd', 'path', 'platform'],
+            context=ctx)
         serializers = salt.loader.serializers(self.opts)
         self.funcs = salt.loader.minion_mods(self.opts, context=ctx, utils=utils, whitelist=['boto_vpc', 'config'])
         self.salt_states = salt.loader.states(opts=self.opts, functions=self.funcs, utils=utils, whitelist=['boto_vpc'],
@@ -99,12 +105,12 @@ class BotoVpcStateTestCaseBase(TestCase, LoaderModuleMockMixin):
                 '__states__': self.salt_states,
                 '__serializers__': serializers,
             },
-            salt.utils.boto: {}
+            botomod: {}
         }
 
     @classmethod
     def setUpClass(cls):
-        cls.opts = salt.config.DEFAULT_MINION_OPTS
+        cls.opts = salt.config.DEFAULT_MINION_OPTS.copy()
         cls.opts['grains'] = salt.loader.grains(cls.opts)
 
     @classmethod
@@ -131,25 +137,27 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
     TestCase for salt.states.boto_vpc state.module
     '''
 
-    @mock_ec2
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
+    @mock_ec2_deprecated
     def test_present_when_vpc_does_not_exist(self):
         '''
         Tests present on a VPC that does not exist.
         '''
-        with patch.dict(salt.utils.boto.__salt__, self.funcs):
+        with patch.dict(botomod.__salt__, self.funcs):
             vpc_present_result = self.salt_states['boto_vpc.present']('test', cidr_block)
 
         self.assertTrue(vpc_present_result['result'])
         self.assertEqual(vpc_present_result['changes']['new']['vpc']['state'], 'available')
 
-    @mock_ec2
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
+    @mock_ec2_deprecated
     def test_present_when_vpc_exists(self):
         vpc = self._create_vpc(name='test')
         vpc_present_result = self.salt_states['boto_vpc.present']('test', cidr_block)
         self.assertTrue(vpc_present_result['result'])
         self.assertEqual(vpc_present_result['changes'], {})
 
-    @mock_ec2
+    @mock_ec2_deprecated
     @skipIf(True, 'Disabled pending https://github.com/spulec/moto/issues/493')
     def test_present_with_failure(self):
         with patch('moto.ec2.models.VPCBackend.create_vpc', side_effect=BotoServerError(400, 'Mocked error')):
@@ -157,25 +165,27 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
             self.assertFalse(vpc_present_result['result'])
             self.assertTrue('Mocked error' in vpc_present_result['comment'])
 
-    @mock_ec2
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
+    @mock_ec2_deprecated
     def test_absent_when_vpc_does_not_exist(self):
         '''
         Tests absent on a VPC that does not exist.
         '''
-        with patch.dict(salt.utils.boto.__salt__, self.funcs):
+        with patch.dict(botomod.__salt__, self.funcs):
             vpc_absent_result = self.salt_states['boto_vpc.absent']('test')
         self.assertTrue(vpc_absent_result['result'])
         self.assertEqual(vpc_absent_result['changes'], {})
 
-    @mock_ec2
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
+    @mock_ec2_deprecated
     def test_absent_when_vpc_exists(self):
         vpc = self._create_vpc(name='test')
-        with patch.dict(salt.utils.boto.__salt__, self.funcs):
+        with patch.dict(botomod.__salt__, self.funcs):
             vpc_absent_result = self.salt_states['boto_vpc.absent']('test')
         self.assertTrue(vpc_absent_result['result'])
         self.assertEqual(vpc_absent_result['changes']['new']['vpc'], None)
 
-    @mock_ec2
+    @mock_ec2_deprecated
     @skipIf(True, 'Disabled pending https://github.com/spulec/moto/issues/493')
     def test_absent_with_failure(self):
         vpc = self._create_vpc(name='test')
@@ -195,13 +205,14 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         _create = getattr(self, '_create_' + self.resource_type)
         _create(vpc_id=vpc_id, name=name, **self.extra_kwargs)
 
-    @mock_ec2
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
+    @mock_ec2_deprecated
     def test_present_when_resource_does_not_exist(self):
         '''
         Tests present on a resource that does not exist.
         '''
         vpc = self._create_vpc(name='test')
-        with patch.dict(salt.utils.boto.__salt__, self.funcs):
+        with patch.dict(botomod.__salt__, self.funcs):
             resource_present_result = self.salt_states['boto_vpc.{0}_present'.format(self.resource_type)](
                 name='test', vpc_name='test', **self.extra_kwargs)
 
@@ -210,17 +221,18 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         exists = self.funcs['boto_vpc.resource_exists'](self.resource_type, 'test').get('exists')
         self.assertTrue(exists)
 
-    @mock_ec2
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
+    @mock_ec2_deprecated
     def test_present_when_resource_exists(self):
         vpc = self._create_vpc(name='test')
         resource = self._create_resource(vpc_id=vpc.id, name='test')
-        with patch.dict(salt.utils.boto.__salt__, self.funcs):
+        with patch.dict(botomod.__salt__, self.funcs):
             resource_present_result = self.salt_states['boto_vpc.{0}_present'.format(self.resource_type)](
                     name='test', vpc_name='test', **self.extra_kwargs)
         self.assertTrue(resource_present_result['result'])
         self.assertEqual(resource_present_result['changes'], {})
 
-    @mock_ec2
+    @mock_ec2_deprecated
     @skipIf(True, 'Disabled pending https://github.com/spulec/moto/issues/493')
     def test_present_with_failure(self):
         vpc = self._create_vpc(name='test')
@@ -231,29 +243,31 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
             self.assertFalse(resource_present_result['result'])
             self.assertTrue('Mocked error' in resource_present_result['comment'])
 
-    @mock_ec2
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
+    @mock_ec2_deprecated
     def test_absent_when_resource_does_not_exist(self):
         '''
         Tests absent on a resource that does not exist.
         '''
-        with patch.dict(salt.utils.boto.__salt__, self.funcs):
+        with patch.dict(botomod.__salt__, self.funcs):
             resource_absent_result = self.salt_states['boto_vpc.{0}_absent'.format(self.resource_type)]('test')
         self.assertTrue(resource_absent_result['result'])
         self.assertEqual(resource_absent_result['changes'], {})
 
-    @mock_ec2
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
+    @mock_ec2_deprecated
     def test_absent_when_resource_exists(self):
         vpc = self._create_vpc(name='test')
         self._create_resource(vpc_id=vpc.id, name='test')
 
-        with patch.dict(salt.utils.boto.__salt__, self.funcs):
+        with patch.dict(botomod.__salt__, self.funcs):
             resource_absent_result = self.salt_states['boto_vpc.{0}_absent'.format(self.resource_type)]('test')
         self.assertTrue(resource_absent_result['result'])
         self.assertEqual(resource_absent_result['changes']['new'][self.resource_type], None)
         exists = self.funcs['boto_vpc.resource_exists'](self.resource_type, 'test').get('exists')
         self.assertFalse(exists)
 
-    @mock_ec2
+    @mock_ec2_deprecated
     @skipIf(True, 'Disabled pending https://github.com/spulec/moto/issues/493')
     def test_absent_with_failure(self):
         vpc = self._create_vpc(name='test')
@@ -291,6 +305,9 @@ class BotoVpcInternetGatewayTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTe
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(six.PY3, 'Disabled for Python 3 due to upstream bugs: '
+                 'https://github.com/spulec/moto/issues/548 and '
+                 'https://github.com/gabrielfalcao/HTTPretty/issues/325')
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
@@ -301,7 +318,7 @@ class BotoVpcRouteTableTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCas
     backend_create = 'RouteTableBackend.create_route_table'
     backend_delete = 'RouteTableBackend.delete_route_table'
 
-    @mock_ec2
+    @mock_ec2_deprecated
     def test_present_with_subnets(self):
         vpc = self._create_vpc(name='test')
         subnet1 = self._create_subnet(vpc_id=vpc.id, name='test1')
@@ -326,12 +343,12 @@ class BotoVpcRouteTableTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCas
         new_subnets = changes['new']['subnets_associations']
         self.assertEqual(new_subnets[0]['subnet_id'], subnet2.id)
 
-    @mock_ec2
+    @mock_ec2_deprecated
     def test_present_with_routes(self):
         vpc = self._create_vpc(name='test')
         igw = self._create_internet_gateway(name='test', vpc_id=vpc.id)
 
-        with patch.dict(salt.utils.boto.__salt__, self.funcs):
+        with patch.dict(botomod.__salt__, self.funcs):
             route_table_present_result = self.salt_states['boto_vpc.route_table_present'](
                     name='test', vpc_name='test', routes=[{'destination_cidr_block': '0.0.0.0/0',
                                                            'gateway_id': igw.id},

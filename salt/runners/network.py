@@ -4,13 +4,14 @@ Network tools to run from the Master
 '''
 
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import socket
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.network
+import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
 
@@ -30,10 +31,11 @@ def wollist(maclist, bcast='255.255.255.255', destport=9):
     '''
     ret = []
     try:
-        with salt.utils.fopen(maclist, 'r') as ifile:
+        with salt.utils.files.fopen(maclist, 'r') as ifile:
             for mac in ifile:
-                wol(mac.strip(), bcast, destport)
-                print('Waking up {0}'.format(mac.strip()))
+                mac = salt.utils.stringutils.to_unicode(mac).strip()
+                wol(mac, bcast, destport)
+                print('Waking up {0}'.format(mac))
                 ret.append(mac)
     except Exception as err:
         __jid_event__.fire_event({'error': 'Failed to open the MAC file. Error: {0}'.format(err)}, 'progress')
@@ -53,7 +55,7 @@ def wol(mac, bcast='255.255.255.255', destport=9):
         salt-run network.wol 080027136977 255.255.255.255 7
         salt-run network.wol 08:00:27:13:69:77 255.255.255.255 7
     '''
-    dest = salt.utils.mac_str_to_bytes(mac)
+    dest = salt.utils.network.mac_str_to_bytes(mac)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     sock.sendto(b'\xff' * 6 + dest * 16, (bcast, int(destport)))
@@ -77,7 +79,8 @@ def wolmatch(tgt, tgt_type='glob', bcast='255.255.255.255', destport=9):
         for iface, mac in minion['hwaddr_interfaces'].items():
             if iface == 'lo':
                 continue
+            mac = mac.strip()
             wol(mac, bcast, destport)
-            log.info('Waking up {0}'.format(mac.strip()))
+            log.info('Waking up %s', mac)
             ret.append(mac)
     return ret

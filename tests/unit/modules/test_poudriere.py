@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 
 # Import Python Libs
@@ -50,10 +50,12 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it make jail ``jname`` pkgng aware.
         '''
-        ret1 = 'Could not create or find required directory /tmp/salt'
-        ret2 = 'Looks like file /tmp/salt/salt-make.conf could not be created'
-        ret3 = {'changes': 'Created /tmp/salt/salt-make.conf'}
-        mock = MagicMock(return_value='/tmp/salt')
+        temp_dir = os.path.join('tmp', 'salt')
+        conf_file = os.path.join('tmp', 'salt', 'salt-make.conf')
+        ret1 = 'Could not create or find required directory {0}'.format(temp_dir)
+        ret2 = 'Looks like file {0} could not be created'.format(conf_file)
+        ret3 = {'changes': 'Created {0}'.format(conf_file)}
+        mock = MagicMock(return_value=temp_dir)
         mock_true = MagicMock(return_value=True)
         with patch.dict(poudriere.__salt__, {'config.option': mock,
                                              'file.write': mock_true}):
@@ -76,7 +78,7 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='/tmp/salt')
         with patch.dict(poudriere.__salt__, {'config.option': mock}), \
-                patch('salt.utils.fopen', mock_open()), \
+                patch('salt.utils.files.fopen', mock_open()), \
                 patch.object(poudriere, '_check_config_exists',
                               MagicMock(side_effect=[True, False])):
             self.assertDictEqual(poudriere.parse_config(), {})

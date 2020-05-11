@@ -30,13 +30,16 @@ Execution modules are also available to salt runners:
 
 '''
 # import python libs
-from __future__ import absolute_import
-from __future__ import print_function
+from __future__ import absolute_import, print_function, unicode_literals
+import copy
 import logging
 
 # import salt libs
 import salt.client
-from salt.loader import minion_mods, utils
+import salt.loader
+import salt.pillar
+import salt.utils.args
+import salt.utils.minions
 from salt.exceptions import SaltClientError
 
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -44,12 +47,29 @@ log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 def cmd(fun, *args, **kwargs):
     '''
-    Execute ``fun`` with the given ``args`` and ``kwargs``.
-    Parameter ``fun`` should be the string :ref:`name <all-salt.modules>`
-    of the execution module to call.
+    .. versionchanged:: 2018.3.0
+        Added ``with_pillar`` argument
 
-    Note that execution modules will be *loaded every time*
-    this function is called.
+    Execute ``fun`` with the given ``args`` and ``kwargs``.  Parameter ``fun``
+    should be the string :ref:`name <all-salt.modules>` of the execution module
+    to call.
+
+    .. note::
+        Execution modules will be loaded *every time* this function is called.
+        Additionally, keep in mind that since runners execute on the master,
+        custom execution modules will need to be synced to the master using
+        :py:func:`salt-run saltutil.sync_modules
+        <salt.runners.saltutil.sync_modules>`, otherwise they will not be
+        available.
+
+    with_pillar : False
+        If ``True``, pillar data will be compiled for the master
+
+        .. note::
+            To target the master in the pillar top file, keep in mind that the
+            default ``id`` for the master is ``<hostname>_master``. This can be
+            overridden by setting an ``id`` configuration parameter in the
+            master config file.
 
     CLI example:
 
@@ -58,15 +78,40 @@ def cmd(fun, *args, **kwargs):
         salt-run salt.cmd test.ping
         # call functions with arguments and keyword arguments
         salt-run salt.cmd test.arg 1 2 3 a=1
+        salt-run salt.cmd mymod.myfunc with_pillar=True
     '''
     log.debug('Called salt.cmd runner with minion function %s', fun)
 
-    kws = dict((k, v) for k, v in kwargs.items() if not k.startswith('__'))
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    with_pillar = kwargs.pop('with_pillar', False)
 
-    # pylint: disable=undefined-variable
-    return minion_mods(
-        __opts__,
-        utils=utils(__opts__)).get(fun)(*args, **kws)
+    opts = copy.deepcopy(__opts__)
+    # try to only load grains if we need to, it may already exist from other contexts (e.g., pillar)
+    if 'grains' not in opts:
+        _, grains, _ = salt.utils.minions.get_minion_data(__opts__['id'], __opts__)
+        if grains:
+            opts['grains'] = grains
+        else:
+            opts['grains'] = salt.loader.grains(opts)
+
+    if with_pillar:
+        opts['pillar'] = salt.pillar.get_pillar(
+            opts,
+            opts['grains'],
+            opts['id'],
+            saltenv=opts['saltenv'],
+            pillarenv=opts.get('pillarenv')).compile_pillar()
+    else:
+        opts['pillar'] = {}
+
+    functions = salt.loader.minion_mods(
+        opts,
+        utils=salt.loader.utils(opts),
+        context=__context__)
+
+    return functions[fun](*args, **kwargs) \
+        if fun in functions \
+        else '\'{0}\' is not available.'.format(fun)
 
 
 def execute(tgt,
@@ -79,7 +124,7 @@ def execute(tgt,
             kwarg=None,
             **kwargs):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Execute ``fun`` on all minions matched by ``tgt`` and ``tgt_type``.
     Parameter ``fun`` is the name of execution module function to call.
@@ -115,15 +160,13 @@ def execute(tgt,
                          fun,
                          arg=arg,
                          timeout=timeout or __opts__['timeout'],
-                         tgt_type=tgt_type,  # no warn_until, as this is introduced only in Nitrogen
+                         tgt_type=tgt_type,  # no warn_until, as this is introduced only in 2017.7.0
                          ret=ret,
                          jid=jid,
                          kwarg=kwarg,
                          **kwargs)
     except SaltClientError as client_error:
-        log.error('Error while executing {fun} on {tgt} ({tgt_type})'.format(fun=fun,
-                                                                             tgt=tgt,
-                                                                             tgt_type=tgt_type))
+        log.error('Error while executing %s on %s (%s)', fun, tgt, tgt_type)
         log.error(client_error)
         return {}
     return ret

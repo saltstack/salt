@@ -8,11 +8,11 @@ import tempfile
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
-from tests.support.mock import patch
+from tests.support.mock import patch, MagicMock
 from tests.support.helpers import destructiveTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 import salt.config
-import salt.utils
+import salt.utils.files
 import salt.spm
 
 _F1 = {
@@ -100,26 +100,32 @@ class SPMTest(TestCase, AdaptedConfigurationTestCaseMixin):
             dirname, _ = os.path.split(path)
             if not os.path.exists(dirname):
                 os.makedirs(dirname)
-            with salt.utils.fopen(path, 'w') as f:
+            with salt.utils.files.fopen(path, 'w') as f:
                 f.write(contents)
         return fdir
 
     def test_build_install(self):
         # Build package
         fdir = self._create_formula_files(_F1)
-        self.client.run(['build', fdir])
+        with patch('salt.client.Caller', MagicMock(return_value=self.minion_opts)):
+            with patch('salt.client.get_local_client', MagicMock(return_value=self.minion_opts['conf_file'])):
+                self.client.run(['build', fdir])
         pkgpath = self.ui._status[-1].split()[-1]
         assert os.path.exists(pkgpath)
         # Install package
-        self.client.run(['local', 'install', pkgpath])
+        with patch('salt.client.Caller', MagicMock(return_value=self.minion_opts)):
+            with patch('salt.client.get_local_client', MagicMock(return_value=self.minion_opts['conf_file'])):
+                self.client.run(['local', 'install', pkgpath])
         # Check filesystem
         for path, contents in _F1['contents']:
             path = os.path.join(self.minion_config['file_roots']['base'][0], _F1['definition']['name'], path)
             assert os.path.exists(path)
-            with salt.utils.fopen(path, 'r') as rfh:
+            with salt.utils.files.fopen(path, 'r') as rfh:
                 assert rfh.read() == contents
         # Check database
-        self.client.run(['info', _F1['definition']['name']])
+        with patch('salt.client.Caller', MagicMock(return_value=self.minion_opts)):
+            with patch('salt.client.get_local_client', MagicMock(return_value=self.minion_opts['conf_file'])):
+                self.client.run(['info', _F1['definition']['name']])
         lines = self.ui._status[-1].split('\n')
         for key, line in (
                 ('name', 'Name: {0}'),
@@ -129,13 +135,17 @@ class SPMTest(TestCase, AdaptedConfigurationTestCaseMixin):
             assert line.format(_F1['definition'][key]) in lines
         # Reinstall with force=False, should fail
         self.ui._error = []
-        self.client.run(['local', 'install', pkgpath])
-        assert len(self.ui._error) > 0
+        with patch('salt.client.Caller', MagicMock(return_value=self.minion_opts)):
+            with patch('salt.client.get_local_client', MagicMock(return_value=self.minion_opts['conf_file'])):
+                self.client.run(['local', 'install', pkgpath])
+        assert self.ui._error
         # Reinstall with force=True, should succeed
         with patch.dict(self.minion_config, {'force': True}):
             self.ui._error = []
-            self.client.run(['local', 'install', pkgpath])
-            assert len(self.ui._error) == 0
+            with patch('salt.client.Caller', MagicMock(return_value=self.minion_opts)):
+                with patch('salt.client.get_local_client', MagicMock(return_value=self.minion_opts['conf_file'])):
+                    self.client.run(['local', 'install', pkgpath])
+            assert not self.ui._error
 
     def test_failure_paths(self):
         fail_args = (
@@ -166,5 +176,7 @@ class SPMTest(TestCase, AdaptedConfigurationTestCaseMixin):
 
         for args in fail_args:
             self.ui._error = []
-            self.client.run(args)
-            assert len(self.ui._error) > 0
+            with patch('salt.client.Caller', MagicMock(return_value=self.minion_opts)):
+                with patch('salt.client.get_local_client', MagicMock(return_value=self.minion_opts['conf_file'])):
+                    self.client.run(args)
+            assert self.ui._error

@@ -7,13 +7,13 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import time
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
-from tests.support.paths import TMP
 from tests.support.unit import skipIf
 
 # Import salt libs
@@ -32,11 +32,13 @@ class LoaderGrainsTest(ModuleCase):
     #    self.opts['grains'] = grains(self.opts)
 
     def test_grains_overwrite(self):
+        # Force a grains sync
+        self.run_function('saltutil.sync_grains')
         # To avoid a race condition on Windows, we need to make sure the
         # `test_custom_grain2.py` file is present in the _grains directory
         # before trying to get the grains. This test may execute before the
         # minion has finished syncing down the files it needs.
-        module = os.path.join(TMP, 'rootdir', 'cache', 'files',
+        module = os.path.join(RUNTIME_VARS.TMP, 'rootdir', 'cache', 'files',
                               'base', '_grains', 'test_custom_grain2.py')
         tries = 0
         while not os.path.exists(module):

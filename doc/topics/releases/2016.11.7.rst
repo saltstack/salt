@@ -1,0 +1,17 @@
+============================
+Salt 2016.11.7 Release Notes
+============================
+
+Version 2016.11.7 is a bugfix release for :ref:`2016.11.0 <release-2016-11-0>`.
+
+Security Fix
+============
+
+**CVE-2017-12791** Maliciously crafted minion IDs can cause unwanted directory
+traversals on the Salt-master
+
+This release corrects a flaw in minion ID validation which could allow certain
+minions to authenticate to a master despite not having the correct credentials.
+To exploit the vulnerability, an attacker must create a salt-minion with an ID
+containing characters that will cause a directory traversal. Credit for
+discovering the security flaw goes to: Vernhk@qq.com

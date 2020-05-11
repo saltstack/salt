@@ -2,29 +2,26 @@
 '''
 Module for sending messages to Mattermost
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :configuration: This module can be used by either passing an api_url and hook
     directly or by specifying both in a configuration profile in the salt
-    master/minion config.
-    For example:
+    master/minion config. For example:
+
     .. code-block:: yaml
+
         mattermost:
           hook: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
           api_url: https://example.com
 '''
 
 # Import Python libs
-from __future__ import absolute_import
-import json
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
-# Import 3rd-party libs
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-
+# Import Salt libs
+import salt.utils.json
 import salt.utils.mattermost
-# pylint: enable=import-error,no-name-in-module
-
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -35,6 +32,7 @@ __virtualname__ = 'mattermost'
 def __virtual__():
     '''
     Return virtual name of the module.
+
     :return: The virtual name of the module.
     '''
     return __virtualname__
@@ -43,6 +41,7 @@ def __virtual__():
 def _get_hook():
     '''
     Retrieves and return the Mattermost's configured hook
+
     :return:            String: the hook string
     '''
     hook = __salt__['config.get']('mattermost.hook') or \
@@ -56,6 +55,7 @@ def _get_hook():
 def _get_api_url():
     '''
     Retrieves and return the Mattermost's configured api url
+
     :return:            String: the api url string
     '''
     api_url = __salt__['config.get']('mattermost.api_url') or \
@@ -69,6 +69,7 @@ def _get_api_url():
 def _get_channel():
     '''
     Retrieves the Mattermost's configured channel
+
     :return:            String: the channel string
     '''
     channel = __salt__['config.get']('mattermost.channel') or \
@@ -80,6 +81,7 @@ def _get_channel():
 def _get_username():
     '''
     Retrieves the Mattermost's configured username
+
     :return:            String: the username string
     '''
     username = __salt__['config.get']('mattermost.username') or \
@@ -95,15 +97,19 @@ def post_message(message,
                  hook=None):
     '''
     Send a message to a Mattermost channel.
+
     :param channel:     The channel name, either will work.
     :param username:    The username of the poster.
     :param message:     The message to send to the Mattermost channel.
     :param api_url:     The Mattermost api url, if not specified in the configuration.
     :param hook:        The Mattermost hook, if not specified in the configuration.
     :return:            Boolean if message was sent successfully.
+
     CLI Example:
+
     .. code-block:: bash
-        salt '*' mattermost.post_message message='Build is done"
+
+        salt '*' mattermost.post_message message='Build is done'
     '''
     if not api_url:
         api_url = _get_api_url()
@@ -126,9 +132,8 @@ def post_message(message,
     if username:
         parameters['username'] = username
     parameters['text'] = '```' + message + '```'  # pre-formatted, fixed-width text
-    log.debug('Parameters: {0}'.format(parameters))
-    result = salt.utils.mattermost.query(api_url=api_url,
-                                         hook=hook,
-                                         data='payload={0}'.format(json.dumps(parameters)))
+    log.debug('Parameters: %s', parameters)
+    data = str('payload={0}').format(salt.utils.json.dumps(parameters))  # pylint: disable=blacklisted-function
+    result = salt.utils.mattermost.query(api_url=api_url, hook=hook, data=data)
 
     return bool(result)

@@ -13,17 +13,17 @@
 
 _salt_get_grains(){
     if [ "$1" = 'local' ] ; then
-        salt-call --out=txt -- grains.ls | sed  's/^.*\[//' | tr -d ",']" |sed 's:\([a-z0-9]\) :\1\: :g'
+        salt-call --log-level=error --out=txt -- grains.ls | sed  's/^.*\[//' | tr -d ",']" |sed 's:\([a-z0-9]\) :\1\: :g'
     else
-      salt '*' --timeout 2 --hide-timeout --out=txt -- grains.ls | sed  's/^.*\[//' | tr -d ",']" |sed 's:\([a-z0-9]\) :\1\: :g'
+      salt '*' --timeout 2 --hide-timeout --log-level=error --out=txt -- grains.ls | sed  's/^.*\[//' | tr -d ",']" |sed 's:\([a-z0-9]\) :\1\: :g'
     fi
 }
 
 _salt_get_grain_values(){
     if [ "$1" = 'local' ] ; then
-        salt-call --out=txt -- grains.item $1 |sed 's/^\S*:\s//' |grep -v '^\s*$'
+        salt-call --log-level=error --out=txt -- grains.item $1 |sed 's/^\S*:\s//' |grep -v '^\s*$'
     else
-        salt '*' --timeout 2 --hide-timeout --out=txt -- grains.item $1 |sed 's/^\S*:\s//' |grep -v '^\s*$'
+        salt '*' --timeout 2 --hide-timeout --log-level=error --out=txt -- grains.item $1 |sed 's/^\S*:\s//' |grep -v '^\s*$'
     fi
 }
 
@@ -34,23 +34,51 @@ _salt_get_keys(){
     done
 }
 
-_salt(){
-    local _salt_cache_functions=${SALT_COMP_CACHE_FUNCTIONS:='~/.cache/salt-comp-cache_functions'}
+_salt_list_functions(){
+    # salt-call: get all functions on this minion
+    # salt: get all functions on all minions
+    # sed: remove all array overhead and convert to newline separated list
+    # sort: chop out doubled entries, so overhead is minimal later during actual completion
+    if [ "$1" = 'local' ] ; then
+        salt-call --log-level=quiet --out=txt -- sys.list_functions \
+          | sed "s/^.*\[//;s/[],']\|u'//g;s/ /\n/g" \
+          | sort -u
+    else
+        salt '*' --timeout 2 --hide-timeout --log-level=quiet --out=txt -- sys.list_functions \
+          | sed "s/^.*\[//;s/[],']\|u'//g;s/ /\n/g" \
+          | sort -u
+    fi
+}
+
+_salt_get_coms() {
+    CACHE_DIR="$HOME/.cache/salt-${1}-comp-cache_functions"
+    local _salt_cache_functions=${SALT_COMP_CACHE_FUNCTIONS:=$CACHE_DIR}
     local _salt_cache_timeout=${SALT_COMP_CACHE_TIMEOUT:='last hour'}
 
     if [ ! -d "$(dirname ${_salt_cache_functions})" ]; then
         mkdir -p "$(dirname ${_salt_cache_functions})"
     fi
 
+    # Regenerate cache if timed out
+    if [[ "$(stat --format=%Z ${_salt_cache_functions} 2>/dev/null)" -lt "$(date --date="${_salt_cache_timeout}" +%s)" ]]; then
+	_salt_list_functions $1 > "${_salt_cache_functions}"
+    fi
+
+    # filter results, to only print the part to next dot (or end of function)
+    sed 's/^\('${cur}'\(\.\|[^.]*\)\)\?.*/\1/' "${_salt_cache_functions}" | sort -u
+}
+
+_salt(){
+
     local cur prev opts _salt_grains _salt_coms pprev ppprev
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
     if [ ${COMP_CWORD} -gt 2 ]; then
-	pprev="${COMP_WORDS[COMP_CWORD-2]}"
+        pprev="${COMP_WORDS[COMP_CWORD-2]}"
     fi
     if [ ${COMP_CWORD} -gt 3 ]; then
-	ppprev="${COMP_WORDS[COMP_CWORD-3]}"
+        ppprev="${COMP_WORDS[COMP_CWORD-3]}"
     fi
 
     opts="-h --help -d --doc --documentation --version --versions-report -c \
@@ -70,7 +98,7 @@ _salt(){
     case "${pprev}" in
     -G|--grain|--grain-pcre)
     if [ "${cur}" = ":" ]; then
-        COMPREPLY=($(compgen -W "`_salt_get_grain_values ${prev}`"  ))	
+        COMPREPLY=($(compgen -W "`_salt_get_grain_values ${prev}`"))
         return 0
     fi
     ;;
@@ -108,7 +136,7 @@ _salt(){
      -G|--grain|--grain-pcre)
         COMPREPLY=($(compgen -W "$(_salt_get_grains)" -- ${cur}))
         return 0
-	;;
+        ;;
      -C|--compound)
         COMPREPLY=() # TODO: finish this one? how?
         return 0
@@ -122,28 +150,16 @@ _salt(){
         return 0
         ;;
      -N|--nodegroup)
-	    MASTER_CONFIG='/etc/salt/master'
+        MASTER_CONFIG='/etc/salt/master'
         COMPREPLY=($(compgen -W "`awk -F ':'  'BEGIN {print_line = 0};  /^nodegroups/ {print_line = 1;getline } print_line && /^  */ {print $1} /^[^ ]/ {print_line = 0}' <${MASTER_CONFIG}`" -- ${cur}))
         return 0
      ;;
     esac
 
-    # Regenerate cache if timed out
-    if [[ "$(stat --format=%Z ${_salt_cache_functions} 2>/dev/null)" -lt "$(date --date="${_salt_cache_timeout}" +%s)" ]]; then
-        # salt: get all functions on all minions
-        # sed: remove all array overhead and convert to newline separated list
-        # sort: chop out doubled entries, so overhead is minimal later during actual completion
-        salt '*' --timeout 2 --hide-timeout --out=txt -- sys.list_functions \
-          | sed "s/^.*\[//;s/[],']//g;s/ /\n/g" \
-          | sort -u \
-          > "${_salt_cache_functions}"
-    fi
-
-    # filter results, to only print the part to next dot (or end of function)
-    _salt_coms="$(sed 's/^\('${cur}'\(\.\|[^.]*\)\)\?.*/\1/' "${_salt_cache_functions}" | sort -u)"
+    _salt_coms=$(_salt_get_coms remote)
 
     # If there are still dots in the suggestion, do not append space
-    grep "^${cur}.*\." "${_salt_cache_functions}" &>/dev/null && compopt -o nospace
+    grep "^${cur}.*\." "${_salt_coms}" &>/dev/null && compopt -o nospace
 
     all="${opts} ${_salt_coms}"
     COMPREPLY=( $(compgen -W "${all}" -- ${cur}) )
@@ -221,7 +237,7 @@ _saltkey(){
         return 0
      ;;
      --accept-all)
-	return 0
+        return 0
      ;;
     esac
     COMPREPLY=($(compgen -W "${opts} " -- ${cur}))
@@ -260,22 +276,26 @@ _saltcall(){
     case ${prev} in
         -m|--module-dirs)
                 COMPREPLY=( $(compgen -d ${cur} ))
-		return 0
- 	 	;;
-	-l|--log-level)
-		COMPREPLY=( $(compgen -W "info none garbage trace warning error debug" -- ${cur}))
-		return 0
-		;;
-	-g|grains)
                 return 0
-		;;
-	salt-call)
+                ;;
+        -l|--log-level)
+                COMPREPLY=( $(compgen -W "info none garbage trace warning error debug" -- ${cur}))
+                return 0
+                ;;
+        -g|grains)
+                return 0
+                ;;
+        salt-call)
                 COMPREPLY=($(compgen -W "${opts}" -- ${cur}))
-	        return 0
-		;;
+                return 0
+                ;;
     esac
 
-    _salt_coms="$(salt-call --out=txt -- sys.list_functions|sed 's/^.*\[//' | tr -d ",']"  )"
+    _salt_coms=$(_salt_get_coms local)
+
+    # If there are still dots in the suggestion, do not append space
+    grep "^${cur}.*\." "${_salt_coms}" &>/dev/null && compopt -o nospace
+
     COMPREPLY=( $(compgen -W "${opts} ${_salt_coms}" -- ${cur} ))
     return 0
 }
@@ -307,46 +327,45 @@ _saltcp(){
     fi
 
     case ${prev} in
- 	salt-cp)
-	    COMPREPLY=($(compgen -W "${opts} $(_salt_get_keys acc)" -- ${cur}))
-	    return 0
-	;;
+        salt-cp)
+            COMPREPLY=($(compgen -W "${opts} $(_salt_get_keys acc)" -- ${cur}))
+            return 0
+            ;;
         -t|--timeout)
-	    # those numbers are just a hint
+            # those numbers are just a hint
             COMPREPLY=($(compgen -W "2 3 4 8 10 15 20 25 30 40 60 90 120 180 240 300" -- ${cur} ))
-	    return 0
-        ;;
-	-E|--pcre)
+            return 0
+            ;;
+    -E|--pcre)
             COMPREPLY=($(compgen -W "$(_salt_get_keys acc)" -- ${cur}))
             return 0
-	;;
-	-L|--list)
-	    # IMPROVEMENTS ARE WELCOME
-	    prefpart="${cur%,*},"
-	    postpart=${cur##*,}
-	    filt="^\($(echo ${cur}| sed 's:,:\\|:g')\)$"
+            ;;
+    -L|--list)
+            # IMPROVEMENTS ARE WELCOME
+            prefpart="${cur%,*},"
+            postpart=${cur##*,}
+            filt="^\($(echo ${cur}| sed 's:,:\\|:g')\)$"
             helper=($(_salt_get_keys acc | grep -v "${filt}" | sed "s/^/${prefpart}/"))
-	    COMPREPLY=($(compgen -W "${helper[*]}" -- ${cur}))
-
-	    return 0
-	;;
-	-G|--grain|--grain-pcre)
+            COMPREPLY=($(compgen -W "${helper[*]}" -- ${cur}))
+            return 0
+            ;;
+    -G|--grain|--grain-pcre)
             COMPREPLY=($(compgen -W "$(_salt_get_grains)" -- ${cur}))
             return 0
-	    ;;
-	    # FIXME
-	-R|--range)
-	    # FIXME ??
-	    return 0
-	;;
-	-C|--compound)
-	    # FIXME ??
-	    return 0
-	;;
-	-c|--config)
-	    COMPREPLY=($(compgen -f -- ${cur}))
-	    return 0
-	;;
+            ;;
+    # FIXME
+    -R|--range)
+            # FIXME ??
+            return 0
+            ;;
+    -C|--compound)
+            # FIXME ??
+            return 0
+            ;;
+    -c|--config)
+            COMPREPLY=($(compgen -f -- ${cur}))
+            return 0
+            ;;
     esac
 
    # default is using opts:

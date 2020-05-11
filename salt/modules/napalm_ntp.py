@@ -5,7 +5,7 @@ NAPALM NTP
 
 Manages NTP on network devices.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net> & Jerome Fleury <jf@cloudflare.com>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
@@ -21,7 +21,7 @@ Dependencies
 .. versionadded:: 2016.11.0
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 import logging
 log = logging.getLogger(__file__)
@@ -36,6 +36,7 @@ from salt.utils.napalm import proxy_napalm_wrap
 
 __virtualname__ = 'ntp'
 __proxyenabled__ = ['napalm']
+__virtual_aliases__ = ('napalm_ntp',)
 # uses NAPALM-based proxy to interact with network devices
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -113,6 +114,17 @@ def servers(**kwargs):  # pylint: disable=unused-argument
     .. code-block:: bash
 
         salt '*' ntp.servers
+
+    Example output:
+
+    .. code-block:: python
+
+        [
+            '192.168.0.1',
+            '172.17.17.1',
+            '172.17.17.2',
+            '2400:cb00:6:1024::c71b:840a'
+        ]
     '''
 
     ntp_servers = salt.utils.napalm.call(
@@ -165,12 +177,12 @@ def stats(peer=None, **kwargs):  # pylint: disable=unused-argument
 
         [
             {
-                'remote'        : u'188.114.101.4',
-                'referenceid'   : u'188.114.100.1',
+                'remote'        : '188.114.101.4',
+                'referenceid'   : '188.114.100.1',
                 'synchronized'  : True,
                 'stratum'       : 4,
-                'type'          : u'-',
-                'when'          : u'107',
+                'type'          : '-',
+                'when'          : '107',
                 'hostpoll'      : 256,
                 'reachability'  : 377,
                 'delay'         : 164.228,
@@ -209,11 +221,13 @@ def set_peers(*peers, **options):
     Configures a list of NTP peers on the device.
 
     :param peers: list of IP Addresses/Domain Names
-    :param test (bool): discard loaded config. By default `test` is False (will not dicard the changes)
-    :commit commit (bool): commit loaded config. By default `commit` is True (will commit the changes). Useful when
-    the user does not want to commit after each change, but after a couple.
+    :param test (bool): discard loaded config. By default ``test`` is False
+        (will not dicard the changes)
+    :commit commit (bool): commit loaded config. By default ``commit`` is True
+        (will commit the changes). Useful when the user does not want to commit
+        after each change, but after a couple.
 
-    By default this function will commit the config changes (if any). To load without commiting, use the `commit`
+    By default this function will commit the config changes (if any). To load without committing, use the `commit`
     option. For dry run use the `test` argument.
 
     CLI Example:
@@ -237,16 +251,17 @@ def set_peers(*peers, **options):
 
 @proxy_napalm_wrap
 def set_servers(*servers, **options):
-
     '''
     Configures a list of NTP servers on the device.
 
     :param servers: list of IP Addresses/Domain Names
-    :param test (bool): discard loaded config. By default `test` is False (will not dicard the changes)
-    :commit commit (bool): commit loaded config. By default `commit` is True (will commit the changes). Useful when
-    the user does not want to commit after each change, but after a couple.
+    :param test (bool): discard loaded config. By default ``test`` is False
+        (will not dicard the changes)
+    :commit commit (bool): commit loaded config. By default ``commit`` is True
+        (will commit the changes). Useful when the user does not want to commit
+        after each change, but after a couple.
 
-    By default this function will commit the config changes (if any). To load without commiting, use the `commit`
+    By default this function will commit the config changes (if any). To load without committing, use the `commit`
     option. For dry run use the `test` argument.
 
     CLI Example:
@@ -275,12 +290,15 @@ def delete_peers(*peers, **options):
     Removes NTP peers configured on the device.
 
     :param peers: list of IP Addresses/Domain Names to be removed as NTP peers
-    :param test (bool): discard loaded config. By default `test` is False (will not dicard the changes)
-    :commit commit (bool): commit loaded config. By default `commit` is True (will commit the changes). Useful when
-    the user does not want to commit after each change, but after a couple.
+    :param test (bool): discard loaded config. By default ``test`` is False
+        (will not dicard the changes)
+    :param commit (bool): commit loaded config. By default ``commit`` is True
+        (will commit the changes). Useful when the user does not want to commit
+        after each change, but after a couple.
 
-    By default this function will commit the config changes (if any). To load without commiting, use the `commit`
-    option. For dry run use the `test` argument.
+    By default this function will commit the config changes (if any). To load
+    without committing, use the ``commit`` option. For a dry run, use the
+    ``test`` argument.
 
     CLI Example:
 
@@ -307,13 +325,17 @@ def delete_servers(*servers, **options):
     '''
     Removes NTP servers configured on the device.
 
-    :param servers: list of IP Addresses/Domain Names to be removed as NTP servers
-    :param test (bool): discard loaded config. By default `test` is False (will not dicard the changes)
-    :commit commit (bool): commit loaded config. By default `commit` is True (will commit the changes). Useful when
-    the user does not want to commit after each change, but after a couple.
+    :param servers: list of IP Addresses/Domain Names to be removed as NTP
+        servers
+    :param test (bool): discard loaded config. By default ``test`` is False
+        (will not dicard the changes)
+    :param commit (bool): commit loaded config. By default ``commit`` is True
+        (will commit the changes). Useful when the user does not want to commit
+        after each change, but after a couple.
 
-    By default this function will commit the config changes (if any). To load without commiting, use the `commit`
-    option. For dry run use the `test` argument.
+    By default this function will commit the config changes (if any). To load
+    without committing, use the ``commit`` option. For dry run use the ``test``
+    argument.
 
     CLI Example:
 

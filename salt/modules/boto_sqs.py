@@ -7,7 +7,7 @@ Connection module for Amazon SQS
 :configuration: This module accepts explicit sqs credentials but can also utilize
     IAM roles assigned to the instance through Instance Profiles. Dynamic
     credentials are then automatically obtained from AWS API and no further
-    configuration is necessary. More Information available at:
+    configuration is necessary. More information available at:
 
     .. code-block:: text
 
@@ -39,42 +39,69 @@ Connection module for Amazon SQS
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
             region: us-east-1
 
-:depends: boto
+:depends: boto3
 '''
 # keep lint from choking on _get_conn and _cache_id
-#pylint: disable=E0602
+# pylint: disable=E0602
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
-import json
-import salt.ext.six as six
+
+# Import Salt libs
+import salt.utils.json
+import salt.utils.versions
+
+# Import 3rd-party libs
+from salt.ext import six
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
 
 log = logging.getLogger(__name__)
+
+__func_alias__ = {
+    'list_': 'list',
+}
 
 # Import third party libs
 try:
     # pylint: disable=unused-import
-    import boto
-    import boto.sqs
+    import boto3
+    import botocore
     # pylint: enable=unused-import
-    logging.getLogger('boto').setLevel(logging.CRITICAL)
-    HAS_BOTO = True
+    logging.getLogger('boto3').setLevel(logging.CRITICAL)
+    HAS_BOTO3 = True
 except ImportError:
-    HAS_BOTO = False
-
-from salt.ext.six import string_types
+    HAS_BOTO3 = False
 
 
 def __virtual__():
     '''
-    Only load if boto libraries exist.
+    Only load if boto3 libraries exist.
     '''
-    if not HAS_BOTO:
-        return (False, 'The boto_sqs module could not be loaded: boto libraries not found')
-    __utils__['boto.assign_funcs'](__name__, 'sqs', pack=__salt__)
-    return True
+    has_boto_reqs = salt.utils.versions.check_boto_reqs()
+    if has_boto_reqs is True:
+        __utils__['boto3.assign_funcs'](__name__, 'sqs')
+    return has_boto_reqs
+
+
+def _preprocess_attributes(attributes):
+    '''
+    Pre-process incoming queue attributes before setting them
+    '''
+    if isinstance(attributes, six.string_types):
+        attributes = salt.utils.json.loads(attributes)
+
+    def stringified(val):
+        # Some attributes take full json policy documents, but they take them
+        # as json strings. Convert the value back into a json string.
+        if isinstance(val, dict):
+            return salt.utils.json.dumps(val)
+        return val
+
+    return dict(
+        (attr, stringified(val)) for attr, val in six.iteritems(attributes)
+    )
 
 
 def exists(name, region=None, key=None, keyid=None, profile=None):
@@ -89,13 +116,24 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if conn.get_queue(name):
-        return True
-    else:
-        return False
+    try:
+        conn.get_queue_url(QueueName=name)
+    except botocore.exceptions.ClientError as e:
+        missing_code = 'AWS.SimpleQueueService.NonExistentQueue'
+        if e.response.get('Error', {}).get('Code') == missing_code:
+            return {'result': False}
+        return {'error': __utils__['boto3.get_error'](e)}
+    return {'result': True}
 
 
-def create(name, region=None, key=None, keyid=None, profile=None):
+def create(
+    name,
+    attributes=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
     '''
     Create an SQS queue.
 
@@ -107,15 +145,15 @@ def create(name, region=None, key=None, keyid=None, profile=None):
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if not conn.get_queue(name):
-        try:
-            conn.create_queue(name)
-        except boto.exception.SQSError:
-            msg = 'Failed to create queue {0}'.format(name)
-            log.error(msg)
-            return False
-    log.info('Created queue {0}'.format(name))
-    return True
+    if attributes is None:
+        attributes = {}
+    attributes = _preprocess_attributes(attributes)
+
+    try:
+        conn.create_queue(QueueName=name, Attributes=attributes)
+    except botocore.exceptions.ClientError as e:
+        return {'error': __utils__['boto3.get_error'](e)}
+    return {'result': True}
 
 
 def delete(name, region=None, key=None, keyid=None, profile=None):
@@ -130,37 +168,15 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    queue_obj = conn.get_queue(name)
-    if queue_obj:
-        deleted_queue = conn.delete_queue(queue_obj)
-        if not deleted_queue:
-            msg = 'Failed to delete queue {0}'.format(name)
-            log.error(msg)
-            return False
-    return True
-
-
-def get_all_queues(prefix=None, region=None, key=None, keyid=None, profile=None):
-    '''
-    Return a list of Queue() objects describing all visible queues.
-
-    .. versionadded:: 2016.11.0
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt myminion boto_sqs.get_all_queues region=us-east-1 --output yaml
-    '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
-        return conn.get_all_queues(prefix=prefix)
-    except boto.exception.SQSError:
-        log.error('Error listing queues')
-        return []
+        url = conn.get_queue_url(QueueName=name)['QueueUrl']
+        conn.delete_queue(QueueUrl=url)
+    except botocore.exceptions.ClientError as e:
+        return {'error': __utils__['boto3.get_error'](e)}
+    return {'result': True}
 
 
-def list(prefix=None, region=None, key=None, keyid=None, profile=None):
+def list_(prefix='', region=None, key=None, keyid=None, profile=None):
     '''
     Return a list of the names of all visible queues.
 
@@ -172,8 +188,19 @@ def list(prefix=None, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_sqs.list region=us-east-1
     '''
-    return [r.name for r in get_all_queues(prefix=prefix, region=region, key=key,
-                                         keyid=keyid, profile=profile)]
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    def extract_name(queue_url):
+        # Note: this logic taken from boto, so should be safe
+        return _urlparse(queue_url).path.split('/')[2]
+
+    try:
+        r = conn.list_queues(QueueNamePrefix=prefix)
+        # The 'QueueUrls' attribute is missing if there are no queues
+        urls = r.get('QueueUrls', [])
+        return {'result': [extract_name(url) for url in urls]}
+    except botocore.exceptions.ClientError as e:
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def get_attributes(name, region=None, key=None, keyid=None, profile=None):
@@ -187,17 +214,23 @@ def get_attributes(name, region=None, key=None, keyid=None, profile=None):
         salt myminion boto_sqs.get_attributes myqueue
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    if not conn:
-        return {}
-    queue_obj = conn.get_queue(name)
-    if not queue_obj:
-        log.error('Queue {0} does not exist.'.format(name))
-        return {}
-    return conn.get_queue_attributes(queue_obj)
+
+    try:
+        url = conn.get_queue_url(QueueName=name)['QueueUrl']
+        r = conn.get_queue_attributes(QueueUrl=url, AttributeNames=['All'])
+        return {'result': r['Attributes']}
+    except botocore.exceptions.ClientError as e:
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
-def set_attributes(name, attributes, region=None, key=None, keyid=None,
-                   profile=None):
+def set_attributes(
+    name,
+    attributes,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
     '''
     Set attributes on an SQS queue.
 
@@ -207,22 +240,13 @@ def set_attributes(name, attributes, region=None, key=None, keyid=None,
 
         salt myminion boto_sqs.set_attributes myqueue '{ReceiveMessageWaitTimeSeconds: 20}' region=us-east-1
     '''
-    ret = True
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    queue_obj = conn.get_queue(name)
-    if not queue_obj:
-        log.error('Queue {0} does not exist.'.format(name))
-        ret = False
-    if isinstance(attributes, string_types):
-        attributes = json.loads(attributes)
-    for attr, val in six.iteritems(attributes):
-        attr_set = queue_obj.set_attribute(attr, val)
-        if not attr_set:
-            msg = 'Failed to set attribute {0} = {1} on queue {2}'
-            log.error(msg.format(attr, val, name))
-            ret = False
-        else:
-            msg = 'Set attribute {0} = {1} on queue {2}'
-            log.info(msg.format(attr, val, name))
-    return ret
+    attributes = _preprocess_attributes(attributes)
+
+    try:
+        url = conn.get_queue_url(QueueName=name)['QueueUrl']
+        conn.set_queue_attributes(QueueUrl=url, Attributes=attributes)
+    except botocore.exceptions.ClientError as e:
+        return {'error': __utils__['boto3.get_error'](e)}
+    return {'result': True}

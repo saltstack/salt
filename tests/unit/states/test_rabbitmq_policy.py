@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -75,12 +75,12 @@ class RabbitmqPolicyTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(side_effect=[False, True])
         with patch.dict(rabbitmq_policy.__salt__,
                         {'rabbitmq.policy_exists': mock}):
-            comment = 'Policy \'/ HA\' is not present.'
+            comment = "Policy '/ HA' is not present."
             ret.update({'comment': comment})
             self.assertDictEqual(rabbitmq_policy.absent(name), ret)
 
             with patch.dict(rabbitmq_policy.__opts__, {'test': True}):
-                comment = 'Policy \'/ HA\' will be removed.'
+                comment = "Policy '/ HA' will be removed."
                 changes = {'new': '', 'old': 'HA'}
                 ret.update({'comment': comment, 'result': None, 'changes': changes})
                 self.assertDictEqual(rabbitmq_policy.absent(name), ret)

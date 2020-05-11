@@ -6,31 +6,34 @@ Create virtualenv environments.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import glob
 import shutil
 import logging
 import os
+import sys
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
 import salt.utils.verify
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext.six import string_types
 
-KNOWN_BINARY_NAMES = frozenset(
-    ['virtualenv',
-     'virtualenv2',
-     'virtualenv-2.6',
-     'virtualenv-2.7'
-     ]
-)
+KNOWN_BINARY_NAMES = frozenset([
+    'pyvenv-{0}.{1}'.format(*sys.version_info[:2]),
+    'virtualenv-{0}.{1}'.format(*sys.version_info[:2]),
+    'pyvenv{0}'.format(sys.version_info[0]),
+    'virtualenv{0}'.format(sys.version_info[0]),
+    'pyvenv',
+    'virtualenv',
+])
 
 log = logging.getLogger(__name__)
 
 __opts__ = {
-    'venv_bin': salt.utils.which_bin(KNOWN_BINARY_NAMES) or 'virtualenv'
+    'venv_bin': salt.utils.path.which_bin(KNOWN_BINARY_NAMES) or 'virtualenv'
 }
 
 __pillar__ = {}
@@ -57,7 +60,8 @@ def create(path,
            upgrade=None,
            user=None,
            use_vt=False,
-           saltenv='base'):
+           saltenv='base',
+           **kwargs):
     '''
     Create a virtualenv
 
@@ -66,8 +70,8 @@ def create(path,
 
     venv_bin
         The name (and optionally path) of the virtualenv command. This can also
-        be set globally in the minion config file as ``virtualenv.venv_bin``.
-        Defaults to ``virtualenv``.
+        be set globally in the pillar data as ``venv_bin``.
+        Defaults to ``pyvenv`` or ``virtualenv``, depending on what is installed.
 
     system_site_packages : False
         Passthrough argument given to virtualenv or pyvenv
@@ -103,6 +107,11 @@ def create(path,
     user : None
         Set ownership for the virtualenv
 
+        .. note::
+            On Windows you must also pass a ``password`` parameter. Additionally,
+            the user must have permissions to the location where the virtual
+            environment is being created
+
     runas : None
         Set ownership for the virtualenv
 
@@ -130,9 +139,17 @@ def create(path,
         salt '*' virtualenv.create /path/to/new/virtualenv
     '''
     if venv_bin is None:
-        venv_bin = __opts__.get('venv_bin') or __pillar__.get('venv_bin')
+        # Beginning in 3.6, pyvenv has been deprecated
+        # in favor of "python3 -m venv"
+        if sys.version_info >= (3, 6):
+            venv_bin = ['python3', '-m', 'venv']
+        else:
+            venv_bin = __pillar__.get('venv_bin') or __opts__.get('venv_bin')
 
-    cmd = [venv_bin]
+    if not isinstance(venv_bin, list):
+        cmd = [venv_bin]
+    else:
+        cmd = venv_bin
 
     if 'pyvenv' not in venv_bin:
         # ----- Stop the user if pyvenv only options are used --------------->
@@ -162,7 +179,7 @@ def create(path,
             # Unable to import?? Let's parse the version from the console
             version_cmd = [venv_bin, '--version']
             ret = __salt__['cmd.run_all'](
-                    version_cmd, runas=user, python_shell=False
+                    version_cmd, runas=user, python_shell=False, **kwargs
                 )
             if ret['retcode'] > 0 or not ret['stdout'].strip():
                 raise CommandExecutionError(
@@ -186,7 +203,7 @@ def create(path,
                 cmd.append('--distribute')
 
         if python is not None and python.strip() != '':
-            if not salt.utils.which(python):
+            if not salt.utils.path.which(python):
                 raise CommandExecutionError(
                     'Cannot find requested python ({0}).'.format(python)
                 )
@@ -200,12 +217,10 @@ def create(path,
             for entry in extra_search_dir:
                 cmd.append('--extra-search-dir={0}'.format(entry))
         if never_download is True:
-            if virtualenv_version_info >= (1, 10):
+            if (1, 10) <= virtualenv_version_info < (14, 0, 0):
                 log.info(
-                    'The virtualenv \'--never-download\' option has been '
-                    'deprecated in virtualenv(>=1.10), as such, the '
-                    '\'never_download\' option to `virtualenv.create()` has '
-                    'also been deprecated and it\'s not necessary anymore.'
+                    '--never-download was deprecated in 1.10.0, but reimplemented in 14.0.0. '
+                    'If this feature is needed, please install a supported virtualenv version.'
                 )
             else:
                 cmd.append('--never-download')
@@ -254,13 +269,13 @@ def create(path,
     cmd.append(path)
 
     # Let's create the virtualenv
-    ret = __salt__['cmd.run_all'](cmd, runas=user, python_shell=False)
+    ret = __salt__['cmd.run_all'](cmd, runas=user, python_shell=False, **kwargs)
     if ret['retcode'] != 0:
         # Something went wrong. Let's bail out now!
         return ret
 
     # Check if distribute and pip are already installed
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         venv_python = os.path.join(path, 'Scripts', 'python.exe')
         venv_pip = os.path.join(path, 'Scripts', 'pip.exe')
         venv_setuptools = os.path.join(path, 'Scripts', 'easy_install.exe')
@@ -319,7 +334,7 @@ def get_site_packages(venv):
     ret = __salt__['cmd.exec_code_all'](
         bin_path,
         'from distutils import sysconfig; '
-            'print sysconfig.get_python_lib()'
+            'print(sysconfig.get_python_lib())'
     )
 
     if ret['retcode'] != 0:
@@ -454,12 +469,12 @@ def get_resource_content(venv,
 
 
 def _install_script(source, cwd, python, user, saltenv='base', use_vt=False):
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         tmppath = salt.utils.files.mkstemp(dir=cwd)
     else:
         tmppath = __salt__['cp.cache_file'](source, saltenv)
 
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         fn_ = __salt__['cp.cache_file'](source, saltenv)
         shutil.copyfile(fn_, tmppath)
         os.chmod(tmppath, 0o500)

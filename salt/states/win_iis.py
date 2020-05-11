@@ -10,8 +10,10 @@ from Microsoft IIS.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
+# Import salt libs
+from salt.ext.six.moves import map
 
 # Define the module's virtual name
 __virtualname__ = 'win_iis'
@@ -35,7 +37,7 @@ def _get_binding_info(hostheader='', ipaddress='*', port=80):
     return ret
 
 
-def deployed(name, sourcepath, apppool='', hostheader='', ipaddress='*', port=80, protocol='http'):
+def deployed(name, sourcepath, apppool='', hostheader='', ipaddress='*', port=80, protocol='http', preload=''):
     '''
     Ensure the website has been deployed.
 
@@ -52,6 +54,7 @@ def deployed(name, sourcepath, apppool='', hostheader='', ipaddress='*', port=80
     :param str ipaddress: The IP address of the binding.
     :param str port: The TCP port of the binding.
     :param str protocol: The application protocol of the binding.
+    :param bool preload: Whether Preloading should be enabled
 
     .. note:
 
@@ -81,6 +84,7 @@ def deployed(name, sourcepath, apppool='', hostheader='', ipaddress='*', port=80
                 - ipaddress: '*'
                 - port: 443
                 - protocol: https
+                - preload: True
     '''
     ret = {'name': name,
            'changes': {},
@@ -102,7 +106,7 @@ def deployed(name, sourcepath, apppool='', hostheader='', ipaddress='*', port=80
                           'new': name}
         ret['result'] = __salt__['win_iis.create_site'](name, sourcepath, apppool,
                                                         hostheader, ipaddress, port,
-                                                        protocol)
+                                                        protocol, preload)
     return ret
 
 
@@ -183,7 +187,7 @@ def create_binding(name, site, hostheader='', ipaddress='*', port=80, protocol='
     '''
     ret = {'name': name,
            'changes': {},
-           'comment': str(),
+           'comment': '',
            'result': None}
 
     binding_info = _get_binding_info(hostheader, ipaddress, port)
@@ -235,7 +239,7 @@ def remove_binding(name, site, hostheader='', ipaddress='*', port=80):
     '''
     ret = {'name': name,
            'changes': {},
-           'comment': str(),
+           'comment': '',
            'result': None}
 
     binding_info = _get_binding_info(hostheader, ipaddress, port)
@@ -298,7 +302,7 @@ def create_cert_binding(name, site, hostheader='', ipaddress='*', port=443, sslf
     '''
     ret = {'name': name,
            'changes': {},
-           'comment': str(),
+           'comment': '',
            'result': None}
 
     binding_info = _get_binding_info(hostheader, ipaddress, port)
@@ -367,7 +371,7 @@ def remove_cert_binding(name, site, hostheader='', ipaddress='*', port=443):
     '''
     ret = {'name': name,
            'changes': {},
-           'comment': str(),
+           'comment': '',
            'result': None}
 
     binding_info = _get_binding_info(hostheader, ipaddress, port)
@@ -480,9 +484,8 @@ def container_setting(name, container, settings=None):
     :param str name: The name of the IIS container.
     :param str container: The type of IIS container. The container types are:
         AppPools, Sites, SslBindings
-    :param str settings: A dictionary of the setting names and their values.
-
-    Example of usage for the ``AppPools`` container:
+    :param dict settings: A dictionary of the setting names and their values.
+        Example of usage for the ``AppPools`` container:
 
     .. code-block:: yaml
 
@@ -495,6 +498,7 @@ def container_setting(name, container, settings=None):
                     processModel.maxProcesses: 1
                     processModel.userName: TestUser
                     processModel.password: TestPassword
+                    processModel.identityType: SpecificUser
 
     Example of usage for the ``Sites`` container:
 
@@ -509,9 +513,11 @@ def container_setting(name, container, settings=None):
                     logFile.period: Daily
                     limits.maxUrlSegments: 32
     '''
+
+    identityType_map2string = {0: 'LocalSystem', 1: 'LocalService', 2: 'NetworkService', 3: 'SpecificUser', 4: 'ApplicationPoolIdentity'}
     ret = {'name': name,
            'changes': {},
-           'comment': str(),
+           'comment': '',
            'result': None}
 
     if not settings:
@@ -528,6 +534,10 @@ def container_setting(name, container, settings=None):
                                                                  container=container,
                                                                  settings=settings.keys())
     for setting in settings:
+        # map identity type from numeric to string for comparing
+        if setting == 'processModel.identityType' and settings[setting] in identityType_map2string.keys():
+            settings[setting] = identityType_map2string[settings[setting]]
+
         if str(settings[setting]) != str(current_settings[setting]):
             ret_settings['changes'][setting] = {'old': current_settings[setting],
                                                 'new': settings[setting]}
@@ -540,8 +550,8 @@ def container_setting(name, container, settings=None):
         ret['changes'] = ret_settings
         return ret
 
-    __salt__['win_iis.set_container_setting'](name=name, container=container,
-                                              settings=settings)
+    __salt__['win_iis.set_container_setting'](name=name, container=container, settings=settings)
+
     new_settings = __salt__['win_iis.get_container_setting'](name=name,
                                                              container=container,
                                                              settings=settings.keys())
@@ -601,7 +611,7 @@ def create_app(name, site, sourcepath, apppool=None):
     '''
     ret = {'name': name,
            'changes': {},
-           'comment': str(),
+           'comment': '',
            'result': None}
 
     current_apps = __salt__['win_iis.list_apps'](site)
@@ -640,7 +650,7 @@ def remove_app(name, site):
     '''
     ret = {'name': name,
            'changes': {},
-           'comment': str(),
+           'comment': '',
            'result': None}
 
     current_apps = __salt__['win_iis.list_apps'](site)
@@ -698,7 +708,7 @@ def create_vdir(name, site, sourcepath, app='/'):
     '''
     ret = {'name': name,
            'changes': {},
-           'comment': str(),
+           'comment': '',
            'result': None}
 
     current_vdirs = __salt__['win_iis.list_vdirs'](site, app)
@@ -749,7 +759,7 @@ def remove_vdir(name, site, app='/'):
     '''
     ret = {'name': name,
            'changes': {},
-           'comment': str(),
+           'comment': '',
            'result': None}
 
     current_vdirs = __salt__['win_iis.list_vdirs'](site, app)
@@ -771,20 +781,28 @@ def remove_vdir(name, site, app='/'):
 
 
 def set_app(name, site, settings=None):
-    r'''
+    # pylint: disable=anomalous-backslash-in-string
+    '''
+    .. versionadded:: 2017.7.0
+
     Set the value of the setting for an IIS web application.
+
     .. note::
-        This function only configures existing app.
-        Params are case sensitive.
+        This function only configures existing app. Params are case sensitive.
+
     :param str name: The IIS application.
     :param str site: The IIS site name.
-    :param str settings: A dictionary of the setting names and their values.
-    :available settings:    physicalPath: The physical path of the webapp.
-    :                       applicationPool: The application pool for the webapp.
-    :                       userName: "connectAs" user
-    :                       password: "connectAs" password for user
+    :param dict settings: A dictionary of the setting names and their values.
+
+    Available settings:
+
+    - ``physicalPath`` - The physical path of the webapp
+    - ``applicationPool`` - The application pool for the webapp
+    - ``userName`` "connectAs" user
+    - ``password`` "connectAs" password for user
+
     :rtype: bool
-    .. versionadded:: Nitrogen
+
     Example of usage:
 
     .. code-block:: yaml
@@ -794,14 +812,15 @@ def set_app(name, site, settings=None):
                 - name: app0
                 - site: Default Web Site
                 - settings:
-                    userName: domain\user
+                    userName: domain\\user
                     password: pass
                     physicalPath: c:\inetpub\wwwroot
                     applicationPool: appPool0
     '''
+    # pylint: enable=anomalous-backslash-in-string
     ret = {'name': name,
            'changes': {},
-           'comment': str(),
+           'comment': '',
            'result': None}
 
     if not settings:
@@ -839,6 +858,141 @@ def set_app(name, site, settings=None):
             ret_settings['failures'][setting] = {'old': current_settings[setting],
                                                  'new': new_settings[setting]}
             ret_settings['changes'].pop(setting, None)
+
+    if ret_settings['failures']:
+        ret['comment'] = 'Some settings failed to change.'
+        ret['changes'] = ret_settings
+        ret['result'] = False
+    else:
+        ret['comment'] = 'Set settings to contain the provided values.'
+        ret['changes'] = ret_settings['changes']
+        ret['result'] = True
+
+    return ret
+
+
+def webconfiguration_settings(name, location='', settings=None):
+    r'''
+    Set the value of webconfiguration settings.
+
+    :param str name: The name of the IIS PSPath containing the settings.
+        Possible PSPaths are :
+        MACHINE, MACHINE/WEBROOT, IIS:\, IIS:\Sites\sitename, ...
+    :param str location: The location of the settings.
+    :param dict settings: Dictionaries of dictionaries.
+        You can match a specific item in a collection with this syntax inside a key:
+        'Collection[{name: site0}].logFile.directory'
+
+    Example of usage for the ``MACHINE/WEBROOT`` PSPath:
+
+    .. code-block:: yaml
+
+        MACHINE-WEBROOT-level-security:
+          win_iis.webconfiguration_settings:
+            - name: 'MACHINE/WEBROOT'
+            - settings:
+                system.web/authentication/forms:
+                  requireSSL: True
+                  protection: "All"
+                  credentials.passwordFormat: "SHA1"
+                system.web/httpCookies:
+                  httpOnlyCookies: True
+
+    Example of usage for the ``IIS:\Sites\site0`` PSPath:
+
+    .. code-block:: yaml
+
+        site0-IIS-Sites-level-security:
+          win_iis.webconfiguration_settings:
+            - name: 'IIS:\Sites\site0'
+            - settings:
+                system.webServer/httpErrors:
+                  errorMode: "DetailedLocalOnly"
+                system.webServer/security/requestFiltering:
+                  allowDoubleEscaping: False
+                  verbs.Collection:
+                    - verb: TRACE
+                      allowed: False
+                  fileExtensions.allowUnlisted: False
+
+    Example of usage for the ``IIS:\`` PSPath with a collection matching:
+
+    .. code-block:: yaml
+
+        site0-IIS-level-security:
+          win_iis.webconfiguration_settings:
+            - name: 'IIS:\'
+            - settings:
+                system.applicationHost/sites:
+                  'Collection[{name: site0}].logFile.directory': 'C:\logs\iis\site0'
+
+    Example of usage with a location:
+
+    .. code-block:: yaml
+
+        site0-IIS-location-level-security:
+          win_iis.webconfiguration_settings:
+            - name: 'IIS:/'
+            - location: 'site0'
+            - settings:
+              system.webServer/security/authentication/basicAuthentication:
+                enabled: True
+
+    '''
+
+    ret = {'name': name,
+           'changes': {},
+           'comment': '',
+           'result': None}
+
+    if not settings:
+        ret['comment'] = 'No settings to change provided.'
+        ret['result'] = True
+        return ret
+
+    ret_settings = {
+        'changes': {},
+        'failures': {},
+    }
+
+    settings_list = []
+
+    for filter, filter_settings in settings.items():
+        for setting_name, value in filter_settings.items():
+            settings_list.append({'filter': filter, 'name': setting_name, 'value': value})
+
+    current_settings_list = __salt__['win_iis.get_webconfiguration_settings'](name=name,
+                                                                                  settings=settings_list, location=location)
+    for idx, setting in enumerate(settings_list):
+        is_collection = setting['name'].split('.')[-1] == 'Collection'
+
+        if ((is_collection and list(map(dict, setting['value'])) != list(map(dict, current_settings_list[idx]['value'])))
+                or (not is_collection and str(setting['value']) != str(current_settings_list[idx]['value']))):
+            ret_settings['changes'][setting['filter'] + '.' + setting['name']] = {'old': current_settings_list[idx]['value'],
+                                                                                  'new': settings_list[idx]['value']}
+    if not ret_settings['changes']:
+        ret['comment'] = 'Settings already contain the provided values.'
+        ret['result'] = True
+        return ret
+    elif __opts__['test']:
+        ret['comment'] = 'Settings will be changed.'
+        ret['changes'] = ret_settings
+        return ret
+
+    __salt__['win_iis.set_webconfiguration_settings'](name=name, settings=settings_list, location=location)
+
+    new_settings_list = __salt__['win_iis.get_webconfiguration_settings'](name=name,
+                                                                          settings=settings_list,
+                                                                          location=location)
+    for idx, setting in enumerate(settings_list):
+
+        is_collection = setting['name'].split('.')[-1] == 'Collection'
+
+        if ((is_collection and setting['value'] != new_settings_list[idx]['value'])
+                or (not is_collection and str(setting['value']) != str(new_settings_list[idx]['value']))):
+            ret_settings['failures'][setting['filter'] + '.' + setting['name']] = {'old': current_settings_list[idx]['value'],
+                                                                                   'new': new_settings_list[idx]['value']}
+            ret_settings['changes'].pop(setting['filter'] + '.' + setting['name'], None)
 
     if ret_settings['failures']:
         ret['comment'] = 'Some settings failed to change.'

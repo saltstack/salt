@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -25,7 +25,7 @@ class ChefTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for salt.modules.chef
     '''
     def setup_loader_modules(self):
-        patcher = patch('salt.utils.which', MagicMock(return_value=True))
+        patcher = patch('salt.utils.path.which', MagicMock(return_value=True))
         patcher.start()
         self.addCleanup(patcher.stop)
         return {chef: {'_exec_cmd': MagicMock(return_value={})}}
@@ -36,7 +36,8 @@ class ChefTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it execute a chef client run and return a dict
         '''
-        self.assertDictEqual(chef.client(), {})
+        with patch.dict(chef.__opts__, {'cachedir': r'c:\salt\var\cache\salt\minion'}):
+            self.assertDictEqual(chef.client(), {})
 
     # 'solo' function tests: 1
 
@@ -44,4 +45,5 @@ class ChefTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it execute a chef solo run and return a dict
         '''
-        self.assertDictEqual(chef.solo('/dev/sda1'), {})
+        with patch.dict(chef.__opts__, {'cachedir': r'c:\salt\var\cache\salt\minion'}):
+            self.assertDictEqual(chef.solo('/dev/sda1'), {})

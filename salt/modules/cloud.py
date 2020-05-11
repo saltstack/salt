@@ -4,11 +4,11 @@ Salt-specific interface for calling Salt Cloud directly
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import logging
 import copy
-import salt.utils
+import salt.utils.data
 
 # Import salt libs
 try:
@@ -17,11 +17,10 @@ try:
 except ImportError:
     HAS_SALTCLOUD = False
 
-import salt.utils
 from salt.exceptions import SaltCloudConfigError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -175,7 +174,7 @@ def get_instance(name, provider=None):
 
     '''
     data = action(fun='show_instance', names=[name], provider=provider)
-    info = salt.utils.simple_types_filter(data)
+    info = salt.utils.data.simple_types_filter(data)
     try:
         # get the first: [alias][driver][vm_name]
         info = next(six.itervalues(next(six.itervalues(next(six.itervalues(info))))))
@@ -205,11 +204,24 @@ def map_run(path=None, **kwargs):
     '''
     Execute a salt cloud map file
 
+    Cloud Map data can be retrieved from several sources:
+
+    - a local file (provide the path to the file to the 'path' argument)
+    - a JSON-formatted map directly (provide the appropriately formatted to using the 'map_data' argument)
+    - the Salt Pillar (provide the map name of under 'pillar:cloud:maps' to the 'map_pillar' argument)
+
+    .. note::
+        Only one of these sources can be read at a time. The options are listed
+        in their order of precedence.
+
     CLI Examples:
 
     .. code-block:: bash
 
         salt minionname cloud.map_run /path/to/cloud.map
+        salt minionname cloud.map_run path=/path/to/cloud.map
+        salt minionname cloud.map_run map_pillar='<map_pillar>'
+          .. versionchanged:: 2018.3.1
         salt minionname cloud.map_run map_data='<actual map data>'
     '''
     client = _get_client()

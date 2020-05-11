@@ -6,14 +6,15 @@ Please note: The functions in here are Debian-specific. Placing them in this
 separate file will allow them to load only on Debian-based systems, while still
 loading under the ``apache`` namespace.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.decorators.path
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -27,7 +28,7 @@ def __virtual__():
     Only load the module if apache is installed
     '''
     cmd = _detect_os()
-    if salt.utils.which(cmd) and __grains__['os_family'] == 'Debian':
+    if salt.utils.path.which(cmd) and __grains__.get('os_family') == 'Debian':
         return __virtualname__
     return (False, 'apache execution module not loaded: apache not installed.')
 
@@ -37,9 +38,9 @@ def _detect_os():
     Apache commands and paths differ depending on packaging
     '''
     # TODO: Add pillar support for the apachectl location
-    if __grains__['os_family'] == 'RedHat':
+    if __grains__.get('os_family') == 'RedHat':
         return 'apachectl'
-    elif __grains__['os_family'] == 'Debian':
+    elif __grains__.get('os_family') == 'Debian':
         return 'apache2ctl'
     else:
         return 'apachectl'
@@ -253,7 +254,7 @@ def check_conf_enabled(conf):
     return os.path.islink('/etc/apache2/conf-enabled/{0}'.format(conf_file))
 
 
-@salt.utils.decorators.which('a2enconf')
+@salt.utils.decorators.path.which('a2enconf')
 def a2enconf(conf):
     '''
     .. versionadded:: 2016.3.0
@@ -290,7 +291,7 @@ def a2enconf(conf):
     return ret
 
 
-@salt.utils.decorators.which('a2disconf')
+@salt.utils.decorators.path.which('a2disconf')
 def a2disconf(conf):
     '''
     .. versionadded:: 2016.3.0

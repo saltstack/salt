@@ -4,7 +4,7 @@ Execute salt convenience routines
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import logging
 
@@ -12,9 +12,11 @@ import logging
 import salt.exceptions
 import salt.loader
 import salt.minion
-import salt.utils
 import salt.utils.args
 import salt.utils.event
+import salt.utils.files
+import salt.utils.user
+import salt.defaults.exitcodes
 from salt.client import mixins
 from salt.output import display_output
 from salt.utils.lazy import verify_fun
@@ -42,6 +44,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
 
     def __init__(self, opts):
         self.opts = opts
+        self.context = {}
 
     @property
     def functions(self):
@@ -50,11 +53,13 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
                 self.utils = salt.loader.utils(self.opts)
             # Must be self.functions for mixin to work correctly :-/
             try:
-                self._functions = salt.loader.runner(self.opts, utils=self.utils)
+                self._functions = salt.loader.runner(
+                    self.opts, utils=self.utils, context=self.context)
             except AttributeError:
                 # Just in case self.utils is still not present (perhaps due to
                 # problems with the loader), load the runner funcs without them
-                self._functions = salt.loader.runner(self.opts)
+                self._functions = salt.loader.runner(
+                    self.opts, context=self.context)
 
         return self._functions
 
@@ -72,24 +77,34 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         fun = low.pop('fun')
         verify_fun(self.functions, fun)
 
-        reserved_kwargs = dict([(i, low.pop(i)) for i in [
+        eauth_creds = dict([(i, low.pop(i)) for i in [
             'username', 'password', 'eauth', 'token', 'client', 'user', 'key',
-            '__current_eauth_groups', '__current_eauth_user',
         ] if i in low])
 
         # Run name=value args through parse_input. We don't need to run kwargs
         # through because there is no way to send name=value strings in the low
         # dict other than by including an `arg` array.
-        arg, kwarg = salt.utils.args.parse_input(
+        _arg, _kwarg = salt.utils.args.parse_input(
                 low.pop('arg', []), condition=False)
-        kwarg.update(low.pop('kwarg', {}))
+        _kwarg.update(low.pop('kwarg', {}))
 
         # If anything hasn't been pop()'ed out of low by this point it must be
         # an old-style kwarg.
-        kwarg.update(low)
+        _kwarg.update(low)
+
+        # Finally, mung our kwargs to a format suitable for the byzantine
+        # load_args_and_kwargs so that we can introspect the function being
+        # called and fish for invalid kwargs.
+        munged = []
+        munged.extend(_arg)
+        munged.append(dict(__kwarg__=True, **_kwarg))
+        arg, kwarg = salt.minion.load_args_and_kwargs(
+            self.functions[fun],
+            munged,
+            ignore_invalid=True)
 
         return dict(fun=fun, kwarg={'kwarg': kwarg, 'arg': arg},
-                **reserved_kwargs)
+                **eauth_creds)
 
     def cmd_async(self, low):
         '''
@@ -166,96 +181,125 @@ class Runner(RunnerClient):
         '''
         Execute the runner sequence
         '''
-        import salt.minion
-        ret = {}
+        # Print documentation only
         if self.opts.get('doc', False):
             self.print_docs()
         else:
-            low = {'fun': self.opts['fun']}
-            try:
-                verify_fun(self.functions, low['fun'])
-                args, kwargs = salt.minion.load_args_and_kwargs(
-                    self.functions[low['fun']],
-                    salt.utils.args.parse_input(self.opts['arg']),
-                    self.opts,
-                )
-                low['arg'] = args
-                low['kwarg'] = kwargs
+            return self._run_runner()
 
-                if self.opts.get('eauth'):
-                    if 'token' in self.opts:
-                        try:
-                            with salt.utils.fopen(os.path.join(self.opts['cachedir'], '.root_key'), 'r') as fp_:
-                                low['key'] = fp_.readline()
-                        except IOError:
-                            low['token'] = self.opts['token']
+    def _run_runner(self):
+        '''
+        Actually execute specific runner
+        :return:
+        '''
+        import salt.minion
+        ret = {}
+        low = {'fun': self.opts['fun']}
+        try:
+            # Allocate a jid
+            async_pub = self._gen_async_pub()
+            self.jid = async_pub['jid']
 
-                    # If using eauth and a token hasn't already been loaded into
-                    # low, prompt the user to enter auth credentials
-                    if 'token' not in low and 'key' not in low and self.opts['eauth']:
-                        # This is expensive. Don't do it unless we need to.
-                        import salt.auth
-                        resolver = salt.auth.Resolver(self.opts)
-                        res = resolver.cli(self.opts['eauth'])
-                        if self.opts['mktoken'] and res:
-                            tok = resolver.token_cli(
-                                    self.opts['eauth'],
-                                    res
-                                    )
-                            if tok:
-                                low['token'] = tok.get('token', '')
-                        if not res:
-                            log.error('Authentication failed')
-                            return ret
-                        low.update(res)
-                        low['eauth'] = self.opts['eauth']
-                else:
-                    user = salt.utils.get_specific_user()
+            fun_args = salt.utils.args.parse_input(
+                    self.opts['arg'],
+                    no_parse=self.opts.get('no_parse', []))
 
-                # Allocate a jid
-                async_pub = self._gen_async_pub()
-                self.jid = async_pub['jid']
+            verify_fun(self.functions, low['fun'])
+            args, kwargs = salt.minion.load_args_and_kwargs(
+                self.functions[low['fun']],
+                fun_args)
+            low['arg'] = args
+            low['kwarg'] = kwargs
 
-                if low['fun'] == 'state.orchestrate':
-                    low['kwarg']['orchestration_jid'] = async_pub['jid']
+            if self.opts.get('eauth'):
+                if 'token' in self.opts:
+                    try:
+                        with salt.utils.files.fopen(os.path.join(self.opts['cachedir'], '.root_key'), 'r') as fp_:
+                            low['key'] = salt.utils.stringutils.to_unicode(fp_.readline())
+                    except IOError:
+                        low['token'] = self.opts['token']
 
-                # Run the runner!
-                if self.opts.get('async', False):
-                    if self.opts.get('eauth'):
-                        async_pub = self.cmd_async(low)
-                    else:
-                        async_pub = self.async(self.opts['fun'],
-                                               low,
-                                               user=user,
-                                               pub=async_pub)
-                    # by default: info will be not enougth to be printed out !
-                    log.warning('Running in async mode. Results of this execution may '
-                             'be collected by attaching to the master event bus or '
-                             'by examing the master job cache, if configured. '
-                             'This execution is running under tag {tag}'.format(**async_pub))
-                    return async_pub['jid']  # return the jid
-
-                # otherwise run it in the main process
-                if self.opts.get('eauth'):
-                    ret = self.cmd_sync(low)
-                    if isinstance(ret, dict) and set(ret) == set(('data', 'outputter')):
-                        outputter = ret['outputter']
-                        ret = ret['data']
-                    else:
-                        outputter = None
-                    display_output(ret, outputter, self.opts)
-                else:
-                    ret = self._proc_function(self.opts['fun'],
-                                              low,
-                                              user,
-                                              async_pub['tag'],
-                                              async_pub['jid'],
-                                              daemonize=False)
-            except salt.exceptions.SaltException as exc:
-                ret = '{0}'.format(exc)
-                if not self.opts.get('quiet', False):
-                    display_output(ret, 'nested', self.opts)
+                # If using eauth and a token hasn't already been loaded into
+                # low, prompt the user to enter auth credentials
+                if 'token' not in low and 'key' not in low and self.opts['eauth']:
+                    # This is expensive. Don't do it unless we need to.
+                    import salt.auth
+                    resolver = salt.auth.Resolver(self.opts)
+                    res = resolver.cli(self.opts['eauth'])
+                    if self.opts['mktoken'] and res:
+                        tok = resolver.token_cli(
+                                self.opts['eauth'],
+                                res
+                                )
+                        if tok:
+                            low['token'] = tok.get('token', '')
+                    if not res:
+                        log.error('Authentication failed')
+                        return ret
+                    low.update(res)
+                    low['eauth'] = self.opts['eauth']
             else:
-                log.debug('Runner return: {0}'.format(ret))
+                user = salt.utils.user.get_specific_user()
 
-            return ret
+            if low['fun'] in ['state.orchestrate', 'state.orch', 'state.sls']:
+                low['kwarg']['orchestration_jid'] = async_pub['jid']
+
+            # Run the runner!
+            if self.opts.get('async', False):
+                if self.opts.get('eauth'):
+                    async_pub = self.cmd_async(low)
+                else:
+                    async_pub = self.asynchronous(self.opts['fun'],
+                                                  low,
+                                                  user=user,
+                                                  pub=async_pub)
+
+                # by default: info will be not enough to be printed out !
+                log.warning(
+                    'Running in asynchronous mode. Results of this execution may '
+                    'be collected by attaching to the master event bus or '
+                    'by examing the master job cache, if configured. '
+                    'This execution is running under tag %s', async_pub['tag']
+                )
+                return async_pub['jid']  # return the jid
+
+            # otherwise run it in the main process
+            if self.opts.get('eauth'):
+                ret = self.cmd_sync(low)
+                if isinstance(ret, dict) and set(ret) == {'data', 'outputter'}:
+                    outputter = ret['outputter']
+                    ret = ret['data']
+                else:
+                    outputter = None
+                display_output(ret, outputter, self.opts)
+            else:
+                ret = self._proc_function(self.opts['fun'],
+                                          low,
+                                          user,
+                                          async_pub['tag'],
+                                          async_pub['jid'],
+                                          daemonize=False)
+        except salt.exceptions.SaltException as exc:
+            with salt.utils.event.get_event('master', opts=self.opts) as evt:
+                evt.fire_event({'success': False,
+                                'return': '{0}'.format(exc),
+                                'retcode': 254,
+                                'fun': self.opts['fun'],
+                                'fun_args': fun_args,
+                                'jid': self.jid},
+                               tag='salt/run/{0}/ret'.format(self.jid))
+            # Attempt to grab documentation
+            if 'fun' in low:
+                ret = self.get_docs('{0}*'.format(low['fun']))
+            else:
+                ret = None
+
+            # If we didn't get docs returned then
+            # return the `not availble` message.
+            if not ret:
+                ret = '{0}'.format(exc)
+            if not self.opts.get('quiet', False):
+                display_output(ret, 'nested', self.opts)
+        log.debug('Runner return: %s', ret)
+
+        return ret

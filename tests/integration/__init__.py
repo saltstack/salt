@@ -10,7 +10,6 @@ import os
 import re
 import sys
 import copy
-import json
 import time
 import stat
 import errno
@@ -37,53 +36,40 @@ from tests.support.unit import TestCase
 from tests.support.case import ShellTestCase
 from tests.support.parser import PNUM, print_header, SaltTestcaseParser
 from tests.support.helpers import requires_sshd_server, RedirectStdStreams
-from tests.support.paths import ScriptPathMixin
+from tests.support.cli_scripts import ScriptPathMixin
 from tests.support.mixins import CheckShellBinaryNameAndVersionMixin, ShellCaseCommonTestsMixin
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin, SaltClientTestCaseMixin
 from tests.support.mixins import SaltMinionEventAssertsMixin, SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
+
 # Import Salt libs
 import salt
 import salt.config
+import salt.master
 import salt.minion
 import salt.runner
 import salt.output
 import salt.version
-import salt.utils
-import salt.utils.network
+import salt.utils.color
+import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
 import salt.utils.process
+import salt.utils.stringutils
+import salt.utils.yaml
 import salt.log.setup as salt_log_setup
-from salt.ext import six
 from salt.utils.verify import verify_env
 from salt.utils.immutabletypes import freeze
-from salt.utils.nb_popen import NonBlockingPopen
 from salt.exceptions import SaltClientError
 
-try:
-    from salt.utils.gitfs import HAS_GITPYTHON, HAS_PYGIT2
-    HAS_GITFS = HAS_GITPYTHON or HAS_PYGIT2
-except ImportError:
-    HAS_GITFS = False
-
-try:
-    import salt.master
-except ImportError:
-    # Not required for raet tests
-    pass
-
 # Import 3rd-party libs
-import yaml
 import msgpack
-import salt.ext.six as six
-from salt.ext.six.moves import cStringIO
+from salt.ext import six
 
 try:
     import salt.ext.six.moves.socketserver as socketserver
 except ImportError:
     import socketserver
-
-from tornado import gen
-from tornado import ioloop
 
 # Import salt tests support libs
 from tests.support.processes import SaltMaster, SaltMinion, SaltSyndic
@@ -109,15 +95,16 @@ def get_unused_localhost_port():
 
     DARWIN = True if sys.platform.startswith('darwin') else False
     BSD = True if 'bsd' in sys.platform else False
+    AIX = True if sys.platform.startswith('aix') else False
 
-    if DARWIN and port in _RUNTESTS_PORTS:
+    if (AIX or DARWIN) and port in _RUNTESTS_PORTS:
         port = get_unused_localhost_port()
         usock.close()
         return port
 
     _RUNTESTS_PORTS[port] = usock
 
-    if DARWIN or BSD:
+    if DARWIN or BSD or AIX:
         usock.close()
 
     return port
@@ -157,7 +144,13 @@ class ThreadedSocketServer(ThreadingMixIn, socketserver.TCPServer):
 
 class SocketServerRequestHandler(socketserver.StreamRequestHandler):
     def handle(self):
-        unpacker = msgpack.Unpacker(encoding='utf-8')
+        encoding = 'utf-8'
+        unpacker_kwargs = {}
+        if msgpack.version >= (0, 5, 2):
+            unpacker_kwargs['raw'] = False
+        else:
+            unpacker_kwargs['encoding'] = encoding
+        unpacker = msgpack.Unpacker(**unpacker_kwargs)
         while not self.server.shutting_down.is_set():
             try:
                 wire_bytes = self.request.recv(1024)
@@ -188,12 +181,12 @@ class TestDaemon(object):
     '''
     Set up the master and minion daemons, and run related cases
     '''
-    MINIONS_CONNECT_TIMEOUT = MINIONS_SYNC_TIMEOUT = 120
+    MINIONS_CONNECT_TIMEOUT = MINIONS_SYNC_TIMEOUT = 500
 
     def __init__(self, parser):
         self.parser = parser
-        self.colors = salt.utils.get_colors(self.parser.options.no_colors is False)
-        if salt.utils.is_windows():
+        self.colors = salt.utils.color.get_colors(self.parser.options.no_colors is False)
+        if salt.utils.platform.is_windows():
             # There's no shell color support on windows...
             for key in self.colors:
                 self.colors[key] = ''
@@ -210,27 +203,20 @@ class TestDaemon(object):
         # Set up PATH to mockbin
         self._enter_mockbin()
 
-        if not HAS_GITFS:
-            sys.stdout.write(
-                ' * {LIGHT_RED}No suitable provider for git_pillar is installed. Install\n'
-                '   GitPython or Pygit2.{ENDC}\n'.format(
-                    **self.colors
-                )
-            )
+        self.minion_targets = set(['minion', 'sub_minion'])
 
         if self.parser.options.transport == 'zeromq':
             self.start_zeromq_daemons()
-        elif self.parser.options.transport == 'raet':
-            self.start_raet_daemons()
         elif self.parser.options.transport == 'tcp':
             self.start_tcp_daemons()
 
-        self.minion_targets = set(['minion', 'sub_minion'])
         self.pre_setup_minions()
         self.setup_minions()
 
         if getattr(self.parser.options, 'ssh', False):
             self.prep_ssh()
+
+        self.wait_for_minions(time.time(), self.MINIONS_CONNECT_TIMEOUT)
 
         if self.parser.options.sysinfo:
             try:
@@ -270,27 +256,10 @@ class TestDaemon(object):
         finally:
             self.post_setup_minions()
 
-    def start_daemon(self, cls, opts, start_fun):
-        def start(cls, opts, start_fun):
-            salt.utils.appendproctitle('{0}-{1}'.format(self.__class__.__name__, cls.__name__))
-            daemon = cls(opts)
-            getattr(daemon, start_fun)()
-        process = multiprocessing.Process(target=start,
-                                          args=(cls, opts, start_fun))
-        process.start()
-        return process
-
     def start_zeromq_daemons(self):
         '''
         Fire up the daemons used for zeromq tests
         '''
-        if not salt.utils.network.ip_addrs():
-            sys.stdout.write(
-                ' * {LIGHT_RED}Unable to list IPv4 addresses. Test suite startup will be\n'
-                '   slower. Install iproute/ifconfig to fix this.{ENDC}\n'.format(
-                    **self.colors
-                )
-            )
         self.log_server = ThreadedSocketServer(('localhost', SALT_LOG_PORT), SocketServerRequestHandler)
         self.log_server_process = threading.Thread(target=self.log_server.serve_forever)
         self.log_server_process.daemon = True
@@ -310,7 +279,8 @@ class TestDaemon(object):
                 daemon_class=SaltMaster,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=30)
+                event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
+                start_timeout=60)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -346,7 +316,8 @@ class TestDaemon(object):
                 daemon_class=SaltMinion,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=30)
+                event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
+                start_timeout=60)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -382,7 +353,8 @@ class TestDaemon(object):
                 daemon_class=SaltMinion,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=30)
+                event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
+                start_timeout=60)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -408,6 +380,7 @@ class TestDaemon(object):
                 ' * {LIGHT_YELLOW}Starting syndic salt-master ... {ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
+            self.prep_syndic()
             self.smaster_process = start_daemon(
                 daemon_name='salt-smaster',
                 daemon_id=self.syndic_master_opts['id'],
@@ -418,7 +391,8 @@ class TestDaemon(object):
                 daemon_class=SaltMaster,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=30)
+                event_listener_config_dir=RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR,
+                start_timeout=60)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -454,7 +428,8 @@ class TestDaemon(object):
                 daemon_class=SaltSyndic,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=30)
+                event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
+                start_timeout=60)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -475,32 +450,53 @@ class TestDaemon(object):
             )
             sys.stdout.flush()
 
-    def start_raet_daemons(self):
-        '''
-        Fire up the raet daemons!
-        '''
-        import salt.daemons.flo
-        self.master_process = self.start_daemon(salt.daemons.flo.IofloMaster,
-                                                self.master_opts,
-                                                'start')
-
-        self.minion_process = self.start_daemon(salt.daemons.flo.IofloMinion,
-                                                self.minion_opts,
-                                                'tune_in')
-
-        self.sub_minion_process = self.start_daemon(salt.daemons.flo.IofloMinion,
-                                                    self.sub_minion_opts,
-                                                    'tune_in')
-        # Wait for the daemons to all spin up
-        time.sleep(5)
-
-        # self.smaster_process = self.start_daemon(salt.daemons.flo.IofloMaster,
-        #                                            self.syndic_master_opts,
-        #                                            'start')
-
-        # no raet syndic daemon yet
+        if self.parser.options.proxy:
+            self.minion_targets.add(self.proxy_opts['id'])
+            try:
+                sys.stdout.write(
+                    ' * {LIGHT_YELLOW}Starting salt-proxy ... {ENDC}'.format(**self.colors)
+                )
+                sys.stdout.flush()
+                self.proxy_process = start_daemon(
+                    daemon_name='salt-proxy',
+                    daemon_id=self.proxy_opts['id'],
+                    daemon_log_prefix='salt-proxy/{}'.format(self.proxy_opts['id']),
+                    daemon_cli_script_name='proxy',
+                    daemon_config=self.proxy_opts,
+                    daemon_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
+                    daemon_class=SaltProxy,
+                    bin_dir_path=SCRIPT_DIR,
+                    fail_hard=True,
+                    start_timeout=60)
+                sys.stdout.write(
+                    '\r{0}\r'.format(
+                        ' ' * getattr(self.parser.options, 'output_columns', PNUM)
+                    )
+                )
+                sys.stdout.write(
+                    ' * {LIGHT_GREEN}Starting salt-proxy ... STARTED!\n{ENDC}'.format(**self.colors)
+                )
+                sys.stdout.flush()
+            except (RuntimeWarning, RuntimeError):
+                sys.stdout.write(
+                    '\r{0}\r'.format(
+                        ' ' * getattr(self.parser.options, 'output_columns', PNUM)
+                    )
+                )
+                sys.stdout.write(
+                    ' * {LIGHT_RED}Starting salt-proxy ... FAILED!\n{ENDC}'.format(**self.colors)
+                )
+                sys.stdout.flush()
 
     start_tcp_daemons = start_zeromq_daemons
+
+    def prep_syndic(self):
+        '''
+        Create a roster file for salt's syndic
+        '''
+        roster_path = os.path.join(FILES, 'conf/_ssh/roster')
+        shutil.copy(roster_path, RUNTIME_VARS.TMP_CONF_DIR)
+        shutil.copy(roster_path, RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR)
 
     def prep_ssh(self):
         '''
@@ -512,8 +508,8 @@ class TestDaemon(object):
                 **self.colors
             )
         )
-        keygen = salt.utils.which('ssh-keygen')
-        sshd = salt.utils.which('sshd')
+        keygen = salt.utils.path.which('ssh-keygen')
+        sshd = salt.utils.path.which('sshd')
 
         if not (keygen and sshd):
             print('WARNING: Could not initialize SSH subsystem. Tests for salt-ssh may break!')
@@ -546,7 +542,7 @@ class TestDaemon(object):
         )
         _, keygen_err = keygen_process.communicate()
         if keygen_err:
-            print('ssh-keygen had errors: {0}'.format(salt.utils.to_str(keygen_err)))
+            print('ssh-keygen had errors: {0}'.format(salt.utils.stringutils.to_str(keygen_err)))
         sshd_config_path = os.path.join(FILES, 'conf/_ssh/sshd_config')
         shutil.copy(sshd_config_path, RUNTIME_VARS.TMP_CONF_DIR)
         auth_key_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'key_test.pub')
@@ -589,7 +585,7 @@ class TestDaemon(object):
         )
         _, keygen_dsa_err = keygen_process_dsa.communicate()
         if keygen_dsa_err:
-            print('ssh-keygen had errors: {0}'.format(salt.utils.to_str(keygen_dsa_err)))
+            print('ssh-keygen had errors: {0}'.format(salt.utils.stringutils.to_str(keygen_dsa_err)))
 
         keygen_process_ecdsa = subprocess.Popen(
             [keygen, '-t',
@@ -609,7 +605,7 @@ class TestDaemon(object):
         )
         _, keygen_escda_err = keygen_process_ecdsa.communicate()
         if keygen_escda_err:
-            print('ssh-keygen had errors: {0}'.format(salt.utils.to_str(keygen_escda_err)))
+            print('ssh-keygen had errors: {0}'.format(salt.utils.stringutils.to_str(keygen_escda_err)))
 
         keygen_process_ed25519 = subprocess.Popen(
             [keygen, '-t',
@@ -629,9 +625,9 @@ class TestDaemon(object):
         )
         _, keygen_ed25519_err = keygen_process_ed25519.communicate()
         if keygen_ed25519_err:
-            print('ssh-keygen had errors: {0}'.format(salt.utils.to_str(keygen_ed25519_err)))
+            print('ssh-keygen had errors: {0}'.format(salt.utils.stringutils.to_str(keygen_ed25519_err)))
 
-        with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'sshd_config'), 'a') as ssh_config:
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'sshd_config'), 'a') as ssh_config:
             ssh_config.write('AuthorizedKeysFile {0}\n'.format(auth_key_file))
             if not keygen_dsa_err:
                 ssh_config.write('HostKey {0}\n'.format(server_dsa_priv_key_file))
@@ -650,12 +646,11 @@ class TestDaemon(object):
         )
         _, sshd_err = self.sshd_process.communicate()
         if sshd_err:
-            print('sshd had errors on startup: {0}'.format(salt.utils.to_str(sshd_err)))
+            print('sshd had errors on startup: {0}'.format(salt.utils.stringutils.to_str(sshd_err)))
         else:
             os.environ['SSH_DAEMON_RUNNING'] = 'True'
-        roster_path = os.path.join(FILES, 'conf/_ssh/roster')
-        shutil.copy(roster_path, RUNTIME_VARS.TMP_CONF_DIR)
-        with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'), 'a') as roster:
+        self.prep_syndic()
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'), 'a') as roster:
             roster.write('  user: {0}\n'.format(RUNTIME_VARS.RUNNING_TESTS_USER))
             roster.write('  priv: {0}/{1}'.format(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'))
         sys.stdout.write(
@@ -675,6 +670,7 @@ class TestDaemon(object):
             * syndic
             * syndic_master
             * sub_minion
+            * proxy
         '''
         return RUNTIME_VARS.RUNTIME_CONFIGS[role]
 
@@ -700,25 +696,38 @@ class TestDaemon(object):
 
     @classmethod
     def transplant_configs(cls, transport='zeromq'):
-        if os.path.isdir(RUNTIME_VARS.TMP_CONF_DIR):
-            shutil.rmtree(RUNTIME_VARS.TMP_CONF_DIR)
+        if os.path.isdir(RUNTIME_VARS.TMP):
+            shutil.rmtree(RUNTIME_VARS.TMP)
+        os.makedirs(RUNTIME_VARS.TMP)
+        os.makedirs(RUNTIME_VARS.TMP_ROOT_DIR)
         os.makedirs(RUNTIME_VARS.TMP_CONF_DIR)
         os.makedirs(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR)
         os.makedirs(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR)
         os.makedirs(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR)
+
         print(' * Transplanting configuration files to \'{0}\''.format(RUNTIME_VARS.TMP_CONF_DIR))
         tests_known_hosts_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'salt_ssh_known_hosts')
-        with salt.utils.fopen(tests_known_hosts_file, 'w') as known_hosts:
+        with salt.utils.files.fopen(tests_known_hosts_file, 'w') as known_hosts:
             known_hosts.write('')
 
         # This master connects to syndic_master via a syndic
         master_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'master'))
         master_opts['known_hosts_file'] = tests_known_hosts_file
-        master_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
+        master_opts['cachedir'] = 'cache'
         master_opts['user'] = RUNTIME_VARS.RUNNING_TESTS_USER
-        master_opts['config_dir'] = RUNTIME_VARS.TMP_CONF_DIR
-        master_opts['root_dir'] = os.path.join(TMP, 'rootdir')
-        master_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki', 'master')
+        master_opts['root_dir'] = os.path.join(TMP_ROOT_DIR)
+        master_opts['pki_dir'] = 'pki'
+        master_opts['syndic_master'] = 'localhost'
+        pytest_stop_sending_events_file = os.path.join(TMP_ROOT_DIR, 'pytest_stop_sending_events_file_master')
+        with salt.utils.files.fopen(pytest_stop_sending_events_file, 'w') as wfh:
+            wfh.write('')
+        master_opts['pytest_stop_sending_events_file'] = pytest_stop_sending_events_file
+        file_tree = {
+            'root_dir':  os.path.join(FILES, 'pillar', 'base', 'file_tree'),
+            'follow_dir_links': False,
+            'keep_newline': True,
+        }
+        master_opts['ext_pillar'].append({'file_tree': file_tree})
 
         # This is the syndic for master
         # Let's start with a copy of the syndic master configuration
@@ -728,54 +737,113 @@ class TestDaemon(object):
         syndic_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
         syndic_opts['config_dir'] = RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR
 
+        # Under windows we can't seem to properly create a virtualenv off of another
+        # virtualenv, we can on linux but we will still point to the virtualenv binary
+        # outside the virtualenv running the test suite, if that's the case.
+        try:
+            real_prefix = sys.real_prefix
+            # The above attribute exists, this is a virtualenv
+            if salt.utils.is_windows():
+                virtualenv_binary = os.path.join(real_prefix, 'Scripts', 'virtualenv.exe')
+            else:
+                # We need to remove the virtualenv from PATH or we'll get the virtualenv binary
+                # from within the virtualenv, we don't want that
+                path = os.environ.get('PATH')
+                if path is not None:
+                    path_items = path.split(os.pathsep)
+                    for item in path_items[:]:
+                        if item.startswith(sys.base_prefix):
+                            path_items.remove(item)
+                    os.environ['PATH'] = os.pathsep.join(path_items)
+                virtualenv_binary = salt.utils.which('virtualenv')
+                if path is not None:
+                    # Restore previous environ PATH
+                    os.environ['PATH'] = path
+                if not virtualenv_binary.startswith(real_prefix):
+                    virtualenv_binary = None
+            if virtualenv_binary and not os.path.exists(virtualenv_binary):
+                # It doesn't exist?!
+                virtualenv_binary = None
+        except AttributeError:
+            # We're not running inside a virtualenv
+            virtualenv_binary = None
+
         # This minion connects to master
         minion_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'minion'))
-        minion_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
+        minion_opts['cachedir'] = 'cache'
         minion_opts['user'] = RUNTIME_VARS.RUNNING_TESTS_USER
-        minion_opts['config_dir'] = RUNTIME_VARS.TMP_CONF_DIR
-        minion_opts['root_dir'] = os.path.join(TMP, 'rootdir')
-        minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki')
-        minion_opts['hosts.file'] = os.path.join(TMP, 'rootdir', 'hosts')
-        minion_opts['aliases.file'] = os.path.join(TMP, 'rootdir', 'aliases')
+        minion_opts['root_dir'] = os.path.join(TMP_ROOT_DIR)
+        minion_opts['pki_dir'] = 'pki'
+        minion_opts['hosts.file'] = os.path.join(TMP_ROOT_DIR, 'hosts')
+        minion_opts['aliases.file'] = os.path.join(TMP_ROOT_DIR, 'aliases')
+        if virtualenv_binary:
+            minion_opts['venv_bin'] = virtualenv_binary
 
         # This sub_minion also connects to master
         sub_minion_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'sub_minion'))
-        sub_minion_opts['cachedir'] = os.path.join(TMP, 'rootdir-sub-minion', 'cache')
+        sub_minion_opts['cachedir'] = 'cache'
         sub_minion_opts['user'] = RUNTIME_VARS.RUNNING_TESTS_USER
-        sub_minion_opts['config_dir'] = RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR
         sub_minion_opts['root_dir'] = os.path.join(TMP, 'rootdir-sub-minion')
-        sub_minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir-sub-minion', 'pki', 'minion')
-        sub_minion_opts['hosts.file'] = os.path.join(TMP, 'rootdir', 'hosts')
-        sub_minion_opts['aliases.file'] = os.path.join(TMP, 'rootdir', 'aliases')
+        sub_minion_opts['pki_dir'] = 'pki'
+        sub_minion_opts['hosts.file'] = os.path.join(TMP_ROOT_DIR, 'hosts')
+        sub_minion_opts['aliases.file'] = os.path.join(TMP_ROOT_DIR, 'aliases')
+        if virtualenv_binary:
+            sub_minion_opts['venv_bin'] = virtualenv_binary
 
         # This is the master of masters
         syndic_master_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic_master'))
-        syndic_master_opts['cachedir'] = os.path.join(TMP, 'rootdir-syndic-master', 'cache')
+        syndic_master_opts['cachedir'] = 'cache'
         syndic_master_opts['user'] = RUNTIME_VARS.RUNNING_TESTS_USER
-        syndic_master_opts['config_dir'] = RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR
         syndic_master_opts['root_dir'] = os.path.join(TMP, 'rootdir-syndic-master')
-        syndic_master_opts['pki_dir'] = os.path.join(TMP, 'rootdir-syndic-master', 'pki', 'master')
+        syndic_master_opts['pki_dir'] = 'pki'
+        pytest_stop_sending_events_file = os.path.join(TMP_ROOT_DIR, 'pytest_stop_sending_events_file_syndic_master')
+        with salt.utils.files.fopen(pytest_stop_sending_events_file, 'w') as wfh:
+            wfh.write('')
+        syndic_master_opts['pytest_stop_sending_events_file'] = pytest_stop_sending_events_file
 
-        if transport == 'raet':
-            master_opts['transport'] = 'raet'
-            master_opts['raet_port'] = 64506
-            minion_opts['transport'] = 'raet'
-            minion_opts['raet_port'] = 64510
-            sub_minion_opts['transport'] = 'raet'
-            sub_minion_opts['raet_port'] = 64520
-            # syndic_master_opts['transport'] = 'raet'
+        # This proxy connects to master
+        proxy_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'proxy'))
+        proxy_opts['cachedir'] = 'cache'
+        # proxy_opts['user'] = running_tests_user
+        proxy_opts['root_dir'] = os.path.join(TMP, 'rootdir-proxy')
+        proxy_opts['pki_dir'] = 'pki'
+        proxy_opts['hosts.file'] = os.path.join(TMP, 'rootdir-proxy', 'hosts')
+        proxy_opts['aliases.file'] = os.path.join(TMP, 'rootdir-proxy', 'aliases')
 
         if transport == 'tcp':
             master_opts['transport'] = 'tcp'
             minion_opts['transport'] = 'tcp'
             sub_minion_opts['transport'] = 'tcp'
             syndic_master_opts['transport'] = 'tcp'
+            proxy_opts['transport'] = 'tcp'
 
         # Set up config options that require internal data
         master_opts['pillar_roots'] = syndic_master_opts['pillar_roots'] = {
-            'base': [os.path.join(FILES, 'pillar', 'base')]
+            'base': [
+                RUNTIME_VARS.TMP_PILLAR_TREE,
+                os.path.join(FILES, 'pillar', 'base'),
+            ]
+        }
+        minion_opts['pillar_roots'] = {
+            'base': [
+                RUNTIME_VARS.TMP_PILLAR_TREE,
+                os.path.join(FILES, 'pillar', 'base'),
+            ]
         }
         master_opts['file_roots'] = syndic_master_opts['file_roots'] = {
+            'base': [
+                os.path.join(FILES, 'file', 'base'),
+                # Let's support runtime created files that can be used like:
+                #   salt://my-temp-file.txt
+                RUNTIME_VARS.TMP_STATE_TREE
+            ],
+            # Alternate root to test __env__ choices
+            'prod': [
+                os.path.join(FILES, 'file', 'prod'),
+                RUNTIME_VARS.TMP_PRODENV_STATE_TREE
+            ]
+        }
+        minion_opts['file_roots'] = {
             'base': [
                 os.path.join(FILES, 'file', 'base'),
                 # Let's support runtime created files that can be used like:
@@ -795,16 +863,26 @@ class TestDaemon(object):
                 ],
             }
         )
+        master_opts.setdefault('reactor', []).append(
+            {
+                'salt/test/reactor': [
+                    os.path.join(FILES, 'reactor-test.sls')
+                ],
+
+            }
+        )
         for opts_dict in (master_opts, syndic_master_opts):
             if 'ext_pillar' not in opts_dict:
                 opts_dict['ext_pillar'] = []
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 opts_dict['ext_pillar'].append(
                     {'cmd_yaml': 'type {0}'.format(os.path.join(FILES, 'ext.yaml'))})
             else:
                 opts_dict['ext_pillar'].append(
                     {'cmd_yaml': 'cat {0}'.format(os.path.join(FILES, 'ext.yaml'))})
 
+        # all read, only owner write
+        autosign_file_permissions = stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IWUSR
         for opts_dict in (master_opts, syndic_master_opts):
             # We need to copy the extension modules into the new master root_dir or
             # it will be prefixed by it
@@ -818,6 +896,14 @@ class TestDaemon(object):
                 )
             opts_dict['extension_modules'] = os.path.join(opts_dict['root_dir'], 'extension_modules')
 
+            # Copy the autosign_file to the new  master root_dir
+            new_autosign_file_path = os.path.join(opts_dict['root_dir'], 'autosign_file')
+            shutil.copyfile(
+                os.path.join(INTEGRATION_TEST_DIR, 'files', 'autosign_file'),
+                new_autosign_file_path
+            )
+            os.chmod(new_autosign_file_path, autosign_file_permissions)
+
         # Point the config values to the correct temporary paths
         for name in ('hosts', 'aliases'):
             optname = '{0}.file'.format(name)
@@ -827,14 +913,16 @@ class TestDaemon(object):
             sub_minion_opts[optname] = optname_path
             syndic_opts[optname] = optname_path
             syndic_master_opts[optname] = optname_path
+            proxy_opts[optname] = optname_path
 
         master_opts['runtests_conn_check_port'] = get_unused_localhost_port()
         minion_opts['runtests_conn_check_port'] = get_unused_localhost_port()
         sub_minion_opts['runtests_conn_check_port'] = get_unused_localhost_port()
         syndic_opts['runtests_conn_check_port'] = get_unused_localhost_port()
         syndic_master_opts['runtests_conn_check_port'] = get_unused_localhost_port()
+        proxy_opts['runtests_conn_check_port'] = get_unused_localhost_port()
 
-        for conf in (master_opts, minion_opts, sub_minion_opts, syndic_opts, syndic_master_opts):
+        for conf in (master_opts, minion_opts, sub_minion_opts, syndic_opts, syndic_master_opts, proxy_opts):
             if 'engines' not in conf:
                 conf['engines'] = []
             conf['engines'].append({'salt_runtests': {}})
@@ -848,10 +936,11 @@ class TestDaemon(object):
                 conf['log_handlers_dirs'] = []
             conf['log_handlers_dirs'].insert(0, LOG_HANDLERS_DIR)
             conf['runtests_log_port'] = SALT_LOG_PORT
+            conf['runtests_log_level'] = os.environ.get('TESTS_MIN_LOG_LEVEL_NAME') or 'debug'
 
         # ----- Transcribe Configuration ---------------------------------------------------------------------------->
         for entry in os.listdir(RUNTIME_VARS.CONF_DIR):
-            if entry in ('master', 'minion', 'sub_minion', 'syndic', 'syndic_master'):
+            if entry in ('master', 'minion', 'sub_minion', 'syndic', 'syndic_master', 'proxy'):
                 # These have runtime computed values and will be handled
                 # differently
                 continue
@@ -867,27 +956,21 @@ class TestDaemon(object):
                     os.path.join(RUNTIME_VARS.TMP_CONF_DIR, entry)
                 )
 
-        for entry in ('master', 'minion', 'sub_minion', 'syndic', 'syndic_master'):
+        for entry in ('master', 'minion', 'sub_minion', 'syndic', 'syndic_master', 'proxy'):
             computed_config = copy.deepcopy(locals()['{0}_opts'.format(entry)])
-            with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, entry), 'w') as fp_:
-                fp_.write(yaml.dump(computed_config, default_flow_style=False))
+            with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, entry), 'w') as fp_:
+                salt.utils.yaml.safe_dump(computed_config, fp_, default_flow_style=False)
         sub_minion_computed_config = copy.deepcopy(sub_minion_opts)
-        with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR, 'minion'), 'w') as wfh:
-            wfh.write(
-                yaml.dump(sub_minion_computed_config, default_flow_style=False)
-            )
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR, 'minion'), 'w') as wfh:
+            salt.utils.yaml.safe_dump(sub_minion_computed_config, wfh, default_flow_style=False)
         shutil.copyfile(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'master'), os.path.join(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR, 'master'))
 
         syndic_master_computed_config = copy.deepcopy(syndic_master_opts)
-        with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, 'master'), 'w') as wfh:
-            wfh.write(
-                yaml.dump(syndic_master_computed_config, default_flow_style=False)
-            )
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, 'master'), 'w') as wfh:
+            salt.utils.yaml.safe_dump(syndic_master_computed_config, wfh, default_flow_style=False)
         syndic_computed_config = copy.deepcopy(syndic_opts)
-        with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR, 'minion'), 'w') as wfh:
-            wfh.write(
-                yaml.dump(syndic_computed_config, default_flow_style=False)
-            )
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR, 'minion'), 'w') as wfh:
+            salt.utils.yaml.safe_dump(syndic_computed_config, wfh, default_flow_style=False)
         shutil.copyfile(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'master'), os.path.join(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR, 'master'))
         # <---- Transcribe Configuration -----------------------------------------------------------------------------
 
@@ -900,25 +983,25 @@ class TestDaemon(object):
         )
         sub_minion_opts = salt.config.minion_config(os.path.join(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR, 'minion'))
         syndic_master_opts = salt.config.master_config(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, 'master'))
+        proxy_opts = salt.config.proxy_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'proxy'))
 
         RUNTIME_VARS.RUNTIME_CONFIGS['master'] = freeze(master_opts)
         RUNTIME_VARS.RUNTIME_CONFIGS['minion'] = freeze(minion_opts)
         RUNTIME_VARS.RUNTIME_CONFIGS['syndic'] = freeze(syndic_opts)
         RUNTIME_VARS.RUNTIME_CONFIGS['sub_minion'] = freeze(sub_minion_opts)
         RUNTIME_VARS.RUNTIME_CONFIGS['syndic_master'] = freeze(syndic_master_opts)
+        RUNTIME_VARS.RUNTIME_CONFIGS['proxy'] = freeze(proxy_opts)
 
         verify_env([os.path.join(master_opts['pki_dir'], 'minions'),
                     os.path.join(master_opts['pki_dir'], 'minions_pre'),
                     os.path.join(master_opts['pki_dir'], 'minions_rejected'),
                     os.path.join(master_opts['pki_dir'], 'minions_denied'),
                     os.path.join(master_opts['cachedir'], 'jobs'),
-                    os.path.join(master_opts['cachedir'], 'raet'),
                     os.path.join(master_opts['root_dir'], 'cache', 'tokens'),
                     os.path.join(syndic_master_opts['pki_dir'], 'minions'),
                     os.path.join(syndic_master_opts['pki_dir'], 'minions_pre'),
                     os.path.join(syndic_master_opts['pki_dir'], 'minions_rejected'),
                     os.path.join(syndic_master_opts['cachedir'], 'jobs'),
-                    os.path.join(syndic_master_opts['cachedir'], 'raet'),
                     os.path.join(syndic_master_opts['root_dir'], 'cache', 'tokens'),
                     os.path.join(master_opts['pki_dir'], 'accepted'),
                     os.path.join(master_opts['pki_dir'], 'rejected'),
@@ -926,16 +1009,13 @@ class TestDaemon(object):
                     os.path.join(syndic_master_opts['pki_dir'], 'accepted'),
                     os.path.join(syndic_master_opts['pki_dir'], 'rejected'),
                     os.path.join(syndic_master_opts['pki_dir'], 'pending'),
-                    os.path.join(syndic_master_opts['cachedir'], 'raet'),
 
                     os.path.join(minion_opts['pki_dir'], 'accepted'),
                     os.path.join(minion_opts['pki_dir'], 'rejected'),
                     os.path.join(minion_opts['pki_dir'], 'pending'),
-                    os.path.join(minion_opts['cachedir'], 'raet'),
                     os.path.join(sub_minion_opts['pki_dir'], 'accepted'),
                     os.path.join(sub_minion_opts['pki_dir'], 'rejected'),
                     os.path.join(sub_minion_opts['pki_dir'], 'pending'),
-                    os.path.join(sub_minion_opts['cachedir'], 'raet'),
                     os.path.dirname(master_opts['log_file']),
                     minion_opts['extension_modules'],
                     sub_minion_opts['extension_modules'],
@@ -945,24 +1025,34 @@ class TestDaemon(object):
                     sub_minion_opts['sock_dir'],
                     minion_opts['sock_dir'],
                     RUNTIME_VARS.TMP_STATE_TREE,
+                    RUNTIME_VARS.TMP_PILLAR_TREE,
                     RUNTIME_VARS.TMP_PRODENV_STATE_TREE,
                     TMP,
                     ],
-                   RUNTIME_VARS.RUNNING_TESTS_USER)
+                   RUNTIME_VARS.RUNNING_TESTS_USER,
+                   root_dir=master_opts['root_dir'],
+                   )
 
         cls.master_opts = master_opts
         cls.minion_opts = minion_opts
+        # cls.proxy_opts = proxy_opts
         cls.sub_minion_opts = sub_minion_opts
         cls.syndic_opts = syndic_opts
         cls.syndic_master_opts = syndic_master_opts
+        cls.proxy_opts = proxy_opts
         # <---- Verify Environment -----------------------------------------------------------------------------------
 
     def __exit__(self, type, value, traceback):
         '''
         Kill the minion and master processes
         '''
-        self.sub_minion_process.terminate()
+        try:
+            self.sub_minion_process.terminate()
+        except AttributeError:
+            pass
         self.minion_process.terminate()
+        if hasattr(self, 'proxy_process'):
+            self.proxy_process.terminate()
         self.master_process.terminate()
         try:
             self.syndic_process.terminate()
@@ -1026,7 +1116,7 @@ class TestDaemon(object):
             except OSError as exc:
                 if exc.errno != 3:
                     raise
-            with salt.utils.fopen(self.sshd_pidfile) as fhr:
+            with salt.utils.files.fopen(self.sshd_pidfile) as fhr:
                 try:
                     os.kill(int(fhr.read()), signal.SIGKILL)
                 except OSError as exc:
@@ -1048,13 +1138,18 @@ class TestDaemon(object):
         Clean out the tmp files
         '''
         def remove_readonly(func, path, excinfo):
-            # Give full permissions to owner
-            os.chmod(path, stat.S_IRWXU)
-            func(path)
+            if os.path.exists(path):
+                # Give full permissions to owner
+                os.chmod(path, stat.S_IRWXU)
+                func(path)
 
-        for dirname in (TMP, RUNTIME_VARS.TMP_STATE_TREE, RUNTIME_VARS.TMP_PRODENV_STATE_TREE):
+        for dirname in (TMP, RUNTIME_VARS.TMP_STATE_TREE,
+                        RUNTIME_VARS.TMP_PILLAR_TREE, RUNTIME_VARS.TMP_PRODENV_STATE_TREE):
             if os.path.isdir(dirname):
-                shutil.rmtree(dirname, onerror=remove_readonly)
+                try:
+                    shutil.rmtree(six.text_type(dirname), onerror=remove_readonly)
+                except Exception:
+                    log.exception('Failed to remove directory: %s', dirname)
 
     def wait_for_jid(self, targets, jid, timeout=120):
         time.sleep(1)  # Allow some time for minions to accept jobs
@@ -1102,84 +1197,6 @@ class TestDaemon(object):
         return [
             k for (k, v) in six.iteritems(running) if v and v[0]['jid'] == jid
         ]
-
-    def wait_for_minion_connections(self, targets, timeout):
-        salt.utils.appendproctitle('WaitForMinionConnections')
-        sys.stdout.write(
-            ' {LIGHT_BLUE}*{ENDC} Waiting at most {0} for minions({1}) to '
-            'connect back\n'.format(
-                (timeout > 60 and
-                 timedelta(seconds=timeout) or
-                 '{0} secs'.format(timeout)),
-                ', '.join(targets),
-                **self.colors
-            )
-        )
-        sys.stdout.flush()
-        expected_connections = set(targets)
-        now = datetime.now()
-        expire = now + timedelta(seconds=timeout)
-        while now <= expire:
-            sys.stdout.write(
-                '\r{0}\r'.format(
-                    ' ' * getattr(self.parser.options, 'output_columns', PNUM)
-                )
-            )
-            sys.stdout.write(
-                ' * {LIGHT_YELLOW}[Quit in {0}]{ENDC} Waiting for {1}'.format(
-                    '{0}'.format(expire - now).rsplit('.', 1)[0],
-                    ', '.join(expected_connections),
-                    **self.colors
-                )
-            )
-            sys.stdout.flush()
-
-            try:
-                responses = self.client.cmd(
-                    list(expected_connections), 'test.ping', tgt_type='list',
-                )
-            # we'll get this exception if the master process hasn't finished starting yet
-            except SaltClientError:
-                time.sleep(0.1)
-                now = datetime.now()
-                continue
-            for target in responses:
-                if target not in expected_connections:
-                    # Someone(minion) else "listening"?
-                    continue
-                expected_connections.remove(target)
-                sys.stdout.write(
-                    '\r{0}\r'.format(
-                        ' ' * getattr(self.parser.options, 'output_columns',
-                                      PNUM)
-                    )
-                )
-                sys.stdout.write(
-                    '   {LIGHT_GREEN}*{ENDC} {0} connected.\n'.format(
-                        target, **self.colors
-                    )
-                )
-                sys.stdout.flush()
-
-            if not expected_connections:
-                return
-
-            time.sleep(1)
-            now = datetime.now()
-        else:  # pylint: disable=W0120
-            print(
-                '\n {LIGHT_RED}*{ENDC} WARNING: Minions failed to connect '
-                'back. Tests requiring them WILL fail'.format(**self.colors)
-            )
-            try:
-                print_header(
-                    '=', sep='=', inline=True,
-                    width=getattr(self.parser.options, 'output_columns', PNUM)
-
-                )
-            except TypeError:
-                print_header('=', sep='=', inline=True)
-            raise SystemExit()
 
     def sync_minion_modules_(self, modules_kind, targets, timeout=None):
         if not timeout:
@@ -1247,13 +1264,30 @@ class TestDaemon(object):
         return True
 
     def sync_minion_states(self, targets, timeout=None):
-        salt.utils.appendproctitle('SyncMinionStates')
+        salt.utils.process.appendproctitle('SyncMinionStates')
         self.sync_minion_modules_('states', targets, timeout=timeout)
 
     def sync_minion_modules(self, targets, timeout=None):
-        salt.utils.appendproctitle('SyncMinionModules')
+        salt.utils.process.appendproctitle('SyncMinionModules')
         self.sync_minion_modules_('modules', targets, timeout=timeout)
 
     def sync_minion_grains(self, targets, timeout=None):
-        salt.utils.appendproctitle('SyncMinionGrains')
+        salt.utils.process.appendproctitle('SyncMinionGrains')
         self.sync_minion_modules_('grains', targets, timeout=timeout)
+
+    def wait_for_minions(self, start, timeout, sleep=5):
+        '''
+        Ensure all minions and masters (including sub-masters) are connected.
+        '''
+        while True:
+            try:
+                ret = self.client.run_job('*', 'test.ping')
+            except salt.exceptions.SaltClientError:
+                ret = None
+            if ret and 'minions' not in ret:
+                continue
+            if ret and sorted(ret['minions']) == sorted(self.minion_targets):
+                break
+            if time.time() - start >= timeout:
+                raise RuntimeError("Ping Minions Failed")
+            time.sleep(sleep)

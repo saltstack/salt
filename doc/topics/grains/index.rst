@@ -41,6 +41,11 @@ Grains data can be listed by using the 'grains.items' module:
 
 .. _static-custom-grains:
 
+Using grains in a state
+=======================
+
+To use a grain in a state you can access it via `{{ grains['key'] }}`.
+
 Grains in the Minion Config
 ===========================
 
@@ -58,8 +63,7 @@ Just add the option :conf_minion:`grains` and pass options to it:
       cab_u: 14-15
 
 Then status data specific to your servers can be retrieved via Salt, or used
-inside of the State system for matching. It also makes targeting, in the case
-of the example above, simply based on specific data about your deployment.
+inside of the State system for matching. It also makes it possible to target based on specific data about your deployment, as in the example above.
 
 
 Grains in /etc/salt/grains
@@ -80,11 +84,20 @@ same way as in the above example, only without a top-level ``grains:`` key:
 
 .. note::
 
-    The content of ``/etc/salt/grains`` is ignored if you specify grains in the minion config.
+    Grains in ``/etc/salt/grains`` are ignored if you specify the same grains in the minion config.
 
 .. note::
 
     Grains are static, and since they are not often changed, they will need a grains refresh when they are updated. You can do this by calling: ``salt minion saltutil.refresh_modules``
+
+.. note::
+
+    You can equally configure static grains for Proxy Minions.
+    As multiple Proxy Minion processes can run on the same machine, you need
+    to index the files using the Minion ID, under ``/etc/salt/proxy.d/<minion ID>/grains``.
+    For example, the grains for the Proxy Minion ``router1`` can be defined
+    under ``/etc/salt/proxy.d/router1/grains``, while the grains for the
+    Proxy Minion ``switch7`` can be put in ``/etc/salt/proxy.d/switch7/grains``.
 
 Matching Grains in the Top File
 ===============================
@@ -95,44 +108,17 @@ the following configuration:
 
 .. code-block:: yaml
 
-    'node_type:webserver':
+    'roles:webserver':
       - match: grain
-      - webserver
+      - state0
 
-    'node_type:postgres':
+    'roles:memcache':
       - match: grain
-      - postgres
-
-    'node_type:redis':
-      - match: grain
-      - redis
-
-    'node_type:lb':
-      - match: grain
-      - lb
+      - state1
+      - state2
 
 For this example to work, you would need to have defined the grain
-``node_type`` for the minions you wish to match. This simple example is nice,
-but too much of the code is similar. To go one step further, Jinja templating
-can be used to simplify the :term:`top file`.
-
-.. code-block:: yaml
-
-    {% set the_node_type = salt['grains.get']('node_type', '') %}
-
-    {% if the_node_type %}
-      'node_type:{{ the_node_type }}':
-        - match: grain
-        - {{ the_node_type }}
-    {% endif %}
-
-Using Jinja templating, only one match entry needs to be defined.
-
-.. note::
-
-    The example above uses the :mod:`grains.get <salt.modules.grains.get>`
-    function to account for minions which do not have the ``node_type`` grain
-    set.
+``role`` for the minions you wish to match.
 
 .. _writing-grains:
 
@@ -142,8 +128,8 @@ Writing Grains
 The grains are derived by executing all of the "public" functions (i.e. those
 which do not begin with an underscore) found in the modules located in the
 Salt's core grains code, followed by those in any custom grains modules. The
-functions in a grains module must return a Python :ref:`dict
-<python2:typesmapping>`, where the dictionary keys are the names of grains, and
+functions in a grains module must return a :ref:`Python dictionary
+<python:typesmapping>`, where the dictionary keys are the names of grains, and
 each key's value is that value for that grain.
 
 Custom grains modules should be placed in a subdirectory named ``_grains``
@@ -287,6 +273,11 @@ grain will override that core grain. Similarly, grains from
 ``/etc/salt/minion`` override both core grains and custom grain modules, and
 grains in ``_grains`` will override *any* grains of the same name.
 
+For custom grains, if the function takes an argument ``grains``, then the
+previously rendered grains will be passed in.  Because the rest of the grains
+could be rendered in any order, the only grains that can be relied upon to be
+passed in are ``core`` grains. This was added in the 2019.2.0 release.
+
 
 Examples of Grains
 ==================
@@ -300,8 +291,14 @@ the Salt minion and provides the principal example of how to write grains:
 Syncing Grains
 ==============
 
-Syncing grains can be done a number of ways, they are automatically synced when
+Syncing grains can be done a number of ways. They are automatically synced when
 :mod:`state.highstate <salt.modules.state.highstate>` is called, or (as noted
 above) the grains can be manually synced and reloaded by calling the
 :mod:`saltutil.sync_grains <salt.modules.saltutil.sync_grains>` or
 :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` functions.
+
+.. note::
+
+    When the :conf_minion:`grains_cache` is set to False, the grains dictionary is built
+    and stored in memory on the minion. Every time the minion restarts or
+    ``saltutil.refresh_grains`` is run, the grain dictionary is rebuilt from scratch.

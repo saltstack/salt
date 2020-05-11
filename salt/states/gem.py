@@ -14,8 +14,11 @@ you can specify what ruby version and gemset to target.
         - user: rvm
         - ruby: jruby@jgemset
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
+import salt.utils.versions
+
+import re
 import logging
 log = logging.getLogger(__name__)
 
@@ -84,10 +87,34 @@ def installed(name,          # pylint: disable=C0103
             'Use of argument ruby found, but neither rvm or rbenv is installed'
         )
     gems = __salt__['gem.list'](name, ruby, gem_bin=gem_bin, runas=user)
-    if name in gems and version is not None and str(version) in gems[name]:
-        ret['result'] = True
-        ret['comment'] = 'Gem is already installed.'
-        return ret
+    if name in gems and version is not None:
+        versions = list([x.replace('default: ', '') for x in gems[name]])
+        match = re.match(r'(>=|>|<|<=)', version)
+        if match:
+            # Grab the comparison
+            cmpr = match.group()
+
+            # Clear out 'default:' and any whitespace
+            installed_version = re.sub('default: ', '', gems[name][0]).strip()
+
+            # Clear out comparison from version and whitespace
+            desired_version = re.sub(cmpr, '', version).strip()
+
+            if salt.utils.versions.compare(installed_version,
+                                           cmpr,
+                                           desired_version):
+                ret['result'] = True
+                ret['comment'] = 'Installed Gem meets version requirements.'
+                return ret
+        elif str(version) in versions:
+            ret['result'] = True
+            ret['comment'] = 'Gem is already installed.'
+            return ret
+        else:
+            if str(version) in gems[name]:
+                ret['result'] = True
+                ret['comment'] = 'Gem is already installed.'
+                return ret
     elif name in gems and version is None:
         ret['result'] = True
         ret['comment'] = 'Gem is already installed.'
@@ -177,7 +204,7 @@ def sources_add(name, ruby=None, user=None):
         ret['comment'] = 'Gem source is already added.'
         return ret
     if __opts__['test']:
-        ret['comment'] = 'The gem source {0} would have been removed.'.format(name)
+        ret['comment'] = 'The gem source {0} would have been added.'.format(name)
         return ret
     if __salt__['gem.sources_add'](source_uri=name, ruby=ruby, runas=user):
         ret['result'] = True
@@ -212,7 +239,7 @@ def sources_remove(name, ruby=None, user=None):
         return ret
 
     if __opts__['test']:
-        ret['comment'] = 'The gem source would have been removed'
+        ret['comment'] = 'The gem source would have been removed.'
         return ret
 
     if __salt__['gem.sources_remove'](source_uri=name, ruby=ruby, runas=user):

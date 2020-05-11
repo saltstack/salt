@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import datetime
 import logging
 import random
@@ -173,8 +173,10 @@ class BotoApiGatewayTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
 
     def setup_loader_modules(self):
-        self.opts = opts = salt.config.DEFAULT_MINION_OPTS
-        utils = salt.loader.utils(opts, whitelist=['boto3'])
+        self.opts = opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        utils = salt.loader.utils(
+            opts,
+            whitelist=['boto3', 'args', 'systemd', 'path', 'platform'])
         return {
             boto_apigateway: {
                 '__opts__': opts,

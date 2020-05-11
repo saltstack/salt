@@ -5,8 +5,8 @@
 
     Code coverage aware testing parser
 
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
+    :copyright: Copyright 2013 by the SaltStack Team, see AUTHORS for more details.
     :license: Apache 2.0, see LICENSE for more details.
 '''
 # pylint: disable=repr-flag-used-in-string
@@ -16,9 +16,11 @@ from __future__ import absolute_import, print_function
 import os
 import re
 import sys
-import json
 import shutil
 import warnings
+
+# Import Salt libs
+import salt.utils.json
 
 # Import salt testing libs
 from tests.support.parser import SaltTestingParser
@@ -42,7 +44,7 @@ try:
         coverage_object.save()
 
     def multiprocessing_start(obj):
-        coverage_options = json.loads(os.environ.get('COVERAGE_OPTIONS', '{}'))
+        coverage_options = salt.utils.json.loads(os.environ.get('COVERAGE_OPTIONS', '{}'))
         if not coverage_options:
             return
 
@@ -175,8 +177,8 @@ class SaltCoverageTestingParser(SaltTestingParser):
             # Update environ so that any subprocess started on tests are also
             # included in the report
             coverage_options['data_suffix'] = True
-            os.environ['COVERAGE_PROCESS_START'] = '1'
-            os.environ['COVERAGE_OPTIONS'] = json.dumps(coverage_options)
+            os.environ['COVERAGE_PROCESS_START'] = ''
+            os.environ['COVERAGE_OPTIONS'] = salt.utils.json.dumps(coverage_options)
 
         # Setup coverage
         self.code_coverage = coverage.coverage(**coverage_options)

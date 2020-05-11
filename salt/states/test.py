@@ -3,8 +3,8 @@
 Test States
 ===========
 
-Provide test case states that enable easy testing of things to do with
- state calls, e.g. running, calling, logging, output filtering etc.
+Provide test case states that enable easy testing of things to do with state
+calls, e.g. running, calling, logging, output filtering etc.
 
 .. code-block:: yaml
 
@@ -43,16 +43,35 @@ Provide test case states that enable easy testing of things to do with
             - foo
         - integer:
             - bar
+
+You may also use these states for controlled failure in state definitions, for example if certain conditions in
+pillar or grains do not apply. The following state definition will fail with a message "OS not supported!" when
+`grains['os']` is neither Ubuntu nor CentOS:
+
+.. code-block:: jinja
+
+    {% if grains['os'] in ['Ubuntu', 'CentOS'] %}
+
+    # Your state definitions go here
+
+    {% else %}
+    failure:
+      test.fail_without_changes:
+        - name: "OS not supported!"
+        - failhard: True
+    {% endif %}
+
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
-import logging
 import random
-from salt.state import _gen_tag
-from salt.exceptions import SaltInvocationError
 
-log = logging.getLogger(__name__)
+# Import Salt libs
+import salt.utils.data
+from salt.state import _gen_tag
+from salt.ext import six
+from salt.exceptions import SaltInvocationError
 
 
 def nop(name, **kwargs):
@@ -66,7 +85,7 @@ def nop(name, **kwargs):
     return succeed_without_changes(name)
 
 
-def succeed_without_changes(name):
+def succeed_without_changes(name, **kwargs):  # pylint: disable=unused-argument
     '''
     Returns successful.
 
@@ -84,7 +103,7 @@ def succeed_without_changes(name):
     return ret
 
 
-def fail_without_changes(name):
+def fail_without_changes(name, **kwargs):  # pylint: disable=unused-argument
     '''
     Returns failure.
 
@@ -107,7 +126,7 @@ def fail_without_changes(name):
     return ret
 
 
-def succeed_with_changes(name):
+def succeed_with_changes(name, **kwargs):  # pylint: disable=unused-argument
     '''
     Returns successful and changes is not empty
 
@@ -140,7 +159,7 @@ def succeed_with_changes(name):
     return ret
 
 
-def fail_with_changes(name):
+def fail_with_changes(name, **kwargs):  # pylint: disable=unused-argument
     '''
     Returns failure and changes is not empty.
 
@@ -333,7 +352,7 @@ def _check_key_type(key_str, key_type=None):
     value = __salt__['pillar.get'](key_str, None)
     if value is None:
         return None
-    elif type(value) is not key_type and key_type is not None:
+    elif key_type is not None and not isinstance(value, key_type):
         return False
     else:
         return True
@@ -345,11 +364,11 @@ def _if_str_then_list(listing):
     A str will be turned into a list with the
     str as its only element.
     '''
-    if type(listing) is str:
-        return [listing]
-    elif type(listing) is not list:
+    if isinstance(listing, six.string_types):
+        return [salt.utils.stringutils.to_unicode(listing)]
+    elif not isinstance(listing, list):
         raise TypeError
-    return listing
+    return salt.utils.data.decode_list(listing)
 
 
 def check_pillar(name,
@@ -414,7 +433,7 @@ def check_pillar(name,
     checks[int] = integer
     # those should be str:
     string = _if_str_then_list(string)
-    checks[str] = string
+    checks[six.string_types] = string
     # those should be list:
     listing = _if_str_then_list(listing)
     checks[list] = listing

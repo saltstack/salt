@@ -35,9 +35,8 @@ Run the salt proxy via the following command:
 
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
 # Import 3rd-party libs
@@ -47,6 +46,10 @@ try:
     import jnpr.junos.utils
     import jnpr.junos.utils.config
     import jnpr.junos.utils.sw
+    from jnpr.junos.exception import RpcTimeoutError, ConnectClosedError,\
+        RpcError, ConnectError, ProbeError, ConnectAuthError,\
+        ConnectRefusedError, ConnectTimeoutError
+    from ncclient.operations.errors import TimeoutExpiredError
 except ImportError:
     HAS_JUNOS = False
 
@@ -102,9 +105,32 @@ def init(opts):
             args[arg] = opts['proxy'][arg]
 
     thisproxy['conn'] = jnpr.junos.Device(**args)
-    thisproxy['conn'].open()
-    thisproxy['conn'].bind(cu=jnpr.junos.utils.config.Config)
-    thisproxy['conn'].bind(sw=jnpr.junos.utils.sw.SW)
+    try:
+        thisproxy['conn'].open()
+    except (ProbeError, ConnectAuthError, ConnectRefusedError, ConnectTimeoutError,
+            ConnectError) as ex:
+        log.error("{} : not able to initiate connection to the device".format(str(ex)))
+        thisproxy['initialized'] = False
+        return
+
+    if 'timeout' in proxy_keys:
+        timeout = int(opts['proxy']['timeout'])
+        try:
+            thisproxy['conn'].timeout = timeout
+        except Exception as ex:
+            log.error('Not able to set timeout due to: %s', str(ex))
+        else:
+            log.debug('RPC timeout set to %d seconds', timeout)
+
+    try:
+        thisproxy['conn'].bind(cu=jnpr.junos.utils.config.Config)
+    except Exception as ex:
+        log.error('Bind failed with Config class due to: {}'.format(str(ex)))
+
+    try:
+        thisproxy['conn'].bind(sw=jnpr.junos.utils.sw.SW)
+    except Exception as ex:
+        log.error('Bind failed with SW class due to: {}'.format(str(ex)))
     thisproxy['initialized'] = True
 
 
@@ -114,6 +140,68 @@ def initialized():
 
 def conn():
     return thisproxy['conn']
+
+
+def alive(opts):
+    '''
+    Validate and return the connection status with the remote device.
+
+    .. versionadded:: 2018.3.0
+    '''
+
+    dev = conn()
+
+    thisproxy['conn'].connected = ping()
+
+    if not dev.connected:
+        __salt__['event.fire_master']({}, 'junos/proxy/{}/stop'.format(
+            opts['proxy']['host']))
+    return dev.connected
+
+
+def ping():
+    '''
+    Ping?  Pong!
+    '''
+
+    dev = conn()
+    # Check that the underlying netconf connection still exists.
+    if dev._conn is None:
+        return False
+
+    # call rpc only if ncclient queue is empty. If not empty that means other
+    # rpc call is going on.
+    if hasattr(dev._conn, '_session'):
+        if dev._conn._session._transport.is_active():
+            # there is no on going rpc call. buffer tell can be 1 as it stores
+            # remaining char after "]]>]]>" which can be a new line char
+            if dev._conn._session._buffer.tell() <= 1 and \
+                    dev._conn._session._q.empty():
+                return _rpc_file_list(dev)
+            else:
+                log.debug('skipped ping() call as proxy already getting data')
+                return True
+        else:
+            # ssh connection is lost
+            return False
+    else:
+        # other connection modes, like telnet
+        return _rpc_file_list(dev)
+
+
+def _rpc_file_list(dev):
+    try:
+        dev.rpc.file_list(path='/dev/null', dev_timeout=5)
+        return True
+    except (RpcTimeoutError, ConnectClosedError):
+        try:
+            dev.close()
+            return False
+        except (RpcError, ConnectError, TimeoutExpiredError):
+            return False
+    except AttributeError as ex:
+        if "'NoneType' object has no attribute 'timeout'" in ex:
+            return False
 
 
 def proxytype():
@@ -131,18 +219,10 @@ def get_serialized_facts():
     # For backward compatibility. 'junos_info' is present
     # only of in newer versions of facts.
     if 'junos_info' in facts:
-        facts['junos_info']['re0']['object'] = \
-            dict(facts['junos_info']['re0']['object'])
-        facts['junos_info']['re1']['object'] = \
-            dict(facts['junos_info']['re1']['object'])
+        for re in facts['junos_info']:
+            facts['junos_info'][re]['object'] = \
+                dict(facts['junos_info'][re]['object'])
     return facts
-
-
-def ping():
-    '''
-    Ping?  Pong!
-    '''
-    return thisproxy['conn'].connected
 
 
 def shutdown(opts):
@@ -150,7 +230,7 @@ def shutdown(opts):
     This is called when the proxy-minion is exiting to make sure the
     connection to the device is closed cleanly.
     '''
-    log.debug('Proxy module {0} shutting down!!'.format(opts['id']))
+    log.debug('Proxy module %s shutting down!!', opts['id'])
     try:
         thisproxy['conn'].close()
 

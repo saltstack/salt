@@ -21,7 +21,7 @@ Or you may specify a map which includes all VMs to perform the action on:
 
     $ salt-cloud -a reboot -m /path/to/mapfile
 
-The following is a list of actions currently supported by salt-cloud:
+The following is an example list of actions currently supported by ``salt-cloud``:
 
 .. code-block:: yaml
 
@@ -36,5 +36,5 @@ The following is a list of actions currently supported by salt-cloud:
         - start
         - stop
 
-Another useful reference for viewing more salt-cloud actions is the
-:ref:Salt Cloud Feature Matrix <salt-cloud-feature-matrix>
+Another useful reference for viewing more ``salt-cloud`` actions is the
+:ref:`Salt Cloud Feature Matrix <salt-cloud-feature-matrix>`.

@@ -14,7 +14,7 @@ from tests.support.mock import (
 )
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.utils.odict import OrderedDict
 import salt.modules.pillar as pillarmod
 
@@ -54,10 +54,11 @@ class PillarModuleTestCase(TestCase, LoaderModuleMockMixin):
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_ls(self):
         with patch('salt.modules.pillar.items', MagicMock(return_value=pillar_value_1)):
+            ls = sorted(pillarmod.ls())
             if six.PY3:
-                self.assertCountEqual(pillarmod.ls(), ['a', 'b'])
+                self.assertCountEqual(ls, ['a', 'b'])
             else:
-                self.assertEqual(pillarmod.ls(), ['a', 'b'])
+                self.assertEqual(ls, ['a', 'b'])
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_pillar_get_default_merge(self):
@@ -96,8 +97,8 @@ class PillarModuleTestCase(TestCase, LoaderModuleMockMixin):
                     if default_type == data_type:
                         continue
                     self.assertEqual(
-                        pillarmod.get(item, default=defaults[default_type], merge=True),
-                        pillarmod.__pillar__[item]
+                        pillarmod.get(data_type, default=defaults[default_type], merge=True),
+                        pillarmod.__pillar__[data_type]
                     )
 
             # Test recursive dict merging

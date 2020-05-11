@@ -1,42 +1,49 @@
 # -*- coding: utf-8 -*-
 
 # import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 from copy import deepcopy
+import pkg_resources
+import os.path
+import sys
+
+# Import test support libs
+from tests.support.runtests import RUNTIME_VARS
 
 # import Python Third Party Libs
 # pylint: disable=import-error
 try:
     import boto
+    boto.ENDPOINTS_PATH = os.path.join(RUNTIME_VARS.TESTS_DIR, 'unit/files/endpoints.json')
     import boto.ec2.elb
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
 
 try:
-    from moto import mock_ec2, mock_elb
+    from moto import mock_ec2_deprecated, mock_elb_deprecated
     HAS_MOTO = True
 except ImportError:
     HAS_MOTO = False
 
-    def mock_ec2(self):
+    def mock_ec2_deprecated(self):
         '''
-        if the mock_ec2 function is not available due to import failure
+        if the mock_ec2_deprecated function is not available due to import failure
         this replaces the decorated function with stub_function.
-        Allows boto_vpc unit tests to use the @mock_ec2 decorator
-        without a "NameError: name 'mock_ec2' is not defined" error.
+        Allows boto_elb unit tests to use the @mock_ec2_deprecated decorator
+        without a "NameError: name 'mock_ec2_deprecated' is not defined" error.
         '''
         def stub_function(self):
             pass
         return stub_function
 
-    def mock_elb(self):
+    def mock_elb_deprecated(self):
         '''
-        if the mock_ec2 function is not available due to import failure
+        if the mock_elb_deprecated function is not available due to import failure
         this replaces the decorated function with stub_function.
-        Allows boto_vpc unit tests to use the @mock_ec2 decorator
-        without a "NameError: name 'mock_ec2' is not defined" error.
+        Allows boto_elb unit tests to use the @mock_elb_deprecated decorator
+        without a "NameError: name 'mock_elb_deprecated' is not defined" error.
         '''
         def stub_function(self):
             pass
@@ -45,9 +52,10 @@ except ImportError:
 
 # Import Salt Libs
 import salt.config
-import salt.ext.six as six
+from salt.ext import six
 import salt.loader
 import salt.modules.boto_elb as boto_elb
+import salt.utils.versions
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -64,20 +72,42 @@ conn_parameters = {'region': region, 'key': access_key, 'keyid': secret_key,
 boto_conn_parameters = {'aws_access_key_id': access_key,
                         'aws_secret_access_key': secret_key}
 instance_parameters = {'instance_type': 't1.micro'}
+required_moto = '0.3.7'
+required_moto_py3 = '1.0.1'
+
+
+def _has_required_moto():
+    '''
+    Returns True or False depending on if ``moto`` is installed and at the correct version,
+    depending on what version of Python is running these tests.
+    '''
+    if not HAS_MOTO:
+        return False
+    else:
+        moto_version = salt.utils.versions.LooseVersion(pkg_resources.get_distribution('moto').version)
+        if moto_version < salt.utils.versions.LooseVersion(required_moto):
+            return False
+        elif six.PY3 and moto_version < salt.utils.versions.LooseVersion(required_moto_py3):
+            return False
+
+    return True
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(six.PY3, 'Running tests with Python 3. These tests need to be rewritten to support Py3.')
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
+@skipIf(_has_required_moto() is False, 'The moto module must be >= to {0} for '
+                                       'PY2 or {1} for PY3.'.format(required_moto, required_moto_py3))
 class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.boto_elb module
     '''
 
     def setup_loader_modules(self):
-        opts = salt.config.DEFAULT_MASTER_OPTS
-        utils = salt.loader.utils(opts, whitelist=['boto'])
+        opts = salt.config.DEFAULT_MASTER_OPTS.copy()
+        utils = salt.loader.utils(
+            opts,
+            whitelist=['boto', 'args', 'systemd', 'path', 'platform'])
         funcs = salt.loader.minion_mods(opts, utils=utils)
         return {
             boto_elb: {
@@ -92,8 +122,9 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
         # __virtual__ must be caller in order for _get_conn to be injected
         boto_elb.__virtual__()
 
-    @mock_ec2
-    @mock_elb
+    @mock_ec2_deprecated
+    @mock_elb_deprecated
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     def test_register_instances_valid_id_result_true(self):
         '''
         tests that given a valid instance id and valid ELB that
@@ -111,8 +142,9 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
                                                       **conn_parameters)
         self.assertEqual(True, register_result)
 
-    @mock_ec2
-    @mock_elb
+    @mock_ec2_deprecated
+    @mock_elb_deprecated
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     def test_register_instances_valid_id_string(self):
         '''
         tests that given a string containing a instance id and valid ELB that
@@ -134,8 +166,9 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
         log.debug(load_balancer_refreshed.instances)
         self.assertEqual([reservations.instances[0].id], registered_instance_ids)
 
-    @mock_ec2
-    @mock_elb
+    @mock_ec2_deprecated
+    @mock_elb_deprecated
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     def test_deregister_instances_valid_id_result_true(self):
         '''
         tests that given an valid id the boto_elb deregister_instances method
@@ -155,8 +188,9 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
                                                           **conn_parameters)
         self.assertEqual(True, deregister_result)
 
-    @mock_ec2
-    @mock_elb
+    @mock_ec2_deprecated
+    @mock_elb_deprecated
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     def test_deregister_instances_valid_id_string(self):
         '''
         tests that given an valid id the boto_elb deregister_instances method
@@ -181,8 +215,9 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
                             load_balancer_refreshed.instances]
         self.assertEqual(actual_instances, expected_instances)
 
-    @mock_ec2
-    @mock_elb
+    @mock_ec2_deprecated
+    @mock_elb_deprecated
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     def test_deregister_instances_valid_id_list(self):
         '''
         tests that given an valid ids in the form of a list that the boto_elb

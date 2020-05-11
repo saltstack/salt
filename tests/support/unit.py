@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     ============================
@@ -22,11 +22,23 @@
 # pylint: disable=unused-import,blacklisted-module,deprecated-method
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 import logging
-import salt.ext.six as six
+from unittest import (
+    TestLoader as _TestLoader,
+    TextTestRunner as _TextTestRunner,
+    TestCase as _TestCase,
+    expectedFailure,
+    TestSuite as _TestSuite,
+    skip,
+    skipIf,
+    TestResult,
+    TextTestResult as _TextTestResult
+)
+from unittest.case import _id, SkipTest
+from salt.ext import six
 try:
     import psutil
     HAS_PSUTIL = True
@@ -40,66 +52,16 @@ log = logging.getLogger(__name__)
 # i.e. [CPU:15.1%|MEM:48.3%|Z:0]
 SHOW_PROC = 'NO_SHOW_PROC' not in os.environ
 
-# support python < 2.7 via unittest2
-if sys.version_info < (2, 7):
-    try:
-        # pylint: disable=import-error
-        from unittest2 import (
-            TestLoader as __TestLoader,
-            TextTestRunner as __TextTestRunner,
-            TestCase as __TestCase,
-            expectedFailure,
-            TestSuite as __TestSuite,
-            skip,
-            skipIf,
-            TestResult as _TestResult,
-            TextTestResult as __TextTestResult
-        )
-        from unittest2.case import _id
-        # pylint: enable=import-error
-
-        class NewStyleClassMixin(object):
-            '''
-            Simple new style class to make pylint shut up!
-
-            And also to avoid errors like:
-
-                'Cannot create a consistent method resolution order (MRO) for bases'
-            '''
-
-        class _TestLoader(__TestLoader, NewStyleClassMixin):
-            pass
-
-        class _TextTestRunner(__TextTestRunner, NewStyleClassMixin):
-            pass
-
-        class _TestCase(__TestCase, NewStyleClassMixin):
-            pass
-
-        class _TestSuite(__TestSuite, NewStyleClassMixin):
-            pass
-
-        class TestResult(_TestResult, NewStyleClassMixin):
-            pass
-
-        class _TextTestResult(__TextTestResult, NewStyleClassMixin):
-            pass
-
-    except ImportError:
-        raise SystemExit('You need to install unittest2 to run the salt tests')
-else:
-    from unittest import (
-        TestLoader as _TestLoader,
-        TextTestRunner as _TextTestRunner,
-        TestCase as _TestCase,
-        expectedFailure,
-        TestSuite as _TestSuite,
-        skip,
-        skipIf,
-        TestResult,
-        TextTestResult as _TextTestResult
-    )
-    from unittest.case import _id
+LOREM_IPSUM = '''\
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque eget urna a arcu lacinia sagittis.
+Sed scelerisque, lacus eget malesuada vestibulum, justo diam facilisis tortor, in sodales dolor
+nibh eu urna. Aliquam iaculis massa risus, sed elementum risus accumsan id. Suspendisse mattis,
+metus sed lacinia dictum, leo orci dapibus sapien, at porttitor sapien nulla ac velit.
+Duis ac cursus leo, non varius metus. Sed laoreet felis magna, vel tempor diam malesuada nec.
+Quisque cursus odio tortor. In consequat augue nisl, eget lacinia odio vestibulum eget.
+Donec venenatis elementum arcu at rhoncus. Nunc pharetra erat in lacinia convallis. Ut condimentum
+eu mauris sit amet convallis. Morbi vulputate vel odio non laoreet. Nullam in suscipit tellus.
+Sed quis posuere urna.'''
 
 
 class TestSuite(_TestSuite):
@@ -177,6 +139,7 @@ class TestCase(_TestCase):
 
     def run(self, result=None):
         self._prerun_instance_attributes = dir(self)
+        self.maxDiff = None
         outcome = super(TestCase, self).run(result=result)
         for attr in dir(self):
             if attr == '_prerun_instance_attributes':
@@ -256,6 +219,19 @@ class TestCase(_TestCase):
         )
         # return _TestCase.assertNotAlmostEquals(self, *args, **kwargs)
 
+    def repack_state_returns(self, state_ret):
+        '''
+        Accepts a state return dict and returns it back with the top level key
+        names rewritten such that the ID declaration is the key instead of the
+        State's unique tag. For example: 'foo' instead of
+        'file_|-foo_|-/etc/foo.conf|-managed'
+
+        This makes it easier to work with state returns when crafting asserts
+        after running states.
+        '''
+        assert isinstance(state_ret, dict), state_ret
+        return {x.split('_|-')[1]: y for x, y in six.iteritems(state_ret)}
+
     def failUnlessEqual(self, *args, **kwargs):
         raise DeprecationWarning(
             'The {0}() function is deprecated. Please start using {1}() '
@@ -304,6 +280,16 @@ class TestCase(_TestCase):
             'instead.'.format('failIfAlmostEqual', 'assertNotAlmostEqual')
         )
         # return _TestCase.failIfAlmostEqual(self, *args, **kwargs)
+
+    @staticmethod
+    def assert_called_once(mock):
+        '''
+        mock.assert_called_once only exists in PY3 in 3.6 and newer
+        '''
+        try:
+            mock.assert_called_once()
+        except AttributeError:
+            log.warning('assert_called_once invoked, but not available')
 
     if six.PY2:
         def assertRegexpMatches(self, *args, **kwds):
@@ -379,11 +365,11 @@ class TextTestResult(_TextTestResult):
     '''
 
     def startTest(self, test):
-        log.debug('>>>>> START >>>>> {0}'.format(test.id()))
+        log.debug('>>>>> START >>>>> %s', test.id())
         return super(TextTestResult, self).startTest(test)
 
     def stopTest(self, test):
-        log.debug('<<<<< END <<<<<<< {0}'.format(test.id()))
+        log.debug('<<<<< END <<<<<<< %s', test.id())
         return super(TextTestResult, self).stopTest(test)
 
 

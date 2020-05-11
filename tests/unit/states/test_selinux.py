@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -118,9 +118,11 @@ class SelinuxTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(selinux.__opts__, {'test': False}):
                 comt = ('Boolean samba_create_home_dirs has been set to on')
                 ret.update({'comment': comt, 'result': True})
+                ret.update({'changes': {'State': {'old': 'off', 'new': 'on'}}})
                 self.assertDictEqual(selinux.boolean(name, value), ret)
 
                 comt = ('Failed to set the boolean '
                         'samba_create_home_dirs to on')
-                ret.update({'comment': comt, 'result': True})
+                ret.update({'comment': comt, 'result': False})
+                ret.update({'changes': {}})
                 self.assertDictEqual(selinux.boolean(name, value), ret)

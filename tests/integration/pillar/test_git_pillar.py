@@ -65,7 +65,7 @@ https://github.com/unbit/uwsgi/commit/ac1e354
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import random
 import string
 
@@ -85,36 +85,44 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 from tests.support.unit import skipIf
 
 # Import Salt libs
-import salt.utils
-from salt.utils.gitfs import GITPYTHON_MINVER, PYGIT2_MINVER
-from salt.utils.versions import LooseVersion
+import salt.utils.path
+import salt.utils.platform
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES as VIRTUALENV_NAMES
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
+from salt.utils.gitfs import (
+    GITPYTHON_VERSION,
+    GITPYTHON_MINVER,
+    PYGIT2_VERSION,
+    PYGIT2_MINVER,
+    LIBGIT2_VERSION,
+    LIBGIT2_MINVER
+)
 
 # Check for requisite components
 try:
-    import git
-    HAS_GITPYTHON = \
-        LooseVersion(git.__version__) >= LooseVersion(GITPYTHON_MINVER)
-except ImportError:
+    HAS_GITPYTHON = GITPYTHON_VERSION >= GITPYTHON_MINVER
+except Exception:
     HAS_GITPYTHON = False
 
 try:
-    import pygit2
-    HAS_PYGIT2 = \
-        LooseVersion(pygit2.__version__) >= LooseVersion(PYGIT2_MINVER)
-except ImportError:
+    HAS_PYGIT2 = PYGIT2_VERSION >= PYGIT2_MINVER \
+        and LIBGIT2_VERSION >= LIBGIT2_MINVER
+except Exception:
     HAS_PYGIT2 = False
 
-HAS_SSHD = bool(salt.utils.which('sshd'))
-HAS_NGINX = bool(salt.utils.which('nginx'))
-HAS_VIRTUALENV = bool(salt.utils.which_bin(VIRTUALENV_NAMES))
+HAS_SSHD = bool(salt.utils.path.which('sshd'))
+HAS_NGINX = bool(salt.utils.path.which('nginx'))
+HAS_VIRTUALENV = bool(salt.utils.path.which_bin(VIRTUALENV_NAMES))
 
 
 def _rand_key_name(length):
     return 'id_rsa_{0}'.format(
         ''.join(random.choice(string.ascii_letters) for _ in range(length))
     )
+
+
+def _windows_or_mac():
+    return salt.utils.platform.is_windows() or salt.utils.platform.is_darwin()
 
 
 class GitPythonMixin(object):
@@ -127,6 +135,8 @@ class GitPythonMixin(object):
         Test using a single ext_pillar repo
         '''
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: gitpython
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -152,6 +162,8 @@ class GitPythonMixin(object):
         pillar_merge_lists disabled.
         '''
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: gitpython
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -180,6 +192,8 @@ class GitPythonMixin(object):
         pillar_merge_lists disabled.
         '''
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: gitpython
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -208,6 +222,8 @@ class GitPythonMixin(object):
         pillar_merge_lists enabled.
         '''
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: gitpython
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -236,6 +252,8 @@ class GitPythonMixin(object):
         pillar_merge_lists enabled.
         '''
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: gitpython
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -260,6 +278,8 @@ class GitPythonMixin(object):
         Test using pillarenv to restrict results to those from a single branch
         '''
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: gitpython
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -285,6 +305,8 @@ class GitPythonMixin(object):
         SLS file (included_pillar) in the compiled pillar data.
         '''
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: gitpython
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -313,6 +335,8 @@ class GitPythonMixin(object):
         message in the compiled data.
         '''
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: gitpython
             git_pillar_includes: False
             cachedir: {cachedir}
@@ -334,10 +358,167 @@ class GitPythonMixin(object):
                          "available on the salt master"]}
         )
 
+    def test_includes_enabled_solves___env___with_mountpoint(self):
+        '''
+        Test with git_pillar_includes enabled and using "__env__" as the branch
+        name for the configured repositories.
+        The "gitinfo" repository contains top.sls file with a local reference
+        and also referencing external "nowhere.foo" which is provided by "webinfo"
+        repository mounted as "nowhere".
+        '''
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: gitpython
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - name: gitinfo
+                - __env__ {url}:
+                  - name: webinfo
+                  - mountpoint: nowhere
+            ''')
+        self.assertEqual(
+            ret,
+            {'branch': 'master',
+             'motd': 'The force will be with you. Always.',
+             'mylist': ['master'],
+             'mydict': {'master': True,
+                        'nested_list': ['master'],
+                        'nested_dict': {'master': True}}}
+        )
+
+    def test_root_parameter(self):
+        '''
+        Test root parameter
+        '''
+        expected = {
+            'from_subdir': True
+        }
+
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: gitpython
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - root: subdir
+                - top_only {url}:
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+    def test_mountpoint_parameter(self):
+        '''
+        Test mountpoint parameter
+        '''
+        expected = {
+            'included_pillar': True
+        }
+
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: gitpython
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - mountpoint: mounted
+                - top_mounted {url}:
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+    def test_root_and_mountpoint_parameters(self):
+        '''
+        Test root and mountpoint parameters
+        '''
+        expected = {
+            'from_subdir': True
+        }
+
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: gitpython
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - mountpoint: mounted
+                  - root: subdir
+                - top_mounted {url}:
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+    def test_all_saltenvs(self):
+        '''
+        Test all_saltenvs parameter.
+        '''
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: gitpython
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            pillarenv: dev
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - all_saltenvs: master
+                - __env__ {url}:
+                  - mountpoint: nowhere
+            ''')
+        self.assertEqual(
+            ret,
+            {'branch': 'dev',
+             'motd': 'The force will be with you. Always.',
+             'mylist': ['dev'],
+             'mydict': {'dev': True,
+                        'nested_list': ['dev'],
+                        'nested_dict': {'dev': True}}}
+        )
+
+    def test_all_saltenvs_base(self):
+        '''
+        Test all_saltenvs parameter with base pillarenv.
+        '''
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: gitpython
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - all_saltenvs: master
+                - __env__ {url}:
+                  - mountpoint: nowhere
+            ''')
+        self.assertEqual(
+            ret,
+            {'branch': 'master',
+             'motd': 'The force will be with you. Always.',
+             'mylist': ['master'],
+             'mydict': {'master': True,
+                        'nested_list': ['master'],
+                        'nested_dict': {'master': True}}}
+        )
+
 
 @destructiveTest
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(salt.utils.is_windows(), 'minion is windows')
+@skipIf(_windows_or_mac(), 'minion is windows or mac')
 @skip_if_not_root
 @skipIf(not HAS_GITPYTHON, 'GitPython >= {0} required'.format(GITPYTHON_MINVER))
 @skipIf(not HAS_SSHD, 'sshd not present')
@@ -352,7 +533,7 @@ class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(salt.utils.is_windows(), 'minion is windows')
+@skipIf(_windows_or_mac(), 'minion is windows or mac')
 @skip_if_not_root
 @skipIf(not HAS_GITPYTHON, 'GitPython >= {0} required'.format(GITPYTHON_MINVER))
 @skipIf(not HAS_NGINX, 'nginx not present')
@@ -365,7 +546,7 @@ class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(salt.utils.is_windows(), 'minion is windows')
+@skipIf(_windows_or_mac(), 'minion is windows or mac')
 @skip_if_not_root
 @skipIf(not HAS_GITPYTHON, 'GitPython >= {0} required'.format(GITPYTHON_MINVER))
 @skipIf(not HAS_NGINX, 'nginx not present')
@@ -389,16 +570,21 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
             username=cls.username,
             password=cls.password,
             port=cls.nginx_port)
+        cls.url_extra_repo = 'http://{username}:{password}@127.0.0.1:{port}/extra_repo.git'.format(
+            username=cls.username,
+            password=cls.password,
+            port=cls.nginx_port)
         cls.ext_opts['url'] = cls.url
+        cls.ext_opts['url_extra_repo'] = cls.url_extra_repo
         cls.ext_opts['username'] = cls.username
         cls.ext_opts['password'] = cls.password
 
 
 @destructiveTest
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(salt.utils.is_windows(), 'minion is windows')
+@skipIf(_windows_or_mac(), 'minion is windows or mac')
 @skip_if_not_root
-@skipIf(not HAS_PYGIT2, 'pygit2 >= {0} required'.format(PYGIT2_MINVER))
+@skipIf(not HAS_PYGIT2, 'pygit2 >= {0} and libgit2 >= {1} required'.format(PYGIT2_MINVER, LIBGIT2_MINVER))
 @skipIf(not HAS_SSHD, 'sshd not present')
 class TestPygit2SSH(GitPillarSSHTestBase):
     '''
@@ -411,12 +597,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
     id_rsa_withpass = _rand_key_name(8)
     username = USERNAME
     passphrase = PASSWORD
-
-    def setUp(self):
-        super(TestPygit2SSH, self).setUp()
-        if self.is_el7():  # pylint: disable=E1120
-            self.skipTest(
-                'skipped until EPEL7 fixes pygit2/libgit2 version mismatch')
 
     @requires_system_grains
     def test_single_source(self, grains):
@@ -433,6 +613,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_pubkey: {pubkey_nopass}
             git_pillar_privkey: {privkey_nopass}
@@ -446,6 +628,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -463,6 +647,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_pubkey: {pubkey_withpass}
             git_pillar_privkey: {privkey_withpass}
@@ -477,6 +663,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -509,6 +697,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_pubkey: {pubkey_nopass}
             git_pillar_privkey: {privkey_nopass}
@@ -524,6 +714,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -545,6 +737,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_pubkey: {pubkey_withpass}
             git_pillar_privkey: {privkey_withpass}
@@ -561,6 +755,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -598,6 +794,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_pubkey: {pubkey_nopass}
             git_pillar_privkey: {privkey_nopass}
@@ -613,6 +811,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -634,6 +834,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_pubkey: {pubkey_withpass}
             git_pillar_privkey: {privkey_withpass}
@@ -650,6 +852,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -687,6 +891,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_pubkey: {pubkey_nopass}
             git_pillar_privkey: {privkey_nopass}
@@ -702,6 +908,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -723,6 +931,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_pubkey: {pubkey_withpass}
             git_pillar_privkey: {privkey_withpass}
@@ -739,6 +949,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -776,6 +988,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_pubkey: {pubkey_nopass}
             git_pillar_privkey: {privkey_nopass}
@@ -791,6 +1005,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -812,6 +1028,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_pubkey: {pubkey_withpass}
             git_pillar_privkey: {privkey_withpass}
@@ -828,6 +1046,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -860,6 +1080,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_pubkey: {pubkey_nopass}
             git_pillar_privkey: {privkey_nopass}
@@ -875,6 +1097,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -896,6 +1120,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_pubkey: {pubkey_withpass}
             git_pillar_privkey: {privkey_withpass}
@@ -912,6 +1138,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -947,6 +1175,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_pubkey: {pubkey_nopass}
             git_pillar_privkey: {privkey_nopass}
@@ -962,6 +1192,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -983,6 +1215,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_pubkey: {pubkey_withpass}
             git_pillar_privkey: {privkey_withpass}
@@ -999,6 +1233,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -1037,6 +1273,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_includes: False
             git_pillar_pubkey: {pubkey_nopass}
@@ -1053,6 +1291,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_includes: False
             cachedir: {cachedir}
@@ -1075,6 +1315,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_includes: False
             git_pillar_pubkey: {pubkey_withpass}
@@ -1092,6 +1334,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_includes: False
             cachedir: {cachedir}
@@ -1110,23 +1354,529 @@ class TestPygit2SSH(GitPillarSSHTestBase):
             ''')
         self.assertEqual(ret, expected)
 
+    def test_includes_enabled_solves___env___with_mountpoint(self):
+        '''
+        Test with git_pillar_includes enabled and using "__env__" as the branch
+        name for the configured repositories.
+        The "gitinfo" repository contains top.sls file with a local reference
+        and also referencing external "nowhere.foo" which is provided by "webinfo"
+        repository mounted as "nowhere".
+        '''
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_pubkey: {pubkey_nopass}
+            git_pillar_privkey: {privkey_nopass}
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - name: gitinfo
+                - __env__ {url}:
+                  - name: webinfo
+                  - mountpoint: nowhere
+            ''')
+        self.assertEqual(
+            ret,
+            {'branch': 'master',
+             'motd': 'The force will be with you. Always.',
+             'mylist': ['master'],
+             'mydict': {'master': True,
+                        'nested_list': ['master'],
+                        'nested_dict': {'master': True}}}
+        )
+
+    @requires_system_grains
+    def test_root_parameter(self, grains):
+        '''
+        Test root parameter
+        '''
+        expected = {
+            'from_subdir': True
+        }
+
+        # Test with passphraseless key and global credential options
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_pubkey: {pubkey_nopass}
+            git_pillar_privkey: {privkey_nopass}
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - root: subdir
+                - top_only {url}:
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+        # Test with passphraseless key and per-repo credential options
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - root: subdir
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+                - top_only {url}:
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+        if grains['os_family'] == 'Debian':
+            # passphrase-protected currently does not work here
+            return
+
+        # Test with passphrase-protected key and global credential options
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_pubkey: {pubkey_withpass}
+            git_pillar_privkey: {privkey_withpass}
+            git_pillar_passphrase: {passphrase}
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - root: subdir
+                - top_only {url}:
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+        # Test with passphrase-protected key and per-repo credential options
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - root: subdir
+                  - pubkey: {pubkey_withpass}
+                  - privkey: {privkey_withpass}
+                  - passphrase: {passphrase}
+                - top_only {url}:
+                  - pubkey: {pubkey_withpass}
+                  - privkey: {privkey_withpass}
+                  - passphrase: {passphrase}
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+    @requires_system_grains
+    def test_mountpoint_parameter(self, grains):
+        '''
+        Test mountpoint parameter
+        '''
+        expected = {
+            'included_pillar': True
+        }
+
+        # Test with passphraseless key and global credential options
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_pubkey: {pubkey_nopass}
+            git_pillar_privkey: {privkey_nopass}
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - mountpoint: mounted
+                - top_mounted {url}:
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+        # Test with passphraseless key and per-repo credential options
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - mountpoint: mounted
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+                - top_mounted {url}:
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+        if grains['os_family'] == 'Debian':
+            # passphrase-protected currently does not work here
+            return
+
+        # Test with passphrase-protected key and global credential options
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_pubkey: {pubkey_withpass}
+            git_pillar_privkey: {privkey_withpass}
+            git_pillar_passphrase: {passphrase}
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - mountpoint: mounted
+                - top_mounted {url}:
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+        # Test with passphrase-protected key and per-repo credential options
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - mountpoint: mounted
+                  - pubkey: {pubkey_withpass}
+                  - privkey: {privkey_withpass}
+                  - passphrase: {passphrase}
+                - top_mounted {url}:
+                  - pubkey: {pubkey_withpass}
+                  - privkey: {privkey_withpass}
+                  - passphrase: {passphrase}
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+    @requires_system_grains
+    def test_root_and_mountpoint_parameters(self, grains):
+        '''
+        Test root and mountpoint parameters
+        '''
+        expected = {
+            'from_subdir': True
+        }
+
+        # Test with passphraseless key and global credential options
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_pubkey: {pubkey_nopass}
+            git_pillar_privkey: {privkey_nopass}
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - mountpoint: mounted
+                  - root: subdir
+                - top_mounted {url}:
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+        # Test with passphraseless key and per-repo credential options
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - mountpoint: mounted
+                  - root: subdir
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+                - top_mounted {url}:
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+        if grains['os_family'] == 'Debian':
+            # passphrase-protected currently does not work here
+            return
+
+        # Test with passphrase-protected key and global credential options
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_pubkey: {pubkey_withpass}
+            git_pillar_privkey: {privkey_withpass}
+            git_pillar_passphrase: {passphrase}
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - mountpoint: mounted
+                  - root: subdir
+                - top_mounted {url}:
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+        # Test with passphrase-protected key and per-repo credential options
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - mountpoint: mounted
+                  - root: subdir
+                  - pubkey: {pubkey_withpass}
+                  - privkey: {privkey_withpass}
+                  - passphrase: {passphrase}
+                - top_mounted {url}:
+                  - pubkey: {pubkey_withpass}
+                  - privkey: {privkey_withpass}
+                  - passphrase: {passphrase}
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+    @requires_system_grains
+    def test_all_saltenvs(self, grains):
+        '''
+        Test all_saltenvs parameter.
+        '''
+        expected = {'branch': 'dev',
+             'motd': 'The force will be with you. Always.',
+             'mylist': ['dev'],
+             'mydict': {'dev': True,
+                        'nested_list': ['dev'],
+                        'nested_dict': {'dev': True}
+                       }
+        }
+
+        # Test with passphraseless key and global credential options
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_pubkey: {pubkey_nopass}
+            git_pillar_privkey: {privkey_nopass}
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            pillarenv: dev
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - all_saltenvs: master
+                - __env__ {url}:
+                  - mountpoint: nowhere
+            ''')
+        self.assertEqual(ret, expected)
+
+        # Test with passphraseless key and per-repo credential options
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            pillarenv: dev
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - all_saltenvs: master
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+                - __env__ {url}:
+                  - mountpoint: nowhere
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+            ''')
+        self.assertEqual(ret, expected)
+
+        if grains['os_family'] == 'Debian':
+            # passphrase-protected currently does not work here
+            return
+
+        # Test with passphrase-protected key and global credential options
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_pubkey: {pubkey_withpass}
+            git_pillar_privkey: {privkey_withpass}
+            git_pillar_passphrase: {passphrase}
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            pillarenv: dev
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - all_saltenvs: master
+                - __env__ {url}:
+                  - mountpoint: nowhere
+            ''')
+        self.assertEqual(ret, expected)
+
+        # Test with passphrase-protected key and per-repo credential options
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            pillarenv: dev
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - all_saltenvs: master
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+                  - passphrase: {passphrase}
+                - __env__ {url}:
+                  - mountpoint: nowhere
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+                  - passphrase: {passphrase}
+            ''')
+        self.assertEqual(ret, expected)
+
+    @requires_system_grains
+    def test_all_saltenvs_base(self, grains):
+        '''
+        Test all_saltenvs parameter.
+        '''
+        expected = {'branch': 'master',
+             'motd': 'The force will be with you. Always.',
+             'mylist': ['master'],
+             'mydict': {'master': True,
+                        'nested_list': ['master'],
+                        'nested_dict': {'master': True}
+                       }
+        }
+
+        # Test with passphraseless key and global credential options
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_pubkey: {pubkey_nopass}
+            git_pillar_privkey: {privkey_nopass}
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - all_saltenvs: master
+                - __env__ {url}:
+                  - mountpoint: nowhere
+            ''')
+        self.assertEqual(ret, expected)
+
+        # Test with passphraseless key and per-repo credential options
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - all_saltenvs: master
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+                - __env__ {url}:
+                  - mountpoint: nowhere
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+            ''')
+        self.assertEqual(ret, expected)
+
+        if grains['os_family'] == 'Debian':
+            # passphrase-protected currently does not work here
+            return
+
+        # Test with passphrase-protected key and global credential options
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_pubkey: {pubkey_withpass}
+            git_pillar_privkey: {privkey_withpass}
+            git_pillar_passphrase: {passphrase}
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - all_saltenvs: master
+                - __env__ {url}:
+                  - mountpoint: nowhere
+            ''')
+        self.assertEqual(ret, expected)
+
+        # Test with passphrase-protected key and per-repo credential options
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - all_saltenvs: master
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+                  - passphrase: {passphrase}
+                - __env__ {url}:
+                  - mountpoint: nowhere
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+                  - passphrase: {passphrase}
+            ''')
+        self.assertEqual(ret, expected)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(salt.utils.is_windows(), 'minion is windows')
+@skipIf(_windows_or_mac(), 'minion is windows or mac')
 @skip_if_not_root
-@skipIf(not HAS_PYGIT2, 'pygit2 >= {0} required'.format(PYGIT2_MINVER))
+@skipIf(not HAS_PYGIT2, 'pygit2 >= {0} and libgit2 >= {1} required'.format(PYGIT2_MINVER, LIBGIT2_MINVER))
 @skipIf(not HAS_NGINX, 'nginx not present')
 @skipIf(not HAS_VIRTUALENV, 'virtualenv not present')
 class TestPygit2HTTP(GitPillarHTTPTestBase):
     '''
     Test git_pillar with pygit2 using SSH authentication
     '''
-    def setUp(self):
-        super(TestPygit2HTTP, self).setUp()
-        if self.is_el7():  # pylint: disable=E1120
-            self.skipTest(
-                'skipped until EPEL7 fixes pygit2/libgit2 version mismatch')
-
     def test_single_source(self):
         '''
         Test using a single ext_pillar repo
@@ -1140,6 +1890,8 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         }
 
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -1167,6 +1919,8 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         }
 
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -1196,6 +1950,8 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         }
 
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -1225,6 +1981,8 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         }
 
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -1254,6 +2012,8 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         }
 
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -1278,6 +2038,8 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         }
 
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -1305,6 +2067,8 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         }
 
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -1335,6 +2099,8 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         }
 
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_includes: False
             cachedir: {cachedir}
@@ -1347,11 +2113,168 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
             ''')
         self.assertEqual(ret, expected)
 
+    def test_includes_enabled_solves___env___with_mountpoint(self):
+        '''
+        Test with git_pillar_includes enabled and using "__env__" as the branch
+        name for the configured repositories.
+        The "gitinfo" repository contains top.sls file with a local reference
+        and also referencing external "nowhere.foo" which is provided by "webinfo"
+        repository mounted as "nowhere".
+        '''
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - name: gitinfo
+                - __env__ {url}:
+                  - name: webinfo
+                  - mountpoint: nowhere
+            ''')
+        self.assertEqual(
+            ret,
+            {'branch': 'master',
+             'motd': 'The force will be with you. Always.',
+             'mylist': ['master'],
+             'mydict': {'master': True,
+                        'nested_list': ['master'],
+                        'nested_dict': {'master': True}}}
+        )
+
+    def test_root_parameter(self):
+        '''
+        Test root parameter
+        '''
+        expected = {
+            'from_subdir': True
+        }
+
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - root: subdir
+                - top_only {url}:
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+    def test_mountpoint_parameter(self):
+        '''
+        Test mountpoint parameter
+        '''
+        expected = {
+            'included_pillar': True
+        }
+
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - mountpoint: mounted
+                - top_mounted {url}:
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+    def test_root_and_mountpoint_parameters(self):
+        '''
+        Test root and mountpoint parameters
+        '''
+        expected = {
+            'from_subdir': True
+        }
+
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - mountpoint: mounted
+                  - root: subdir
+                - top_mounted {url}:
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+    def test_all_saltenvs(self):
+        '''
+        Test all_saltenvs parameter.
+        '''
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            pillarenv: dev
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - all_saltenvs: master
+                - __env__ {url}:
+                  - mountpoint: nowhere
+            ''')
+        self.assertEqual(
+            ret,
+            {'branch': 'dev',
+             'motd': 'The force will be with you. Always.',
+             'mylist': ['dev'],
+             'mydict': {'dev': True,
+                        'nested_list': ['dev'],
+                        'nested_dict': {'dev': True}}}
+        )
+
+    def test_all_saltenvs_base(self):
+        '''
+        Test all_saltenvs parameter with base pillarenv.
+        '''
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - all_saltenvs: master
+                - __env__ {url}:
+                  - mountpoint: nowhere
+            ''')
+        self.assertEqual(
+            ret,
+            {'branch': 'master',
+             'motd': 'The force will be with you. Always.',
+             'mylist': ['master'],
+             'mydict': {'master': True,
+                        'nested_list': ['master'],
+                        'nested_dict': {'master': True}}}
+        )
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(salt.utils.is_windows(), 'minion is windows')
+@skipIf(_windows_or_mac(), 'minion is windows or mac')
 @skip_if_not_root
-@skipIf(not HAS_PYGIT2, 'pygit2 >= {0} required'.format(PYGIT2_MINVER))
+@skipIf(not HAS_PYGIT2, 'pygit2 >= {0} and libgit2 >= {1} required'.format(PYGIT2_MINVER, LIBGIT2_MINVER))
 @skipIf(not HAS_NGINX, 'nginx not present')
 @skipIf(not HAS_VIRTUALENV, 'virtualenv not present')
 class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
@@ -1364,12 +2287,6 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
     user = USERNAME
     password = PASSWORD
 
-    def setUp(self):
-        super(TestPygit2AuthenticatedHTTP, self).setUp()
-        if self.is_el7():  # pylint: disable=E1120
-            self.skipTest(
-                'skipped until EPEL7 fixes pygit2/libgit2 version mismatch')
-
     def test_single_source(self):
         '''
         Test using a single ext_pillar repo
@@ -1384,6 +2301,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_user: {user}
             git_pillar_password: {password}
@@ -1398,6 +2317,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -1429,6 +2350,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_user: {user}
             git_pillar_password: {password}
@@ -1445,6 +2368,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -1481,6 +2406,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_user: {user}
             git_pillar_password: {password}
@@ -1497,6 +2424,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -1533,6 +2462,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_user: {user}
             git_pillar_password: {password}
@@ -1549,6 +2480,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -1585,6 +2518,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_user: {user}
             git_pillar_password: {password}
@@ -1601,6 +2536,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -1632,6 +2569,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_user: {user}
             git_pillar_password: {password}
@@ -1648,6 +2587,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
@@ -1682,6 +2623,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_user: {user}
             git_pillar_password: {password}
@@ -1696,14 +2639,69 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             ''')
         self.assertEqual(ret, expected)
 
+    def test_mountpoint_parameter(self):
+        '''
+        Test mountpoint parameter
+        '''
+        expected = {
+            'included_pillar': True
+        }
+
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_user: {user}
+            git_pillar_password: {password}
+            git_pillar_insecure_auth: True
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - mountpoint: mounted
+                - top_mounted {url}:
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+    def test_root_parameter(self):
+        '''
+        Test root parameter
+        '''
+        expected = {
+            'from_subdir': True
+        }
+
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_user: {user}
+            git_pillar_password: {password}
+            git_pillar_insecure_auth: True
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - root: subdir
+                - top_only {url}:
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
         # Test with per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             cachedir: {cachedir}
             extension_modules: {extmods}
             ext_pillar:
               - git:
                 - master {url}:
+                  - root: subdir
                   - user: {user}
                   - password: {password}
                   - insecure_auth: True
@@ -1735,6 +2733,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with global credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_includes: False
             git_pillar_user: {user}
@@ -1752,6 +2752,8 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
 
         # Test with per-repo credential options
         ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_includes: False
             cachedir: {cachedir}
@@ -1769,3 +2771,132 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                   - env: base
             ''')
         self.assertEqual(ret, expected)
+
+    def test_includes_enabled_solves___env___with_mountpoint(self):
+        '''
+        Test with git_pillar_includes enabled and using "__env__" as the branch
+        name for the configured repositories.
+        The "gitinfo" repository contains top.sls file with a local reference
+        and also referencing external "nowhere.foo" which is provided by "webinfo"
+        repository mounted as "nowhere".
+        '''
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_user: {user}
+            git_pillar_password: {password}
+            git_pillar_insecure_auth: True
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - name: gitinfo
+                  - user: {user}
+                  - password: {password}
+                  - insecure_auth: True
+                - __env__ {url}:
+                  - name: webinfo
+                  - mountpoint: nowhere
+                  - user: {user}
+                  - password: {password}
+                  - insecure_auth: True
+            ''')
+        self.assertEqual(
+            ret,
+            {'branch': 'master',
+             'motd': 'The force will be with you. Always.',
+             'mylist': ['master'],
+             'mydict': {'master': True,
+                        'nested_list': ['master'],
+                        'nested_dict': {'master': True}}}
+        )
+
+    def test_root_and_mountpoint_parameters(self):
+        '''
+        Test root and mountpoint parameters
+        '''
+        expected = {
+            'from_subdir': True
+        }
+
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_user: {user}
+            git_pillar_password: {password}
+            git_pillar_insecure_auth: True
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - mountpoint: mounted
+                  - root: subdir
+                - top_mounted {url}:
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+    def test_all_saltenvs(self):
+        '''
+        Test all_saltenvs parameter.
+        '''
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_user: {user}
+            git_pillar_password: {password}
+            git_pillar_insecure_auth: True
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            pillarenv: dev
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - all_saltenvs: master
+                - __env__ {url}:
+                  - mountpoint: nowhere
+            ''')
+        self.assertEqual(
+            ret,
+            {'branch': 'dev',
+             'motd': 'The force will be with you. Always.',
+             'mylist': ['dev'],
+             'mydict': {'dev': True,
+                        'nested_list': ['dev'],
+                        'nested_dict': {'dev': True}}}
+        )
+
+    def test_all_saltenvs_base(self):
+        '''
+        Test all_saltenvs parameter with base pillarenv.
+        '''
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_user: {user}
+            git_pillar_password: {password}
+            git_pillar_insecure_auth: True
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - all_saltenvs: master
+                - __env__ {url}:
+                  - mountpoint: nowhere
+            ''')
+        self.assertEqual(
+            ret,
+            {'branch': 'master',
+             'motd': 'The force will be with you. Always.',
+             'mylist': ['master'],
+             'mydict': {'master': True,
+                        'nested_list': ['master'],
+                        'nested_dict': {'master': True}}}
+        )

@@ -1,8 +1,12 @@
 Jinja2
-msgpack-python>0.3
-PyYAML
+# This should be changed to msgpack-python for Packages
+# msgpack-python>0.3,!=0.5.5
+msgpack>=0.5,!=0.5.5
+PyYAML<5.1
 MarkupSafe
 requests>=1.0.0
-tornado>=4.2.1
+tornado>=4.2.1,<6.0; python_version < '3'
+tornado>=4.2.1,<5.0; python_version >= '3.4'
+
 # Required by Tornado to handle threads stuff.
-futures>=2.0
+futures>=2.0; python_version < '3.0'

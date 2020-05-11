@@ -2,8 +2,15 @@
 '''
 The networking module for Non-RH/Deb Linux distros
 '''
-from __future__ import absolute_import
-import salt.utils
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
+# Import Salt libs
+import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
+import salt.utils.stringutils
+
 from salt.ext.six.moves import zip
 
 __virtualname__ = 'ip'
@@ -13,15 +20,15 @@ def __virtual__():
     '''
     Confine this module to Non-RH/Deb Linux distros
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return (False, 'Module linux_ip: Windows systems are not supported.')
-    if __grains__['os_family'] == 'RedHat':
+    if __grains__.get('os_family') == 'RedHat':
         return (False, 'Module linux_ip: RedHat systems are not supported.')
-    if __grains__['os_family'] == 'Debian':
+    if __grains__.get('os_family') == 'Debian':
         return (False, 'Module linux_ip: Debian systems are not supported.')
-    if __grains__['os_family'] == 'NILinuxRT':
+    if __grains__.get('os_family') == 'NILinuxRT':
         return (False, 'Module linux_ip: NILinuxRT systems are not supported.')
-    if not salt.utils.which('ip'):
+    if not salt.utils.path.which('ip'):
         return (False, 'The linux_ip execution module cannot be loaded: '
                 'the ip binary is not in the path.')
     return __virtualname__
@@ -133,8 +140,8 @@ def _parse_routes():
     '''
     Parse the contents of ``/proc/net/route``
     '''
-    with salt.utils.fopen('/proc/net/route', 'r') as fp_:
-        out = fp_.read()
+    with salt.utils.files.fopen('/proc/net/route', 'r') as fp_:
+        out = salt.utils.stringutils.to_unicode(fp_.read())
 
     ret = {}
     for line in out.splitlines():

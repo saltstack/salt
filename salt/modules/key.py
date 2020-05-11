@@ -2,13 +2,13 @@
 '''
 Functions to view the minion's public key information
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
 
 # Import Salt libs
-import salt.utils
+import salt.utils.crypt
 
 
 def finger(hash_type=None):
@@ -27,7 +27,7 @@ def finger(hash_type=None):
     if hash_type is None:
         hash_type = __opts__['hash_type']
 
-    return salt.utils.pem_finger(
+    return salt.utils.crypt.pem_finger(
         os.path.join(__opts__['pki_dir'], 'minion.pub'),
         sum_type=hash_type)
 
@@ -48,6 +48,6 @@ def finger_master(hash_type=None):
     if hash_type is None:
         hash_type = __opts__['hash_type']
 
-    return salt.utils.pem_finger(
+    return salt.utils.crypt.pem_finger(
         os.path.join(__opts__['pki_dir'], 'minion_master.pub'),
         sum_type=hash_type)

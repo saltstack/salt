@@ -7,17 +7,17 @@ Execution module for Cisco Network Services Orchestrator Proxy minions
 For documentation on setting up the cisconso proxy minion look in the documentation
 for :mod:`salt.proxy.cisconso<salt.proxy.cisconso>`.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
-import salt.utils
-import salt.ext.six as six
+import salt.utils.platform
+from salt.ext import six
 
 __proxyenabled__ = ['cisconso']
 __virtualname__ = 'cisconso'
 
 
 def __virtual__():
-    if salt.utils.is_proxy():
+    if salt.utils.platform.is_proxy():
         return __virtualname__
     return (False, 'The cisconso execution module failed to load: '
             'only available on proxy minions.')
@@ -43,7 +43,7 @@ def get_data(datastore, path):
     :type  datastore: :class:`DatastoreType` (``str`` enum).
 
     :param path: The device path to set the value at,
-        a list of element names in order, / seperated
+        a list of element names in order, / separated
     :type  path: ``list``, ``str`` OR ``tuple``
 
     :return: The network configuration at that tree
@@ -60,14 +60,14 @@ def get_data(datastore, path):
 
 def set_data_value(datastore, path, data):
     '''
-    Get a data entry in a datastore
+    Set a data entry in a datastore
 
     :param datastore: The datastore, e.g. running, operational.
         One of the NETCONF store IETF types
     :type  datastore: :class:`DatastoreType` (``str`` enum).
 
     :param path: The device path to set the value at,
-        a list of element names in order, / seperated
+        a list of element names in order, / separated
     :type  path: ``list``, ``str`` OR ``tuple``
 
     :param data: The new value at the given path

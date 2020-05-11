@@ -44,18 +44,32 @@ to use a YAML 'explicit key', as demonstrated in the second example below.
           - ssh-dss AAAAB3NzaCL0sQ9fJ5bYTEyY== user@domain
           - option3="value3" ssh-dss AAAAB3NzaC1kcQ9J5bYTEyY== other@testdomain
           - AAAAB3NzaC1kcQ9fJFF435bYTEyY== newcomment
+
+    sshkeys:
+      ssh_auth.manage:
+        - user: root
+        - enc: ssh-rsa
+        - options:
+          - option1="value1"
+          - option2="value2 flag2"
+        - comment: myuser
+        - ssh_keys:
+          - AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY==
+          - ssh-dss AAAAB3NzaCL0sQ9fJ5bYTEyY== user@domain
+          - option3="value3" ssh-dss AAAAB3NzaC1kcQ9J5bYTEyY== other@testdomain
+          - AAAAB3NzaC1kcQ9fJFF435bYTEyY== newcomment
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import re
 import sys
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
-def _present_test(user, name, enc, comment, options, source, config):
+def _present_test(user, name, enc, comment, options, source, config, fingerprint_hash_type):
     '''
     Run checks for "present"
     '''
@@ -65,7 +79,8 @@ def _present_test(user, name, enc, comment, options, source, config):
                 user,
                 source,
                 config,
-                saltenv=__env__)
+                saltenv=__env__,
+                fingerprint_hash_type=fingerprint_hash_type)
         if keys:
             comment = ''
             for key, status in six.iteritems(keys):
@@ -111,7 +126,8 @@ def _present_test(user, name, enc, comment, options, source, config):
             enc,
             comment,
             options,
-            config)
+            config=config,
+            fingerprint_hash_type=fingerprint_hash_type)
     if check == 'update':
         comment = (
                 'Key {0} for user {1} is set to be updated'
@@ -123,12 +139,12 @@ def _present_test(user, name, enc, comment, options, source, config):
     elif check == 'exists':
         result = True
         comment = ('The authorized host key {0} is already present '
-                          'for user {1}'.format(name, user))
+                   'for user {1}'.format(name, user))
 
     return result, comment
 
 
-def _absent_test(user, name, enc, comment, options, source, config):
+def _absent_test(user, name, enc, comment, options, source, config, fingerprint_hash_type):
     '''
     Run checks for "absent"
     '''
@@ -138,7 +154,8 @@ def _absent_test(user, name, enc, comment, options, source, config):
                 user,
                 source,
                 config,
-                saltenv=__env__)
+                saltenv=__env__,
+                fingerprint_hash_type=fingerprint_hash_type)
         if keys:
             comment = ''
             for key, status in list(keys.items()):
@@ -184,7 +201,8 @@ def _absent_test(user, name, enc, comment, options, source, config):
             enc,
             comment,
             options,
-            config)
+            config=config,
+            fingerprint_hash_type=fingerprint_hash_type)
     if check == 'update' or check == 'exists':
         comment = ('Key {0} for user {1} is set for removal').format(name, user)
     else:
@@ -202,6 +220,7 @@ def present(
         source='',
         options=None,
         config='.ssh/authorized_keys',
+        fingerprint_hash_type=None,
         **kwargs):
     '''
     Verifies that the specified SSH key is present for the specified user
@@ -243,6 +262,10 @@ def present(
         The location of the authorized keys file relative to the user's home
         directory, defaults to ".ssh/authorized_keys". Token expansion %u and
         %h for username and home path supported.
+
+    fingerprint_hash_type
+        The public key fingerprint hash type that the public key fingerprint
+        was originally hashed with. This defaults to ``sha256`` if not specified.
     '''
     ret = {'name': name,
            'changes': {},
@@ -279,7 +302,7 @@ def present(
                 options or [],
                 source,
                 config,
-                )
+                fingerprint_hash_type)
         return ret
 
     # Get only the path to the file without env referrences to check if exists
@@ -305,10 +328,11 @@ def present(
                 data = __salt__['ssh.set_auth_key_from_file'](
                         user,
                         source,
-                        config,
-                        saltenv=__env__)
+                        config=config,
+                        saltenv=__env__,
+                        fingerprint_hash_type=fingerprint_hash_type)
             else:
-                # Split keyline to get key und commen
+                # Split keyline to get key and comment
                 keyline = keyline.split(' ')
                 key_type = keyline[0]
                 key_value = keyline[1]
@@ -316,18 +340,20 @@ def present(
                 data = __salt__['ssh.set_auth_key'](
                         user,
                         key_value,
-                        key_type,
-                        key_comment,
-                        options or [],
-                        config)
+                        enc=key_type,
+                        comment=key_comment,
+                        options=options or [],
+                        config=config,
+                        fingerprint_hash_type=fingerprint_hash_type)
     else:
         data = __salt__['ssh.set_auth_key'](
                 user,
                 name,
-                enc,
-                comment,
-                options or [],
-                config)
+                enc=enc,
+                comment=comment,
+                options=options or [],
+                config=config,
+                fingerprint_hash_type=fingerprint_hash_type)
 
     if data == 'replace':
         ret['changes'][name] = 'Updated'
@@ -369,7 +395,8 @@ def absent(name,
            comment='',
            source='',
            options=None,
-           config='.ssh/authorized_keys'):
+           config='.ssh/authorized_keys',
+           fingerprint_hash_type=None):
     '''
     Verifies that the specified SSH key is absent
 
@@ -401,6 +428,11 @@ def absent(name,
         directory, defaults to ".ssh/authorized_keys". Token expansion %u and
         %h for username and home path supported.
 
+    fingerprint_hash_type
+        The public key fingerprint hash type that the public key fingerprint
+        was originally hashed with. This defaults to ``sha256`` if not specified.
+
+        .. versionadded:: 2016.11.7
     '''
     ret = {'name': name,
            'changes': {},
@@ -416,7 +448,7 @@ def absent(name,
                 options or [],
                 source,
                 config,
-                )
+                fingerprint_hash_type)
         return ret
 
     # Extract Key from file if source is present
@@ -434,13 +466,15 @@ def absent(name,
                 ret['comment'] = __salt__['ssh.rm_auth_key_from_file'](user,
                                                                        source,
                                                                        config,
-                                                                       saltenv=__env__)
+                                                                       saltenv=__env__,
+                                                                       fingerprint_hash_type=fingerprint_hash_type)
             else:
                 # Split keyline to get key
                 keyline = keyline.split(' ')
                 ret['comment'] = __salt__['ssh.rm_auth_key'](user,
                                                              keyline[1],
-                                                             config)
+                                                             config=config,
+                                                             fingerprint_hash_type=fingerprint_hash_type)
     else:
         # Get just the key
         sshre = re.compile(r'^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$')
@@ -461,12 +495,111 @@ def absent(name,
             name = comps[1]
             if len(comps) == 3:
                 comment = comps[2]
-        ret['comment'] = __salt__['ssh.rm_auth_key'](user, name, config)
+        ret['comment'] = __salt__['ssh.rm_auth_key'](user,
+                                                     name,
+                                                     config=config,
+                                                     fingerprint_hash_type=fingerprint_hash_type)
 
     if ret['comment'] == 'User authorized keys file not present':
         ret['result'] = False
         return ret
     elif ret['comment'] == 'Key removed':
         ret['changes'][name] = 'Removed'
+
+    return ret
+
+
+def manage(
+        name,
+        ssh_keys,
+        user,
+        enc='ssh-rsa',
+        comment='',
+        source='',
+        options=None,
+        config='.ssh/authorized_keys',
+        fingerprint_hash_type=None,
+        **kwargs):
+    '''
+    .. versionadded:: Neon
+
+    Ensures that only the specified ssh_keys are present for the specified user
+
+    ssh_keys
+        The SSH key to manage
+
+    user
+        The user who owns the SSH authorized keys file to modify
+
+    enc
+        Defines what type of key is being used; can be ed25519, ecdsa, ssh-rsa
+        or ssh-dss
+
+    comment
+        The comment to be placed with the SSH public key
+
+    source
+        The source file for the key(s). Can contain any number of public keys,
+        in standard "authorized_keys" format. If this is set, comment and enc
+        will be ignored.
+
+    .. note::
+        The source file must contain keys in the format ``<enc> <key>
+        <comment>``. If you have generated a keypair using PuTTYgen, then you
+        will need to do the following to retrieve an OpenSSH-compatible public
+        key.
+
+        1. In PuTTYgen, click ``Load``, and select the *private* key file (not
+           the public key), and click ``Open``.
+        2. Copy the public key from the box labeled ``Public key for pasting
+           into OpenSSH authorized_keys file``.
+        3. Paste it into a new file.
+
+    options
+        The options passed to the keys, pass a list object
+
+    config
+        The location of the authorized keys file relative to the user's home
+        directory, defaults to ".ssh/authorized_keys". Token expansion %u and
+        %h for username and home path supported.
+
+    fingerprint_hash_type
+        The public key fingerprint hash type that the public key fingerprint
+        was originally hashed with. This defaults to ``sha256`` if not specified.
+    '''
+    ret = {'name': '',
+           'changes': {},
+           'result': True,
+           'comment': ''}
+
+    all_potential_keys = []
+    for ssh_key in ssh_keys:
+        # gather list potential ssh keys for removal comparison
+        # options, enc, and comments could be in the mix
+        all_potential_keys.extend(ssh_key.split(' '))
+    existing_keys = __salt__['ssh.auth_keys'](user=user).keys()
+    remove_keys = set(existing_keys).difference(all_potential_keys)
+    for remove_key in remove_keys:
+        if __opts__['test']:
+            remove_comment = '{0} Key set for removal'.format(remove_key)
+            ret['comment'] = remove_comment
+            ret['result'] = None
+        else:
+            remove_comment = absent(remove_key, user)['comment']
+            ret['changes'][remove_key] = remove_comment
+
+    for ssh_key in ssh_keys:
+        run_return = present(ssh_key, user, enc, comment, source,
+                             options, config, fingerprint_hash_type, **kwargs)
+        if run_return['changes']:
+            ret['changes'].update(run_return['changes'])
+        else:
+            ret['comment'] += '\n' + run_return['comment']
+            ret['comment'].strip()
+
+        if run_return['result'] is None:
+            ret['result'] = None
+        elif not run_return['result']:
+            ret['result'] = False
 
     return ret

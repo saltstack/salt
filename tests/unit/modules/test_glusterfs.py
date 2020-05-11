@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
-    :codeauthor: :email:`Joe Julian <me@joejulian.name>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
+    :codeauthor: Joe Julian <me@joejulian.name>
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -180,6 +180,7 @@ class GlusterResults(object):
             success_first_ip_from_second_first_time = success_other
             success_first_ip_from_second_second_time = success_reverse_already_peer[
                 'ip']
+
 
 xml_peer_present = """
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -361,6 +362,74 @@ xml_command_fail = """
   <opRet>-1</opRet>
     <opErrno>0</opErrno>
   <opErrstr>Command Failed</opErrstr>
+</cliOutput>
+"""
+
+xml_op_version_37 = """
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cliOutput>
+  <opRet>0</opRet>
+  <opErrno>0</opErrno>
+  <opErrstr/>
+  <volGetopts>
+    <count>1</count>
+    <Option>cluster.op-version</Option>
+    <Value>30707</Value>
+  </volGetopts>
+</cliOutput>
+"""
+
+xml_op_version_312 = """
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cliOutput>
+  <opRet>0</opRet>
+  <opErrno>0</opErrno>
+  <opErrstr/>
+  <volGetopts>
+    <count>1</count>
+    <Opt>
+      <Option>cluster.op-version</Option>
+      <Value>30707</Value>
+    </Opt>
+  </volGetopts>
+</cliOutput>
+"""
+
+xml_max_op_version = """
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cliOutput>
+  <opRet>0</opRet>
+  <opErrno>0</opErrno>
+  <opErrstr/>
+  <volGetopts>
+    <count>1</count>
+    <Opt>
+      <Option>cluster.max-op-version</Option>
+      <Value>31200</Value>
+    </Opt>
+  </volGetopts>
+</cliOutput>
+"""
+
+xml_set_op_version_failure = """
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cliOutput>
+  <opRet>-1</opRet>
+  <opErrno>30800</opErrno>
+  <opErrstr>Required op-version (30707) should not be equal or lower than current cluster op-version (30707).</opErrstr>
+  <cliOp>volSet</cliOp>
+  <output>Set volume unsuccessful</output>
+</cliOutput>
+"""
+
+xml_set_op_version_success = """
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cliOutput>
+  <opRet>0</opRet>
+  <opErrno>0</opErrno>
+  <opErrstr/>
+  <cliOp>volSet</cliOp>
+  <output>Set volume successful</output>
 </cliOutput>
 """
 
@@ -678,3 +747,52 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
                 mock_run.return_value = xml_command_fail
                 self.assertFalse(glusterfs.add_volume_bricks('Newvolume1',
                                                              ['new:/path']))
+
+    # 'get_op_version' function tests: 1
+
+    def test_get_op_version(self):
+        '''
+        Test retrieving the glusterfs op-version
+        '''
+
+        # Test with xml output structure from v3.7
+        mock_run = MagicMock(return_value=xml_op_version_37)
+        with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
+            self.assertEqual(glusterfs.get_op_version('test'), '30707')
+
+        # Test with xml output structure from v3.12
+        mock_run = MagicMock(return_value=xml_op_version_312)
+        with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
+            self.assertEqual(glusterfs.get_op_version('test'), '30707')
+
+    # 'get_max_op_version' function tests: 1
+
+    def test_get_max_op_version(self):
+        '''
+        Test retrieving the glusterfs max-op-version.
+        '''
+
+        mock_xml = MagicMock(return_value=xml_max_op_version)
+        mock_version = MagicMock(return_value='glusterfs 3.9.1')
+
+        with patch.dict(glusterfs.__salt__, {'cmd.run': mock_version}):
+            self.assertFalse(glusterfs.get_max_op_version()[0])
+
+        with patch.object(glusterfs, '_get_version', return_value=(3, 12, 0)):
+            with patch.dict(glusterfs.__salt__, {'cmd.run': mock_xml}):
+                self.assertEqual(glusterfs.get_max_op_version(), '31200')
+
+    # 'set_op_version' function tests: 1
+
+    def test_set_op_version(self):
+        '''
+        Test setting the glusterfs op-version
+        '''
+        mock_failure = MagicMock(return_value=xml_set_op_version_failure)
+        mock_success = MagicMock(return_value=xml_set_op_version_success)
+
+        with patch.dict(glusterfs.__salt__, {'cmd.run': mock_failure}):
+            self.assertFalse(glusterfs.set_op_version(30707)[0])
+
+        with patch.dict(glusterfs.__salt__, {'cmd.run': mock_success}):
+            self.assertEqual(glusterfs.set_op_version(31200), 'Set volume successful')

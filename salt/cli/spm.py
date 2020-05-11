@@ -9,12 +9,12 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 import salt.spm
 import salt.utils.parsers as parsers
-from salt.utils.verify import verify_log
+from salt.utils.verify import verify_log, verify_env
 
 
 class SPM(parsers.SPMParser):
@@ -29,6 +29,13 @@ class SPM(parsers.SPMParser):
         ui = salt.spm.SPMCmdlineInterface()
         self.parse_args()
         self.setup_logfile_logger()
+        v_dirs = [
+            self.config['spm_cache_dir'],
+        ]
+        verify_env(v_dirs,
+                   self.config['user'],
+                   root_dir=self.config['root_dir'],
+                   )
         verify_log(self.config)
         client = salt.spm.SPMClient(ui, self.config)
         client.run(self.args)

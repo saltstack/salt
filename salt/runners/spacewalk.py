@@ -29,14 +29,14 @@ master configuration at ``/etc/salt/master`` or ``/etc/salt/master.d/spacewalk.c
     not using the defaults. Default is ``protocol: https``.
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import atexit
 import logging
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -70,7 +70,7 @@ def _get_spacewalk_configuration(spacewalk_url=''):
                 if not username or not password:
                     log.error(
                         'Username or Password has not been specified in the master '
-                        'configuration for {0}'.format(spacewalk_server)
+                        'configuration for %s', spacewalk_server
                     )
                     return False
 
@@ -83,15 +83,13 @@ def _get_spacewalk_configuration(spacewalk_url=''):
                 if (not spacewalk_url) or (spacewalk_url == spacewalk_server):
                     return ret
         except Exception as exc:
-            log.error(
-                'Exception encountered: {0}'.format(exc)
-            )
+            log.error('Exception encountered: %s', exc)
             return False
 
         if spacewalk_url:
             log.error(
-                'Configuration for {0} has not been specified in the master '
-                'configuration'.format(spacewalk_url)
+                'Configuration for %s has not been specified in the master '
+                'configuration', spacewalk_url
             )
             return False
 

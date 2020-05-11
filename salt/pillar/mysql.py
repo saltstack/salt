@@ -12,7 +12,7 @@ This module is a concrete implementation of the sql_base ext_pillar for MySQL.
 :platform: all
 
 Configuring the mysql ext_pillar
-=====================================
+================================
 
 Use the 'mysql' key under ext_pillar for configuration of queries.
 
@@ -22,7 +22,7 @@ mysql.pass, mysql.port, mysql.host) for database connection info.
 Required python modules: MySQLdb
 
 Complete example
-=====================================
+================
 
 .. code-block:: yaml
 
@@ -45,7 +45,7 @@ Complete example
             as_list: True
             with_lists: [1,3]
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 from contextlib import contextmanager
@@ -59,16 +59,27 @@ log = logging.getLogger(__name__)
 
 # Import third party libs
 try:
+    # Trying to import MySQLdb
     import MySQLdb
-    HAS_MYSQL = True
+    import MySQLdb.cursors
+    import MySQLdb.converters
 except ImportError:
-    HAS_MYSQL = False
+    try:
+        # MySQLdb import failed, try to import PyMySQL
+        import pymysql
+        pymysql.install_as_MySQLdb()
+        import MySQLdb
+        import MySQLdb.cursors
+        import MySQLdb.converters
+    except ImportError:
+        MySQLdb = None
 
 
 def __virtual__():
-    if not HAS_MYSQL:
-        return False
-    return True
+    '''
+    Confirm that a python mysql client is installed.
+    '''
+    return bool(MySQLdb), 'No python mysql client installed.' if MySQLdb is None else ''
 
 
 class MySQLExtPillar(SqlBaseExtPillar):
@@ -93,7 +104,7 @@ class MySQLExtPillar(SqlBaseExtPillar):
         _opts = __opts__.get('mysql', {})
         for attr in defaults:
             if attr not in _opts:
-                log.debug('Using default for MySQL {0}'.format(attr))
+                log.debug('Using default for MySQL %s', attr)
                 _options[attr] = defaults[attr]
                 continue
             _options[attr] = _opts[attr]
@@ -114,7 +125,7 @@ class MySQLExtPillar(SqlBaseExtPillar):
         try:
             yield cursor
         except MySQLdb.DatabaseError as err:
-            log.exception('Error in ext_pillar MySQL: {0}'.format(err.args))
+            log.exception('Error in ext_pillar MySQL: %s', err.args)
         finally:
             conn.close()
 

@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import
-
-# Import third party libs
-import msgpack
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
-from salt.ext.six import string_types
+import salt.utils.msgpack
+from salt.ext import six
 
 
 def render(msgpack_data, saltenv='base', sls='', **kws):
@@ -21,11 +19,11 @@ def render(msgpack_data, saltenv='base', sls='', **kws):
 
     :rtype: A Python data structure
     '''
-    if not isinstance(msgpack_data, string_types):
+    if not isinstance(msgpack_data, six.string_types):
         msgpack_data = msgpack_data.read()
 
     if msgpack_data.startswith('#!'):
         msgpack_data = msgpack_data[(msgpack_data.find('\n') + 1):]
     if not msgpack_data.strip():
         return {}
-    return msgpack.loads(msgpack_data)
+    return salt.utils.msgpack.loads(msgpack_data)

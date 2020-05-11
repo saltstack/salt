@@ -55,50 +55,52 @@ def parse_gitlog(filename=None):
     else:
         fh = open(filename, 'r+')
 
-    commitcount = 0
-    for line in fh.readlines():
-        line = line.rstrip()
-        if line.startswith('commit '):
-            new_commit = True
-            commitcount += 1
-            continue
+    try:
+        commitcount = 0
+        for line in fh.readlines():
+            line = line.rstrip()
+            if line.startswith('commit '):
+                new_commit = True
+                commitcount += 1
+                continue
 
-        if line.startswith('Author:'):
-            author = re.match(r'Author:\s+(.*)\s+<(.*)>', line)
-            if author:
-                email = author.group(2)
-            continue
+            if line.startswith('Author:'):
+                author = re.match(r'Author:\s+(.*)\s+<(.*)>', line)
+                if author:
+                    email = author.group(2)
+                continue
 
-        if line.startswith('Date:'):
+            if line.startswith('Date:'):
 
-            isodate = re.match(r'Date:\s+(.*)', line)
-            d = parse_date(isodate.group(1))
-            continue
+                isodate = re.match(r'Date:\s+(.*)', line)
+                d = parse_date(isodate.group(1))
+                continue
 
-        if len(line) < 2 and new_commit:
-            new_commit = False
-            key = '{0}-{1}'.format(d.year, str(d.month).zfill(2))
+            if len(line) < 2 and new_commit:
+                new_commit = False
+                key = '{0}-{1}'.format(d.year, str(d.month).zfill(2))
 
-            if key not in results:
-                results[key] = []
+                if key not in results:
+                    results[key] = []
 
-            if key not in commits:
-                commits[key] = 0
+                if key not in commits:
+                    commits[key] = 0
 
-            if email not in commits_by_contributor:
-                commits_by_contributor[email] = {}
+                if email not in commits_by_contributor:
+                    commits_by_contributor[email] = {}
 
-            if key not in commits_by_contributor[email]:
-                commits_by_contributor[email][key] = 1
-            else:
-                commits_by_contributor[email][key] += 1
+                if key not in commits_by_contributor[email]:
+                    commits_by_contributor[email][key] = 1
+                else:
+                    commits_by_contributor[email][key] += 1
 
-                if email not in results[key]:
-                    results[key].append(email)
+                    if email not in results[key]:
+                        results[key].append(email)
 
-                commits[key] += commitcount
-                commitcount = 0
-    fh.close()
+                    commits[key] += commitcount
+                    commitcount = 0
+    finally:
+        fh.close()
     return (results, commits, commits_by_contributor)
 
 
@@ -136,7 +138,7 @@ def main(argv=None):
     try:
         try:
             opts, args = getopt.getopt(argv[1:], 'hc', ['help', 'contributor-detail'])
-            if len(args) < 1:
+            if not args:
                 raise Usage('committer_parser.py needs a filename or \'-\' to read from stdin')
         except getopt.error as msg:
             raise Usage(msg)
@@ -144,17 +146,18 @@ def main(argv=None):
         print(err.msg, file=sys.stderr)
         return 2
 
-    if len(opts) > 0:
+    if opts:
         if '-h' in opts[0] or '--help' in opts[0]:
             return 0
 
     data, counts, commits_by_contributor = parse_gitlog(filename=args[0])
 
-    if len(opts) > 0:
+    if opts:
         if '-c' or '--contributor-detail':
             print(counts_by_contributor(commits_by_contributor, data))
     else:
         print(count_results(data, counts))
+
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -7,12 +7,11 @@ user present
 user present with custom homedir
 '''
 
-# Import python libs
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 from random import randint
-import grp
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -20,12 +19,23 @@ from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest, requires_system_grains, skip_if_not_root
 from tests.support.mixins import SaltReturnAssertsMixin
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.files
+import salt.utils.platform
 
-if salt.utils.is_darwin():
+try:
+    import grp
+except ImportError:
+    grp = None
+
+if salt.utils.platform.is_darwin():
     USER = 'macuser'
     GROUP = 'macuser'
+    GID = randint(400, 500)
+    NOGROUPGID = randint(400, 500)
+elif salt.utils.platform.is_windows():
+    USER = 'winuser'
+    GROUP = 'winuser'
     GID = randint(400, 500)
     NOGROUPGID = randint(400, 500)
 else:
@@ -41,14 +51,8 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     test for user absent
     '''
-    user_name = 'salt_test'
-    user_home = '/var/lib/salt_test'
-
-    def setUp(self):
-        if salt.utils.is_darwin():
-            #on mac we need to add user, because there is
-            #no creationtime for nobody user.
-            add_user = self.run_function('user.add', [USER], gid=GID)
+    user_name = 'salt-test'
+    user_home = '/var/lib/{0}'.format(user_name) if not salt.utils.platform.is_windows() else os.path.join('tmp', user_name)
 
     def test_user_absent(self):
         ret = self.run_state('user.absent', name='unpossible')
@@ -84,7 +88,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         And then destroys that user.
         Assume that it will break any system you run it on.
         '''
-        if salt.utils.is_darwin():
+        if salt.utils.platform.is_darwin():
             HOMEDIR = '/Users/home_of_' + self.user_name
         else:
             HOMEDIR = '/home/home_of_' + self.user_name
@@ -97,45 +101,34 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
                              home=HOMEDIR)
         self.assertSaltTrueReturn(ret)
 
-    def test_user_present_nondefault(self):
+    @requires_system_grains
+    def test_user_present_nondefault(self, grains=None):
         '''
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
         '''
         ret = self.run_state('user.present', name=self.user_name,
                              home=self.user_home)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(os.path.isdir(self.user_home))
-
-    @requires_system_grains
-    def test_user_present_gid_from_name_default(self, grains=None):
-        '''
-        This is a DESTRUCTIVE TEST. It creates a new user on the on the minion.
-        This is an integration test. Not all systems will automatically create
-        a group of the same name as the user, but I don't have access to any.
-        If you run the test and it fails, please fix the code it's testing to
-        work on your operating system.
-        '''
-        # MacOS users' primary group defaults to staff (20), not the name of
-        # user
-        gid_from_name = False if grains['os_family'] == 'MacOS' else True
-
-        ret = self.run_state('user.present', name=self.user_name,
-                             gid_from_name=gid_from_name, home=self.user_home)
-        self.assertSaltTrueReturn(ret)
-
         ret = self.run_function('user.info', [self.user_name])
         self.assertReturnNonEmptySaltType(ret)
-        group_name = grp.getgrgid(ret['gid']).gr_name
+        if salt.utils.platform.is_windows():
+            group_name = self.run_function('user.list_groups', [self.user_name])
+        else:
+            group_name = grp.getgrgid(ret['gid']).gr_name
 
-        self.assertTrue(os.path.isdir(self.user_home))
+        if not salt.utils.platform.is_darwin() and not salt.utils.platform.is_windows():
+            self.assertTrue(os.path.isdir(self.user_home))
         if grains['os_family'] in ('Suse',):
             self.assertEqual(group_name, 'users')
         elif grains['os_family'] == 'MacOS':
             self.assertEqual(group_name, 'staff')
+        elif salt.utils.platform.is_windows():
+            self.assertEqual([], group_name)
         else:
             self.assertEqual(group_name, self.user_name)
 
-    def test_user_present_gid_from_name(self):
+    @skipIf(salt.utils.platform.is_windows(), 'windows minion does not support usergroup')
+    def test_user_present_usergroup_false(self):
         '''
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
         This is a unit test, NOT an integration test. We create a group of the
@@ -143,15 +136,40 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         ret = self.run_state('group.present', name=self.user_name)
         self.assertSaltTrueReturn(ret)
+
         ret = self.run_state('user.present', name=self.user_name,
-                             gid_from_name=True, home=self.user_home)
+                             gid=self.user_name, usergroup=False,
+                             home=self.user_home)
         self.assertSaltTrueReturn(ret)
 
         ret = self.run_function('user.info', [self.user_name])
         self.assertReturnNonEmptySaltType(ret)
         group_name = grp.getgrgid(ret['gid']).gr_name
 
-        self.assertTrue(os.path.isdir(self.user_home))
+        if not salt.utils.platform.is_darwin():
+            self.assertTrue(os.path.isdir(self.user_home))
+        self.assertEqual(group_name, self.user_name)
+        ret = self.run_state('user.absent', name=self.user_name)
+        self.assertSaltTrueReturn(ret)
+        ret = self.run_state('group.absent', name=self.user_name)
+        self.assertSaltTrueReturn(ret)
+
+    @skipIf(salt.utils.platform.is_windows(), 'windows minion does not support usergroup')
+    def test_user_present_usergroup(self):
+        '''
+        This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
+        This is a unit test, NOT an integration test.
+        '''
+        ret = self.run_state('user.present', name=self.user_name,
+                             usergroup=True, home=self.user_home)
+        self.assertSaltTrueReturn(ret)
+
+        ret = self.run_function('user.info', [self.user_name])
+        self.assertReturnNonEmptySaltType(ret)
+        group_name = grp.getgrgid(ret['gid']).gr_name
+
+        if not salt.utils.platform.is_darwin():
+            self.assertTrue(os.path.isdir(self.user_home))
         self.assertEqual(group_name, self.user_name)
         ret = self.run_state('user.absent', name=self.user_name)
         self.assertSaltTrueReturn(ret)
@@ -169,23 +187,24 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state(
             'user.present',
             name=self.user_name,
-            fullname=u'Sålt Test',
-            roomnumber=u'①②③',
-            workphone=u'١٢٣٤',
-            homephone=u'६७८'
+            fullname='Sålt Test',
+            roomnumber='①②③',
+            workphone='١٢٣٤',
+            homephone='६७८'
         )
         self.assertSaltTrueReturn(ret)
         # Ensure updating a user also works
         ret = self.run_state(
             'user.present',
             name=self.user_name,
-            fullname=u'Sølt Test',
-            roomnumber=u'①③②',
-            workphone=u'٣٤١٢',
-            homephone=u'६८७'
+            fullname='Sølt Test',
+            roomnumber='①③②',
+            workphone='٣٤١٢',
+            homephone='६८७'
         )
         self.assertSaltTrueReturn(ret)
 
+    @skipIf(salt.utils.platform.is_windows(), 'windows minon does not support roomnumber or phone')
     def test_user_present_gecos(self):
         '''
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
@@ -205,6 +224,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
 
+    @skipIf(salt.utils.platform.is_windows(), 'windows minon does not support roomnumber or phone')
     def test_user_present_gecos_none_fields(self):
         '''
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
@@ -226,16 +246,79 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertReturnNonEmptySaltType(ret)
         self.assertEqual('', ret['fullname'])
         # MacOS does not supply the following GECOS fields
-        if not salt.utils.is_darwin():
+        if not salt.utils.platform.is_darwin():
             self.assertEqual('', ret['roomnumber'])
             self.assertEqual('', ret['workphone'])
             self.assertEqual('', ret['homephone'])
 
+    def test_user_present_same_password(self):
+        ret = self.run_state('user.present', name=USER, password='P@ssW0rd')
+        self.assertSaltTrueReturn(ret)
+
+        ret = self.run_state('user.present', name=USER, password='P@ssW0rd')
+        self.assertInSaltComment('up to date', ret)
+
+    def test_user_present_new_password_test_true(self):
+        ret = self.run_state('user.present', name=USER, password='P@ssW0rd')
+        self.assertSaltTrueReturn(ret)
+
+        ret = self.run_state('user.present',
+                             name=USER,
+                             password='P@ssW0rd1!',
+                             test=True)
+        self.assertSaltNoneReturn(ret)
+        self.assertSaltStateChangesEqual(ret, {})
+        self.assertInSaltComment('passwd: XXX-REDACTED-XXX', ret)
+
+    def test_user_present_new_password(self):
+        ret = self.run_state('user.present', name=USER, password='P@ssW0rd')
+        self.assertSaltTrueReturn(ret)
+
+        ret = self.run_state('user.present', name=USER, password='P@ssW0rd1!')
+        self.assertSaltTrueReturn(ret)
+        self.assertSaltStateChangesEqual(ret, {'passwd': 'XXX-REDACTED-XXX'})
+
     def tearDown(self):
-        if salt.utils.is_darwin():
+        if salt.utils.platform.is_darwin():
             check_user = self.run_function('user.list_users')
             if USER in check_user:
-                del_user = self.run_function('user.delete', [USER], remove=True)
+                self.run_function('user.delete', [USER], remove=True)
         self.assertSaltTrueReturn(
             self.run_state('user.absent', name=self.user_name)
         )
+
+
+@destructiveTest
+@skip_if_not_root
+@skipIf(not salt.utils.platform.is_windows(), 'Windows only tests')
+class WinUserTest(ModuleCase, SaltReturnAssertsMixin):
+    '''
+    test for user absent
+    '''
+    def tearDown(self):
+        self.assertSaltTrueReturn(
+            self.run_state('user.absent', name=USER)
+        )
+
+    def test_user_present_existing(self):
+        ret = self.run_state('user.present',
+                             name=USER,
+                             win_homedrive='U:',
+                             win_profile='C:\\User\\{0}'.format(USER),
+                             win_logonscript='C:\\logon.vbs',
+                             win_description='Test User Account')
+        self.assertSaltTrueReturn(ret)
+        ret = self.run_state('user.present',
+                             name=USER,
+                             win_homedrive='R:',
+                             win_profile='C:\\Users\\{0}'.format(USER),
+                             win_logonscript='C:\\Windows\\logon.vbs',
+                             win_description='Temporary Account')
+        self.assertSaltTrueReturn(ret)
+        self.assertSaltStateChangesEqual(ret, 'R:', keys=['homedrive'])
+        self.assertSaltStateChangesEqual(
+            ret, 'C:\\Users\\{0}'.format(USER), keys=['profile'])
+        self.assertSaltStateChangesEqual(
+            ret, 'C:\\Windows\\logon.vbs', keys=['logonscript'])
+        self.assertSaltStateChangesEqual(
+            ret, 'Temporary Account', keys=['description'])

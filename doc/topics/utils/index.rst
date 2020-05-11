@@ -54,7 +54,7 @@ types like so:
 
             salt '*' mymodule.observe_the_awesomeness
         '''
-        print __utils__['foo.bar']()
+        return __utils__['foo.bar']()
 
 Utility modules, like any other kind of Salt extension, support using a
 :ref:`__virtual__ function <modules-virtual-name>` to conditionally load them,
@@ -81,22 +81,76 @@ the ``foo`` utility module with a ``__virtual__`` function.
     def bar():
         return 'baz'
 
+.. versionadded:: 2018.3.0
+    Instantiating objects from classes declared in util modules works with
+    Master side modules, such as Runners, Outputters, etc.
+
+Also you could even write your utility modules in object oriented fashion:
+
+.. code-block:: python
+
+    # -*- coding: utf-8 -*-
+    '''
+    My OOP-style utils module
+    -------------------------
+
+    This module contains common functions for use in my other custom types.
+    '''
+
+    class Foo(object):
+
+        def __init__(self):
+            pass
+
+        def bar(self):
+            return 'baz'
+
+And import them into other custom modules:
+
+.. code-block:: python
+
+    # -*- coding: utf-8 -*-
+    '''
+    My awesome execution module
+    ---------------------------
+    '''
+
+    import mymodule
+
+    def observe_the_awesomeness():
+        '''
+        Prints information from my utility module
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' mymodule.observe_the_awesomeness
+        '''
+        foo = mymodule.Foo()
+        return foo.bar()
+
 These are, of course, contrived examples, but they should serve to show some of
 the possibilities opened up by writing utility modules. Keep in mind though
-that States still have access to all of the execution modules, so it is not
+that states still have access to all of the execution modules, so it is not
 necessary to write a utility module to make a function available to both a
-state and an execution module. One good use case for utililty modules is one
+state and an execution module. One good use case for utility modules is one
 where it is necessary to invoke the same function from a custom :ref:`outputter
 <all-salt.output>`/returner, as well as an execution module.
 
 Utility modules placed in ``salt://_utils/`` will be synced to the minions when
-any of the following Salt functions are called:
+a :ref:`highstate <running-highstate>` is run, as well as when any of the
+following Salt functions are called:
 
-* :mod:`state.apply <salt.modules.state.apply_>`
-* :mod:`saltutil.sync_utils <salt.modules.saltutil.sync_utils>`
-* :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>`
+* :py:func:`saltutil.sync_utils <salt.modules.saltutil.sync_utils>`
+* :py:func:`saltutil.sync_all <salt.modules.saltutil.sync_all>`
+
+As of the 2019.2.0 release, as well as 2017.7.7 and 2018.3.2 in their
+respective release cycles, the ``sync`` argument to :py:func:`state.apply
+<salt.modules.state.apply_>`/:py:func:`state.sls <salt.modules.state.sls>` can
+be used to sync custom types when running individual SLS files.
 
 To sync to the Master, use either of the following:
 
-* :mod:`saltutil.sync_utils <salt.runners.saltutil.sync_utils>`
-* :mod:`saltutil.sync_all <salt.runners.saltutil.sync_all>`
+* :py:func:`saltutil.sync_utils <salt.runners.saltutil.sync_utils>`
+* :py:func:`saltutil.sync_all <salt.runners.saltutil.sync_all>`

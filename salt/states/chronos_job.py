@@ -13,10 +13,11 @@ Configure Chronos jobs via a salt proxy.
 
 .. versionadded:: 2015.8.2
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import logging
 
+from salt.ext import six
 import salt.utils.configcomparer
 
 __proxyenabled__ = ['chronos']
@@ -75,9 +76,12 @@ def config(name, config):
                     _old = old.split('/')
                     log.debug('_old schedule: %s', _old)
                     if len(_new) == 3 and len(_old) == 3:
-                        log.debug('_new[0] == _old[0]: %s', str(_new[0]) == str(_old[0]))
-                        log.debug('_new[2] == _old[2]: %s', str(_new[2]) == str(_old[2]))
-                        if str(_new[0]) == str(_old[0]) and str(_new[2]) == str(_old[2]):
+                        log.debug('_new[0] == _old[0]: %s',
+                                  six.text_type(_new[0]) == six.text_type(_old[0]))
+                        log.debug('_new[2] == _old[2]: %s',
+                                  six.text_type(_new[2]) == six.text_type(_old[2]))
+                        if six.text_type(_new[0]) == six.text_type(_old[0]) and \
+                                six.text_type(_new[2]) == six.text_type(_old[2]):
                             log.debug('schedules match--no need for changes')
                             ret['changes'] = {}
 

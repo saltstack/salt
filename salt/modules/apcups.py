@@ -2,13 +2,13 @@
 '''
 Module for apcupsd
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils.path
 import salt.utils.decorators as decorators
 
 log = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ def _check_apcaccess():
     '''
     Looks to see if apcaccess is present on the system
     '''
-    return salt.utils.which('apcaccess')
+    return salt.utils.path.which('apcaccess')
 
 
 def __virtual__():

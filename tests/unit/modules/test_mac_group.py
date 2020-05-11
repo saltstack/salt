@@ -1,15 +1,19 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
+    :codeauthor: Nicole Thomas <nicole@saltstack.com>
 '''
 
 # Import python libs
-from __future__ import absolute_import
-import grp
+from __future__ import absolute_import, unicode_literals, print_function
+HAS_GRP = True
+try:
+    import grp
+except ImportError:
+    HAS_GRP = False
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch
 
 # Import Salt Libs
@@ -17,6 +21,7 @@ import salt.modules.mac_group as mac_group
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 
+@skipIf(not HAS_GRP, "Missing required library 'grp'")
 class MacGroupTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for the salt.modules.mac_group module

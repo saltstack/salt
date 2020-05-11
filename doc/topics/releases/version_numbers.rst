@@ -11,9 +11,11 @@ format ``YYYY.MM.R``. The year (``YYYY``) and month (``MM``) reflect when the
 release was created. The bugfix release number (``R``) increments within that
 feature release.
 
-.. note:: Prior to the ``2014.1.0`` release, the typical semantic versioning was
-   still being used. Because of the rolling nature of the project, this did not
-   make sense. The ``0.17`` release was the last of that style.
+.. note::
+
+    Prior to the ``2014.1.0`` release, the typical semantic versioning was
+    still being used. Because of the rolling nature of the project, this did not
+    make sense. The ``0.17`` release was the last of that style.
 
 Code Names
 ----------
@@ -21,7 +23,7 @@ Code Names
 To distinguish future releases from the current release, code names are used.
 The periodic table is used to derive the next codename. The first release in
 the date based system was code named ``Hydrogen``, each subsequent release will
-go to the next `atomic number <https://en.wikipedia.org/wiki/List_of_elements>`.
+go to the next `atomic number <https://en.wikipedia.org/wiki/List_of_elements>`_.
 
 Assigned codenames:
 
@@ -31,8 +33,11 @@ Assigned codenames:
 - Beryllium: ``2015.8.0``
 - Boron: ``2016.3.0``
 - Carbon: ``2016.11.0``
-- Nitrogen: ``TBD``
-- Oxygen: ``TBD``
+- Nitrogen: ``2017.7.0``
+- Oxygen: ``2018.3.0``
+- Fluorine: ``2019.2.0``
+- Neon: ``TBD``
+- Sodium: ``TBD``
 
 Example
 -------
@@ -49,10 +54,13 @@ code name and the process repeats itself.
 
 
 Version numbers, Git and salt --version
--------
-The salt version, for programmers, is based on `git describe` and presented to end-users with `salt --version`.
+---------------------------------------
 
-Example arguments for `git checkout`
+The salt version, for programmers, is based on ``git describe`` and presented to
+end-users with ``salt --version``.
+
+Example arguments for ``git checkout``:
+
   +------------+----------------------------------------------------------------------------+
   |  Argument  |                                           Comment                          |
   +============+============================================================================+
@@ -64,11 +72,12 @@ Example arguments for `git checkout`
   +------------+----------------------------------------------------------------------------+
   | v2016.11.1 | Tag signaling the commit that the 2016.11.1 release is based on.           |
   +------------+----------------------------------------------------------------------------+
-  
-Further reading on `release branch and develop branch 
+
+Further reading on `release branch and develop branch
 <https://docs.saltstack.com/en/latest/topics/development/contributing.html#which-salt-branch>`_.
-  
-Influence of the `git checkout` argument on `git describe`
+
+Influence of the ``git checkout`` argument on ``git describe``:
+
   +------------+----------------------------+-----------------------------------------------+
   | Checkout   | Describe                   |               Comment                         |
   +============+============================+===============================================+
@@ -80,10 +89,9 @@ Influence of the `git checkout` argument on `git describe`
   +------------+----------------------------+-----------------------------------------------+
   | develop    | v2016.11.1-1741-g10d5dec   | Commit of most recent tag in develop          |
   +------------+----------------------------+-----------------------------------------------+
-    
-  
 
-Some details of v2016.11.1-220-g9a1550d (from `git describe` after `git checkout 2016.11`)
+Some details of v2016.11.1-220-g9a1550d (from ``git describe`` after ``git checkout 2016.11``):
+
   +---------------+-------------------------------------------------------------------------+
   |     Part      |                       Comment                                           |
   +===============+=========================================================================+

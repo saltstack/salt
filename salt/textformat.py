@@ -3,6 +3,10 @@
 ANSI escape code utilities, see
 http://www.ecma-international.org/publications/files/ECMA-ST/Ecma-048.pdf
 '''
+from __future__ import absolute_import, print_function, unicode_literals
+
+# Import 3rd-party libs
+from salt.ext import six
 
 graph_prefix = '\x1b['
 graph_suffix = 'm'
@@ -138,7 +142,7 @@ class TextFormat(object):
                 '{0}Can you read this?{1}'
                 ).format(magenta_on_green, TextFormat('reset'))
         '''
-        self.codes = [codes[attr.lower()] for attr in attrs if isinstance(attr, str)]
+        self.codes = [codes[attr.lower()] for attr in attrs if isinstance(attr, six.string_types)]
 
         if kwargs.get('reset', True):
             self.codes[:0] = [codes['reset']]

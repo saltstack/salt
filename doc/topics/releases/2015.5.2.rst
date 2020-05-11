@@ -6,969 +6,1084 @@ Salt 2015.5.2 Release Notes
 
 Version 2015.5.2 is a bugfix release for :ref:`2015.5.0<release-2015-5-0>`.
 
-Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
-**PR** `#24346`_: (*rallytime*) Backport `#24271`_ to 2015.5
-  @ *2015-06-03T18:44:31Z*
+Statistics
+==========
 
-  **PR** `#24271`_: (*randybias*) Fixed the setup instructions
-    | refs: `#24346`_
-  * 76927c9 Merge pull request `#24346`_ from rallytime/`bp-24271`_
-  * 04067b6 Fixed the setup instructions
+- Total Merges: **112**
+- Total Issue References: **36**
+- Total PR References: **145**
 
-**PR** `#24345`_: (*rallytime*) Backport `#24013`_ to 2015.5
-  @ *2015-06-03T18:39:41Z*
+- Contributors: **49** (`Sacro`_, `The-Loeki`_, `YanChii`_, `aboe76`_, `anlutro`_, `awdrius`_, `basepi`_, `cdarwin`_, `cedwards`_, `clan`_, `corywright`_, `cro`_, `djcrabhat`_, `dmyerscough`_, `dr4Ke`_, `fayetted`_, `galet`_, `garethgreenaway`_, `ghost`_, `hazelesque`_, `hvnsweeting`_, `jacksontj`_, `jacobhammons`_, `jayeshka`_, `jbq`_, `jfindlay`_, `joejulian`_, `justinta`_, `kartiksubbarao`_, `kiorky`_, `merll`_, `msteed`_, `neogenix`_, `nicholascapo`_, `nleib`_, `pengyao`_, `pruiz`_, `rallytime`_, `randybias`_, `ryan-lane`_, `steverweber`_, `swdream`_, `techhat`_, `terminalmage`_, `thcipriani`_, `thusoy`_, `trevor-h`_, `twangboy`_, `whiteinge`_)
 
-  **ISSUE** `#24012`_: (*jbq*) Enabling a service does not create the appropriate rc.d symlinks on Ubuntu
-    | refs: `#24013`_
-  **PR** `#24013`_: (*jbq*) Fix enabling a service on Ubuntu `#24012`_
-    | refs: `#24345`_
-  * 4afa03d Merge pull request `#24345`_ from rallytime/`bp-24013`_
-  * 16e0732 Fix enabling a service on Ubuntu `#24012`_
 
-**PR** `#24365`_: (*jacobhammons*) Fixes for PDF build errors
-  @ *2015-06-03T17:50:02Z*
+Changelog for v2015.5.1..v2015.5.2
+==================================
 
-  * c3392c2 Merge pull request `#24365`_ from jacobhammons/DocFixes
-  * 0fc1902 Fixes for PDF build errors
+*Generated at: 2018-05-27 21:13:02 UTC*
 
-**PR** `#24313`_: (*nicholascapo*) Fix `#22991`_ Correctly set result when test=True
-  @ *2015-06-03T14:49:18Z*
+* **PR** `#24372`_: (`rallytime`_) Add 2015.5.2 release notes
+  @ *2015-06-03 19:30:46 UTC*
 
-  **ISSUE** `#22991`_: (*nicholascapo*) npm.installed ignores test=True
-  * ae681a4 Merge pull request `#24313`_ from nicholascapo/`fix-22991`_-npm.installed-test-true
-  * ac9644c Fix `#22991`_ npm.installed correctly set result on test=True
+  * d71d75e2ec Merge pull request `#24372`_ from rallytime/release_notes
 
-**PR** `#24312`_: (*nicholascapo*) Fix `#18966`_: file.serialize supports test=True
-  @ *2015-06-03T14:49:06Z*
+  * f5ec1a1693 Add 2015.5.2 release notes
 
-  **ISSUE** `#18966`_: (*bechtoldt*) file.serialize ignores test=True
-  * d57a9a2 Merge pull request `#24312`_ from nicholascapo/`fix-18966`_-file.serialize-test-true
-  * e7328e7 Fix `#18966`_ file.serialize correctly set result on test=True
+* **PR** `#24346`_: (`rallytime`_) Backport `#24271`_ to 2015.5
+  @ *2015-06-03 18:44:31 UTC*
 
-**PR** `#24302`_: (*jfindlay*) fix pkg hold/unhold integration test
-  @ *2015-06-03T03:27:43Z*
+  * **PR** `#24271`_: (`randybias`_) Fixed the setup instructions (refs: `#24346`_)
 
-  * 6b694e3 Merge pull request `#24302`_ from jfindlay/pkg_tests
-  * c2db0b1 fix pkg hold/unhold integration test
+  * 76927c9ea1 Merge pull request `#24346`_ from rallytime/bp-24271
 
-**PR** `#24349`_: (*rallytime*) Remove references to mount_points in ec2 docs
-  @ *2015-06-03T01:54:09Z*
+  * 04067b6833 Fixed the setup instructions
 
-  **ISSUE** `#14021`_: (*mathrawka*) EC2 doc mentions mount_point, but unable to use properly
-    | refs: `#24349`_
-  * aca8447 Merge pull request `#24349`_ from rallytime/`fix-14021`_
-  * a235b11 Remove references to mount_points in ec2 docs
+* **ISSUE** `#24012`_: (`jbq`_) Enabling a service does not create the appropriate rc.d symlinks on Ubuntu (refs: `#24013`_)
 
-**PR** `#24328`_: (*dr4Ke*) Fix state grains silently fails 2015.5
-  @ *2015-06-02T15:18:46Z*
+* **PR** `#24345`_: (`rallytime`_) Backport `#24013`_ to 2015.5
+  @ *2015-06-03 18:39:41 UTC*
 
-  **ISSUE** `#24319`_: (*dr4Ke*) grains state shouldn't fail silently
-  * 88a997e Merge pull request `#24328`_ from dr4Ke/fix_state_grains_silently_fails_2015.5
-  * 8a63d1e fix state grains silently fails `#24319`_
+  * **PR** `#24013`_: (`jbq`_) Fix enabling a service on Ubuntu `#24012`_ (refs: `#24345`_)
 
-  * ca1af20 grains state: add some tests
+  * 4afa03d8e3 Merge pull request `#24345`_ from rallytime/bp-24013
 
-**PR** `#24310`_: (*techhat*) Add warning about destroying maps
-  @ *2015-06-02T03:01:28Z*
+  * 16e0732b50 Fix enabling a service on Ubuntu `#24012`_
 
-  **ISSUE** `#24036`_: (*arthurlogilab*) [salt-cloud] Protect against passing command line arguments as names for the --destroy command in map files
-    | refs: `#24310`_
-  **ISSUE** `#9772`_: (*s0undt3ch*) Delete VM's in a map does not delete them all
-    | refs: `#24310`_
-  * 7dcd9bb Merge pull request `#24310`_ from techhat/mapwarning
-  * ca535a6 Add warning about destroying maps
+* **PR** `#24365`_: (`jacobhammons`_) Fixes for PDF build errors
+  @ *2015-06-03 17:50:02 UTC*
 
-**PR** `#24281`_: (*steverweber*) Ipmi docfix
-  @ *2015-06-01T17:45:36Z*
+  * c3392c246a Merge pull request `#24365`_ from jacobhammons/DocFixes
 
-  * 02bfb25 Merge pull request `#24281`_ from steverweber/ipmi_docfix
-  * dd36f2c yaml formatting
+  * 0fc190267f Fixes for PDF build errors
 
-  * f6deef3 include api_kg kwarg in ipmi state
+* **ISSUE** `#22991`_: (`nicholascapo`_) npm.installed ignores test=True (refs: `#24313`_)
 
-  * a7d4e97 doc cleanup
+* **PR** `#24313`_: (`nicholascapo`_) Fix `#22991`_ Correctly set result when test=True
+  @ *2015-06-03 14:49:18 UTC*
 
-  * 0ded2fd save more cleanup to doc
+  * ae681a4db1 Merge pull request `#24313`_ from nicholascapo/fix-22991-npm.installed-test-true
 
-  * 08872f2 fix name api_key to api_kg
+  * ac9644cb19 Fix `#22991`_ npm.installed correctly set result on test=True
 
-  * 165a387 doc fix add api_kg kwargs
+* **ISSUE** `#18966`_: (`bechtoldt`_) file.serialize ignores test=True (refs: `#24312`_)
 
-  * 1ec7888 cleanup docs
+* **PR** `#24312`_: (`nicholascapo`_) Fix `#18966`_: file.serialize supports test=True
+  @ *2015-06-03 14:49:06 UTC*
 
-**PR** `#24287`_: (*jfindlay*) fix pkg test on ubuntu 12.04 for realz
-  @ *2015-06-01T14:16:37Z*
+  * d57a9a267c Merge pull request `#24312`_ from nicholascapo/fix-18966-file.serialize-test-true
 
-  * 73cd2cb Merge pull request `#24287`_ from jfindlay/pkg_test
-  * 98944d8 fix pkg test on ubuntu 12.04 for realz
+  * e7328e7043 Fix `#18966`_ file.serialize correctly set result on test=True
 
-**PR** `#24279`_: (*rallytime*) Backport `#24263`_ to 2015.5
-  @ *2015-06-01T04:29:34Z*
+* **PR** `#24302`_: (`jfindlay`_) fix pkg hold/unhold integration test
+  @ *2015-06-03 03:27:43 UTC*
 
-  **PR** `#24263`_: (*cdarwin*) Correct usage of import_yaml in formula documentation
-    | refs: `#24279`_
-  * 02017a0 Merge pull request `#24279`_ from rallytime/`bp-24263`_
-  * beff7c7 Correct usage of import_yaml in formula documentation
+  * 6b694e3495 Merge pull request `#24302`_ from jfindlay/pkg_tests
 
-**PR** `#24277`_: (*rallytime*) Put a space between after_jump commands
-  @ *2015-06-01T04:28:26Z*
+  * c2db0b1758 fix pkg hold/unhold integration test
 
-  **ISSUE** `#24226`_: (*c4urself*) iptables state needs to keep ordering of flags
-    | refs: `#24277`_
-  * 2ba696d Merge pull request `#24277`_ from rallytime/fix_iptables_jump
-  * e2d1606 Move after_jump split out of loop
+* **ISSUE** `#14021`_: (`emostar`_) EC2 doc mentions mount_point, but unable to use properly (refs: `#24349`_)
 
-  * d14f130 Remove extra loop
+* **PR** `#24349`_: (`rallytime`_) Remove references to mount_points in ec2 docs
+  @ *2015-06-03 01:54:09 UTC*
 
-  * 42ed532 Put a space between after_jump commands
+  * aca8447ced Merge pull request `#24349`_ from rallytime/fix-14021
 
-**PR** `#24262`_: (*basepi*) More dictupdate after `#24142`_
-  @ *2015-05-31T04:09:37Z*
+  * a235b114d7 Remove references to mount_points in ec2 docs
 
-  **PR** `#24142`_: (*basepi*) Optimize dictupdate.update and add `#24097`_ functionality
-    | refs: `#24262`_
-  **PR** `#24097`_: (*kiorky*) Optimize dictupdate
-    | refs: `#24142`_ `#24142`_
-  * 113eba3 Merge pull request `#24262`_ from basepi/dictupdatefix
-  * 0c4832c Raise a typeerror if non-dict types
+* **PR** `#24328`_: (`dr4Ke`_) Fix state grains silently fails 2015.5
+  @ *2015-06-02 15:18:46 UTC*
 
-  * be21aaa Pylint
+  * 88a997e6ee Merge pull request `#24328`_ from dr4Ke/fix_state_grains_silently_fails_2015.5
 
-  * bb8a6c6 More optimization
+  * 8a63d1ebbe fix state grains silently fails `#24319`_
 
-  * c933249 py3 compat
+  * ca1af20203 grains state: add some tests
 
-  * ff6b2a7 Further optimize dictupdate.update()
+* **ISSUE** `#9772`_: (`s0undt3ch`_) Delete VM's in a map does not delete them all (refs: `#24310`_)
 
-  * c73f5ba Remove unused valtype
+* **ISSUE** `#24036`_: (`arthurlogilab`_) [salt-cloud] Protect against passing command line arguments as names for the --destroy command in map files (refs: `#24310`_)
 
-**PR** `#24269`_: (*kiorky*) zfs: Fix spurious retcode hijacking in virtual
-  @ *2015-05-30T17:47:49Z*
+* **PR** `#24310`_: (`techhat`_) Add warning about destroying maps
+  @ *2015-06-02 03:01:28 UTC*
 
-  * 785d5a1 Merge pull request `#24269`_ from makinacorpus/zfs
-  * 0bf23ce zfs: Fix spurious retcode hijacking in virtual
+  * 7dcd9bb5de Merge pull request `#24310`_ from techhat/mapwarning
 
-**PR** `#24257`_: (*jfindlay*) fix pkg mod integration test on ubuntu 12.04
-  @ *2015-05-29T23:09:00Z*
+  * ca535a6ff4 Add warning about destroying maps
 
-  * 3d885c0 Merge pull request `#24257`_ from jfindlay/pkg_tests
-  * 9508924 fix pkg mod integration test on ubuntu 12.04
+* **PR** `#24281`_: (`steverweber`_) Ipmi docfix
+  @ *2015-06-01 17:45:36 UTC*
 
-**PR** `#24260`_: (*basepi*) Fix some typos from `#24080`_
-  @ *2015-05-29T22:54:58Z*
+  * 02bfb254d6 Merge pull request `#24281`_ from steverweber/ipmi_docfix
 
-  **ISSUE** `#23657`_: (*arthurlogilab*) [salt-cloud lxc] NameError: global name '__salt__' is not defined
-    | refs: `#24080`_ `#23982`_
-  **PR** `#24080`_: (*kiorky*) Lxc consistency2
-    | refs: `#24260`_ `#23982`_ `#24066`_
-  **PR** `#24066`_: (*kiorky*) Merge forward 2015.5 -> develop
-    | refs: `#23982`_
-  **PR** `#24065`_: (*kiorky*) continue to fix `#23883`_
-    | refs: `#24080`_ `#24066`_
-  **PR** `#23982`_: (*kiorky*) lxc: path support
-    | refs: `#24080`_
-  * 08a1075 Merge pull request `#24260`_ from basepi/lxctypos24080
-  * 0fa1ad3 Fix another lxc typo
+  * dd36f2c555 yaml formating
 
-  * 669938f s/you ll/you'll/
+  * f6deef3047 include api_kg kwarg in ipmi state
 
-**PR** `#24080`_: (*kiorky*) Lxc consistency2
-  | refs: `#24260`_ `#23982`_ `#24066`_
-  @ *2015-05-29T22:51:54Z*
+  * a7d4e97bb9 doc cleanup
 
-  **ISSUE** `#23657`_: (*arthurlogilab*) [salt-cloud lxc] NameError: global name '__salt__' is not defined
-    | refs: `#24080`_ `#23982`_
-  **PR** `#24066`_: (*kiorky*) Merge forward 2015.5 -> develop
-    | refs: `#23982`_
-  **PR** `#24065`_: (*kiorky*) continue to fix `#23883`_
-    | refs: `#24080`_ `#24066`_
-  **PR** `#23982`_: (*kiorky*) lxc: path support
-    | refs: `#24080`_
-  * 75590cf Merge pull request `#24080`_ from makinacorpus/lxc_consistency2
-  * 81f8067 lxc: fix old lxc test
+  * 0ded2fdbef save more cleanup to doc
 
-  * 458f506 seed: lint
+  * 08872f2da3 fix name api_key to api_kg
 
-  * 96b8d55 Fix seed.mkconfig yamldump
+  * 165a387681 doc fix add api_kg kwargs
 
-  * 76ddb68 lxc/applynet: conservative
+  * 1ec78887e4 cleanup docs
 
-  * ce7096f variable collision
+* **PR** `#24287`_: (`jfindlay`_) fix pkg test on ubuntu 12.04 for realz
+  @ *2015-06-01 14:16:37 UTC*
 
-  * 8a8b28d lxc: lint
+  * 73cd2cbe1f Merge pull request `#24287`_ from jfindlay/pkg_test
 
-  * 458b18b more lxc docs
+  * 98944d8c7f fix pkg test on ubuntu 12.04 for realz
 
-  * ef1f952 lxc docs: typos
+* **PR** `#24279`_: (`rallytime`_) Backport `#24263`_ to 2015.5
+  @ *2015-06-01 04:29:34 UTC*
 
-  * d67a43d more lxc docs
+  * **PR** `#24263`_: (`cdarwin`_) Correct usage of import_yaml in formula documentation (refs: `#24279`_)
 
-  * 608da5e modules/lxc: merge resolution
+  * 02017a074c Merge pull request `#24279`_ from rallytime/bp-24263
 
-  * 27c4689 modules/lxc: more consistent comparison
+  * beff7c7785 Correct usage of import_yaml in formula documentation
 
-  * 07c365a lxc: merge conflict spotted
+* **ISSUE** `#24226`_: (`c4urself`_) iptables state needs to keep ordering of flags (refs: `#24277`_)
 
-  * 9993915 modules/lxc: rework settings for consistency
+* **PR** `#24277`_: (`rallytime`_) Put a space between after_jump commands
+  @ *2015-06-01 04:28:26 UTC*
 
-  * ce11d83 lxc: Global doc refresh
+  * 2ba696d54a Merge pull request `#24277`_ from rallytime/fix_iptables_jump
 
-  * 61ed2f5 clouds/lxc: profile key is conflicting
+  * e2d1606b19 Move after_jump split out of loop
 
-**PR** `#24247`_: (*rallytime*) Backport `#24220`_ to 2015.5
-  @ *2015-05-29T21:40:01Z*
+  * d14f1307b6 Remove extra loop
 
-  **ISSUE** `#24210`_: (*damonnk*) salt-cloud vsphere.py should allow key_filename param
-    | refs: `#24220`_
-  **PR** `#24220`_: (*djcrabhat*) adding key_filename param to vsphere provider
-    | refs: `#24247`_
-  * da14f3b Merge pull request `#24247`_ from rallytime/`bp-24220`_
-  * 0b1041d adding key_filename param to vsphere provider
+  * 42ed5320b6 Put a space between after_jump commands
 
-**PR** `#24254`_: (*rallytime*) Add deprecation warning to Digital Ocean v1 Driver
-  @ *2015-05-29T21:39:25Z*
+* **PR** `#24262`_: (`basepi`_) More dictupdate after `#24142`_
+  @ *2015-05-31 04:09:37 UTC*
 
-  **PR** `#22731`_: (*dmyerscough*) Decommission DigitalOcean APIv1 and have users use the new DigitalOcean APIv2
-    | refs: `#24254`_
-  * 21d6126 Merge pull request `#24254`_ from rallytime/add_deprecation_warning_digitalocean
-  * cafe37b Add note to docs about deprecation
+  * **PR** `#24142`_: (`basepi`_) Optimize dictupdate.update and add `#24097`_ functionality (refs: `#24262`_)
 
-  * ea0f1e0 Add deprecation warning to digital ocean driver to move to digital_ocean_v2
+  * **PR** `#24097`_: (`kiorky`_) Optimize dictupdate (refs: `#24142`_)
 
-**PR** `#24252`_: (*aboe76*) Updated suse spec to 2015.5.1
-  @ *2015-05-29T21:38:45Z*
+  * 113eba34ec Merge pull request `#24262`_ from basepi/dictupdatefix
 
-  * dac055d Merge pull request `#24252`_ from aboe76/opensuse_package
-  * 0ad617d Updated suse spec to 2015.5.1
+  * 0c4832c0d4 Raise a typeerror if non-dict types
 
-**PR** `#24251`_: (*garethgreenaway*) Returners broken in 2015.5
-  @ *2015-05-29T21:37:52Z*
+  * be21aaa122 Pylint
 
-  * 49e7fe8 Merge pull request `#24251`_ from garethgreenaway/2015_5_returner_brokenness
-  * 5df6b52 The code calling cfg as a function vs treating it as a dictionary and using get is currently backwards causing returners to fail when used from the CLI and in scheduled jobs.
+  * bb8a6c6cc9 More optimization
 
-**PR** `#24255`_: (*rallytime*) Clarify digital ocean documentation and mention v1 driver deprecation
-  @ *2015-05-29T21:37:07Z*
+  * c933249d1a py3 compat
 
-  **ISSUE** `#21498`_: (*rallytime*) Clarify Digital Ocean Documentation
-    | refs: `#24255`_
-  * bfb9461 Merge pull request `#24255`_ from rallytime/clarify_digital_ocean_driver_docs
-  * 8d51f75 Clarify digital ocean documentation and mention v1 driver deprecation
+  * ff6b2a781f Further optimize dictupdate.update()
 
-**PR** `#24232`_: (*rallytime*) Backport `#23308`_ to 2015.5
-  @ *2015-05-29T21:36:46Z*
+  * c73f5ba37c Remove unused valtype
 
-  **PR** `#23308`_: (*thusoy*) Don't merge: Add missing jump arguments to iptables module
-    | refs: `#24232`_
-  * 41f5756 Merge pull request `#24232`_ from rallytime/`bp-23308`_
-  * 2733f66 Import string
+* **PR** `#24269`_: (`kiorky`_) zfs: Fix spurious retcode hijacking in virtual
+  @ *2015-05-30 17:47:49 UTC*
 
-  * 9097cca Add missing jump arguments to iptables module
+  * 785d5a1bfc Merge pull request `#24269`_ from makinacorpus/zfs
 
-**PR** `#24245`_: (*Sacro*) Unset PYTHONHOME when starting the service
-  @ *2015-05-29T20:00:31Z*
+  * 0bf23ce701 zfs: Fix spurious retcode hijacking in virtual
 
-  * a95982c Merge pull request `#24245`_ from Sacro/patch-2
-  * 6632d06 Unset PYTHONHOME when starting the service
+* **PR** `#24257`_: (`jfindlay`_) fix pkg mod integration test on ubuntu 12.04
+  @ *2015-05-29 23:09:00 UTC*
 
-**PR** `#24121`_: (*hvnsweeting*) deprecate setting user permission in rabbitmq_vhost.present
-  @ *2015-05-29T15:55:40Z*
+  * 3d885c04f0 Merge pull request `#24257`_ from jfindlay/pkg_tests
 
-  * 1504c76 Merge pull request `#24121`_ from hvnsweeting/rabbitmq-host-deprecate-set-permission
-  * 2223158 deprecate setting user permission in rabbitmq_host.present
+  * 9508924c02 fix pkg mod integration test on ubuntu 12.04
 
-**PR** `#24179`_: (*merll*) Changing user and group only possible for existing ids.
-  @ *2015-05-29T15:52:43Z*
+* **ISSUE** `#23883`_: (`kaithar`_) max_event_size seems broken (refs: `#24001`_, `#24065`_)
 
-  **PR** `#24169`_: (*merll*) Changing user and group only possible for existing ids.
-    | refs: `#24179`_
-  * ba02f65 Merge pull request `#24179`_ from Precis/fix-file-uid-gid-2015.0
-  * ee4c9d5 Use ids if user or group is not present.
+* **ISSUE** `#23657`_: (`arthurlogilab`_) [salt-cloud lxc] NameError: global name '__salt__' is not defined (refs: `#23982`_, `#24080`_)
 
-**PR** `#24229`_: (*msteed*) Fix auth failure on syndic with external_auth
-  @ *2015-05-29T15:04:06Z*
+* **PR** `#24260`_: (`basepi`_) Fix some typos from `#24080`_
+  @ *2015-05-29 22:54:58 UTC*
 
-  **ISSUE** `#24147`_: (*paclat*) Syndication issues when using authentication on master of masters.
-    | refs: `#24229`_
-  * 9bfb066 Merge pull request `#24229`_ from msteed/issue-24147
-  * 482d1cf Fix auth failure on syndic with external_auth
+  * **PR** `#24080`_: (`kiorky`_) Lxc consistency2 (refs: `#24066`_, `#24260`_, `#23982`_)
 
-**PR** `#24234`_: (*jayeshka*) adding states/quota unit test case.
-  @ *2015-05-29T14:14:27Z*
+  * **PR** `#24066`_: (`kiorky`_) Merge forward 2015.5 -> develop (refs: `#23982`_)
 
-  * 19fa43c Merge pull request `#24234`_ from jayeshka/quota-states-unit-test
-  * c233565 adding states/quota unit test case.
+  * **PR** `#24065`_: (`kiorky`_) continue to fix `#23883`_ (refs: `#24066`_, `#24080`_)
 
-**PR** `#24217`_: (*jfindlay*) disable intermittently failing tests
-  @ *2015-05-29T03:08:39Z*
+  * **PR** `#23982`_: (`kiorky`_) lxc: path support (refs: `#24080`_)
 
-  **ISSUE** `#40`_: (*thatch45*) Clean up timeouts
-    | refs: `#22857`_
-  **PR** `#23623`_: (*jfindlay*) Fix /jobs endpoint's return
-    | refs: `#24217`_
-  **PR** `#22857`_: (*jacksontj*) Fix /jobs endpoint's return
-    | refs: `#23623`_
-  * e15142c Merge pull request `#24217`_ from jfindlay/disable_bad_tests
-  * 6b62804 disable intermittently failing tests
+  * 08a10755b3 Merge pull request `#24260`_ from basepi/lxctypos24080
 
-**PR** `#24199`_: (*ryan-lane*) Various fixes for boto_route53 and boto_elb
-  @ *2015-05-29T03:02:41Z*
+  * 0fa1ad3977 Fix another lxc typo
 
-  * ce8e43b Merge pull request `#24199`_ from lyft/route53-fix-elb
-  * d8dc9a7 Better unit tests for boto_elb state
+  * 669938f28d s/you ll/you'll/
 
-  * 62f214b Remove cnames_present test
+* **ISSUE** `#23883`_: (`kaithar`_) max_event_size seems broken (refs: `#24001`_, `#24065`_)
 
-  * 7b9ae82 Lint fix
+* **ISSUE** `#23657`_: (`arthurlogilab`_) [salt-cloud lxc] NameError: global name '__salt__' is not defined (refs: `#23982`_, `#24080`_)
 
-  * b74b0d1 Various fixes for boto_route53 and boto_elb
+* **PR** `#24080`_: (`kiorky`_) Lxc consistency2 (refs: `#24066`_, `#24260`_, `#23982`_)
+  @ *2015-05-29 22:51:54 UTC*
 
-**PR** `#24142`_: (*basepi*) Optimize dictupdate.update and add `#24097`_ functionality
-  | refs: `#24262`_
-  @ *2015-05-29T03:00:56Z*
+  * **PR** `#24066`_: (`kiorky`_) Merge forward 2015.5 -> develop (refs: `#23982`_)
 
-  **PR** `#24097`_: (*kiorky*) Optimize dictupdate
-    | refs: `#24142`_ `#24142`_
-  **PR** `#21968`_: (*ryanwohara*) Verifying the key has a value before using it.
-  * a43465d Merge pull request `#24142`_ from basepi/dictupdate24097
-  * 5c6e210 Deepcopy on merge_recurse
+  * **PR** `#24065`_: (`kiorky`_) continue to fix `#23883`_ (refs: `#24066`_, `#24080`_)
 
-  * a13c84a Fix None check from `#21968`_
+  * **PR** `#23982`_: (`kiorky`_) lxc: path support (refs: `#24080`_)
 
-  * 9ef2c64 Add docstring
+  * 75590cf490 Merge pull request `#24080`_ from makinacorpus/lxc_consistency2
 
-  * 8579429 Add in recursive_update from `#24097`_
+  * 81f80674a2 lxc: fix old lxc test
 
-  * 8599143 if key not in dest, don't recurse
+  * 458f50617b seed: lint
 
-  * d8a84b3 Rename klass to valtype
+  * 96b8d55f14 Fix seed.mkconfig yamldump
 
-**PR** `#24208`_: (*jayeshka*) adding states/ports unit test case.
-  @ *2015-05-28T23:06:33Z*
+  * 76ddb683f4 lxc/applynet: conservative
 
-  * 526698b Merge pull request `#24208`_ from jayeshka/ports-states-unit-test
-  * 657b709 adding states/ports unit test case.
+  * ce7096fdb7 variable collision
 
-**PR** `#24219`_: (*jfindlay*) find zfs without modinfo
-  @ *2015-05-28T21:07:26Z*
+  * 8a8b28d652 lxc: lint
 
-  **ISSUE** `#20635`_: (*dennisjac*) 2015.2.0rc1: zfs errors in log after update
-    | refs: `#24219`_
-  * d00945f Merge pull request `#24219`_ from jfindlay/zfs_check
-  * 15d4019 use the salt loader in the zfs mod
+  * 458b18b7e6 more lxc docs
 
-  * 5599b67 try to search for zfs if modinfo is unavailable
+  * ef1f95231a lxc docs: typos
 
-**PR** `#24190`_: (*msteed*) Fix issue 23815
-  @ *2015-05-28T20:10:34Z*
+  * d67a43dc1f more lxc docs
 
-  **ISSUE** `#23815`_: (*Snergster*) [beacons] inotify errors on subdir creation
-  * 3dc4b85 Merge pull request `#24190`_ from msteed/issue-23815
-  * 086a1a9 lint
+  * 608da5ef5d modules/lxc: merge resolution
 
-  * 65de62f fix `#23815`_
+  * 27c4689a24 modules/lxc: more consistent comparsion
 
-  * d04e916 spelling
+  * 07c365a23b lxc: merge conflict spotted
 
-  * db9f682 add inotify beacon unit tests
+  * 999391551c modules/lxc: rework settings for consistency
 
-**PR** `#24211`_: (*rallytime*) Backport `#24205`_ to 2015.5
-  @ *2015-05-28T18:28:15Z*
+  * ce11d8352e lxc: Global doc refresh
 
-  **PR** `#24205`_: (*hazelesque*) Docstring fix in salt.modules.yumpkg.hold
-    | refs: `#24211`_
-  * 436634b Merge pull request `#24211`_ from rallytime/`bp-24205`_
-  * 23284b5 Docstring fix in salt.modules.yumpkg.hold
+  * 61ed2f5e76 clouds/lxc: profile key is conflicting
 
-**PR** `#24212`_: (*terminalmage*) Clarify error in rendering template for top file
-  @ *2015-05-28T18:26:20Z*
+* **ISSUE** `#24210`_: (`damonnk`_) salt-cloud vsphere.py should allow key_filename param (refs: `#24220`_)
 
-  * cc58624 Merge pull request `#24212`_ from terminalmage/clarify-error-msg
-  * ca807fb Clarify error in rendering template for top file
+* **PR** `#24247`_: (`rallytime`_) Backport `#24220`_ to 2015.5
+  @ *2015-05-29 21:40:01 UTC*
 
-**PR** `#24213`_: (*The-Loeki*) ShouldFix _- troubles in debian_ip
-  @ *2015-05-28T18:24:39Z*
+  * **PR** `#24220`_: (`djcrabhat`_) adding key_filename param to vsphere provider (refs: `#24247`_)
 
-  **ISSUE** `#23904`_: (*mbrgm*) Network config bonding section cannot be parsed when attribute names use dashes
-    | refs: `#23917`_
-  **ISSUE** `#23900`_: (*hashi825*) salt ubuntu network building issue 2015.5.0
-    | refs: `#23922`_
-  **PR** `#23922`_: (*garethgreenaway*) Fixes to debian_ip.py
-    | refs: `#24213`_
-  **PR** `#23917`_: (*corywright*) Split debian bonding options on dash instead of underscore
-    | refs: `#24213`_
-  * 9825160 Merge pull request `#24213`_ from The-Loeki/patch-3
-  * a68d515 ShouldFix _- troubles in debian_ip
+  * da14f3b976 Merge pull request `#24247`_ from rallytime/bp-24220
 
-**PR** `#24214`_: (*basepi*) 2015.5.1release
-  @ *2015-05-28T16:23:57Z*
+  * 0b1041dd72 adding key_filename param to vsphere provider
 
-  * 071751d Merge pull request `#24214`_ from basepi/2015.5.1release
-  * e5ba31b 2015.5.1 release date
+* **PR** `#24254`_: (`rallytime`_) Add deprecation warning to Digital Ocean v1 Driver
+  @ *2015-05-29 21:39:25 UTC*
 
-  * 768494c Update latest release in docs
+  * **PR** `#22731`_: (`dmyerscough`_) Decommission DigitalOcean APIv1 and have users use the new DigitalOcean APIv2 (refs: `#24254`_)
 
-**PR** `#24202`_: (*rallytime*) Backport `#24186`_ to 2015.5
-  @ *2015-05-28T05:16:48Z*
+  * 21d6126c34 Merge pull request `#24254`_ from rallytime/add_deprecation_warning_digitalocean
 
-  **PR** `#24186`_: (*thcipriani*) Update salt vagrant provisioner info
-    | refs: `#24202`_
-  * c2f1fdb Merge pull request `#24202`_ from rallytime/`bp-24186`_
-  * db793dd Update salt vagrant provisioner info
+  * cafe37bdf8 Add note to docs about deprecation
 
-**PR** `#24192`_: (*rallytime*) Backport `#20474`_ to 2015.5
-  @ *2015-05-28T05:16:18Z*
+  * ea0f1e0921 Add deprecation warning to digital ocean driver to move to digital_ocean_v2
 
-  **PR** `#20474`_: (*djcrabhat*) add sudo, sudo_password params to vsphere deploy to allow for non-root deploys
-    | refs: `#24192`_
-  * 8a085a2 Merge pull request `#24192`_ from rallytime/`bp-20474`_
-  * fd3c783 add sudo, sudo_password params to deploy to allow for non-root deploys
+* **PR** `#24252`_: (`aboe76`_) Updated suse spec to 2015.5.1
+  @ *2015-05-29 21:38:45 UTC*
 
-**PR** `#24184`_: (*rallytime*) Backport `#24129`_ to 2015.5
-  @ *2015-05-28T05:15:08Z*
+  * dac055dd8b Merge pull request `#24252`_ from aboe76/opensuse_package
 
-  **PR** `#24129`_: (*pengyao*) Wheel client doc
-    | refs: `#24184`_
-  * 7cc535b Merge pull request `#24184`_ from rallytime/`bp-24129`_
-  * 722a662 fixed a typo
+  * 0ad617df21 Updated suse spec to 2015.5.1
 
-  * 565eb46 Add cmd doc for WheelClient
+* **PR** `#24251`_: (`garethgreenaway`_) Returners broken in 2015.5
+  @ *2015-05-29 21:37:52 UTC*
 
-**PR** `#24183`_: (*rallytime*) Backport `#19320`_ to 2015.5
-  @ *2015-05-28T05:14:36Z*
+  * 49e7fe8a5e Merge pull request `#24251`_ from garethgreenaway/2015_5_returner_brokenness
 
-  **PR** `#19320`_: (*clan*) add 'state_output_profile' option for profile output
-    | refs: `#24183`_
-  * eb0af70 Merge pull request `#24183`_ from rallytime/`bp-19320`_
-  * 55db1bf sate_output_profile default to True
+  * 5df6b52568 The code calling cfg as a function vs treating it as a dictionary and using get is currently backwards causing returners to fail when used from the CLI and in scheduled jobs.
 
-  * 9919227 fix type: statei -> state
+* **ISSUE** `#21498`_: (`rallytime`_) Clarify Digital Ocean Documentation (refs: `#24255`_)
 
-  * 0549ca6 add 'state_output_profile' option for profile output
+* **PR** `#24255`_: (`rallytime`_) Clarify digital ocean documentation and mention v1 driver deprecation
+  @ *2015-05-29 21:37:07 UTC*
 
-**PR** `#24201`_: (*whiteinge*) Add list of client libraries for the rest_cherrypy module to the top-level documentation
-  @ *2015-05-28T02:12:09Z*
+  * bfb946123e Merge pull request `#24255`_ from rallytime/clarify_digital_ocean_driver_docs
 
-  * 1b5bf23 Merge pull request `#24201`_ from whiteinge/rest_cherrypy-client-libs
-  * 5f71802 Add list of client libraries for the rest_cherrypy module
+  * 8d51f75aa5 Clarify digital ocean documentation and mention v1 driver deprecation
 
-  * 28fc77f Fix rest_cherrypy config example indentation
+* **PR** `#24232`_: (`rallytime`_) Backport `#23308`_ to 2015.5
+  @ *2015-05-29 21:36:46 UTC*
 
-**PR** `#24195`_: (*rallytime*) Merge `#24185`_ with a couple of fixes
-  @ *2015-05-27T22:18:37Z*
+  * **PR** `#23308`_: (`thusoy`_) Don't merge: Add missing jump arguments to iptables module (refs: `#24232`_)
 
-  **PR** `#24185`_: (*jacobhammons*) Fixes for doc build errors
-    | refs: `#24195`_
-  * 3307ec2 Merge pull request `#24195`_ from rallytime/merge-24185
-  * d8daa9d Merge `#24185`_ with a couple of fixes
+  * 41f5756f36 Merge pull request `#24232`_ from rallytime/bp-23308
 
-  * 634d56b Fixed pylon error
+  * 2733f66449 Import string
 
-  * 0689815 Fixes for doc build errors
+  * 9097cca099 Add missing jump arguments to iptables module
 
-**PR** `#24166`_: (*jayeshka*) adding states/pkgng unit test case.
-  @ *2015-05-27T20:27:49Z*
+* **PR** `#24245`_: (`Sacro`_) Unset PYTHONHOME when starting the service
+  @ *2015-05-29 20:00:31 UTC*
 
-  * 7e400bc Merge pull request `#24166`_ from jayeshka/pkgng-states-unit-test
-  * 2234bb0 adding states/pkgng unit test case.
+  * a95982c722 Merge pull request `#24245`_ from Sacro/patch-2
 
-**PR** `#24189`_: (*basepi*) [2015.5] Merge forward from 2014.7 to 2015.5
-  @ *2015-05-27T20:26:31Z*
+  * 6632d06e94 Unset PYTHONHOME when starting the service
 
-  **PR** `#24178`_: (*rallytime*) Backport `#24118`_ to 2014.7, too.
-  **PR** `#24159`_: (*rallytime*) Fill out modules/keystone.py CLI Examples
-  **PR** `#24158`_: (*rallytime*) Fix test_valid_docs test for tls module
-  **PR** `#24118`_: (*trevor-h*) removed deprecated pymongo usage
-    | refs: `#24139`_ `#24178`_
-  * 9fcda79 Merge pull request `#24189`_ from basepi/merge-forward-2015.5
-  * 8839e9c Merge remote-tracking branch 'upstream/2014.7' into merge-forward-2015.5
+* **PR** `#24121`_: (`hvnsweeting`_) deprecate setting user permission in rabbitmq_vhost.present
+  @ *2015-05-29 15:55:40 UTC*
 
-  * 9d7331c Merge pull request `#24178`_ from rallytime/`bp-24118`_
+  * 1504c76d3a Merge pull request `#24121`_ from hvnsweeting/rabbitmq-host-deprecate-set-permission
 
-    * e2217a0 removed deprecated pymongo usage as no longer functional with pymongo > 3.x
+  * 2223158e76 deprecate setting user permission in rabbitmq_host.present
 
-  * 4e8c503 Merge pull request `#24159`_ from rallytime/keystone_doc_examples
+* **PR** `#24179`_: (`merll`_) Changing user and group only possible for existing ids.
+  @ *2015-05-29 15:52:43 UTC*
 
-    * dadac8d Fill out modules/keystone.py CLI Examples
+  * **PR** `#24169`_: (`merll`_) Changing user and group only possible for existing ids. (refs: `#24179`_)
 
-  * fc10ee8 Merge pull request `#24158`_ from rallytime/fix_doc_error
+  * ba02f6509e Merge pull request `#24179`_ from Precis/fix-file-uid-gid-2015.0
 
-    * 49a517e Fix test_valid_docs test for tls module
+  * ee4c9d59ab Use ids if user or group is not present.
 
-**PR** `#24181`_: (*jtand*) Fixed error where file was evaluated as a symlink in test_absent
-  @ *2015-05-27T18:26:28Z*
+* **ISSUE** `#24147`_: (`paclat`_) Syndication issues when using authentication on master of masters.  (refs: `#24229`_)
 
-  * 2303dec Merge pull request `#24181`_ from jtand/file_test
-  * 5f0e601 Fixed error where file was evaluated as a symlink in test_absent
+* **PR** `#24229`_: (`msteed`_) Fix auth failure on syndic with external_auth
+  @ *2015-05-29 15:04:06 UTC*
 
-**PR** `#24180`_: (*terminalmage*) Skip libvirt tests if not running as root
-  @ *2015-05-27T18:18:47Z*
+  * 9bfb066c2c Merge pull request `#24229`_ from msteed/issue-24147
 
-  * a162768 Merge pull request `#24180`_ from terminalmage/fix-libvirt-test
-  * 72e7416 Skip libvirt tests if not running as root
+  * 482d1cfc64 Fix auth failure on syndic with external_auth
 
-**PR** `#24165`_: (*jayeshka*) adding states/portage_config unit test case.
-  @ *2015-05-27T17:15:08Z*
+* **PR** `#24234`_: (`jayeshka`_) adding states/quota unit test case.
+  @ *2015-05-29 14:14:27 UTC*
 
-  * 1fbc5b2 Merge pull request `#24165`_ from jayeshka/portage_config-states-unit-test
-  * 8cf1505 adding states/portage_config unit test case.
+  * 19fa43c290 Merge pull request `#24234`_ from jayeshka/quota-states-unit-test
 
-**PR** `#24164`_: (*jayeshka*) adding states/pecl unit test case.
-  @ *2015-05-27T17:14:26Z*
+  * c23356500b adding states/quota unit test case.
 
-  * 4747856 Merge pull request `#24164`_ from jayeshka/pecl-states-unit-test
-  * 563a5b3 adding states/pecl unit test case.
+* **PR** `#24217`_: (`jfindlay`_) disable intermittently failing tests
+  @ *2015-05-29 03:08:39 UTC*
 
-**PR** `#24160`_: (*The-Loeki*) small enhancement to data module; pop()
-  @ *2015-05-27T17:03:10Z*
+  * **PR** `#23623`_: (`jfindlay`_) Fix /jobs endpoint's return (refs: `#24217`_)
 
-  * cdaaa19 Merge pull request `#24160`_ from The-Loeki/patch-1
-  * 2175ff3 doc & merge fix
+  * **PR** `#22857`_: (`jacksontj`_) Fix /jobs endpoint's return (refs: `#23623`_)
 
-  * eba382c small enhancement to data module; pop()
+  * e15142c629 Merge pull request `#24217`_ from jfindlay/disable_bad_tests
 
-**PR** `#24153`_: (*techhat*) Batch mode sometimes improperly builds lists of minions to process
-  @ *2015-05-27T16:21:53Z*
+  * 6b6280442c disable intermittently failing tests
 
-  * 4a8dbc7 Merge pull request `#24153`_ from techhat/batchlist
-  * 467ba64 Make sure that minion IDs are strings
+* **PR** `#24199`_: (`ryan-lane`_) Various fixes for boto_route53 and boto_elb
+  @ *2015-05-29 03:02:41 UTC*
 
-**PR** `#24167`_: (*jayeshka*) adding states/pagerduty unit test case.
-  @ *2015-05-27T16:14:01Z*
+  * ce8e43b774 Merge pull request `#24199`_ from lyft/route53-fix-elb
 
-  * ed8ccf5 Merge pull request `#24167`_ from jayeshka/pagerduty-states-unit-test
-  * 1af8c83 adding states/pagerduty unit test case.
+  * d8dc9a7b5b Better unit tests for boto_elb state
 
-**PR** `#24156`_: (*basepi*) [2015.5] Merge forward from 2014.7 to 2015.5
-  @ *2015-05-27T15:05:01Z*
+  * 62f214b535 Remove cnames_present test
 
-  **ISSUE** `#23464`_: (*tibold*) cmd_iter_no_block() blocks
-    | refs: `#24093`_
-  **PR** `#24125`_: (*hvnsweeting*) Fix rabbitmq test mode
-  **PR** `#24093`_: (*msteed*) Make LocalClient.cmd_iter_no_block() not block
-  **PR** `#24008`_: (*davidjb*) Correct reST formatting for states.cmd documentation
-  **PR** `#23933`_: (*jacobhammons*) sphinx saltstack2 doc theme
-  * b9507d1 Merge pull request `#24156`_ from basepi/merge-forward-2015.5
-  * e52b5ab Remove stray >>>>>
+  * 7b9ae82951 Lint fix
 
-  * 7dfbd92 Merge remote-tracking branch 'upstream/2014.7' into merge-forward-2015.5
+  * b74b0d1413 Various fixes for boto_route53 and boto_elb
 
-    * c0d32e0 Merge pull request `#24125`_ from hvnsweeting/fix-rabbitmq-test-mode
+* **PR** `#24142`_: (`basepi`_) Optimize dictupdate.update and add `#24097`_ functionality (refs: `#24262`_)
+  @ *2015-05-29 03:00:56 UTC*
 
-      * 71862c6 enhance log
+  * **PR** `#24097`_: (`kiorky`_) Optimize dictupdate (refs: `#24142`_)
 
-      * 28e2594 change according to new output of rabbitmq module functions
+  * a43465d235 Merge pull request `#24142`_ from basepi/dictupdate24097
 
-      * cd0212e processes and returns better output for rabbitmq module
+  * 5c6e210c8b Deepcopy on merge_recurse
 
-    * 39a8f30 Merge pull request `#24093`_ from msteed/issue-23464
+  * a13c84ade8 Fix None check from `#21968`_
 
-      * fd35903 Fix failing test
+  * 9ef2c64098 Add docstring
 
-      * 41b344c Make LocalClient.cmd_iter_no_block() not block
+  * 8579429314 Add in recursive_update from `#24097`_
 
-    * 5bffd30 Merge pull request `#24008`_ from davidjb/2014.7
+  * 8599143200 if key not in dest, don't recurse
 
-      * 8b8d029 Correct reST formatting for documentation
+  * d8a84b3017 Rename klass to valtype
 
-    * 1aa0420 Merge pull request `#23933`_ from jacobhammons/2014.7
+* **PR** `#24208`_: (`jayeshka`_) adding states/ports unit test case.
+  @ *2015-05-28 23:06:33 UTC*
 
-    * a3613e6 removed numbering from doc TOC
+  * 526698ba8d Merge pull request `#24208`_ from jayeshka/ports-states-unit-test
 
-    * 78b737c removed 2015.* release from release notes, updated index page to remove PDF/epub links
+  * 657b709932 adding states/ports unit test case.
 
-    * e867f7d Changed build settings to use saltstack2 theme and update release versions.
+* **ISSUE** `#20635`_: (`dennisjac`_) 2015.2.0rc1: zfs errors in log after update (refs: `#24219`_)
 
-    * 81ed9c9 sphinx saltstack2 doc theme
+* **PR** `#24219`_: (`jfindlay`_) find zfs without modinfo
+  @ *2015-05-28 21:07:26 UTC*
 
-**PR** `#24145`_: (*jfindlay*) attempt to decode win update package
-  @ *2015-05-26T23:20:20Z*
+  * d00945fd40 Merge pull request `#24219`_ from jfindlay/zfs_check
 
-  **ISSUE** `#24102`_: (*bormotov*) win_update encondig problems
-    | refs: `#24145`_
-  * 05745fa Merge pull request `#24145`_ from jfindlay/win_update_encoding
-  * cc5e17e attempt to decode win update package
+  * 15d401907c use the salt loader in the zfs mod
 
-**PR** `#24123`_: (*kiorky*) fix service enable/disable change
-  @ *2015-05-26T21:24:19Z*
+  * 5599b67a46 try to search for zfs if modinfo is unavailable
 
-  **ISSUE** `#24122`_: (*kiorky*) service.dead is no more stateful: services does not handle correctly enable/disable change state
-    | refs: `#24123`_
-  * 7024789 Merge pull request `#24123`_ from makinacorpus/ss
-  * 2e2e1d2 fix service enable/disable change
+* **PR** `#24190`_: (`msteed`_) Fix issue 23815
+  @ *2015-05-28 20:10:34 UTC*
 
-**PR** `#24146`_: (*rallytime*) Fixes the boto_vpc_test failure on CentOS 5 tests
-  @ *2015-05-26T20:15:19Z*
+  * 3dc4b85295 Merge pull request `#24190`_ from msteed/issue-23815
 
-  * 51c3cec Merge pull request `#24146`_ from rallytime/fix_centos_boto_failure
-  * ac0f97d Fixes the boto_vpc_test failure on CentOS 5 tests
+  * 086a1a94e8 lint
 
-**PR** `#24144`_: (*twangboy*) Compare Keys ignores all newlines and carriage returns
-  @ *2015-05-26T19:25:48Z*
+  * 65de62f852 fix `#23815`_
 
-  **ISSUE** `#24052`_: (*twangboy*) v2015.5.1 Changes the way it interprets the minion_master.pub file
-    | refs: `#24089`_ `#24144`_
-  **ISSUE** `#23566`_: (*rks2286*) Salt-cp corrupting the file after transfer to minion
-    | refs: `#24144`_ `#23740`_
-  **PR** `#23740`_: (*jfindlay*) Binary write
-    | refs: `#24144`_
-  * 1c91a21 Merge pull request `#24144`_ from twangboy/fix_24052
-  * c197b41 Compare Keys removing all newlines and carriage returns
+  * d04e9162de spelling
 
-**PR** `#24139`_: (*rallytime*) Backport `#24118`_ to 2015.5
-  @ *2015-05-26T18:24:27Z*
+  * db9f6820b8 add inotify beacon unit tests
 
-  **PR** `#24118`_: (*trevor-h*) removed deprecated pymongo usage
-    | refs: `#24139`_ `#24178`_
-  * 0841667 Merge pull request `#24139`_ from rallytime/`bp-24118`_
-  * 4bb519b removed deprecated pymongo usage as no longer functional with pymongo > 3.x
+* **PR** `#24211`_: (`rallytime`_) Backport `#24205`_ to 2015.5
+  @ *2015-05-28 18:28:15 UTC*
 
-**PR** `#24138`_: (*rallytime*) Backport `#24116`_ to 2015.5
-  @ *2015-05-26T18:23:51Z*
+  * **PR** `#24205`_: (`hazelesque`_) Docstring fix in salt.modules.yumpkg.hold (refs: `#24211`_)
 
-  **PR** `#24116`_: (*awdrius*) Fixed typo in chown username (ending dot) that fails the command.
-    | refs: `#24138`_
-  * 742eca2 Merge pull request `#24138`_ from rallytime/`bp-24116`_
-  * 7f08641 Fixed typo in chown username (ending dot) that fails the command.
+  * 436634b508 Merge pull request `#24211`_ from rallytime/bp-24205
 
-**PR** `#24137`_: (*rallytime*) Backport `#24105`_ to 2015.5
-  @ *2015-05-26T18:23:40Z*
+  * 23284b5d47 Docstring fix in salt.modules.yumpkg.hold
 
-  **PR** `#24105`_: (*cedwards*) Updated some beacon-specific documentation formatting
-    | refs: `#24137`_
-  * e01536d Merge pull request `#24137`_ from rallytime/`bp-24105`_
-  * f0778a0 Updated some beacon-specific documentation formatting
+* **PR** `#24212`_: (`terminalmage`_) Clarify error in rendering template for top file
+  @ *2015-05-28 18:26:20 UTC*
 
-**PR** `#24136`_: (*rallytime*) Backport `#24104`_ to 2015.5
-  @ *2015-05-26T15:58:47Z*
+  * cc58624c7e Merge pull request `#24212`_ from terminalmage/clarify-error-msg
 
-  **ISSUE** `#23364`_: (*pruiz*) Unable to destroy host using proxmox cloud: There was an error destroying machines: 501 Server Error: Method 'DELETE /nodes/pmx1/openvz/openvz/100' not implemented
-  **PR** `#24104`_: (*pruiz*) Only try to stop a VM if it's not already stopped. (fixes `#23364`_)
-    | refs: `#24136`_
-  * 89cdf97 Merge pull request `#24136`_ from rallytime/`bp-24104`_
-  * c538884 Only try to stop a VM if it's not already stopped. (fixes `#23364`_)
+  * ca807fb032 Clarify error in rendering template for top file
 
-**PR** `#24135`_: (*rallytime*) Backport `#24083`_ to 2015.5
-  @ *2015-05-26T15:58:27Z*
+* **ISSUE** `#23904`_: (`mbrgm`_) Network config bonding section cannot be parsed when attribute names use dashes (refs: `#23917`_)
 
-  **PR** `#24083`_: (*swdream*) fix code block syntax
-    | refs: `#24135`_
-  * 67c4373 Merge pull request `#24135`_ from rallytime/`bp-24083`_
-  * e1d06f9 fix code block syntax
+* **ISSUE** `#23900`_: (`hashi825`_) salt ubuntu network building issue 2015.5.0 (refs: `#23922`_)
 
-**PR** `#24131`_: (*jayeshka*) adding states/mysql_user unit test case
-  @ *2015-05-26T15:58:10Z*
+* **PR** `#24213`_: (`The-Loeki`_) ShouldFix _- troubles in debian_ip
+  @ *2015-05-28 18:24:39 UTC*
 
-  * a83371e Merge pull request `#24131`_ from jayeshka/mysql_user-states-unit-test
-  * ed1ef69 adding states/mysql_user unit test case
+  * **PR** `#23922`_: (`garethgreenaway`_) Fixes to debian_ip.py (refs: `#24213`_)
 
-**PR** `#24130`_: (*jayeshka*) adding states/ntp unit test case
-  @ *2015-05-26T15:57:29Z*
+  * **PR** `#23917`_: (`corywright`_) Split debian bonding options on dash instead of underscore (refs: `#24213`_)
 
-  * 1dc1d2a Merge pull request `#24130`_ from jayeshka/ntp-states-unit-test
-  * ede4a9f adding states/ntp unit test case
+  * 9825160b1a Merge pull request `#24213`_ from The-Loeki/patch-3
 
-**PR** `#24128`_: (*jayeshka*) adding states/openstack_config unit test case
-  @ *2015-05-26T15:56:08Z*
+  * a68d515973 ShouldFix _- troubles in debian_ip
 
-  * 3943417 Merge pull request `#24128`_ from jayeshka/openstack_config-states-unit-test
-  * ca09e0f adding states/openstack_config unit test case
+* **PR** `#24214`_: (`basepi`_) 2015.5.1release
+  @ *2015-05-28 16:23:57 UTC*
 
-**PR** `#24127`_: (*jayeshka*) adding states/npm unit test case
-  @ *2015-05-26T15:55:18Z*
+  * 071751d13f Merge pull request `#24214`_ from basepi/2015.5.1release
 
-  * 23f25c4 Merge pull request `#24127`_ from jayeshka/npm-states-unit-test
-  * c3ecabb adding states/npm unit test case
+  * e5ba31b5b5 2015.5.1 release date
 
-**PR** `#24077`_: (*anlutro*) Change how state_verbose output is filtered
-  @ *2015-05-26T15:41:11Z*
+  * 768494c819 Update latest release in docs
 
-  **ISSUE** `#24009`_: (*hvnsweeting*) state_verbose False summary is wrong
-    | refs: `#24077`_
-  * 07488a4 Merge pull request `#24077`_ from alprs/fix-outputter_highstate_nonverbose_count
-  * 7790408 Change how state_verbose output is filtered
+* **PR** `#24202`_: (`rallytime`_) Backport `#24186`_ to 2015.5
+  @ *2015-05-28 05:16:48 UTC*
 
-**PR** `#24119`_: (*jfindlay*) Update contrib docs
-  @ *2015-05-26T15:37:01Z*
+  * **PR** `#24186`_: (`thcipriani`_) Update salt vagrant provisioner info (refs: `#24202`_)
 
-  * 224820f Merge pull request `#24119`_ from jfindlay/update_contrib_docs
-  * fa2d411 update example release branch in contrib docs
+  * c2f1fdb244 Merge pull request `#24202`_ from rallytime/bp-24186
 
-  * a0b76b5 clarify git rebase instructions
+  * db793dd0de Update salt vagrant provisioner info
 
-  * 3517e00 fix contribution docs link typos
+* **PR** `#24192`_: (`rallytime`_) Backport `#20474`_ to 2015.5
+  @ *2015-05-28 05:16:18 UTC*
 
-  * 651629c backport dev contrib doc updates to 2015.5
+  * **PR** `#20474`_: (`djcrabhat`_) add sudo, sudo_password params to vsphere deploy to allow for non-root deploys (refs: `#24192`_)
 
-**PR** `#23928`_: (*joejulian*) Add the ability to replace existing certificates
-  @ *2015-05-25T19:47:26Z*
+  * 8a085a2592 Merge pull request `#24192`_ from rallytime/bp-20474
 
-  * 5488c4a Merge pull request `#23928`_ from joejulian/2015.5_tls_module_replace_existing
-  * 4a4cbdd Add the ability to replace existing certificates
+  * fd3c783f3e add sudo, sudo_password params to deploy to allow for non-root deploys
 
-**PR** `#24078`_: (*jfindlay*) if a charmap is not supplied, set it to the codeset
-  @ *2015-05-25T19:39:19Z*
+* **PR** `#24184`_: (`rallytime`_) Backport `#24129`_ to 2015.5
+  @ *2015-05-28 05:15:08 UTC*
 
-  **ISSUE** `#23221`_: (*Reiner030*) Debian Jessie: locale.present not working again
-    | refs: `#24078`_
-  * dd90ef0 Merge pull request `#24078`_ from jfindlay/locale_charmap
-  * 5eb97f0 if a charmap is not supplied, set it to the codeset
+  * **PR** `#24129`_: (`pengyao`_) Wheel client doc (refs: `#24184`_)
 
-**PR** `#24088`_: (*jfindlay*) pkg module integration tests
-  @ *2015-05-25T19:39:02Z*
+  * 7cc535bf4a Merge pull request `#24184`_ from rallytime/bp-24129
 
-  * 9cec5d3 Merge pull request `#24088`_ from jfindlay/pkg_tests
-  * f1bd5ec adding pkg module integration tests
+  * 722a662479 fixed a typo
 
-  * 739b2ef rework yumpkg refresh_db so args are not mandatory
+  * 565eb46ff5 Add cmd doc for WheelClient
 
-**PR** `#24089`_: (*jfindlay*) allow override of binary file mode on windows
-  @ *2015-05-25T19:38:44Z*
+* **PR** `#24183`_: (`rallytime`_) Backport `#19320`_ to 2015.5
+  @ *2015-05-28 05:14:36 UTC*
 
-  **ISSUE** `#24052`_: (*twangboy*) v2015.5.1 Changes the way it interprets the minion_master.pub file
-    | refs: `#24089`_ `#24144`_
-  * 517552c Merge pull request `#24089`_ from jfindlay/binary_write
-  * b2259a6 allow override of binary file mode on windows
+  * **PR** `#19320`_: (`clan`_) add 'state_output_profile' option for profile output (refs: `#24183`_)
 
-**PR** `#24092`_: (*jfindlay*) collect scattered contents edits, ensure it's a str
-  @ *2015-05-25T19:38:10Z*
+  * eb0af70e5b Merge pull request `#24183`_ from rallytime/bp-19320
 
-  **ISSUE** `#23973`_: (*mschiff*) state file.managed: setting contents_pillar to a pillar which is a list throws exception instead giving descriptive error message
-    | refs: `#24092`_
-  * 121ab9f Merge pull request `#24092`_ from jfindlay/file_state
-  * cfa0f13 collect scattered contents edits, ensure it's a str
+  * 55db1bf8b5 sate_output_profile default to True
 
-**PR** `#24112`_: (*The-Loeki*) thin_gen breaks when thinver doesn't exist
-  @ *2015-05-25T19:37:47Z*
+  * 991922703b fix type: statei -> state
 
-  * 84e65de Merge pull request `#24112`_ from The-Loeki/patch-1
-  * 34646ea thin_gen breaks when thinver doesn't exist
+  * 0549ca6266 add 'state_output_profile' option for profile output
 
-**PR** `#24108`_: (*jayeshka*) adding states/mysql_query unit test case
-  @ *2015-05-25T12:30:48Z*
+* **PR** `#24201`_: (`whiteinge`_) Add list of client libraries for the rest_cherrypy module to the top-level documentation
+  @ *2015-05-28 02:12:09 UTC*
 
-  * ec509ed Merge pull request `#24108`_ from jayeshka/mysql_query-states-unit-test
-  * ec50450 adding states/mysql_query unit test case
+  * 1b5bf23187 Merge pull request `#24201`_ from whiteinge/rest_cherrypy-client-libs
 
-**PR** `#24110`_: (*jayeshka*) adding varnish unit test case
-  @ *2015-05-25T12:30:21Z*
+  * 5f718027ca Add list of client libraries for the rest_cherrypy module
 
-  * f2e5d6c Merge pull request `#24110`_ from jayeshka/varnish-unit-test
-  * e119889 adding varnish unit test case
+  * 28fc77f6f6 Fix rest_cherrypy config example indentation
 
-**PR** `#24109`_: (*jayeshka*) adding states/mysql_grants unit test case
-  @ *2015-05-25T12:29:53Z*
+* **PR** `#24195`_: (`rallytime`_) Merge `#24185`_ with a couple of fixes
+  @ *2015-05-27 22:18:37 UTC*
 
-  * 4fca2b4 Merge pull request `#24109`_ from jayeshka/mysql_grants-states-unit-test
-  * 11a93cb adding states/mysql_grants unit test case
+  * **PR** `#24185`_: (`jacobhammons`_) Fixes for doc build errors (refs: `#24195`_)
 
-**PR** `#24028`_: (*nleib*) send a disable message to disable puppet
-  @ *2015-05-25T04:02:11Z*
+  * 3307ec20d9 Merge pull request `#24195`_ from rallytime/merge-24185
 
-  * 6b43c9a Merge pull request `#24028`_ from nleib/2015.5
-  * 15f24b4 update format of string in disabled msg
+  * d8daa9dcd7 Merge `#24185`_ with a couple of fixes
 
-  * 7690e5b remove trailing whitespaces
+  * 634d56bca0 Fixed pylon error
 
-  * 56a9720 Update puppet.py
+  * 0689815d0e Fixes for doc build errors
 
-  * 9686391 Update puppet.py
+* **PR** `#24166`_: (`jayeshka`_) adding states/pkgng unit test case.
+  @ *2015-05-27 20:27:49 UTC*
 
-  * 33f3d68 send a disable message to disable puppet
+  * 7e400bc3d7 Merge pull request `#24166`_ from jayeshka/pkgng-states-unit-test
 
-**PR** `#24100`_: (*jfindlay*) adding states/file unit test case
-  @ *2015-05-24T05:17:54Z*
+  * 2234bb0b70 adding states/pkgng unit test case.
 
-  **PR** `#23963`_: (*jayeshka*) adding states/file unit test case
-    | refs: `#24100`_
-  * 52c9aca Merge pull request `#24100`_ from jfindlay/merge_23963
-  * 7d59deb adding states/file unit test case
+* **PR** `#24189`_: (`basepi`_) [2015.5] Merge forward from 2014.7 to 2015.5
+  @ *2015-05-27 20:26:31 UTC*
 
-**PR** `#24098`_: (*galet*) Systemd not recognized properly on Oracle Linux 7
-  @ *2015-05-24T04:07:31Z*
+  * 9fcda79cd4 Merge pull request `#24189`_ from basepi/merge-forward-2015.5
 
-  **ISSUE** `#21446`_: (*dpheasant*) check for systemd on Oracle Linux
-    | refs: `#24098`_
-  * 0eb9f15 Merge pull request `#24098`_ from galet/2015.5
-  * 4d6ab21 Systemd not recognized properly on Oracle Linux 7
+  * 8839e9c22e Merge remote-tracking branch 'upstream/2014.7' into merge-forward-2015.5
 
-**PR** `#24090`_: (*jfindlay*) adding states/mount unit test case
-  @ *2015-05-22T23:02:57Z*
+  * 9d7331c87d Merge pull request `#24178`_ from rallytime/bp-24118
 
-  **PR** `#24062`_: (*jayeshka*) adding states/mount unit test case
-    | refs: `#24090`_
-  * 8e04db7 Merge pull request `#24090`_ from jfindlay/merge_24062
-  * a81a922 adding states/mount unit test case
+    * e2217a09e8 removed deprecated pymongo usage as no longer functional with pymongo > 3.x
 
-**PR** `#24086`_: (*rallytime*) Backport `#22806`_ to 2015.5
-  @ *2015-05-22T21:18:20Z*
+  * 4e8c5031b0 Merge pull request `#24159`_ from rallytime/keystone_doc_examples
 
-  **ISSUE** `#22574`_: (*unicolet*) error when which is not available
-    | refs: `#22806`_
-  **PR** `#22806`_: (*jfindlay*) use cmd.run_all instead of cmd.run_stdout
-    | refs: `#24086`_
-  * c0079f5 Merge pull request `#24086`_ from rallytime/`bp-22806`_
-  * f728f55 use cmd.run_all instead of cmd.run_stdout
+    * dadac8d076 Fill out modules/keystone.py CLI Examples
 
-**PR** `#24024`_: (*jayeshka*) adding states/mongodb_user unit test case
-  @ *2015-05-22T20:53:19Z*
+  * fc10ee8ed5 Merge pull request `#24158`_ from rallytime/fix_doc_error
 
-  * 09de253 Merge pull request `#24024`_ from jayeshka/mongodb_user-states-unit-test
-  * f31dc92 resolved errors
+    * 49a517e2ca Fix test_valid_docs test for tls module
 
-  * d038b1f adding states/mongodb_user unit test case
+* **PR** `#24181`_: (`justinta`_) Fixed error where file was evaluated as a symlink in test_absent
+  @ *2015-05-27 18:26:28 UTC*
 
-**PR** `#24065`_: (*kiorky*) continue to fix `#23883`_
-  | refs: `#24080`_ `#24066`_
-  @ *2015-05-22T18:59:21Z*
+  * 2303dec0e9 Merge pull request `#24181`_ from jtand/file_test
 
-  **ISSUE** `#23883`_: (*kaithar*) max_event_size seems broken
-  * bfd812c Merge pull request `#24065`_ from makinacorpus/real23883
-  * 028282e continue to fix `#23883`_
+  * 5f0e601589 Fixed error where file was evaluated as a symlink in test_absent
 
-**PR** `#24029`_: (*kiorky*) Fix providers handling
-  @ *2015-05-22T16:56:06Z*
+* **PR** `#24180`_: (`terminalmage`_) Skip libvirt tests if not running as root
+  @ *2015-05-27 18:18:47 UTC*
 
-  **ISSUE** `#24017`_: (*arthurlogilab*) [salt-cloud openstack] TypeError: unhashable type: 'dict' on map creation
-    | refs: `#24029`_
-  * 429adfe Merge pull request `#24029`_ from makinacorpus/fixproviders
-  * 412b39b Fix providers handling
+  * a16276852b Merge pull request `#24180`_ from terminalmage/fix-libvirt-test
 
-**PR** `#23936`_: (*jfindlay*) remove unreachable returns in file state
-  @ *2015-05-22T16:26:49Z*
+  * 72e7416ad2 Skip libvirt tests if not running as root
 
-  * a42cccc Merge pull request `#23936`_ from jfindlay/file_state
-  * ac29c0c also validate file.recurse source parameter
+* **PR** `#24165`_: (`jayeshka`_) adding states/portage_config unit test case.
+  @ *2015-05-27 17:15:08 UTC*
 
-  * 57f7388 remove unreachable returns in file state
+  * 1fbc5b25e6 Merge pull request `#24165`_ from jayeshka/portage_config-states-unit-test
 
-**PR** `#24063`_: (*jayeshka*) removed tuple index error
-  @ *2015-05-22T14:58:20Z*
+  * 8cf1505392 adding states/portage_config unit test case.
 
-  * 8b69b41 Merge pull request `#24063`_ from jayeshka/mount-states-module
-  * b9745d5 removed tuple index error
+* **PR** `#24164`_: (`jayeshka`_) adding states/pecl unit test case.
+  @ *2015-05-27 17:14:26 UTC*
 
-**PR** `#24057`_: (*rallytime*) Backport `#22572`_ to 2015.5
-  @ *2015-05-22T05:36:25Z*
+  * 4747856411 Merge pull request `#24164`_ from jayeshka/pecl-states-unit-test
 
-  **PR** `#22572`_: (*The-Loeki*) Small docfix for GitPillar
-    | refs: `#24057`_
-  * 02ac4aa Merge pull request `#24057`_ from rallytime/`bp-22572`_
-  * 49aad84 Small docfix for GitPillar
+  * 563a5b3c30 adding states/pecl unit test case.
 
-**PR** `#24040`_: (*rallytime*) Backport `#24027`_ to 2015.5
-  @ *2015-05-21T23:43:54Z*
+* **PR** `#24160`_: (`The-Loeki`_) small enhancement to data module; pop()
+  @ *2015-05-27 17:03:10 UTC*
 
-  **ISSUE** `#23088`_: (*wfhg*) Segfault when adding a Zypper repo on SLES 11.3
-    | refs: `#24027`_
-  **PR** `#24027`_: (*wfhg*) Add baseurl to salt.modules.zypper.mod_repo
-    | refs: `#24040`_
-  * 82de059 Merge pull request `#24040`_ from rallytime/`bp-24027`_
-  * 37d25d8 Added baseurl as alias for url and mirrorlist in salt.modules.zypper.mod_repo.
+  * cdaaa19324 Merge pull request `#24160`_ from The-Loeki/patch-1
 
-**PR** `#24039`_: (*rallytime*) Backport `#24015`_ to 2015.5
-  @ *2015-05-21T23:43:25Z*
+  * 2175ff3c75 doc & merge fix
 
-  **PR** `#24015`_: (*YanChii*) minor improvement of solarisips docs & fix typos
-    | refs: `#24039`_
-  * d909781 Merge pull request `#24039`_ from rallytime/`bp-24015`_
-  * 6bfaa94 minor improvement of solarisips docs & fix typos
+  * eba382cdda small enhancement to data module; pop()
 
-**PR** `#24038`_: (*rallytime*) Backport `#19599`_ to 2015.5
-  @ *2015-05-21T23:43:10Z*
+* **PR** `#24153`_: (`techhat`_) Batch mode sometimes improperly builds lists of minions to process
+  @ *2015-05-27 16:21:53 UTC*
 
-  **ISSUE** `#19598`_: (*fayetted*) ssh_auth.present test=true incorectly reports changes will be made
-    | refs: `#19599`_
-  **PR** `#19599`_: (*fayetted*) Fix ssh_auth test mode, compare lines not just key
-    | refs: `#24038`_
-  * 4a0f254 Merge pull request `#24038`_ from rallytime/`bp-19599`_
-  * ea00d3e Fix ssh_auth test mode, compare lines not just key
+  * 4a8dbc7f13 Merge pull request `#24153`_ from techhat/batchlist
 
-**PR** `#24046`_: (*rallytime*) Remove key management test from digital ocean cloud tests
-  @ *2015-05-21T22:32:04Z*
+  * 467ba64612 Make sure that minion IDs are strings
 
-  * 42b87f1 Merge pull request `#24046`_ from rallytime/remove_key_test
-  * 1d031ca Remove key management test from digital ocean cloud tests
+* **PR** `#24167`_: (`jayeshka`_) adding states/pagerduty unit test case.
+  @ *2015-05-27 16:14:01 UTC*
 
-**PR** `#24044`_: (*cro*) Remove spurious log message, fix typo in doc
-  @ *2015-05-21T22:31:49Z*
+  * ed8ccf57a2 Merge pull request `#24167`_ from jayeshka/pagerduty-states-unit-test
 
-  * eff54b1 Merge pull request `#24044`_ from cro/pgjsonb
-  * de06633 Remove spurious log message, fix typo in doc
+  * 1af8c8334d adding states/pagerduty unit test case.
 
-**PR** `#24001`_: (*msteed*) issue `#23883`_
-  @ *2015-05-21T20:32:30Z*
+* **PR** `#24156`_: (`basepi`_) [2015.5] Merge forward from 2014.7 to 2015.5
+  @ *2015-05-27 15:05:01 UTC*
 
-  **ISSUE** `#23883`_: (*kaithar*) max_event_size seems broken
-  * ac32000 Merge pull request `#24001`_ from msteed/issue-23883
-  * bea97a8 issue `#23883`_
+  * b9507d1567 Merge pull request `#24156`_ from basepi/merge-forward-2015.5
 
-**PR** `#23995`_: (*kiorky*) Lxc path pre
-  @ *2015-05-21T17:26:03Z*
+  * e52b5ab2e2 Remove stray >>>>>
 
-  * f7fae26 Merge pull request `#23995`_ from makinacorpus/lxc_path_pre
-  * 319282a lint
+  * 7dfbd929ff Merge remote-tracking branch 'upstream/2014.7' into merge-forward-2015.5
 
-  * 1dc67e5 lxc: versionadded
+    * c0d32e0b5e Merge pull request `#24125`_ from hvnsweeting/fix-rabbitmq-test-mode
 
-  * fcad7cb lxc: states improvements
+      * 71862c69b9 enhance log
 
-  * 644bd72 lxc: more consistence for profiles
+      * 28e2594162 change according to new output of rabbitmq module functions
 
-  * 139372c lxc: remove merge cruft
+      * cd0212e8ed processes and returns better output for rabbitmq module
 
-  * 725b046 lxc: Repair merge
+    * 39a8f30f06 Merge pull request `#24093`_ from msteed/issue-23464
 
-**PR** `#24032`_: (*kartiksubbarao*) Update augeas_cfg.py
-  @ *2015-05-21T17:03:42Z*
+      * fd35903d75 Fix failing test
 
-  **ISSUE** `#16383`_: (*interjection*) salt.states.augeas.change example from docs fails with exception
-    | refs: `#24032`_
-  * 26d6851 Merge pull request `#24032`_ from kartiksubbarao/augeas_insert_16383
-  * 3686dcd Update augeas_cfg.py
+      * 41b344c7d3 Make LocalClient.cmd_iter_no_block() not block
 
-**PR** `#24025`_: (*jayeshka*) adding timezone unit test case
-  @ *2015-05-21T16:50:53Z*
+    * 5bffd3045e Merge pull request `#24008`_ from davidjb/2014.7
 
-  * 55c9245 Merge pull request `#24025`_ from jayeshka/timezone-unit-test
-  * 1ec33e2 removed assertion error
+      * 8b8d0293d4 Correct reST formatting for documentation
 
-  * 16ecb28 adding timezone unit test case
+    * 1aa0420040 Merge pull request `#23933`_ from jacobhammons/2014.7
 
-**PR** `#24023`_: (*jayeshka*) adding states/mongodb_database unit test case
-  @ *2015-05-21T16:49:17Z*
+    * a3613e68e4 removed numbering from doc TOC
 
-  * e243617 Merge pull request `#24023`_ from jayeshka/mongodb_database-states-unit-test
-  * 5a9ac7e adding states/mongodb_database unit test case
+    * 78b737c5e6 removed 2015.* release from release notes, updated index page to remove PDF/epub links
 
-**PR** `#24022`_: (*jayeshka*) adding states/modjk_worker unit test case
-  @ *2015-05-21T16:48:29Z*
+    * e867f7df77 Changed build settings to use saltstack2 theme and update release versions.
 
-  * b377bd9 Merge pull request `#24022`_ from jayeshka/modjk_worker-states-unit-test
-  * 05c0a98 adding states/modjk_worker unit test case
+    * 81ed9c9f59 sphinx saltstack2 doc theme
 
-**PR** `#24005`_: (*msteed*) issue `#23776`_
-  @ *2015-05-21T01:55:34Z*
+* **ISSUE** `#24102`_: (`bormotov`_) win_update encondig problems (refs: `#24145`_)
 
-  **ISSUE** `#23776`_: (*enblde*) Presence change events constantly reporting all minions as new in 2015.5
-  * 701c51b Merge pull request `#24005`_ from msteed/issue-23776
-  * 62e67d8 issue `#23776`_
+* **PR** `#24145`_: (`jfindlay`_) attempt to decode win update package
+  @ *2015-05-26 23:20:20 UTC*
 
-**PR** `#23996`_: (*neogenix*) iptables state generates a 0 position which is invalid in iptables cli `#23950`_
-  @ *2015-05-20T22:44:27Z*
+  * 05745fa931 Merge pull request `#24145`_ from jfindlay/win_update_encoding
 
-  **ISSUE** `#23950`_: (*neogenix*) iptables state generates a 0 position which is invalid in iptables cli
-    | refs: `#23996`_
-  * 17b7c0b Merge pull request `#23996`_ from neogenix/2015.5-23950
-  * ad417a5 fix for `#23950`_
+  * cc5e17e61f attempt to decode win update package
 
-**PR** `#23994`_: (*rallytime*) Skip the gpodder pkgrepo test for Ubuntu 15 - they don't have vivid ppa up yet
-  @ *2015-05-20T21:18:21Z*
+* **ISSUE** `#24122`_: (`kiorky`_) service.dead is no more stateful: services does not handle correctly enable/disable change state (refs: `#24123`_)
 
-  * 4cb8773 Merge pull request `#23994`_ from rallytime/skip_test_ubuntu_15
-  * 9e0ec07 Skip the gpodder pkgrepo test - they don't have vivid ppa up yet
+* **PR** `#24123`_: (`kiorky`_) fix service enable/disable change
+  @ *2015-05-26 21:24:19 UTC*
 
+  * 70247890de Merge pull request `#24123`_ from makinacorpus/ss
+
+  * 2e2e1d262d fix service enable/disable change
+
+* **PR** `#24146`_: (`rallytime`_) Fixes the boto_vpc_test failure on CentOS 5 tests
+  @ *2015-05-26 20:15:19 UTC*
+
+  * 51c3cec5d7 Merge pull request `#24146`_ from rallytime/fix_centos_boto_failure
+
+  * ac0f97de51 Fixes the boto_vpc_test failure on CentOS 5 tests
+
+* **ISSUE** `#24052`_: (`twangboy`_) v2015.5.1 Changes the way it interprets the minion_master.pub file (refs: `#24144`_, `#24089`_)
+
+* **ISSUE** `#23566`_: (`rks2286`_) Salt-cp corrupting the file after transfer to minion (refs: `#24144`_, `#23740`_)
+
+* **PR** `#24144`_: (`twangboy`_) Compare Keys ignores all newlines and carriage returns
+  @ *2015-05-26 19:25:48 UTC*
+
+  * **PR** `#23740`_: (`jfindlay`_) Binary write (refs: `#24144`_)
+
+  * 1c91a2176f Merge pull request `#24144`_ from twangboy/fix_24052
+
+  * c197b41494 Compare Keys removing all newlines and carriage returns
+
+* **PR** `#24139`_: (`rallytime`_) Backport `#24118`_ to 2015.5
+  @ *2015-05-26 18:24:27 UTC*
+
+  * **PR** `#24118`_: (`trevor-h`_) removed deprecated pymongo usage (refs: `#24178`_, `#24139`_)
+
+  * 084166747c Merge pull request `#24139`_ from rallytime/bp-24118
+
+  * 4bb519b8da removed deprecated pymongo usage as no longer functional with pymongo > 3.x
+
+* **PR** `#24138`_: (`rallytime`_) Backport `#24116`_ to 2015.5
+  @ *2015-05-26 18:23:51 UTC*
+
+  * **PR** `#24116`_: (`awdrius`_) Fixed typo in chown username (ending dot) that fails the command. (refs: `#24138`_)
+
+  * 742eca29f7 Merge pull request `#24138`_ from rallytime/bp-24116
+
+  * 7f08641800 Fixed typo in chown username (ending dot) that fails the command.
+
+* **PR** `#24137`_: (`rallytime`_) Backport `#24105`_ to 2015.5
+  @ *2015-05-26 18:23:40 UTC*
+
+  * **PR** `#24105`_: (`cedwards`_) Updated some beacon-specific documentation formatting (refs: `#24137`_)
+
+  * e01536d098 Merge pull request `#24137`_ from rallytime/bp-24105
+
+  * f0778a0a60 Updated some beacon-specific documentation formatting
+
+* **ISSUE** `#23364`_: (`pruiz`_) Unable to destroy host using proxmox cloud: There was an error destroying machines: 501 Server Error: Method 'DELETE /nodes/pmx1/openvz/openvz/100' not implemented (refs: `#24104`_)
+
+* **PR** `#24136`_: (`rallytime`_) Backport `#24104`_ to 2015.5
+  @ *2015-05-26 15:58:47 UTC*
+
+  * **PR** `#24104`_: (`pruiz`_) Only try to stop a VM if it's not already stopped. (fixes `#23364`_) (refs: `#24136`_)
+
+  * 89cdf976e1 Merge pull request `#24136`_ from rallytime/bp-24104
+
+  * c53888415f Only try to stop a VM if it's not already stopped. (fixes `#23364`_)
+
+* **PR** `#24135`_: (`rallytime`_) Backport `#24083`_ to 2015.5
+  @ *2015-05-26 15:58:27 UTC*
+
+  * **PR** `#24083`_: (`swdream`_) fix code block syntax (refs: `#24135`_)
+
+  * 67c4373577 Merge pull request `#24135`_ from rallytime/bp-24083
+
+  * e1d06f9764 fix code block syntax
+
+* **PR** `#24131`_: (`jayeshka`_) adding states/mysql_user unit test case
+  @ *2015-05-26 15:58:10 UTC*
+
+  * a83371e0ed Merge pull request `#24131`_ from jayeshka/mysql_user-states-unit-test
+
+  * ed1ef69856 adding states/mysql_user unit test case
+
+* **PR** `#24130`_: (`jayeshka`_) adding states/ntp unit test case
+  @ *2015-05-26 15:57:29 UTC*
+
+  * 1dc1d2a6e5 Merge pull request `#24130`_ from jayeshka/ntp-states-unit-test
+
+  * ede4a9f2f1 adding states/ntp unit test case
+
+* **PR** `#24128`_: (`jayeshka`_) adding states/openstack_config unit test case
+  @ *2015-05-26 15:56:08 UTC*
+
+  * 39434179a8 Merge pull request `#24128`_ from jayeshka/openstack_config-states-unit-test
+
+  * ca09e0f7c1 adding states/openstack_config unit test case
+
+* **PR** `#24127`_: (`jayeshka`_) adding states/npm unit test case
+  @ *2015-05-26 15:55:18 UTC*
+
+  * 23f25c4298 Merge pull request `#24127`_ from jayeshka/npm-states-unit-test
+
+  * c3ecabbae0 adding states/npm unit test case
+
+* **ISSUE** `#24009`_: (`hvnsweeting`_) state_verbose False summary is wrong (refs: `#24077`_)
+
+* **PR** `#24077`_: (`anlutro`_) Change how state_verbose output is filtered
+  @ *2015-05-26 15:41:11 UTC*
+
+  * 07488a4415 Merge pull request `#24077`_ from alprs/fix-outputter_highstate_nonverbose_count
+
+  * 7790408c3c Change how state_verbose output is filtered
+
+* **PR** `#24119`_: (`jfindlay`_) Update contrib docs
+  @ *2015-05-26 15:37:01 UTC*
+
+  * 224820febf Merge pull request `#24119`_ from jfindlay/update_contrib_docs
+
+  * fa2d411f53 update example release branch in contrib docs
+
+  * a0b76b57b3 clarify git rebase instructions
+
+  * 3517e0095f fix contribution docs link typos
+
+  * 651629c6a4 backport dev contrib doc updates to 2015.5
+
+* **PR** `#23928`_: (`joejulian`_) Add the ability to replace existing certificates
+  @ *2015-05-25 19:47:26 UTC*
+
+  * 5488c4aaa2 Merge pull request `#23928`_ from joejulian/2015.5_tls_module_replace_existing
+
+  * 4a4cbdd266 Add the ability to replace existing certificates
+
+* **ISSUE** `#23221`_: (`Reiner030`_) Debian Jessie: locale.present not working again (refs: `#24078`_)
+
+* **PR** `#24078`_: (`jfindlay`_) if a charmap is not supplied, set it to the codeset
+  @ *2015-05-25 19:39:19 UTC*
+
+  * dd90ef09b9 Merge pull request `#24078`_ from jfindlay/locale_charmap
+
+  * 5eb97f0973 if a charmap is not supplied, set it to the codeset
+
+* **PR** `#24088`_: (`jfindlay`_) pkg module integration tests
+  @ *2015-05-25 19:39:02 UTC*
+
+  * 9cec5d3dc9 Merge pull request `#24088`_ from jfindlay/pkg_tests
+
+  * f1bd5ec404 adding pkg module integration tests
+
+  * 739b2ef3bd rework yumpkg refresh_db so args are not mandatory
+
+* **ISSUE** `#24052`_: (`twangboy`_) v2015.5.1 Changes the way it interprets the minion_master.pub file (refs: `#24144`_, `#24089`_)
+
+* **PR** `#24089`_: (`jfindlay`_) allow override of binary file mode on windows
+  @ *2015-05-25 19:38:44 UTC*
+
+  * 517552caa6 Merge pull request `#24089`_ from jfindlay/binary_write
+
+  * b2259a6370 allow override of binary file mode on windows
+
+* **ISSUE** `#23973`_: (`mschiff`_) state file.managed: setting contents_pillar to a pillar which is a list throws exception instead giving descriptive error message (refs: `#24092`_)
+
+* **PR** `#24092`_: (`jfindlay`_) collect scattered contents edits, ensure it's a str
+  @ *2015-05-25 19:38:10 UTC*
+
+  * 121ab9f857 Merge pull request `#24092`_ from jfindlay/file_state
+
+  * cfa0f1358e collect scattered contents edits, ensure it's a str
+
+* **PR** `#24112`_: (`The-Loeki`_) thin_gen breaks when thinver doesn't exist
+  @ *2015-05-25 19:37:47 UTC*
+
+  * 84e65dece7 Merge pull request `#24112`_ from The-Loeki/patch-1
+
+  * 34646eae16 thin_gen breaks when thinver doesn't exist
+
+* **PR** `#24108`_: (`jayeshka`_) adding states/mysql_query unit test case
+  @ *2015-05-25 12:30:48 UTC*
+
+  * ec509ed272 Merge pull request `#24108`_ from jayeshka/mysql_query-states-unit-test
+
+  * ec50450460 adding states/mysql_query unit test case
+
+* **PR** `#24110`_: (`jayeshka`_) adding varnish unit test case
+  @ *2015-05-25 12:30:21 UTC*
+
+  * f2e5d6c2fd Merge pull request `#24110`_ from jayeshka/varnish-unit-test
+
+  * e11988969f adding varnish unit test case
+
+* **PR** `#24109`_: (`jayeshka`_) adding states/mysql_grants unit test case
+  @ *2015-05-25 12:29:53 UTC*
+
+  * 4fca2b49e3 Merge pull request `#24109`_ from jayeshka/mysql_grants-states-unit-test
+
+  * 11a93cb80c adding states/mysql_grants unit test case
+
+* **PR** `#24028`_: (`nleib`_) send a disable message to disable puppet
+  @ *2015-05-25 04:02:11 UTC*
+
+  * 6b43c9a8cb Merge pull request `#24028`_ from nleib/2015.5
+
+  * 15f24b42b2 update format of string in disabled msg
+
+  * 7690e5b008 remove trailing whitespaces
+
+  * 56a972034f Update puppet.py
+
+  * 9686391d81 Update puppet.py
+
+  * 33f3d68489 send a disable message to disable puppet
+
+* **PR** `#24100`_: (`jfindlay`_) adding states/file unit test case
+  @ *2015-05-24 05:17:54 UTC*
+
+  * **PR** `#23963`_: (`jayeshka`_) adding states/file unit test case (refs: `#24100`_)
+
+  * 52c9acafc2 Merge pull request `#24100`_ from jfindlay/merge_23963
+
+  * 7d59deb3d6 adding states/file unit test case
+
+* **ISSUE** `#21446`_: (`dpheasant`_) check for systemd on Oracle Linux (refs: `#24098`_)
+
+* **PR** `#24098`_: (`galet`_) Systemd not recognized properly on Oracle Linux 7
+  @ *2015-05-24 04:07:31 UTC*
+
+  * 0eb9f15d20 Merge pull request `#24098`_ from galet/2015.5
+
+  * 4d6ab21c74 Systemd not recognized properly on Oracle Linux 7
+
+* **PR** `#24090`_: (`jfindlay`_) adding states/mount unit test case
+  @ *2015-05-22 23:02:57 UTC*
+
+  * **PR** `#24062`_: (`jayeshka`_) adding states/mount unit test case (refs: `#24090`_)
+
+  * 8e04db76de Merge pull request `#24090`_ from jfindlay/merge_24062
+
+  * a81a9225b8 adding states/mount unit test case
+
+* **ISSUE** `#22574`_: (`unicolet`_) error when which is not available (refs: `#22806`_)
+
+* **PR** `#24086`_: (`rallytime`_) Backport `#22806`_ to 2015.5
+  @ *2015-05-22 21:18:20 UTC*
+
+  * **PR** `#22806`_: (`jfindlay`_) use cmd.run_all instead of cmd.run_stdout (refs: `#24086`_)
+
+  * c0079f5dc7 Merge pull request `#24086`_ from rallytime/bp-22806
+
+  * f728f55160 use cmd.run_all instead of cmd.run_stdout
+
+* **PR** `#24024`_: (`jayeshka`_) adding states/mongodb_user unit test case
+  @ *2015-05-22 20:53:19 UTC*
+
+  * 09de253373 Merge pull request `#24024`_ from jayeshka/mongodb_user-states-unit-test
+
+  * f31dc921f5 resolved errors
+
+  * d038b1fdbb adding states/mongodb_user unit test case
+
+* **ISSUE** `#23883`_: (`kaithar`_) max_event_size seems broken (refs: `#24001`_, `#24065`_)
+
+* **PR** `#24065`_: (`kiorky`_) continue to fix `#23883`_ (refs: `#24066`_, `#24080`_)
+  @ *2015-05-22 18:59:21 UTC*
+
+  * bfd812c56b Merge pull request `#24065`_ from makinacorpus/real23883
+
+  * 028282e01d continue to fix `#23883`_
+
+* **ISSUE** `#24017`_: (`arthurlogilab`_) [salt-cloud openstack] TypeError: unhashable type: 'dict' on map creation (refs: `#24029`_)
+
+* **PR** `#24029`_: (`kiorky`_) Fix providers handling
+  @ *2015-05-22 16:56:06 UTC*
+
+  * 429adfe00a Merge pull request `#24029`_ from makinacorpus/fixproviders
+
+  * 412b39b802 Fix providers handling
+
+* **PR** `#23936`_: (`jfindlay`_) remove unreachable returns in file state
+  @ *2015-05-22 16:26:49 UTC*
+
+  * a42ccccd98 Merge pull request `#23936`_ from jfindlay/file_state
+
+  * ac29c0cdd0 also validate file.recurse source parameter
+
+  * 57f73887fe remove unreachable returns in file state
+
+* **PR** `#24063`_: (`jayeshka`_) removed tuple index error
+  @ *2015-05-22 14:58:20 UTC*
+
+  * 8b69b41a42 Merge pull request `#24063`_ from jayeshka/mount-states-module
+
+  * b9745d5c4f removed tuple index error
+
+* **PR** `#24057`_: (`rallytime`_) Backport `#22572`_ to 2015.5
+  @ *2015-05-22 05:36:25 UTC*
+
+  * **PR** `#22572`_: (`The-Loeki`_) Small docfix for GitPillar (refs: `#24057`_)
+
+  * 02ac4aa288 Merge pull request `#24057`_ from rallytime/bp-22572
+
+  * 49aad84b17 Small docfix for GitPillar
+
+* **ISSUE** `#23088`_: (`ghost`_) Segfault when adding a Zypper repo on SLES 11.3 (refs: `#24027`_)
+
+* **PR** `#24040`_: (`rallytime`_) Backport `#24027`_ to 2015.5
+  @ *2015-05-21 23:43:54 UTC*
+
+  * **PR** `#24027`_: (`ghost`_) Add baseurl to salt.modules.zypper.mod_repo (refs: `#24040`_)
+
+  * 82de059891 Merge pull request `#24040`_ from rallytime/bp-24027
+
+  * 37d25d8bc6 Added baseurl as alias for url and mirrorlist in salt.modules.zypper.mod_repo.
+
+* **PR** `#24039`_: (`rallytime`_) Backport `#24015`_ to 2015.5
+  @ *2015-05-21 23:43:25 UTC*
+
+  * **PR** `#24015`_: (`YanChii`_) minor improvement of solarisips docs & fix typos (refs: `#24039`_)
+
+  * d909781d97 Merge pull request `#24039`_ from rallytime/bp-24015
+
+  * 6bfaa94a8c minor improovement of solarisips docs & fix typos
+
+* **ISSUE** `#19598`_: (`fayetted`_) ssh_auth.present test=true incorectly reports changes will be made (refs: `#19599`_)
+
+* **PR** `#24038`_: (`rallytime`_) Backport `#19599`_ to 2015.5
+  @ *2015-05-21 23:43:10 UTC*
+
+  * **PR** `#19599`_: (`fayetted`_) Fix ssh_auth test mode, compare lines not just key (refs: `#24038`_)
+
+  * 4a0f254d22 Merge pull request `#24038`_ from rallytime/bp-19599
+
+  * ea00d3e786 Fix ssh_auth test mode, compare lines not just key
+
+* **PR** `#24046`_: (`rallytime`_) Remove key management test from digital ocean cloud tests
+  @ *2015-05-21 22:32:04 UTC*
+
+  * 42b87f1049 Merge pull request `#24046`_ from rallytime/remove_key_test
+
+  * 1d031caa78 Remove key management test from digital ocean cloud tests
+
+* **PR** `#24044`_: (`cro`_) Remove spurious log message, fix typo in doc
+  @ *2015-05-21 22:31:49 UTC*
+
+  * eff54b1c5a Merge pull request `#24044`_ from cro/pgjsonb
+
+  * de0663314a Remove spurious log message, fix typo in doc
+
+* **ISSUE** `#23883`_: (`kaithar`_) max_event_size seems broken (refs: `#24001`_, `#24065`_)
+
+* **PR** `#24001`_: (`msteed`_) issue `#23883`_
+  @ *2015-05-21 20:32:30 UTC*
+
+  * ac32000b5d Merge pull request `#24001`_ from msteed/issue-23883
+
+  * bea97a8b98 issue `#23883`_
+
+* **PR** `#23995`_: (`kiorky`_) Lxc path pre
+  @ *2015-05-21 17:26:03 UTC*
+
+  * f7fae26059 Merge pull request `#23995`_ from makinacorpus/lxc_path_pre
+
+  * 319282af5f lint
+
+  * 1dc67e5678 lxc: versionadded
+
+  * fcad7cb804 lxc: states improvments
+
+  * 644bd729f7 lxc: more consistence for profiles
+
+  * 139372c055 lxc: remove merge cruft
+
+  * 725b0462ca lxc: Repair merge
+
+* **ISSUE** `#16383`_: (`interjection`_) salt.states.augeas.change example from docs fails with exception (refs: `#24032`_)
+
+* **PR** `#24032`_: (`kartiksubbarao`_) Update augeas_cfg.py
+  @ *2015-05-21 17:03:42 UTC*
+
+  * 26d6851666 Merge pull request `#24032`_ from kartiksubbarao/augeas_insert_16383
+
+  * 3686dcd4c7 Update augeas_cfg.py
+
+* **PR** `#24025`_: (`jayeshka`_) adding timezone unit test case
+  @ *2015-05-21 16:50:53 UTC*
+
+  * 55c9245075 Merge pull request `#24025`_ from jayeshka/timezone-unit-test
+
+  * 1ec33e22a7 removed assertion error
+
+  * 16ecb28950 adding timezone unit test case
+
+* **PR** `#24023`_: (`jayeshka`_) adding states/mongodb_database unit test case
+  @ *2015-05-21 16:49:17 UTC*
+
+  * e243617659 Merge pull request `#24023`_ from jayeshka/mongodb_database-states-unit-test
+
+  * 5a9ac7effb adding states/mongodb_database unit test case
+
+* **PR** `#24022`_: (`jayeshka`_) adding states/modjk_worker unit test case
+  @ *2015-05-21 16:48:29 UTC*
+
+  * b377bd93e6 Merge pull request `#24022`_ from jayeshka/modjk_worker-states-unit-test
+
+  * 05c0a985db adding states/modjk_worker unit test case
+
+* **ISSUE** `#23776`_: (`enblde`_) Presence change events constantly reporting all minions as new in 2015.5 (refs: `#24005`_)
+
+* **PR** `#24005`_: (`msteed`_) issue `#23776`_
+  @ *2015-05-21 01:55:34 UTC*
+
+  * 701c51ba7a Merge pull request `#24005`_ from msteed/issue-23776
+
+  * 62e67d8ca0 issue `#23776`_
+
+* **ISSUE** `#23950`_: (`neogenix`_) iptables state generates a 0 position which is invalid in iptables cli (refs: `#23996`_)
+
+* **PR** `#23996`_: (`neogenix`_) iptables state generates a 0 position which is invalid in iptables cli `#23950`_
+  @ *2015-05-20 22:44:27 UTC*
+
+  * 17b7c0b741 Merge pull request `#23996`_ from neogenix/2015.5-23950
+
+  * ad417a57c2 fix for `#23950`_
+
+* **PR** `#23994`_: (`rallytime`_) Skip the gpodder pkgrepo test for Ubuntu 15 - they don't have vivid ppa up yet
+  @ *2015-05-20 21:18:21 UTC*
+
+  * 4cb877307c Merge pull request `#23994`_ from rallytime/skip_test_ubuntu_15
+
+  * 9e0ec07d85 Skip the gpodder pkgrepo test - they don't have vivid ppa up yet
 
 .. _`#14021`: https://github.com/saltstack/salt/issues/14021
 .. _`#16383`: https://github.com/saltstack/salt/issues/16383
@@ -991,7 +1106,6 @@ Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt
 .. _`#23221`: https://github.com/saltstack/salt/issues/23221
 .. _`#23308`: https://github.com/saltstack/salt/pull/23308
 .. _`#23364`: https://github.com/saltstack/salt/issues/23364
-.. _`#23464`: https://github.com/saltstack/salt/issues/23464
 .. _`#23566`: https://github.com/saltstack/salt/issues/23566
 .. _`#23623`: https://github.com/saltstack/salt/pull/23623
 .. _`#23657`: https://github.com/saltstack/salt/issues/23657
@@ -1148,28 +1262,75 @@ Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt
 .. _`#24346`: https://github.com/saltstack/salt/pull/24346
 .. _`#24349`: https://github.com/saltstack/salt/pull/24349
 .. _`#24365`: https://github.com/saltstack/salt/pull/24365
+.. _`#24372`: https://github.com/saltstack/salt/pull/24372
 .. _`#40`: https://github.com/saltstack/salt/issues/40
 .. _`#9772`: https://github.com/saltstack/salt/issues/9772
-.. _`bp-19320`: https://github.com/saltstack/salt/pull/19320
-.. _`bp-19599`: https://github.com/saltstack/salt/pull/19599
-.. _`bp-20474`: https://github.com/saltstack/salt/pull/20474
-.. _`bp-22572`: https://github.com/saltstack/salt/pull/22572
-.. _`bp-22806`: https://github.com/saltstack/salt/pull/22806
-.. _`bp-23308`: https://github.com/saltstack/salt/pull/23308
-.. _`bp-24013`: https://github.com/saltstack/salt/pull/24013
-.. _`bp-24015`: https://github.com/saltstack/salt/pull/24015
-.. _`bp-24027`: https://github.com/saltstack/salt/pull/24027
-.. _`bp-24083`: https://github.com/saltstack/salt/pull/24083
-.. _`bp-24104`: https://github.com/saltstack/salt/pull/24104
-.. _`bp-24105`: https://github.com/saltstack/salt/pull/24105
-.. _`bp-24116`: https://github.com/saltstack/salt/pull/24116
-.. _`bp-24118`: https://github.com/saltstack/salt/pull/24118
-.. _`bp-24129`: https://github.com/saltstack/salt/pull/24129
-.. _`bp-24186`: https://github.com/saltstack/salt/pull/24186
-.. _`bp-24205`: https://github.com/saltstack/salt/pull/24205
-.. _`bp-24220`: https://github.com/saltstack/salt/pull/24220
-.. _`bp-24263`: https://github.com/saltstack/salt/pull/24263
-.. _`bp-24271`: https://github.com/saltstack/salt/pull/24271
-.. _`fix-14021`: https://github.com/saltstack/salt/issues/14021
-.. _`fix-18966`: https://github.com/saltstack/salt/issues/18966
-.. _`fix-22991`: https://github.com/saltstack/salt/issues/22991
+.. _`Reiner030`: https://github.com/Reiner030
+.. _`Sacro`: https://github.com/Sacro
+.. _`The-Loeki`: https://github.com/The-Loeki
+.. _`YanChii`: https://github.com/YanChii
+.. _`aboe76`: https://github.com/aboe76
+.. _`anlutro`: https://github.com/anlutro
+.. _`arthurlogilab`: https://github.com/arthurlogilab
+.. _`awdrius`: https://github.com/awdrius
+.. _`basepi`: https://github.com/basepi
+.. _`bechtoldt`: https://github.com/bechtoldt
+.. _`bormotov`: https://github.com/bormotov
+.. _`c4urself`: https://github.com/c4urself
+.. _`cdarwin`: https://github.com/cdarwin
+.. _`cedwards`: https://github.com/cedwards
+.. _`clan`: https://github.com/clan
+.. _`corywright`: https://github.com/corywright
+.. _`cro`: https://github.com/cro
+.. _`damonnk`: https://github.com/damonnk
+.. _`dennisjac`: https://github.com/dennisjac
+.. _`djcrabhat`: https://github.com/djcrabhat
+.. _`dmyerscough`: https://github.com/dmyerscough
+.. _`dpheasant`: https://github.com/dpheasant
+.. _`dr4Ke`: https://github.com/dr4Ke
+.. _`emostar`: https://github.com/emostar
+.. _`enblde`: https://github.com/enblde
+.. _`fayetted`: https://github.com/fayetted
+.. _`galet`: https://github.com/galet
+.. _`garethgreenaway`: https://github.com/garethgreenaway
+.. _`ghost`: https://github.com/ghost
+.. _`hashi825`: https://github.com/hashi825
+.. _`hazelesque`: https://github.com/hazelesque
+.. _`hvnsweeting`: https://github.com/hvnsweeting
+.. _`interjection`: https://github.com/interjection
+.. _`jacksontj`: https://github.com/jacksontj
+.. _`jacobhammons`: https://github.com/jacobhammons
+.. _`jayeshka`: https://github.com/jayeshka
+.. _`jbq`: https://github.com/jbq
+.. _`jfindlay`: https://github.com/jfindlay
+.. _`joejulian`: https://github.com/joejulian
+.. _`justinta`: https://github.com/justinta
+.. _`kaithar`: https://github.com/kaithar
+.. _`kartiksubbarao`: https://github.com/kartiksubbarao
+.. _`kiorky`: https://github.com/kiorky
+.. _`mbrgm`: https://github.com/mbrgm
+.. _`merll`: https://github.com/merll
+.. _`mschiff`: https://github.com/mschiff
+.. _`msteed`: https://github.com/msteed
+.. _`neogenix`: https://github.com/neogenix
+.. _`nicholascapo`: https://github.com/nicholascapo
+.. _`nleib`: https://github.com/nleib
+.. _`paclat`: https://github.com/paclat
+.. _`pengyao`: https://github.com/pengyao
+.. _`pruiz`: https://github.com/pruiz
+.. _`rallytime`: https://github.com/rallytime
+.. _`randybias`: https://github.com/randybias
+.. _`rks2286`: https://github.com/rks2286
+.. _`ryan-lane`: https://github.com/ryan-lane
+.. _`s0undt3ch`: https://github.com/s0undt3ch
+.. _`steverweber`: https://github.com/steverweber
+.. _`swdream`: https://github.com/swdream
+.. _`techhat`: https://github.com/techhat
+.. _`terminalmage`: https://github.com/terminalmage
+.. _`thatch45`: https://github.com/thatch45
+.. _`thcipriani`: https://github.com/thcipriani
+.. _`thusoy`: https://github.com/thusoy
+.. _`trevor-h`: https://github.com/trevor-h
+.. _`twangboy`: https://github.com/twangboy
+.. _`unicolet`: https://github.com/unicolet
+.. _`whiteinge`: https://github.com/whiteinge

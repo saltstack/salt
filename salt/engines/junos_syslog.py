@@ -3,7 +3,7 @@
 Junos Syslog Engine
 ==========================
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 
 :depends: pyparsing, twisted
@@ -27,27 +27,29 @@ of the following fields:
 9.   pid
 10.   raw (the raw event data forwarded from the device)
 
-The topic title can consist of any of the combination of above fields,
-but the topic has to start with ‘jnpr/syslog’.
-So, we can have different combinations:
- - jnpr/syslog/hostip/daemon/event
- - jnpr/syslog/daemon/severity
+The topic title can consist of any of the combination of above fields, but the
+topic has to start with ``jnpr/syslog``. Here are a couple example
+combinations:
+
+- jnpr/syslog/hostip/daemon/event
+- jnpr/syslog/daemon/severity
 
 The corresponding dynamic topic sent on salt event bus would look something like:
 
- - jnpr/syslog/1.1.1.1/mgd/UI_COMMIT_COMPLETED
- - jnpr/syslog/sshd/7
-The default topic title is ‘jnpr/syslog/hostname/event’.
+- jnpr/syslog/1.1.1.1/mgd/UI_COMMIT_COMPLETED
+- jnpr/syslog/sshd/7
 
-The user can choose the type of data he/she wants of the event bus.
-Like, if one wants only events pertaining to a particular daemon, he/she can
-specify that in the configuration file:
+The default topic title is ``jnpr/syslog/hostname/event``.
+
+One can choose the type of data they want from the event bus. For example, if
+one wants only events pertaining to a particular daemon, this can be specified
+in the configuration file:
 
 .. code-block:: yaml
 
     daemon: mgd
 
-One can even have a list of daemons like:
+One can even have a list of daemons:
 
 .. code-block:: yaml
 
@@ -70,24 +72,24 @@ Example configuration (to be written in master config file)
 For junos_syslog engine to receive events, syslog must be set on the junos device.
 This can be done via following configuration:
 
-.. code-block:: shell
+.. code-block:: text
 
     set system syslog host <ip-of-the-salt-device> port 516 any any
 
 Below is a sample syslog event which is received from the junos device:
 
-.. code-block:: shell
+.. code-block:: text
 
-    '<30>May 29 05:18:12 bng-ui-vm-9 mspd[1492]: No chassis configuration found'
+    <30>May 29 05:18:12 bng-ui-vm-9 mspd[1492]: No chassis configuration found
 
 The source for parsing the syslog messages is taken from:
 https://gist.github.com/leandrosilva/3651640#file-xlog-py
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import re
-from time import strftime
 import logging
+import time
 
 try:
     from twisted.internet.protocol import DatagramProtocol
@@ -102,8 +104,11 @@ except ImportError:
     class DatagramProtocol(object):
         pass
 
-from salt.utils import event
-from salt.ext.six import moves
+import salt.utils.event as event
+
+# Import 3rd-party libs
+from salt.ext import six
+from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
 # logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
@@ -175,7 +180,7 @@ class _Parser(object):
             payload["priority"] = int(parsed[0])
             payload["severity"] = payload["priority"] & 0x07
             payload["facility"] = payload["priority"] >> 3
-            payload["timestamp"] = strftime("%Y-%m-%d %H:%M:%S")
+            payload["timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S")
             payload["hostname"] = parsed[4]
             payload["daemon"] = 'unknown'
             payload["message"] = parsed[5]
@@ -187,7 +192,7 @@ class _Parser(object):
             payload["priority"] = int(parsed[0])
             payload["severity"] = payload["priority"] & 0x07
             payload["facility"] = payload["priority"] >> 3
-            payload["timestamp"] = strftime("%Y-%m-%d %H:%M:%S")
+            payload["timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S")
             payload["hostname"] = parsed[4]
             payload["daemon"] = parsed[5]
             payload["message"] = parsed[6]
@@ -202,7 +207,7 @@ class _Parser(object):
             payload["priority"] = int(parsed[0])
             payload["severity"] = payload["priority"] & 0x07
             payload["facility"] = payload["priority"] >> 3
-            payload["timestamp"] = strftime("%Y-%m-%d %H:%M:%S")
+            payload["timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S")
             payload["hostname"] = parsed[4]
             payload["daemon"] = parsed[5]
             payload["pid"] = parsed[6]
@@ -220,7 +225,7 @@ class _Parser(object):
             payload["priority"] = int(parsed[1])
             payload["severity"] = payload["priority"] & 0x07
             payload["facility"] = payload["priority"] >> 3
-            payload["timestamp"] = strftime("%Y-%m-%d %H:%M:%S")
+            payload["timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S")
             payload["hostname"] = parsed[5]
             payload["daemon"] = parsed[6]
             payload["pid"] = parsed[7]
@@ -264,7 +269,7 @@ class _SyslogServerFactory(DatagramProtocol):
                     "jnpr/syslog". Using the default topic.')
                 self.title = ['jnpr', 'syslog', 'hostname', 'event']
             else:
-                for i in moves.range(2, len(topics)):
+                for i in range(2, len(topics)):
                     if topics[i] not in data:
                         log.debug(
                             'Please check the topic specified. \
@@ -299,19 +304,20 @@ class _SyslogServerFactory(DatagramProtocol):
         data = self.obj.parse(data)
         data['hostip'] = host
         log.debug(
-            'Junos Syslog - received {0} from {1}, \
-            sent from port {2}'.format(data, host, port))
+            'Junos Syslog - received %s from %s, sent from port %s',
+            data, host, port
+        )
 
         send_this_event = True
         for key in options:
             if key in data:
-                if isinstance(options[key], (str, int)):
-                    if str(options[key]) != str(data[key]):
+                if isinstance(options[key], (six.string_types, int)):
+                    if six.text_type(options[key]) != six.text_type(data[key]):
                         send_this_event = False
                         break
                 elif isinstance(options[key], list):
                     for opt in options[key]:
-                        if str(opt) == str(data[key]):
+                        if six.text_type(opt) == six.text_type(data[key]):
                             break
                     else:
                         send_this_event = False
@@ -328,11 +334,12 @@ class _SyslogServerFactory(DatagramProtocol):
             if 'event' in data:
                 topic = 'jnpr/syslog'
 
-                for i in moves.range(2, len(self.title)):
-                    topic += '/' + str(data[self.title[i]])
+                for i in range(2, len(self.title)):
+                    topic += '/' + six.text_type(data[self.title[i]])
                     log.debug(
-                        'Junos Syslog - sending this event on the bus: \
-                        {0} from {1}'.format(data, host))
+                        'Junos Syslog - sending this event on the bus: %s from %s',
+                        data, host
+                    )
                 result = {'send': True, 'data': data, 'topic': topic}
                 return result
             else:
@@ -383,6 +390,6 @@ class _SyslogServerFactory(DatagramProtocol):
 
 def start(port=516, **kwargs):
 
-    log.info('Starting junos syslog engine (port {0})'.format(port))
+    log.info('Starting junos syslog engine (port %s)', port)
     reactor.listenUDP(port, _SyslogServerFactory(kwargs))
     reactor.run()

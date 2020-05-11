@@ -1,21 +1,24 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import shutil
 import tempfile
+import textwrap
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ShellCase
-from tests.support.paths import TMP
 from tests.support.mixins import ShellCaseCommonTestsMixin
 
 # Import 3rd-party libs
-import yaml
+from salt.ext import six
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.files
+import salt.utils.platform
+import salt.utils.yaml
 
 USERA = 'saltdev'
 USERA_PWD = 'saltdev'
@@ -36,11 +39,11 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         try:
             add_user = self.run_call('user.add {0} createhome=False'.format(USERA))
             add_pwd = self.run_call('shadow.set_password {0} \'{1}\''.format(USERA,
-                                    USERA_PWD if salt.utils.is_darwin() else HASHED_USERA_PWD))
+                                    USERA_PWD if salt.utils.platform.is_darwin() else HASHED_USERA_PWD))
             self.assertTrue(add_user)
             self.assertTrue(add_pwd)
             user_list = self.run_call('user.list_users')
-            self.assertIn(USERA, str(user_list))
+            self.assertIn(USERA, six.text_type(user_list))
         except AssertionError:
             self.run_call('user.delete {0} remove=True'.format(USERA))
             self.skipTest(
@@ -55,6 +58,36 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         for user in user_list:
             if USERA in user:
                 self.run_call('user.delete {0} remove=True'.format(USERA))
+
+    def test_remove_key(self):
+        '''
+        test salt-key -d usage
+        '''
+        min_name = 'minibar'
+        pki_dir = self.master_opts['pki_dir']
+        key = os.path.join(pki_dir, 'minions', min_name)
+
+        with salt.utils.files.fopen(key, 'w') as fp:
+            fp.write(textwrap.dedent('''\
+                     -----BEGIN PUBLIC KEY-----
+                     MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoqIZDtcQtqUNs0wC7qQz
+                     JwFhXAVNT5C8M8zhI+pFtF/63KoN5k1WwAqP2j3LquTG68WpxcBwLtKfd7FVA/Kr
+                     OF3kXDWFnDi+HDchW2lJObgfzLckWNRFaF8SBvFM2dys3CGSgCV0S/qxnRAjrJQb
+                     B3uQwtZ64ncJAlkYpArv3GwsfRJ5UUQnYPDEJwGzMskZ0pHd60WwM1gMlfYmNX5O
+                     RBEjybyNpYDzpda6e6Ypsn6ePGLkP/tuwUf+q9wpbRE3ZwqERC2XRPux+HX2rGP+
+                     mkzpmuHkyi2wV33A9pDfMgRHdln2CLX0KgfRGixUQhW1o+Kmfv2rq4sGwpCgLbTh
+                     NwIDAQAB
+                     -----END PUBLIC KEY-----
+                     '''))
+
+        check_key = self.run_key('-p {0}'.format(min_name))
+        self.assertIn('Accepted Keys:', check_key)
+        self.assertIn('minibar:  -----BEGIN PUBLIC KEY-----', check_key)
+
+        remove_key = self.run_key('-d {0} -y'.format(min_name))
+
+        check_key = self.run_key('-p {0}'.format(min_name))
+        self.assertEqual([], check_key)
 
     def test_list_accepted_args(self):
         '''
@@ -82,14 +115,6 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
                 'Unaccepted Keys:',
                 'Rejected Keys:'
             ]
-        elif self.master_opts['transport'] == 'raet':
-            expect = [
-                'Accepted Keys:',
-                'minion',
-                'sub_minion',
-                'Unaccepted Keys:',
-                'Rejected Keys:'
-            ]
         self.assertEqual(data, expect)
 
     def test_list_json_out(self):
@@ -99,8 +124,8 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         data = self.run_key('-L --out json')
         ret = {}
         try:
-            import json
-            ret = json.loads('\n'.join(data))
+            import salt.utils.json
+            ret = salt.utils.json.loads('\n'.join(data))
         except ValueError:
             pass
 
@@ -110,10 +135,6 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
                       'minions_denied': [],
                       'minions_pre': [],
                       'minions': ['minion', 'sub_minion']}
-        elif self.master_opts['transport'] == 'raet':
-            expect = {'accepted': ['minion', 'sub_minion'],
-                      'rejected': [],
-                      'pending': []}
         self.assertEqual(ret, expect)
 
     def test_list_yaml_out(self):
@@ -123,8 +144,8 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         data = self.run_key('-L --out yaml')
         ret = {}
         try:
-            import yaml
-            ret = yaml.load('\n'.join(data))
+            import salt.utils.yaml
+            ret = salt.utils.yaml.safe_load('\n'.join(data))
         except Exception:
             pass
 
@@ -134,10 +155,6 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
                       'minions_denied': [],
                       'minions_pre': [],
                       'minions': ['minion', 'sub_minion']}
-        elif self.master_opts['transport'] == 'raet':
-            expect = {'accepted': ['minion', 'sub_minion'],
-                      'rejected': [],
-                      'pending': []}
         self.assertEqual(ret, expect)
 
     def test_list_raw_out(self):
@@ -160,10 +177,6 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
                       'minions_denied': [],
                       'minions_pre': [],
                       'minions': ['minion', 'sub_minion']}
-        elif self.master_opts['transport'] == 'raet':
-            expect = {'accepted': ['minion', 'sub_minion'],
-                      'rejected': [],
-                      'pending': []}
         self.assertEqual(ret, expect)
 
     def test_list_acc(self):
@@ -199,8 +212,8 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         test salt-key -l with wrong eauth
         '''
         data = self.run_key('-l acc --eauth wrongeauth --username {0} --password {1}'.format(USERA, USERA_PWD))
-        expect = ['The specified external authentication system "wrongeauth" is not available']
-        self.assertEqual(data, expect)
+        expect = r"^The specified external authentication system \"wrongeauth\" is not available\tAvailable eauth types: auto, .*"
+        self.assertRegex("\t".join(data), expect)
 
     def test_list_un(self):
         '''
@@ -211,57 +224,56 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         self.assertEqual(data, expect)
 
     def test_keys_generation(self):
-        tempdir = tempfile.mkdtemp(dir=TMP)
+        tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         arg_str = '--gen-keys minibar --gen-keys-dir {0}'.format(tempdir)
         self.run_key(arg_str)
         try:
             key_names = None
             if self.master_opts['transport'] in ('zeromq', 'tcp'):
                 key_names = ('minibar.pub', 'minibar.pem')
-            elif self.master_opts['transport'] == 'raet':
-                key_names = ('minibar.key',)
             for fname in key_names:
                 self.assertTrue(os.path.isfile(os.path.join(tempdir, fname)))
         finally:
+            for dirname, dirs, files in os.walk(tempdir):
+                for filename in files:
+                    os.chmod(os.path.join(dirname, filename), 0o700)
             shutil.rmtree(tempdir)
 
     def test_keys_generation_keysize_minmax(self):
-        tempdir = tempfile.mkdtemp(dir=TMP)
+        tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         arg_str = '--gen-keys minion --gen-keys-dir {0}'.format(tempdir)
         try:
             data, error = self.run_key(
                 arg_str + ' --keysize=1024', catch_stderr=True
             )
             self.assertIn(
-                'salt-key: error: The minimum value for keysize is 2048', error
+                'error: The minimum value for keysize is 2048', '\n'.join(error)
             )
 
             data, error = self.run_key(
                 arg_str + ' --keysize=32769', catch_stderr=True
             )
             self.assertIn(
-                'salt-key: error: The maximum value for keysize is 32768',
-                error
+                'error: The maximum value for keysize is 32768',
+                '\n'.join(error)
             )
         finally:
             shutil.rmtree(tempdir)
 
     def test_issue_7754(self):
         old_cwd = os.getcwd()
-        config_dir = os.path.join(TMP, 'issue-7754')
+        config_dir = os.path.join(RUNTIME_VARS.TMP, 'issue-7754')
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir)
 
         os.chdir(config_dir)
 
         config_file_name = 'master'
-        with salt.utils.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
-            config = yaml.load(fhr.read())
+        with salt.utils.files.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
+            config = salt.utils.yaml.safe_load(fhr)
             config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
-            with salt.utils.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
-                fhw.write(
-                    yaml.dump(config, default_flow_style=False)
-                )
+            with salt.utils.files.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
+                salt.utils.yaml.safe_dump(config, fhw, default_flow_style=False)
         ret = self.run_script(
             self._call_binary_,
             '--config-dir {0} -L'.format(

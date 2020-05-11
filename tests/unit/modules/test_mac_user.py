@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
+    :codeauthor: Nicole Thomas <nicole@saltstack.com>
 '''
-
 # Import python libs
-from __future__ import absolute_import
-import pwd
+from __future__ import absolute_import, unicode_literals, print_function
+HAS_PWD = True
+try:
+    import pwd
+except ImportError:
+    HAS_PWD = False
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -17,6 +20,7 @@ import salt.modules.mac_user as mac_user
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 
+@skipIf(not HAS_PWD, "Missing required library 'pwd'")
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class MacUserTestCase(TestCase, LoaderModuleMockMixin):
     '''
@@ -26,14 +30,15 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {mac_user: {}}
 
-    mock_pwall = [pwd.struct_passwd(('_amavisd', '*', 83, 83, 'AMaViS Daemon',
-                                    '/var/virusmails', '/usr/bin/false')),
-                  pwd.struct_passwd(('_appleevents', '*', 55, 55,
-                                     'AppleEvents Daemon',
-                                    '/var/empty', '/usr/bin/false')),
-                  pwd.struct_passwd(('_appowner', '*', 87, 87,
-                                     'Application Owner',
-                                     '/var/empty', '/usr/bin/false'))]
+    if HAS_PWD:
+        mock_pwall = [pwd.struct_passwd(('_amavisd', '*', 83, 83, 'AMaViS Daemon',
+                                        '/var/virusmails', '/usr/bin/false')),
+                      pwd.struct_passwd(('_appleevents', '*', 55, 55,
+                                         'AppleEvents Daemon',
+                                        '/var/empty', '/usr/bin/false')),
+                      pwd.struct_passwd(('_appowner', '*', 87, 87,
+                                         'Application Owner',
+                                         '/var/empty', '/usr/bin/false'))]
     mock_info_ret = {'shell': '/bin/bash', 'name': 'test', 'gid': 4376,
                      'groups': ['TEST_GROUP'], 'home': '/Users/foo',
                      'fullname': 'TEST USER', 'uid': 4376}
@@ -307,6 +312,11 @@ class MacUserTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests the list of all users
         '''
-        with patch('pwd.getpwall', MagicMock(return_value=self.mock_pwall)):
-            ret = ['_amavisd', '_appleevents', '_appowner']
-            self.assertEqual(mac_user.list_users(), ret)
+        expected = ['spongebob', 'patrick', 'squidward']
+        mock_run = MagicMock(return_value={'pid': 4948,
+                                           'retcode': 0,
+                                           'stderr': '',
+                                           'stdout': '\n'.join(expected)})
+        with patch.dict(mac_user.__grains__, {'osrelease_info': (10, 9, 1)}), \
+                patch.dict(mac_user.__salt__, {'cmd.run_all': mock_run}):
+            self.assertEqual(mac_user.list_users(), expected)

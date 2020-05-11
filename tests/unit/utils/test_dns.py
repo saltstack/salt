@@ -2,10 +2,11 @@
 '''
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Python
 import socket
+import textwrap
 from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
 
 # Salt
@@ -14,15 +15,12 @@ from salt.utils.odict import OrderedDict
 import salt.utils.dns
 from salt.utils.dns import _to_port, _tree, _weighted_order, _data2rec, _data2rec_group
 from salt.utils.dns import _lookup_gai, _lookup_dig, _lookup_drill, _lookup_host, _lookup_nslookup
+from salt.utils.dns import lookup
+import salt.modules.cmdmod
 
 # Testing
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-
-
-# Debug
-import pprint
-ppr = pprint.PrettyPrinter(indent=2).pprint
 
 
 class DNShelpersCase(TestCase):
@@ -40,13 +38,17 @@ class DNShelpersCase(TestCase):
         test_map = (
             'ex1.nl',
             'o.1.example.eu',
-            'a1a.b2b.c3c.example.com'
+            'a1a.b2b.c3c.example.com',
+            'c3c.example.co.uk',
+            'c3c.example.mil.ng',
         )
 
         res_map = (
             ['ex1.nl'],
             ['o.1.example.eu', '1.example.eu', 'example.eu'],
-            ['a1a.b2b.c3c.example.com', 'b2b.c3c.example.com', 'c3c.example.com', 'example.com']
+            ['a1a.b2b.c3c.example.com', 'b2b.c3c.example.com', 'c3c.example.com', 'example.com'],
+            ['c3c.example.co.uk', 'example.co.uk'],
+            ['c3c.example.mil.ng', 'example.mil.ng']
         )
 
         for domain, result in zip(test_map, res_map):
@@ -69,7 +71,9 @@ class DNShelpersCase(TestCase):
         ]
 
         # What are the odds of this tripping over a build
+        # 1/(8!^4) builds?
         self.assertNotEqual(
+            _weighted_order(list(recs[-1])),
             _weighted_order(list(recs[-1])),
             _weighted_order(list(recs[-1]))
         )
@@ -101,7 +105,7 @@ class DNShelpersCase(TestCase):
         ]
 
         results = [
-            {'address': ipaddress.IPv4Address(right[0])},
+            ipaddress.IPv4Address(right[0]),
             {'preference': 10, 'name': 'mbox.example.com'},
             {'prio': 10, 'weight': 20, 'port': 30, 'name': 'example.com'}
         ]
@@ -111,7 +115,7 @@ class DNShelpersCase(TestCase):
 
         wrong = [
             'not-an-ip',
-            '10 20 30 toomany.example.com',
+            'hundred 20 30 interror.example.com',
             '10 toolittle.example.com',
         ]
 
@@ -136,11 +140,11 @@ class DNShelpersCase(TestCase):
             ))
 
         results = [
-            OrderedDict([(10, [{'srvr': 'mbox.example.com'}])]),
+            OrderedDict([(10, ['mbox.example.com'])]),
             OrderedDict([
-                (10, [{'srvr': 'mbox1.example.com'}]),
-                (20, [{'srvr': 'mbox2.example.com'}, {'srvr': 'mbox3.example.com'}]),
-                (30, [{'srvr': 'mbox4.example.com'}, {'srvr': 'mbox5.example.com'}, {'srvr': 'mbox6.example.com'}])]
+                (10, ['mbox1.example.com']),
+                (20, ['mbox2.example.com', 'mbox3.example.com']),
+                (30, ['mbox4.example.com', 'mbox5.example.com', 'mbox6.example.com'])]
             ),
         ]
 
@@ -159,9 +163,9 @@ class DNSlookupsCase(TestCase):
     only nslookup is bad enough to be an exception to that
 
     a lookup function
-        - raises ValueError when an incorrect DNS type is given
-        - returns False upon error
-        - returns [*record-data] upon succes/no records
+    - raises ValueError when an incorrect DNS type is given
+    - returns False upon error
+    - returns [*record-data] upon succes/no records
 
     '''
     CMD_RET = {
@@ -182,12 +186,23 @@ class DNSlookupsCase(TestCase):
              '2a00:a00:b01:c02:d03:e04:f05:222',
              '2a00:a00:b01:c02:d03:e04:f05:333']   # multi-match
         ],
+        'CAA': [
+            ['0 issue "exampleca.com"', '0 iodef "mailto:sslabuse@example.com"'],
+        ],
         'CNAME': [
             ['web.example.com.']
         ],
         'MX': [
             ['10 mx1.example.com.'],
             ['10 mx1.example.com.', '20 mx2.example.eu.', '30 mx3.example.nl.']
+        ],
+        'SSHFP': [
+            [
+              '1 1 0aabda8af5418108e8a5d3f90f207226b2c89fbe',
+              '1 2 500ca871d8e255e01f1261a2370c4e5406b8712f19916d3ab9f86344a67e5597',
+              '3 1 a3b605ce6f044617c6077c46a7cd5d17a767f0d5',
+              '4 2 0360d0a5a2fa550f972259e7374533add7ac8e5f303322a5b8e208bbc859ab1b'
+            ]
         ],
         'TXT': [
             ['v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all']
@@ -217,7 +232,6 @@ class DNSlookupsCase(TestCase):
             cmd_mock = MagicMock(
                 return_value=test_res
             )
-
         return patch.dict(salt.utils.dns.__salt__, {'cmd.run_all': cmd_mock}, clear=True)
 
     def _test_cmd_lookup(self, lookup_cb, wrong_type, wrong, right, empty=None, secure=None):
@@ -248,12 +262,19 @@ class DNSlookupsCase(TestCase):
         for rec_t, tests in right.items():
             with self._mock_cmd_ret([dict([('stdout', dres)]) for dres in tests]):
                 for test_res in self.RESULTS[rec_t]:
-                    if rec_t in ('A', 'AAAA', 'CNAME'):
+                    if rec_t in ('A', 'AAAA', 'CNAME', 'SSHFP'):
                         rec = 'mocksrvr.example.com'
                     else:
                         rec = 'example.com'
+
+                    lookup_res = lookup_cb(rec, rec_t)
+                    if rec_t == 'SSHFP':
+                        # Some resolvers 'split' the output and/or capitalize differently.
+                        # So we need to workaround that here as well
+                        lookup_res = [res[:4] + res[4:].replace(' ', '').lower() for res in lookup_res]
+
                     self.assertEqual(
-                        lookup_cb(rec, rec_t), test_res,
+                        lookup_res, test_res,
                         # msg='Error parsing {0} returns'.format(rec_t)
                     )
 
@@ -277,6 +298,52 @@ class DNSlookupsCase(TestCase):
                         msg='Error parsing DNSSEC\'d {0} returns'.format(rec_t)
                     )
 
+    def test_lookup_with_servers(self):
+        rights = {
+            'A': [
+                'Name:\tmocksrvr.example.com\nAddress: 10.1.1.1',
+                'Name:\tmocksrvr.example.com\nAddress: 10.1.1.1\n'
+                'Name:\tweb.example.com\nAddress: 10.2.2.2\n'
+                'Name:\tweb.example.com\nAddress: 10.3.3.3'
+            ],
+            'AAAA': [
+                'mocksrvr.example.com\thas AAAA address 2a00:a00:b01:c02:d03:e04:f05:111',
+                'mocksrvr.example.com\tcanonical name = web.example.com.\n'
+                'web.example.com\thas AAAA address 2a00:a00:b01:c02:d03:e04:f05:111\n'
+                'web.example.com\thas AAAA address 2a00:a00:b01:c02:d03:e04:f05:222\n'
+                'web.example.com\thas AAAA address 2a00:a00:b01:c02:d03:e04:f05:333'
+            ],
+            'CNAME': [
+                'mocksrvr.example.com\tcanonical name = web.example.com.'
+            ],
+            'MX':    [
+                'example.com\tmail exchanger = 10 mx1.example.com.',
+                'example.com\tmail exchanger = 10 mx1.example.com.\n'
+                'example.com\tmail exchanger = 20 mx2.example.eu.\n'
+                'example.com\tmail exchanger = 30 mx3.example.nl.'
+            ],
+            'TXT':   [
+                'example.com\ttext = "v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
+            ]
+        }
+
+        for rec_t, tests in rights.items():
+            with self._mock_cmd_ret([dict([('stdout', dres)]) for dres in tests]):
+                for test_res in self.RESULTS[rec_t]:
+                    if rec_t in ('A', 'AAAA', 'CNAME'):
+                        rec = 'mocksrvr.example.com'
+                    else:
+                        rec = 'example.com'
+                    self.assertEqual(
+                        lookup(rec, rec_t, method='nslookup', servers='8.8.8.8'), test_res,
+                    )
+
+    @skipIf(not salt.utils.dns.HAS_DIG, 'dig is not available')
+    def test_dig_options(self):
+        cmd = 'dig {0} -v'.format(salt.utils.dns.DIG_OPTIONS)
+        cmd = salt.modules.cmdmod.retcode(cmd, python_shell=False, output_loglevel='quiet')
+        self.assertEqual(cmd, 0)
+
     def test_dig(self):
         wrong_type = {'retcode': 0, 'stderr':  ';; Warning, ignoring invalid type ABC'}
 
@@ -284,14 +351,13 @@ class DNSlookupsCase(TestCase):
             {'retcode': 9, 'stderr':  ';; connection timed out; no servers could be reached'},
         ]
 
-        # example returns for dig
+        # example returns for dig +search +fail +noall +answer +noclass +nosplit +nottl -t {rtype} {name}
         rights = {
             'A': [
                 'mocksrvr.example.com.\tA\t10.1.1.1',
                 'web.example.com.\t\tA\t10.1.1.1\n'
                 'web.example.com.\t\tA\t10.2.2.2\n'
                 'web.example.com.\t\tA\t10.3.3.3'
-
             ],
             'AAAA': [
                 'mocksrvr.example.com.\tA\t2a00:a00:b01:c02:d03:e04:f05:111',
@@ -300,12 +366,22 @@ class DNSlookupsCase(TestCase):
                 'web.example.com.\t\tAAAA\t2a00:a00:b01:c02:d03:e04:f05:222\n'
                 'web.example.com.\t\tAAAA\t2a00:a00:b01:c02:d03:e04:f05:333'
             ],
+            'CAA': [
+                'example.com.\t\tCAA\t0 issue "exampleca.com"\n'
+                'example.com.\t\tCAA\t0 iodef "mailto:sslabuse@example.com"'
+            ],
             'CNAME': [
                 'mocksrvr.example.com.\tCNAME\tweb.example.com.'
             ],
             'MX': [
                 'example.com.\t\tMX\t10 mx1.example.com.',
                 'example.com.\t\tMX\t10 mx1.example.com.\nexample.com.\t\tMX\t20 mx2.example.eu.\nexample.com.\t\tMX\t30 mx3.example.nl.'
+            ],
+            'SSHFP': [
+                'mocksrvr.example.com.\tSSHFP\t1 1 0AABDA8AF5418108E8A5D3F90F207226B2C89FBE\n'
+                'mocksrvr.example.com.\tSSHFP\t1 2 500CA871D8E255E01F1261A2370C4E5406B8712F19916D3AB9F86344A67E5597\n'
+                'mocksrvr.example.com.\tSSHFP\t3 1 A3B605CE6F044617C6077C46A7CD5D17A767F0D5\n'
+                'mocksrvr.example.com.\tSSHFP\t4 2 0360D0A5A2FA550F972259E7374533ADD7AC8E5F303322A5B8E208BBC859AB1B'
             ],
             'TXT': [
                 'example.com.\tTXT\t"v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
@@ -320,7 +396,6 @@ class DNSlookupsCase(TestCase):
                 'web.example.com.\t\tA\t10.2.2.2\n'
                 'web.example.com.\t\tA\t10.3.3.3\n'
                 'web.example.com.\tRRSIG\tA 8 3 7200 20170420000000 20170330000000 1629 example.com. Hv4p37EF55LKBxUNYpnhWiEYqfmMct0z0WgDJyG5reqYfl+z4HX/kaoi Wr2iCYuYeB4Le7BgnMSb77UGHPWE7lCQ8z5gkgJ9rCDrooJzSTVdnHfw 1JQ7txRSp8Rj2GLf/L3Ytuo6nNZTV7bWUkfhOs61DAcOPHYZiX8rVhIh UAE='
-
             ]
         }
 
@@ -328,23 +403,24 @@ class DNSlookupsCase(TestCase):
 
     def test_drill(self):
         # all Drill returns look like this
-        RES_TMPL = ''';; ->>HEADER<<- opcode: QUERY, rcode: NOERROR, id: 58233
-;; flags: qr rd ra ; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
-;; QUESTION SECTION:
-;; mocksrvr.example.com.	IN	A
+        RES_TMPL = textwrap.dedent('''\
+            ;; ->>HEADER<<- opcode: QUERY, rcode: NOERROR, id: 58233
+            ;; flags: qr rd ra ; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+            ;; QUESTION SECTION:
+            ;; mocksrvr.example.com.\tIN\tA
 
-;; ANSWER SECTION:
-{}
+            ;; ANSWER SECTION:
+            {}
 
-;; AUTHORITY SECTION:
+            ;; AUTHORITY SECTION:
 
-;; ADDITIONAL SECTION:
+            ;; ADDITIONAL SECTION:
 
-;; Query time: 37 msec
-;; SERVER: 10.100.150.129
-;; WHEN: Tue Apr  4 19:03:51 2017
-;; MSG SIZE  rcvd: 50
-'''
+            ;; Query time: 37 msec
+            ;; SERVER: 10.100.150.129
+            ;; WHEN: Tue Apr  4 19:03:51 2017
+            ;; MSG SIZE  rcvd: 50
+        ''')
 
         # Not even a different retcode!?
         wrong_type = {'stdout': RES_TMPL.format('mocksrvr.example.com.\t4404\tIN\tA\t10.1.1.1\n')}
@@ -353,6 +429,7 @@ class DNSlookupsCase(TestCase):
             {'retcode': 1, 'stderr':  'Error: error sending query: No (valid) nameservers defined in the resolver'}
         ]
 
+        # example returns for drill {rtype} {name}
         rights = {
             'A': [
                 'mocksrvr.example.com.\t4404\tIN\tA\t10.1.1.1\n',
@@ -367,6 +444,10 @@ class DNSlookupsCase(TestCase):
                 'web.example.com.\t4404\tIN\tAAAA\t2a00:a00:b01:c02:d03:e04:f05:222\n'
                 'web.example.com.\t4404\tIN\tAAAA\t2a00:a00:b01:c02:d03:e04:f05:333'
             ],
+            'CAA': [
+                'example.com.\t1144\tIN\tCAA\t0 issue "exampleca.com"\n'
+                'example.com.\t1144\tIN\tCAA\t0 iodef "mailto:sslabuse@example.com"'
+            ],
             'CNAME': [
                 'mocksrvr.example.com.\t4404\tIN\tCNAME\tweb.example.com.'
             ],
@@ -375,6 +456,12 @@ class DNSlookupsCase(TestCase):
                 'example.com.\t4404\tIN\tMX\t10 mx1.example.com.\n'
                 'example.com.\t4404\tIN\tMX\t20 mx2.example.eu.\n'
                 'example.com.\t4404\tIN\tMX\t30 mx3.example.nl.'
+            ],
+            'SSHFP': [
+                'mocksrvr.example.com.\t3339\tIN\tSSHFP\t1 1 0aabda8af5418108e8a5d3f90f207226b2c89fbe\n'
+                'mocksrvr.example.com.\t3339\tIN\tSSHFP\t1 2 500ca871d8e255e01f1261a2370c4e5406b8712f19916d3ab9f86344a67e5597\n'
+                'mocksrvr.example.com.\t3339\tIN\tSSHFP\t3 1 a3b605ce6f044617c6077c46a7cd5d17a767f0d5\n'
+                'mocksrvr.example.com.\t3339\tIN\tSSHFP\t4 2 0360d0a5a2fa550f972259e7374533add7ac8e5f303322a5b8e208bbc859ab1b'
             ],
             'TXT': [
                 'example.com.\t4404\tIN\tTXT\t"v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
@@ -407,7 +494,7 @@ class DNSlookupsCase(TestCase):
         # wrong
         with patch.object(socket, 'getaddrinfo', MagicMock(side_effect=socket.gaierror)):
             for rec_t in ('A', 'AAAA'):
-                self.assertEqual(_lookup_gai('mockq', rec_t), False)
+                self.assertEqual(False, _lookup_gai('mockq', rec_t))
 
         # example returns from getaddrinfo
         right = {
@@ -442,14 +529,13 @@ class DNSlookupsCase(TestCase):
 
         empty = {'stdout': 'www.example.com has no MX record'}
 
-        # example returns for dig
+        # example returns for host -t {rdtype} {name}
         rights = {
             'A':     [
                 'mocksrvr.example.com has address 10.1.1.1',
-                'web.example.com  has address 10.1.1.1\n'
-                'web.example.com  has address 10.2.2.2\n'
-                'web.example.com  has address 10.3.3.3'
-
+                'web.example.com has address 10.1.1.1\n'
+                'web.example.com has address 10.2.2.2\n'
+                'web.example.com has address 10.3.3.3'
             ],
             'AAAA':  [
                 'mocksrvr.example.com has IPv6 address 2a00:a00:b01:c02:d03:e04:f05:111',
@@ -457,6 +543,10 @@ class DNSlookupsCase(TestCase):
                 'web.example.com has IPv6 address 2a00:a00:b01:c02:d03:e04:f05:111\n'
                 'web.example.com has IPv6 address 2a00:a00:b01:c02:d03:e04:f05:222\n'
                 'web.example.com has IPv6 address 2a00:a00:b01:c02:d03:e04:f05:333'
+            ],
+            'CAA': [
+                'example.com has CAA record 0 issue "exampleca.com"\n'
+                'example.com has CAA record 0 iodef "mailto:sslabuse@example.com"'
             ],
             'CNAME': [
                 'mocksrvr.example.com is an alias for web.example.com.'
@@ -467,6 +557,12 @@ class DNSlookupsCase(TestCase):
                 'example.com mail is handled by 20 mx2.example.eu.\n'
                 'example.com mail is handled by 30 mx3.example.nl.'
             ],
+            'SSHFP': [
+                'mocksrvr.example.com has SSHFP record 1 1 0AABDA8AF5418108E8A5D3F90F207226B2C89FBE\n'
+                'mocksrvr.example.com has SSHFP record 1 2 500CA871D8E255E01F1261A2370C4E5406B8712F19916D3AB9F86344 A67E5597\n'
+                'mocksrvr.example.com has SSHFP record 3 1 A3B605CE6F044617C6077C46A7CD5D17A767F0D5\n'
+                'mocksrvr.example.com has SSHFP record 4 2 0360D0A5A2FA550F972259E7374533ADD7AC8E5F303322A5B8E208BB C859AB1B'
+            ],
             'TXT':   [
                 'example.com descriptive text "v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
             ]
@@ -474,13 +570,17 @@ class DNSlookupsCase(TestCase):
 
         self._test_cmd_lookup(_lookup_host, wrong_type=wrong_type, wrong=wrongs, right=rights, empty=empty)
 
-    def test_dnspython(self):
-
-        pass
-
     def test_nslookup(self):
         # all nslookup returns look like this
-        RES_TMPL = 'Server:\t\t10.11.12.13\nAddress:\t10.11.12.13#53\n\nNon-authoritative answer:\n{}\n\nAuthoritative answers can be found from:'
+        RES_TMPL = textwrap.dedent('''\
+            Server:\t\t10.11.12.13
+            Address:\t10.11.12.13#53
+
+            Non-authoritative answer:
+            {}
+
+            Authoritative answers can be found from:
+        ''')
 
         wrong_type = {'stdout': 'unknown query type: WRONG' +
                                 RES_TMPL.format('Name:\tmocksrvr.example.com\nAddress: 10.1.1.1')}
@@ -490,8 +590,9 @@ class DNSlookupsCase(TestCase):
         ]
 
         empty = {'stdout': RES_TMPL.format(
-            "*** Can't find www.google.com: No answer\n\nAuthoritative answers can be found from:")}
+            "*** Can't find www.google.com: No answer")}
 
+        # Example returns of nslookup -query={rdype} {name}
         rights = {
             'A': [
                 'Name:\tmocksrvr.example.com\nAddress: 10.1.1.1',
@@ -506,6 +607,10 @@ class DNSlookupsCase(TestCase):
                 'web.example.com\thas AAAA address 2a00:a00:b01:c02:d03:e04:f05:222\n'
                 'web.example.com\thas AAAA address 2a00:a00:b01:c02:d03:e04:f05:333'
             ],
+            'CAA': [
+                'example.com\trdata_257 = 0 issue "exampleca.com"\n'
+                'example.com\trdata_257 = 0 iodef "mailto:sslabuse@example.com"'
+            ],
             'CNAME': [
                 'mocksrvr.example.com\tcanonical name = web.example.com.'
             ],
@@ -515,7 +620,13 @@ class DNSlookupsCase(TestCase):
                 'example.com\tmail exchanger = 20 mx2.example.eu.\n'
                 'example.com\tmail exchanger = 30 mx3.example.nl.'
             ],
-            'TXT':   [
+            'SSHFP': [
+                'mocksrvr.example.com\trdata_44 = 1 1 0AABDA8AF5418108E8A5D3F90F207226B2C89FBE\n'
+                'mocksrvr.example.com\trdata_44 = 1 2 500CA871D8E255E01F1261A2370C4E5406B8712F19916D3AB9F86344 A67E5597\n'
+                'mocksrvr.example.com\trdata_44 = 3 1 A3B605CE6F044617C6077C46A7CD5D17A767F0D5\n'
+                'mocksrvr.example.com\trdata_44 = 4 2 0360D0A5A2FA550F972259E7374533ADD7AC8E5F303322A5B8E208BB C859AB1B'
+            ],
+            'TXT': [
                 'example.com\ttext = "v=spf1 a include:_spf4.example.com include:mail.example.eu ip4:10.0.0.0/8 ip6:2a00:a00:b01::/48 ~all"'
             ]
         }

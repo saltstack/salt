@@ -20,11 +20,12 @@ for the package which provides npm (simply ``npm`` in most cases). Example:
 '''
 
 # Import salt libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+import re
+from salt.ext import six
 
 
 def __virtual__():
@@ -96,7 +97,7 @@ def installed(name,
     pkg_list = pkgs if pkgs else [name]
 
     try:
-        installed_pkgs = __salt__['npm.list'](dir=dir, runas=user, env=env)
+        installed_pkgs = __salt__['npm.list'](dir=dir, runas=user, env=env, depth=0)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
         ret['comment'] = 'Error looking up \'{0}\': {1}'.format(name, err)
@@ -138,8 +139,14 @@ def installed(name,
                     pass
         return False
     for pkg in pkg_list:
-        pkg_name, _, pkg_ver = pkg.partition('@')
-        pkg_name = pkg_name.strip()
+        # Valid:
+        #
+        # @google-cloud/bigquery@^0.9.6
+        # @foobar
+        # buffer-equal-constant-time@1.0.1
+        # coffee-script
+        matches = re.search(r'^(@?[^@\s]+)(?:@(\S+))?', pkg)
+        pkg_name, pkg_ver = matches.group(1), matches.group(2) or None
 
         if force_reinstall is True:
             pkgs_to_install.append(pkg)
@@ -232,7 +239,7 @@ def removed(name, dir=None, user=None):
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     try:
-        installed_pkgs = __salt__['npm.list'](dir=dir)
+        installed_pkgs = __salt__['npm.list'](dir=dir, depth=0)
     except (CommandExecutionError, CommandNotFoundError) as err:
         ret['result'] = False
         ret['comment'] = 'Error uninstalling \'{0}\': {1}'.format(name, err)
@@ -275,9 +282,13 @@ def bootstrap(name, user=None, silent=True):
     if __opts__['test']:
         try:
             call = __salt__['npm.install'](dir=name, runas=user, pkg=None, silent=silent, dry_run=True)
-            ret['result'] = None
-            ret['changes'] = {'old': [], 'new': call}
-            ret['comment'] = '{0} is set to be bootstrapped'.format(name)
+            if call:
+                ret['result'] = None
+                ret['changes'] = {'old': [], 'new': call}
+                ret['comment'] = '{0} is set to be bootstrapped'.format(name)
+            else:
+                ret['result'] = True
+                ret['comment'] = '{0} is already bootstrapped'.format(name)
         except (CommandNotFoundError, CommandExecutionError) as err:
             ret['result'] = False
             ret['comment'] = 'Error Bootstrapping \'{0}\': {1}'.format(name, err)
@@ -296,7 +307,7 @@ def bootstrap(name, user=None, silent=True):
         return ret
 
     # npm.install will return a string if it can't parse a JSON result
-    if isinstance(call, str):
+    if isinstance(call, six.string_types):
         ret['result'] = False
         ret['changes'] = call
         ret['comment'] = 'Could not bootstrap directory'
@@ -309,7 +320,8 @@ def bootstrap(name, user=None, silent=True):
 
 
 def cache_cleaned(name=None,
-                  user=None):
+                  user=None,
+                  force=False):
     '''
     Ensure that the given package is not cached.
 
@@ -320,6 +332,11 @@ def cache_cleaned(name=None,
 
     user
         The user to run NPM with
+
+    force
+        Force cleaning of cache.  Required for npm@5 and greater
+
+        .. versionadded:: 2016.11.6
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     specific_pkg = None

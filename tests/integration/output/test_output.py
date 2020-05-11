@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
+    :codeauthor: Nicole Thomas <nicole@saltstack.com>
 '''
 
 # Import Salt Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import traceback
 
@@ -14,7 +14,9 @@ from tests.support.mixins import RUNTIME_VARS
 
 # Import Salt libs
 import salt.config
+import salt.utils.yaml
 from salt.output import display_output
+from salt.ext import six
 
 
 class OutputReturnTest(ShellCase):
@@ -53,7 +55,7 @@ class OutputReturnTest(ShellCase):
         '''
         Tests the return of pprint-formatted data
         '''
-        expected = ["{'local': True}"]
+        expected = ["{u'local': True}"] if six.PY2 else ["{'local': True}"]
         ret = self.run_call('test.ping --out=pprint')
         self.assertEqual(ret, expected)
 
@@ -61,7 +63,7 @@ class OutputReturnTest(ShellCase):
         '''
         Tests the return of raw-formatted data
         '''
-        expected = ["{'local': True}"]
+        expected = ["{u'local': True}"] if six.PY2 else ["{'local': True}"]
         ret = self.run_call('test.ping --out=raw')
         self.assertEqual(ret, expected)
 
@@ -80,6 +82,20 @@ class OutputReturnTest(ShellCase):
         expected = ['local: true']
         ret = self.run_call('test.ping --out=yaml')
         self.assertEqual(ret, expected)
+
+    def test_output_yaml_namespaced_dict_wrapper(self):
+        '''
+        Tests the ability to dump a NamespacedDictWrapper instance, as used in
+        magic dunders like __grains__ and __pillar__
+
+        See https://github.com/saltstack/salt/issues/49269
+        '''
+        dumped_yaml = '\n'.join(self.run_call('grains.items --out=yaml'))
+        loaded_yaml = salt.utils.yaml.safe_load(dumped_yaml)
+        # We just want to check that the dumped YAML loades as a dict with a
+        # single top-level key, we don't care about the real contents.
+        assert isinstance(loaded_yaml, dict)
+        assert list(loaded_yaml) == ['local']
 
     def test_output_unicodebad(self):
         '''
@@ -109,3 +125,59 @@ class OutputReturnTest(ShellCase):
                     delattr(self, 'maxDiff')
                 else:
                     self.maxDiff = old_max_diff
+
+    def test_output_highstate(self):
+        '''
+        Regression tests for the highstate outputter. Calls a basic state with various
+        flags. Each comparison should be identical when successful.
+        '''
+        # Test basic highstate output. No frills.
+        expected = ['minion:', '          ID: simple-ping', '    Function: module.run',
+                    '        Name: test.ping', '      Result: True',
+                    '     Comment: Module function test.ping executed',
+                    '     Changes:   ', '              ret:', '                  True',
+                    'Summary for minion', 'Succeeded: 1 (changed=1)', 'Failed:    0',
+                    'Total states run:     1']
+        state_run = self.run_salt('"minion" state.sls simple-ping')
+
+        for expected_item in expected:
+            self.assertIn(expected_item, state_run)
+
+        # Test highstate output while also passing --out=highstate.
+        # This is a regression test for Issue #29796
+        state_run = self.run_salt('"minion" state.sls simple-ping --out=highstate')
+
+        for expected_item in expected:
+            self.assertIn(expected_item, state_run)
+
+        # Test highstate output when passing --static and running a state function.
+        # See Issue #44556.
+        state_run = self.run_salt('"minion" state.sls simple-ping --static')
+
+        for expected_item in expected:
+            self.assertIn(expected_item, state_run)
+
+        # Test highstate output when passing --static and --out=highstate.
+        # See Issue #44556.
+        state_run = self.run_salt('"minion" state.sls simple-ping --static --out=highstate')
+
+        for expected_item in expected:
+            self.assertIn(expected_item, state_run)
+
+    def test_output_highstate_falls_back_nested(self):
+        '''
+        Tests outputter when passing --out=highstate with a non-state call. This should
+        fall back to "nested" output.
+        '''
+        expected = ['minion:', '    True']
+        ret = self.run_salt('"minion" test.ping --out=highstate')
+        self.assertEqual(ret, expected)
+
+    def test_static_simple(self):
+        '''
+        Tests passing the --static option with a basic test.ping command. This
+        should be the "nested" output.
+        '''
+        expected = ['minion:', '    True']
+        ret = self.run_salt('"minion" test.ping --static')
+        self.assertEqual(ret, expected)

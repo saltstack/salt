@@ -6,12 +6,13 @@ This module allows you to manage extended attributes on files or directories
 
     salt '*' xattr.list /path/to/file
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python Libs
 import logging
 
 # Import salt libs
+import salt.utils.args
 import salt.utils.mac_utils
 from salt.exceptions import CommandExecutionError
 
@@ -27,7 +28,7 @@ def __virtual__():
     '''
     Only work on Mac OS
     '''
-    if __grains__['os'] in ['MacOS', 'Darwin']:
+    if __grains__.get('os') in ['MacOS', 'Darwin']:
         return __virtualname__
     return False
 
@@ -41,7 +42,7 @@ def list_(path, **kwargs):
     :param bool hex: Return the values with forced hexadecimal values
 
     :return: A dictionary containing extended attributes and values for the
-    given file
+        given file
     :rtype: dict
 
     :raises: CommandExecutionError on file not found or any other unknown error
@@ -53,10 +54,10 @@ def list_(path, **kwargs):
         salt '*' xattr.list /path/to/file
         salt '*' xattr.list /path/to/file hex=True
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     hex_ = kwargs.pop('hex', False)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     cmd = ['xattr', path]
     try:
@@ -92,7 +93,7 @@ def read(path, attribute, **kwargs):
     :rtype: str
 
     :raises: CommandExecutionError on file not found, attribute not found, and
-    any other unknown error
+        any other unknown error
 
     CLI Example:
 
@@ -101,10 +102,10 @@ def read(path, attribute, **kwargs):
         salt '*' xattr.read /path/to/file com.test.attr
         salt '*' xattr.read /path/to/file com.test.attr hex=True
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     hex_ = kwargs.pop('hex', False)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     cmd = ['xattr', '-p']
     if hex_:
@@ -147,10 +148,10 @@ def write(path, attribute, value, **kwargs):
         salt '*' xattr.write /path/to/file "com.test.attr" "value"
 
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     hex_ = kwargs.pop('hex', False)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     cmd = ['xattr', '-w']
     if hex_:
@@ -174,13 +175,13 @@ def delete(path, attribute):
     :param str path: The file(s) to get attributes from
 
     :param str attribute: The attribute name to be deleted from the
-    file/directory
+        file/directory
 
     :return: True if successful, otherwise False
     :rtype: bool
 
     :raises: CommandExecutionError on file not found, attribute not found, and
-    any other unknown error
+        any other unknown error
 
     CLI Example:
 

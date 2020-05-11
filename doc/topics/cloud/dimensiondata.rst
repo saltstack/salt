@@ -2,7 +2,6 @@
 Getting Started With Dimension Data Cloud
 =========================================
 
-
 Dimension Data are a global IT Services company and form part of the NTT Group.
 Dimension Data provide IT-as-a-Service to customers around the globe on their
 cloud platform (Compute as a Service). The CaaS service is available either on
@@ -10,14 +9,15 @@ one of the public cloud instances or as a private instance on premises.
 
 http://cloud.dimensiondata.com/
 
-CaaS has its own non-standard `API`_ , SaltStack provides a 
-wrapper on top of this `API`_ with common methods with other IaaS solutions and
-Public cloud providers. Therefore, you can use the Dimension Data
-module to communicate with both the public and private clouds.
+CaaS has its own non-standard API , SaltStack provides a wrapper on top of this
+API with common methods with other IaaS solutions and Public cloud providers.
+Therefore, you can use the Dimension Data module to communicate with both the
+public and private clouds.
 
 
 Dependencies
 ============
+
 This driver requires the Python ``apache-libcloud`` and ``netaddr`` library to be installed.
 
 
@@ -53,13 +53,14 @@ Possible regions:
       driver: dimensiondata
 
 .. note::
-    .. versionchanged:: 2015.8.0
 
-    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
-    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
-    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
-    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
-    to use ``provider`` to refer to provider configurations that you define.
+    In version 2015.8.0, the ``provider`` parameter in cloud provider
+    definitions was renamed to ``driver``. This change was made to avoid
+    confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the
+    Salt cloud module that provides the underlying functionality to connect to
+    a cloud host, while cloud profiles continue to use ``provider`` to refer to
+    provider configurations that you define.
 
 Profiles
 ========

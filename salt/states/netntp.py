@@ -3,32 +3,35 @@
 Network NTP
 ===========
 
+.. versionadded: 2016.11.0
+
 Manage the configuration of NTP peers and servers on the network devices through the NAPALM proxy.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net> & Jerome Fleury <jf@cloudflare.com>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
 
 Dependencies
 ------------
-- Requires netaddr_ to be installed: `pip install netaddr` to check if IP Addresses are correctly specified
-- Requires dnspython_ to be installed: `pip install dnspython` to resolve the nameserver entities
-(in case the user does not configure the peers/servers using their IP addresses)
+- Requires netaddr_ to be installed: `pip install netaddr` to check if IP
+  Addresses are correctly specified
+- Requires dnspython_ to be installed: `pip install dnspython` to resolve the
+  nameserver entities (in case the user does not configure the peers/servers
+  using their IP addresses)
 - :mod:`NAPALM proxy minion <salt.proxy.napalm>`
 - :mod:`NTP operational and configuration management module <salt.modules.napalm_ntp>`
 
 .. _netaddr: https://pythonhosted.org/netaddr/
 .. _dnspython: http://www.dnspython.org/
-
-.. versionadded: 2016.11.0
 '''
 
-
-from __future__ import absolute_import
-
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
-log = logging.getLogger(__name__)
+
+# Import 3rd-party libs
+from salt.ext import six
 
 # import NAPALM utils
 import salt.utils.napalm
@@ -51,6 +54,8 @@ except ImportError:
 # ----------------------------------------------------------------------------------------------------------------------
 
 __virtualname__ = 'netntp'
+
+log = logging.getLogger(__name__)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # global variables
@@ -105,7 +110,7 @@ def _check(peers):
         return False
 
     for peer in peers:
-        if not isinstance(peer, str):
+        if not isinstance(peer, six.string_types):
             return False
 
     if not HAS_NETADDR:  # if does not have this lib installed, will simply try to load what user specified
@@ -115,7 +120,7 @@ def _check(peers):
     ip_only_peers = []
     for peer in peers:
         try:
-            ip_only_peers.append(str(IPAddress(peer)))  # append the str value
+            ip_only_peers.append(six.text_type(IPAddress(peer)))  # append the str value
         except AddrFormatError:
             # if not a valid IP Address
             # will try to see if it is a nameserver and resolve it
@@ -130,7 +135,7 @@ def _check(peers):
                 # no a valid DNS entry either
                 return False
             for dns_ip in dns_reply:
-                ip_only_peers.append(str(dns_ip))
+                ip_only_peers.append(six.text_type(dns_ip))
 
     peers = ip_only_peers
 

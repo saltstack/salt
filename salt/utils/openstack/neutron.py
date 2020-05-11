@@ -5,11 +5,11 @@ Neutron class
 
 
 # Import python libs
-from __future__ import absolute_import, with_statement
+from __future__ import absolute_import, with_statement, unicode_literals, print_function
 import logging
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 # pylint: disable=import-error
 HAS_NEUTRON = False
 try:
@@ -17,6 +17,14 @@ try:
     from neutronclient.shell import NeutronShell
 
     HAS_NEUTRON = True
+except ImportError:
+    pass
+
+HAS_KEYSTONEAUTH = False
+try:
+    import keystoneauth1.loading
+    import keystoneauth1.session
+    HAS_KEYSTONEAUTH = True
 except ImportError:
     pass
 # pylint: enable=import-error
@@ -32,11 +40,15 @@ def check_neutron():
     return HAS_NEUTRON
 
 
+def check_keystone():
+    return HAS_KEYSTONEAUTH
+
+
 def sanitize_neutronclient(kwargs):
     variables = (
         'username', 'user_id', 'password', 'token', 'tenant_name',
         'tenant_id', 'auth_url', 'service_type', 'endpoint_type',
-        'region_name', 'endpoint_url', 'timeout', 'insecure',
+        'region_name', 'verify', 'endpoint_url', 'timeout', 'insecure',
         'ca_cert', 'retries', 'raise_error', 'session', 'auth'
     )
     ret = {}
@@ -53,14 +65,77 @@ class SaltNeutron(NeutronShell):
     Class for all neutronclient functions
     '''
 
-    def __init__(self, username, tenant_name, auth_url, password=None,
-                 region_name=None, service_type=None, **kwargs):
+    def __init__(
+        self,
+        username,
+        tenant_name,
+        auth_url,
+        password=None,
+        region_name=None,
+        service_type='network',
+        os_auth_plugin=None,
+        use_keystoneauth=False,
+        **kwargs
+    ):
+
         '''
         Set up neutron credentials
         '''
+        __utils__['versions.warn_until'](
+            'Neon',
+            (
+                'The neutron module has been deprecated and will be removed in {version}.  '
+                'Please update to using the neutronng module'
+            ),
+        )
         if not HAS_NEUTRON:
             return None
 
+        elif all([use_keystoneauth, HAS_KEYSTONEAUTH]):
+            self._new_init(username=username,
+                           project_name=tenant_name,
+                           auth_url=auth_url,
+                           region_name=region_name,
+                           service_type=service_type,
+                           os_auth_plugin=os_auth_plugin,
+                           password=password,
+                           **kwargs)
+        else:
+            self._old_init(username=username,
+                           tenant_name=tenant_name,
+                           auth_url=auth_url,
+                           region_name=region_name,
+                           service_type=service_type,
+                           os_auth_plugin=os_auth_plugin,
+                           password=password,
+                           **kwargs)
+
+    def _new_init(self, username, project_name, auth_url, region_name, service_type, password, os_auth_plugin, auth=None, verify=True, **kwargs):
+        if auth is None:
+            auth = {}
+
+        loader = keystoneauth1.loading.get_plugin_loader(os_auth_plugin or 'password')
+
+        self.client_kwargs = kwargs.copy()
+        self.kwargs = auth.copy()
+
+        self.kwargs['username'] = username
+        self.kwargs['project_name'] = project_name
+        self.kwargs['auth_url'] = auth_url
+        self.kwargs['password'] = password
+        if auth_url.endswith('3'):
+            self.kwargs['user_domain_name'] = kwargs.get('user_domain_name', 'default')
+            self.kwargs['project_domain_name'] = kwargs.get('project_domain_name', 'default')
+
+        self.client_kwargs['region_name'] = region_name
+        self.client_kwargs['service_type'] = service_type
+
+        self.client_kwargs = sanitize_neutronclient(self.client_kwargs)
+        options = loader.load_from_options(**self.kwargs)
+        self.session = keystoneauth1.session.Session(auth=options, verify=verify)
+        self.network_conn = client.Client(session=self.session, **self.client_kwargs)
+
+    def _old_init(self, username, tenant_name, auth_url, region_name, service_type, password, os_auth_plugin, auth=None, verify=True, **kwargs):
         self.kwargs = kwargs.copy()
 
         self.kwargs['username'] = username
@@ -69,6 +144,7 @@ class SaltNeutron(NeutronShell):
         self.kwargs['service_type'] = service_type
         self.kwargs['password'] = password
         self.kwargs['region_name'] = region_name
+        self.kwargs['verify'] = verify
 
         self.kwargs = sanitize_neutronclient(self.kwargs)
 
@@ -82,7 +158,7 @@ class SaltNeutron(NeutronShell):
                 return resource
             if resource.get('name') == name_or_id:
                 ret.append(resource)
-        if len(ret) == 0:
+        if not ret:
             raise exceptions.MinionError("Resource not found.")
         elif len(ret) >= 2:
             raise exceptions.MinionError("Multiple resource matches found.")
@@ -468,12 +544,16 @@ class SaltNeutron(NeutronShell):
 
         return self.network_conn.create_floatingip(body={'floatingip': body})
 
-    def update_floatingip(self, floatingip_id, port):
+    def update_floatingip(self, floatingip_id, port=None):
         '''
-        Updates a floatingip
+        Updates a floatingip, disassociates the floating ip if
+        port is set to `None`
         '''
-        port_id = self._find_port_id(port)
-        body = {'floatingip': {'port_id': port_id}}
+        if port is None:
+            body = {'floatingip': {}}
+        else:
+            port_id = self._find_port_id(port)
+            body = {'floatingip': {'port_id': port_id}}
         return self.network_conn.update_floatingip(
             floatingip=floatingip_id, body=body)
 

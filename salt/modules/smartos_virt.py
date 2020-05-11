@@ -2,14 +2,15 @@
 '''
 virst compatibility module for managing VMs on SmartOS
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging
 
 # Import Salt libs
+import salt.utils.path
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -21,11 +22,12 @@ def __virtual__():
     '''
     Provides virt on SmartOS
     '''
-    if salt.utils.is_smartos_globalzone() and salt.utils.which('vmadm'):
+    if salt.utils.platform.is_smartos_globalzone() \
+            and salt.utils.path.which('vmadm'):
         return __virtualname__
     return (
         False,
-        '{0} module can only be loaded on SmartOS computed nodes'.format(
+        '{0} module can only be loaded on SmartOS compute nodes'.format(
             __virtualname__
         )
     )
@@ -55,8 +57,7 @@ def list_domains():
         salt '*' virt.list_domains
     '''
     data = __salt__['vmadm.list'](keyed=True)
-    vms = []
-    vms.append("UUID                                  TYPE  RAM      STATE             ALIAS")
+    vms = ["UUID                                  TYPE  RAM      STATE             ALIAS"]
     for vm in data:
         vms.append("{vmuuid}{vmtype}{vmram}{vmstate}{vmalias}".format(
             vmuuid=vm.ljust(38),
@@ -188,7 +189,7 @@ def vm_virt_type(domain):
         salt '*' virt.vm_virt_type <domain>
     '''
     ret = __salt__['vmadm.lookup'](search="uuid={uuid}".format(uuid=domain), order='type')
-    if len(ret) < 1:
+    if not ret:
         raise CommandExecutionError("We can't determine the type of this VM")
 
     return ret[0]['type']
@@ -233,7 +234,7 @@ def get_macs(domain):
     '''
     macs = []
     ret = __salt__['vmadm.lookup'](search="uuid={uuid}".format(uuid=domain), order='nics')
-    if len(ret) < 1:
+    if not ret:
         raise CommandExecutionError('We can\'t find the MAC address of this VM')
     else:
         for nic in ret[0]['nics']:

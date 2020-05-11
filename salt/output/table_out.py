@@ -3,7 +3,7 @@
 Display output in a table format
 =================================
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 This outputter displays a sequence of rows as table.
 
@@ -35,19 +35,19 @@ Example output::
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import operator
 from functools import reduce  # pylint: disable=redefined-builtin
 
-# Import salt libs
+# Import Salt libs
 import salt.output
-import salt.utils.locales
-from salt.ext.six import string_types
-from salt.utils import get_colors
-from salt.ext.six.moves import map  # pylint: disable=redefined-builtin
-from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
+import salt.utils.color
+import salt.utils.data
 
+# Import 3rd-party libs
+from salt.ext import six
+from salt.ext.six.moves import map, zip  # pylint: disable=redefined-builtin
 
 __virtualname__ = 'table'
 
@@ -62,9 +62,9 @@ class TableDisplay(object):
     '''
 
     _JUSTIFY_MAP = {
-        'center': str.center,
-        'right': str.rjust,
-        'left': str.ljust
+        'center': six.text_type.center,
+        'right': six.text_type.rjust,
+        'left': six.text_type.ljust
     }
 
     def __init__(self,
@@ -78,7 +78,7 @@ class TableDisplay(object):
                  width=50,  # column max width
                  wrapfunc=None):  # function wrapper
         self.__dict__.update(
-            get_colors(
+            salt.utils.color.get_colors(
                 __opts__.get('color'),
                 __opts__.get('color_theme')
             )
@@ -116,7 +116,7 @@ class TableDisplay(object):
         try:
             return fmt.format(indent, color, prefix, msg, endc, suffix)
         except UnicodeDecodeError:
-            return fmt.format(indent, color, prefix, salt.utils.locales.sdecode(msg), endc, suffix)
+            return fmt.format(indent, color, prefix, salt.utils.data.decode(msg), endc, suffix)
 
     def wrap_onspace(self, text):
 
@@ -147,7 +147,7 @@ class TableDisplay(object):
                 for item in row
             ]
             rows = []
-            for item in map(None, *new_rows):
+            for item in map(lambda *args: args, *new_rows):
                 if isinstance(item, (tuple, list)):
                     rows.append([substr or '' for substr in item])
                 else:
@@ -159,10 +159,10 @@ class TableDisplay(object):
             for row in rows
         ]
 
-        columns = map(None, *reduce(operator.add, logical_rows))
+        columns = map(lambda *args: args, *reduce(operator.add, logical_rows))
 
         max_widths = [
-            max([len(str(item)) for item in column])
+            max([len(six.text_type(item)) for item in column])
             for column in columns
         ]
         row_separator = self.row_delimiter * (len(self.prefix) + len(self.suffix) + sum(max_widths) +
@@ -182,7 +182,7 @@ class TableDisplay(object):
             for row in physical_rows:
                 line = self.prefix \
                         + self.delim.join([
-                                justify(str(item), width)
+                                justify(six.text_type(item), width)
                                 for (item, width) in zip(row, max_widths)
                         ]) + self.suffix
                 out.append(
@@ -234,14 +234,14 @@ class TableDisplay(object):
         if first_row_type is dict:  # and all the others
             temp_rows = []
             if not labels:
-                labels = [str(label).replace('_', ' ').title() for label in sorted(rows[0])]
+                labels = [six.text_type(label).replace('_', ' ').title() for label in sorted(rows[0])]
             for row in rows:
                 temp_row = []
                 for key in sorted(row):
-                    temp_row.append(str(row[key]))
+                    temp_row.append(six.text_type(row[key]))
                 temp_rows.append(temp_row)
             rows = temp_rows
-        elif isinstance(rows[0], string_types):
+        elif isinstance(rows[0], six.string_types):
             rows = [[row] for row in rows]  # encapsulate each row in a single-element list
 
         labels_and_rows = [labels] + rows if labels else rows
@@ -315,11 +315,11 @@ def output(ret, **kwargs):
         * nested_indent: integer, specify the left alignment.
         * has_header: boolean specifying if header should be displayed. Default: True.
         * row_delimiter: character to separate rows. Default: ``_``.
-        * delim: character to separate columns. Default: `` | ``.
+        * delim: character to separate columns. Default: ``" | "``.
         * justify: text alignment. Default: ``center``.
         * separate_rows: boolean specifying if row separator will be displayed between consecutive rows. Default: True.
-        * prefix: character at the beginning of the row. Default: ``| ``.
-        * suffix: character at the end of the row. Default: `` |``.
+        * prefix: character at the beginning of the row. Default: ``"| "``.
+        * suffix: character at the end of the row. Default: ``" |"``.
         * width: column max width. Default: ``50``.
         * rows_key: display the rows under a specific key.
         * labels_key: use the labels under a certain key. Otherwise will try to use the dictionary keys (if any).
@@ -363,7 +363,7 @@ def output(ret, **kwargs):
             )
         )
 
-    return '\n'.join(table.display(ret,
+    return '\n'.join(table.display(salt.utils.data.decode(ret),
                                    base_indent,
                                    out,
                                    rows_key=rows_key,

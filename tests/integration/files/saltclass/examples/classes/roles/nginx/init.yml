@@ -1,0 +1,7 @@
+states:
+  - nginx_deployment
+
+pillars:
+  nginx:
+    pkg:
+      - nginx

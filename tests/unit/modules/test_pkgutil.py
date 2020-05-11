@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
+    Mock,
     MagicMock,
     patch,
     NO_MOCK,
@@ -19,6 +20,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.pkgutil as pkgutil
 from salt.exceptions import CommandExecutionError, MinionError
+import salt.utils.pkg
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -37,7 +39,8 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=0)
         with patch.dict(pkgutil.__salt__, {'cmd.retcode': mock}):
-            self.assertTrue(pkgutil.refresh_db())
+            with patch.object(salt.utils.pkg, 'clear_rtag', Mock()):
+                self.assertTrue(pkgutil.refresh_db())
 
     # 'upgrade_available' function tests: 1
 
@@ -65,7 +68,8 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
         mock_ret = MagicMock(return_value=0)
         with patch.dict(pkgutil.__salt__, {'cmd.run_stdout': mock_run,
                                            'cmd.retcode': mock_ret}):
-            self.assertDictEqual(pkgutil.list_upgrades(), {'A': ' B'})
+            with patch.object(salt.utils.pkg, 'clear_rtag', Mock()):
+                self.assertDictEqual(pkgutil.list_upgrades(), {'A': ' B'})
 
     # 'upgrade' function tests: 1
 
@@ -83,7 +87,8 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
                          'pkg_resource.sort_pkglist': mock_pkg,
                          'cmd.run_all': mock_ret, 'cmd.run': mock_run}):
             with patch.dict(pkgutil.__context__, {'pkg.list_pkgs': mock_ret}):
-                self.assertDictEqual(pkgutil.upgrade(), {})
+                with patch.object(salt.utils.pkg, 'clear_rtag', Mock()):
+                    self.assertDictEqual(pkgutil.upgrade(), {})
 
     # 'list_pkgs' function tests: 1
 
@@ -142,10 +147,11 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
                          'pkg_resource.stringify': mock_pkg,
                          'pkg_resource.sort_pkglist': mock_pkg,
                          'cmd.run_all': mock_run, 'cmd.run': mock_run_all}):
-            self.assertEqual(pkgutil.latest_version('CSWpython'), '')
+            with patch.object(salt.utils.pkg, 'clear_rtag', Mock()):
+                self.assertEqual(pkgutil.latest_version('CSWpython'), '')
 
-            self.assertDictEqual(pkgutil.latest_version('CSWpython', 'Python'),
-                                 {'Python': '', 'CSWpython': ''})
+                self.assertDictEqual(pkgutil.latest_version('CSWpython', 'Python'),
+                                     {'Python': '', 'CSWpython': ''})
 
     # 'install' function tests: 1
 

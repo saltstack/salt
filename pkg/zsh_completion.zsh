@@ -25,7 +25,7 @@ _modules(){
     fi
 
     if _cache_invalid salt/modules || ! _retrieve_cache salt/modules; then
-        _funcs=( ${${(Q)${${(s. .)"$(_call_program salt-call-cmd salt-call --local --out txt sys.list_functions)"}%%[],]##}#\[}:#local:} )
+        _funcs=( ${${(Q)${${${(s. .)"$(_call_program salt-call-cmd salt-call --local --log-level error --out txt sys.list_functions)"}%%[],]##}#\[#u}#\[}:#local:} )
         _store_cache salt/modules _funcs
     fi
 
@@ -40,7 +40,7 @@ _runners(){
     fi
 
     if _cache_invalid salt/runners || ! _retrieve_cache salt/runners; then
-        _runs=( ${${(Q)${${(s. .)"$(_call_program salt-call-cmd salt-call --local --out txt sys.list_runner_functions)"}%%[],]##}#\[}:#local:} )
+        _runs=( ${${(Q)${${${(s. .)"$(_call_program salt-call-cmd salt-call --local --log-level error --out txt sys.list_runner_functions)"}%%[],]##}#\[#u}#\[}:#local:} )
         _store_cache salt/runners _runs
     fi
 
@@ -119,7 +119,7 @@ _target_opt_pat=(
 
 _target_options=(
     "$_target_opt_pat[2]"{-E,--pcre}'[use pcre regular expressions]:pcre:'
-    "$_target_opt_pat[2]"{-L,--list}'[take a comma or space delimited list of servers.]:list:'
+    "$_target_opt_pat[2]"{-L,--list}'[take a comma or whitespace delimited list of servers.]:list:'
     "$_target_opt_pat[2]"{-G,--grain}'[use a grain value to identify targets]:Grains:'
     "$_target_opt_pat[2]--grain-pcre[use a grain value to identify targets.]:pcre:"
     "$_target_opt_pat[2]"{-N,--nodegroup}'[use one of the predefined nodegroups to identify a list of targets.]:Nodegroup:'

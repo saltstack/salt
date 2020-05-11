@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 
 # Import Salt Testing Libs
@@ -16,10 +16,12 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
+from salt.ext.six.moves import range
 import salt.modules.rh_ip as rh_ip
 
 # Import 3rd-party libs
 import jinja2.exceptions
+from salt.ext import six
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -29,6 +31,18 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
     '''
     def setup_loader_modules(self):
         return {rh_ip: {}}
+
+    def test_error_message_iface_should_process_non_str_expected(self):
+        values = [1, True, False, 'no-kaboom']
+        iface = 'ethtest'
+        option = 'test'
+        msg = rh_ip._error_msg_iface(iface, option, values)
+        self.assertTrue(msg.endswith('[1|True|False|no-kaboom]'), msg)
+
+    def test_error_message_network_should_process_non_str_expected(self):
+        values = [1, True, False, 'no-kaboom']
+        msg = rh_ip._error_msg_network('fnord', values)
+        self.assertTrue(msg.endswith('[1|True|False|no-kaboom]'), msg)
 
     def test_build_bond(self):
         '''
@@ -58,9 +72,8 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test to build an interface script for a network interface.
         '''
-        with patch.dict(rh_ip.__grains__, {'os': 'Fedora'}):
+        with patch.dict(rh_ip.__grains__, {'os': 'Fedora', 'osmajorrelease': 26}):
             with patch.object(rh_ip, '_raise_error_iface', return_value=None):
-
                 self.assertRaises(AttributeError,
                                   rh_ip.build_interface,
                                   'iface', 'slave', True)
@@ -70,34 +83,53 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
                                       rh_ip.build_interface,
                                       'iface', 'eth', True, netmask='255.255.255.255', prefix=32,
                                       test=True)
+                    self.assertRaises(AttributeError,
+                                      rh_ip.build_interface,
+                                      'iface', 'eth', True, ipaddrs=['A'],
+                                      test=True)
+                    self.assertRaises(AttributeError,
+                                      rh_ip.build_interface,
+                                      'iface', 'eth', True, ipv6addrs=['A'],
+                                      test=True)
 
-                with patch.object(rh_ip, '_parse_settings_bond', MagicMock()):
-                    mock = jinja2.exceptions.TemplateNotFound('foo')
-                    with patch.object(jinja2.Environment,
-                                      'get_template',
-                                      MagicMock(side_effect=mock)):
-                        self.assertEqual(rh_ip.build_interface('iface',
-                                                               'vlan',
-                                                               True), '')
-
-                    with patch.object(rh_ip, '_read_temp', return_value='A'):
+        for osrelease in range(5, 8):
+            with patch.dict(rh_ip.__grains__, {'os': 'RedHat', 'osrelease': six.text_type(osrelease)}):
+                with patch.object(rh_ip, '_raise_error_iface', return_value=None):
+                    with patch.object(rh_ip, '_parse_settings_bond', MagicMock()):
+                        mock = jinja2.exceptions.TemplateNotFound('foo')
                         with patch.object(jinja2.Environment,
-                                          'get_template', MagicMock()):
+                                          'get_template',
+                                          MagicMock(side_effect=mock)):
                             self.assertEqual(rh_ip.build_interface('iface',
                                                                    'vlan',
-                                                                   True,
-                                                                   test='A'),
-                                             'A')
+                                                                   True), '')
 
-                            with patch.object(rh_ip, '_write_file_iface',
-                                              return_value=None):
-                                with patch.object(os.path, 'join',
-                                                  return_value='A'):
-                                    with patch.object(rh_ip, '_read_file',
+                        with patch.object(rh_ip, '_read_temp', return_value='A'):
+                            with patch.object(jinja2.Environment,
+                                              'get_template', MagicMock()):
+                                self.assertEqual(rh_ip.build_interface('iface',
+                                                                       'vlan',
+                                                                       True,
+                                                                       test='A'),
+                                                 'A')
+
+                                with patch.object(rh_ip, '_write_file_iface',
+                                                  return_value=None):
+                                    with patch.object(os.path, 'join',
                                                       return_value='A'):
-                                        self.assertEqual(rh_ip.build_interface
-                                                         ('iface', 'vlan',
-                                                          True), 'A')
+                                        with patch.object(rh_ip, '_read_file',
+                                                          return_value='A'):
+                                            self.assertEqual(rh_ip.build_interface
+                                                             ('iface', 'vlan',
+                                                              True), 'A')
+                                            if osrelease > 6:
+                                                with patch.dict(rh_ip.__salt__, {'network.interfaces': lambda: {'eth': True}}):
+                                                    self.assertEqual(rh_ip.build_interface
+                                                                     ('iface', 'eth', True,
+                                                                      ipaddrs=['127.0.0.1/8']), 'A')
+                                                    self.assertEqual(rh_ip.build_interface
+                                                                     ('iface', 'eth', True,
+                                                                      ipv6addrs=['fc00::1/128']), 'A')
 
     def test_build_routes(self):
         '''

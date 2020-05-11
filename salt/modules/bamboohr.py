@@ -14,13 +14,13 @@ Requires a ``subdomain`` and an ``apikey`` in ``/etc/salt/minion``:
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
-import yaml
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
 import salt.utils.http
-import salt.ext.six as six
+import salt.utils.yaml
+from salt.ext import six
 from salt._compat import ElementTree as ET
 
 log = logging.getLogger(__name__)
@@ -167,7 +167,7 @@ def update_employee(emp_id, key=None, value=None, items=None):
             return {'Error': 'At least one key/value pair is required'}
         items = {key: value}
     elif isinstance(items, six.string_types):
-        items = yaml.safe_load(items)
+        items = salt.utils.yaml.safe_load(items)
 
     xml_items = ''
     for pair in items:
@@ -265,7 +265,7 @@ def _query(action=None,
     if command:
         path += '/{0}'.format(command)
 
-    log.debug('BambooHR URL: {0}'.format(path))
+    log.debug('BambooHR URL: %s', path)
 
     if not isinstance(args, dict):
         args = {}
@@ -283,10 +283,6 @@ def _query(action=None,
         status=True,
         opts=__opts__,
     )
-    log.debug(
-        'BambooHR Response Status Code: {0}'.format(
-            result['status']
-        )
-    )
+    log.debug('BambooHR Response Status Code: %s', result['status'])
 
     return [result['status'], result['text']]

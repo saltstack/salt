@@ -37,8 +37,8 @@ Example configuration
       pass: strong_pass_phrase
       timeout: 5.0
 
-Complete example
-=================
+Complete Example
+================
 
 .. code-block:: yaml
 
@@ -57,7 +57,7 @@ Complete example
             as_list: True
             with_lists: [1,3]
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 from contextlib import contextmanager

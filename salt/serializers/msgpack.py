@@ -7,16 +7,16 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+import copy
 import logging
-from copy import copy
 
 # Import Salt Libs
 from salt.log import setup_console_logger
 from salt.serializers import DeserializationError, SerializationError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -24,6 +24,7 @@ log = logging.getLogger(__name__)
 try:
     # Attempt to import msgpack
     import msgpack
+    import salt.utils.msgpack
     # There is a serialization issue on ARM and potentially other platforms
     # for some msgpack bindings, check for it
     if msgpack.loads(msgpack.dumps([1, 2, 3]), use_list=True) is None:
@@ -33,6 +34,7 @@ except ImportError:
     # Fall back to msgpack_pure
     try:
         import msgpack_pure as msgpack  # pylint: disable=import-error
+        import salt.utils.msgpack
     except ImportError:
         # TODO: Come up with a sane way to get a configured logfile
         #       and write to the logfile when this error is hit also
@@ -60,7 +62,8 @@ elif msgpack.version >= (0, 2, 0):
 
     def _serialize(obj, **options):
         try:
-            return msgpack.dumps(obj, **options)
+            return salt.utils.msgpack.dumps(obj, _msgpack_module=msgpack,
+                                            **options)
         except Exception as error:
             raise SerializationError(error)
 
@@ -68,7 +71,9 @@ elif msgpack.version >= (0, 2, 0):
         try:
             options.setdefault('use_list', True)
             options.setdefault('encoding', 'utf-8')
-            return msgpack.loads(stream_or_string, **options)
+            return salt.utils.msgpack.loads(stream_or_string,
+                                            _msgpack_module=msgpack,
+                                            **options)
         except Exception as error:
             raise DeserializationError(error)
 
@@ -87,7 +92,7 @@ else:  # msgpack.version < 0.2.0
             return dict(data)
         elif isinstance(obj, (list, tuple)):
             return [_encoder(value) for value in obj]
-        return copy(obj)
+        return copy.copy(obj)
 
     def _decoder(obj):
         return obj
@@ -95,14 +100,16 @@ else:  # msgpack.version < 0.2.0
     def _serialize(obj, **options):
         try:
             obj = _encoder(obj)
-            return msgpack.dumps(obj, **options)
+            return salt.utils.msgpack.dumps(obj, _msgpack_module=msgpack,
+                                            **options)
         except Exception as error:
             raise SerializationError(error)
 
     def _deserialize(stream_or_string, **options):
         options.setdefault('use_list', True)
         try:
-            obj = msgpack.loads(stream_or_string)
+            obj = salt.utils.msgpack.loads(stream_or_string,
+                                           _msgpack_module=msgpack)
             return _decoder(obj)
         except Exception as error:
             raise DeserializationError(error)

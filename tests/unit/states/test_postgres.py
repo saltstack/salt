@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -21,7 +21,7 @@ import salt.states.postgres_schema as postgres_schema
 class PostgresUserTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
-        patcher = patch('salt.utils.which', Mock(return_value='/usr/bin/pgsql'))
+        patcher = patch('salt.utils.path.which', Mock(return_value='/usr/bin/pgsql'))
         patcher.start()
         self.addCleanup(patcher.stop)
         self.salt_stub = {
@@ -78,6 +78,7 @@ class PostgresUserTestCase(TestCase, LoaderModuleMockMixin):
                                                                            maintenance_db=None,
                                                                            login=None,
                                                                            password=None,
+                                                                           valid_until=None,
                                                                            createdb=None)
 
     def test_present__update(self):
@@ -126,6 +127,7 @@ class PostgresUserTestCase(TestCase, LoaderModuleMockMixin):
                                                                            maintenance_db=None,
                                                                            login=True,
                                                                            password=None,
+                                                                           valid_until=None,
                                                                            createdb=None)
 
     def test_present__no_update(self):
@@ -166,7 +168,7 @@ class PostgresUserTestCase(TestCase, LoaderModuleMockMixin):
 class PostgresGroupTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
-        patcher = patch('salt.utils.which', Mock(return_value='/usr/bin/pgsql'))
+        patcher = patch('salt.utils.path.which', Mock(return_value='/usr/bin/pgsql'))
         patcher.start()
         self.addCleanup(patcher.stop)
         self.salt_stub = {
@@ -311,7 +313,7 @@ class PostgresGroupTestCase(TestCase, LoaderModuleMockMixin):
 class PostgresExtensionTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
-        patcher = patch('salt.utils.which', Mock(return_value='/usr/bin/pgsql'))
+        patcher = patch('salt.utils.path.which', Mock(return_value='/usr/bin/pgsql'))
         patcher.start()
         self.addCleanup(patcher.stop)
         self.salt_stub = {
@@ -420,8 +422,8 @@ class PostgresExtensionTestCase(TestCase, LoaderModuleMockMixin):
                 ret = postgres_extension.present('foo')
                 self.assertEqual(
                     ret,
-                    {'comment': "Extension foo is set to be created",
-                     'changes': {}, 'name': 'foo', 'result': None}
+                    {'comment': "Extension foo is already present",
+                     'changes': {}, 'name': 'foo', 'result': True}
 
                 )
                 ret = postgres_extension.present('foo')
@@ -500,7 +502,7 @@ class PostgresExtensionTestCase(TestCase, LoaderModuleMockMixin):
 class PostgresSchemaTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
-        patcher = patch('salt.utils.which', Mock(return_value='/usr/bin/pgsql'))
+        patcher = patch('salt.utils.path.which', Mock(return_value='/usr/bin/pgsql'))
         patcher.start()
         self.addCleanup(patcher.stop)
         self.salt_stub = {

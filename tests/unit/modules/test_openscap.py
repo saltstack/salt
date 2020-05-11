@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from subprocess import PIPE
 
 # Import salt libs
@@ -18,7 +18,7 @@ from tests.support.mock import (
 )
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -28,8 +28,10 @@ class OpenscapTestCase(TestCase):
     policy_file = '/usr/share/openscap/policy-file-xccdf.xml'
 
     def setUp(self):
+        import salt.modules.openscap
+        salt.modules.openscap.__salt__ = MagicMock()
         patchers = [
-            patch('salt.modules.openscap.Caller', MagicMock()),
+            patch('salt.modules.openscap.__salt__', MagicMock()),
             patch('salt.modules.openscap.shutil.rmtree', Mock()),
             patch(
                 'salt.modules.openscap.tempfile.mkdtemp',
@@ -68,8 +70,7 @@ class OpenscapTestCase(TestCase):
                 cwd=openscap.tempfile.mkdtemp.return_value,
                 stderr=PIPE,
                 stdout=PIPE)
-            openscap.Caller().cmd.assert_called_once_with(
-                'cp.push_dir', self.random_temp_dir)
+            openscap.__salt__['cp.push_dir'].assert_called_once_with(self.random_temp_dir)
             self.assertEqual(openscap.shutil.rmtree.call_count, 1)
             self.assertEqual(
                 response,
@@ -106,8 +107,7 @@ class OpenscapTestCase(TestCase):
                 cwd=openscap.tempfile.mkdtemp.return_value,
                 stderr=PIPE,
                 stdout=PIPE)
-            openscap.Caller().cmd.assert_called_once_with(
-                'cp.push_dir', self.random_temp_dir)
+            openscap.__salt__['cp.push_dir'].assert_called_once_with(self.random_temp_dir)
             self.assertEqual(openscap.shutil.rmtree.call_count, 1)
             self.assertEqual(
                 response,
@@ -190,12 +190,16 @@ class OpenscapTestCase(TestCase):
 
     def test_openscap_xccdf_eval_fail_not_implemented_action(self):
         response = openscap.xccdf('info {0}'.format(self.policy_file))
+        if six.PY2:
+            mock_err = "argument action: invalid choice: 'info' (choose from u'eval')"
+        else:
+            mock_err = "argument action: invalid choice: 'info' (choose from 'eval')"
 
         self.assertEqual(
             response,
             {
                 'upload_dir': None,
-                'error': "argument action: invalid choice: 'info' (choose from 'eval')",
+                'error': mock_err,
                 'success': False,
                 'returncode': None
             }

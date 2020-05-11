@@ -137,11 +137,11 @@ The second return value will be a string with two possible values:
 
 Both before and after the installing the target(s), you should run
 :strong:`list_pkgs` to obtain a list of the installed packages. You should then
-return the output of ``salt.utils.compare_dicts()``
+return the output of ``salt.utils.data.compare_dicts()``:
 
 .. code-block:: python
 
-        return salt.utils.compare_dicts(old, new)
+    return salt.utils.data.compare_dicts(old, new)
 
 
 remove

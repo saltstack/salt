@@ -2,7 +2,7 @@
 '''
 The sys module provides information about the available functions on the minion
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import fnmatch
@@ -12,13 +12,13 @@ import logging
 import salt.loader
 import salt.runner
 import salt.state
-import salt.utils
-import salt.utils.schema as S
+import salt.utils.args
+import salt.utils.schema
 from salt.utils.doc import strip_rst as _strip_rst
 from salt.ext.six.moves import zip
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -325,6 +325,55 @@ def renderer_doc(*args):
     return _strip_rst(docs)
 
 
+def utils_doc(*args):
+    '''
+    .. versionadded:: Neon
+
+    Return the docstrings for all utils modules. Optionally, specify a module
+    or a function to narrow the selection.
+
+    The strings are aggregated into a single document on the master for easy
+    reading.
+
+    Multiple modules/functions can be specified.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' sys.utils_doc
+        salt '*' sys.utils_doc data stringutils
+        salt '*' sys.utils_doc stringutils.to_unicode
+        salt '*' sys.utils_doc data.encode data.decode
+    '''
+    docs = {}
+    if not args:
+        for fun in __utils__:
+            docs[fun] = __utils__[fun].__doc__
+        return _strip_rst(docs)
+
+    for module in args:
+        _use_fnmatch = False
+        if '*' in module:
+            target_mod = module
+            _use_fnmatch = True
+        elif module:
+            # allow both "sys" and "sys." to match sys, without also matching
+            # sysctl
+            target_mod = module + '.' if not module.endswith('.') else module
+        else:
+            target_mod = ''
+        if _use_fnmatch:
+            for fun in fnmatch.filter(__utils__, target_mod):
+                docs[fun] = __utils__[fun].__doc__
+        else:
+
+            for fun in __utils__:
+                if fun == module or fun.startswith(target_mod):
+                    docs[fun] = __utils__[fun].__doc__
+    return _strip_rst(docs)
+
+
 def list_functions(*args, **kwargs):  # pylint: disable=unused-argument
     '''
     List the functions for all modules. Optionally, specify a module or modules
@@ -450,7 +499,7 @@ def argspec(module=''):
         salt '*' sys.argspec 'pkg.*'
 
     '''
-    return salt.utils.argspec_report(__salt__, module)
+    return salt.utils.args.argspec_report(__salt__, module)
 
 
 def state_argspec(module=''):
@@ -476,7 +525,7 @@ def state_argspec(module=''):
 
     '''
     st_ = salt.state.State(__opts__)
-    return salt.utils.argspec_report(st_.states, module)
+    return salt.utils.args.argspec_report(st_.states, module)
 
 
 def returner_argspec(module=''):
@@ -502,7 +551,7 @@ def returner_argspec(module=''):
 
     '''
     returners_ = salt.loader.returners(__opts__, [])
-    return salt.utils.argspec_report(returners_, module)
+    return salt.utils.args.argspec_report(returners_, module)
 
 
 def runner_argspec(module=''):
@@ -527,7 +576,7 @@ def runner_argspec(module=''):
         salt '*' sys.runner_argspec 'winrepo.*'
     '''
     run_ = salt.runner.Runner(__opts__)
-    return salt.utils.argspec_report(run_.functions, module)
+    return salt.utils.args.argspec_report(run_.functions, module)
 
 
 def list_state_functions(*args, **kwargs):  # pylint: disable=unused-argument
@@ -609,7 +658,7 @@ def list_state_modules(*args):
 
     if not args:
         for func in st_.states:
-            log.debug('func {0}'.format(func))
+            log.debug('func %s', func)
             modules.add(func.split('.')[0])
         return sorted(modules)
 
@@ -844,28 +893,28 @@ def _argspec_to_schema(mod, spec):
     }
 
     for i in args_req:
-        types[i] = S.OneOfItem(items=(
-            S.BooleanItem(title=i, description=i, required=True),
-            S.IntegerItem(title=i, description=i, required=True),
-            S.NumberItem(title=i, description=i, required=True),
-            S.StringItem(title=i, description=i, required=True),
+        types[i] = salt.utils.schema.OneOfItem(items=(
+            salt.utils.schema.BooleanItem(title=i, description=i, required=True),
+            salt.utils.schema.IntegerItem(title=i, description=i, required=True),
+            salt.utils.schema.NumberItem(title=i, description=i, required=True),
+            salt.utils.schema.StringItem(title=i, description=i, required=True),
 
             # S.ArrayItem(title=i, description=i, required=True),
             # S.DictItem(title=i, description=i, required=True),
         ))
 
     for i, j in args_defaults:
-        types[i] = S.OneOfItem(items=(
-            S.BooleanItem(title=i, description=i, default=j),
-            S.IntegerItem(title=i, description=i, default=j),
-            S.NumberItem(title=i, description=i, default=j),
-            S.StringItem(title=i, description=i, default=j),
+        types[i] = salt.utils.schema.OneOfItem(items=(
+            salt.utils.schema.BooleanItem(title=i, description=i, default=j),
+            salt.utils.schema.IntegerItem(title=i, description=i, default=j),
+            salt.utils.schema.NumberItem(title=i, description=i, default=j),
+            salt.utils.schema.StringItem(title=i, description=i, default=j),
 
             # S.ArrayItem(title=i, description=i, default=j),
             # S.DictItem(title=i, description=i, default=j),
         ))
 
-    return type(mod, (S.Schema,), types).serialize()
+    return type(mod, (salt.utils.schema.Schema,), types).serialize()
 
 
 def state_schema(module=''):

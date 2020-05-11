@@ -2,7 +2,7 @@
 '''
 Support for Debconf
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -10,8 +10,10 @@ import os
 import re
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 import salt.utils.files
+import salt.utils.stringutils
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -28,11 +30,11 @@ def __virtual__():
     Confirm this module is on a Debian based system and that debconf-utils
     is installed.
     '''
-    if __grains__['os_family'] != 'Debian':
+    if __grains__.get('os_family') != 'Debian':
         return (False, 'The debconfmod module could not be loaded: '
                 'unsupported OS family')
 
-    if salt.utils.which('debconf-get-selections') is None:
+    if salt.utils.path.which('debconf-get-selections') is None:
         return (False, 'The debconfmod module could not be loaded: '
                 'debconf-utils is not installed.')
 
@@ -127,7 +129,7 @@ def set_(package, question, type, value, *extra):
     fd_, fname = salt.utils.files.mkstemp(prefix="salt-", close_fd=False)
 
     line = "{0} {1} {2} {3}".format(package, question, type, value)
-    os.write(fd_, line)
+    os.write(fd_, salt.utils.stringutils.to_bytes(line))
     os.close(fd_)
 
     _set_file(fname)
@@ -184,12 +186,7 @@ def set_file(path, saltenv='base', **kwargs):
         salt '*' debconf.set_file salt://pathto/pkg.selections
     '''
     if '__env__' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'__env__\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('__env__')
 
     path = __salt__['cp.cache_file'](path, saltenv)

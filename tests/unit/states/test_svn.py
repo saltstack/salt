@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Rahul Handay <rahulha@saltstack.com>`
+    :codeauthor: Rahul Handay <rahulha@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 
 # Import Salt Libs
@@ -53,7 +53,8 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
                 mock = MagicMock(side_effect=[False, True])
                 with patch.object(os.path, 'exists', mock):
                     mock = MagicMock(return_value=True)
-                    with patch.dict(svn.__salt__, {'svn.diff': mock}):
+                    info_mock = MagicMock(return_value=[{'Revision': 'mocked'}])
+                    with patch.dict(svn.__salt__, {'svn.diff': mock, 'svn.info': info_mock}):
                         mock = MagicMock(return_value=["Dude"])
                         with patch.object(svn, '_neutral_test', mock):
                             self.assertListEqual(svn.latest("salt",
@@ -103,13 +104,18 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(svn.__opts__, {'test': False}):
                 mock = MagicMock(return_value=True)
                 with patch.dict(svn.__salt__, {'svn.export': mock}):
-                    self.assertDictEqual(svn.export("salt",
-                                                    "c://salt"),
-                                         {'changes': 'salt was Exported'
-                                          ' to c://salt', 'comment': '',
-                                          'name': 'salt', 'result': True
-                                          }
-                                         )
+                    self.assertDictEqual(
+                        svn.export("salt", "c://salt"),
+                        {
+                            'changes': {
+                                'new': 'salt',
+                                'comment': 'salt was Exported to c://salt',
+                            },
+                            'comment': '',
+                            'name': 'salt',
+                            'result': True,
+                        }
+                    )
 
     def test_dirty(self):
         '''

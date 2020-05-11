@@ -74,6 +74,12 @@ salt-syndic
 
     salt-syndic
 
+salt-unity
+==========
+.. toctree::
+
+    salt-unity
+
 salt-api
 ========
 .. toctree::

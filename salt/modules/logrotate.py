@@ -2,15 +2,18 @@
 '''
 Module for managing logrotate.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
 import logging
 
 # Import salt libs
+from salt.ext import six
+import salt.utils.files
+import salt.utils.platform
+import salt.utils.stringutils
 from salt.exceptions import SaltInvocationError
-import salt.utils
 
 _LOG = logging.getLogger(__name__)
 _DEFAULT_CONF = '/etc/logrotate.conf'
@@ -26,8 +29,12 @@ def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
-    if salt.utils.is_windows():
-        return (False, 'The logrotate execution module cannot be loaded: only available on non-Windows systems.')
+    if salt.utils.platform.is_windows():
+        return (
+            False,
+            'The logrotate execution module cannot be loaded: only available '
+            'on non-Windows systems.'
+        )
     return True
 
 
@@ -41,7 +48,7 @@ def _convert_if_int(value):
     :rtype: bool|int|str
     '''
     try:
-        value = int(str(value))
+        value = int(six.text_type(value))
     except ValueError:
         pass
     return value
@@ -62,9 +69,9 @@ def _parse_conf(conf_file=_DEFAULT_CONF):
     multi = {}
     prev_comps = None
 
-    with salt.utils.fopen(conf_file, 'r') as ifile:
+    with salt.utils.files.fopen(conf_file, 'r') as ifile:
         for line in ifile:
-            line = line.strip()
+            line = salt.utils.stringutils.to_unicode(line).strip()
             if not line:
                 continue
             if line.startswith('#'):
@@ -206,7 +213,7 @@ def set_(key, value, setting=None, conf_file=_DEFAULT_CONF):
         if key in conf['include files'][include]:
             conf_file = os.path.join(conf['include'], include)
 
-    new_line = str()
+    new_line = six.text_type()
     kwargs = {
         'flags': 8,
         'backup': False,

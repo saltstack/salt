@@ -2,27 +2,29 @@
 '''
 Manage transport commands via ssh
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import re
 import os
 import sys
-import json
 import time
 import logging
 import subprocess
 
 # Import salt libs
 import salt.defaults.exitcodes
-import salt.utils
+import salt.utils.json
 import salt.utils.nb_popen
 import salt.utils.vt
+
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
 SSH_PASSWORD_PROMPT_RE = re.compile(r'(?:.*)[Pp]assword(?: for .*)?:', re.M)
 KEY_VALID_RE = re.compile(r'.*\(yes\/no\).*')
+SSH_PRIVATE_KEY_PASSWORD_PROMPT_RE = re.compile(r'Enter passphrase for key', re.M)
 
 # Keep these in sync with ./__init__.py
 RSTR = '_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878'
@@ -75,6 +77,7 @@ class Shell(object):
             port=None,
             passwd=None,
             priv=None,
+            priv_passwd=None,
             timeout=None,
             sudo=False,
             tty=False,
@@ -89,8 +92,9 @@ class Shell(object):
         self.host = host.strip('[]')
         self.user = user
         self.port = port
-        self.passwd = str(passwd) if passwd else passwd
+        self.passwd = six.text_type(passwd) if passwd else passwd
         self.priv = priv
+        self.priv_passwd = priv_passwd
         self.timeout = timeout
         self.sudo = sudo
         self.tty = tty
@@ -137,7 +141,7 @@ class Shell(object):
             options.append('UserKnownHostsFile={0}'.format(known_hosts))
         if self.port:
             options.append('Port={0}'.format(self.port))
-        if self.priv:
+        if self.priv and self.priv != 'agent-forwarding':
             options.append('IdentityFile={0}'.format(self.priv))
         if self.user:
             options.append('User={0}'.format(self.user))
@@ -191,7 +195,7 @@ class Shell(object):
 
     def _ssh_opts(self):
         return ' '.join(['-o {0}'.format(opt)
-                        for opt in self.ssh_options])
+                          for opt in self.ssh_options])
 
     def _copy_id_str_old(self):
         '''
@@ -254,7 +258,7 @@ class Shell(object):
             command.append(self.priv and self._key_opts() or self._passwd_opts())
         if ssh != 'scp' and self.remote_port_forwards:
             command.append(' '.join(['-R {0}'.format(item)
-                                     for item in self.remote_port_forwards.split(',')]))
+                                      for item in self.remote_port_forwards.split(',')]))
         if self.ssh_options:
             command.append(self._ssh_opts())
 
@@ -370,6 +374,9 @@ class Shell(object):
         Execute a shell command via VT. This is blocking and assumes that ssh
         is being run
         '''
+        if not cmd:
+            return '', 'No command or passphrase', 245
+
         term = salt.utils.vt.Terminal(
                 cmd,
                 shell=True,
@@ -398,6 +405,11 @@ class Shell(object):
                 if buff and RSTR_RE.search(buff):
                     # We're getting results back, don't try to send passwords
                     send_password = False
+                if buff and SSH_PRIVATE_KEY_PASSWORD_PROMPT_RE.search(buff):
+                    if not self.priv_passwd:
+                        return '', 'Private key file need passphrase', 254
+                    term.sendline(self.priv_passwd)
+                    continue
                 if buff and SSH_PASSWORD_PROMPT_RE.search(buff) and send_password:
                     if not self.passwd:
                         return '', 'Permission denied, no authentication information', 254
@@ -419,7 +431,7 @@ class Shell(object):
                                       'flag:\n{0}').format(stdout)
                         return ret_stdout, '', 254
                 elif buff and buff.endswith('_||ext_mods||_'):
-                    mods_raw = json.dumps(self.mods, separators=(',', ':')) + '|_E|0|'
+                    mods_raw = salt.utils.json.dumps(self.mods, separators=(',', ':')) + '|_E|0|'
                     term.sendline(mods_raw)
                 if stdout:
                     old_stdout = stdout

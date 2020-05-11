@@ -26,18 +26,21 @@ Module for managing XFS file systems.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import re
 import time
 import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
+import salt.utils.data
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
@@ -47,7 +50,8 @@ def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
-    return not salt.utils.is_windows() and __grains__.get('kernel') == 'Linux'
+    return not salt.utils.platform.is_windows() \
+        and __grains__.get('kernel') == 'Linux'
 
 
 def _verify_run(out, cmd=None):
@@ -56,10 +60,10 @@ def _verify_run(out, cmd=None):
     '''
     if out.get("retcode", 0) and out['stderr']:
         if cmd:
-            log.debug('Command: "{0}"'.format(cmd))
+            log.debug('Command: "%s"', cmd)
 
-        log.debug('Return code: {0}'.format(out.get('retcode')))
-        log.debug('Error output:\n{0}'.format(out.get('stderr', "N/A")))
+        log.debug('Return code: %s', out.get('retcode'))
+        log.debug('Error output:\n%s', out.get('stderr', "N/A"))
 
         raise CommandExecutionError(out['stderr'])
 
@@ -183,7 +187,7 @@ def dump(device, destination, level=0, label=None, noerase=None):
         salt '*' xfs.dump /dev/sda1 /detination/on/the/client label='Company accountancy'
         salt '*' xfs.dump /dev/sda1 /detination/on/the/client noerase=True
     '''
-    if not salt.utils.which("xfsdump"):
+    if not salt.utils.path.which("xfsdump"):
         raise CommandExecutionError("Utility \"xfsdump\" has to be installed or missing.")
 
     label = label and label or time.strftime("XFS dump for \"{0}\" of %Y.%m.%d, %H:%M".format(device),
@@ -507,8 +511,8 @@ def _get_mounts():
     List mounted filesystems.
     '''
     mounts = {}
-    with salt.utils.fopen("/proc/mounts") as fhr:
-        for line in fhr.readlines():
+    with salt.utils.files.fopen("/proc/mounts") as fhr:
+        for line in salt.utils.data.decode(fhr.readlines()):
             device, mntpnt, fstype, options, fs_freq, fs_passno = line.strip().split(" ")
             if fstype != 'xfs':
                 continue

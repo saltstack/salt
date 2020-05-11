@@ -52,14 +52,14 @@ The below code deletes a key pair:
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 from time import time, sleep
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
-import salt.utils
+import salt.utils.data
 import salt.utils.dictupdate as dictupdate
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
@@ -87,7 +87,7 @@ def key_present(name, save_private=None, upload_public=None, region=None,
            'changes': {}
            }
     exists = __salt__['boto_ec2.get_key'](name, region, key, keyid, profile)
-    log.debug('exists is {0}'.format(exists))
+    log.debug('exists is %s', exists)
     if upload_public is not None and 'salt://' in upload_public:
         try:
             upload_public = __salt__['cp.get_file_str'](upload_public)
@@ -151,7 +151,7 @@ def key_absent(name, region=None, key=None, keyid=None, profile=None):
         deleted = __salt__['boto_ec2.delete_key'](name, region,
                                                   key, keyid,
                                                   profile)
-        log.debug('exists is {0}'.format(deleted))
+        log.debug('exists is %s', deleted)
         if deleted:
             ret['result'] = True
             ret['comment'] = 'The key {0} is deleted.'.format(name)
@@ -237,7 +237,7 @@ def eni_present(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    if not salt.utils.exactly_one((subnet_id, subnet_name)):
+    if not salt.utils.data.exactly_one((subnet_id, subnet_name)):
         raise SaltInvocationError('One (but not both) of subnet_id or '
                                   'subnet_name must be provided.')
     if not groups:
@@ -354,7 +354,7 @@ def eni_present(
             if 'name' not in arecord:
                 msg = 'The arecord must contain a "name" property.'
                 raise SaltInvocationError(msg)
-            log.debug('processing arecord {0}'.format(arecord))
+            log.debug('processing arecord %s', arecord)
             _ret = None
             dns_provider = 'boto_route53'
             arecord['record_type'] = 'A'
@@ -383,7 +383,7 @@ def eni_present(
                 if 'region' not in arecord:
                     arecord['region'] = region
             _ret = __states__['.'.join([dns_provider, 'present'])](**arecord)
-            log.debug('ret from dns_provider.present = {0}'.format(_ret))
+            log.debug('ret from dns_provider.present = %s', _ret)
             ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
             ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
             if not _ret['result']:
@@ -665,8 +665,10 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
     instance_initiated_shutdown_behavior
         (string) – Specifies whether the instance stops or terminates on
         instance-initiated shutdown. Valid values are:
-            - 'stop'
-            - 'terminate'
+
+        - 'stop'
+        - 'terminate'
+
     placement_group
         (string) – If specified, this is the name of the placement group in
         which the instance(s) will be launched.
@@ -715,22 +717,26 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
     attributes
         (dict) - Instance attributes and value to be applied to the instance.
         Available options are:
-            - instanceType - A valid instance type (m1.small)
-            - kernel - Kernel ID (None)
-            - ramdisk - Ramdisk ID (None)
-            - userData - Base64 encoded String (None)
-            - disableApiTermination - Boolean (true)
-            - instanceInitiatedShutdownBehavior - stop|terminate
-            - blockDeviceMapping - List of strings - ie: [‘/dev/sda=false’]
-            - sourceDestCheck - Boolean (true)
-            - groupSet - Set of Security Groups or IDs
-            - ebsOptimized - Boolean (false)
-            - sriovNetSupport - String - ie: ‘simple’
+
+        - instanceType - A valid instance type (m1.small)
+        - kernel - Kernel ID (None)
+        - ramdisk - Ramdisk ID (None)
+        - userData - Base64 encoded String (None)
+        - disableApiTermination - Boolean (true)
+        - instanceInitiatedShutdownBehavior - stop|terminate
+        - blockDeviceMapping - List of strings - ie: [‘/dev/sda=false’]
+        - sourceDestCheck - Boolean (true)
+        - groupSet - Set of Security Groups or IDs
+        - ebsOptimized - Boolean (false)
+        - sriovNetSupport - String - ie: ‘simple’
+
     target_state
         (string) - The desired target state of the instance.  Available options
         are:
-            - running
-            - stopped
+
+        - running
+        - stopped
+
         Note that this option is currently UNIMPLEMENTED.
     public_ip:
         (string) - The IP of a previously allocated EIP address, which will be
@@ -765,10 +771,10 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
     running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
     changed_attrs = {}
 
-    if not salt.utils.exactly_one((image_id, image_name)):
+    if not salt.utils.data.exactly_one((image_id, image_name)):
         raise SaltInvocationError('Exactly one of image_id OR '
                                   'image_name must be provided.')
-    if (public_ip or allocation_id or allocate_eip) and not salt.utils.exactly_one((public_ip, allocation_id, allocate_eip)):
+    if (public_ip or allocation_id or allocate_eip) and not salt.utils.data.exactly_one((public_ip, allocation_id, allocate_eip)):
         raise SaltInvocationError('At most one of public_ip, allocation_id OR '
                                   'allocate_eip may be provided.')
 
@@ -781,8 +787,13 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
         instances = __salt__['boto_ec2.find_instances'](name=instance_name if instance_name else name,
                                                         region=region, key=key, keyid=keyid, profile=profile,
                                                         in_states=running_states)
-        if not len(instances):
+        if not instances:
             _create = True
+        elif len(instances) > 1:
+            log.debug('Multiple instances matching criteria found - cannot determine a singular instance-id')
+            instance_id = None  # No way to know, we'll just have to bail later....
+        else:
+            instance_id = instances[0]
 
     if _create:
         if __opts__['test']:
@@ -793,7 +804,7 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
             args = {'ami_name': image_name, 'region': region, 'key': key,
                     'keyid': keyid, 'profile': profile}
             image_ids = __salt__['boto_ec2.find_images'](**args)
-            if len(image_ids):
+            if image_ids:
                 image_id = image_ids[0]
             else:
                 image_id = image_name
@@ -846,7 +857,7 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
                 ret['comment'] = 'Failed to allocate new EIP.'
                 return ret
             allocation_id = r['allocation_id']
-            log.info("New EIP with address {0} allocated.".format(r['public_ip']))
+            log.info("New EIP with address %s allocated.", r['public_ip'])
         else:
             log.info("EIP not requested.")
 
@@ -861,8 +872,10 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
             if r:
                 break
             else:
-                log.info("Waiting up to {0} secs for new EIP {1} to become available".format(
-                        tries * secs, public_ip or allocation_id))
+                log.info(
+                    'Waiting up to %s secs for new EIP %s to become available',
+                    tries * secs, public_ip or allocation_id
+                )
                 time.sleep(secs)
         if not r:
             ret['result'] = False
@@ -886,6 +899,8 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
                     allocation_id=allocation_id, region=region, key=key,
                     keyid=keyid, profile=profile)
             if r:
+                if 'new' not in ret['changes']:
+                    ret['changes']['new'] = {}
                 ret['changes']['new']['public_ip'] = ip
             else:
                 ret['result'] = False
@@ -897,8 +912,7 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
         for k, v in six.iteritems(attributes):
             curr = __salt__['boto_ec2.get_attribute'](k, instance_id=instance_id, region=region, key=key,
                                                       keyid=keyid, profile=profile)
-            if not isinstance(curr, dict):
-                curr = {}
+            curr = {} if not isinstance(curr, dict) else curr
             if curr.get(k) == v:
                 continue
             else:
@@ -926,6 +940,51 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
             ret['comment'] = 'Instance {0} is in the correct state'.format(instance_name if instance_name else name)
             ret['result'] = True
 
+    if tags and instance_id is not None:
+        tags = dict(tags)
+        curr_tags = dict(__salt__['boto_ec2.get_all_tags'](filters={'resource-id': instance_id},
+                region=region, key=key, keyid=keyid, profile=profile).get(instance_id, {}))
+        current = set(curr_tags.keys())
+        desired = set(tags.keys())
+        remove = list(current - desired)  # Boto explicitly requires a list here and can't cope with a set...
+        add = dict([(t, tags[t]) for t in desired - current])
+        replace = dict([(t, tags[t]) for t in tags if tags.get(t) != curr_tags.get(t)])
+        # Tag keys are unique despite the bizarre semantics uses which make it LOOK like they could be duplicative.
+        add.update(replace)
+        if add or remove:
+            if __opts__['test']:
+                ret['changes']['old'] = ret['changes']['old'] if 'old' in ret['changes'] else {}
+                ret['changes']['new'] = ret['changes']['new'] if 'new' in ret['changes'] else {}
+                ret['changes']['old']['tags'] = curr_tags
+                ret['changes']['new']['tags'] = tags
+                ret['comment'] += '  Tags would be updated on instance {0}.'.format(instance_name if
+                                                                                    instance_name else name)
+            else:
+                if remove:
+                    if not __salt__['boto_ec2.delete_tags'](resource_ids=instance_id, tags=remove,
+                                                            region=region, key=key, keyid=keyid,
+                                                            profile=profile):
+                        msg = "Error while deleting tags on instance {0}".format(instance_name if
+                                                                                instance_name else name)
+                        log.error(msg)
+                        ret['comment'] += '  ' + msg
+                        ret['result'] = False
+                        return ret
+                if add:
+                    if not __salt__['boto_ec2.create_tags'](resource_ids=instance_id, tags=add,
+                                                            region=region, key=key, keyid=keyid,
+                                                            profile=profile):
+                        msg = "Error while creating tags on instance {0}".format(instance_name if
+                                                                                instance_name else name)
+                        log.error(msg)
+                        ret['comment'] += '  ' + msg
+                        ret['result'] = False
+                        return ret
+                ret['changes']['old'] = ret['changes']['old'] if 'old' in ret['changes'] else {}
+                ret['changes']['new'] = ret['changes']['new'] if 'new' in ret['changes'] else {}
+                ret['changes']['old']['tags'] = curr_tags
+                ret['changes']['new']['tags'] = tags
+
     return ret
 
 
@@ -935,7 +994,7 @@ def instance_absent(name, instance_name=None, instance_id=None,
     '''
     Ensure an EC2 instance does not exist (is stopped and removed).
 
-    .. versionupdated:: 2016.11.0
+    .. versionchanged:: 2016.11.0
 
     name
         (string) - The name of the state definition.
@@ -961,9 +1020,9 @@ def instance_absent(name, instance_name=None, instance_id=None,
     YAML example fragment:
 
     .. code-block:: yaml
+
         - filters:
             vpc-id: vpc-abcdef12
-
     '''
     ### TODO - Implement 'force' option??  Would automagically turn off
     ###        'disableApiTermination', as needed, before trying to delete.
@@ -989,7 +1048,7 @@ def instance_absent(name, instance_name=None, instance_id=None,
     instances = __salt__['boto_ec2.find_instances'](instance_id=instance_id, region=region,
                                                     key=key, keyid=keyid, profile=profile,
                                                     return_objs=True, filters=filters)
-    if not len(instances):
+    if not instances:
         ret['result'] = True
         ret['comment'] = 'Instance {0} is already gone.'.format(instance_id)
         return ret
@@ -1027,7 +1086,7 @@ def instance_absent(name, instance_name=None, instance_id=None,
             assoc_id = None
             if getattr(instance, 'vpc_id', None):
                 r = __salt__['boto_ec2.get_eip_address_info'](addresses=ip, **base_args)
-                if len(r) and 'allocation_id' in r[0]:
+                if r and 'allocation_id' in r[0]:
                     alloc_id = r[0]['allocation_id']
                     assoc_id = r[0].get('association_id')
                 else:
@@ -1042,11 +1101,11 @@ def instance_absent(name, instance_name=None, instance_id=None,
                 # Race here - sometimes the terminate above will already have dropped this
                 if not __salt__['boto_ec2.disassociate_eip_address'](association_id=assoc_id,
                                                                      **base_args):
-                    log.warning("Failed to disassociate EIP {0}.".format(ip))
+                    log.warning("Failed to disassociate EIP %s.", ip)
 
             if __salt__['boto_ec2.release_eip_address'](allocation_id=alloc_id, public_ip=public_ip,
                                                         **base_args):
-                log.info("Released EIP address {0}".format(public_ip or r[0]['public_ip']))
+                log.info("Released EIP address %s", public_ip or r[0]['public_ip'])
                 ret['changes']['old']['public_ip'] = public_ip or r[0]['public_ip']
             else:
                 ret['result'] = False
@@ -1108,7 +1167,7 @@ def volume_absent(name, volume_name=None, volume_id=None, instance_name=None,
     filters = {}
     running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
 
-    if not salt.utils.exactly_one((volume_name, volume_id, instance_name, instance_id)):
+    if not salt.utils.data.exactly_one((volume_name, volume_id, instance_name, instance_id)):
         raise SaltInvocationError("Exactly one of 'volume_name', 'volume_id', "
                                   "'instance_name', or 'instance_id' must be provided.")
     if (instance_name or instance_id) and not device:
@@ -1134,7 +1193,7 @@ def volume_absent(name, volume_name=None, volume_id=None, instance_name=None,
     args = {'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
 
     vols = __salt__['boto_ec2.get_all_volumes'](filters=filters, **args)
-    if len(vols) < 1:
+    if not vols:
         ret['comment'] = 'Volume matching criteria not found, assuming already absent'
         return ret
     if len(vols) > 1:
@@ -1144,7 +1203,7 @@ def volume_absent(name, volume_name=None, volume_id=None, instance_name=None,
         ret['result'] = False
         return ret
     vol = vols[0]
-    log.info('Matched Volume ID {0}'.format(vol))
+    log.info('Matched Volume ID %s', vol)
 
     if __opts__['test']:
         ret['comment'] = 'The volume {0} is set to be deleted.'.format(vol)
@@ -1181,6 +1240,7 @@ def volumes_tagged(name, tag_maps, authoritative=False, region=None, key=None,
     YAML example fragment:
 
     .. code-block:: yaml
+
         - filters:
             attachment.instance_id: i-abcdef12
           tags:
@@ -1229,15 +1289,222 @@ def volumes_tagged(name, tag_maps, authoritative=False, region=None, key=None,
     if __opts__['test']:
         args['dry_run'] = True
         r = __salt__['boto_ec2.set_volumes_tags'](**args)
-        if r.get('changes'):
-            ret['comment'] = 'The following changes would be applied: {0}'.format(r)
+        if r['success']:
+            if r.get('changes'):
+                ret['comment'] = 'Tags would be updated.'
+                ret['changes'] = r['changes']
+                ret['result'] = None
+        else:
+            ret['comment'] = 'Error validating requested volume tags.'
+            ret['result'] = False
         return ret
     r = __salt__['boto_ec2.set_volumes_tags'](**args)
-    if r['success'] is True:
-        ret['comment'] = 'Tags applied.'
-        ret['changes'] = r['changes']
+    if r['success']:
+        if r.get('changes'):
+            ret['comment'] = 'Tags applied.'
+            ret['changes'] = r['changes']
     else:
         ret['comment'] = 'Error updating requested volume tags.'
+        ret['result'] = False
+    return ret
+
+
+def volume_present(name, volume_name=None, volume_id=None, instance_name=None,
+                   instance_id=None, device=None, size=None, snapshot_id=None,
+                   volume_type=None, iops=None, encrypted=False, kms_key_id=None,
+                   region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensure the EC2 volume is present and attached.
+
+    ..
+
+    name
+        State definition name.
+
+    volume_name
+        The Name tag value for the volume. If no volume with that matching name tag is found,
+        a new volume will be created. If multiple volumes are matched, the state will fail.
+
+    volume_id
+        Resource ID of the volume. Exclusive with 'volume_name'.
+
+    instance_name
+        Attach volume to instance with this Name tag.
+        Exclusive with 'instance_id'.
+
+    instance_id
+        Attach volume to instance with this ID.
+        Exclusive with 'instance_name'.
+
+    device
+        The device on the instance through which the volume is exposed (e.g. /dev/sdh)
+
+    size
+        The size of the new volume, in GiB. If you're creating the volume from a snapshot
+        and don't specify a volume size, the default is the snapshot size. Optionally specified
+        at volume creation time; will be ignored afterward. Requires 'volume_name'.
+
+    snapshot_id
+        The snapshot ID from which the new Volume will be created. Optionally specified
+        at volume creation time; will be ignored afterward. Requires 'volume_name'.
+
+    volume_type
+        The type of the volume. Optionally specified at volume creation time; will be ignored afterward.
+        Requires 'volume_name'.
+        Valid volume types for AWS can be found here:
+        http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html
+
+    iops
+        The provisioned IOPS you want to associate with this volume. Optionally specified
+        at volume creation time; will be ignored afterward. Requires 'volume_name'.
+
+    encrypted
+        Specifies whether the volume should be encrypted. Optionally specified
+        at volume creation time; will be ignored afterward. Requires 'volume_name'.
+
+    kms_key_id
+        If encrypted is True, this KMS Key ID may be specified to encrypt volume with this key.
+        Optionally specified at volume creation time; will be ignored afterward.
+        Requires 'volume_name'.
+        e.g.: arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string)
+        that contains a dict with region, key and keyid.
+
+    '''
+
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}}
+    old_dict = {}
+    new_dict = {}
+    running_states = ('running', 'stopped')
+
+    if not salt.utils.data.exactly_one((volume_name, volume_id)):
+        raise SaltInvocationError("Exactly one of 'volume_name', 'volume_id', "
+                                  " must be provided.")
+    if not salt.utils.data.exactly_one((instance_name, instance_id)):
+        raise SaltInvocationError("Exactly one of 'instance_name', or 'instance_id'"
+                                  " must be provided.")
+    if device is None:
+        raise SaltInvocationError("Parameter 'device' is required.")
+    args = {'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
+    if instance_name:
+        instance_id = __salt__['boto_ec2.get_id'](
+                name=instance_name, in_states=running_states, **args)
+        if not instance_id:
+            raise SaltInvocationError('Instance with Name {0} not found.'.format(instance_name))
+
+    instances = __salt__['boto_ec2.find_instances'](instance_id=instance_id, return_objs=True, **args)
+    instance = instances[0]
+    if volume_name:
+        filters = {}
+        filters.update({'tag:Name': volume_name})
+        vols = __salt__['boto_ec2.get_all_volumes'](filters=filters, **args)
+        if len(vols) > 1:
+            msg = "More than one volume matched volume name {0}, can't continue in state {1}".format(volume_name,
+                                                                                                     name)
+            raise SaltInvocationError(msg)
+        if not vols:
+            if __opts__['test']:
+                ret['comment'] = ('The volume with name {0} is set to be created and attached'
+                                  ' on {1}({2}).'.format(volume_name, instance_id, device))
+                ret['result'] = None
+                return ret
+            _rt = __salt__['boto_ec2.create_volume'](zone_name=instance.placement,
+                                                     size=size,
+                                                     snapshot_id=snapshot_id,
+                                                     volume_type=volume_type,
+                                                     iops=iops,
+                                                     encrypted=encrypted,
+                                                     kms_key_id=kms_key_id,
+                                                     wait_for_creation=True, **args)
+            if 'result' in _rt:
+                volume_id = _rt['result']
+            else:
+                raise SaltInvocationError('Error creating volume with name {0}.'.format(volume_name))
+            _rt = __salt__['boto_ec2.set_volumes_tags'](tag_maps=[{
+                                                                    'filters': {'volume_ids': [volume_id]},
+                                                                    'tags': {'Name': volume_name}
+                                                                  }], **args)
+            if _rt['success'] is False:
+                raise SaltInvocationError('Error updating requested volume '
+                                          '{0} with name {1}. {2}'.format(volume_id,
+                                                                          volume_name,
+                                                                          _rt['comment']))
+            old_dict['volume_id'] = None
+            new_dict['volume_id'] = volume_id
+        else:
+            volume_id = vols[0]
+    vols = __salt__['boto_ec2.get_all_volumes'](volume_ids=[volume_id], return_objs=True, **args)
+    if not vols:
+        raise SaltInvocationError('Volume {0} do not exist'.format(volume_id))
+    vol = vols[0]
+    if vol.zone != instance.placement:
+        raise SaltInvocationError(('Volume {0} in {1} cannot attach to instance'
+                                   ' {2} in {3}.').format(volume_id,
+                                                          vol.zone,
+                                                          instance_id,
+                                                          instance.placement))
+    attach_data = vol.attach_data
+    if attach_data is not None and attach_data.instance_id is not None:
+        if instance_id == attach_data.instance_id and device == attach_data.device:
+            ret['comment'] = 'The volume {0} is attached on {1}({2}).'.format(volume_id,
+                                                                              instance_id, device)
+            return ret
+        else:
+            if __opts__['test']:
+                ret['comment'] = ('The volume {0} is set to be detached'
+                                  ' from {1}({2} and attached on {3}({4}).').format(attach_data.instance_id,
+                                                                                    attach_data.devic,
+                                                                                    volume_id,
+                                                                                    instance_id,
+                                                                                    device)
+                ret['result'] = None
+                return ret
+            if __salt__['boto_ec2.detach_volume'](volume_id=volume_id, wait_for_detachement=True, **args):
+                ret['comment'] = 'Volume {0} is detached from {1}({2}).'.format(volume_id,
+                                                                                attach_data.instance_id,
+                                                                                attach_data.device)
+                old_dict['instance_id'] = attach_data.instance_id
+                old_dict['device'] = attach_data.device
+            else:
+                raise SaltInvocationError(('The volume {0} is already attached on instance {1}({2}).'
+                                           ' Failed to detach').format(volume_id,
+                                                                       attach_data.instance_id,
+                                                                       attach_data.device))
+    else:
+        old_dict['instance_id'] = instance_id
+        old_dict['device'] = None
+    if __opts__['test']:
+        ret['comment'] = 'The volume {0} is set to be attached on {1}({2}).'.format(volume_id,
+                                                                                    instance_id,
+                                                                                    device)
+        ret['result'] = None
+        return ret
+    if __salt__['boto_ec2.attach_volume'](volume_id=volume_id, instance_id=instance_id,
+                                          device=device, **args):
+        ret['comment'] = ' '.join([
+                          ret['comment'],
+                          'Volume {0} is attached on {1}({2}).'.format(volume_id, instance_id, device)])
+        new_dict['instance_id'] = instance_id
+        new_dict['device'] = device
+        ret['changes'] = {'old': old_dict, 'new': new_dict}
+    else:
+        ret['comment'] = 'Error attaching volume {0} to instance {1}({2}).'.format(volume_id,
+                                                                                   instance_id,
+                                                                                   device)
         ret['result'] = False
     return ret
 
@@ -1269,7 +1536,7 @@ def private_ips_present(name, network_interface_name=None, network_interface_id=
         dict with region, key and keyid.
     '''
 
-    if not salt.utils.exactly_one((network_interface_name, network_interface_id)):
+    if not salt.utils.data.exactly_one((network_interface_name, network_interface_id)):
         raise SaltInvocationError("Exactly one of 'network_interface_name', "
                                   "'network_interface_id' must be provided")
 
@@ -1390,7 +1657,7 @@ def private_ips_absent(name, network_interface_name=None, network_interface_id=N
         dict with region, key and keyid.
     '''
 
-    if not salt.utils.exactly_one((network_interface_name, network_interface_id)):
+    if not salt.utils.data.exactly_one((network_interface_name, network_interface_id)):
         raise SaltInvocationError("Exactly one of 'network_interface_name', "
                                   "'network_interface_id' must be provided")
 

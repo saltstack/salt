@@ -27,7 +27,7 @@ Proxy-specific Configuration Options
 .. conf_proxy:: add_proxymodule_to_opts
 
 ``add_proxymodule_to_opts``
---------------------------
+---------------------------
 
 .. versionadded:: 2015.8.2
 
@@ -49,7 +49,7 @@ Add the proxymodule LazyLoader object to opts.
 
 .. versionadded:: 2016.3.0
 
-.. versionchanged:: Nitrogen
+.. versionchanged:: 2017.7.0
 
 Default: ``True``
 
@@ -68,7 +68,7 @@ function in a custom way and returns the data elsewhere.
 ``proxy_keep_alive``
 --------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``True``
 
@@ -86,7 +86,7 @@ otherwise the connection is considered alive.
 ``proxy_keep_alive_interval``
 -----------------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``1``
 
@@ -104,11 +104,11 @@ The frequency of keepalive checks, in minutes. It requires the
 ``proxy_always_alive``
 ----------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Default: ``True``
 
-Wheter the proxy should maintain the connection with the remote
+Whether the proxy should maintain the connection with the remote
 device. Similarly to :conf_proxy:`proxy_keep_alive`, this option
 is very specific to the design of the proxy module.
 When :conf_proxy:`proxy_always_alive` is set to ``False``,
@@ -118,3 +118,53 @@ has to be closed after every command.
 .. code-block:: yaml
 
     proxy_always_alive: False
+
+``proxy_merge_pillar_in_opts``
+------------------------------
+
+.. versionadded:: 2017.7.3
+
+Default: ``False``.
+
+Whether the pillar data to be merged into the proxy configuration options.
+As multiple proxies can run on the same server, we may need different
+configuration options for each, while there's one single configuration file.
+The solution is merging the pillar data of each proxy minion into the opts.
+
+.. code-block:: yaml
+
+    proxy_merge_pillar_in_opts: True
+
+``proxy_deep_merge_pillar_in_opts``
+-----------------------------------
+
+.. versionadded:: 2017.7.3
+
+Default: ``False``.
+
+Deep merge of pillar data into configuration opts.
+This option is evaluated only when :conf_proxy:`proxy_merge_pillar_in_opts` is
+enabled.
+
+``proxy_merge_pillar_in_opts_strategy``
+---------------------------------------
+
+.. versionadded:: 2017.7.3
+
+Default: ``smart``.
+
+The strategy used when merging pillar configuration into opts.
+This option is evaluated only when :conf_proxy:`proxy_merge_pillar_in_opts` is
+enabled.
+
+``proxy_mines_pillar``
+----------------------
+
+.. versionadded:: 2017.7.3
+
+Default: ``True``.
+
+Allow enabling mine details using pillar data. This evaluates the mine
+configuration under the pillar, for the following regular minion options that
+are also equally available on the proxy minion: :conf_minion:`mine_interval`,
+and :conf_minion:`mine_functions`.

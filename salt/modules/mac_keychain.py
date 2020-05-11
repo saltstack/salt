@@ -7,7 +7,7 @@ Install certificates into the keychain on Mac OS
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 import re
 
@@ -18,8 +18,8 @@ try:
 except ImportError:
     HAS_DEPS = False
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'keychain'
@@ -36,7 +36,7 @@ def __virtual__():
     '''
     Only work on Mac OS
     '''
-    if salt.utils.is_darwin() and _quote is not None:
+    if salt.utils.platform.is_darwin() and _quote is not None:
         return __virtualname__
     return False
 

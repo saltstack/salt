@@ -9,7 +9,7 @@ Support for Advanced Policy Firewall (APF)
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 try:
     import iptc
     IPTC_IMPORTED = True
@@ -18,15 +18,15 @@ except ImportError:
 
 
 # Import Salt Libs
+import salt.utils.path
 from salt.exceptions import CommandExecutionError
-import salt.utils
 
 
 def __virtual__():
     '''
     Only load if apf exists on the system
     '''
-    if salt.utils.which('apf') is None:
+    if salt.utils.path.which('apf') is None:
         return (False,
                 'The apf execution module cannot be loaded: apf unavailable.')
     elif not IPTC_IMPORTED:
@@ -40,7 +40,7 @@ def __apf_cmd(cmd):
     '''
     Return the apf location
     '''
-    apf_cmd = '{0} {1}'.format(salt.utils.which('apf'), cmd)
+    apf_cmd = '{0} {1}'.format(salt.utils.path.which('apf'), cmd)
     out = __salt__['cmd.run_all'](apf_cmd)
 
     if out['retcode'] != 0:

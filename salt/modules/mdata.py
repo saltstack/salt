@@ -8,13 +8,14 @@ Module for managaging metadata in SmartOS Zones
 :maturity:      new
 :platform:      smartos
 '''
-from __future__ import absolute_import
 
 # Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils.path
+import salt.utils.platform
 import salt.utils.decorators as decorators
 
 log = logging.getLogger(__name__)
@@ -36,7 +37,7 @@ def _check_mdata_list():
     '''
     looks to see if mdata-list is present on the system
     '''
-    return salt.utils.which('mdata-list')
+    return salt.utils.path.which('mdata-list')
 
 
 @decorators.memoize
@@ -44,7 +45,7 @@ def _check_mdata_get():
     '''
     looks to see if mdata-get is present on the system
     '''
-    return salt.utils.which('mdata-get')
+    return salt.utils.path.which('mdata-get')
 
 
 @decorators.memoize
@@ -52,7 +53,7 @@ def _check_mdata_put():
     '''
     looks to see if mdata-put is present on the system
     '''
-    return salt.utils.which('mdata-put')
+    return salt.utils.path.which('mdata-put')
 
 
 @decorators.memoize
@@ -60,14 +61,14 @@ def _check_mdata_delete():
     '''
     looks to see if mdata-delete is present on the system
     '''
-    return salt.utils.which('mdata-delete')
+    return salt.utils.path.which('mdata-delete')
 
 
 def __virtual__():
     '''
     Provides mdata only on SmartOS
     '''
-    if _check_mdata_list() and not salt.utils.is_smartos_globalzone():
+    if _check_mdata_list() and not salt.utils.platform.is_smartos_globalzone():
         return __virtualname__
     return (
         False,
@@ -90,7 +91,7 @@ def list_():
     mdata = _check_mdata_list()
     if mdata:
         cmd = '{0}'.format(mdata)
-        return __salt__['cmd.run'](cmd).splitlines()
+        return __salt__['cmd.run'](cmd, ignore_retcode=True).splitlines()
     return {}
 
 
@@ -115,13 +116,13 @@ def get_(*keyname):
     mdata = _check_mdata_get()
     ret = {}
 
-    if len(keyname) == 0:
+    if not keyname:
         keyname = list_()
 
     for k in keyname:
         if mdata:
             cmd = '{0} {1}'.format(mdata, k)
-            res = __salt__['cmd.run_all'](cmd)
+            res = __salt__['cmd.run_all'](cmd, ignore_retcode=True)
             ret[k] = res['stdout'] if res['retcode'] == 0 else ''
         else:
             ret[k] = ''
@@ -149,7 +150,7 @@ def put_(keyname, val):
 
     if mdata:
         cmd = 'echo {2} | {0} {1}'.format(mdata, keyname, val)
-        ret = __salt__['cmd.run_all'](cmd, python_shell=True)
+        ret = __salt__['cmd.run_all'](cmd, python_shell=True, ignore_retcode=True)
 
     return ret['retcode'] == 0
 
@@ -175,7 +176,7 @@ def delete_(*keyname):
     for k in keyname:
         if mdata and k in valid_keynames:
             cmd = '{0} {1}'.format(mdata, k)
-            ret[k] = __salt__['cmd.run_all'](cmd)['retcode'] == 0
+            ret[k] = __salt__['cmd.run_all'](cmd, ignore_retcode=True)['retcode'] == 0
         else:
             ret[k] = True
 

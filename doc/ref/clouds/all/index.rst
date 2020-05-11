@@ -1,8 +1,8 @@
 .. _all-salt.clouds:
 
-===============================
-Full list of Salt Cloud modules
-===============================
+=============
+cloud modules
+=============
 
 .. currentmodule:: salt.cloud.clouds
 
@@ -12,19 +12,23 @@ Full list of Salt Cloud modules
 
     aliyun
     azurearm
+    clc
     cloudstack
-    digital_ocean
+    digitalocean
     dimensiondata
     ec2
     gce
     gogrid
     joyent
+    libvirt
     linode
     lxc
     msazure
     nova
+    oneandone
     opennebula
     openstack
+    packet
     parallels
     profitbricks
     proxmox
@@ -34,6 +38,7 @@ Full list of Salt Cloud modules
     scaleway
     softlayer
     softlayer_hw
+    vagrant
     virtualbox
     vmware
     vultrpy

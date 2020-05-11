@@ -1,0 +1,17 @@
+classes:
+  - app.ssh.server
+  - roles.nginx.server
+
+pillars:
+  default:
+    network:
+      sub: Lausanne
+      dns:
+        srv1: 10.10.0.1
+        domain: qls.example.com
+    users:
+      nginx_adm:
+        uid: 250
+        gid: 200
+        gecos: 'Nginx admin user'
+        homedir: /srv/www

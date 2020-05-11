@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     tests.unit.modules.archive_test
@@ -8,7 +8,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os.path
 
 # Import Salt Testing libs
@@ -18,8 +18,8 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
 import salt.modules.archive as archive
+import salt.utils.path
 from salt.exceptions import CommandNotFoundError
-from salt.utils import which_bin
 
 # Import 3rd-party libs
 from salt.ext.six.moves import zip
@@ -45,7 +45,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_tar(self):
         with patch('glob.glob', lambda pathname: [pathname]):
-            with patch('salt.utils.which', lambda exe: exe):
+            with patch('salt.utils.path.which', lambda exe: exe):
                 mock = MagicMock(return_value='salt')
                 with patch.dict(archive.__salt__, {'cmd.run': mock}):
                     ret = archive.tar(
@@ -76,7 +76,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                     )
 
     def test_tar_raises_exception_if_not_found(self):
-        with patch('salt.utils.which', lambda exe: None):
+        with patch('salt.utils.path.which', lambda exe: None):
             mock = MagicMock(return_value='salt')
             with patch.dict(archive.__salt__, {'cmd.run': mock}):
                 self.assertRaises(
@@ -91,7 +91,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
     def test_gzip(self):
         mock = MagicMock(return_value='salt')
         with patch.dict(archive.__salt__, {'cmd.run': mock}):
-            with patch('salt.utils.which', lambda exe: exe):
+            with patch('salt.utils.path.which', lambda exe: exe):
                 ret = archive.gzip('/tmp/something-to-compress')
                 self.assertEqual(['salt'], ret)
                 mock.assert_called_once_with(
@@ -102,7 +102,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
     def test_gzip_raises_exception_if_not_found(self):
         mock = MagicMock(return_value='salt')
         with patch.dict(archive.__salt__, {'cmd.run': mock}):
-            with patch('salt.utils.which', lambda exe: None):
+            with patch('salt.utils.path.which', lambda exe: None):
                 self.assertRaises(
                     CommandNotFoundError,
                     archive.gzip, '/tmp/something-to-compress'
@@ -112,7 +112,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
     def test_gunzip(self):
         mock = MagicMock(return_value='salt')
         with patch.dict(archive.__salt__, {'cmd.run': mock}):
-            with patch('salt.utils.which', lambda exe: exe):
+            with patch('salt.utils.path.which', lambda exe: exe):
                 ret = archive.gunzip('/tmp/something-to-decompress.tar.gz')
                 self.assertEqual(['salt'], ret)
                 mock.assert_called_once_with(
@@ -123,7 +123,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
     def test_gunzip_raises_exception_if_not_found(self):
         mock = MagicMock(return_value='salt')
         with patch.dict(archive.__salt__, {'cmd.run': mock}):
-            with patch('salt.utils.which', lambda exe: None):
+            with patch('salt.utils.path.which', lambda exe: None):
                 self.assertRaises(
                     CommandNotFoundError,
                     archive.gunzip,
@@ -133,7 +133,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_cmd_zip(self):
         with patch('glob.glob', lambda pathname: [pathname]):
-            with patch('salt.utils.which', lambda exe: exe):
+            with patch('salt.utils.path.which', lambda exe: exe):
                 mock = MagicMock(return_value='salt')
                 with patch.dict(archive.__salt__, {'cmd.run': mock}):
                     ret = archive.cmd_zip(
@@ -172,12 +172,14 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                         '/tmp/tmpePe8yO,/tmp/tmpLeSw1A',
                         template='jinja'
                     )
-                    self.assertEqual(['tmp/tmpePe8yO', 'tmp/tmpLeSw1A'], ret)
+                    expected = [os.path.join('tmp', 'tmpePe8yO'),
+                                os.path.join('tmp', 'tmpLeSw1A')]
+                    self.assertEqual(expected, ret)
 
     def test_zip_raises_exception_if_not_found(self):
         mock = MagicMock(return_value='salt')
         with patch.dict(archive.__salt__, {'cmd.run': mock}):
-            with patch('salt.utils.which', lambda exe: None):
+            with patch('salt.utils.path.which', lambda exe: None):
                 self.assertRaises(
                     CommandNotFoundError,
                     archive.cmd_zip,
@@ -199,7 +201,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                                            'pid': 12345,
                                            'retcode': 0})
 
-        with patch('salt.utils.which', lambda exe: exe):
+        with patch('salt.utils.path.which', lambda exe: exe):
 
             mock = _get_mock()
             with patch.dict(archive.__salt__, {'cmd.run_all': mock}):
@@ -315,7 +317,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
     def test_unzip_raises_exception_if_not_found(self):
         mock = MagicMock(return_value='salt')
         with patch.dict(archive.__salt__, {'cmd.run': mock}):
-            with patch('salt.utils.which', lambda exe: None):
+            with patch('salt.utils.path.which', lambda exe: None):
                 self.assertRaises(
                     CommandNotFoundError,
                     archive.cmd_unzip,
@@ -328,7 +330,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_rar(self):
         with patch('glob.glob', lambda pathname: [pathname]):
-            with patch('salt.utils.which', lambda exe: exe):
+            with patch('salt.utils.path.which', lambda exe: exe):
                 mock = MagicMock(return_value='salt')
                 with patch.dict(archive.__salt__, {'cmd.run': mock}):
                     ret = archive.rar(
@@ -358,7 +360,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
     def test_rar_raises_exception_if_not_found(self):
         mock = MagicMock(return_value='salt')
         with patch.dict(archive.__salt__, {'cmd.run': mock}):
-            with patch('salt.utils.which', lambda exe: None):
+            with patch('salt.utils.path.which', lambda exe: None):
                 self.assertRaises(
                     CommandNotFoundError,
                     archive.rar,
@@ -367,10 +369,10 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertFalse(mock.called)
 
-    @skipIf(which_bin(('unrar', 'rar')) is None, 'unrar not installed')
+    @skipIf(salt.utils.path.which_bin(('unrar', 'rar')) is None, 'unrar not installed')
     def test_unrar(self):
-        with patch('salt.utils.which_bin', lambda exe: exe[0] if isinstance(exe, (list, tuple)) else exe):
-            with patch('salt.utils.which', lambda exe: exe[0] if isinstance(exe, (list, tuple)) else exe):
+        with patch('salt.utils.path.which_bin', lambda exe: exe[0] if isinstance(exe, (list, tuple)) else exe):
+            with patch('salt.utils.path.which', lambda exe: exe[0] if isinstance(exe, (list, tuple)) else exe):
                 mock = MagicMock(return_value='salt')
                 with patch.dict(archive.__salt__, {'cmd.run': mock}):
                     ret = archive.unrar(
@@ -400,7 +402,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                     )
 
     def test_unrar_raises_exception_if_not_found(self):
-        with patch('salt.utils.which_bin', lambda exe: None):
+        with patch('salt.utils.path.which_bin', lambda exe: None):
             mock = MagicMock(return_value='salt')
             with patch.dict(archive.__salt__, {'cmd.run': mock}):
                 self.assertRaises(
@@ -412,7 +414,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertFalse(mock.called)
 
     def test_trim_files(self):
-        with patch('salt.utils.which_bin', lambda exe: exe):
+        with patch('salt.utils.path.which_bin', lambda exe: exe):
             source = 'file.tar.gz'
             tmp_dir = 'temp'
             files = [

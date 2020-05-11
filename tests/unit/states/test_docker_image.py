@@ -4,20 +4,19 @@ Unit tests for the docker state
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
-    Mock,
+    MagicMock,
     NO_MOCK,
     NO_MOCK_REASON,
     patch
 )
 
 # Import Salt Libs
-from salt.exceptions import CommandExecutionError
 import salt.modules.dockermod as docker_mod
 import salt.states.docker_image as docker_state
 
@@ -50,21 +49,19 @@ class DockerImageTestCase(TestCase, LoaderModuleMockMixin):
         if ``image:latest`` is already downloaded locally the state
         should not report changes.
         '''
-        docker_inspect_image = Mock(
-            return_value={'Id': 'abcdefghijk'})
-        docker_pull = Mock(
+        docker_inspect_image = MagicMock(return_value={'Id': 'abcdefghijkl'})
+        docker_pull = MagicMock(
             return_value={'Layers':
-                          {'Already_Pulled': ['abcdefghijk'],
+                          {'Already_Pulled': ['abcdefghijkl'],
                            'Pulled': []},
                           'Status': 'Image is up to date for image:latest',
                           'Time_Elapsed': 1.1})
-        docker_list_tags = Mock(
-            return_value=['image:latest']
-        )
+        docker_list_tags = MagicMock(return_value=['image:latest'])
+        docker_resolve_tag = MagicMock(return_value='image:latest')
         __salt__ = {'docker.list_tags': docker_list_tags,
                     'docker.pull': docker_pull,
                     'docker.inspect_image': docker_inspect_image,
-                    }
+                    'docker.resolve_tag': docker_resolve_tag}
         with patch.dict(docker_state.__dict__,
                         {'__salt__': __salt__}):
             ret = docker_state.present('image:latest', force=True)
@@ -87,31 +84,26 @@ class DockerImageTestCase(TestCase, LoaderModuleMockMixin):
                 - force: true
 
         if ``image:latest`` is not downloaded and force is true
-        should pull a new image successfuly.
+        should pull a new image successfully.
         '''
-        docker_inspect_image = Mock(
-            side_effect=CommandExecutionError(
-                'Error 404: No such image/container: image:latest'))
-        docker_pull = Mock(
+        docker_inspect_image = MagicMock(return_value={'Id': '1234567890ab'})
+        docker_pull = MagicMock(
             return_value={'Layers':
-                          {'Already_Pulled': ['abcdefghijk'],
-                           'Pulled': ['abcdefghijk']},
-                          'Status': "Image 'image:latest' was pulled",
-                          'Time_Elapsed': 1.1})
-        docker_list_tags = Mock(
-            side_effect=[[], ['image:latest']]
-        )
+                          {'Pulled': ['abcdefghijkl']},
+                           'Status': "Image 'image:latest' was pulled",
+                           'Time_Elapsed': 1.1})
+        docker_list_tags = MagicMock(side_effect=[[], ['image:latest']])
+        docker_resolve_tag = MagicMock(return_value='image:latest')
         __salt__ = {'docker.list_tags': docker_list_tags,
                     'docker.pull': docker_pull,
                     'docker.inspect_image': docker_inspect_image,
-                    }
+                    'docker.resolve_tag': docker_resolve_tag}
         with patch.dict(docker_state.__dict__,
                         {'__salt__': __salt__}):
             ret = docker_state.present('image:latest', force=True)
         self.assertEqual(ret,
                          {'changes': {
-                             'Layers': {'Already_Pulled': ['abcdefghijk'],
-                                        'Pulled': ['abcdefghijk']},
+                             'Layers': {'Pulled': ['abcdefghijkl']},
                              'Status': "Image 'image:latest' was pulled",
                              'Time_Elapsed': 1.1},
                              'result': True,

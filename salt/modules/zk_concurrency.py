@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 '''
-:depends: kazoo
-:configuration: See :py:mod:`salt.modules.zookeeper` for setup instructions.
-
 Concurrency controls in zookeeper
 =========================================================================
+
+:depends: kazoo
+:configuration: See :py:mod:`salt.modules.zookeeper` for setup instructions.
 
 This module allows you to acquire and release a slot. This is primarily useful
 for ensureing that no more than N hosts take a specific action at once. This can
 also be used to coordinate between masters.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import sys
@@ -185,7 +185,7 @@ def lock_holders(path,
 
     Example:
 
-    ... code-block: bash
+    .. code-block: bash
 
         salt minion zk_concurrency.lock_holders /lock/path host1:1234,host2:1234
     '''
@@ -237,7 +237,7 @@ def lock(path,
 
     Example:
 
-    ... code-block: bash
+    .. code-block: bash
 
         salt minion zk_concurrency.lock /lock/path host1:1234,host2:1234
     '''
@@ -255,10 +255,10 @@ def lock(path,
 
     # block waiting for lock acquisition
     if timeout:
-        logging.info('Acquiring lock {0} with timeout={1}'.format(path, timeout))
+        logging.info('Acquiring lock %s with timeout=%s', path, timeout)
         __context__['semaphore_map'][path].acquire(timeout=timeout)
     else:
-        logging.info('Acquiring lock {0} with no timeout'.format(path))
+        logging.info('Acquiring lock %s with no timeout', path)
         __context__['semaphore_map'][path].acquire()
 
     return __context__['semaphore_map'][path].is_acquired
@@ -298,7 +298,7 @@ def unlock(path,
 
     Example:
 
-    ... code-block: bash
+    .. code-block: bash
 
         salt minion zk_concurrency.unlock /lock/path host1:1234,host2:1234
     '''
@@ -316,7 +316,7 @@ def unlock(path,
         del __context__['semaphore_map'][path]
         return True
     else:
-        logging.error('Unable to find lease for path {0}'.format(path))
+        logging.error('Unable to find lease for path %s', path)
         return False
 
 
@@ -348,7 +348,7 @@ def party_members(path,
 
     Example:
 
-    ... code-block: bash
+    .. code-block: bash
 
         salt minion zk_concurrency.party_members /lock/path host1:1234,host2:1234
         salt minion zk_concurrency.party_members /lock/path host1:1234,host2:1234 min_nodes=3 blocking=True

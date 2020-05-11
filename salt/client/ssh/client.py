@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import copy
 import logging
@@ -9,6 +9,7 @@ import random
 
 # Import Salt libs
 import salt.config
+import salt.utils.args
 import salt.syspaths as syspaths
 from salt.exceptions import SaltClientError  # Temporary
 
@@ -30,10 +31,9 @@ class SSHClient(object):
         else:
             if os.path.isdir(c_path):
                 log.warning(
-                    '{0} expects a file path not a directory path({1}) to '
-                    'it\'s \'c_path\' keyword argument'.format(
-                        self.__class__.__name__, c_path
-                    )
+                    '%s expects a file path not a directory path(%s) to '
+                    'its \'c_path\' keyword argument',
+                    self.__class__.__name__, c_path
                 )
             self.opts = salt.config.client_config(c_path)
 
@@ -52,15 +52,6 @@ class SSHClient(object):
         '''
         Prepare the arguments
         '''
-        if 'expr_form' in kwargs:
-            salt.utils.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
         opts = copy.deepcopy(self.opts)
         opts.update(kwargs)
         if timeout:
@@ -88,15 +79,6 @@ class SSHClient(object):
 
         .. versionadded:: 2015.5.0
         '''
-        if 'expr_form' in kwargs:
-            salt.utils.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
         ssh = self._prep_ssh(
                 tgt,
                 fun,
@@ -122,15 +104,6 @@ class SSHClient(object):
 
         .. versionadded:: 2015.5.0
         '''
-        if 'expr_form' in kwargs:
-            salt.utils.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
         ssh = self._prep_ssh(
                 tgt,
                 fun,
@@ -224,16 +197,8 @@ class SSHClient(object):
             >>> sshclient.cmd_subset('*', 'test.ping', sub=1)
             {'jerry': True}
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
         '''
-        if 'expr_form' in kwargs:
-            salt.utils.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
         minion_ret = self.cmd(tgt,
                               'sys.list_functions',
                               tgt_type=tgt_type,

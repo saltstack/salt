@@ -28,27 +28,27 @@
 # dictionary.  Otherwise it is assumed that the module calls the grains
 # function in a custom way and returns the data elsewhere
 #
-# Default to False for 2016.3 and 2016.11. Switch to True for Nitrogen.
+# Default to False for 2016.3 and 2016.11. Switch to True for 2017.7.0.
 # proxy_merge_grains_in_module: True
 
 # If a proxymodule has a function called 'alive' returning a boolean
 # flag reflecting the state of the connection with the remove device,
 # when this option is set as True, a scheduled job on the proxy will
 # try restarting the connection. The polling frequency depends on the
-# next option, 'proxy_keep_alive_interval'. Added in Nitrogen.
+# next option, 'proxy_keep_alive_interval'. Added in 2017.7.0.
 # proxy_keep_alive: True
 
 # The polling interval (in minutes) to check if the underlying connection
 # with the remote device is still alive. This option requires
 # 'proxy_keep_alive' to be configured as True and the proxymodule to
-# implement the 'alive' function. Added in Nitrogen.
+# implement the 'alive' function. Added in 2017.7.0.
 # proxy_keep_alive_interval: 1
 
 # By default, any proxy opens the connection with the remote device when
 # initialized. Some proxymodules allow through this option to open/close
 # the session per command. This requires the proxymodule to have this
 # capability. Please consult the documentation to see if the proxy type
-# used can be that flexible. Added in Nitrogen.
+# used can be that flexible. Added in 2017.7.0.
 # proxy_always_alive: True
 
 # If multiple masters are specified in the 'master' setting, the default behavior
@@ -356,19 +356,18 @@
 
 #####    State Management Settings    #####
 ###########################################
-# The state management system executes all of the state templates on the minion
-# to enable more granular control of system state management. The type of
-# template and serialization used for state management needs to be configured
-# on the minion, the default renderer is yaml_jinja. This is a yaml file
-# rendered from a jinja template, the available options are:
-# yaml_jinja
-# yaml_mako
-# yaml_wempy
-# json_jinja
-# json_mako
-# json_wempy
+# The default renderer to use in SLS files. This is configured as a
+# pipe-delimited expression. For example, jinja|yaml will first run jinja
+# templating on the SLS file, and then load the result as YAML. This syntax is
+# documented in further depth at the following URL:
 #
-#renderer: yaml_jinja
+# https://docs.saltstack.com/en/latest/ref/renderers/#composing-renderers
+#
+# NOTE: The "shebang" prefix (e.g. "#!jinja|yaml") described in the
+# documentation linked above is for use in an SLS file to override the default
+# renderer, it should not be used when configuring the renderer here.
+#
+#renderer: jinja|yaml
 #
 # The failhard option tells the minions to stop immediately after the first
 # failure detected in the state execution. Defaults to False.
@@ -498,9 +497,12 @@
 # all data that has a result of True and no changes will be suppressed.
 #state_verbose: True
 
-# The state_output setting changes if the output is the full multi line
-# output for each changed state if set to 'full', but if set to 'terse'
-# the output will be shortened to a single line.
+# The state_output setting controls which results will be output full multi line
+# full, terse - each state will be full/terse
+# mixed - only states with errors will be full
+# changes - states with changes and errors will be full
+# full_id, mixed_id, changes_id and terse_id are also allowed;
+# when set, the state ID will be used as name in the output
 #state_output: full
 
 # The state_output_diff setting changes whether or not the output from
@@ -540,7 +542,7 @@
 #key_logfile: /var/log/salt/key
 
 # The level of messages to send to the console.
-# One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
+# One of 'garbage', 'trace', 'debug', 'info', 'warning', 'error', 'critical'.
 #
 # The following log levels are considered INSECURE and may log sensitive data:
 # ['garbage', 'trace', 'debug']

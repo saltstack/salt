@@ -4,14 +4,20 @@ Set up the version of Salt
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import re
 import sys
 import platform
+import warnings
 
-# linux_distribution depreacted in py3.7
+# linux_distribution deprecated in py3.7
 try:
-    from platform import linux_distribution
+    from platform import linux_distribution as _deprecated_linux_distribution
+
+    def linux_distribution(**kwargs):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return _deprecated_linux_distribution(**kwargs)
 except ImportError:
     from distro import linux_distribution
 
@@ -69,7 +75,10 @@ class SaltStackVersion(object):
         r'(?:(?P<pre_type>rc|a|b|alpha|beta|nb)(?P<pre_num>[\d]{1}))?'
         r'(?:(?:.*)-(?P<noc>(?:[\d]+|n/a))-(?P<sha>[a-z0-9]{8}))?'
     )
-    git_sha_regex = re.compile(r'(?P<sha>[a-z0-9]{7})')
+    git_sha_regex = r'(?P<sha>[a-z0-9]{7})'
+    if six.PY2:
+        git_sha_regex = git_sha_regex.decode(__salt_system_encoding__)
+    git_sha_regex = re.compile(git_sha_regex)
 
     # Salt versions after 0.17.0 will be numbered like:
     #   <4-digit-year>.<month>.<bugfix>
@@ -93,110 +102,110 @@ class SaltStackVersion(object):
         'Beryllium'     : (2015, 8),
         'Boron'         : (2016, 3),
         'Carbon'        : (2016, 11),
-        'Nitrogen'      : (MAX_SIZE - 102, 0),
-        'Oxygen'        : (MAX_SIZE - 101, 0),
-        'Fluorine'      : (MAX_SIZE - 100, 0),
+        'Nitrogen'      : (2017, 7),
+        'Oxygen'        : (2018, 3),
+        'Fluorine'      : (2019, 2),
+        'Neon'          : (MAX_SIZE - 99, 0),
+        'Sodium'        : (MAX_SIZE - 98, 0),
+        'Magnesium'     : (MAX_SIZE - 97, 0),
         # pylint: disable=E8265
-        #'Neon'         : (MAX_SIZE - 99 , 0),
-        #'Sodium'       : (MAX_SIZE - 98 , 0),
-        #'Magnesium'    : (MAX_SIZE - 97 , 0),
-        #'Aluminium'    : (MAX_SIZE - 96 , 0),
-        #'Silicon'      : (MAX_SIZE - 95 , 0),
-        #'Phosphorus'   : (MAX_SIZE - 94 , 0),
-        #'Sulfur'       : (MAX_SIZE - 93 , 0),
-        #'Chlorine'     : (MAX_SIZE - 92 , 0),
-        #'Argon'        : (MAX_SIZE - 91 , 0),
-        #'Potassium'    : (MAX_SIZE - 90 , 0),
-        #'Calcium'      : (MAX_SIZE - 89 , 0),
-        #'Scandium'     : (MAX_SIZE - 88 , 0),
-        #'Titanium'     : (MAX_SIZE - 87 , 0),
-        #'Vanadium'     : (MAX_SIZE - 86 , 0),
-        #'Chromium'     : (MAX_SIZE - 85 , 0),
-        #'Manganese'    : (MAX_SIZE - 84 , 0),
-        #'Iron'         : (MAX_SIZE - 83 , 0),
-        #'Cobalt'       : (MAX_SIZE - 82 , 0),
-        #'Nickel'       : (MAX_SIZE - 81 , 0),
-        #'Copper'       : (MAX_SIZE - 80 , 0),
-        #'Zinc'         : (MAX_SIZE - 79 , 0),
-        #'Gallium'      : (MAX_SIZE - 78 , 0),
-        #'Germanium'    : (MAX_SIZE - 77 , 0),
-        #'Arsenic'      : (MAX_SIZE - 76 , 0),
-        #'Selenium'     : (MAX_SIZE - 75 , 0),
-        #'Bromine'      : (MAX_SIZE - 74 , 0),
-        #'Krypton'      : (MAX_SIZE - 73 , 0),
-        #'Rubidium'     : (MAX_SIZE - 72 , 0),
-        #'Strontium'    : (MAX_SIZE - 71 , 0),
-        #'Yttrium'      : (MAX_SIZE - 70 , 0),
-        #'Zirconium'    : (MAX_SIZE - 69 , 0),
-        #'Niobium'      : (MAX_SIZE - 68 , 0),
-        #'Molybdenum'   : (MAX_SIZE - 67 , 0),
-        #'Technetium'   : (MAX_SIZE - 66 , 0),
-        #'Ruthenium'    : (MAX_SIZE - 65 , 0),
-        #'Rhodium'      : (MAX_SIZE - 64 , 0),
-        #'Palladium'    : (MAX_SIZE - 63 , 0),
-        #'Silver'       : (MAX_SIZE - 62 , 0),
-        #'Cadmium'      : (MAX_SIZE - 61 , 0),
-        #'Indium'       : (MAX_SIZE - 60 , 0),
-        #'Tin'          : (MAX_SIZE - 59 , 0),
-        #'Antimony'     : (MAX_SIZE - 58 , 0),
-        #'Tellurium'    : (MAX_SIZE - 57 , 0),
-        #'Iodine'       : (MAX_SIZE - 56 , 0),
-        #'Xenon'        : (MAX_SIZE - 55 , 0),
-        #'Caesium'      : (MAX_SIZE - 54 , 0),
-        #'Barium'       : (MAX_SIZE - 53 , 0),
-        #'Lanthanum'    : (MAX_SIZE - 52 , 0),
-        #'Cerium'       : (MAX_SIZE - 51 , 0),
-        #'Praseodymium' : (MAX_SIZE - 50 , 0),
-        #'Neodymium'    : (MAX_SIZE - 49 , 0),
-        #'Promethium'   : (MAX_SIZE - 48 , 0),
-        #'Samarium'     : (MAX_SIZE - 47 , 0),
-        #'Europium'     : (MAX_SIZE - 46 , 0),
-        #'Gadolinium'   : (MAX_SIZE - 45 , 0),
-        #'Terbium'      : (MAX_SIZE - 44 , 0),
-        #'Dysprosium'   : (MAX_SIZE - 43 , 0),
-        #'Holmium'      : (MAX_SIZE - 42 , 0),
-        #'Erbium'       : (MAX_SIZE - 41 , 0),
-        #'Thulium'      : (MAX_SIZE - 40 , 0),
-        #'Ytterbium'    : (MAX_SIZE - 39 , 0),
-        #'Lutetium'     : (MAX_SIZE - 38 , 0),
-        #'Hafnium'      : (MAX_SIZE - 37 , 0),
-        #'Tantalum'     : (MAX_SIZE - 36 , 0),
-        #'Tungsten'     : (MAX_SIZE - 35 , 0),
-        #'Rhenium'      : (MAX_SIZE - 34 , 0),
-        #'Osmium'       : (MAX_SIZE - 33 , 0),
-        #'Iridium'      : (MAX_SIZE - 32 , 0),
-        #'Platinum'     : (MAX_SIZE - 31 , 0),
-        #'Gold'         : (MAX_SIZE - 30 , 0),
-        #'Mercury'      : (MAX_SIZE - 29 , 0),
-        #'Thallium'     : (MAX_SIZE - 28 , 0),
-        #'Lead'         : (MAX_SIZE - 27 , 0),
-        #'Bismuth'      : (MAX_SIZE - 26 , 0),
-        #'Polonium'     : (MAX_SIZE - 25 , 0),
-        #'Astatine'     : (MAX_SIZE - 24 , 0),
-        #'Radon'        : (MAX_SIZE - 23 , 0),
-        #'Francium'     : (MAX_SIZE - 22 , 0),
-        #'Radium'       : (MAX_SIZE - 21 , 0),
-        #'Actinium'     : (MAX_SIZE - 20 , 0),
-        #'Thorium'      : (MAX_SIZE - 19 , 0),
-        #'Protactinium' : (MAX_SIZE - 18 , 0),
-        #'Uranium'      : (MAX_SIZE - 17 , 0),
-        #'Neptunium'    : (MAX_SIZE - 16 , 0),
-        #'Plutonium'    : (MAX_SIZE - 15 , 0),
-        #'Americium'    : (MAX_SIZE - 14 , 0),
-        #'Curium'       : (MAX_SIZE - 13 , 0),
-        #'Berkelium'    : (MAX_SIZE - 12 , 0),
-        #'Californium'  : (MAX_SIZE - 11 , 0),
-        #'Einsteinium'  : (MAX_SIZE - 10 , 0),
-        #'Fermium'      : (MAX_SIZE - 9  , 0),
-        #'Mendelevium'  : (MAX_SIZE - 8  , 0),
-        #'Nobelium'     : (MAX_SIZE - 7  , 0),
-        #'Lawrencium'   : (MAX_SIZE - 6  , 0),
-        #'Rutherfordium': (MAX_SIZE - 5  , 0),
-        #'Dubnium'      : (MAX_SIZE - 4  , 0),
-        #'Seaborgium'   : (MAX_SIZE - 3  , 0),
-        #'Bohrium'      : (MAX_SIZE - 2  , 0),
-        #'Hassium'      : (MAX_SIZE - 1  , 0),
-        #'Meitnerium'   : (MAX_SIZE - 0  , 0),
+        #'Aluminium'    : (MAX_SIZE - 96, 0),
+        #'Silicon'      : (MAX_SIZE - 95, 0),
+        #'Phosphorus'   : (MAX_SIZE - 94, 0),
+        #'Sulfur'       : (MAX_SIZE - 93, 0),
+        #'Chlorine'     : (MAX_SIZE - 92, 0),
+        #'Argon'        : (MAX_SIZE - 91, 0),
+        #'Potassium'    : (MAX_SIZE - 90, 0),
+        #'Calcium'      : (MAX_SIZE - 89, 0),
+        #'Scandium'     : (MAX_SIZE - 88, 0),
+        #'Titanium'     : (MAX_SIZE - 87, 0),
+        #'Vanadium'     : (MAX_SIZE - 86, 0),
+        #'Chromium'     : (MAX_SIZE - 85, 0),
+        #'Manganese'    : (MAX_SIZE - 84, 0),
+        #'Iron'         : (MAX_SIZE - 83, 0),
+        #'Cobalt'       : (MAX_SIZE - 82, 0),
+        #'Nickel'       : (MAX_SIZE - 81, 0),
+        #'Copper'       : (MAX_SIZE - 80, 0),
+        #'Zinc'         : (MAX_SIZE - 79, 0),
+        #'Gallium'      : (MAX_SIZE - 78, 0),
+        #'Germanium'    : (MAX_SIZE - 77, 0),
+        #'Arsenic'      : (MAX_SIZE - 76, 0),
+        #'Selenium'     : (MAX_SIZE - 75, 0),
+        #'Bromine'      : (MAX_SIZE - 74, 0),
+        #'Krypton'      : (MAX_SIZE - 73, 0),
+        #'Rubidium'     : (MAX_SIZE - 72, 0),
+        #'Strontium'    : (MAX_SIZE - 71, 0),
+        #'Yttrium'      : (MAX_SIZE - 70, 0),
+        #'Zirconium'    : (MAX_SIZE - 69, 0),
+        #'Niobium'      : (MAX_SIZE - 68, 0),
+        #'Molybdenum'   : (MAX_SIZE - 67, 0),
+        #'Technetium'   : (MAX_SIZE - 66, 0),
+        #'Ruthenium'    : (MAX_SIZE - 65, 0),
+        #'Rhodium'      : (MAX_SIZE - 64, 0),
+        #'Palladium'    : (MAX_SIZE - 63, 0),
+        #'Silver'       : (MAX_SIZE - 62, 0),
+        #'Cadmium'      : (MAX_SIZE - 61, 0),
+        #'Indium'       : (MAX_SIZE - 60, 0),
+        #'Tin'          : (MAX_SIZE - 59, 0),
+        #'Antimony'     : (MAX_SIZE - 58, 0),
+        #'Tellurium'    : (MAX_SIZE - 57, 0),
+        #'Iodine'       : (MAX_SIZE - 56, 0),
+        #'Xenon'        : (MAX_SIZE - 55, 0),
+        #'Caesium'      : (MAX_SIZE - 54, 0),
+        #'Barium'       : (MAX_SIZE - 53, 0),
+        #'Lanthanum'    : (MAX_SIZE - 52, 0),
+        #'Cerium'       : (MAX_SIZE - 51, 0),
+        #'Praseodymium' : (MAX_SIZE - 50, 0),
+        #'Neodymium'    : (MAX_SIZE - 49, 0),
+        #'Promethium'   : (MAX_SIZE - 48, 0),
+        #'Samarium'     : (MAX_SIZE - 47, 0),
+        #'Europium'     : (MAX_SIZE - 46, 0),
+        #'Gadolinium'   : (MAX_SIZE - 45, 0),
+        #'Terbium'      : (MAX_SIZE - 44, 0),
+        #'Dysprosium'   : (MAX_SIZE - 43, 0),
+        #'Holmium'      : (MAX_SIZE - 42, 0),
+        #'Erbium'       : (MAX_SIZE - 41, 0),
+        #'Thulium'      : (MAX_SIZE - 40, 0),
+        #'Ytterbium'    : (MAX_SIZE - 39, 0),
+        #'Lutetium'     : (MAX_SIZE - 38, 0),
+        #'Hafnium'      : (MAX_SIZE - 37, 0),
+        #'Tantalum'     : (MAX_SIZE - 36, 0),
+        #'Tungsten'     : (MAX_SIZE - 35, 0),
+        #'Rhenium'      : (MAX_SIZE - 34, 0),
+        #'Osmium'       : (MAX_SIZE - 33, 0),
+        #'Iridium'      : (MAX_SIZE - 32, 0),
+        #'Platinum'     : (MAX_SIZE - 31, 0),
+        #'Gold'         : (MAX_SIZE - 30, 0),
+        #'Mercury'      : (MAX_SIZE - 29, 0),
+        #'Thallium'     : (MAX_SIZE - 28, 0),
+        #'Lead'         : (MAX_SIZE - 27, 0),
+        #'Bismuth'      : (MAX_SIZE - 26, 0),
+        #'Polonium'     : (MAX_SIZE - 25, 0),
+        #'Astatine'     : (MAX_SIZE - 24, 0),
+        #'Radon'        : (MAX_SIZE - 23, 0),
+        #'Francium'     : (MAX_SIZE - 22, 0),
+        #'Radium'       : (MAX_SIZE - 21, 0),
+        #'Actinium'     : (MAX_SIZE - 20, 0),
+        #'Thorium'      : (MAX_SIZE - 19, 0),
+        #'Protactinium' : (MAX_SIZE - 18, 0),
+        #'Uranium'      : (MAX_SIZE - 17, 0),
+        #'Neptunium'    : (MAX_SIZE - 16, 0),
+        #'Plutonium'    : (MAX_SIZE - 15, 0),
+        #'Americium'    : (MAX_SIZE - 14, 0),
+        #'Curium'       : (MAX_SIZE - 13, 0),
+        #'Berkelium'    : (MAX_SIZE - 12, 0),
+        #'Californium'  : (MAX_SIZE - 11, 0),
+        #'Einsteinium'  : (MAX_SIZE - 10, 0),
+        #'Fermium'      : (MAX_SIZE - 9, 0),
+        #'Mendelevium'  : (MAX_SIZE - 8, 0),
+        #'Nobelium'     : (MAX_SIZE - 7, 0),
+        #'Lawrencium'   : (MAX_SIZE - 6, 0),
+        #'Rutherfordium': (MAX_SIZE - 5, 0),
+        #'Dubnium'      : (MAX_SIZE - 4, 0),
+        #'Seaborgium'   : (MAX_SIZE - 3, 0),
+        #'Bohrium'      : (MAX_SIZE - 2, 0),
+        #'Hassium'      : (MAX_SIZE - 1, 0),
+        #'Meitnerium'   : (MAX_SIZE - 0, 0),
         # <---- Please refrain from fixing PEP-8 E203 and E265 ------
         # pylint: enable=E8203,E8265
     }
@@ -308,16 +317,6 @@ class SaltStackVersion(object):
             self.bugfix,
             self.mbugfix
         )
-
-    @property
-    def rc_info(self):
-        import salt.utils
-        salt.utils.warn_until(
-            'Oxygen',
-            'Please stop using the \'rc_info\' attribute and instead use '
-            '\'pre_info\'. \'rc_info\' will be supported until Salt {version}.'
-        )
-        return self.pre_info
 
     @property
     def pre_info(self):
@@ -511,6 +510,9 @@ def __discover_version(saltstack_version):
             process = subprocess.Popen(
                 ['git', 'describe', '--tags', '--match', 'v[0-9]*', '--always'], **kwargs)
             out, err = process.communicate()
+        if six.PY3:
+            out = out.decode()
+            err = err.decode()
         out = out.strip()
         err = err.strip()
 
@@ -581,11 +583,8 @@ def dependency_information(include_salt_cloud=False):
         ('msgpack-pure', 'msgpack_pure', 'version'),
         ('pycrypto', 'Crypto', '__version__'),
         ('pycryptodome', 'Cryptodome', 'version_info'),
-        ('libnacl', 'libnacl', '__version__'),
         ('PyYAML', 'yaml', '__version__'),
-        ('ioflo', 'ioflo', '__version__'),
         ('PyZMQ', 'zmq', '__version__'),
-        ('RAET', 'raet', '__version__'),
         ('ZMQ', 'zmq', 'zmq_version'),
         ('Mako', 'mako', '__version__'),
         ('Tornado', 'tornado', 'version'),
@@ -649,22 +648,47 @@ def system_information():
         else:
             return ''
 
-    version = system_version()
-    release = platform.release()
     if platform.win32_ver()[0]:
+        # Get the version and release info based on the Windows Operating
+        # System Product Name. As long as Microsoft maintains a similar format
+        # this should be future proof
         import win32api  # pylint: disable=3rd-party-module-not-gated
-        if ((sys.version_info.major == 2 and sys.version_info >= (2, 7, 12)) or
-                (sys.version_info.major == 3 and sys.version_info >= (3, 5, 2))):
-            if win32api.GetVersionEx(1)[8] > 1:
-                server = {'Vista': '2008Server',
-                          '7': '2008ServerR2',
-                          '8': '2012Server',
-                          '8.1': '2012ServerR2',
-                          '10': '2016Server'}
-                release = server.get(platform.release(),
-                                     'UNKServer')
-                _, ver, sp, extra = platform.win32_ver()
-                version = ' '.join([release, ver, sp, extra])
+        import win32con  # pylint: disable=3rd-party-module-not-gated
+
+        # Get the product name from the registry
+        hkey = win32con.HKEY_LOCAL_MACHINE
+        key = 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion'
+        value_name = 'ProductName'
+        reg_handle = win32api.RegOpenKey(hkey, key)
+
+        # Returns a tuple of (product_name, value_type)
+        product_name, _ = win32api.RegQueryValueEx(reg_handle, value_name)
+
+        version = 'Unknown'
+        release = ''
+        if 'Server' in product_name:
+            for item in product_name.split(' '):
+                # If it's all digits, then it's version
+                if re.match(r'\d+', item):
+                    version = item
+                # If it starts with R and then numbers, it's the release
+                # ie: R2
+                if re.match(r'^R\d+$', item):
+                    release = item
+            release = '{0}Server{1}'.format(version, release)
+        else:
+            for item in product_name.split(' '):
+                # If it's a number, decimal number, Thin or Vista, then it's the
+                # version
+                if re.match(r'^(\d+(\.\d+)?)|Thin|Vista$', item):
+                    version = item
+            release = version
+
+        _, ver, sp, extra = platform.win32_ver()
+        version = ' '.join([release, ver, sp, extra])
+    else:
+        version = system_version()
+        release = platform.release()
 
     system = [
         ('system', platform.system()),
@@ -672,6 +696,7 @@ def system_information():
         ('release', release),
         ('machine', platform.machine()),
         ('version', version),
+        ('locale', __salt_system_encoding__),
     ]
 
     for name, attr in system:
@@ -697,10 +722,11 @@ def versions_report(include_salt_cloud=False):
     Yield each version properly formatted for console output.
     '''
     ver_info = versions_information(include_salt_cloud)
-
+    not_installed = 'Not Installed'
+    ns_pad = len(not_installed)
     lib_pad = max(len(name) for name in ver_info['Dependency Versions'])
     sys_pad = max(len(name) for name in ver_info['System Versions'])
-    padding = max(lib_pad, sys_pad) + 1
+    padding = max(lib_pad, sys_pad, ns_pad) + 1
 
     fmt = '{0:>{pad}}: {1}'
     info = []
@@ -709,7 +735,7 @@ def versions_report(include_salt_cloud=False):
         # List dependencies in alphabetical, case insensitive order
         for name in sorted(ver_info[ver_type], key=lambda x: x.lower()):
             ver = fmt.format(name,
-                             ver_info[ver_type][name] or 'Not Installed',
+                             ver_info[ver_type][name] or not_installed,
                              pad=padding)
             info.append(ver)
         info.append(' ')
@@ -720,21 +746,39 @@ def versions_report(include_salt_cloud=False):
 
 def msi_conformant_version():
     '''
-    An msi conformant version consists of up to 4 numbers, each smaller than 256, except the 4th.
-    Therefore, the year must be represented as 'short year'.
+    An msi installer uninstalls/replaces a lower "internal version" of itself.
+    "internal version" is ivMAJOR.ivMINOR.ivBUILD with max values 255.255.65535.
+    Using the build nr allows continuous integration of the installer.
+    "Display version" is indipendent and free format: Year.Month.Bugfix as in Salt 2016.11.3.
+    Calculation of the internal version fields:
+        ivMAJOR = 'short year' (2 digits).
+        ivMINOR = 20*(month-1) + Bugfix
+            Combine Month and Bugfix to free ivBUILD for the build number
+            This limits Bugfix < 20.
+            The msi automatically replaces only 19 bugfixes of a month, one must uninstall manually.
+        ivBUILD = git commit count (noc)
+            noc for tags is 0, representing the final word, translates to the highest build number (65535).
 
-    Examples (depend on git checkout):
-      develop                2016.11.0-742-g5ca4d20     16.11.0.742
-      20166.11 (branch)      2016.11.2-78-gce1f01f      16.11.2.78
-      v20166.11.2 (tag)      2016.11.2                  16.11.2.0
+    Examples:
+      git checkout    Display version      Internal version    Remark
+      develop         2016.11.0-742        16.200.742          The develop branch has bugfix 0
+      2016.11         2016.11.2-78         16.202.78
+      2016.11         2016.11.9-88         16.209.88
+      2018.8          2018.3.2-1306        18.42.1306
+      v2016.11.0      2016.11.0            16.200.65535        Tags have noc 0
+      v2016.11.2      2016.11.2            16.202.65535
 
-    Note that the commit count for tags is 0(zero)
     '''
-    year2 = int(str(__saltstack_version__.major)[2:])
+    short_year = int(six.text_type(__saltstack_version__.major)[2:])
     month = __saltstack_version__.minor
-    minor = __saltstack_version__.bugfix
-    commi = __saltstack_version__.noc
-    return '{0}.{1}.{2}.{3}'.format(year2, month, minor, commi)
+    bugfix = __saltstack_version__.bugfix
+    if bugfix > 19:
+        bugfix = 19
+    noc = __saltstack_version__.noc
+    if noc == 0:
+        noc = 65535
+    return '{}.{}.{}'.format(short_year, 20*(month-1)+bugfix, noc)
+
 
 if __name__ == '__main__':
     if len(sys.argv) == 2 and sys.argv[1] == 'msi':

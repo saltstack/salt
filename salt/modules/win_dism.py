@@ -5,14 +5,18 @@ not running server versions of Windows. Some functions are only available on
 Windows 10.
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
-# Import python libs
+# Import Python libs
 import re
 import logging
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
+import salt.utils.versions
+
+# Import 3rd party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 __virtualname__ = "dism"
@@ -22,7 +26,7 @@ def __virtual__():
     '''
     Only work on Windows
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False, "Only available on Windows systems"
 
     return __virtualname__
@@ -73,7 +77,7 @@ def add_capability(capability,
 
         salt '*' dism.add_capability Tools.Graphics.DirectX~~~~0.0.1.0
     '''
-    if salt.utils.version_cmp(__grains__['osversion'], '10') == -1:
+    if salt.utils.versions.version_cmp(__grains__['osversion'], '10') == -1:
         raise NotImplementedError(
             '`install_capability` is not available on this version of Windows: '
             '{0}'.format(__grains__['osversion']))
@@ -118,7 +122,7 @@ def remove_capability(capability, image=None, restart=False):
 
         salt '*' dism.remove_capability Tools.Graphics.DirectX~~~~0.0.1.0
     '''
-    if salt.utils.version_cmp(__grains__['osversion'], '10') == -1:
+    if salt.utils.versions.version_cmp(__grains__['osversion'], '10') == -1:
         raise NotImplementedError(
             '`uninstall_capability` is not available on this version of '
             'Windows: {0}'.format(__grains__['osversion']))
@@ -157,7 +161,7 @@ def get_capabilities(image=None):
 
         salt '*' dism.get_capabilities
     '''
-    if salt.utils.version_cmp(__grains__['osversion'], '10') == -1:
+    if salt.utils.versions.version_cmp(__grains__['osversion'], '10') == -1:
         raise NotImplementedError(
             '`installed_capabilities` is not available on this version of '
             'Windows: {0}'.format(__grains__['osversion']))
@@ -197,7 +201,7 @@ def installed_capabilities(image=None):
 
         salt '*' dism.installed_capabilities
     '''
-    if salt.utils.version_cmp(__grains__['osversion'], '10') == -1:
+    if salt.utils.versions.version_cmp(__grains__['osversion'], '10') == -1:
         raise NotImplementedError(
             '`installed_capabilities` is not available on this version of '
             'Windows: {0}'.format(__grains__['osversion']))
@@ -226,7 +230,7 @@ def available_capabilities(image=None):
 
         salt '*' dism.installed_capabilities
     '''
-    if salt.utils.version_cmp(__grains__['osversion'], '10') == -1:
+    if salt.utils.versions.version_cmp(__grains__['osversion'], '10') == -1:
         raise NotImplementedError(
             '`installed_capabilities` is not available on this version of '
             'Windows: {0}'.format(__grains__['osversion']))
@@ -426,16 +430,27 @@ def add_package(package,
     Install a package using DISM
 
     Args:
-        package (str): The package to install. Can be a .cab file, a .msu file,
-            or a folder
-        ignore_check (Optional[bool]): Skip installation of the package if the
-            applicability checks fail
-        prevent_pending (Optional[bool]): Skip the installation of the package
-            if there are pending online actions
-        image (Optional[str]): The path to the root directory of an offline
-            Windows image. If `None` is passed, the running operating system is
-            targeted. Default is None.
-        restart (Optional[bool]): Reboot the machine if required by the install
+        package (str):
+            The package to install. Can be a .cab file, a .msu file, or a folder
+
+            .. note::
+                An `.msu` package is supported only when the target image is
+                offline, either mounted or applied.
+
+        ignore_check (Optional[bool]):
+            Skip installation of the package if the applicability checks fail
+
+        prevent_pending (Optional[bool]):
+            Skip the installation of the package if there are pending online
+            actions
+
+        image (Optional[str]):
+            The path to the root directory of an offline Windows image. If
+            ``None`` is passed, the running operating system is targeted.
+            Default is None.
+
+        restart (Optional[bool]):
+            Reboot the machine if required by the install
 
     Returns:
         dict: A dictionary containing the results of the command
@@ -562,7 +577,7 @@ def package_info(package, image=None):
 
     if out['retcode'] == 0:
         ret = dict()
-        for line in str(out['stdout']).splitlines():
+        for line in six.text_type(out['stdout']).splitlines():
             if ' : ' in line:
                 info = line.split(' : ')
                 if len(info) < 2:

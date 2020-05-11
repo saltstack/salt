@@ -83,8 +83,8 @@ Glossary
         to the system.  State module functions should be idempotent.  Some
         state module functions, such as :mod:`cmd.run <salt.states.cmd.run>`
         are not idempotent by default but can be made idempotent with the
-        proper use of requisites such as :ref:```unless`` <unless-requisite>`
-        and :ref:```onlyif`` <onlyif-requisite>`.  For more information, *see*
+        proper use of requisites such as :ref:`unless <unless-requisite>`
+        and :ref:`onlyif <onlyif-requisite>`. For more information, *see*
         `wikipedia <https://en.wikipedia.org/wiki/Idempotent>`_.
 
     Jinja

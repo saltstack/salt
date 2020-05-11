@@ -4,31 +4,36 @@ Jinja loading utils to enable a more powerful backend for jinja templates
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import collections
-import uuid
-import pipes
-import json
-import pprint
 import logging
+import os.path
+import pipes
+import pprint
 import re
-from os import path
+import uuid
 from functools import wraps
+from xml.dom import minidom
+from xml.etree.ElementTree import Element, SubElement, tostring
 
 # Import third party libs
-import salt.ext.six as six
+import jinja2
+from salt.ext import six
 from jinja2 import BaseLoader, Markup, TemplateNotFound, nodes
 from jinja2.environment import TemplateModule
-from jinja2.ext import Extension
 from jinja2.exceptions import TemplateRuntimeError
-import jinja2
-import yaml
+from jinja2.ext import Extension
 
 # Import salt libs
-import salt
-import salt.utils
-import salt.utils.url
+from salt.exceptions import TemplateError
 import salt.fileclient
+import salt.utils.data
+import salt.utils.files
+import salt.utils.json
+import salt.utils.stringutils
+import salt.utils.url
+import salt.utils.yaml
+from salt.utils.decorators.jinja import jinja_filter, jinja_test, jinja_global
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
@@ -39,18 +44,6 @@ __all__ = [
 ]
 
 GLOBAL_UUID = uuid.UUID('91633EBF-1C86-5E33-935A-28061F4B480E')
-
-# To dump OrderedDict objects as regular dicts. Used by the yaml
-# template filter.
-
-
-class OrderedDictDumper(yaml.Dumper):  # pylint: disable=W0232
-    pass
-
-
-yaml.add_representer(OrderedDict,
-                     yaml.representer.SafeRepresenter.represent_dict,
-                     Dumper=OrderedDictDumper)
 
 
 class SaltCacheLoader(BaseLoader):
@@ -66,17 +59,19 @@ class SaltCacheLoader(BaseLoader):
         self.opts = opts
         self.saltenv = saltenv
         self.encoding = encoding
-        if self.opts['file_roots'] is self.opts['pillar_roots']:
-            if saltenv not in self.opts['file_roots']:
+        self.pillar_rend = pillar_rend
+        if self.pillar_rend:
+            if saltenv not in self.opts['pillar_roots']:
                 self.searchpath = []
             else:
-                self.searchpath = opts['file_roots'][saltenv]
+                self.searchpath = opts['pillar_roots'][saltenv]
         else:
-            self.searchpath = [path.join(opts['cachedir'], 'files', saltenv)]
+            self.searchpath = [os.path.join(opts['cachedir'], 'files', saltenv)]
         log.debug('Jinja search path: %s', self.searchpath)
-        self._file_client = None
         self.cached = []
-        self.pillar_rend = pillar_rend
+        self._file_client = None
+        # Instantiate the fileclient
+        self.file_client()
 
     def file_client(self):
         '''
@@ -103,36 +98,68 @@ class SaltCacheLoader(BaseLoader):
             self.cached.append(template)
 
     def get_source(self, environment, template):
-        # checks for relative '..' paths
-        if '..' in template:
-            log.warning(
-                'Discarded template path \'{0}\', relative paths are '
-                'prohibited'.format(template)
-            )
-            raise TemplateNotFound(template)
+        '''
+        Salt-specific loader to find imported jinja files.
 
-        self.check_cache(template)
+        Jinja imports will be interpreted as originating from the top
+        of each of the directories in the searchpath when the template
+        name does not begin with './' or '../'.  When a template name
+        begins with './' or '../' then the import will be relative to
+        the importing file.
+
+        '''
+        # FIXME: somewhere do seprataor replacement: '\\' => '/'
+        _template = template
+        if template.split('/', 1)[0] in ('..', '.'):
+            is_relative = True
+        else:
+            is_relative = False
+        # checks for relative '..' paths that step-out of file_roots
+        if is_relative:
+            # Starts with a relative path indicator
+
+            if not environment or 'tpldir' not in environment.globals:
+                log.warning(
+                    'Relative path "%s" cannot be resolved without an environment',
+                    template
+                )
+                raise TemplateNotFound
+            base_path = environment.globals['tpldir']
+            _template = os.path.normpath('/'.join((base_path, _template)))
+            if _template.split('/', 1)[0] == '..':
+                log.warning(
+                    'Discarded template path "%s": attempts to'
+                    ' ascend outside of salt://', template
+                )
+                raise TemplateNotFound(template)
+
+        self.check_cache(_template)
 
         if environment and template:
-            tpldir = path.dirname(template).replace('\\', '/')
+            tpldir = os.path.dirname(_template).replace('\\', '/')
+            tplfile = _template
+            if is_relative:
+                tpldir = environment.globals.get('tpldir', tpldir)
+                tplfile = template
             tpldata = {
-                'tplfile': template,
+                'tplfile': tplfile,
                 'tpldir': '.' if tpldir == '' else tpldir,
                 'tpldot': tpldir.replace('/', '.'),
+                'tplroot': tpldir.split('/')[0],
             }
             environment.globals.update(tpldata)
 
         # pylint: disable=cell-var-from-loop
         for spath in self.searchpath:
-            filepath = path.join(spath, template)
+            filepath = os.path.join(spath, _template)
             try:
-                with salt.utils.fopen(filepath, 'rb') as ifile:
+                with salt.utils.files.fopen(filepath, 'rb') as ifile:
                     contents = ifile.read().decode(self.encoding)
-                    mtime = path.getmtime(filepath)
+                    mtime = os.path.getmtime(filepath)
 
                     def uptodate():
                         try:
-                            return path.getmtime(filepath) == mtime
+                            return os.path.getmtime(filepath) == mtime
                         except OSError:
                             return False
                     return contents, filepath, uptodate
@@ -179,6 +206,50 @@ class PrintableDict(OrderedDict):
         return '{' + ', '.join(output) + '}'
 
 
+# Additional globals
+@jinja_global('raise')
+def jinja_raise(msg):
+    raise TemplateError(msg)
+
+
+# Additional tests
+@jinja_test('match')
+def test_match(txt, rgx, ignorecase=False, multiline=False):
+    '''Returns true if a sequence of chars matches a pattern.'''
+    flag = 0
+    if ignorecase:
+        flag |= re.I
+    if multiline:
+        flag |= re.M
+    compiled_rgx = re.compile(rgx, flag)
+    return True if compiled_rgx.match(txt) else False
+
+
+@jinja_test('equalto')
+def test_equalto(value, other):
+    '''Returns true if two values are equal.'''
+    return value == other
+
+
+# Additional filters
+@jinja_filter('skip')
+def skip_filter(data):
+    '''
+    Suppress data output
+
+    .. code-block:: yaml
+
+        {% my_string = "foo" %}
+
+        {{ my_string|skip }}
+
+    will be rendered as empty string,
+
+    '''
+    return ''
+
+
+@jinja_filter('sequence')
 def ensure_sequence_filter(data):
     '''
     Ensure sequenced data.
@@ -211,6 +282,7 @@ def ensure_sequence_filter(data):
     return data
 
 
+@jinja_filter('to_bool')
 def to_bool(val):
     '''
     Returns the logical value.
@@ -234,10 +306,31 @@ def to_bool(val):
     if isinstance(val, six.integer_types):
         return val > 0
     if not isinstance(val, collections.Hashable):
-        return len(val) > 0
+        return bool(val)
     return False
 
 
+@jinja_filter('tojson')
+def tojson(val, indent=None):
+    '''
+    Implementation of tojson filter (only present in Jinja 2.9 and later). If
+    Jinja 2.9 or later is installed, then the upstream version of this filter
+    will be used.
+    '''
+    options = {'ensure_ascii': True}
+    if indent is not None:
+        options['indent'] = indent
+    return (
+        salt.utils.json.dumps(
+            val, **options
+        ).replace('<', '\\u003c')
+         .replace('>', '\\u003e')
+         .replace('&', '\\u0026')
+         .replace("'", '\\u0027')
+    )
+
+
+@jinja_filter('quote')
 def quote(txt):
     '''
     Wraps a text around quotes.
@@ -256,6 +349,12 @@ def quote(txt):
     return pipes.quote(txt)
 
 
+@jinja_filter()
+def regex_escape(value):
+    return re.escape(value)
+
+
+@jinja_filter('regex_search')
 def regex_search(txt, rgx, ignorecase=False, multiline=False):
     '''
     Searches for a pattern in the text.
@@ -282,6 +381,7 @@ def regex_search(txt, rgx, ignorecase=False, multiline=False):
     return obj.groups()
 
 
+@jinja_filter('regex_match')
 def regex_match(txt, rgx, ignorecase=False, multiline=False):
     '''
     Searches for a pattern in the text.
@@ -308,6 +408,7 @@ def regex_match(txt, rgx, ignorecase=False, multiline=False):
     return obj.groups()
 
 
+@jinja_filter('regex_replace')
 def regex_replace(txt, rgx, val, ignorecase=False, multiline=False):
     r'''
     Searches for a pattern and replaces with a sequence of characters.
@@ -332,6 +433,7 @@ def regex_replace(txt, rgx, val, ignorecase=False, multiline=False):
     return compiled_rgx.sub(val, txt)
 
 
+@jinja_filter('uuid')
 def uuid_(val):
     '''
     Returns a UUID corresponding to the value passed as argument.
@@ -346,13 +448,19 @@ def uuid_(val):
 
         f4efeff8-c219-578a-bad7-3dc280612ec8
     '''
-    return str(uuid.uuid5(GLOBAL_UUID, str(val)))
+    return six.text_type(
+        uuid.uuid5(
+            GLOBAL_UUID,
+            salt.utils.stringutils.to_str(val)
+        )
+    )
 
 
 ### List-related filters
 
 
-def unique(lst):
+@jinja_filter()
+def unique(values):
     '''
     Removes duplicates from a list.
 
@@ -367,11 +475,18 @@ def unique(lst):
 
         ['a', 'b', 'c']
     '''
-    if not isinstance(lst, collections.Hashable):
-        return list(set(lst))
-    return lst
+    ret = None
+    if isinstance(values, collections.Hashable):
+        ret = set(values)
+    else:
+        ret = []
+        for value in values:
+            if value not in ret:
+                ret.append(value)
+    return ret
 
 
+@jinja_filter('min')
 def lst_min(obj):
     '''
     Returns the min value.
@@ -390,6 +505,7 @@ def lst_min(obj):
     return min(obj)
 
 
+@jinja_filter('max')
 def lst_max(obj):
     '''
     Returns the max value.
@@ -408,6 +524,7 @@ def lst_max(obj):
     return max(obj)
 
 
+@jinja_filter('avg')
 def lst_avg(lst):
     '''
     Returns the average value of a list.
@@ -423,11 +540,20 @@ def lst_avg(lst):
 
         2.5
     '''
+    salt.utils.versions.warn_until(
+        'Neon',
+        'This results of this function are currently being rounded.'
+        'Beginning in the Salt Neon release, results will no longer be '
+        'rounded and this warning will be removed.',
+        stacklevel=3
+    )
+
     if not isinstance(lst, collections.Hashable):
         return float(sum(lst)/len(lst))
     return float(lst)
 
 
+@jinja_filter('union')
 def union(lst1, lst2):
     '''
     Returns the union of two lists.
@@ -448,6 +574,7 @@ def union(lst1, lst2):
     return unique(lst1 + lst2)
 
 
+@jinja_filter('intersect')
 def intersect(lst1, lst2):
     '''
     Returns the intersection of two lists.
@@ -468,6 +595,7 @@ def intersect(lst1, lst2):
     return unique([ele for ele in lst1 if ele in lst2])
 
 
+@jinja_filter('difference')
 def difference(lst1, lst2):
     '''
     Returns the difference of two lists.
@@ -488,6 +616,7 @@ def difference(lst1, lst2):
     return unique([ele for ele in lst1 if ele not in lst2])
 
 
+@jinja_filter('symmetric_difference')
 def symmetric_difference(lst1, lst2):
     '''
     Returns the symmetric difference of two lists.
@@ -508,9 +637,14 @@ def symmetric_difference(lst1, lst2):
     return unique([ele for ele in union(lst1, lst2) if ele not in intersect(lst1, lst2)])
 
 
+@jinja_filter('method_call')
+def method_call(obj, f_name, *f_args, **f_kwargs):
+    return getattr(obj, f_name, lambda *args, **kwargs: None)(*f_args, **f_kwargs)
+
+
 @jinja2.contextfunction
 def show_full_context(ctx):
-    return ctx
+    return salt.utils.data.simple_types_filter({key: value for key, value in ctx.items()})
 
 
 class SerializerExtension(Extension, object):
@@ -535,12 +669,19 @@ class SerializerExtension(Extension, object):
         yaml = {{ data|yaml }}
         json = {{ data|json }}
         python = {{ data|python }}
+        xml  = {{ {'root_node': data}|xml }}
 
     will be rendered as::
 
         yaml = {bar: 42, baz: [1, 2, 3], foo: true, qux: 2.0}
         json = {"baz": [1, 2, 3], "foo": true, "bar": 42, "qux": 2.0}
         python = {'bar': 42, 'baz': [1, 2, 3], 'foo': True, 'qux': 2.0}
+        xml = """<<?xml version="1.0" ?>
+                 <root_node bar="42" foo="True" qux="2.0">
+                  <baz>1</baz>
+                  <baz>2</baz>
+                  <baz>3</baz>
+                 </root_node>"""
 
     The yaml filter takes an optional flow_style parameter to control the
     default-flow-style parameter of the YAML dumper.
@@ -639,7 +780,7 @@ class SerializerExtension(Extension, object):
 
     ** Escape Filters **
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Allows escaping of strings so they can be interpreted literally by another
     function.
@@ -648,15 +789,15 @@ class SerializerExtension(Extension, object):
 
     .. code-block:: jinja
 
-        escape_regex = {{ 'https://example.com?foo=bar%20baz' | escape_regex }}
+        regex_escape = {{ 'https://example.com?foo=bar%20baz' | regex_escape }}
 
     will be rendered as::
 
-        escape_regex = https\\:\\/\\/example\\.com\\?foo\\=bar\\%20baz
+        regex_escape = https\\:\\/\\/example\\.com\\?foo\\=bar\\%20baz
 
     ** Set Theory Filters **
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Performs set math using Jinja filters.
 
@@ -673,20 +814,18 @@ class SerializerExtension(Extension, object):
     .. _`import tag`: http://jinja.pocoo.org/docs/templates/#import
     '''
 
-    tags = set(['load_yaml', 'load_json', 'import_yaml', 'import_json',
-                'load_text', 'import_text', 'regex_escape', 'unique'])
+    tags = {'load_yaml', 'load_json', 'import_yaml', 'import_json', 'load_text', 'import_text'}
 
     def __init__(self, environment):
         super(SerializerExtension, self).__init__(environment)
         self.environment.filters.update({
             'yaml': self.format_yaml,
             'json': self.format_json,
+            'xml': self.format_xml,
             'python': self.format_python,
             'load_yaml': self.load_yaml,
             'load_json': self.load_json,
             'load_text': self.load_text,
-            'regex_escape': self.regex_escape,
-            'unique': self.unique,
         })
 
         if self.environment.finalize is None:
@@ -714,43 +853,114 @@ class SerializerExtension(Extension, object):
         return explore(data)
 
     def format_json(self, value, sort_keys=True, indent=None):
-        return Markup(json.dumps(value, sort_keys=sort_keys, indent=indent).strip())
+        json_txt = salt.utils.json.dumps(value, sort_keys=sort_keys, indent=indent).strip()
+        try:
+            return Markup(json_txt)
+        except UnicodeDecodeError:
+            return Markup(salt.utils.stringutils.to_unicode(json_txt))
 
     def format_yaml(self, value, flow_style=True):
-        yaml_txt = yaml.dump(value, default_flow_style=flow_style,
-                             Dumper=OrderedDictDumper).strip()
-        if yaml_txt.endswith('\n...'):
+        yaml_txt = salt.utils.yaml.safe_dump(
+            value, default_flow_style=flow_style).strip()
+        if yaml_txt.endswith(str('\n...')):  # future lint: disable=blacklisted-function
             yaml_txt = yaml_txt[:len(yaml_txt)-4]
-        return Markup(yaml_txt)
+        try:
+            return Markup(yaml_txt)
+        except UnicodeDecodeError:
+            return Markup(salt.utils.stringutils.to_unicode(yaml_txt))
+
+    def format_xml(self, value):
+        """Render a formatted multi-line XML string from a complex Python
+        data structure. Supports tag attributes and nested dicts/lists.
+
+        :param value: Complex data structure representing XML contents
+        :returns: Formatted XML string rendered with newlines and indentation
+        :rtype: str
+        """
+        def normalize_iter(value):
+            if isinstance(value, (list, tuple)):
+                if isinstance(value[0], str):
+                    xmlval = value
+                else:
+                    xmlval = []
+            elif isinstance(value, dict):
+                xmlval = list(value.items())
+            else:
+                raise TemplateRuntimeError(
+                    'Value is not a dict or list. Cannot render as XML')
+            return xmlval
+
+        def recurse_tree(xmliter, element=None):
+            sub = None
+            for tag, attrs in xmliter:
+                if isinstance(attrs, list):
+                    for attr in attrs:
+                        recurse_tree(((tag, attr),), element)
+                elif element is not None:
+                    sub = SubElement(element, tag)
+                else:
+                    sub = Element(tag)
+                if isinstance(attrs, (str, int, bool, float)):
+                    sub.text = six.text_type(attrs)
+                    continue
+                if isinstance(attrs, dict):
+                    sub.attrib = {attr: six.text_type(val) for attr, val in attrs.items()
+                                  if not isinstance(val, (dict, list))}
+                for tag, val in [item for item in normalize_iter(attrs) if
+                                 isinstance(item[1], (dict, list))]:
+                    recurse_tree(((tag, val),), sub)
+            return sub
+
+        return Markup(minidom.parseString(
+            tostring(recurse_tree(normalize_iter(value)))
+        ).toprettyxml(indent=" "))
 
     def format_python(self, value):
         return Markup(pprint.pformat(value).strip())
 
     def load_yaml(self, value):
         if isinstance(value, TemplateModule):
-            value = str(value)
+            value = six.text_type(value)
         try:
-            return yaml.safe_load(value)
+            return salt.utils.data.decode(salt.utils.yaml.safe_load(value))
+        except salt.utils.yaml.YAMLError as exc:
+            msg = 'Encountered error loading yaml: '
+            try:
+                # Reported line is off by one, add 1 to correct it
+                line = exc.problem_mark.line + 1
+                buf = exc.problem_mark.buffer
+                problem = exc.problem
+            except AttributeError:
+                # No context information available in the exception, fall back
+                # to the stringified version of the exception.
+                msg += six.text_type(exc)
+            else:
+                msg += '{0}\n'.format(problem)
+                msg += salt.utils.stringutils.get_context(
+                    buf,
+                    line,
+                    marker='    <======================')
+            raise TemplateRuntimeError(msg)
         except AttributeError:
             raise TemplateRuntimeError(
                 'Unable to load yaml from {0}'.format(value))
 
     def load_json(self, value):
         if isinstance(value, TemplateModule):
-            value = str(value)
+            value = six.text_type(value)
         try:
-            return json.loads(value)
+            return salt.utils.json.loads(value)
         except (ValueError, TypeError, AttributeError):
             raise TemplateRuntimeError(
                 'Unable to load json from {0}'.format(value))
 
     def load_text(self, value):
         if isinstance(value, TemplateModule):
-            value = str(value)
+            value = six.text_type(value)
 
         return value
 
-    _load_parsers = set(['load_yaml', 'load_json', 'load_text'])
+    _load_parsers = {'load_yaml', 'load_json', 'load_text'}
 
     def parse(self, parser):
         if parser.stream.current.value == 'import_yaml':
@@ -867,17 +1077,3 @@ class SerializerExtension(Extension, object):
             ).set_lineno(lineno)
         ]
     # pylint: enable=E1120,E1121
-
-    def regex_escape(self, value):
-        return re.escape(value)
-
-    def unique(self, values):
-        ret = None
-        if isinstance(values, collections.Hashable):
-            ret = set(values)
-        else:
-            ret = []
-            for value in values:
-                if value not in ret:
-                    ret.append(value)
-        return ret

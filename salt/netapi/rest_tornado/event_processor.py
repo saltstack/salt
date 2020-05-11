@@ -1,13 +1,13 @@
 # encoding: utf-8
-from __future__ import absolute_import
-import json
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import threading
-import salt.ext.six as six
+from salt.ext import six
 
 import salt.netapi
+import salt.utils.json
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 class SaltInfo(object):
@@ -33,27 +33,28 @@ class SaltInfo(object):
         '''
         Publishes minions as a list of dicts.
         '''
-        logger.debug('in publish minions')
+        log.debug('in publish minions')
         minions = {}
 
-        logger.debug('starting loop')
+        log.debug('starting loop')
         for minion, minion_info in six.iteritems(self.minions):
-            logger.debug(minion)
-            # logger.debug(minion_info)
+            log.debug(minion)
+            # log.debug(minion_info)
             curr_minion = {}
             curr_minion.update(minion_info)
             curr_minion.update({'id': minion})
             minions[minion] = curr_minion
-        logger.debug('ended loop')
+        log.debug('ended loop')
         ret = {'minions': minions}
-        self.handler.write_message(u'{0}\n\n'.format(json.dumps(ret)))
+        self.handler.write_message(
+            salt.utils.json.dumps(ret) + str('\n\n'))  # future lint: disable=blacklisted-function
 
     def publish(self, key, data):
         '''
         Publishes the data to the event stream.
         '''
         publish_data = {key: data}
-        pub = u'{0}\n\n'.format(json.dumps(publish_data))
+        pub = salt.utils.json.dumps(publish_data) + str('\n\n')  # future lint: disable=blacklisted-function
         self.handler.write_message(pub)
 
     def process_minion_update(self, event_data):
@@ -63,7 +64,7 @@ class SaltInfo(object):
         tag = event_data['tag']
         event_info = event_data['data']
 
-        _, _, _, _, mid = tag.split('/')
+        mid = tag.split('/')[-1]
 
         if not self.minions.get(mid, None):
             self.minions[mid] = {}
@@ -71,7 +72,7 @@ class SaltInfo(object):
         minion = self.minions[mid]
 
         minion.update({'grains': event_info['return']})
-        logger.debug("In process minion grains update with minions={0}".format(self.minions))
+        log.debug("In process minion grains update with minions=%s", self.minions)
         self.publish_minions()
 
     def process_ret_job_event(self, event_data):
@@ -152,7 +153,7 @@ class SaltInfo(object):
         Check if any minions have connected or dropped.
         Send a message to the client if they have.
         '''
-        logger.debug('In presence')
+        log.debug('In presence')
         changed = False
 
         # check if any connections were dropped
@@ -163,16 +164,16 @@ class SaltInfo(object):
 
         for minion in dropped_minions:
             changed = True
-            logger.debug('Popping {0}'.format(minion))
+            log.debug('Popping %s', minion)
             self.minions.pop(minion, None)
 
         # check if any new connections were made
         if set(salt_data['data'].get('new', [])):
-            logger.debug('got new minions')
+            log.debug('got new minions')
             new_minions = set(salt_data['data'].get('new', []))
             changed = True
         elif set(salt_data['data'].get('present', [])) - set(self.minions):
-            logger.debug('detected new minions')
+            log.debug('detected new minions')
             new_minions = set(salt_data['data'].get('present', [])) - set(self.minions)
             changed = True
         else:
@@ -180,7 +181,7 @@ class SaltInfo(object):
 
         tgt = ','.join(new_minions)
         for mid in new_minions:
-            logger.debug('Adding minion')
+            log.debug('Adding minion')
             self.minions[mid] = {}
 
         if tgt:
@@ -193,7 +194,7 @@ class SaltInfo(object):
                     'expr_type': 'list',
                     'mode': 'client',
                     'client': 'local',
-                    'async': 'local_async',
+                    'asynchronous': 'local_async',
                     'token': token,
                 })
 
@@ -204,9 +205,9 @@ class SaltInfo(object):
         '''
         Process events and publish data
         '''
-        logger.debug('In process {0}'.format(threading.current_thread()))
-        logger.debug(salt_data['tag'])
-        logger.debug(salt_data)
+        log.debug('In process %s', threading.current_thread())
+        log.debug(salt_data['tag'])
+        log.debug(salt_data)
 
         parts = salt_data['tag'].split('/')
         if len(parts) < 2:
@@ -214,20 +215,20 @@ class SaltInfo(object):
 
         # TBD: Simplify these conditional expressions
         if parts[1] == 'job':
-            logger.debug('In job part 1')
+            log.debug('In job part 1')
             if parts[3] == 'new':
-                logger.debug('In new job')
+                log.debug('In new job')
                 self.process_new_job_event(salt_data)
                 # if salt_data['data']['fun'] == 'grains.items':
                 #     self.minions = {}
             elif parts[3] == 'ret':
-                logger.debug('In ret')
+                log.debug('In ret')
                 self.process_ret_job_event(salt_data)
                 if salt_data['data']['fun'] == 'grains.items':
                     self.process_minion_update(salt_data)
         elif parts[1] == 'key':
-            logger.debug('In key')
+            log.debug('In key')
             self.process_key_event(salt_data)
         elif parts[1] == 'presence':
             self.process_presence_events(salt_data, token, opts)
-            # logger.debug('In presence')
+            # log.debug('In presence')

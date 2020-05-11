@@ -4,6 +4,7 @@ After=network.target salt-master.service
 
 [Service]
 Type=notify
+KillMode=process
 NotifyAccess=all
 LimitNOFILE=8192
 ExecStart=/usr/bin/salt-minion

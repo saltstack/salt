@@ -1,15 +1,15 @@
 # encoding: utf-8
 
 # Import python libs
-from __future__ import absolute_import
-import json
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Import Salt libs
 import salt.netapi
+import salt.utils.json
 
 logger = logging.getLogger(__name__)
 
@@ -45,14 +45,14 @@ class SaltInfo(object):
             minions.append(curr_minion)
 
         ret = {'minions': minions}
-        self.handler.send(json.dumps(ret), False)
+        self.handler.send(salt.utils.json.dumps(ret), False)
 
     def publish(self, key, data):
         '''
         Publishes the data to the event stream.
         '''
         publish_data = {key: data}
-        self.handler.send(json.dumps(publish_data), False)
+        self.handler.send(salt.utils.json.dumps(publish_data), False)
 
     def process_minion_update(self, event_data):
         '''
@@ -180,7 +180,7 @@ class SaltInfo(object):
                     'expr_type': 'list',
                     'mode': 'client',
                     'client': 'local',
-                    'async': 'local_async',
+                    'asynchronous': 'local_async',
                     'token': token,
                 })
 

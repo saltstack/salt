@@ -3,8 +3,7 @@
 Runner for SmartOS minions control vmadm
 '''
 # Import python libs
-from __future__ import absolute_import
-from __future__ import print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
 import salt.client
@@ -12,7 +11,7 @@ from salt.exceptions import SaltClientError
 from salt.utils.odict import OrderedDict
 
 # Import 3rd party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Function aliases
 __func_alias__ = {
@@ -66,7 +65,7 @@ def _action(action='get', search=None, one=True, force=False):
         pass
 
     ## check if we have vms
-    if len(vms) == 0:
+    if not vms:
         return {'Error': 'No vms found.'}
 
     ## simple search
@@ -90,7 +89,7 @@ def _action(action='get', search=None, one=True, force=False):
                     matched_vms.append(vm)
 
             ## exit on match(es) or try again
-            if len(matched_vms) > 0:
+            if matched_vms:
                 break
             else:
                 loop_pass += 1
@@ -99,7 +98,7 @@ def _action(action='get', search=None, one=True, force=False):
             matched_vms.append(vm)
 
     ## check if we have vms
-    if len(matched_vms) == 0:
+    if not matched_vms:
         return {'Error': 'No vms matched.'}
 
     ## multiple allowed?

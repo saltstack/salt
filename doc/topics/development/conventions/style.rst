@@ -22,21 +22,31 @@ improve Salt)!!
 Linting
 =======
 
-Most Salt style conventions are codified in Salt's ``.pylintrc`` file. Salt's
-pylint file has two dependencies: pylint_ and saltpylint_. You can install
-these dependencies with ``pip``:
+Most Salt style conventions are codified in Salt's ``.testing.pylintrc`` file.
+Salt's pylint file has two dependencies: pylint_ and saltpylint_. You can
+install these dependencies with ``pip``:
 
 .. code-block:: bash
 
     pip install pylint
     pip install saltpylint
 
-The ``.pylintrc`` file is found in the root of the Salt project and can be passed
-as an argument to the pylint_ program as follows:
+The ``.testing.pylintrc`` file is found in the root of the Salt project and can
+be passed as an argument to the pylint_ program as follows:
 
 .. code-block:: bash
 
-    pylint --rcfile=/path/to/salt/.pylintrc salt/dir/to/lint
+    pylint --rcfile=/path/to/salt/.testing.pylintrc salt/dir/to/lint
+
+.. note::
+
+    There are two pylint files in the ``salt`` directory. One is the
+    ``.pylintrc`` file and the other is the ``.testing.pylintrc`` file. The
+    tests that run in Jenkins against GitHub Pull Requests use
+    ``.testing.pylintrc``. The ``testing.pylintrc`` file is a little less
+    strict than the ``.pylintrc`` and is used to make it easier for contributors
+    to submit changes. The ``.pylintrc`` file can be used for linting, but the
+    ``testing.pylintrc`` is the source of truth when submitting pull requests.
 
 .. _pylint: http://www.pylint.org
 .. _saltpylint: https://github.com/saltstack/salt-pylint

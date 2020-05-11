@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
 '''
-React by calling async runners
+React by calling asynchronous runners
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # import salt libs
 import salt.runner
 
 
 def cmd(
         name,
-        fun=None,
+        func=None,
         arg=(),
         **kwargs):
     '''
-    Execute a runner async:
+    Execute a runner asynchronous:
 
     USAGE:
 
@@ -22,14 +22,14 @@ def cmd(
 
         run_cloud:
           runner.cmd:
-            - fun: cloud.create
+            - func: cloud.create
             - arg:
                 - my-ec2-config
                 - myinstance
 
         run_cloud:
           runner.cmd:
-            - fun: cloud.create
+            - func: cloud.create
             - kwargs:
                 provider: my-ec2-config
                 instances: myinstance
@@ -38,11 +38,16 @@ def cmd(
            'changes': {},
            'comment': '',
            'result': True}
-    if fun is None:
-        fun = name
-    client = salt.runner.RunnerClient(__opts__)
-    low = {'fun': fun,
-            'arg': arg,
-            'kwargs': kwargs}
-    client.cmd_async(low)
+    if func is None:
+        func = name
+    local_opts = {}
+    local_opts.update(__opts__)
+    local_opts['async'] = True  # ensure this will be run asynchronous
+    local_opts.update({
+        'fun': func,
+        'arg': arg,
+        'kwarg': kwargs
+    })
+    runner = salt.runner.Runner(local_opts)
+    runner.run()
     return ret

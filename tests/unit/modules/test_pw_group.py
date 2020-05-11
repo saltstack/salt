@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Rupesh Tare <rupesht@saltstack.com>`
+    :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -18,6 +18,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.modules.pw_group as pw_group
+import salt.utils.platform
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -44,6 +45,7 @@ class PwGroupTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pw_group.__salt__, {'cmd.run_all': mock}):
             self.assertTrue(pw_group.delete('a'))
 
+    @skipIf(salt.utils.platform.is_windows(), 'grp not available on Windows')
     def test_info(self):
         '''
         Tests to return information about a group
@@ -57,6 +59,7 @@ class PwGroupTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pw_group.grinfo, mock):
             self.assertDictEqual(pw_group.info('name'), {})
 
+    @skipIf(salt.utils.platform.is_windows(), 'grp not available on Windows')
     def test_getent(self):
         '''
         Tests for return info on all groups

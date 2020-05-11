@@ -4,22 +4,29 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-# Import python libs
-from __future__ import absolute_import
-import pwd
-import grp
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+import logging
+try:
+    import pwd
+    import grp
+except ImportError:
+    pwd, grp = None, None
 import random
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
+from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest, skip_if_not_root
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 from salt.utils.pycrypto import gen_hash
 
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+
+log = logging.getLogger(__name__)
 
 
 def gen_password():
@@ -41,6 +48,7 @@ def gen_password():
 
 
 @skip_if_not_root
+@skipIf(pwd is None, 'Skip if no pwd module exists')
 @destructiveTest
 class AuthTest(ShellCase):
     '''
@@ -54,19 +62,39 @@ class AuthTest(ShellCase):
     group = 'saltops'
 
     def setUp(self):
-        # This is a little wasteful but shouldn't be a problem
         for user in (self.userA, self.userB):
             try:
+                if salt.utils.platform.is_darwin() and user not in str(self.run_call('user.list_users')):
+                    # workaround for https://github.com/saltstack/salt-jenkins/issues/504
+                    raise KeyError
                 pwd.getpwnam(user)
             except KeyError:
                 self.run_call('user.add {0} createhome=False'.format(user))
 
         # only put userB into the group for the group auth test
         try:
+            if salt.utils.platform.is_darwin() and self.group not in str(self.run_call('group.info {0}'.format(self.group))):
+                # workaround for https://github.com/saltstack/salt-jenkins/issues/504
+                raise KeyError
             grp.getgrnam(self.group)
         except KeyError:
             self.run_call('group.add {0}'.format(self.group))
             self.run_call('user.chgroups {0} {1} True'.format(self.userB, self.group))
+
+    def tearDown(self):
+        for user in (self.userA, self.userB):
+            try:
+                pwd.getpwnam(user)
+            except KeyError:
+                pass
+            else:
+                self.run_call('user.delete {0}'.format(user))
+        try:
+            grp.getgrnam(self.group)
+        except KeyError:
+            pass
+        else:
+            self.run_call('group.delete {0}'.format(self.group))
 
     def test_pam_auth_valid_user(self):
         '''
@@ -77,7 +105,7 @@ class AuthTest(ShellCase):
         # set user password
         set_pw_cmd = "shadow.set_password {0} '{1}'".format(
                 self.userA,
-                password if salt.utils.is_darwin() else hashed_pwd
+                password if salt.utils.platform.is_darwin() else hashed_pwd
         )
         self.run_call(set_pw_cmd)
 
@@ -85,6 +113,7 @@ class AuthTest(ShellCase):
         cmd = ('-a pam "*" test.ping '
                '--username {0} --password {1}'.format(self.userA, password))
         resp = self.run_salt(cmd)
+        log.debug('resp = %s', resp)
         self.assertTrue(
             'minion:' in resp
         )
@@ -97,7 +126,7 @@ class AuthTest(ShellCase):
                '--username nouser --password {0}'.format('abcd1234'))
         resp = self.run_salt(cmd)
         self.assertTrue(
-            'Failed to authenticate' in ''.join(resp)
+            'Authentication error occurred.' in ''.join(resp)
         )
 
     def test_pam_auth_valid_group(self):
@@ -109,7 +138,7 @@ class AuthTest(ShellCase):
         # set user password
         set_pw_cmd = "shadow.set_password {0} '{1}'".format(
                 self.userB,
-                password if salt.utils.is_darwin() else hashed_pwd
+                password if salt.utils.platform.is_darwin() else hashed_pwd
         )
         self.run_call(set_pw_cmd)
 
@@ -121,10 +150,3 @@ class AuthTest(ShellCase):
         self.assertTrue(
             'minion:' in resp
         )
-
-    def test_zzzz_tearDown(self):
-        for user in (self.userA, self.userB):
-            if pwd.getpwnam(user):
-                self.run_call('user.delete {0}'.format(user))
-        if grp.getgrnam(self.group):
-            self.run_call('group.delete {0}'.format(self.group))

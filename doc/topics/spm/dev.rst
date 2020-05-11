@@ -20,6 +20,7 @@ marked as required are crucial to SPM's core functionality, while arguments that
 are marked as optional are provided as a benefit to the module, if it needs to
 use them.
 
+.. _spm-development-pkgdb:
 
 Package Database
 ----------------
@@ -146,6 +147,8 @@ The only argument that is expected is ``db_``, which is the package database
 file.
 
 
+.. _spm-development-pkgfiles:
+
 Package Files
 -------------
 By default, package files are installed using the ``local`` module. This module
@@ -256,7 +259,7 @@ This function will not generally be more complex than:
 .. code-block:: python
 
     def hash_file(path, hashobj, conn=None):
-        with salt.utils.fopen(path, 'r') as f:
+        with salt.utils.files.fopen(path, 'r') as f:
             hashobj.update(f.read())
             return hashobj.hexdigest()
 

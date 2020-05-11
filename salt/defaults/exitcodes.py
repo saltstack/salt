@@ -9,6 +9,10 @@ prefix or in `sysexits.h`).
 # else is more appropriate.
 EX_GENERIC = 1
 
+EX_STATE_COMPILER_ERROR = 1
+EX_STATE_FAILURE = 2
+EX_PILLAR_FAILURE = 5
+
 # Salt SSH "Thin" deployment failures
 EX_THIN_PYTHON_INVALID = 10
 EX_THIN_DEPLOY = 11
@@ -32,6 +36,7 @@ EX_UNAVAILABLE = 69       # service unavailable
 EX_SOFTWARE = 70          # internal software error
 EX_CANTCREAT = 73         # can't create (user) output file
 EX_TEMPFAIL = 75          # temp failure; user is invited to retry
+EX_NOPERM = 77            # permission denied
 
 # The Salt specific exit codes are defined below:
 

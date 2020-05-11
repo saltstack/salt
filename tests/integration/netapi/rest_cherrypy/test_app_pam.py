@@ -3,7 +3,7 @@
 Integration Tests for restcherry salt-api with pam eauth
 '''
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 
 # Import test support libs
@@ -13,7 +13,7 @@ from tests.support.helpers import destructiveTest, skip_if_not_root
 import tests.support.cherrypy_testclasses as cptc
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.platform
 
 # Import 3rd-party libs
 from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name-in-module,import-error
@@ -42,8 +42,13 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
         super(TestAuthPAM, self).setUp()
         try:
             add_user = self.run_function('user.add', [USERA], createhome=False)
-            add_pwd = self.run_function('shadow.set_password',
-                                        [USERA, USERA_PWD if salt.utils.is_darwin() else HASHED_USERA_PWD])
+            add_pwd = self.run_function(
+                'shadow.set_password',
+                [
+                    USERA,
+                    USERA_PWD if salt.utils.platform.is_darwin() else HASHED_USERA_PWD
+                ]
+            )
             self.assertTrue(add_user)
             self.assertTrue(add_pwd)
             user_list = self.run_function('user.list_users')

@@ -4,11 +4,11 @@ unit tests for the cache runner
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import TMP
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -18,7 +18,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.runners.cache as cache
-import salt.utils
+import salt.utils.master
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -27,7 +27,7 @@ class CacheTest(TestCase, LoaderModuleMockMixin):
     Validate the cache runner
     '''
     def setup_loader_modules(self):
-        return {cache: {'__opts__': {'cache': 'localfs', 'pki_dir': TMP, 'key_cache': True}}}
+        return {cache: {'__opts__': {'cache': 'localfs', 'pki_dir': RUNTIME_VARS.TMP, 'key_cache': True}}}
 
     def test_grains(self):
         '''

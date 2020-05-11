@@ -5,12 +5,13 @@ Module to provide Postgres compatibility to salt for debian family specific tool
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import pipes
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
+from salt.ext import six
 
 # Import 3rd-party libs
 
@@ -23,7 +24,7 @@ def __virtual__():
     '''
     Only load this module if the pg_createcluster bin exists
     '''
-    if salt.utils.which('pg_createcluster'):
+    if salt.utils.path.which('pg_createcluster'):
         return __virtualname__
     return (False, 'postgres execution module not loaded: pg_createcluste command not found.')
 
@@ -33,7 +34,10 @@ def cluster_create(version,
                    port=None,
                    locale=None,
                    encoding=None,
-                   datadir=None):
+                   datadir=None,
+                   allow_group_access=None,
+                   data_checksums=None,
+                   wal_segsize=None):
     '''
     Adds a cluster to the Postgres server.
 
@@ -51,10 +55,12 @@ def cluster_create(version,
 
         salt '*' postgres.cluster_create '9.3' locale='fr_FR'
 
+        salt '*' postgres.cluster_create '11' data_checksums=True wal_segsize='32'
+
     '''
-    cmd = [salt.utils.which('pg_createcluster')]
+    cmd = [salt.utils.path.which('pg_createcluster')]
     if port:
-        cmd += ['--port', str(port)]
+        cmd += ['--port', six.text_type(port)]
     if locale:
         cmd += ['--locale', locale]
     if encoding:
@@ -62,11 +68,19 @@ def cluster_create(version,
     if datadir:
         cmd += ['--datadir', datadir]
     cmd += [version, name]
+    # initdb-specific options are passed after '--'
+    if allow_group_access or data_checksums or wal_segsize:
+        cmd += ['--']
+    if allow_group_access is True:
+        cmd += ['--allow-group-access']
+    if data_checksums is True:
+        cmd += ['--data-checksums']
+    if wal_segsize:
+        cmd += ['--wal-segsize', wal_segsize]
     cmdstr = ' '.join([pipes.quote(c) for c in cmd])
     ret = __salt__['cmd.run_all'](cmdstr, python_shell=False)
     if ret.get('retcode', 0) != 0:
-        log.error('Error creating a Postgresql'
-                  ' cluster {0}/{1}'.format(version, name))
+        log.error('Error creating a Postgresql cluster %s/%s', version, name)
         return False
     return ret
 
@@ -83,7 +97,7 @@ def cluster_list(verbose=False):
 
         salt '*' postgres.cluster_list verbose=True
     '''
-    cmd = [salt.utils.which('pg_lsclusters'), '--no-header']
+    cmd = [salt.utils.path.which('pg_lsclusters'), '--no-header']
     ret = __salt__['cmd.run_all'](' '.join([pipes.quote(c) for c in cmd]))
     if ret.get('retcode', 0) != 0:
         log.error('Error listing clusters')
@@ -127,7 +141,7 @@ def cluster_remove(version,
         salt '*' postgres.cluster_remove '9.3' 'main' stop=True
 
     '''
-    cmd = [salt.utils.which('pg_dropcluster')]
+    cmd = [salt.utils.path.which('pg_dropcluster')]
     if stop:
         cmd += ['--stop']
     cmd += [version, name]
@@ -135,8 +149,7 @@ def cluster_remove(version,
     ret = __salt__['cmd.run_all'](cmdstr, python_shell=False)
     # FIXME - return Boolean ?
     if ret.get('retcode', 0) != 0:
-        log.error('Error removing a Postgresql'
-                  ' cluster {0}/{1}'.format(version, name))
+        log.error('Error removing a Postgresql cluster %s/%s', version, name)
     else:
         ret['changes'] = ('Successfully removed'
                           ' cluster {0}/{1}').format(version, name)

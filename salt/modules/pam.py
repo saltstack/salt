@@ -2,14 +2,14 @@
 '''
 Support for pam
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 
@@ -31,10 +31,10 @@ def _parse(contents=None, file_name=None):
     if contents:
         pass
     elif file_name and os.path.exists(file_name):
-        with salt.utils.fopen(file_name, 'r') as ifile:
-            contents = ifile.read()
+        with salt.utils.files.fopen(file_name, 'r') as ifile:
+            contents = salt.utils.stringutils.to_unicode(ifile.read())
     else:
-        log.error('File "{0}" does not exist'.format(file_name))
+        log.error('File "%s" does not exist', file_name)
         return False
 
     rules = []

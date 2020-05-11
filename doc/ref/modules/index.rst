@@ -13,7 +13,7 @@ Writing Salt execution modules is straightforward.
 
 A Salt execution module is a Python or `Cython`_ module placed in a directory
 called ``_modules/`` at the root of the Salt fileserver. When using the default
-fileserver backend (i.e. :py:mod:`roots <salt.fileserver.roots`), unless
+fileserver backend (i.e. :py:mod:`roots <salt.fileserver.roots>`), unless
 environments are otherwise defined in the :conf_master:`file_roots` config
 option, the ``_modules/`` directory would be located in ``/srv/salt/_modules``
 on most systems.
@@ -137,7 +137,7 @@ call functions available in other execution modules.
 The variable ``__salt__`` is packed into the modules after they are loaded into
 the Salt minion.
 
-The ``__salt__`` variable is a :ref:`Python dictionary <python2:typesmapping>`
+The ``__salt__`` variable is a :ref:`Python dictionary <python:typesmapping>`
 containing all of the Salt functions. Dictionary keys are strings representing
 the names of the modules and the values are the functions themselves.
 
@@ -157,6 +157,7 @@ Calling Execution Modules on the Salt Master
 ============================================
 
 .. versionadded:: 2016.11.0
+
 Execution modules can now also be called via the :command:`salt-run` command
 using the :ref:`salt runner <salt_salt_runner>`.
 
@@ -175,8 +176,8 @@ Grains Data
 -----------
 
 The values detected by the Salt Grains on the minion are available in a
-:ref:`dict <python2:typesmapping>` named ``__grains__`` and can be accessed
-from within callable objects in the Python modules.
+:ref:`Python dictionary <python:typesmapping>` named ``__grains__`` and can be
+accessed from within callable objects in the Python modules.
 
 To see the contents of the grains dictionary for a given system in your
 deployment run the :func:`grains.items` function:
@@ -208,6 +209,29 @@ The test execution module contains usage of the module configuration and the
 default configuration file for the minion contains the information and format
 used to pass data to the modules. :mod:`salt.modules.test`,
 :file:`conf/minion`.
+
+.. _module_init:
+
+``__init__`` Function
+---------------------
+
+If you want your module to have different execution modes based on minion
+configuration, you can use the ``__init__(opts)`` function to perform initial
+module setup. The parameter ``opts`` is the complete minion configuration,
+as also available in the ``__opts__`` dict.
+
+.. code-block:: python
+
+    '''
+    Cheese module initialization example
+    '''
+    def __init__(opts):
+        '''
+        Allow foreign imports if configured to do so
+        '''
+        if opts.get('cheese.allow_foreign', False):
+            _enable_foreign_products()
+
 
 Strings and Unicode
 ===================
@@ -264,7 +288,7 @@ Virtual module names are set using the ``__virtual__`` function and the
 ``__virtual__`` Function
 ========================
 
-The ``__virtual__`` function returns either a :ref:`string <python2:typesseq>`,
+The ``__virtual__`` function returns either a :ref:`string <python:typesseq>`,
 :py:data:`True`, :py:data:`False`, or :py:data:`False` with an :ref:`error
 string <modules-error-info>`. If a string is returned then the module is loaded
 using the name of the string as the virtual name. If ``True`` is returned the
@@ -273,8 +297,9 @@ module is not loaded. ``False`` lets the module perform system checks and
 prevent loading if dependencies are not met.
 
 Since ``__virtual__`` is called before the module is loaded, ``__salt__`` will
-be unavailable as it will not have been packed into the module at this point in
-time.
+be unreliable as not all modules will be available at this point in time. The
+``__pillar__`` and ``__grains__`` :ref:`"dunder" dictionaries <dunder-dictionaries>`
+are available however.
 
 .. note::
     Modules which return a string from ``__virtual__`` that is already used by
@@ -313,10 +338,14 @@ the case when the dependency is unavailable.
         else:
             return False, 'The cheese execution module cannot be loaded: enzymes unavailable.'
 
+    def slice():
+        pass
+
 .. code-block:: python
 
     '''
-    Cheese state module
+    Cheese state module. Note that this works in state modules because it is
+    guaranteed that execution modules are loaded first
     '''
 
     def __virtual__():
@@ -376,6 +405,22 @@ The above example will force the minion to use the :py:mod:`systemd
 
 .. __: https://github.com/saltstack/salt/issues/new
 
+Logging Restrictions
+--------------------
+
+As a rule, logging should not be done anywhere in a Salt module before it is
+loaded. This rule apples to all code that would run before the ``__virtual__()``
+function, as well as the code within the ``__virtual__()`` function itself.
+
+If logging statements are made before the virtual function determines if
+the module should be loaded, then those logging statements will be called
+repeatedly. This clutters up log files unnecessarily.
+
+Exceptions may be considered for logging statements made at the ``trace`` level.
+However, it is better to provide the necessary information by another means.
+One method is to :ref:`return error information <modules-error-info>` in the
+``__virtual__()`` function.
+
 .. _modules-virtual-name:
 
 ``__virtualname__``
@@ -401,10 +446,33 @@ similar to the following:
        Confine this module to Mac OS with Homebrew.
        '''
 
-       if salt.utils.which('brew') and __grains__['os'] == 'MacOS':
+       if salt.utils.path.which('brew') and __grains__['os'] == 'MacOS':
            return __virtualname__
        return False
 
+The ``__virtual__()`` function can return a ``True`` or ``False`` boolean, a tuple,
+or a string. If it returns a ``True`` value, this ``__virtualname__`` module-level
+attribute can be set as seen in the above example. This is the string that the module
+should be referred to as.
+
+When ``__virtual__()`` returns a tuple, the first item should be a boolean and the
+second should be a string. This is typically done when the module should not load. The
+first value of the tuple is ``False`` and the second is the error message to display
+for why the module did not load.
+
+For example:
+
+.. code-block:: python
+
+    def __virtual__():
+        '''
+        Only load if git exists on the system
+        '''
+        if salt.utils.path.which('git') is None:
+            return (False,
+                    'The git execution module cannot be loaded: git unavailable.')
+        else:
+            return True
 
 Documentation
 =============
@@ -442,7 +510,7 @@ To add documentation add a `Python docstring`_ to the function.
 Now when the sys.doc call is executed the docstring will be cleanly returned
 to the calling terminal.
 
-.. _`Python docstring`: http://docs.python.org/2/glossary.html#term-docstring
+.. _`Python docstring`: https://docs.python.org/3/glossary.html#term-docstring
 
 Documentation added to execution modules in docstrings will automatically be
 added to the online web-based documentation.

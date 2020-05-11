@@ -64,7 +64,8 @@ Deploy ssh key for salt-ssh
 ===========================
 
 By default, salt-ssh will generate key pairs for ssh, the default path will be
-/etc/salt/pki/master/ssh/salt-ssh.rsa
+``/etc/salt/pki/master/ssh/salt-ssh.rsa``. The key generation happens when you run
+``salt-ssh`` for the first time.
 
 You can use ssh-copy-id, (the OpenSSH key deployment tool) to deploy keys to your servers.
 
@@ -112,7 +113,7 @@ Calling Salt SSH
 
 .. note:: ``salt-ssh`` on systems with Python 3.x
 
-    Salt, before the Nitrogen release, does not support Python 3.x which is the
+    Salt, before the 2017.7.0 release, does not support Python 3.x which is the
     default on for example the popular 16.04 LTS release of Ubuntu. An easy
     workaround for this scenario is to use the ``-r`` option similar to the
     example above:
@@ -126,7 +127,7 @@ command:
 
 .. code-block:: bash
 
-    salt-ssh '*' test.ping
+    salt-ssh '*' test.version
 
 Commands with ``salt-ssh`` follow the same syntax as the ``salt`` command.
 
@@ -212,12 +213,13 @@ YAML contents:
 
     salt-ssh:
       config_dir: path/to/config/dir
+      ssh_log_file: salt-ssh.log
       ssh_max_procs: 30
       ssh_wipe: True
 
 Instead of having to call
-``salt-ssh --config-dir=path/to/config/dir --max-procs=30 --wipe \* test.ping`` you
-can call ``salt-ssh \* test.ping``.
+``salt-ssh --config-dir=path/to/config/dir --max-procs=30 --wipe \* test.version`` you
+can call ``salt-ssh \* test.version``.
 
 Boolean-style options should be specified in their YAML representation.
 

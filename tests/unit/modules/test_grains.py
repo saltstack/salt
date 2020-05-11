@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import copy
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -19,7 +19,7 @@ from tests.support.mock import (
 # Import Salt libs
 from salt.exceptions import SaltException
 import salt.modules.grains as grainsmod
-from salt.utils import dictupdate
+import salt.utils.dictupdate as dictupdate
 
 # Import 3rd-party libs
 from salt.utils.odict import OrderedDict
@@ -29,8 +29,8 @@ from salt.utils.odict import OrderedDict
 class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
-        conf_file = os.path.join(TMP, '__salt_test_grains')
-        cachedir = os.path.join(TMP, '__salt_test_grains_cache_dir')
+        conf_file = os.path.join(RUNTIME_VARS.TMP, '__salt_test_grains')
+        cachedir = os.path.join(RUNTIME_VARS.TMP, '__salt_test_grains_cache_dir')
         if not os.path.isdir(cachedir):
             os.makedirs(cachedir)
         return {

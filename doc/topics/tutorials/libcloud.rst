@@ -4,7 +4,7 @@
 Using Apache Libcloud for declarative and procedural multi-cloud orchestration
 ==============================================================================
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 .. note::
 
@@ -13,7 +13,7 @@ Using Apache Libcloud for declarative and procedural multi-cloud orchestration
 
 Apache Libcloud is a Python library which hides differences between different cloud provider APIs and allows
 you to manage different cloud resources through a unified and easy to use API. Apache Libcloud supports over
-60 cloud platforms, including Amazon, Microsoft Azure, Digital Ocean, Google Cloud Platform and OpenStack.
+60 cloud platforms, including Amazon, Microsoft Azure, DigitalOcean, Google Cloud Platform and OpenStack.
 
 Execution and state modules are available for Compute, DNS, Storage and Load Balancer drivers from Apache Libcloud in
  SaltStack.

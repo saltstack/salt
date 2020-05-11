@@ -9,6 +9,13 @@ Windows images.
 
 Requirements
 ============
+
+.. note::
+   Support ``winexe`` and ``impacket`` has been deprecated and will be removed in
+   Sodium. These dependencies are replaced by ``pypsexec`` and ``smbprotocol``
+   respectivly. These are pure python alternatives that are compatible with all
+   supported python versions.
+
 Salt Cloud makes use of `impacket` and `winexe` to set up the Windows Salt
 Minion installer.
 
@@ -32,6 +39,15 @@ channels:
 
 .. __: http://software.opensuse.org/package/winexe
 
+* `pypsexec project home`__
+
+.. __: https://github.com/jborean93/pypsexec
+
+* `smbprotocol project home`__
+
+.. __: https://github.com/jborean93/smbprotocol
+
+
 Optionally WinRM can be used instead of `winexe` if the python module `pywinrm`
 is available and WinRM is supported on the target Windows version. Information
 on pywinrm can be found at the project home:
@@ -48,6 +64,15 @@ from saltstack.com:
 
 .. __: https://repo.saltstack.com/windows/
 
+.. _new-pywinrm:
+
+Self Signed Certificates with WinRM
+===================================
+
+Salt-Cloud can use versions of ``pywinrm<=0.1.1`` or ``pywinrm>=0.2.1``.
+
+For versions greater than `0.2.1`, ``winrm_verify_ssl`` needs to be set to
+`False` if the certificate is self signed and not verifiable.
 
 Firewall Settings
 =================
@@ -60,7 +85,7 @@ If supported by the cloud provider, a PowerShell script may be used to open up
 this port automatically, using the cloud provider's `userdata`. The following
 script would open up port 445, and apply the changes:
 
-.. code-block:: powershell
+.. code-block:: text
 
     <powershell>
     New-NetFirewallRule -Name "SMB445" -DisplayName "SMB445" -Protocol TCP -LocalPort 445
@@ -113,7 +138,7 @@ enabled in your userdata. By default EC2 Windows images only have insecure HTTP
 enabled. To enable HTTPS and basic authentication required by pywinrm consider
 the following userdata example:
 
-.. code-block:: powershell
+.. code-block:: text
 
     <powershell>
     New-NetFirewallRule -Name "SMB445" -DisplayName "SMB445" -Protocol TCP -LocalPort 445
@@ -127,24 +152,24 @@ the following userdata example:
     $SourceStoreScope = 'LocalMachine'
     $SourceStorename = 'Remote Desktop'
 
-    $SourceStore = New-Object  -TypeName System.Security.Cryptography.X509Certificates.X509Store  -ArgumentList $SourceStorename, $SourceStoreScope
+    $SourceStore = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Store -ArgumentList $SourceStorename, $SourceStoreScope
     $SourceStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadOnly)
 
-    $cert = $SourceStore.Certificates | Where-Object  -FilterScript {
+    $cert = $SourceStore.Certificates | Where-Object -FilterScript {
         $_.subject -like '*'
     }
 
     $DestStoreScope = 'LocalMachine'
     $DestStoreName = 'My'
 
-    $DestStore = New-Object  -TypeName System.Security.Cryptography.X509Certificates.X509Store  -ArgumentList $DestStoreName, $DestStoreScope
+    $DestStore = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Store -ArgumentList $DestStoreName, $DestStoreScope
     $DestStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
     $DestStore.Add($cert)
 
     $SourceStore.Close()
     $DestStore.Close()
 
-    winrm create winrm/config/listener?Address=*+Transport=HTTPS  `@`{Hostname=`"($certId)`"`;CertificateThumbprint=`"($cert.Thumbprint)`"`}
+    winrm create winrm/config/listener?Address=*+Transport=HTTPS `@`{CertificateThumbprint=`"($cert.Thumbprint)`"`}
 
     Restart-Service winrm
     </powershell>
@@ -179,7 +204,8 @@ The default Windows user is `Administrator`, and the default Windows password
 is blank.
 
 If WinRM is to be used ``use_winrm`` needs to be set to `True`. ``winrm_port``
-can be used to specify a custom port (must be HTTPS listener).
+can be used to specify a custom port (must be HTTPS listener).  And
+``winrm_verify_ssl`` can be set to `False` to use a self signed certificate.
 
 
 Auto-Generated Passwords on EC2

@@ -1,5 +1,5 @@
-salt.runners.vault module
-=========================
+salt.runners.vault
+==================
 
 .. automodule:: salt.runners.vault
     :members:

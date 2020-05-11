@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :codeauthor: :email:`Alexandru Bleotu (alexandru.bleotu@morganstanley.com)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
+    :codeauthor: Alexandru Bleotu (alexandru.bleotu@morganstanley.com)
 
 
     salt.utils.schema
@@ -77,7 +77,7 @@
             ('x-ordering', ['host', 'port']),
             ('additionalProperties', True)]
         )
-        >>> print(json.dumps(HostConfig.serialize(), indent=2))
+        >>> print(salt.utils.json.dumps(HostConfig.serialize(), indent=2))
         {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "title": "Host Configuration",
@@ -170,7 +170,7 @@
 
     .. code-block:: python
 
-        >>> print json.dumps(MyConfig.serialize(), indent=4)
+        >>> print salt.utils.json.dumps(MyConfig.serialize(), indent=4)
         {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "title": "My Config",
@@ -282,7 +282,7 @@
 
     .. code-block:: python
 
-        >>> print(json.dumps(MyConfig, indent=4))
+        >>> print(salt.utils.json.dumps(MyConfig, indent=4))
         {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "title": "My Config",
@@ -320,7 +320,7 @@
         }
 '''
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import sys
 import inspect
 import textwrap
@@ -328,11 +328,11 @@ import functools
 
 # Import salt libs
 import salt.utils.args
+#import salt.utils.yaml
 from salt.utils.odict import OrderedDict
 
 # Import 3rd-party libs
-#import yaml
-import salt.ext.six as six
+from salt.ext import six
 
 BASE_SCHEMA_URL = 'https://non-existing.saltstack.com/schemas'
 RENDER_COMMENT_YAML_MAX_LINE_LENGTH = 80
@@ -402,6 +402,7 @@ of a field to null.
 # make sure nobody creates another Null value
 def _failing_new(*args, **kwargs):
     raise TypeError('Can\'t create another NullSentinel instance')
+
 
 NullSentinel.__new__ = staticmethod(_failing_new)
 del _failing_new
@@ -622,16 +623,20 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
         if properties:
             serialized['properties'] = properties
 
-        # Update the serialized object with any items to include after properties
+        # Update the serialized object with any items to include after properties.
+        # Do not overwrite properties already existing in the serialized dict.
         if cls.after_items_update:
             after_items_update = {}
             for entry in cls.after_items_update:
-                name, data = next(six.iteritems(entry))
-                if name in after_items_update:
-                    after_items_update[name].extend(data)
-                else:
-                    after_items_update[name] = data
-            serialized.update(after_items_update)
+                for name, data in six.iteritems(entry):
+                    if name in after_items_update:
+                        if isinstance(after_items_update[name], list):
+                            after_items_update[name].extend(data)
+                    else:
+                        after_items_update[name] = data
+            if after_items_update:
+                after_items_update.update(serialized)
+                serialized = after_items_update
 
         if required:
             # Only include required if not empty
@@ -727,7 +732,7 @@ class SchemaItem(six.with_metaclass(BaseSchemaItemMeta, object)):
         '''
         Return the argname value looking up on all possible attributes
         '''
-        # Let's see if there's a private fuction to get the value
+        # Let's see if there's a private function to get the value
         argvalue = getattr(self, '__get_{0}__'.format(argname), None)
         if argvalue is not None and callable(argvalue):
             argvalue = argvalue()
@@ -867,7 +872,7 @@ class BaseSchemaItem(SchemaItem):
     #                                          width=RENDER_COMMENT_YAML_MAX_LINE_LENGTH,
     #                                          initial_indent='# '))
     #        output += '\n'
-    #        yamled_default_value = yaml.dump(self.default, default_flow_style=False).split('\n...', 1)[0]
+    #        yamled_default_value = salt.utils.yaml.safe_dump(self.default, default_flow_style=False).split('\n...', 1)[0]
     #        output += '# Default: {0}\n'.format(yamled_default_value)
     #        output += '#{0}: {1}\n'.format(name, yamled_default_value)
     #    output += '# <---- '
@@ -1438,7 +1443,7 @@ class NotItem(SchemaItem):
         if not isinstance(self.item, (Schema, SchemaItem)):
             raise RuntimeError(
                 'The passed item be of type Schema, SchemaItem or '
-                'BaseSchemaItem, not \'{1}\''.format(type(self.item))
+                'BaseSchemaItem, not \'{0}\''.format(type(self.item))
             )
 
     def serialize(self):

@@ -21,7 +21,6 @@ See the following links for instructions:
 - :ref:`Red Hat / CentOS 5, 6, 7 <installation-rhel-repo>`
 - :ref:`Debian 8 <installation-debian-repo>`
 - :ref:`Windows <windows-installer>`
-- :ref:`FreeBSD <freebsd-upstream>`
 
 Send Event on State Completion
 ==============================
@@ -65,14 +64,13 @@ for asynchronous behavior, which should greatly improve reliability and
 performance.
 
 .. note::
+    Tornado is considered expiremental in this release. The following known
+    issues were being investigated at the time of release:
 
-   Tornado is considered expiremental in this release. The following known
-   issues were being investigated at the time of release:
-     - TCP tests show
-       performance degredation over time (:issue:`26051`)
-     - TCP transport stacktrace on windows minion: Future exception was never
-       retrieved (:issue:`25718`)
-     - [freebsd] TCP transport not working in 2015.8.0rc3 (:issue:`26364`)
+    - TCP tests show performance degredation over time (:issue:`26051`)
+    - TCP transport stacktrace on windows minion: Future exception was never
+      retrieved (:issue:`25718`)
+    - [freebsd] TCP transport not working in 2015.8.0rc3 (:issue:`26364`)
 
 Proxy Minion Enhancements
 =========================
@@ -106,7 +104,7 @@ bringing with it the ability to access authenticated repositories.
 
 Using the new features will require updates to the git ext_pillar
 configuration, further details can be found in the :ref:`pillar.git_pillar
-<git-pillar-2015-8-0-and-later>` docs.
+<git-pillar-configuration>` docs.
 
 .. _pygit2: https://github.com/libgit2/pygit2
 
@@ -136,8 +134,10 @@ State and Execution Module Improvements
 
 - New and improved Docker state and execution modules (:mod:`state
   <salt.states.dockerng>` and :mod:`execution module <salt.modules.dockerng>`).
+
 .. toctree::
     includes/git-2015.8.0
+
 - OpenStack Glance API V2 execution module
 - Amazon VPC state module
 - RallyDev execution module
@@ -231,7 +231,7 @@ Deprecations
 
 - The use of ``provider`` in Salt Cloud provider files to define cloud drivers
   has been deprecated in favor of using ``driver``. Both terms will work until
-  the Nitrogen release of Salt. Example provider file:
+  the 2017.7.0 release of Salt. Example provider file:
 
 .. code-block:: yaml
 

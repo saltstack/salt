@@ -89,7 +89,7 @@ to issue #22471 (https://github.com/saltstack/salt/issues/22471)
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import time
@@ -98,14 +98,15 @@ from copy import deepcopy
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import filter
 from salt.ext.six.moves.urllib.parse import quote as _quote
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import salt libs
 from salt.pillar import Pillar
-import salt.utils
+import salt.utils.files
+import salt.utils.hashutils
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -168,8 +169,7 @@ def ext_pillar(minion_id,
                 for file_path in files:
                     cached_file_path = _get_cached_file_name(bucket, saltenv,
                                                              file_path)
-                    log.info('{0} - {1} : {2}'.format(bucket, saltenv,
-                                                      file_path))
+                    log.info('%s - %s : %s', bucket, saltenv, file_path)
                     # load the file from S3 if not in the cache or too old
                     _get_file_from_s3(s3_creds, metadata, saltenv, bucket,
                                       file_path, cached_file_path)
@@ -207,7 +207,13 @@ def _init(creds, bucket, multiple_env, environment, prefix, s3_cache_expire):
 
     expired = (cache_file_mtime <= exp)
 
-    log.debug("S3 bucket cache file {0} is {1}expired, mtime_diff={2}s, expiration={3}s".format(cache_file, "" if expired else "not ", cache_file_mtime - exp, s3_cache_expire))
+    log.debug(
+        'S3 bucket cache file %s is %sexpired, mtime_diff=%ss, expiration=%ss',
+        cache_file,
+        '' if expired else 'not ',
+        cache_file_mtime - exp,
+        s3_cache_expire
+    )
 
     if expired:
         pillars = _refresh_buckets_cache_file(creds, cache_file, multiple_env,
@@ -215,7 +221,7 @@ def _init(creds, bucket, multiple_env, environment, prefix, s3_cache_expire):
     else:
         pillars = _read_buckets_cache_file(cache_file)
 
-    log.debug("S3 bucket retrieved pillars {0}".format(pillars))
+    log.debug('S3 bucket retrieved pillars %s', pillars)
     return pillars
 
 
@@ -337,7 +343,7 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment, pr
 
     log.debug('Writing S3 buckets pillar cache file')
 
-    with salt.utils.fopen(cache_file, 'w') as fp_:
+    with salt.utils.files.fopen(cache_file, 'w') as fp_:
         pickle.dump(metadata, fp_)
 
     return metadata
@@ -350,7 +356,7 @@ def _read_buckets_cache_file(cache_file):
 
     log.debug('Reading buckets cache file')
 
-    with salt.utils.fopen(cache_file, 'rb') as fp_:
+    with salt.utils.files.fopen(cache_file, 'rb') as fp_:
         data = pickle.load(fp_)
 
     return data
@@ -402,12 +408,11 @@ def _get_file_from_s3(creds, metadata, saltenv, bucket, path,
         file_md5 = "".join(list(filter(str.isalnum, file_meta['ETag']))) \
             if file_meta else None
 
-        cached_md5 = salt.utils.get_hash(cached_file_path, 'md5')
-
-        log.debug("Cached file: path={0}, md5={1}, etag={2}".format(cached_file_path, cached_md5, file_md5))
+        cached_md5 = salt.utils.hashutils.get_hash(cached_file_path, 'md5')
 
         # hashes match we have a cache hit
-        log.debug("Cached file: path={0}, md5={1}, etag={2}".format(cached_file_path, cached_md5, file_md5))
+        log.debug('Cached file: path=%s, md5=%s, etag=%s',
+                  cached_file_path, cached_md5, file_md5)
         if cached_md5 == file_md5:
             return
 

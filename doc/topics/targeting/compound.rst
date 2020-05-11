@@ -21,6 +21,7 @@ I      Pillar glob          ``I@pdata:foobar``                                  
 J      Pillar PCRE          ``J@pdata:^(foo|bar)$``                                        Yes
 S      Subnet/IP address    ``S@192.168.1.0/24`` or ``S@192.168.1.100``                    No
 R      Range cluster        ``R@%foo.bar``                                                 No
+N      Nodegroups           ``N@group1``                                                   No 
 ====== ==================== ============================================================== =============================================
 
 Matchers can be joined using boolean ``and``, ``or``, and ``not`` operators.
@@ -31,7 +32,7 @@ matches the :mod:`regular expression <python2:re>` ``web-dc1-srv.*``:
 
 .. code-block:: bash
 
-    salt -C 'webserv* and G@os:Debian or E@web-dc1-srv.*' test.ping
+    salt -C 'webserv* and G@os:Debian or E@web-dc1-srv.*' test.version
 
 That same example expressed in a :term:`top file` looks like the following:
 
@@ -48,20 +49,20 @@ Excluding a minion based on its ID is also possible:
 
 .. code-block:: bash
 
-    salt -C 'not web-dc1-srv' test.ping
+    salt -C 'not web-dc1-srv' test.version
 
 Versions prior to 2015.8.0 a leading ``not`` was not supported in compound
 matches. Instead, something like the following was required:
 
 .. code-block:: bash
 
-    salt -C '* and not G@kernel:Darwin' test.ping
+    salt -C '* and not G@kernel:Darwin' test.version
 
 Excluding a minion based on its ID was also possible:
 
 .. code-block:: bash
 
-    salt -C '* and not web-dc1-srv' test.ping
+    salt -C '* and not web-dc1-srv' test.version
 
 Precedence Matching
 -------------------
@@ -70,7 +71,7 @@ Matchers can be grouped together with parentheses to explicitly declare preceden
 
 .. code-block:: bash
 
-    salt -C '( ms-1 or G@id:ms-3 ) and G@id:ms-3' test.ping
+    salt -C '( ms-1 or G@id:ms-3 ) and G@id:ms-3' test.version
 
 .. note::
 

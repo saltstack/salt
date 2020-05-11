@@ -1,0 +1,27 @@
+network:
+  - network.get_hostname:
+      info: Hostname
+      output: txt
+  - network.get_fqdn:
+      info: FQDN
+      output: txt
+  - network.default_route:
+      info: Default route
+      output: table
+  - network.interfaces:
+      info: All the available interfaces
+      output: table
+  - network.subnets:
+      info: List of IPv4 subnets
+  - network.subnets6:
+      info: List of IPv6 subnets
+  - network.routes:
+      info: Network configured routes from routing tables
+      output: table
+  - network.netstat:
+      info: Information on open ports and states
+      output: table
+  - network.active_tcp:
+      info: All running TCP connections
+  - network.arp:
+      info: ARP table

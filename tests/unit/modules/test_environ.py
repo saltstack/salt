@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Rupesh Tare <rupesht@saltstack.com>`
+    :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing Libs
@@ -50,27 +50,27 @@ class EnvironTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_set_val_permanent(self):
         with patch.dict(os.environ, {}), \
-                patch.dict(environ.__salt__, {'reg.set_value': MagicMock(),
-                                              'reg.delete_value': MagicMock()}), \
-                    patch('salt.utils.is_windows', MagicMock(return_value=True)):
+                patch.dict(environ.__utils__, {'reg.set_value': MagicMock(),
+                                               'reg.delete_value': MagicMock()}), \
+                    patch('salt.utils.platform.is_windows', MagicMock(return_value=True)):
 
             environ.setval('key', 'Test', permanent=True)
-            environ.__salt__['reg.set_value'].assert_called_with('HKCU', 'Environment', 'key', 'Test')
+            environ.__utils__['reg.set_value'].assert_called_with('HKCU', 'Environment', 'key', 'Test')
 
             environ.setval('key', False, false_unsets=True, permanent=True)
-            environ.__salt__['reg.set_value'].asset_not_called()
-            environ.__salt__['reg.delete_value'].assert_called_with('HKCU', 'Environment', 'key')
+            environ.__utils__['reg.set_value'].asset_not_called()
+            environ.__utils__['reg.delete_value'].assert_called_with('HKCU', 'Environment', 'key')
 
             key = r'SYSTEM\CurrentControlSet\Control\Session Manager\Environment'
             environ.setval('key', 'Test', permanent='HKLM')
-            environ.__salt__['reg.set_value'].assert_called_with('HKLM', key, 'key', 'Test')
+            environ.__utils__['reg.set_value'].assert_called_with('HKLM', key, 'key', 'Test')
 
     def test_setenv(self):
         '''
         Set multiple salt process environment variables from a dict.
         Returns a dict.
         '''
-        mock_environ = {'key': 'value'}
+        mock_environ = {'KEY': 'value'}
         with patch.dict(os.environ, mock_environ):
             self.assertFalse(environ.setenv('environ'))
 
@@ -83,7 +83,7 @@ class EnvironTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(os.environ, mock_environ):
             mock_setval = MagicMock(return_value=None)
             with patch.object(environ, 'setval', mock_setval):
-                self.assertEqual(environ.setenv({}, False, True, False)['key'],
+                self.assertEqual(environ.setenv({}, False, True, False)['KEY'],
                                  None)
 
     def test_get(self):

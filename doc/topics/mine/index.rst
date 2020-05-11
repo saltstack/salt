@@ -79,7 +79,8 @@ Mine Interval
 
 The Salt Mine functions are executed when the Minion starts and at a given
 interval by the scheduler. The default interval is every 60 minutes and can
-be adjusted for the Minion via the ``mine_interval`` option:
+be adjusted for the Minion via the ``mine_interval`` option in the minion
+config:
 
 .. code-block:: yaml
 
@@ -225,5 +226,5 @@ Create the Jinja template in :file:`/srv/salt/haproxy_config`:
 In the above example, ``server`` will be expanded to the ``minion_id``.
 
 .. note::
-    The expr_form argument will be renamed to ``tgt_type`` in the Nitrogen
+    The expr_form argument will be renamed to ``tgt_type`` in the 2017.7.0
     release of Salt.

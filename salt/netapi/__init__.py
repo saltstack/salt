@@ -2,7 +2,7 @@
 '''
 Make api awesomeness
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # Import Python libs
 import inspect
 import os
@@ -14,12 +14,12 @@ import salt.config
 import salt.runner
 import salt.syspaths
 import salt.wheel
-import salt.utils
+import salt.utils.args
 import salt.client.ssh.client
 import salt.exceptions
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 class NetapiClient(object):
@@ -42,6 +42,11 @@ class NetapiClient(object):
         Note, this will return an invalid success if the master crashed or was
         not shut down cleanly.
         '''
+        # Windows doesn't have IPC. Assume the master is running.
+        # At worse, it will error 500.
+        if salt.utils.platform.is_windows():
+            return True
+
         if self.opts['transport'] == 'tcp':
             ipc_file = 'publish_pull.ipc'
         else:
@@ -71,7 +76,7 @@ class NetapiClient(object):
                     'No authentication credentials given')
 
         l_fun = getattr(self, low['client'])
-        f_call = salt.utils.format_call(l_fun, low)
+        f_call = salt.utils.args.format_call(l_fun, low)
         return l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
 
     def local_async(self, *args, **kwargs):
@@ -83,7 +88,8 @@ class NetapiClient(object):
         :return: job ID
         '''
         local = salt.client.get_local_client(mopts=self.opts)
-        return local.run_job(*args, **kwargs)
+        ret = local.run_job(*args, **kwargs)
+        return ret
 
     def local(self, *args, **kwargs):
         '''
@@ -198,6 +204,7 @@ class NetapiClient(object):
         kwargs['fun'] = fun
         wheel = salt.wheel.WheelClient(self.opts)
         return wheel.cmd_async(kwargs)
+
 
 CLIENTS = [
     name for name, _

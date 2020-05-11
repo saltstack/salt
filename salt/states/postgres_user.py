@@ -10,16 +10,17 @@ The postgres_users module is used to create and manage Postgres users.
     frank:
       postgres_user.present
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
+import datetime
+import logging
 
 # Import salt libs
-import logging
 
 # Salt imports
 from salt.modules import postgres
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -36,7 +37,6 @@ def __virtual__():
 def present(name,
             createdb=None,
             createroles=None,
-            createuser=None,
             encrypted=None,
             superuser=None,
             replication=None,
@@ -45,6 +45,7 @@ def present(name,
             password=None,
             default_password=None,
             refresh_password=None,
+            valid_until=None,
             groups=None,
             user=None,
             maintenance_db=None,
@@ -66,9 +67,6 @@ def present(name,
 
     createroles
         Is the user allowed to create other users?
-
-    createuser
-        Alias to create roles
 
     encrypted
         Should the password be encrypted in the system catalog?
@@ -95,7 +93,7 @@ def present(name,
         encrypted to the previous
         format if it is not already done.
 
-    default_passwoord
+    default_password
         The password used only when creating the user, unless password is set.
 
         .. versionadded:: 2016.3.0
@@ -111,6 +109,9 @@ def present(name,
 
         This behaviour makes it possible to execute in environments without
         superuser access available, e.g. Amazon RDS for PostgreSQL
+
+    valid_until
+        A date and time after which the role's password is no longer valid.
 
     groups
         A string of comma separated groups the user should be in
@@ -137,8 +138,6 @@ def present(name,
            'result': True,
            'comment': 'User {0} is already present'.format(name)}
 
-    if createuser:
-        createroles = True
     # default to encrypted passwords
     if encrypted is not False:
         encrypted = postgres._DEFAULT_PASSWORDS_ENCRYPTION
@@ -168,7 +167,6 @@ def present(name,
     if user_attr is not None:
         mode = 'update'
 
-    # The user is not present, make it!
     cret = None
     update = {}
     if mode == 'update':
@@ -199,6 +197,18 @@ def present(name,
             update['superuser'] = superuser
         if password is not None and (refresh_password or user_attr['password'] != password):
             update['password'] = True
+        if valid_until is not None:
+            valid_until_dt = __salt__['postgres.psql_query'](
+                'SELECT \'{0}\'::timestamp(0) as dt;'.format(
+                    valid_until.replace('\'', '\'\'')),
+                **db_args)[0]['dt']
+            try:
+                valid_until_dt = datetime.datetime.strptime(
+                    valid_until_dt, '%Y-%m-%d %H:%M:%S')
+            except ValueError:
+                valid_until_dt = None
+            if valid_until_dt != user_attr['expiry time']:
+                update['valid_until'] = valid_until
         if groups is not None:
             lgroups = groups
             if isinstance(groups, (six.string_types, six.text_type)):
@@ -228,6 +238,7 @@ def present(name,
             inherit=inherit,
             replication=replication,
             rolepassword=password,
+            valid_until=valid_until,
             groups=groups,
             **db_args)
     else:

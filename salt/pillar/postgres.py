@@ -2,14 +2,14 @@
 '''
 Retrieve Pillar data by doing a postgres query
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :maturity: new
 :depends: psycopg2
 :platform: all
 
-Complete example
-=====================================
+Complete Example
+================
 
 .. code-block:: yaml
 
@@ -28,7 +28,7 @@ Complete example
             as_list: True
             with_lists: [1,3]
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 from contextlib import contextmanager
@@ -75,7 +75,7 @@ class POSTGRESExtPillar(SqlBaseExtPillar):
         _opts = __opts__.get('postgres', {})
         for attr in defaults:
             if attr not in _opts:
-                log.debug('Using default for POSTGRES {0}'.format(attr))
+                log.debug('Using default for POSTGRES %s', attr)
                 _options[attr] = defaults[attr]
                 continue
             _options[attr] = _opts[attr]
@@ -90,13 +90,14 @@ class POSTGRESExtPillar(SqlBaseExtPillar):
         conn = psycopg2.connect(host=_options['host'],
                                 user=_options['user'],
                                 password=_options['pass'],
-                                dbname=_options['db'])
+                                dbname=_options['db'],
+                                port=_options['port'])
         cursor = conn.cursor()
         try:
             yield cursor
             log.debug('Connected to POSTGRES DB')
         except psycopg2.DatabaseError as err:
-            log.exception('Error in ext_pillar POSTGRES: {0}'.format(err.args))
+            log.exception('Error in ext_pillar POSTGRES: %s', err.args)
         finally:
             conn.close()
 

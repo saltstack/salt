@@ -21,13 +21,12 @@ Module for interop with the Splunk API
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
-import yaml
 import urllib
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 HAS_LIBS = False
 try:
     import splunklib.client
@@ -37,6 +36,7 @@ except ImportError:
     pass
 
 # Import salt libs
+import salt.utils.yaml
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
@@ -239,12 +239,6 @@ def list_all(prefix=None, app=None, owner=None, description_contains=None,
     '''
     client = _get_splunk(profile)
 
-    # yaml magic to output OrderedDict
-    def ordered_dict_presenter(dumper, data):
-        return dumper.represent_dict(six.iteritems(data))
-    yaml.add_representer(
-        OrderedDict, ordered_dict_presenter, Dumper=yaml.dumper.SafeDumper)
-
     # splunklib doesn't provide the default settings for saved searches.
     # so, in order to get the defaults, we create a search with no
     # configuration, get that search, and then delete it. We use its contents
@@ -260,16 +254,14 @@ def list_all(prefix=None, app=None, owner=None, description_contains=None,
 
     # stuff that splunk returns but that you should not attempt to set.
     # cf http://dev.splunk.com/view/python-sdk/SP-CAAAEK2
-    readonly_keys = set([
-        "triggered_alert_count",
-        "action.email",
-        "action.populate_lookup",
-        "action.rss",
-        "action.script",
-        "action.summary_index",
-        "qualifiedSearch",
-        "next_scheduled_time"
-    ])
+    readonly_keys = ("triggered_alert_count",
+                     "action.email",
+                     "action.populate_lookup",
+                     "action.rss",
+                     "action.script",
+                     "action.summary_index",
+                     "qualifiedSearch",
+                     "next_scheduled_time")
 
     results = OrderedDict()
     # sort the splunk searches by name, so we get consistent output
@@ -286,8 +278,7 @@ def list_all(prefix=None, app=None, owner=None, description_contains=None,
                 continue
             name = prefix + name
         # put name in the OrderedDict first
-        d = []
-        d.append({"name": name})
+        d = [{"name": name}]
         # add the rest of the splunk settings, ignoring any defaults
         description = ''
         for (k, v) in sorted(search.content.items()):
@@ -306,4 +297,4 @@ def list_all(prefix=None, app=None, owner=None, description_contains=None,
             continue
         results["manage splunk search " + name] = {"splunk_search.present": d}
 
-    return yaml.safe_dump(results, default_flow_style=False, width=120)
+    return salt.utils.yaml.safe_dump(results, default_flow_style=False, width=120)

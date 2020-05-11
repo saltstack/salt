@@ -1,7 +1,7 @@
 # coding: utf-8
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
@@ -28,7 +28,12 @@ class KeyWheelModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
 
         self.assertIn('pub', ret)
         self.assertIn('priv', ret)
-        self.assertTrue(
-            ret.get('pub', '').startswith('-----BEGIN PUBLIC KEY-----'))
+        try:
+            self.assertTrue(
+                ret.get('pub', '').startswith('-----BEGIN PUBLIC KEY-----'))
+        except AssertionError:
+            self.assertTrue(
+                ret.get('pub', '').startswith('-----BEGIN RSA PUBLIC KEY-----'))
+
         self.assertTrue(
             ret.get('priv', '').startswith('-----BEGIN RSA PRIVATE KEY-----'))

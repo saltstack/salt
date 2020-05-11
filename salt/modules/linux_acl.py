@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 '''
 Support for Linux File Access Control Lists
+
+The Linux ACL module requires the `getfacl` and `setfacl` binaries.
+
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 from salt.exceptions import CommandExecutionError
 
 # Define the module's virtual name
@@ -16,7 +19,7 @@ def __virtual__():
     '''
     Only load the module if getfacl is installed
     '''
-    if salt.utils.which('getfacl'):
+    if salt.utils.path.which('getfacl'):
         return __virtualname__
     return (False, 'The linux_acl execution module cannot be loaded: the getfacl binary is not in the path.')
 
@@ -38,7 +41,7 @@ def version():
 
 
 def _raise_on_no_files(*args):
-    if len(args) == 0:
+    if not args:
         raise CommandExecutionError('You need to specify at least one file or directory to work with!')
 
 
@@ -141,17 +144,17 @@ def _parse_acl(acl, user, group):
     # Set the permissions fields
     octal = 0
     vals['permissions'] = {}
-    if 'r' in comps[2]:
+    if 'r' in comps[-1]:
         octal += 4
         vals['permissions']['read'] = True
     else:
         vals['permissions']['read'] = False
-    if 'w' in comps[2]:
+    if 'w' in comps[-1]:
         octal += 2
         vals['permissions']['write'] = True
     else:
         vals['permissions']['write'] = False
-    if 'x' in comps[2]:
+    if 'x' in comps[-1]:
         octal += 1
         vals['permissions']['execute'] = True
     else:
@@ -213,8 +216,10 @@ def modfacl(acl_type, acl_name='', perms='', *args, **kwargs):
         salt '*' acl.modfacl d:u myuser 7 /tmp/house/kitchen
         salt '*' acl.modfacl g mygroup 0 /tmp/house/kitchen /tmp/house/livingroom
         salt '*' acl.modfacl user myuser rwx /tmp/house/kitchen recursive=True
+        salt '*' acl.modfacl user myuser rwx /tmp/house/kitchen raise_err=True
     '''
     recursive = kwargs.pop('recursive', False)
+    raise_err = kwargs.pop('raise_err', False)
 
     _raise_on_no_files(*args)
 
@@ -228,7 +233,7 @@ def modfacl(acl_type, acl_name='', perms='', *args, **kwargs):
 
     for dentry in args:
         cmd += ' "{0}"'.format(dentry)
-    __salt__['cmd.run'](cmd, python_shell=False)
+    __salt__['cmd.run'](cmd, python_shell=False, raise_err=raise_err)
     return True
 
 

@@ -1,4 +1,4 @@
-.. _all-salt_executors:
+.. _all-salt.executors:
 
 =================
 executors modules
@@ -11,5 +11,6 @@ executors modules
     :template: autosummary.rst.tmpl
 
     direct_call
+    docker
     splay
     sudo

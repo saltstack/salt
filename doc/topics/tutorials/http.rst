@@ -74,15 +74,15 @@ be overridden with the ``method`` argument:
     salt.utils.http.query('http://example.com/delete/url', 'DELETE')
 
 When using the ``POST`` method (and others, such as ``PUT``), extra data is usually
-sent as well. This data can be sent directly, in whatever format is
-required by the remote server (XML, JSON, plain text, etc).
+sent as well. This data can be sent directly (would be URL encoded when necessary),
+or in whatever format is required by the remote server (XML, JSON, plain text, etc).
 
 .. code-block:: python
 
     salt.utils.http.query(
-        'http://example.com/delete/url',
+        'http://example.com/post/url',
         method='POST',
-        data=json.loads(mydict)
+        data=json.dumps(mydict)
     )
 
 Data Formatting and Templating
@@ -110,7 +110,7 @@ To pass through a file that contains jinja + yaml templating (the default):
         method='POST',
         data_file='/srv/salt/somefile.jinja',
         data_render=True,
-        template_data={'key1': 'value1', 'key2': 'value2'}
+        template_dict={'key1': 'value1', 'key2': 'value2'}
     )
 
 To pass through a file that contains mako templating:
@@ -123,7 +123,7 @@ To pass through a file that contains mako templating:
         data_file='/srv/salt/somefile.mako',
         data_render=True,
         data_renderer='mako',
-        template_data={'key1': 'value1', 'key2': 'value2'}
+        template_dict={'key1': 'value1', 'key2': 'value2'}
     )
 
 Because this function uses Salt's own rendering system, any Salt renderer can
@@ -140,7 +140,7 @@ However, this can be changed to ``master`` if necessary.
         method='POST',
         data_file='/srv/salt/somefile.jinja',
         data_render=True,
-        template_data={'key1': 'value1', 'key2': 'value2'},
+        template_dict={'key1': 'value1', 'key2': 'value2'},
         opts=__opts__
     )
 
@@ -149,7 +149,7 @@ However, this can be changed to ``master`` if necessary.
         method='POST',
         data_file='/srv/salt/somefile.jinja',
         data_render=True,
-        template_data={'key1': 'value1', 'key2': 'value2'},
+        template_dict={'key1': 'value1', 'key2': 'value2'},
         node='master'
     )
 
@@ -170,11 +170,11 @@ a Python dict.
         header_file='/srv/salt/headers.jinja',
         header_render=True,
         header_renderer='jinja',
-        template_data={'key1': 'value1', 'key2': 'value2'}
+        template_dict={'key1': 'value1', 'key2': 'value2'}
     )
 
 Because much of the data that would be templated between headers and data may be
-the same, the ``template_data`` is the same for both. Correcting possible
+the same, the ``template_dict`` is the same for both. Correcting possible
 variable name collisions is up to the user.
 
 Authentication
@@ -252,7 +252,7 @@ Proxy
 
 If the ``tornado`` backend is used (``tornado`` is the default), proxy
 information configured in ``proxy_host``, ``proxy_port``, ``proxy_username``,
-and ``proxy_password`` from the ``__opts__`` dictionary will be used.  Normally
+``proxy_password`` and ``no_proxy`` from the ``__opts__`` dictionary will be used.  Normally
 these are set in the minion configuration file.
 
 .. code-block:: yaml
@@ -261,6 +261,7 @@ these are set in the minion configuration file.
     proxy_port: 31337
     proxy_username: charon
     proxy_password: obolus
+    no_proxy: ['127.0.0.1', 'localhost']
 
 .. code-block:: python
 

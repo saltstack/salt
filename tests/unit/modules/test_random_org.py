@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
+from tests.support.helpers import flaky
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 
@@ -36,7 +37,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
 
     def setUp(self):
         if check_status() is False:
-            self.skipTest('External resource \'https://api.random.org/\' not available')
+            self.skipTest("External resource 'https://api.random.org/' not available")
 
     # 'getUsage' function tests: 1
 
@@ -97,7 +98,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
                                                          maximum=6, base='2'),
                              ret6)
 
-        ret7 = {'message': u"Parameter 'apiKey' is malformed", 'res': False}
+        ret7 = {'message': "Parameter 'apiKey' is malformed", 'res': False}
         self.assertDictEqual(random_org.generateIntegers(api_key='peW',
                                                          api_version='1',
                                                          number=5, minimum=1,
@@ -145,7 +146,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
                                                         characters=char*4),
                              ret3)
 
-        ret3 = {'message': u"Parameter 'apiKey' is malformed",
+        ret3 = {'message': "Parameter 'apiKey' is malformed",
                 'res': False}
         self.assertDictEqual(random_org.generateStrings(api_key='peW',
                                                         api_version='1',
@@ -174,7 +175,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
                                                       api_version='1',
                                                       number='5'), ret3)
 
-        ret3 = {'message': u"Parameter 'apiKey' is malformed",
+        ret3 = {'message': "Parameter 'apiKey' is malformed",
                 'res': False}
         self.assertDictEqual(random_org.generateUUIDs(api_key='peW',
                                                       api_version='1',
@@ -182,6 +183,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'generateDecimalFractions' function tests: 1
 
+    @flaky
     def test_generatedecimalfractions(self):
         '''
         Test if it generates true random decimal fractions.
@@ -207,13 +209,14 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
                              (api_key='peW', api_version='1', number=5,
                               decimalPlaces='4', replacement=True), ret4)
 
-        ret5 = {'message': u"Parameter 'apiKey' is malformed", 'res': False}
+        ret5 = {'message': "Parameter 'apiKey' is malformed", 'res': False}
         self.assertDictEqual(random_org.generateDecimalFractions
                              (api_key='peW', api_version='1', number=5,
                               decimalPlaces=4, replacement=True), ret5)
 
     # 'generateGaussians' function tests: 1
 
+    @flaky
     def test_generategaussians(self):
         '''
         Test if it generates true random numbers from a
@@ -257,7 +260,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
                               mean=0.0, standardDeviation=1.0,
                               significantDigits='8'), ret6)
 
-        ret7 = {'message': u"Parameter 'apiKey' is malformed", 'res': False}
+        ret7 = {'message': "Parameter 'apiKey' is malformed", 'res': False}
         self.assertDictEqual(random_org.generateGaussians(api_key='peW',
                                                           api_version='1',
                                                           number=5, mean=0.0,
@@ -280,7 +283,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
         self.assertDictEqual(random_org.generateBlobs(api_key='peW',
                                                       api_version='1'), ret2)
 
-        ret3 = {'message': ('Number of blobs must be between 1 and 100'),
+        ret3 = {'message': 'Number of blobs must be between 1 and 100',
                 'res': False}
         self.assertDictEqual(random_org.generateBlobs(api_key='peW',
                                                       api_version='1',
@@ -299,7 +302,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
                                                       size=8, format='oct'),
                              ret5)
 
-        ret6 = {'message': u"Parameter 'apiKey' is malformed", 'res': False}
+        ret6 = {'message': "Parameter 'apiKey' is malformed", 'res': False}
         self.assertDictEqual(random_org.generateBlobs(api_key='peW',
                                                       api_version='1',
                                                       number=5, size=8,
