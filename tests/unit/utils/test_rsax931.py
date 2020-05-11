@@ -130,7 +130,6 @@ class RSAX931Test(TestCase):
         Test find_libcrypto on Windows hosts.
         """
         lib_path = _find_libcrypto()
-        self.assertFalse(not lib_path)
         self.assertEqual(lib_path, "libeay32")
 
     @skipIf(
@@ -142,7 +141,6 @@ class RSAX931Test(TestCase):
         Test find_libcrypto on a SmartOS host.
         """
         lib_path = _find_libcrypto()
-        self.assertFalse(not lib_path)
         self.assertTrue(
             fnmatch.fnmatch(
                 lib_path, os.path.join(os.path.dirname(sys.executable), "libcrypto*")
@@ -155,7 +153,6 @@ class RSAX931Test(TestCase):
         Test find_libcrypto on a Solaris-like host.
         """
         lib_path = _find_libcrypto()
-        self.assertFalse(not lib_path)
         passed = False
         for i in ("/opt/local/lib/libcrypto.so*", "/opt/tools/lib/libcrypto.so*"):
             if fnmatch.fnmatch(lib_path, i):
@@ -169,7 +166,6 @@ class RSAX931Test(TestCase):
         Test find_libcrypto on an IBM AIX host.
         """
         lib_path = _find_libcrypto()
-        self.assertFalse(not lib_path)
         if os.path.isdir("/opt/salt/lib"):
             self.assertTrue(fnmatch.fnmatch(lib_path, "/opt/salt/lib/libcrypto.so*"))
         else:
@@ -183,7 +179,6 @@ class RSAX931Test(TestCase):
         Test find_libcrypto on a Darwin-like or macOS host.
         """
         lib_path = _find_libcrypto()
-        self.assertFalse(not lib_path)
         passed = False
         for i in (
             "/usr/lib/libcrypto.*.dylib",
