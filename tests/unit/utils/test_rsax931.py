@@ -124,8 +124,6 @@ class RSAX931Test(TestCase):
         msg = verifier.verify(RSAX931Test.hello_world_sig)
         self.assertEqual(RSAX931Test.hello_world, msg)
 
-    # test_find_libcrypto_win32 (method)
-    # {{{
     @skipIf(not salt.utils.platform.is_windows(), "Host OS is not Windows.")
     def test_find_libcrypto_win32(self):
         """
@@ -135,10 +133,6 @@ class RSAX931Test(TestCase):
         self.assertFalse(not lib_path)
         self.assertEqual(lib_path, "libeay32")
 
-    # }}}
-
-    # test_find_libcrypto_smartos (method)
-    # {{{
     @skipIf(
         not getattr(sys, "frozen", False) and not salt.utils.platform.is_smartos(),
         "Host OS is not SmartOS.",
@@ -155,10 +149,6 @@ class RSAX931Test(TestCase):
             )
         )
 
-    # }}}
-
-    # test_find_libcrypto_sunos (method)
-    # {{{
     @skipIf(not salt.utils.platform.is_sunos(), "Host OS is not Solaris-like.")
     def test_find_libcrypto_sunos(self):
         """
@@ -173,10 +163,6 @@ class RSAX931Test(TestCase):
                 break
         self.assertTrue(passed)
 
-    # }}}
-
-    # test_find_libcrypto_aix (method)
-    # {{{
     @skipIf(not salt.utils.platform.is_aix(), "Host OS is not IBM AIX.")
     def test_find_libcrypto_aix(self):
         """
@@ -191,10 +177,6 @@ class RSAX931Test(TestCase):
                 fnmatch.fnmatch(lib_path, "/opt/freeware/lib/libcrypto.so*")
             )
 
-    # }}}
-
-    # test_find_libcrypto_darwin (method)
-    # {{{
     @skipIf(not salt.utils.platform.is_darwin(), "Host OS is not Darwin-like or macOS.")
     def test_find_libcrypto_darwin(self):
         """
@@ -213,10 +195,6 @@ class RSAX931Test(TestCase):
                 break
         self.assertTrue(passed)
 
-    # }}}
-
-    # test_find_libcrypto_unsupported (method)
-    # {{{
     @patch.object(ctypes.util, "find_library", lambda a: None)
     @patch.object(glob, "glob", lambda a: [])
     @patch.object(sys, "platform", "unknown")
@@ -226,8 +204,6 @@ class RSAX931Test(TestCase):
         """
         with self.assertRaises(OSError):
             _find_libcrypto()
-
-    # }}}
 
     def test_load_libcrypto(self):
         """
