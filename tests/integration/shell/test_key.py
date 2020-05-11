@@ -11,16 +11,33 @@ import pytest
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.yaml
-from salt.ext import six
 from tests.support.case import ShellCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import (
+    destructiveTest,
+    skip_if_not_root,
+    slowTest,
+    with_system_user,
+)
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
 USERA = "saltdev"
 USERA_PWD = "saltdev"
-HASHED_USERA_PWD = "$6$SALTsalt$ZZFD90fKFWq8AGmmX0L3uBtS9fXL62SrTk5zcnQ6EkD6zoiM3kB88G1Zvs0xm/gZ7WXJRs5nsTBybUvGSqZkT."
+PUB_KEY = textwrap.dedent(
+    """\
+        -----BEGIN PUBLIC KEY-----
+        MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoqIZDtcQtqUNs0wC7qQz
+        JwFhXAVNT5C8M8zhI+pFtF/63KoN5k1WwAqP2j3LquTG68WpxcBwLtKfd7FVA/Kr
+        OF3kXDWFnDi+HDchW2lJObgfzLckWNRFaF8SBvFM2dys3CGSgCV0S/qxnRAjrJQb
+        B3uQwtZ64ncJAlkYpArv3GwsfRJ5UUQnYPDEJwGzMskZ0pHd60WwM1gMlfYmNX5O
+        RBEjybyNpYDzpda6e6Ypsn6ePGLkP/tuwUf+q9wpbRE3ZwqERC2XRPux+HX2rGP+
+        mkzpmuHkyi2wV33A9pDfMgRHdln2CLX0KgfRGixUQhW1o+Kmfv2rq4sGwpCgLbTh
+        NwIDAQAB
+        -----END PUBLIC KEY-----
+        """
+)
+MIN_NAME = "minibar"
 
 
 @pytest.mark.windows_whitelisted
@@ -31,71 +48,55 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
 
     _call_binary_ = "salt-key"
 
-    def _add_user(self):
-        """
-        helper method to add user
-        """
-        try:
-            add_user = self.run_call("user.add {0} createhome=False".format(USERA))
-            add_pwd = self.run_call(
-                "shadow.set_password {0} '{1}'".format(
-                    USERA,
-                    USERA_PWD if salt.utils.platform.is_darwin() else HASHED_USERA_PWD,
-                )
-            )
-            self.assertTrue(add_user)
-            self.assertTrue(add_pwd)
-            user_list = self.run_call("user.list_users")
-            self.assertIn(USERA, six.text_type(user_list))
-        except AssertionError:
-            self.run_call("user.delete {0} remove=True".format(USERA))
-            self.skipTest("Could not add user or password, skipping test")
-
-    def _remove_user(self):
-        """
-        helper method to remove user
-        """
-        user_list = self.run_call("user.list_users")
-        for user in user_list:
-            if USERA in user:
-                self.run_call("user.delete {0} remove=True".format(USERA))
-
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_remove_key(self):
         """
         test salt-key -d usage
         """
-        min_name = "minibar"
         pki_dir = self.master_opts["pki_dir"]
-        key = os.path.join(pki_dir, "minions", min_name)
+        key = os.path.join(pki_dir, "minions", MIN_NAME)
 
         with salt.utils.files.fopen(key, "w") as fp:
-            fp.write(
-                textwrap.dedent(
-                    """\
-                     -----BEGIN PUBLIC KEY-----
-                     MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoqIZDtcQtqUNs0wC7qQz
-                     JwFhXAVNT5C8M8zhI+pFtF/63KoN5k1WwAqP2j3LquTG68WpxcBwLtKfd7FVA/Kr
-                     OF3kXDWFnDi+HDchW2lJObgfzLckWNRFaF8SBvFM2dys3CGSgCV0S/qxnRAjrJQb
-                     B3uQwtZ64ncJAlkYpArv3GwsfRJ5UUQnYPDEJwGzMskZ0pHd60WwM1gMlfYmNX5O
-                     RBEjybyNpYDzpda6e6Ypsn6ePGLkP/tuwUf+q9wpbRE3ZwqERC2XRPux+HX2rGP+
-                     mkzpmuHkyi2wV33A9pDfMgRHdln2CLX0KgfRGixUQhW1o+Kmfv2rq4sGwpCgLbTh
-                     NwIDAQAB
-                     -----END PUBLIC KEY-----
-                     """
-                )
-            )
+            fp.write(PUB_KEY)
 
-        check_key = self.run_key("-p {0}".format(min_name))
+        check_key = self.run_key("-p {0}".format(MIN_NAME))
         self.assertIn("Accepted Keys:", check_key)
-        self.assertIn("minibar:  -----BEGIN PUBLIC KEY-----", check_key)
+        self.assertIn("{0}:  -----BEGIN PUBLIC KEY-----".format(MIN_NAME), check_key)
 
-        remove_key = self.run_key("-d {0} -y".format(min_name))
+        remove_key = self.run_key("-d {0} -y".format(MIN_NAME))
 
-        check_key = self.run_key("-p {0}".format(min_name))
+        check_key = self.run_key("-p {0}".format(MIN_NAME))
         self.assertEqual([], check_key)
 
-    @skipIf(True, "SLOWTEST skip")
+    @skip_if_not_root
+    @destructiveTest
+    @skipIf(salt.utils.platform.is_windows(), "PAM eauth not available on Windows")
+    @with_system_user(USERA, password=USERA_PWD)
+    @slowTest
+    def test_remove_key_eauth(self, username):
+        """
+        test salt-key -d usage
+        """
+        pki_dir = self.master_opts["pki_dir"]
+        key = os.path.join(pki_dir, "minions", MIN_NAME)
+
+        with salt.utils.files.fopen(key, "w") as fp:
+            fp.write(PUB_KEY)
+
+        check_key = self.run_key("-p {0}".format(MIN_NAME))
+        self.assertIn("Accepted Keys:", check_key)
+        self.assertIn("{0}:  -----BEGIN PUBLIC KEY-----".format(MIN_NAME), check_key)
+
+        remove_key = self.run_key(
+            "-d {0} -y --eauth pam --username {1} --password {2}".format(
+                MIN_NAME, username, USERA_PWD
+            )
+        )
+
+        check_key = self.run_key("-p {0}".format(MIN_NAME))
+        self.assertEqual([], check_key)
+
+    @slowTest
     def test_list_accepted_args(self):
         """
         test salt-key -l for accepted arguments
@@ -107,7 +108,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
             data = self.run_key("-l foo-{0}".format(key), catch_stderr=True)
             self.assertIn("error:", "\n".join(data[1]))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_list_all(self):
         """
         test salt-key -L
@@ -125,7 +126,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
             ]
         self.assertEqual(data, expect)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_list_json_out(self):
         """
         test salt-key -L --json-out
@@ -149,7 +150,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
             }
         self.assertEqual(ret, expect)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_list_yaml_out(self):
         """
         test salt-key -L --yaml-out
@@ -173,7 +174,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
             }
         self.assertEqual(ret, expect)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_list_raw_out(self):
         """
         test salt-key -L --raw-out
@@ -199,7 +200,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
             }
         self.assertEqual(ret, expect)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_list_acc(self):
         """
         test salt-key -l
@@ -210,39 +211,44 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
 
     @skip_if_not_root
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
-    def test_list_acc_eauth(self):
+    @skipIf(salt.utils.platform.is_windows(), "PAM eauth not available on Windows")
+    @with_system_user(USERA, password=USERA_PWD)
+    @slowTest
+    def test_list_acc_eauth(self, username):
         """
         test salt-key -l with eauth
         """
-        self._add_user()
         data = self.run_key(
-            "-l acc --eauth pam --username {0} --password {1}".format(USERA, USERA_PWD)
+            "-l acc --eauth pam --username {0} --password {1}".format(
+                username, USERA_PWD
+            )
         )
         expect = ["Accepted Keys:", "minion", "sub_minion"]
         self.assertEqual(data, expect)
-        self._remove_user()
 
     @skip_if_not_root
     @destructiveTest
+    @skipIf(salt.utils.platform.is_windows(), "PAM eauth not available on Windows")
+    @with_system_user(USERA, password=USERA_PWD)
     @skipIf(True, "SLOWTEST skip")
-    def test_list_acc_eauth_bad_creds(self):
+    @slowTest
+    def test_list_acc_eauth_bad_creds(self, username):
         """
         test salt-key -l with eauth and bad creds
         """
-        self._add_user()
         data = self.run_key(
-            "-l acc --eauth pam --username {0} --password wrongpassword".format(USERA)
+            "-l acc --eauth pam --username {0} --password wrongpassword".format(
+                username
+            )
         )
         expect = [
             'Authentication failure of type "eauth" occurred for user {0}.'.format(
-                USERA
+                username
             )
         ]
         self.assertEqual(data, expect)
-        self._remove_user()
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_list_acc_wrong_eauth(self):
         """
         test salt-key -l with wrong eauth
@@ -255,7 +261,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         expect = r"^The specified external authentication system \"wrongeauth\" is not available\tAvailable eauth types: auto, .*"
         self.assertRegex("\t".join(data), expect)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_list_un(self):
         """
         test salt-key -l
@@ -264,15 +270,15 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         expect = ["Unaccepted Keys:"]
         self.assertEqual(data, expect)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_keys_generation(self):
         tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-        arg_str = "--gen-keys minibar --gen-keys-dir {0}".format(tempdir)
+        arg_str = "--gen-keys {0} --gen-keys-dir {1}".format(MIN_NAME, tempdir)
         self.run_key(arg_str)
         try:
             key_names = None
             if self.master_opts["transport"] in ("zeromq", "tcp"):
-                key_names = ("minibar.pub", "minibar.pem")
+                key_names = ("{0}.pub".format(MIN_NAME), "{0}.pem".format(MIN_NAME))
             for fname in key_names:
                 self.assertTrue(os.path.isfile(os.path.join(tempdir, fname)))
         finally:
@@ -281,7 +287,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
                     os.chmod(os.path.join(dirname, filename), 0o700)
             shutil.rmtree(tempdir)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_keys_generation_keysize_minmax(self):
         tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         arg_str = "--gen-keys minion --gen-keys-dir {0}".format(tempdir)

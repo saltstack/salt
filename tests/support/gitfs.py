@@ -3,7 +3,6 @@
 Base classes for gitfs/git_pillar integration tests
 """
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
@@ -12,33 +11,22 @@ import logging
 import os
 import pprint
 import shutil
-import subprocess
 import sys
 import tempfile
 import textwrap
-import threading
-import time
 
-# Import 3rd-party libs
-import psutil
 import salt.ext.six as six
-
-# Import Salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.yaml
-from pytestsalt.utils import SaltDaemonScriptBase as _SaltDaemonScriptBase
-from pytestsalt.utils import terminate_process
 from salt.fileserver import gitfs
 from salt.pillar import git_pillar
-
-# Import Salt Testing libs
+from saltfactories.utils.ports import get_unused_localhost_port
+from saltfactories.utils.processes.bases import FactoryDaemonScriptBase
+from saltfactories.utils.processes.helpers import start_daemon, terminate_process
+from saltfactories.utils.processes.sshd import SshdDaemon
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    get_unused_localhost_port,
-    patched_environ,
-    requires_system_grains,
-)
+from tests.support.helpers import patched_environ, requires_system_grains
 from tests.support.mixins import (
     AdaptedConfigurationTestCaseMixin,
     LoaderModuleMockMixin,
@@ -47,6 +35,11 @@ from tests.support.mixins import (
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import SkipTest
+
+try:
+    import psutil
+except ImportError:
+    pass
 
 log = logging.getLogger(__name__)
 
@@ -87,148 +80,16 @@ _OPTS = {
 PROC_TIMEOUT = 10
 
 
-def start_daemon(
-    daemon_cli_script_name,
-    daemon_config_dir,
-    daemon_check_port,
-    daemon_class,
-    fail_hard=False,
-    start_timeout=10,
-    slow_stop=True,
-    environ=None,
-    cwd=None,
-    max_attempts=3,
-    **kwargs
-):
-    """
-    Returns a running process daemon
-    """
-    log.info("[%s] Starting %s", daemon_class.log_prefix, daemon_class.__name__)
-    attempts = 0
-    process = None
-    while attempts <= max_attempts:  # pylint: disable=too-many-nested-blocks
-        attempts += 1
-        process = daemon_class(
-            str(daemon_config_dir),
-            daemon_check_port,
-            cli_script_name=daemon_cli_script_name,
-            slow_stop=slow_stop,
-            environ=environ,
-            cwd=cwd,
-            **kwargs
-        )
-        process.start()
-        if process.is_alive():
-            try:
-                connectable = process.wait_until_running(timeout=start_timeout)
-                if connectable is False:
-                    connectable = process.wait_until_running(timeout=start_timeout / 2)
-                    if connectable is False:
-                        process.terminate()
-                        if attempts >= max_attempts:
-                            raise AssertionError(
-                                "The {} has failed to confirm running status "
-                                "after {} attempts".format(
-                                    daemon_class.__name__, attempts
-                                )
-                            )
-                        continue
-            except Exception as exc:  # pylint: disable=broad-except
-                log.exception("[%s] %s", daemon_class.log_prefix, exc, exc_info=True)
-                terminate_process(process.pid, kill_children=True, slow_stop=slow_stop)
-                if attempts >= max_attempts:
-                    raise AssertionError(str(exc))
-                continue
-            # A little breathing before returning the process
-            time.sleep(0.5)
-            log.info(
-                "[%s] The %s is running after %d attempts",
-                daemon_class.log_prefix,
-                daemon_class.__name__,
-                attempts,
-            )
-            break
-        else:
-            terminate_process(process.pid, kill_children=True, slow_stop=slow_stop)
-            time.sleep(1)
-            continue
-    else:
-        if process is not None:
-            terminate_process(process.pid, kill_children=True, slow_stop=slow_stop)
-        raise AssertionError(
-            "The {} has failed to start after {} attempts".format(
-                daemon_class.__name__, attempts - 1
-            )
-        )
-    return process
+class UwsgiDaemon(FactoryDaemonScriptBase):
+    def __init__(self, *args, **kwargs):
+        config_dir = kwargs.pop("config_dir")
+        check_port = kwargs.pop("check_port")
+        super(UwsgiDaemon, self).__init__(*args, **kwargs)
+        self.config_dir = config_dir
+        self.check_port = check_port
 
-
-class SaltDaemonScriptBase(_SaltDaemonScriptBase):
-    def start(self):
-        """
-        Start the daemon subprocess
-        """
-        # Late import
-        log.info(
-            "[%s][%s] Starting DAEMON in CWD: %s",
-            self.log_prefix,
-            self.cli_display_name,
-            self.cwd,
-        )
-        proc_args = (
-            [self.get_script_path(self.cli_script_name)]
-            + self.get_base_script_args()
-            + self.get_script_args()
-        )
-
-        if sys.platform.startswith("win"):
-            # Windows needs the python executable to come first
-            proc_args.insert(0, sys.executable)
-
-        log.info(
-            "[%s][%s] Running '%s'...",
-            self.log_prefix,
-            self.cli_display_name,
-            " ".join(proc_args),
-        )
-
-        self.init_terminal(
-            proc_args,
-            env=self.environ,
-            cwd=self.cwd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        self._running.set()
-        if self._process_cli_output_in_thread:
-            process_output_thread = threading.Thread(
-                target=self._process_output_in_thread
-            )
-            process_output_thread.daemon = True
-            process_output_thread.start()
-        return True
-
-
-class UwsgiDaemon(SaltDaemonScriptBase):
-
-    log_prefix = "uWSGI"
-
-    def __init__(self, config_dir, uwsgi_port, cli_script_name="uwsgi", **kwargs):
-        super(UwsgiDaemon, self).__init__(
-            None,  # request
-            {"check_port": uwsgi_port},  # config
-            config_dir,  # config_dir
-            None,  # bin_dir_path
-            self.__class__.log_prefix,  # log_prefix
-            cli_script_name=cli_script_name,
-            **kwargs
-        )
-
-    def get_script_path(self, script_name):
-        """
-        Returns the path to the script to run
-        """
-        return script_name
+    def get_log_prefix(self):
+        return "[uWSGI] "
 
     def get_base_script_args(self):
         """
@@ -240,38 +101,19 @@ class UwsgiDaemon(SaltDaemonScriptBase):
         """
         Return a list of ports to check against to ensure the daemon is running
         """
-        return [self.config["check_port"]]
-
-    def get_salt_run_event_listener(self):
-        # Remove this method once pytest-salt get's past 2019.7.20
-        # Just return a class with a terminate method
-        class EV(object):
-            def terminate(self):
-                pass
-
-        return EV()
+        return [self.check_port]
 
 
-class NginxDaemon(SaltDaemonScriptBase):
+class NginxDaemon(FactoryDaemonScriptBase):
+    def __init__(self, *args, **kwargs):
+        config_dir = kwargs.pop("config_dir")
+        check_port = kwargs.pop("check_port")
+        super(NginxDaemon, self).__init__(*args, **kwargs)
+        self.config_dir = config_dir
+        self.check_port = check_port
 
-    log_prefix = "Nginx"
-
-    def __init__(self, config_dir, nginx_port, cli_script_name="nginx", **kwargs):
-        super(NginxDaemon, self).__init__(
-            None,  # request
-            {"check_port": nginx_port},  # config
-            config_dir,  # config_dir
-            None,  # bin_dir_path
-            self.__class__.log_prefix,  # log_prefix
-            cli_script_name=cli_script_name,
-            **kwargs
-        )
-
-    def get_script_path(self, script_name):
-        """
-        Returns the path to the script to run
-        """
-        return script_name
+    def get_log_prefix(self):
+        return "[Nginx] "
 
     def get_base_script_args(self):
         """
@@ -283,59 +125,7 @@ class NginxDaemon(SaltDaemonScriptBase):
         """
         Return a list of ports to check against to ensure the daemon is running
         """
-        return [self.config["check_port"]]
-
-    def get_salt_run_event_listener(self):
-        # Remove this method once pytest-salt get's past 2019.7.20
-        # Just return a class with a terminate method
-        class EV(object):
-            def terminate(self):
-                pass
-
-        return EV()
-
-
-class SshdDaemon(SaltDaemonScriptBase):
-
-    log_prefix = "SSHD"
-
-    def __init__(self, config_dir, sshd_port, cli_script_name="sshd", **kwargs):
-        super(SshdDaemon, self).__init__(
-            None,  # request
-            {"check_port": sshd_port},  # config
-            config_dir,  # config_dir
-            None,  # bin_dir_path
-            self.__class__.log_prefix,  # log_prefix
-            cli_script_name=cli_script_name,
-            **kwargs
-        )
-
-    def get_script_path(self, script_name):
-        """
-        Returns the path to the script to run
-        """
-        return script_name
-
-    def get_base_script_args(self):
-        """
-        Returns any additional arguments to pass to the CLI script
-        """
-        return ["-D", "-e", "-f", os.path.join(self.config_dir, "sshd_config")]
-
-    def get_check_ports(self):
-        """
-        Return a list of ports to check against to ensure the daemon is running
-        """
-        return [self.config["check_port"]]
-
-    def get_salt_run_event_listener(self):
-        # Remove this method once pytest-salt get's past 2019.7.20
-        # Just return a class with a terminate method
-        class EV(object):
-            def terminate(self):
-                pass
-
-        return EV()
+        return [self.check_port]
 
 
 class SaltClientMixin(ModuleCase):
@@ -390,7 +180,7 @@ class SSHDMixin(SaltClientMixin, SaltReturnAssertsMixin):
             cls.sshd_bin = salt.utils.path.which("sshd")
             cls.sshd_config_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
             cls.sshd_config = os.path.join(cls.sshd_config_dir, "sshd_config")
-            cls.sshd_port = get_unused_localhost_port()
+            cls.sshd_port = get_unused_localhost_port(cached_seconds=120)
             cls.url = "ssh://{username}@127.0.0.1:{port}/~/repo.git".format(
                 username=cls.username, port=cls.sshd_port
             )
@@ -437,7 +227,10 @@ class SSHDMixin(SaltClientMixin, SaltReturnAssertsMixin):
                     cls.sshd_proc = None
             if cls.sshd_proc is None:
                 cls.sshd_proc = start_daemon(
-                    cls.sshd_bin, cls.sshd_config_dir, cls.sshd_port, SshdDaemon
+                    cls.sshd_bin,
+                    SshdDaemon,
+                    config_dir=cls.sshd_config_dir,
+                    serve_port=cls.sshd_port,
                 )
                 log.info("%s: sshd started", cls.__name__)
         except AssertionError:
@@ -470,13 +263,13 @@ class SSHDMixin(SaltClientMixin, SaltReturnAssertsMixin):
         if cls.sshd_proc is not None:
             log.info(
                 "[%s] Stopping %s",
-                cls.sshd_proc.log_prefix,
+                cls.sshd_proc.get_log_prefix(),
                 cls.sshd_proc.__class__.__name__,
             )
             terminate_process(cls.sshd_proc.pid, kill_children=True, slow_stop=True)
             log.info(
                 "[%s] %s stopped",
-                cls.sshd_proc.log_prefix,
+                cls.sshd_proc.get_log_prefix(),
                 cls.sshd_proc.__class__.__name__,
             )
             cls.sshd_proc = None
@@ -537,11 +330,8 @@ class WebserverMixin(SaltClientMixin, SaltReturnAssertsMixin):
         cls.repo_dir = os.path.join(cls.git_dir, "repos")
         cls.venv_dir = os.path.join(cls.root_dir, "venv")
         cls.uwsgi_bin = os.path.join(cls.venv_dir, "bin", "uwsgi")
-        cls.nginx_port = cls.uwsgi_port = get_unused_localhost_port()
-        while cls.uwsgi_port == cls.nginx_port:
-            # Ensure we don't hit a corner case in which two sucessive calls to
-            # get_unused_localhost_port() return identical port numbers.
-            cls.uwsgi_port = get_unused_localhost_port()
+        cls.nginx_port = cls.uwsgi_port = get_unused_localhost_port(cached_seconds=120)
+        cls.uwsgi_port = get_unused_localhost_port(cached_seconds=120)
         cls.url = "http://127.0.0.1:{port}/repo.git".format(port=cls.nginx_port)
         cls.url_extra_repo = "http://127.0.0.1:{port}/extra_repo.git".format(
             port=cls.nginx_port
@@ -597,7 +387,10 @@ class WebserverMixin(SaltClientMixin, SaltReturnAssertsMixin):
                     cls.uwsgi_proc = None
             if cls.uwsgi_proc is None:
                 cls.uwsgi_proc = start_daemon(
-                    cls.uwsgi_bin, cls.config_dir, cls.uwsgi_port, UwsgiDaemon
+                    cls.uwsgi_bin,
+                    UwsgiDaemon,
+                    config_dir=cls.config_dir,
+                    check_port=cls.uwsgi_port,
                 )
                 log.info("%s: %s started", cls.__name__, cls.uwsgi_bin)
             if cls.nginx_proc is not None:
@@ -609,7 +402,10 @@ class WebserverMixin(SaltClientMixin, SaltReturnAssertsMixin):
                     cls.nginx_proc = None
             if cls.nginx_proc is None:
                 cls.nginx_proc = start_daemon(
-                    "nginx", cls.config_dir, cls.nginx_port, NginxDaemon
+                    "nginx",
+                    NginxDaemon,
+                    config_dir=cls.config_dir,
+                    check_port=cls.nginx_port,
                 )
                 log.info("%s: nginx started", cls.__name__)
         except AssertionError:
@@ -621,26 +417,26 @@ class WebserverMixin(SaltClientMixin, SaltReturnAssertsMixin):
         if cls.nginx_proc is not None:
             log.info(
                 "[%s] Stopping %s",
-                cls.nginx_proc.log_prefix,
+                cls.nginx_proc.get_log_prefix(),
                 cls.nginx_proc.__class__.__name__,
             )
             terminate_process(cls.nginx_proc.pid, kill_children=True, slow_stop=True)
             log.info(
                 "[%s] %s stopped",
-                cls.nginx_proc.log_prefix,
+                cls.nginx_proc.get_log_prefix(),
                 cls.nginx_proc.__class__.__name__,
             )
             cls.nginx_proc = None
         if cls.uwsgi_proc is not None:
             log.info(
                 "[%s] Stopping %s",
-                cls.uwsgi_proc.log_prefix,
+                cls.uwsgi_proc.get_log_prefix(),
                 cls.uwsgi_proc.__class__.__name__,
             )
             terminate_process(cls.uwsgi_proc.pid, kill_children=True, slow_stop=True)
             log.info(
                 "[%s] %s stopped",
-                cls.uwsgi_proc.log_prefix,
+                cls.uwsgi_proc.get_log_prefix(),
                 cls.uwsgi_proc.__class__.__name__,
             )
             cls.uwsgi_proc = None

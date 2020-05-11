@@ -5,7 +5,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import pytest
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, requires_salt_modules
+from tests.support.helpers import destructiveTest, requires_salt_modules, slowTest
 from tests.support.unit import skipIf
 
 
@@ -25,7 +25,7 @@ class LocaleModuleTest(ModuleCase):
         self.assertNotIn("Unsupported platform!", locale)
 
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_gen_locale(self):
         # Make sure charmaps are available on test system before attempting
         # call gen_locale. We log this error to the user in the function, but
@@ -47,7 +47,7 @@ class LocaleModuleTest(ModuleCase):
         self.assertTrue(ret)
 
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_set_locale(self):
         original_locale = self.run_function("locale.get_locale")
         locale_to_set = _find_new_locale(original_locale)

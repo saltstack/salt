@@ -36,10 +36,12 @@ from nox.command import CommandFailed  # isort:skip
 IS_PY3 = sys.version_info > (2,)
 
 # Be verbose when runing under a CI context
-PIP_INSTALL_SILENT = (
-    os.environ.get("JENKINS_URL") or os.environ.get("CI") or os.environ.get("DRONE")
-) is None
-
+CI_RUN = (
+    os.environ.get("JENKINS_URL")
+    or os.environ.get("CI")
+    or os.environ.get("DRONE") is not None
+)
+PIP_INSTALL_SILENT = CI_RUN is False
 
 # Global Path Definitions
 REPO_ROOT = os.path.abspath(os.path.dirname(__file__))
@@ -680,6 +682,9 @@ def pytest_parametrized(session, coverage, transport, crypto):
     # Install requirements
     _install_requirements(session, transport)
 
+    session.run(
+        "pip", "uninstall", "-y", "pytest-salt", silent=True,
+    )
     if crypto:
         session.run(
             "pip",
@@ -886,6 +891,14 @@ def _pytest(session, coverage, cmd_args):
         # Don't nuke our multiprocessing efforts objc!
         # https://stackoverflow.com/questions/50168647/multiprocessing-causes-python-to-crash-and-gives-an-error-may-have-been-in-progr
         env = {"OBJC_DISABLE_INITIALIZE_FORK_SAFETY": "YES"}
+
+    if CI_RUN:
+        # We'll print out the collected tests on CI runs.
+        # This will show a full list of what tests are going to run, in the right order, which, in case
+        # of a test suite hang, helps us pinpoint which test is hanging
+        session.run(
+            "python", "-m", "pytest", *(cmd_args + ["--collect-only", "-qqq"]), env=env
+        )
 
     try:
         if coverage is True:
@@ -1095,7 +1108,7 @@ def docs_html(session, compress):
     if pydir == "py3.4":
         session.error("Sphinx only runs on Python >= 3.5")
     requirements_file = "requirements/static/docs.in"
-    distro_constraints = ["requirements/static/{}/docs.txt".format(_get_pydir(session))]
+    distro_constraints = ["requirements/static/{}/docs.txt".format(pydir)]
     install_command = ["--progress-bar=off", "-r", requirements_file]
     for distro_constraint in distro_constraints:
         install_command.extend(["--constraint", distro_constraint])
@@ -1119,7 +1132,7 @@ def docs_man(session, compress, update):
     if pydir == "py3.4":
         session.error("Sphinx only runs on Python >= 3.5")
     requirements_file = "requirements/static/docs.in"
-    distro_constraints = ["requirements/static/{}/docs.txt".format(_get_pydir(session))]
+    distro_constraints = ["requirements/static/{}/docs.txt".format(pydir)]
     install_command = ["--progress-bar=off", "-r", requirements_file]
     for distro_constraint in distro_constraints:
         install_command.extend(["--constraint", distro_constraint])
@@ -1202,3 +1215,24 @@ def invoke_pre_commit(session):
             reuse_existing=True,
         )
     _invoke(session)
+
+
+@nox.session(name="changelog", python="3")
+@nox.parametrize("draft", [False, True])
+def changelog(session, draft):
+    """
+    Generate salt's changelog
+    """
+    requirements_file = "requirements/static/changelog.in"
+    distro_constraints = [
+        "requirements/static/{}/changelog.txt".format(_get_pydir(session))
+    ]
+    install_command = ["--progress-bar=off", "-r", requirements_file]
+    for distro_constraint in distro_constraints:
+        install_command.extend(["--constraint", distro_constraint])
+    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+
+    town_cmd = ["towncrier", "--version={}".format(session.posargs[0])]
+    if draft:
+        town_cmd.append("--draft")
+    session.run(*town_cmd)

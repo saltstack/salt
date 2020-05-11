@@ -12,6 +12,7 @@ import fnmatch
 import functools
 import logging
 import re
+from collections.abc import Mapping, MutableMapping, Sequence
 
 # Import Salt libs
 import salt.utils.dictupdate
@@ -26,15 +27,6 @@ from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
 from salt.utils.decorators.jinja import jinja_filter
 from salt.utils.odict import OrderedDict
-
-try:
-    from collections.abc import Mapping, MutableMapping, Sequence
-except ImportError:
-    # pylint: disable=no-name-in-module
-    from collections import Mapping, MutableMapping, Sequence
-
-    # pylint: enable=no-name-in-module
-
 
 try:
     import jmespath

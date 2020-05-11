@@ -2,19 +2,14 @@
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
-
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import socket
 from contextlib import closing
 
-# Import Salt Libs
 import salt.utils.http as http
-from tests.support.helpers import MirrorPostHandler, Webserver
-
-# Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.helpers import MirrorPostHandler, Webserver, slowTest
+from tests.support.unit import TestCase
 
 
 class HTTPTestCase(TestCase):
@@ -112,7 +107,7 @@ class HTTPTestCase(TestCase):
         ret = http._sanitize_url_components(mock_component_list, "foo")
         self.assertEqual(ret, mock_ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_query_null_response(self):
         """
         This tests that we get a null response when raise_error=False and the

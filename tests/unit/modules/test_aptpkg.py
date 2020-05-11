@@ -154,6 +154,7 @@ Reading state information...
 """
 
 UNINSTALL = {"tmux": {"new": six.text_type(), "old": "1.8-5"}}
+INSTALL = {"tmux": {"new": "1.8-5", "old": six.text_type()}}
 
 
 class MockSourceEntry(object):
@@ -173,7 +174,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        return {aptpkg: {}}
+        return {aptpkg: {"__grains__": {}}}
 
     def test_version(self):
         """
@@ -333,6 +334,15 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
                 assert aptpkg.autoremove(list_only=True) == []
                 assert aptpkg.autoremove(list_only=True, purge=True) == []
 
+    def test_install(self):
+        """
+        Test - Install packages.
+        """
+        with patch("salt.modules.aptpkg.install", MagicMock(return_value=INSTALL)):
+            self.assertEqual(aptpkg.install(name="tmux"), INSTALL)
+            kwargs = {"force_conf_new": True}
+            self.assertEqual(aptpkg.install(name="tmux", **kwargs), INSTALL)
+
     def test_remove(self):
         """
         Test - Remove packages.
@@ -364,6 +374,8 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
                 }
                 with patch.multiple(aptpkg, **patch_kwargs):
                     self.assertEqual(aptpkg.upgrade(), dict())
+                    kwargs = {"force_conf_new": True}
+                    self.assertEqual(aptpkg.upgrade(**kwargs), dict())
 
     def test_upgrade_downloadonly(self):
         """
@@ -643,6 +655,20 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = aptpkg._skip_source(mock_source)
         self.assertFalse(ret)
+
+    def test_normalize_name(self):
+        """
+        Test that package is normalized only when it should be
+        """
+        with patch.dict(aptpkg.__grains__, {"osarch": "amd64"}):
+            result = aptpkg.normalize_name("foo")
+            assert result == "foo", result
+            result = aptpkg.normalize_name("foo:amd64")
+            assert result == "foo", result
+            result = aptpkg.normalize_name("foo:any")
+            assert result == "foo", result
+            result = aptpkg.normalize_name("foo:i386")
+            assert result == "foo:i386", result
 
 
 @skipIf(pytest is None, "PyTest is missing")
