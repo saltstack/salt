@@ -91,18 +91,25 @@ def _supports_parsing():
     return tuple([int(i) for i in _get_version()]) > (0, 6)
 
 
+@decorators.memoize
+def _get_provider():
+    """
+    Check if we are the default provider for this platform
+    """
+    return (
+        __grains__["os"] in ["NetBSD", "DragonFly", "Minix", "Darwin", "SmartOS"]
+        or "pkgin"
+    )
+
+
 def __virtual__():
     """
     Set the virtual pkg module if the os is supported by pkgin
     """
-    supported = ["NetBSD", "SunOS", "DragonFly", "Minix", "Darwin", "SmartOS"]
-
-    if __grains__["os"] in supported and _check_pkgin():
-        return __virtualname__
     return (
-        False,
-        "The pkgin execution module cannot be loaded: only "
-        "available on {0} systems.".format(", ".join(supported)),
+        _check_pkgin() and _get_provider() or False,
+        "The pkgin execution module cannot be loaded: pkgin was "
+        "not detected on this platform.",
     )
 
 
