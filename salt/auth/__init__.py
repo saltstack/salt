@@ -541,7 +541,7 @@ class Resolver(object):
             )
             print(
                 "Available eauth types: {0}".format(
-                    ", ".join(self.auth.file_mapping.keys())
+                    ", ".join([k[:-5] for k in self.auth if k.endswith(".auth")])
                 )
             )
             return ret

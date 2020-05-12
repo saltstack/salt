@@ -19,10 +19,12 @@ import threading
 import time
 import traceback
 import types
+from collections.abc import MutableMapping
 from zipimport import zipimporter
 
 # Import salt libs
 import salt.config
+import salt.defaults.events
 import salt.defaults.exitcodes
 import salt.syspaths
 import salt.utils.args
@@ -54,13 +56,6 @@ else:
 
     USE_IMPORTLIB = False
 
-try:
-    from collections.abc import MutableMapping
-except ImportError:
-    # pylint: disable=no-name-in-module
-    from collections import MutableMapping
-
-    # pylint: enable=no-name-in-module
 
 try:
     import pkg_resources
@@ -289,7 +284,9 @@ def minion_mods(
 
     if notify:
         with salt.utils.event.get_event("minion", opts=opts, listen=False) as evt:
-            evt.fire_event({"complete": True}, tag="/salt/minion/minion_mod_complete")
+            evt.fire_event(
+                {"complete": True}, tag=salt.defaults.events.MINION_MOD_REFRESH_COMPLETE
+            )
 
     return ret
 

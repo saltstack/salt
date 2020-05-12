@@ -241,7 +241,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
 
     @skipIf(
         salt.utils.platform.is_windows(),
-        "windows minon does not support roomnumber or phone",
+        "windows minion does not support roomnumber or phone",
     )
     @slowTest
     def test_user_present_gecos(self):
@@ -265,7 +265,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
 
     @skipIf(
         salt.utils.platform.is_windows(),
-        "windows minon does not support roomnumber or phone",
+        "windows minion does not support roomnumber or phone",
     )
     @slowTest
     def test_user_present_gecos_none_fields(self):
@@ -295,7 +295,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual("", ret["homephone"])
 
     @skipIf(
-        salt.utils.platform.is_windows(), "windows minon does not support createhome"
+        salt.utils.platform.is_windows(), "windows minion does not support createhome"
     )
     @slowTest
     def test_user_present_home_directory_created(self):

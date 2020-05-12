@@ -167,11 +167,18 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 
+from salt.exceptions import CommandExecutionError
+
 log = logging.getLogger(__name__)
 
 
-def read_secret(path, key=None, metadata=False):
+def read_secret(path, key=None, metadata=False, default=CommandExecutionError):
     """
+    .. versionchanged:: 3001
+        The ``default`` argument has been added. When the path or path/key
+        combination is not found, an exception will be raised, unless a default
+        is provided.
+
     Return the value of key at path in vault, or entire secret
 
     :param metadata: Optional - If using KV v2 backend, display full results, including metadata
@@ -217,8 +224,11 @@ def read_secret(path, key=None, metadata=False):
 
         return data
     except Exception as err:  # pylint: disable=broad-except
-        log.error("Failed to read secret! %s: %s", type(err).__name__, err)
-        return None
+        if default is CommandExecutionError:
+            raise CommandExecutionError(
+                "Failed to read secret! {0}: {1}".format(type(err).__name__, err)
+            )
+        return default
 
 
 def write_secret(path, **kwargs):
@@ -305,10 +315,10 @@ def delete_secret(path):
 
 def destroy_secret(path, *args):
     """
-    Destroy specified secret version at the path in vault. The vault policy
-    used must allow this. Only supported on Vault KV version 2
-
     .. versionadded:: Sodium
+
+    Destory specified secret version at the path in vault. The vault policy
+    used must allow this. Only supported on Vault KV version 2
 
     CLI Example:
 
@@ -335,8 +345,13 @@ def destroy_secret(path, *args):
         return False
 
 
-def list_secrets(path):
+def list_secrets(path, default=CommandExecutionError):
     """
+    .. versionchanged:: 3001
+        The ``default`` argument has been added. When the path or path/key
+        combination is not found, an exception will be raised, unless a default
+        is provided.
+
     List secret keys at the path in vault. The vault policy used must allow this.
     The path should end with a trailing slash.
 
@@ -357,13 +372,24 @@ def list_secrets(path):
             response.raise_for_status()
         return response.json()["data"]
     except Exception as err:  # pylint: disable=broad-except
-        log.error("Failed to list secrets! %s: %s", type(err).__name__, err)
-        return None
+        if default is CommandExecutionError:
+            raise CommandExecutionError(
+                "Failed to list secrets! {0}: {1}".format(type(err).__name__, err)
+            )
+        return default
 
 
 def clear_token_cache():
     """
+    .. versionchanged:: 3001
+
     Delete minion Vault token cache file
+
+    CLI Example:
+
+    .. code-block:: bash
+
+            salt '*' vault.clear_token_cache
     """
     log.debug("Deleting cache file")
     cache_file = os.path.join(__opts__["cachedir"], "salt_vault_token")

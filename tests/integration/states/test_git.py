@@ -6,6 +6,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import functools
 import inspect
+import logging
 import os
 import shutil
 import socket
@@ -19,7 +20,7 @@ from salt.ext.six.moves.urllib.parse import (  # pylint: disable=no-name-in-modu
 )
 from salt.utils.versions import LooseVersion as _LooseVersion
 from tests.support.case import ModuleCase
-from tests.support.helpers import slowTest, with_tempdir
+from tests.support.helpers import TstSuiteLoggingHandler, slowTest, with_tempdir
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 
@@ -170,6 +171,22 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state("git.latest", name=TEST_REPO, target=target)
         self.assertSaltTrueReturn(ret)
         self.assertTrue(os.path.isdir(os.path.join(target, ".git")))
+
+    @with_tempdir(create=False)
+    @slowTest
+    def test_latest_config_get_regexp_retcode(self, target):
+        """
+        git.latest
+        """
+
+        log_format = "[%(levelname)-8s] %(jid)s %(message)s"
+        self.handler = TstSuiteLoggingHandler(format=log_format, level=logging.DEBUG)
+        ret_code_err = "failed with return code: 1"
+        with self.handler:
+            ret = self.run_state("git.latest", name=TEST_REPO, target=target)
+            self.assertSaltTrueReturn(ret)
+            self.assertTrue(os.path.isdir(os.path.join(target, ".git")))
+            assert any(ret_code_err in s for s in self.handler.messages) is False, False
 
     @with_tempdir(create=False)
     @slowTest
