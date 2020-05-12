@@ -835,6 +835,8 @@ VALID_OPTS = immutabletypes.freeze(
         # Whether or not a minion should send the results of a command back to the master
         # Useful when a returner is the source of truth for a job result
         "pub_ret": bool,
+        # HTTP request settings. Used in tornado fetch functions
+        "user_agent": six.string_types,
         # HTTP proxy settings. Used in tornado fetch functions, apt-key etc
         "proxy_host": six.string_types,
         "proxy_username": six.string_types,
@@ -1200,6 +1202,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "event_match_type": "startswith",
         "minion_restart_command": [],
         "pub_ret": True,
+        "user_agent": "",
         "proxy_host": "",
         "proxy_username": "",
         "proxy_password": "",
