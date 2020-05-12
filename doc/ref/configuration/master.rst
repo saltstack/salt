@@ -13,9 +13,26 @@ of the Salt system each have a respective configuration file. The
 
     :ref:`Example master configuration file <configuration-examples-master>`.
 
-The configuration file for the salt-master is located at ``/etc/salt/master``
-by default. Atomic included configuration files can be placed in 
-``/etc/salt/master.d/*.conf``. Warning: files with other suffixes than .conf will 
+Securing the Salt Master
+========================
+The Salt Master is the most critical piece of your Salt implementation because
+it has the ability to reach every part of your infrastructure. For the most
+part, ensure that your Salt Master is secure. For example, you could run Salt
+Masters in a private network, unaccessible to the internet, with no public IP
+address.
+
+However, there are a few scenarios where the Salt Master reasonably needs to be
+accessible to the Internet. In those scenarios, strict firewall rules should be
+used. One option is to avoid allowing large ranges in your firewall rules.
+Another option is to use a hardened bastion server or a VPN to restrict direct
+access to the Salt Master from the Internet.
+
+
+Configuring the Salt Master
+===========================
+The configuration file for the Salt Master is located at ``/etc/salt/master``
+by default. Atomic included configuration files can be placed in
+``/etc/salt/master.d/*.conf``. Warning: files with other suffixes than .conf will
 not be included. A notable exception is FreeBSD, where the configuration file is
 located at ``/usr/local/etc/salt``. The available options are as follows:
 
