@@ -1,8 +1,9 @@
-@Library('salt@master-1.7') _
+@Library('salt@master-1.7-merge') _
 
 // Pre-nox pipeline
 runTestSuite(
-    concurrent_builds: 1,
+    concurrent_builds: 2,
+    run_full_test_suite: true,
     distro_name: 'macosx',
     distro_version: 'highsierra',
     env: env,

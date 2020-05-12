@@ -1,7 +1,8 @@
-@Library('salt@master-1.7') _
+@Library('salt@master-1.7-merge') _
 
 runTestSuite(
     concurrent_builds: 2,
+    run_full_test_suite: true,
     distro_name: 'ubuntu',
     distro_version: '2004',
     env: env,
