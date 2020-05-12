@@ -11,7 +11,6 @@ from pathlib import PurePath, PurePosixPath
 import pytest
 import salt.utils.files
 import salt.utils.templates
-from tests.support import mock
 from tests.support.helpers import with_tempdir
 from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
@@ -254,7 +253,7 @@ class WrapRenderTestCase(TestCase):
         actual = salt.utils.templates._generate_sls_context(tmplpath, sls)
         self.assertDictContainsAll(actual, **expected)
 
-    @mock.patch("salt.utils.templates.generate_sls_context")
+    @patch("salt.utils.templates.generate_sls_context")
     @with_tempdir()
     def test_sls_context_call(self, tempdir, generate_sls_context):
         """ Check that generate_sls_context is called with proper parameters"""
@@ -270,7 +269,7 @@ class WrapRenderTestCase(TestCase):
         res = wrapped(slsfile, context=context, tmplpath=tmplpath)
         generate_sls_context.assert_called_with(tmplpath, sls)
 
-    @mock.patch("salt.utils.templates.generate_sls_context")
+    @patch("salt.utils.templates.generate_sls_context")
     @with_tempdir()
     def test_sls_context_no_call(self, tempdir, generate_sls_context):
         """ Check that generate_sls_context is not called if sls is not set"""
@@ -418,11 +417,11 @@ class WrapRenderTestCase(TestCase):
             slspath="foo/foo",
         )
 
-    @mock.patch(
+    @patch(
         "salt.utils.templates._generate_sls_context_legacy", return_value="legacy"
     )
-    @mock.patch("salt.utils.templates._generate_sls_context", return_value="new")
-    @mock.patch("salt.utils.templates.features.get", return_value=True)
+    @patch("salt.utils.templates._generate_sls_context", return_value="new")
+    @patch("salt.utils.templates.features.get", return_value=True)
     def test_feature_flag_on(self, feature_get, new_impl, legacy_impl):
         """ Test feature flag selection with FF on"""
         tplpath = "tplpath"
@@ -431,11 +430,11 @@ class WrapRenderTestCase(TestCase):
         new_impl.assert_called_with(tplpath, sls)
         legacy_impl.assert_not_called()
 
-    @mock.patch(
+    @patch(
         "salt.utils.templates._generate_sls_context_legacy", return_value="legacy"
     )
-    @mock.patch("salt.utils.templates._generate_sls_context", return_value="new")
-    @mock.patch("salt.utils.templates.features.get", return_value=False)
+    @patch("salt.utils.templates._generate_sls_context", return_value="new")
+    @patch("salt.utils.templates.features.get", return_value=False)
     def test_feature_flag_off(self, feature_get, new_impl, legacy_impl):
         """ Test feature flag selection with FF on"""
         tplpath = "tplpath"
