@@ -5,6 +5,7 @@
 #    pip-compile -o requirements/static/py3.7/linux.txt -v requirements/base.txt requirements/zeromq.txt requirements/pytest.txt requirements/static/linux.in
 #
 apache-libcloud==2.0.0
+appdirs==1.4.4            # via virtualenv
 argh==0.26.2              # via watchdog
 asn1crypto==1.3.0         # via certvalidator, cryptography, oscrypto
 atomicwrites==1.3.0       # via pytest
@@ -26,12 +27,14 @@ cherrypy==17.3.0
 contextlib2==0.5.5        # via cherrypy
 croniter==0.3.29
 cryptography==2.6.1       # via moto, paramiko, pyopenssl, vcert
+distlib==0.3.0            # via virtualenv
 distro==1.5.0
 dnspython==1.16.0
 docker-pycreds==0.4.0     # via docker
 docker==3.7.2
 docutils==0.14            # via botocore
 ecdsa==0.13.3             # via python-jose
+filelock==3.0.12          # via virtualenv
 future==0.17.1            # via python-jose, textfsm
 genshi==0.7.3
 gitdb2==2.0.5             # via gitpython
@@ -39,7 +42,7 @@ gitpython==2.1.11
 google-auth==1.6.3        # via kubernetes
 hgtools==8.1.1
 idna==2.8                 # via requests
-importlib-metadata==0.23  # via pluggy, pytest
+importlib-metadata==0.23  # via pluggy, pytest, virtualenv
 ipaddress==1.0.22         # via kubernetes
 jaraco.functools==2.0     # via tempora
 jinja2==2.10.1
@@ -106,7 +109,7 @@ salttesting==2017.6.1
 scp==0.13.2               # via junos-eznc
 setproctitle==1.1.10
 setuptools-scm==3.2.0
-six==1.12.0               # via bcrypt, cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, junos-eznc, kazoo, kubernetes, mock, more-itertools, moto, ncclient, packaging, pygit2, pynacl, pyopenssl, pytest, pytest-salt-factories, python-dateutil, python-jose, pyvmomi, responses, salttesting, tempora, textfsm, transitions, vcert, websocket-client
+six==1.12.0               # via bcrypt, cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, junos-eznc, kazoo, kubernetes, mock, more-itertools, moto, ncclient, packaging, pygit2, pynacl, pyopenssl, pytest, pytest-salt-factories, python-dateutil, python-jose, pyvmomi, responses, salttesting, tempora, textfsm, transitions, vcert, virtualenv, websocket-client
 smmap2==2.0.5             # via gitdb2
 strict-rfc3339==0.7
 tempora==1.14.1           # via portend
@@ -117,7 +120,7 @@ toml==0.10.0
 transitions==0.8.1        # via junos-eznc
 urllib3==1.24.2           # via botocore, kubernetes, python-etcd, requests
 vcert==0.7.3
-virtualenv==16.4.3
+virtualenv==20.0.20
 watchdog==0.9.0
 wcwidth==0.1.7            # via pytest
 websocket-client==0.40.0  # via docker, kubernetes

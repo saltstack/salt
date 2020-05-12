@@ -118,7 +118,7 @@ toml==0.10.0
 transitions==0.8.1        # via junos-eznc
 urllib3==1.24.2           # via botocore, kubernetes, python-etcd, requests
 vcert==0.7.3
-virtualenv==20.0.10
+virtualenv==20.0.20
 vultr==1.0.1
 watchdog==0.9.0
 wcwidth==0.1.7            # via pytest
