@@ -10,6 +10,7 @@ import time
 import pytest
 import salt.utils.platform
 import salt.utils.schedule
+from tests.support.helpers import slowTest
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import skipIf
 from tests.unit.utils.scheduler.base import SchedulerTestsBase
@@ -42,7 +43,10 @@ class SchedulerEvalTest(SchedulerTestsBase):
         self.schedule.opts["loop_interval"] = 1
         self.schedule.opts["grains"]["whens"] = {"tea time": "11/29/2017 12:00pm"}
 
-    @skipIf(True, "SLOWTEST skip")
+    def tearDown(self):
+        self.schedule.reset()
+
+    @slowTest
     def test_eval(self):
         """
         verify that scheduled job runs
@@ -69,7 +73,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time2)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_eval_multiple_whens(self):
         """
         verify that scheduled job runs
@@ -104,7 +108,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time2)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_eval_whens(self):
         """
         verify that scheduled job runs
@@ -121,7 +125,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_eval_loop_interval(self):
         """
         verify that scheduled job runs
@@ -149,7 +153,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
             ret["_last_run"], run_time2 + datetime.timedelta(seconds=LOOP_INTERVAL)
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_eval_multiple_whens_loop_interval(self):
         """
         verify that scheduled job runs
@@ -192,7 +196,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time2)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_eval_once(self):
         """
         verify that scheduled job runs
@@ -214,7 +218,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_eval_once_loop_interval(self):
         """
         verify that scheduled job runs
@@ -285,7 +289,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_eval_until(self):
         """
         verify that scheduled job is skipped once the current
@@ -337,7 +341,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
         self.assertEqual(ret["_skip_reason"], "until_passed")
         self.assertEqual(ret["_skipped_time"], run_time)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_eval_after(self):
         """
         verify that scheduled job is skipped until after the specified
@@ -389,7 +393,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_eval_enabled(self):
         """
         verify that scheduled job does not run
@@ -411,7 +415,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time1)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_eval_enabled_key(self):
         """
         verify that scheduled job runs
@@ -495,7 +499,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
         # Ensure job is still enabled
         self.assertEqual(ret["enabled"], True)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_eval_run_on_start(self):
         """
         verify that scheduled job is run when minion starts
@@ -521,7 +525,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_eval_splay(self):
         """
         verify that scheduled job runs with splayed time
@@ -548,7 +552,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
             ret = self.schedule.job_status(job_name)
             self.assertEqual(ret["_last_run"], run_time)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_eval_splay_range(self):
         """
         verify that scheduled job runs with splayed time
@@ -579,7 +583,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
             ret = self.schedule.job_status(job_name)
             self.assertEqual(ret["_last_run"], run_time)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_eval_splay_global(self):
         """
         verify that scheduled job runs with splayed time
@@ -607,7 +611,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
             ret = self.schedule.job_status(job_name)
             self.assertEqual(ret["_last_run"], run_time)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_eval_seconds(self):
         """
         verify that scheduled job run mutiple times with seconds
@@ -663,7 +667,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
         self.assertEqual(ret["_last_run"], run_time)
         self.assertEqual(ret["_next_fire_time"], next_run_time)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_eval_minutes(self):
         """
         verify that scheduled job run mutiple times with minutes
@@ -713,7 +717,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_eval_hours(self):
         """
         verify that scheduled job run mutiple times with hours
@@ -763,7 +767,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_eval_days(self):
         """
         verify that scheduled job run mutiple times with days
@@ -834,7 +838,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
         self.assertEqual(ret["_last_run"], run_time)
         self.assertEqual(ret["_next_fire_time"], next_run_time)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_eval_when_splay(self):
         """
         verify that scheduled job runs

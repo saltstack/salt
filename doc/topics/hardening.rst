@@ -36,7 +36,8 @@ General hardening tips
 - Don't expose the Salt master any more than what is required.
 - Harden the system as you would with any high-priority target.
 - Keep the system patched and up-to-date.
-- Use tight firewall rules.
+- Use tight firewall rules. Pay particular attention to TCP/4505 and TCP/4506
+  on the salt master and avoid exposing these ports unnecessarily.
 
 Salt hardening tips
 ===================
@@ -71,6 +72,10 @@ Salt hardening tips
   particularly sensitive minions. There is also :ref:`salt-ssh` or the
   :mod:`modules.sudo <salt.modules.sudo>` if you need to further restrict
   a minion.
+- Monitor specific security releated log messages. Salt ``salt-master`` logs
+  attempts to access methods which are not exposed to network clients. These log
+  messages are logged at the ``error`` log level and start with ``Requested
+  method not exposed``.
 
 .. _salt-users: https://groups.google.com/forum/#!forum/salt-users
 .. _salt-announce: https://groups.google.com/forum/#!forum/salt-announce
