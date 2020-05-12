@@ -11,6 +11,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import glob
 import logging
 import os
+import re
 import shutil
 import sys
 
@@ -69,6 +70,10 @@ def virtualenv_ver(venv_bin, user=None, **kwargs):
                 "Unable to get the virtualenv version output using '{0}'. "
                 "Returned data: {1}".format(version_cmd, ret)
             )
+        # 20.0.0 virtualenv changed the --version output. find version number
+        ver = "".join(
+            [x for x in ret["stdout"].strip().split() if re.search(r"^\d.\d*", x)]
+        )
         virtualenv_version_info = tuple(
             [int(i) for i in ret["stdout"].strip().split("rc")[0].split(".")]
         )
