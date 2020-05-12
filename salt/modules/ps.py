@@ -150,7 +150,10 @@ def top(num_processes=5, interval=3):
         except psutil.NoSuchProcess:
             continue
         else:
-            user, system = process.cpu_times()[:2]
+            try:
+                user, system = process.cpu_times()[:2]
+            except psutil.ZombieProcess:
+                user = system = 0.0
         start_usage[process] = user + system
     time.sleep(interval)
     usage = set()
