@@ -418,24 +418,23 @@ def _is_fstype(fs_type):
     :param fs_type: file system type
     :return: True if fs_type is supported in this module, False otherwise
     """
-    return fs_type in set(
-        [
-            "btrfs",
-            "ext2",
-            "ext3",
-            "ext4",
-            "fat32",
-            "fat16",
-            "linux-swap",
-            "reiserfs",
-            "hfs",
-            "hfs+",
-            "hfsx",
-            "NTFS",
-            "ntfs",
-            "ufs",
-            "xfs",
-        ]
+    return fs_type in (
+        "btrfs",
+        "ext2",
+        "ext3",
+        "ext4",
+        "fat",
+        "fat32",
+        "fat16",
+        "linux-swap",
+        "reiserfs",
+        "hfs",
+        "hfs+",
+        "hfsx",
+        "NTFS",
+        "ntfs",
+        "ufs",
+        "xfs",
     )
 
 

@@ -684,7 +684,8 @@ allowed-3rd-party-modules=msgpack,
                           pytest,
                           setuptools,
                           pytestsalt,
-                          saltfactories
+                          saltfactories,
+                          distro
 
 
 [EXCEPTIONS]

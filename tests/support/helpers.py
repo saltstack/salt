@@ -9,8 +9,6 @@
 
     Test support helpers
 """
-# pylint: disable=repr-flag-used-in-string,wrong-import-order
-
 from __future__ import absolute_import, print_function, unicode_literals
 
 import base64
@@ -1732,11 +1730,10 @@ def change_cwd(path):
     it at the end
     """
     old_cwd = os.getcwd()
-
-    os.chdir(path)
-
-    # Do stuff
-    yield
-
-    # Restore Old CWD
-    os.chdir(old_cwd)
+    try:
+        os.chdir(path)
+        # Do stuff
+        yield
+    finally:
+        # Restore Old CWD
+        os.chdir(old_cwd)
