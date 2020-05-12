@@ -26,7 +26,7 @@ class ConfigMixin:
         cls.minion_config = AdaptedConfigurationTestCaseMixin.get_temp_config(
             "minion",
             id="root",
-            transport="zeromq",
+            transport=cls.master_config["transport"],
             auth_tries=1,
             auth_timeout=5,
             master_ip="127.0.0.1",
