@@ -321,8 +321,27 @@ class PsTestCase(TestCase):
         result = ps.top(num_processes=1, interval=0)
         assert len(result) == 1
 
-        ## This is commented out pending discussion on https://github.com/saltstack/salt/commit/2e5c3162ef87cca8a2c7b12ade7c7e1b32028f0a
-        # @skipIf(not HAS_UTMP, "The utmp module must be installed to run test_get_users_utmp()")
-        # @patch('salt.utils.psutil_compat.get_users', new=MagicMock(return_value=None))  # This will force the function to use utmp
-        # def test_get_users_utmp(self):
-        #     pass
+    def test_top_zombie_process(self):
+        # Get 3 pids that are currently running on the system
+        pids = psutil.pids()[:3]
+        # Get a process instance for each of the pids
+        processes = [psutil.Process(pid) for pid in pids]
+
+        # Patch the middle process to raise ZombieProcess when .cpu_times is called
+        def raise_exception():
+            raise psutil.ZombieProcess(processes[1].pid)
+
+        processes[1].cpu_times = raise_exception
+
+        # Make sure psutil.pids only returns the above 3 pids
+        with patch("salt.utils.psutil_compat.pids", return_value=pids):
+            # Make sure we use our process list from above
+            with patch("salt.utils.psutil_compat.Process", side_effect=processes):
+                result = ps.top(num_processes=1, interval=0)
+                assert len(result) == 1
+
+    ## This is commented out pending discussion on https://github.com/saltstack/salt/commit/2e5c3162ef87cca8a2c7b12ade7c7e1b32028f0a
+    # @skipIf(not HAS_UTMP, "The utmp module must be installed to run test_get_users_utmp()")
+    # @patch('salt.utils.psutil_compat.get_users', new=MagicMock(return_value=None))  # This will force the function to use utmp
+    # def test_get_users_utmp(self):
+    #     pass
