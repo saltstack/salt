@@ -245,7 +245,7 @@ class SaltLoggingClass(
             finally:
                 try:
                     handler.release()
-                except:
+                except Exception:  # pylint: disable=broad-except
                     pass
         return instance
 
@@ -323,7 +323,7 @@ class SaltLoggingClass(
                     stack_info=stack_info,
                     stacklevel=stacklevel,
                 )
-        except:
+        except Exception:  # pylint: disable=broad-except
             pass
         finally:
             logging._releaseLock()

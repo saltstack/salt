@@ -606,7 +606,7 @@ class SSH:
                     logging._acquireLock()
                     routine = Process(target=self.handle_routine, args=args)
                     routine.start()
-                except:
+                except Exception:  # pylint: disable=broad-except
                     pass
                 finally:
                     logging._releaseLock()
