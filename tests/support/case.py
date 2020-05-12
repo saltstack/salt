@@ -173,7 +173,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         import salt.output
         import salt.runner
 
-        opts = salt.config.master_config(self.get_config_file_path("master"))
+        opts = salt.config.client_config(self.get_config_file_path("master"))
 
         opts_arg = list(arg)
         if kwargs:
@@ -195,7 +195,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         opts["output_file"] = cStringIO()
         try:
             salt.output.display_output(ret["return"], opts=opts)
-            ret["out"] = opts["output_file"].getvalue()
+            ret["out"] = opts["output_file"].getvalue().splitlines()
         finally:
             opts["output_file"].close()
         log.debug(
