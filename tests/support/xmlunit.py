@@ -17,6 +17,9 @@ from __future__ import absolute_import
 
 import io
 import logging
+import os
+
+from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
 
@@ -88,7 +91,27 @@ try:
             )
 
         def run(self, test):
-            result = xmlrunner.runner.XMLTestRunner.run(self, test)
+            try:
+                current_cwd = os.getcwd()
+                if current_cwd != RUNTIME_VARS.CODE_DIR:
+                    log.critical(
+                        "CWD is not %s when running test %s",
+                        RUNTIME_VARS.CODE_DIR,
+                        test,
+                    )
+                    os.chdir(RUNTIME_VARS.CODE_DIR)
+            except FileNotFoundError:
+                log.critical("UNABLE TO GET CWD before running test: %s", test)
+                os.chdir(RUNTIME_VARS.CODE_DIR)
+            try:
+                result = xmlrunner.runner.XMLTestRunner.run(self, test)
+            except FileNotFoundError:
+                log.critical(
+                    "FileNotFoundError was caught when running test: %s",
+                    test,
+                    exc_info=True,
+                )
+                raise
             self.stream.writeln("Finished generating XML reports")
             return result
 
