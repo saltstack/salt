@@ -573,7 +573,7 @@ def _refresh_buckets_cache_file(cache_file):
 
     log.debug("Writing buckets cache file")
 
-    with salt.utils.files.fopen(cache_file, "w") as fp_:
+    with salt.utils.files.fopen(cache_file, "wb") as fp_:
         pickle.dump(metadata, fp_)
 
     return metadata
