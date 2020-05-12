@@ -55,5 +55,10 @@ class VirtualenvModuleTest(ModuleCase):
         packages = self.run_function("pip.list", prefix="pep8", bin_env=pip_bin)
         self.assertFalse("pep8" in packages)
 
+    def test_virtualenv_ver(self):
+        ret = self.run_function("virtualenv.virtualenv_ver", [self.venv_dir])
+        assert isinstance(ret, list)
+        assert all([isinstance(x, int) for x in ret])
+
     def tearDown(self):
         self.run_function("file.remove", [self.venv_test_dir])
