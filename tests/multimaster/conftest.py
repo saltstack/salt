@@ -15,6 +15,7 @@ import pytest
 import salt.utils.files
 from salt.serializers import yaml
 from salt.utils.immutabletypes import freeze
+from tests.support.pytest.fixtures import *  # pylint: disable=unused-wildcard-import
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
@@ -198,7 +199,7 @@ def salt_mm_sub_minion(
 
 
 @pytest.fixture(scope="package", autouse=True)
-def bridge_pytest_and_runtests(
+def bridge_pytest_and_runtests(  # pylint: disable=function-redefined
     reap_stray_processes,
     base_env_state_tree_root_dir,
     prod_env_state_tree_root_dir,
