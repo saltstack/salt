@@ -8,8 +8,6 @@ import platform
 import re
 import sys
 
-from distro import linux_distribution
-
 MAX_SIZE = sys.maxsize
 VERSION_LIMIT = MAX_SIZE - 200
 
@@ -668,11 +666,14 @@ def system_information():
     """
     Report system versions.
     """
+    # Late import so that when getting called from setup.py does not break
+    from distro import linux_distribution
 
     def system_version():
         """
         Return host system version.
         """
+
         lin_ver = linux_distribution()
         mac_ver = platform.mac_ver()
         win_ver = platform.win32_ver()
