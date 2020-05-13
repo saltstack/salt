@@ -1330,16 +1330,16 @@ def _shortcut_check(
     if os.path.isfile(name):
         with salt.utils.winapi.Com():
             shell = win32com.client.Dispatch("WScript.Shell")
-        scut = shell.CreateShortcut(name)
-        state_checks = [scut.TargetPath.lower() == target.lower()]
-        if arguments is not None:
-            state_checks.append(scut.Arguments == arguments)
-        if working_dir is not None:
-            state_checks.append(scut.WorkingDirectory.lower() == working_dir.lower())
-        if description is not None:
-            state_checks.append(scut.Description == description)
-        if icon_location is not None:
-            state_checks.append(scut.IconLocation.lower() == icon_location.lower())
+            scut = shell.CreateShortcut(name)
+            state_checks = [scut.TargetPath.lower() == target.lower()]
+            if arguments is not None:
+                state_checks.append(scut.Arguments == arguments)
+            if working_dir is not None:
+                state_checks.append(scut.WorkingDirectory.lower() == working_dir.lower())
+            if description is not None:
+                state_checks.append(scut.Description == description)
+            if icon_location is not None:
+                state_checks.append(scut.IconLocation.lower() == icon_location.lower())
 
         if not all(state_checks):
             changes["change"] = name
@@ -8397,74 +8397,74 @@ def shortcut(
     # It won't create the file until calling scut.Save()
     with salt.utils.winapi.Com():
         shell = win32com.client.Dispatch("WScript.Shell")
-    scut = shell.CreateShortcut(name)
+        scut = shell.CreateShortcut(name)
 
-    # The shortcut target will automatically be created with its
-    # canonical capitalization; no way to override it, so ignore case
-    state_checks = [scut.TargetPath.lower() == target.lower()]
-    if arguments is not None:
-        state_checks.append(scut.Arguments == arguments)
-    if working_dir is not None:
-        state_checks.append(scut.WorkingDirectory.lower() == working_dir.lower())
-    if description is not None:
-        state_checks.append(scut.Description == description)
-    if icon_location is not None:
-        state_checks.append(scut.IconLocation.lower() == icon_location.lower())
+        # The shortcut target will automatically be created with its
+        # canonical capitalization; no way to override it, so ignore case
+        state_checks = [scut.TargetPath.lower() == target.lower()]
+        if arguments is not None:
+            state_checks.append(scut.Arguments == arguments)
+        if working_dir is not None:
+            state_checks.append(scut.WorkingDirectory.lower() == working_dir.lower())
+        if description is not None:
+            state_checks.append(scut.Description == description)
+        if icon_location is not None:
+            state_checks.append(scut.IconLocation.lower() == icon_location.lower())
 
-    if __salt__["file.file_exists"](name):
-        # The shortcut exists, verify that it matches the desired state
-        if not all(state_checks):
-            # The target is wrong, delete it
-            os.remove(name)
-        else:
-            if _check_shortcut_ownership(name, user):
-                # The shortcut looks good!
-                ret["comment"] = "Shortcut {0} is present and owned by " "{1}".format(
-                    name, user
-                )
+        if __salt__["file.file_exists"](name):
+            # The shortcut exists, verify that it matches the desired state
+            if not all(state_checks):
+                # The target is wrong, delete it
+                os.remove(name)
             else:
-                if _set_shortcut_ownership(name, user):
-                    ret["comment"] = "Set ownership of shortcut {0} to " "{1}".format(
+                if _check_shortcut_ownership(name, user):
+                    # The shortcut looks good!
+                    ret["comment"] = "Shortcut {0} is present and owned by " "{1}".format(
                         name, user
                     )
-                    ret["changes"]["ownership"] = "{0}".format(user)
                 else:
-                    ret["result"] = False
-                    ret["comment"] += (
-                        "Failed to set ownership of shortcut {0} to "
-                        "{1}".format(name, user)
-                    )
-            return ret
+                    if _set_shortcut_ownership(name, user):
+                        ret["comment"] = "Set ownership of shortcut {0} to " "{1}".format(
+                            name, user
+                        )
+                        ret["changes"]["ownership"] = "{0}".format(user)
+                    else:
+                        ret["result"] = False
+                        ret["comment"] += (
+                            "Failed to set ownership of shortcut {0} to "
+                            "{1}".format(name, user)
+                        )
+                return ret
 
-    if not os.path.exists(name):
-        # The shortcut is not present, make it
-        try:
-            scut.TargetPath = target
-            if arguments is not None:
-                scut.Arguments = arguments
-            if working_dir is not None:
-                scut.WorkingDirectory = working_dir
-            if description is not None:
-                scut.Description = description
-            if icon_location is not None:
-                scut.IconLocation = icon_location
-            scut.Save()
-        except (AttributeError, pywintypes.com_error) as exc:
-            ret["result"] = False
-            ret["comment"] = "Unable to create new shortcut {0} -> " "{1}: {2}".format(
-                name, target, exc
-            )
-            return ret
-        else:
-            ret["comment"] = "Created new shortcut {0} -> " "{1}".format(name, target)
-            ret["changes"]["new"] = name
-
-        if not _check_shortcut_ownership(name, user):
-            if not _set_shortcut_ownership(name, user):
+        if not os.path.exists(name):
+            # The shortcut is not present, make it
+            try:
+                scut.TargetPath = target
+                if arguments is not None:
+                    scut.Arguments = arguments
+                if working_dir is not None:
+                    scut.WorkingDirectory = working_dir
+                if description is not None:
+                    scut.Description = description
+                if icon_location is not None:
+                    scut.IconLocation = icon_location
+                scut.Save()
+            except (AttributeError, pywintypes.com_error) as exc:
                 ret["result"] = False
-                ret["comment"] += ", but was unable to set ownership to " "{0}".format(
-                    user
+                ret["comment"] = "Unable to create new shortcut {0} -> " "{1}: {2}".format(
+                    name, target, exc
                 )
+                return ret
+            else:
+                ret["comment"] = "Created new shortcut {0} -> " "{1}".format(name, target)
+                ret["changes"]["new"] = name
+
+            if not _check_shortcut_ownership(name, user):
+                if not _set_shortcut_ownership(name, user):
+                    ret["result"] = False
+                    ret["comment"] += ", but was unable to set ownership to " "{0}".format(
+                        user
+                    )
     return ret
 
 
