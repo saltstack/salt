@@ -5,7 +5,7 @@ Extract the pillar data for this minion
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
-import collections
+from collections.abc import Mapping
 
 # Import third party libs
 import copy
@@ -148,7 +148,7 @@ def get(
             ret = salt.utils.data.traverse_dict_and_list(
                 pillar_dict, key, {}, delimiter
             )
-            if isinstance(ret, collections.Mapping):
+            if isinstance(ret, Mapping):
                 default = copy.deepcopy(default)
                 return salt.utils.dictupdate.update(
                     default, ret, merge_lists=opt_merge_lists
