@@ -999,36 +999,36 @@ def rename(name, new_name):
     with salt.utils.winapi.Com():
         c = wmi.WMI(find_classes=0)
 
-    # Get the user object
-    try:
-        user = c.Win32_UserAccount(Name=name)[0]
-    except IndexError:
-        raise CommandExecutionError("User '{0}' does not exist".format(name))
+        # Get the user object
+        try:
+            user = c.Win32_UserAccount(Name=name)[0]
+        except IndexError:
+            raise CommandExecutionError("User '{0}' does not exist".format(name))
 
-    # Rename the user
-    result = user.Rename(new_name)[0]
+        # Rename the user
+        result = user.Rename(new_name)[0]
 
-    # Check the result (0 means success)
-    if not result == 0:
-        # Define Error Dict
-        error_dict = {
-            0: "Success",
-            1: "Instance not found",
-            2: "Instance required",
-            3: "Invalid parameter",
-            4: "User not found",
-            5: "Domain not found",
-            6: "Operation is allowed only on the primary domain controller of the domain",
-            7: "Operation is not allowed on the last administrative account",
-            8: "Operation is not allowed on specified special groups: user, admin, local, or guest",
-            9: "Other API error",
-            10: "Internal error",
-        }
-        raise CommandExecutionError(
-            "There was an error renaming '{0}' to '{1}'. Error: {2}".format(
-                name, new_name, error_dict[result]
+        # Check the result (0 means success)
+        if not result == 0:
+            # Define Error Dict
+            error_dict = {
+                0: "Success",
+                1: "Instance not found",
+                2: "Instance required",
+                3: "Invalid parameter",
+                4: "User not found",
+                5: "Domain not found",
+                6: "Operation is allowed only on the primary domain controller of the domain",
+                7: "Operation is not allowed on the last administrative account",
+                8: "Operation is not allowed on specified special groups: user, admin, local, or guest",
+                9: "Other API error",
+                10: "Internal error",
+            }
+            raise CommandExecutionError(
+                "There was an error renaming '{0}' to '{1}'. Error: {2}".format(
+                    name, new_name, error_dict[result]
+                )
             )
-        )
 
     return info(new_name).get("name") == new_name
 
