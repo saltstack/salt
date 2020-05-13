@@ -9,8 +9,6 @@ will always be executed first, so that any grains loaded here in the core
 module can be overwritten just by returning dict keys with the same value
 as those returned here
 """
-
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
@@ -23,10 +21,8 @@ import socket
 import sys
 import time
 import uuid
-import warnings
 from errno import EACCES, EPERM
 
-# Import salt libs
 import salt.exceptions
 import salt.log
 
@@ -42,69 +38,23 @@ import salt.utils.path
 import salt.utils.pkg.rpm
 import salt.utils.platform
 import salt.utils.stringutils
+from distro import linux_distribution
 from salt.ext import six
 from salt.ext.six.moves import range
 
-# pylint: disable=import-error
 try:
-    import dateutil.tz
+    import dateutil.tz  # pylint: disable=import-error
 
     _DATEUTIL_TZ = True
 except ImportError:
     _DATEUTIL_TZ = False
 
-__proxyenabled__ = ["*"]
-__FQDN__ = None
-
-# linux_distribution deprecated in py3.7
-try:
-    from platform import linux_distribution as _deprecated_linux_distribution
-
-    # Extend the default list of supported distros. This will be used for the
-    # /etc/DISTRO-release checking that is part of linux_distribution()
-    from platform import _supported_dists
-
-    _supported_dists += (
-        "arch",
-        "mageia",
-        "meego",
-        "vmware",
-        "bluewhite64",
-        "slamd64",
-        "ovs",
-        "system",
-        "mint",
-        "oracle",
-        "void",
-    )
-
-    def linux_distribution(**kwargs):
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            return _deprecated_linux_distribution(
-                supported_dists=_supported_dists, **kwargs
-            )
-
-
-except ImportError:
-    from distro import linux_distribution
-
-
-if salt.utils.platform.is_windows():
-    import salt.utils.win_osinfo
-
-
-__salt__ = {
-    "cmd.run": salt.modules.cmdmod._run_quiet,
-    "cmd.retcode": salt.modules.cmdmod._retcode_quiet,
-    "cmd.run_all": salt.modules.cmdmod._run_all_quiet,
-    "smbios.records": salt.modules.smbios.records,
-    "smbios.get": salt.modules.smbios.get,
-}
 log = logging.getLogger(__name__)
 
 HAS_WMI = False
 if salt.utils.platform.is_windows():
+    import salt.utils.win_osinfo
+
     # attempt to import the python wmi module
     # the Windows minion uses WMI for some of its grains
     try:
@@ -119,9 +69,19 @@ if salt.utils.platform.is_windows():
             "Unable to import Python wmi module, some core grains " "will be missing"
         )
 
-HAS_UNAME = True
-if not hasattr(os, "uname"):
-    HAS_UNAME = False
+
+__proxyenabled__ = ["*"]
+__FQDN__ = None
+
+__salt__ = {
+    "cmd.run": salt.modules.cmdmod._run_quiet,
+    "cmd.retcode": salt.modules.cmdmod._retcode_quiet,
+    "cmd.run_all": salt.modules.cmdmod._run_all_quiet,
+    "smbios.records": salt.modules.smbios.records,
+    "smbios.get": salt.modules.smbios.get,
+}
+
+HAS_UNAME = hasattr(os, "uname")
 
 _INTERFACES = {}
 
