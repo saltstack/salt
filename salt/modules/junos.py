@@ -200,11 +200,6 @@ def rpc(cmd=None, dest=None, **kwargs):
     ret = {}
     ret["out"] = True
 
-    if cmd is None:
-        ret["message"] = "Please provide the rpc to execute."
-        ret["out"] = False
-        return ret
-
     op = dict()
     if "__pub_arg" in kwargs:
         if kwargs["__pub_arg"]:
@@ -216,6 +211,14 @@ def rpc(cmd=None, dest=None, **kwargs):
                 op[key] = value
     else:
         op.update(kwargs)
+
+    if cmd is None:
+        cmd = kwargs.pop('rpc')
+    if cmd is None:
+        ret["message"] = "Please provide the rpc to execute."
+        ret["out"] = False
+        return ret
+
     format_ = op.pop("format", "xml")
     # when called from state, dest becomes part of op via __pub_arg
     dest = dest or op.pop("dest", None)
@@ -1393,6 +1396,8 @@ def load(path=None, **kwargs):
             template_format = "set"
         elif path.endswith("xml"):
             template_format = "xml"
+        elif path.endswith("json"):
+            template_format = "json"
         else:
             template_format = "text"
 
