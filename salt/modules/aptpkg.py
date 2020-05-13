@@ -833,6 +833,7 @@ def install(
         for cmd in cmds:
             out = _call_apt(cmd)
             if out["retcode"] != 0 and out["stderr"]:
+                errors.append(out["stdout"])
                 errors.append(out["stderr"])
 
         __context__.pop("pkg.list_pkgs", None)
