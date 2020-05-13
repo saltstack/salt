@@ -431,7 +431,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         # Let's install a fixed version pip over whatever pip was
         # previously installed
         ret = self.run_function(
-            "pip.install", ["pip==8.0"], upgrade=True, bin_env=venv_dir
+            "pip.install", ["pip==9.0.1"], upgrade=True, bin_env=venv_dir
         )
 
         if not isinstance(ret, dict):
@@ -444,14 +444,14 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["retcode"], 0)
         self.assertIn("Successfully installed pip", ret["stdout"])
 
-        # Let's make sure we have pip 8.0 installed
+        # Let's make sure we have pip 9.0.1 installed
         self.assertEqual(
-            self.run_function("pip.list", ["pip"], bin_env=venv_dir), {"pip": "8.0.0"}
+            self.run_function("pip.list", ["pip"], bin_env=venv_dir), {"pip": "9.0.1"}
         )
 
         # Now the actual pip upgrade pip test
         ret = self.run_state(
-            "pip.installed", name="pip==8.0.1", upgrade=True, bin_env=venv_dir
+            "pip.installed", name="pip==20.0.1", upgrade=True, bin_env=venv_dir
         )
 
         if not isinstance(ret, dict):
@@ -462,7 +462,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             )
 
         self.assertSaltTrueReturn(ret)
-        self.assertSaltStateChangesEqual(ret, {"pip==8.0.1": "Installed"})
+        self.assertSaltStateChangesEqual(ret, {"pip==20.0.1": "Installed"})
 
     @slowTest
     def test_pip_installed_specific_env(self):
