@@ -12,6 +12,7 @@ from __future__ import absolute_import, unicode_literals
 import logging
 
 import pytest
+from tests.support.pytest.fixtures import *  # pylint: disable=unused-wildcard-import
 
 log = logging.getLogger(__name__)
 
@@ -57,7 +58,7 @@ def salt_sub_minion(request, salt_factories, salt_master):
 
 
 @pytest.fixture(scope="package", autouse=True)
-def bridge_pytest_and_runtests(
+def bridge_pytest_and_runtests_integration(
     bridge_pytest_and_runtests,
     salt_factories,
     # salt_syndic_master,
