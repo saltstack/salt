@@ -884,7 +884,7 @@ def _join_domain(
 
     with salt.utils.winapi.Com():
         conn = wmi.WMI()
-    comp = conn.Win32_ComputerSystem()[0]
+        comp = conn.Win32_ComputerSystem()[0]
 
     # Return the results of the command as an error
     # JoinDomainOrWorkgroup returns a strangely formatted value that looks like
@@ -982,7 +982,7 @@ def unjoin_domain(
 
     with salt.utils.winapi.Com():
         conn = wmi.WMI()
-    comp = conn.Win32_ComputerSystem()[0]
+        comp = conn.Win32_ComputerSystem()[0]
     err = comp.UnjoinDomainOrWorkgroup(
         Password=password, UserName=username, FUnjoinOptions=unjoin_options
     )

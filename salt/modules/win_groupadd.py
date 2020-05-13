@@ -52,7 +52,7 @@ def _get_computer_object():
     """
     with salt.utils.winapi.Com():
         nt = win32com.client.Dispatch("AdsNameSpaces")
-    return nt.GetObject("", "WinNT://.,computer")
+        return nt.GetObject("", "WinNT://.,computer")
 
 
 def _get_group_object(name):
@@ -68,7 +68,7 @@ def _get_group_object(name):
     """
     with salt.utils.winapi.Com():
         nt = win32com.client.Dispatch("AdsNameSpaces")
-    return nt.GetObject("", "WinNT://./" + name + ",group")
+        return nt.GetObject("", "WinNT://./" + name + ",group")
 
 
 def _get_all_groups():
@@ -81,7 +81,7 @@ def _get_all_groups():
     """
     with salt.utils.winapi.Com():
         nt = win32com.client.Dispatch("AdsNameSpaces")
-    results = nt.GetObject("", "WinNT://.")
+        results = nt.GetObject("", "WinNT://.")
     results.Filter = ["group"]
     return results
 
