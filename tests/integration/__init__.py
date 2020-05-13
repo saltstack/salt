@@ -1238,12 +1238,56 @@ class TestDaemon(object):
         cls.syndic_opts = syndic_opts
         cls.syndic_master_opts = syndic_master_opts
         cls.proxy_opts = proxy_opts
+        cls.chattr_config_files(immutable=True)
         # <---- Verify Environment -----------------------------------------------------------------------------------
+
+    @staticmethod
+    def chattr_config_files(immutable=True):
+        if sys.platform.startswith("win"):
+            return
+        chattr = salt.utils.path.which("chattr")
+        if chattr is None:
+            log.warning("No chattr binary found")
+            return
+        config_files = []
+        for entry in (
+            "master",
+            "minion",
+            "sub_minion",
+            "syndic",
+            "syndic_master",
+            "proxy",
+        ):
+            config_files.append(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, entry))
+        for config_dir in (
+            RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR,
+            RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR,
+        ):
+            for entry in ("master", "minion"):
+                config_files.append(os.path.join(config_dir, entry))
+        config_files.append(
+            os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, "master")
+        )
+        cmd_base = [chattr]
+        if immutable:
+            cmd_base.append("+i")
+        else:
+            cmd_base.append("-i")
+        if RUNTIME_VARS.RUNNING_TESTS_USER != "root":
+            cmd_base.insert(0, "sudo")
+        for config_file in config_files:
+            cmd = cmd_base + [config_file]
+            log.info("Running command: %s", cmd)
+            try:
+                subprocess.run(cmd, check=True)
+            except subprocess.CalledProcessError as exc:
+                log.info("Failed to run %s: %s", cmd, exc)
 
     def __exit__(self, type, value, traceback):
         """
         Kill the minion and master processes
         """
+        self.chattr_config_files(immutable=False)
         try:
             if hasattr(self.sub_minion_process, "terminate"):
                 self.sub_minion_process.terminate()
