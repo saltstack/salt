@@ -3145,13 +3145,15 @@ class BaseHighState(object):
         if not isinstance(mopts, dict):
             # An error happened on the master
             opts['renderer'] = 'jinja|yaml'
-            opts['failhard'] = False
+            if 'failhard' not in opts:
+                opts['failhard'] = False
             opts['state_top'] = salt.utils.url.create('top.sls')
             opts['nodegroups'] = {}
             opts['file_roots'] = {'base': [syspaths.BASE_FILE_ROOTS_DIR]}
         else:
             opts['renderer'] = mopts['renderer']
-            opts['failhard'] = mopts.get('failhard', False)
+            if 'failhard' not in opts:
+                opts['failhard'] = mopts.get('failhard', False)
             if mopts['state_top'].startswith('salt://'):
                 opts['state_top'] = mopts['state_top']
             elif mopts['state_top'].startswith('/'):
