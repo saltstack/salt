@@ -739,3 +739,39 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
             ret = grainsmod.setvals({key: value})
             self.assertIn(key, ret)
             self.assertEqual(ret[key], value)
+
+    def test_delval_single(self):
+        with patch.dict(
+            grainsmod.__grains__, {"a": "aval", "b": {"nested": "val"}, "c": 8}
+        ):
+            res = grainsmod.delval("a")
+            self.assertTrue(res["result"])
+            self.assertEqual(res["changes"], {"a": None})
+            self.assertEqual(grainsmod.__grains__, {"a": None, "b": {"nested": "val"}, "c": 8})
+
+    def test_delval_nested(self):
+        with patch.dict(
+            grainsmod.__grains__, {"a": "aval", "b": {"nested": "val"}, "c": 8}
+        ):
+            res = grainsmod.delval("b:nested")
+            self.assertTrue(res["result"])
+            self.assertEqual(res["changes"], {"b": {"nested": None}})
+            self.assertEqual(grainsmod.__grains__, {"a": "aval", "b": {"nested": None}, "c": 8})
+            
+    def test_delkey_single_key(self):
+        with patch.dict(
+            grainsmod.__grains__, {"a": "aval", "b": {"nested": "val"}, "c": 8}
+        ):
+            res = grainsmod.delkey("a")
+            self.assertTrue(res["result"])
+            self.assertEqual(res["changes"], {"a": None})
+            self.assertEqual(grainsmod.__grains__, {"b": {"nested": "val"}, "c": 8})
+
+    def test_delkey_nested_key(self):
+        with patch.dict(
+            grainsmod.__grains__, {"a": "aval", "b": {"nested": "val"}, "c": 8}
+        ):
+            res = grainsmod.delkey("b:nested")
+            self.assertTrue(res["result"])
+            self.assertEqual(res["changes"], {"b": {}})
+            self.assertEqual(grainsmod.__grains__, {"a": "aval", "b": {}, "c": 8})
