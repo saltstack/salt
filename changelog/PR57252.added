@@ -1,0 +1,25 @@
+Print stdout on apt install failure
+
+When apt install fails it is not clear from the stderr output what went wrong, ex:
+
+ errors:
+     - Running scope as unit: run-r5851ebada9ac4ae0a1ef7288de7c4b69.scope
+       E: Unable to correct problems, you have held broken packages.
+
+After adding the stdout it shows why it failed:
+
+  errors:
+      - Reading package lists...
+        Building dependency tree...
+        Reading state information...
+        Some packages could not be installed. This may mean that you have
+        requested an impossible situation or if you are using the unstable
+        distribution that some required packages have not yet been created
+        or been moved out of Incoming.
+        The following information may help to resolve the situation:
+
+        The following packages have unmet dependencies:
+         bla:i386 : Depends: libsomethingorrather:i386 (>= 1.2.13) but it is not installable
+                    Depends: anotherDependency:i386 (>= 1.2.6) but it is not installable
+      - Running scope as unit: run-r0097166ab0f9412c879647df0955982f.scope
+        E: Unable to correct problems, you have held broken packages.
