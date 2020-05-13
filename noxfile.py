@@ -42,6 +42,7 @@ CI_RUN = (
     or os.environ.get("DRONE") is not None
 )
 PIP_INSTALL_SILENT = CI_RUN is False
+SKIP_REQUIREMENTS_INSTALL = "SKIP_REQUIREMENTS_INSTALL" in os.environ
 
 # Global Path Definitions
 REPO_ROOT = os.path.abspath(os.path.dirname(__file__))
@@ -291,6 +292,11 @@ def _get_distro_pip_constraints(session, transport):
 
 
 def _install_requirements(session, transport, *extra_requirements):
+    if SKIP_REQUIREMENTS_INSTALL:
+        session.log(
+            "Skipping Python Requirements because SKIP_REQUIREMENTS_INSTALL was found in the environ"
+        )
+        return
     # Install requirements
     distro_constraints = _get_distro_pip_constraints(session, transport)
 
@@ -354,7 +360,10 @@ def _install_requirements(session, transport, *extra_requirements):
 
 
 def _run_with_coverage(session, *test_cmd):
-    session.install("--progress-bar=off", "coverage==5.0.1", silent=PIP_INSTALL_SILENT)
+    if SKIP_REQUIREMENTS_INSTALL is False:
+        session.install(
+            "--progress-bar=off", "coverage==5.0.1", silent=PIP_INSTALL_SILENT
+        )
     session.run("coverage", "erase")
     python_path_env_var = os.environ.get("PYTHONPATH") or None
     if python_path_env_var is None:
