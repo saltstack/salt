@@ -83,10 +83,22 @@ else:
 known_methods = ["sha512", "sha256", "blowfish", "md5", "crypt"]
 
 
-def _fallback_gen_hash(crypt_salt=None, password=None, algorithm=None):
+def _gen_hash_passlib(crypt_salt=None, password=None, algorithm=None):
     """
     Generate a /etc/shadow-compatible hash for a non-local system
     """
+    if algorithm is None:
+        # use the most secure natively supported method
+        algorithm = known_methods[0]
+
+    if algorithm not in known_methods:
+        raise SaltInvocationError(
+            "Algorithm '{0}' is not in passlib supported algorithms: {1}. "
+            "Try to change algorithm or install passlib.".format(
+                algorithm, list(known_methods)
+            )
+        )
+
     # these are the passlib equivalents to the 'known_methods' defined in crypt
     schemes = ["sha512_crypt", "sha256_crypt", "bcrypt", "md5_crypt", "des_crypt"]
 
@@ -96,26 +108,21 @@ def _fallback_gen_hash(crypt_salt=None, password=None, algorithm=None):
     )
 
 
-def gen_hash(crypt_salt=None, password=None, algorithm=None, force=False):
+def _gen_hash_crypt(crypt_salt=None, password=None, algorithm=None):
     """
-    Generate /etc/shadow hash
+    Generate /etc/shadow hash using the native crypt module
     """
-    if password is None:
-        password = secure_password()
-
     if algorithm is None:
         # use the most secure natively supported method
-        algorithm = crypt.methods[0].name.lower() if HAS_CRYPT else known_methods[0]
+        algorithm = crypt.methods[0].name.lower()
 
     if algorithm not in methods:
-        if force and HAS_PASSLIB:
-            return _fallback_gen_hash(crypt_salt, password, algorithm)
-        else:
-            raise SaltInvocationError(
-                "Algorithm '{}' is not natively supported by this platform, use force=True with passlib installed to override.".format(
-                    algorithm
-                )
+        raise SaltInvocationError(
+            "Algorithm '{0}' is not in natively supported algorithms: {1}. "
+            "Try to change algorithm or install passlib.".format(
+                algorithm, list(methods)
             )
+        )
 
     if crypt_salt is None:
         crypt_salt = methods[algorithm]
@@ -128,3 +135,28 @@ def gen_hash(crypt_salt=None, password=None, algorithm=None, force=False):
             )
 
     return crypt.crypt(password, crypt_salt)
+
+
+def gen_hash(crypt_salt=None, password=None, algorithm=None):
+    """
+    Generate /etc/shadow hash
+    """
+    if password is None:
+        password = secure_password()
+
+    hash = None
+    if HAS_CRYPT:
+        try:
+            return _gen_hash_crypt(
+                crypt_salt=crypt_salt, password=password, algorithm=algorithm
+            )
+        except KeyError:
+            if not HAS_PASSLIB:
+                raise
+
+    if HAS_PASSLIB:
+        return _gen_hash_passlib(
+            crypt_salt=crypt_salt, password=password, algorithm=algorithm
+        )
+
+    raise SaltInvocationError("Not crypt nor passlib hasing library is installed.")

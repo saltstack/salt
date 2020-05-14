@@ -78,8 +78,14 @@ class PycryptoTestCase(TestCase):
                 crypt_salt="long", password=self.passwd, algorithm="crypt"
             )
 
+        # This will also try passlib if installed
         with self.assertRaises(SaltInvocationError):
             salt.utils.pycrypto.gen_hash(algorithm="garbage")
+
+        # This will not trying passlib
+        with patch("salt.utils.pycrypto.HAS_CRYPT", False):
+            with self.assertRaises(SaltInvocationError):
+                salt.utils.pycrypto.gen_hash(algorithm="garbage")
 
         # Assert it works without arguments passed
         self.assertIsNotNone(salt.utils.pycrypto.gen_hash())
@@ -107,7 +113,6 @@ class PycryptoTestCase(TestCase):
                 crypt_salt=expected.get("salt") or expected["salt_passlib"],
                 password=self.passwd,
                 algorithm=algorithm,
-                force=True,
             )
             self.assertEqual(ret, expected["hashed"])
 
@@ -115,12 +120,11 @@ class PycryptoTestCase(TestCase):
                 crypt_salt=expected["badsalt"],
                 password=self.passwd,
                 algorithm=algorithm,
-                force=True,
             )
             self.assertNotEqual(ret, expected["hashed"])
 
             ret = salt.utils.pycrypto.gen_hash(
-                crypt_salt=None, password=self.passwd, algorithm=algorithm, force=True
+                crypt_salt=None, password=self.passwd, algorithm=algorithm
             )
             self.assertNotEqual(ret, expected["hashed"])
 
@@ -129,20 +133,19 @@ class PycryptoTestCase(TestCase):
                     crypt_salt=self.invalid_salt,
                     password=self.passwd,
                     algorithm=algorithm,
-                    force=True,
                 )
 
         with self.assertRaises(SaltInvocationError):
             salt.utils.pycrypto.gen_hash(algorithm="garbage")
 
         # Assert it works without arguments passed
-        self.assertIsNotNone(salt.utils.pycrypto.gen_hash(force=True))
+        self.assertIsNotNone(salt.utils.pycrypto.gen_hash())
         # Assert it works without algorithm passed
         default_algorithm = salt.utils.pycrypto.known_methods[0]
         expected = self.expecteds[default_algorithm]
         if default_algorithm in self.expecteds:
             ret = salt.utils.pycrypto.gen_hash(
-                crypt_salt=expected["salt_passlib"], password=self.passwd, force=True,
+                crypt_salt=expected["salt_passlib"], password=self.passwd
             )
             self.assertEqual(ret, expected["hashed"])
 
