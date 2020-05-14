@@ -72,7 +72,6 @@ class RunnerReturnsTest(ShellCase):
         # Do not supply the default arguments because we want to know if we are
         # missing some aspect of the schema.
         data.pop("_stamp")
-        data.pop("pid")
 
     def write_conf(self, data):
         """
