@@ -797,12 +797,13 @@ def install_config(path=None, **kwargs):
 
     overwrite : False
         Set to ``True`` if you want this file is to completely replace the
-        configuration file.
+        configuration file. Sets action to override
 
-    replace : False
-        Specify whether the configuration file uses ``replace:`` statements. If
-        ``True``, only those statements under the ``replace`` tag will be
-        changed.
+        .. note:: This option cannot be used if **format** is "set".
+
+    merge : False
+        If set to ``True`` will set the load-config action to merge.
+        the default load-config action is 'replace' for xml/json/text config
 
     format
         Determines the format of the contents
@@ -909,6 +910,8 @@ def install_config(path=None, **kwargs):
             template_format = "set"
         elif path.endswith("xml"):
             template_format = "xml"
+        elif path.endswith("json"):
+            template_format = "json"
         else:
             template_format = "text"
 
@@ -1302,18 +1305,13 @@ def load(path=None, **kwargs):
 
     overwrite : False
         Set to ``True`` if you want this file is to completely replace the
-        configuration file.
+        configuration file. Sets action to override
 
-    replace : False
-        Specify whether the configuration file uses ``replace:`` statements. If
-        ``True``, only those statements under the ``replace`` tag will be
-        changed.
+        .. note:: This option cannot be used if **format** is "set".
 
     merge : False
         If set to ``True`` will set the load-config action to merge.
-
-    format
-        Determines the format of the contents
+        the default load-config action is 'replace' for xml/json/text config
 
     update : False
         Compare a complete loaded configuration against the candidate
@@ -1323,6 +1321,9 @@ def load(path=None, **kwargs):
         the configuration is later committed, only system processes that are
         affected by the changed configuration elements parse the new
         configuration. This action is supported from PyEZ 2.1.
+
+    format
+        Determines the format of the contents
 
     template_vars
       Variables to be passed into the template processing engine in addition to
