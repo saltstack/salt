@@ -3,13 +3,16 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-from collections import OrderedDict
-
 # Import Salt Libs
 import salt.pillar.pepa as pepa
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
+
+try:
+    from salt.utils.odict import OrderedDict
+except ImportError:
+    from collections import OrderedDict
 
 
 class PepaPillarTestCase(TestCase):

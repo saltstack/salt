@@ -32,6 +32,7 @@ EXCLUDED_DIRS = [
     os.path.join("tests", "unit", "files"),
     os.path.join("tests", "integration", "cloud", "helpers"),
     os.path.join("tests", "kitchen", "tests"),
+    os.path.join("tests", "unit", "modules", "nxos"),
 ]
 INCLUDED_DIRS = [
     os.path.join("tests", "kitchen", "tests", "*", "tests", "*"),
@@ -173,8 +174,8 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.reactor.test_reactor",
             "integration.returners.test_noop_return",
             "integration.runners.test_runner_returns",
-            "integration.setup.test_bdist",
-            "integration.setup.test_egg",
+            "unit.setup.test_bdist",
+            "unit.setup.test_egg",
             "integration.shell.test_spm",
             "integration.shell.test_cp",
             "integration.shell.test_syndic",

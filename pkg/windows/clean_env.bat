@@ -16,12 +16,12 @@ if %errorLevel%==0 (
 )
 echo.
 
-:CheckPython2
-if exist "\Python27" goto RemovePython2
+:CheckPython27
+if exist "\Python27" goto RemovePython27
 
-goto CheckPython3
+goto CheckPython35
 
-:RemovePython2
+:RemovePython27
     rem Uninstall Python 2.7
     echo %0 :: Uninstalling Python 2 ...
     echo ---------------------------------------------------------------------
@@ -54,12 +54,12 @@ goto CheckPython3
         echo Failed, please remove manually
     )
 
-:CheckPython3
-if exist "\Python35" goto RemovePython3
+:CheckPython35
+if exist "\Python35" goto RemovePython35
 
-goto eof
+goto CheckPython37
 
-:RemovePython3
+:RemovePython35
     echo %0 :: Uninstalling Python 3 ...
     echo ---------------------------------------------------------------------
     :: 64 bit
@@ -86,6 +86,41 @@ goto eof
     echo %0 :: Removing the C:\Python35 Directory ...
     echo ---------------------------------------------------------------------
     rd /s /q "C:\Python35"
+    if %errorLevel%==0 (
+        echo Successful
+    ) else (
+        echo Failed, please remove manually
+    )
+
+    goto eof
+
+:CheckPython37
+if exist "\Python37" goto RemovePython37
+
+goto eof
+
+:RemovePython37
+    echo %0 :: Uninstalling Python 3.7 ...
+    echo ---------------------------------------------------------------------
+    :: 64 bit
+    if exist "%LOCALAPPDATA%\Package Cache\{8ae589dd-de2e-42cd-af56-102374115fee}" (
+        echo %0 :: - 3.7.4 64bit
+        "%LOCALAPPDATA%\Package Cache\{8ae589dd-de2e-42cd-af56-102374115fee}\python-3.7.4-amd64.exe" /uninstall /quiet
+    )
+
+    :: 32 bit
+    if exist "%LOCALAPPDATA%\Package Cache\{b66087e3-469e-4725-8b9b-f0981244afea}" (
+        echo %0 :: - 3.7.4 32bit
+        "%LOCALAPPDATA%\Package Cache\{b66087e3-469e-4725-8b9b-f0981244afea}\python-3.7.4" /uninstall /quiet
+    )
+    :: Python Launcher, seems to be the same for 32 and 64 bit
+    echo %0 :: - Python Launcher
+    msiexec.exe /x {D722DA3A-92F5-454A-BD5D-A48C94D82300} /quiet /qn
+
+    rem wipe the Python directory
+    echo %0 :: Removing the C:\Python37 Directory ...
+    echo ---------------------------------------------------------------------
+    rd /s /q "C:\Python37"
     if %errorLevel%==0 (
         echo Successful
     ) else (

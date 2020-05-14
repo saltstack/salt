@@ -15,10 +15,9 @@ from salt.ext import six
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import skip_if_binaries_missing
+from tests.support.helpers import skip_if_binaries_missing, slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 GITHUB_FINGERPRINT = "9d:38:5b:83:a9:17:52:92:56:1a:5e:c4:d4:81:8e:0a:ca:51:a2:64:f1:74:20:11:2e:f8:8a:c3:a1:39:49:8f"
 GITHUB_IP = "192.30.253.113"
@@ -39,7 +38,7 @@ class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
             os.remove(self.known_hosts)
         super(SSHKnownHostsStateTest, self).tearDown()
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_present(self):
         """
         ssh_known_hosts.present
@@ -111,7 +110,7 @@ class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
                 "Salt return '{0}' is in ('', None,".format(ret) + " {})"
             )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_present_fail(self):
         # save something wrong
         ret = self.run_state(
@@ -123,7 +122,7 @@ class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltFalseReturn(ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_absent(self):
         """
         ssh_known_hosts.absent

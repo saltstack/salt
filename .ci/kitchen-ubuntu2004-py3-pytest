@@ -2,8 +2,8 @@
 
 runTestSuite(
     concurrent_builds: 2,
-    distro_name: 'fedora',
-    distro_version: '30',
+    distro_name: 'ubuntu',
+    distro_version: '2004',
     env: env,
     golden_images_branch: 'master',
     jenkins_slave_label: 'kitchen-slave',
