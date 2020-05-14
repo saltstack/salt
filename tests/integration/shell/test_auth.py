@@ -130,7 +130,10 @@ class GroupAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
         )
         self.assertSaltTrueReturn(ret)
         stdout, stderr, retcode = self.run_call(
-            "user.chgroups {0} {1} True".format(self.user, self.group), local=True
+            "user.chgroups {0} {1} True".format(self.user, self.group),
+            local=True,
+            with_retcode=True,
+            catch_stderr=True,
         )
         if stderr:
             log.warning(stderr)
