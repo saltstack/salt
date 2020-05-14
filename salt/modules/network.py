@@ -18,6 +18,7 @@ from multiprocessing.pool import ThreadPool
 # Import salt libs
 import salt.utils.decorators.path
 import salt.utils.functools
+import salt.utils.network
 import salt.utils.validate.net
 from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError
