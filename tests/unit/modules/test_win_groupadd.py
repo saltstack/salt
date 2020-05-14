@@ -415,3 +415,40 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         """
         with patch.dict(win_groupadd.__context__, {"group.list_groups": True}):
             self.assertTrue(win_groupadd.list_groups())
+
+    def test__get_computer_object(self):
+        """
+        Test the _get_computer_object function. Should return a Com object, but
+        we're going to mock just an object
+        """
+        with patch("salt.utils.winapi.Com", MagicMock()), patch(
+            "win32com.client.Dispatch", autospec=True
+        ) as com_obj:
+            com_obj.GetObject = [object]
+            test = win_groupadd._get_computer_object()
+            assert isinstance(test, object)
+
+    def test__get_group_object(self):
+        """
+        Test the _get_group_object function. Should return a Com object, but
+        we're going to mock just an object
+        """
+        with patch("salt.utils.winapi.Com", MagicMock()), patch(
+            "win32com.client.Dispatch", autospec=True
+        ) as com_obj:
+            com_obj.GetObject = [object]
+            test = win_groupadd._get_group_object("steve")
+            assert isinstance(test, object)
+
+    def test__get_all_groups(self):
+        """
+        Test the _get_all_groups function. It doesn't actually return a list.
+        It returns a Com Object that is an iterator, so we're just going to mock
+        an object
+        """
+        with patch("salt.utils.winapi.Com", MagicMock()), patch(
+            "win32com.client.Dispatch", autospec=True
+        ) as com_obj:
+            com_obj.GetObject = [object]
+            test = win_groupadd._get_all_groups()
+            assert isinstance(test, object)
