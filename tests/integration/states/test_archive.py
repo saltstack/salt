@@ -353,3 +353,31 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
 
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment(expected_comment, ret)
+
+    @skipIf(True, "SLOWTEST skip")
+    def test_local_archive_extracted_trim_output(self):
+        """
+        test archive.extracted with local file and trim_output set to 1
+        """
+        expected_changes = {
+            "directories_created": ["/tmp/archive/"],
+            "extracted_files": ["custom"],
+        }
+        ret = self.run_state(
+            "archive.extracted",
+            name=ARCHIVE_DIR,
+            source=self.archive_local_tar_source,
+            archive_format="tar",
+            skip_files_list_verify=True,
+            source_hash_update=True,
+            source_hash=ARCHIVE_TAR_SHA_HASH,
+            trim_output=1,
+        )
+
+        self.assertSaltTrueReturn(ret)
+        self._check_extracted(self.untar_file)
+        state_ret = ret["archive_|-/tmp/archive_|-/tmp/archive_|-extracted"]
+        self.assertTrue(
+            state_ret["comment"].endswith("Output was trimmed to 1 number of lines")
+        )
+        self.assertEqual(state_ret["changes"], expected_changes)
