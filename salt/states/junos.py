@@ -226,7 +226,7 @@ def diff(name, d_id, **kwargs):
 
 
 @resultdecorator
-def cli(name, **kwargs):
+def cli(name, command=None, **kwargs):
     """
     Executes the CLI commands and reuturns the text output.
 
@@ -236,10 +236,17 @@ def cli(name, **kwargs):
               junos.cli:
                 - format: xml
 
+            get software version of device:
+              junos.cli:
+                - command: show version
+                - format: text
+                - dest: /home/user/show_version.log
+
     Parameters:
       Required
         * command:
           The command that need to be executed on Junos CLI. (default = None)
+          If not provided name to be used as command.
       Optional
         * kwargs: Keyworded arguments which can be provided like-
             * format:
@@ -253,7 +260,14 @@ def cli(name, **kwargs):
                (default = None)
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
-    ret["changes"] = __salt__["junos.cli"](name, **kwargs)
+    if command is None:
+        # for backward, will use name as command if command not provided explicitly
+        # for example
+        # show version:
+        #     junos.cli:
+        #         - /home/user/show_version.log
+        command = name
+    ret["changes"] = __salt__["junos.cli"](command, **kwargs)
     return ret
 
 
