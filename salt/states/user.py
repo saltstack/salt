@@ -685,21 +685,17 @@ def present(
             __salt__["shadow.set_expire"](name, expire)
 
         if "win_homedrive" in changes:
-            del changes["win_homedrive"]
             __salt__["user.update"](name=name, homedrive=changes.pop("win_homedrive"))
 
         if "win_profile" in changes:
-            del changes["win_profile"]
             __salt__["user.update"](name=name, profile=changes.pop("win_profile"))
 
         if "win_logonscript" in changes:
-            del changes["win_logonscript"]
             __salt__["user.update"](
                 name=name, logonscript=changes.pop("win_logonscript")
             )
 
         if "win_description" in changes:
-            del changes["win_description"]
             __salt__["user.update"](
                 name=name, description=changes.pop("win_description")
             )
