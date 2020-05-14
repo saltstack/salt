@@ -1620,7 +1620,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret[
                 "message"
-            ] = "Write diff is not supported with dynamic configuration mode"
+            ] = "Write diff is not supported with dynamic/ephemeral configuration mode"
             ret["out"] = False
             self.assertEqual(
                 junos.install_config(
@@ -1654,7 +1654,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret = dict()
             ret[
                 "message"
-            ] = "Invalid mode. Modes supported: private, dynamic, batch, exclusive"
+            ] = "install_config failed due to: unsupported action: abcdef"
             ret["out"] = False
             self.assertEqual(
                 junos.install_config("actual/path/config", mode="abcdef"), ret
