@@ -33,7 +33,7 @@ def resultdecorator(function):
 
 
 @resultdecorator
-def rpc(name, dest=None, format="xml", args=None, **kwargs):
+def rpc(name, rpc=None, dest=None, format="xml", args=None, **kwargs):
     """
     Executes the given rpc. The returned data can be stored in a file
     by specifying the destination path with dest as an argument
@@ -42,14 +42,22 @@ def rpc(name, dest=None, format="xml", args=None, **kwargs):
 
         get-interface-information:
             junos.rpc:
-              - dest: /home/user/rpc.log
-              - interface_name: lo0
+                - dest: /home/user/rpc.log
+                - interface_name: lo0
 
+        fetch interface information with terse:
+            junos.rpc:
+                - rpc: get-interface-information
+                - terse: True
 
     Parameters:
       Required
-        * cmd:
-          The rpc to be executed. (default = None)
+        * rpc:
+          The rpc to be executed (default = None) If not provided name to be
+          used as rpc.
+
+          .. versionadded:: Sodium
+
       Optional
         * dest:
           Destination file where the rpc output is stored. (default = None)
@@ -71,12 +79,19 @@ def rpc(name, dest=None, format="xml", args=None, **kwargs):
               Name of the interface whose information you want.
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+    if rpc is None:
+        # for backward, will use name as rpc if rpc not provided explicitly
+        # for example
+        # get-interface-information:
+        #     junos.rpc:
+        #         - dest: /home/user/rpc.log
+        rpc = name
     if args is not None:
         ret["changes"] = __salt__["junos.rpc"](
-            name, dest=dest, format=format, args=args, **kwargs
+            rpc, dest=dest, format=format, args=args, **kwargs
         )
     else:
-        ret["changes"] = __salt__["junos.rpc"](name, dest=dest, format=format, **kwargs)
+        ret["changes"] = __salt__["junos.rpc"](rpc, dest=dest, format=format, **kwargs)
     return ret
 
 
@@ -214,7 +229,7 @@ def diff(name, d_id, **kwargs):
 
 
 @resultdecorator
-def cli(name, **kwargs):
+def cli(name, command=None, **kwargs):
     """
     Executes the CLI commands and reuturns the text output.
 
@@ -224,10 +239,18 @@ def cli(name, **kwargs):
               junos.cli:
                 - format: xml
 
+            get software version of device:
+              junos.cli:
+                - command: show version
+                - format: text
+                - dest: /home/user/show_version.log
+
     Parameters:
       Required
         * command:
           The command that need to be executed on Junos CLI. (default = None)
+          If not provided name to be used as command.
+
       Optional
         * kwargs: Keyworded arguments which can be provided like-
             * format:
@@ -241,7 +264,14 @@ def cli(name, **kwargs):
                (default = None)
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
-    ret["changes"] = __salt__["junos.cli"](name, **kwargs)
+    if command is None:
+        # for backward, will use name as command if command not provided explicitly
+        # for example
+        # show version:
+        #     junos.cli:
+        #         - /home/user/show_version.log
+        command = name
+    ret["changes"] = __salt__["junos.cli"](command, **kwargs)
     return ret
 
 
@@ -272,7 +302,7 @@ def shutdown(name, **kwargs):
 
 
 @resultdecorator
-def install_config(name, **kwargs):
+def install_config(name, path, **kwargs):
     """
     Loads and commits the configuration provided.
 
@@ -280,7 +310,7 @@ def install_config(name, **kwargs):
 
             Install the mentioned config:
               junos.install_config:
-                - path: salt//configs/interface.set
+                - path: salt://configs/interface.set
                 - timeout: 100
                 - diffs_file: 'var/log/diff'
 
@@ -289,19 +319,21 @@ def install_config(name, **kwargs):
 
             Install the mentioned config:
               junos.install_config:
-                - template_path: salt//configs/interface.set
+                - path: salt://configs/interface.set
                 - timeout: 100
                 - template_vars:
                     interface_name: lo0
                     description: Creating interface via SaltStack.
 
 
-    name
+    path
         Path where the configuration/template file is present. If the file has
         a ``*.conf`` extension, the content is treated as text format. If the
         file has a ``*.xml`` extension, the content is treated as XML format. If
         the file has a ``*.set`` extension, the content is treated as Junos OS
         ``set`` commands
+
+        .. versionadded:: Sodium
 
     template_vars
       The dictionary of data for the jinja variables present in the jinja
@@ -312,12 +344,14 @@ def install_config(name, **kwargs):
       execute.
 
     overwrite : False
-      Set to ``True`` if you want this file is to completely replace the
-       configuration file.
+        Set to ``True`` if you want this file is to completely replace the
+        configuration file. Sets action to override
 
-    replace : False
-      Specify whether the configuration file uses "replace:" statements.  Only
-      those statements under the 'replace' tag will be changed.
+        .. note:: This option cannot be used if **format** is "set".
+
+    merge : False
+        If set to ``True`` will set the load-config action to merge.
+        the default load-config action is 'replace' for xml/json/text config
 
     comment
       Provide a comment to the commit. (default = None)
@@ -337,7 +371,7 @@ def install_config(name, **kwargs):
 
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
-    ret["changes"] = __salt__["junos.install_config"](name, **kwargs)
+    ret["changes"] = __salt__["junos.install_config"](path, **kwargs)
     return ret
 
 
@@ -455,7 +489,7 @@ def unlock(name):
 
 
 @resultdecorator
-def load(name, **kwargs):
+def load(name, path, **kwargs):
     """
     Loads the configuration provided onto the junos device.
 
@@ -463,13 +497,13 @@ def load(name, **kwargs):
 
         Install the mentioned config:
           junos.load:
-            - path: salt//configs/interface.set
+            - path: salt://configs/interface.set
 
     .. code-block:: yaml
 
         Install the mentioned config:
           junos.load:
-            - template_path: salt//configs/interface.set
+            - path: salt://configs/interface.set
             - template_vars:
                 interface_name: lo0
                 description: Creating interface via SaltStack.
@@ -481,23 +515,24 @@ def load(name, **kwargs):
         set interfaces {{ interface_name }} unit 0
 
 
-    name
+    path:
         Path where the configuration/template file is present. If the file has
         a ``*.conf`` extension, the content is treated as text format. If the
         file has a ``*.xml`` extension, the content is treated as XML format. If
         the file has a ``*.set`` extension, the content is treated as Junos OS
         ``set`` commands.
 
+        .. versionadded:: Sodium
+
     overwrite : False
         Set to ``True`` if you want this file is to completely replace the
-        configuration file.
+        configuration file. Sets action to override
 
-    replace : False
-        Specify whether the configuration file uses "replace:" statements.
-        Only those statements under the 'replace' tag will be changed.
+        .. note:: This option cannot be used if **format** is "set".
 
-    format:
-      Determines the format of the contents.
+    merge : False
+        If set to ``True`` will set the load-config action to merge.
+        the default load-config action is 'replace' for xml/json/text config
 
     update : False
         Compare a complete loaded configuration against the candidate
@@ -508,6 +543,9 @@ def load(name, **kwargs):
         affected by the changed configuration elements parse the new
         configuration. This action is supported from PyEZ 2.1 (default = False)
 
+    format
+      Determines the format of the contents.
+
     template_vars
       Variables to be passed into the template processing engine in addition
       to those present in __pillar__, __opts__, __grains__, etc.
@@ -516,7 +554,7 @@ def load(name, **kwargs):
 
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
-    ret["changes"] = __salt__["junos.load"](name, **kwargs)
+    ret["changes"] = __salt__["junos.load"](path, **kwargs)
     return ret
 
 
@@ -549,7 +587,14 @@ def get_table(name, table, table_file, **kwargs):
         get route details:
           junos.get_table:
             - table: RouteTable
-            - file: routes.yml
+            - table_file: routes.yml
+
+        get interface details:
+          junos.get_table:
+            - table: EthPortTable
+            - table_file: ethport.yml
+            - table_args:
+                interface_name: ge-0/0/0
 
     name (required)
         task definition

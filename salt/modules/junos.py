@@ -17,6 +17,7 @@ Refer to :mod:`junos <salt.proxy.junos>` for information on connecting to junos 
 # Import Python libraries
 from __future__ import absolute_import, print_function, unicode_literals
 
+import copy
 import glob
 import json
 import logging
@@ -51,6 +52,7 @@ try:
     import jnpr.junos.cfg
     import jxmlease
     from jnpr.junos.factory.optable import OpTable
+    from jnpr.junos.factory.cfgtable import CfgTable
     import jnpr.junos.op as tables_dir
     from jnpr.junos.factory.factory_loader import FactoryLoader
     import yamlordereddictloader
@@ -200,11 +202,6 @@ def rpc(cmd=None, dest=None, **kwargs):
     ret = {}
     ret["out"] = True
 
-    if cmd is None:
-        ret["message"] = "Please provide the rpc to execute."
-        ret["out"] = False
-        return ret
-
     op = dict()
     if "__pub_arg" in kwargs:
         if kwargs["__pub_arg"]:
@@ -216,6 +213,14 @@ def rpc(cmd=None, dest=None, **kwargs):
                 op[key] = value
     else:
         op.update(kwargs)
+
+    if cmd is None:
+        cmd = kwargs.pop("rpc", None)
+    if cmd is None:
+        ret["message"] = "Please provide the rpc to execute."
+        ret["out"] = False
+        return ret
+
     format_ = op.pop("format", "xml")
     # when called from state, dest becomes part of op via __pub_arg
     dest = dest or op.pop("dest", None)
@@ -250,13 +255,10 @@ def rpc(cmd=None, dest=None, **kwargs):
             return ret
 
     if format_ == "text":
-        # Earlier it was ret['message']
         ret["rpc_reply"] = reply.text
     elif format_ == "json":
-        # Earlier it was ret['message']
         ret["rpc_reply"] = reply
     else:
-        # Earlier it was ret['message']
         ret["rpc_reply"] = jxmlease.parse(etree.tostring(reply))
 
     if dest:
@@ -786,7 +788,7 @@ def install_config(path=None, **kwargs):
 
     mode : exclusive
         The mode in which the configuration is locked. Can be one of
-        ``private``, ``dynamic``, ``batch``, ``exclusive``.
+        ``private``, ``dynamic``, ``batch``, ``exclusive``, ``ephemeral``
 
     dev_timeout : 30
         Set NETCONF RPC timeout. Can be used for commands which take a while to
@@ -794,12 +796,13 @@ def install_config(path=None, **kwargs):
 
     overwrite : False
         Set to ``True`` if you want this file is to completely replace the
-        configuration file.
+        configuration file. Sets action to override
 
-    replace : False
-        Specify whether the configuration file uses ``replace:`` statements. If
-        ``True``, only those statements under the ``replace`` tag will be
-        changed.
+        .. note:: This option cannot be used if **format** is "set".
+
+    merge : False
+        If set to ``True`` will set the load-config action to merge.
+        the default load-config action is 'replace' for xml/json/text config
 
     format
         Determines the format of the contents
@@ -906,6 +909,8 @@ def install_config(path=None, **kwargs):
             template_format = "set"
         elif path.endswith("xml"):
             template_format = "xml"
+        elif path.endswith("json"):
+            template_format = "json"
         else:
             template_format = "text"
 
@@ -921,13 +926,17 @@ def install_config(path=None, **kwargs):
         del op["overwrite"]
 
     db_mode = op.pop("mode", "exclusive")
-    if write_diff and db_mode == "dynamic":
-        ret["message"] = "Write diff is not supported with dynamic configuration mode"
+    if write_diff and db_mode == ["dynamic", "ephemeral"]:
+        ret["message"] = (
+            "Write diff is not supported with dynamic/ephemeral " "configuration mode"
+        )
         ret["out"] = False
         return ret
 
     try:
-        with Config(conn, mode=db_mode) as cu:
+        with Config(
+            conn, mode=db_mode, ephemeral_instance=op.pop("ephemeral_instance", None)
+        ) as cu:
             try:
                 cu.load(**op)
             except Exception as exception:  # pylint: disable=broad-except
@@ -940,7 +949,9 @@ def install_config(path=None, **kwargs):
             finally:
                 salt.utils.files.safe_rm(template_cached_path)
 
-            if db_mode != "dynamic":
+            if db_mode in ["dynamic", "ephemeral"]:
+                log.debug("diff is not supported for dynamic and ephemeral")
+            else:
                 config_diff = cu.diff()
                 if config_diff is None:
                     ret["message"] = "Configuration already applied!"
@@ -955,7 +966,9 @@ def install_config(path=None, **kwargs):
 
             # Assume commit_check succeeds and initialize variable check
             check = True
-            if db_mode != "dynamic":
+            if db_mode in ["dynamic", "ephemeral"]:
+                log.debug("commit check not supported for dynamic and ephemeral")
+            else:
                 try:
                     check = cu.commit_check()
                 except Exception as exception:  # pylint: disable=broad-except
@@ -1059,12 +1072,11 @@ def install_os(path=None, **kwargs):
         device. The default is ``/var/tmp``. If the value of :path: or
         is a URL, then the value of :remote_path: is unused.
 
-    dev_timeout : 30
+    dev_timeout : 1800
         The NETCONF RPC timeout (in seconds). This argument was added since most of
-        the time the "package add" RPC takes a significant amount of time.  The default
-        RPC timeout is 30 seconds.  So this :timeout: value will be
-        used in the context of the SW installation process.  Defaults to
-        30 minutes (30*60=1800)
+        the time the "package add" RPC takes a significant amount of time.
+        So this :timeout: value will be used in the context of the SW installation
+        process.  Defaults to 30 minutes (30*60=1800 seconds)
 
     reboot : False
         Whether to reboot after installation
@@ -1122,8 +1134,8 @@ def install_os(path=None, **kwargs):
     # timeout value is not honoured by sw.install if not passed as argument
     # currently, timeout is set to be maximum of default 1800 and user passed timeout value
     # For info: https://github.com/Juniper/salt/issues/116
-    op.pop("dev_timeout", None)
-    timeout = max(1800, conn.timeout)
+    dev_timeout = op.pop("dev_timeout", 0)
+    timeout = max(1800, conn.timeout, dev_timeout)
     # Reboot should not be passed as a keyword argument to install(),
     # Please refer to https://github.com/Juniper/salt/issues/115 for more details
     reboot = op.pop("reboot", False)
@@ -1171,8 +1183,13 @@ def install_os(path=None, **kwargs):
 
     # Handle reboot, after the install has finished
     if reboot is True:
+        reboot_kwargs = {}
+        if "vmhost" in op and op.get("vmhost") is True:
+            reboot_kwargs["vmhost"] = True
+        if "all_re" in op:
+            reboot_kwargs["all_re"] = op.get("all_re")
         try:
-            conn.sw.reboot()
+            conn.sw.reboot(**reboot_kwargs)
         except Exception as exception:  # pylint: disable=broad-except
             ret[
                 "message"
@@ -1299,18 +1316,13 @@ def load(path=None, **kwargs):
 
     overwrite : False
         Set to ``True`` if you want this file is to completely replace the
-        configuration file.
+        configuration file. Sets action to override
 
-    replace : False
-        Specify whether the configuration file uses ``replace:`` statements. If
-        ``True``, only those statements under the ``replace`` tag will be
-        changed.
+        .. note:: This option cannot be used if **format** is "set".
 
     merge : False
         If set to ``True`` will set the load-config action to merge.
-
-    format
-        Determines the format of the contents
+        the default load-config action is 'replace' for xml/json/text config
 
     update : False
         Compare a complete loaded configuration against the candidate
@@ -1320,6 +1332,9 @@ def load(path=None, **kwargs):
         the configuration is later committed, only system processes that are
         affected by the changed configuration elements parse the new
         configuration. This action is supported from PyEZ 2.1.
+
+    format
+        Determines the format of the contents
 
     template_vars
       Variables to be passed into the template processing engine in addition to
@@ -1393,6 +1408,8 @@ def load(path=None, **kwargs):
             template_format = "set"
         elif path.endswith("xml"):
             template_format = "xml"
+        elif path.endswith("json"):
+            template_format = "json"
         else:
             template_format = "text"
 
@@ -1468,7 +1485,7 @@ def get_table(
     key=None,
     key_items=None,
     filters=None,
-    template_args=None,
+    table_args=None,
 ):
     """
     .. versionadded:: Sodium
@@ -1497,14 +1514,15 @@ def get_table(
     filters:
         To select only filter for the dictionary from columns
 
-    template_args:
+    table_args:
         key/value pair which should render Jinja template command
+        or are passed as args to rpc call in op table
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt 'device_name' junos.get_table
+        salt 'device_name' junos.get_table RouteTable routes.yml
     """
     conn = __proxy__["junos.conn"]()
     ret = {}
@@ -1520,8 +1538,8 @@ def get_table(
         get_kvargs["key_items"] = key_items
     if filters is not None:
         get_kvargs["filters"] = filters
-    if template_args is not None and isinstance(template_args, dict):
-        get_kvargs["args"] = template_args
+    if table_args is not None and isinstance(table_args, dict):
+        get_kvargs["args"] = table_args
     pyez_tables_path = os.path.dirname(os.path.abspath(tables_dir.__file__))
     try:
         if path is not None:
@@ -1532,8 +1550,14 @@ def get_table(
             )
         if len(file_loc) == 1:
             file_name = file_loc[0]
-        else:
-            ret["message"] = "Given table file {} cannot be located".format(table_file)
+        elif len(file_loc) > 1:
+            ret["message"] = (
+                "Given table file %s is located at multiple location" % table_file
+            )
+            ret["out"] = False
+            return ret
+        elif len(file_loc) == 0:
+            ret["message"] = "Given table file %s cannot be located" % table_file
             ret["out"] = False
             return ret
         try:
@@ -1566,13 +1590,17 @@ def get_table(
             ret["out"] = False
             return ret
         ret["reply"] = json.loads(data.to_json())
-        if data.__class__.__bases__[0] == OpTable:
+        if data.__class__.__bases__[0] in [OpTable, CfgTable]:
             # Sets key value if not present in YAML. To be used by returner
             if ret["table"][table].get("key") is None:
                 ret["table"][table]["key"] = data.ITEM_NAME_XPATH
             # If key is provided from salt state file.
             if key is not None:
                 ret["table"][table]["key"] = data.KEY
+            if table_args is not None:
+                args = copy.copy(data.GET_ARGS)
+                args.update(table_args)
+                ret["table"][table]["args"] = args
         else:
             if target is not None:
                 ret["table"][table]["target"] = data.TARGET
@@ -1580,9 +1608,17 @@ def get_table(
                 ret["table"][table]["key"] = data.KEY
             if key_items is not None:
                 ret["table"][table]["key_items"] = data.KEY_ITEMS
-            if template_args is not None:
-                ret["table"][table]["args"] = data.CMD_ARGS
+            if table_args is not None:
+                args = copy.copy(data.CMD_ARGS)
+                args.update(table_args)
+                ret["table"][table]["args"] = args
                 ret["table"][table]["command"] = data.GET_CMD
+    except ConnectClosedError:
+        ret["message"] = (
+            "Got ConnectClosedError exception. Connection lost " "with %s" % conn
+        )
+        ret["out"] = False
+        return ret
     except Exception as err:  # pylint: disable=broad-except
         ret["message"] = "Uncaught exception - please report: {0}".format(str(err))
         traceback.print_exc()

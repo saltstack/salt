@@ -57,6 +57,7 @@ try:
         ConnectTimeoutError,
     )
     from ncclient.operations.errors import TimeoutExpiredError
+    from ncclient.transport.third_party.junos.ioproc import IOProc
 except ImportError:
     HAS_JUNOS = False
 
@@ -181,7 +182,6 @@ def ping():
     """
     Ping?  Pong!
     """
-
     dev = conn()
     # Check that the underlying netconf connection still exists.
     if dev._conn is None:
@@ -190,7 +190,13 @@ def ping():
     # call rpc only if ncclient queue is empty. If not empty that means other
     # rpc call is going on.
     if hasattr(dev._conn, "_session"):
-        if dev._conn._session._transport.is_active():
+        if (
+            dev._conn._session._transport is not None
+            and dev._conn._session._transport.is_active()
+        ) or (
+            dev._conn._session._transport is None
+            and isinstance(dev._conn._session, IOProc)
+        ):
             # there is no on going rpc call. buffer tell can be 1 as it stores
             # remaining char after "]]>]]>" which can be a new line char
             if dev._conn._session._buffer.tell() <= 1 and dev._conn._session._q.empty():
