@@ -862,13 +862,6 @@ def _join_domain(
 
     Returns:
         int:
-
-    :param domain:
-    :param username:
-    :param password:
-    :param account_ou:
-    :param account_exists:
-    :return:
     """
     NETSETUP_JOIN_DOMAIN = 0x1  # pylint: disable=invalid-name
     NETSETUP_ACCOUNT_CREATE = 0x2  # pylint: disable=invalid-name
@@ -999,7 +992,7 @@ def unjoin_domain(
                 return ret
             else:
                 log.error(win32api.FormatMessage(err[0]).rstrip())
-                log.error("Failed to join the computer to %s", workgroup)
+                log.error("Failed to unjoin the computer from %s", workgroup)
                 return False
         else:
             log.error(win32api.FormatMessage(err[0]).rstrip())
