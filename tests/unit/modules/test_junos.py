@@ -1652,9 +1652,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             mock_diff.return_value = "diff"
             mock_commit_check.return_value = True
             ret = dict()
-            ret[
-                "message"
-            ] = "install_config failed due to: unsupported action: abcdef"
+            ret["message"] = "install_config failed due to: unsupported action: abcdef"
             ret["out"] = False
             self.assertEqual(
                 junos.install_config("actual/path/config", mode="abcdef"), ret

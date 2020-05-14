@@ -927,9 +927,9 @@ def install_config(path=None, **kwargs):
 
     db_mode = op.pop("mode", "exclusive")
     if write_diff and db_mode in ["dynamic", "ephemeral"]:
-        ret["message"] = (
-            "Write diff is not supported with dynamic/ephemeral configuration mode"
-        )
+        ret[
+            "message"
+        ] = "Write diff is not supported with dynamic/ephemeral configuration mode"
         ret["out"] = False
         return ret
 
@@ -1526,6 +1526,7 @@ def get_table(
 
         salt 'device_name' junos.get_table RouteTable routes.yml
     """
+
     conn = __proxy__["junos.conn"]()
     ret = {}
     ret["out"] = True
@@ -1553,8 +1554,10 @@ def get_table(
         if len(file_loc) == 1:
             file_name = file_loc[0]
         elif len(file_loc) > 1:
-            ret["message"] = (
-                "Given table file {0} is located at multiple location".format(table_file)
+            ret[
+                "message"
+            ] = "Given table file {0} is located at multiple location".format(
+                table_file
             )
             ret["out"] = False
             return ret
@@ -1617,8 +1620,9 @@ def get_table(
                 ret["table"][table]["command"] = data.GET_CMD
     except ConnectClosedError:
         ret["message"] = (
-            "Got ConnectClosedError exception. Connection lost " "with {0}".format(
-                str(conn)))
+            "Got ConnectClosedError exception. Connection lost "
+            "with {0}".format(str(conn))
+        )
         ret["out"] = False
         return ret
     except Exception as err:  # pylint: disable=broad-except
