@@ -22,6 +22,20 @@ located at ``/usr/local/etc/salt``. The available options are as follows:
 
 .. _primary-master-configuration:
 
+Securing the Salt Master
+========================
+The Salt Master is the most critical piece of your Salt implementation because
+it has the ability to reach every part of your infrastructure. For the most
+part, ensure that your Salt Master is secure. For example, you could run Salt
+Masters in a private network, unaccessible to the internet, with no public IP
+address.
+
+However, there are a few scenarios where the Salt Master reasonably needs to be
+accessible to the Internet. In those scenarios, strict firewall rules should be
+used. One option is to avoid allowing large ranges in your firewall rules.
+Another option is to use a hardened bastion server or a VPN to restrict direct
+access to the Salt Master from the Internet.
+
 Primary Master Configuration
 ============================
 
