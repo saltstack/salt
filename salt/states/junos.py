@@ -55,6 +55,9 @@ def rpc(name, rpc=None, dest=None, format="xml", args=None, **kwargs):
         * rpc:
           The rpc to be executed (default = None) If not provided name to be
           used as rpc.
+
+          .. versionadded:: Sodium
+
       Optional
         * dest:
           Destination file where the rpc output is stored. (default = None)
@@ -247,6 +250,7 @@ def cli(name, command=None, **kwargs):
         * command:
           The command that need to be executed on Junos CLI. (default = None)
           If not provided name to be used as command.
+
       Optional
         * kwargs: Keyworded arguments which can be provided like-
             * format:
@@ -322,12 +326,14 @@ def install_config(name, path, **kwargs):
                     description: Creating interface via SaltStack.
 
 
-    name
+    path
         Path where the configuration/template file is present. If the file has
         a ``*.conf`` extension, the content is treated as text format. If the
         file has a ``*.xml`` extension, the content is treated as XML format. If
         the file has a ``*.set`` extension, the content is treated as Junos OS
         ``set`` commands
+
+        .. versionadded:: Sodium
 
     template_vars
       The dictionary of data for the jinja variables present in the jinja
@@ -515,6 +521,8 @@ def load(name, path, **kwargs):
         file has a ``*.xml`` extension, the content is treated as XML format. If
         the file has a ``*.set`` extension, the content is treated as Junos OS
         ``set`` commands.
+
+        .. versionadded:: Sodium
 
     overwrite : False
         Set to ``True`` if you want this file is to completely replace the
