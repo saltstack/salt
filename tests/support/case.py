@@ -242,8 +242,11 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             timeout = self.RUN_TIMEOUT
         if not config_dir:
             config_dir = RUNTIME_VARS.TMP_MINION_CONF_DIR
+        # arg_str = "{0} --config-dir {1} {2}".format(
+        #    "--local" if local else "", RUNTIME_VARS.TMP_CONF_DIR, arg_str
+        # )
         arg_str = "{0} --config-dir {1} {2}".format(
-            "--local" if local else "", RUNTIME_VARS.TMP_CONF_DIR, arg_str
+            "--local" if local else "", config_dir, arg_str
         )
         ret = self.run_script(
             "salt-call",
