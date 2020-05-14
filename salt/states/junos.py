@@ -301,7 +301,7 @@ def install_config(name, path, **kwargs):
 
             Install the mentioned config:
               junos.install_config:
-                - template_path: salt://configs/interface.set
+                - path: salt://configs/interface.set
                 - timeout: 100
                 - template_vars:
                     interface_name: lo0
