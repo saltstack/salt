@@ -579,7 +579,14 @@ def get_table(name, table, table_file, **kwargs):
         get route details:
           junos.get_table:
             - table: RouteTable
-            - file: routes.yml
+            - table_file: routes.yml
+
+        get interface details:
+          junos.get_table:
+            - table: EthPortTable
+            - table_file: ethport.yml
+            - table_args:
+                interface_name: ge-0/0/0
 
     name (required)
         task definition
