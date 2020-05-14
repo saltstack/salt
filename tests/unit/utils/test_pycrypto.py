@@ -32,7 +32,8 @@ class PycryptoTestCase(TestCase):
         },
         "blowfish": {
             "hashed": "$2b$12$goodsaltgoodsaltgoodsOaeGcaoZ.j.ugFo3vJZv5uk3W2zf2166",
-            "salt": "goodsaltgoodsaltgoodsa",
+            "salt_crypt": "12$goodsaltgoodsaltgoodsa",
+            "salt_passlib": "goodsaltgoodsaltgoodsa",
             "badsalt": "badsaltbadsaltbadsaltb",
         },
         "md5": {
@@ -86,7 +87,8 @@ class PycryptoTestCase(TestCase):
         default_algorithm = salt.utils.pycrypto.crypt.methods[0].name.lower()
         expected = self.expecteds[default_algorithm]
         ret = salt.utils.pycrypto.gen_hash(
-            crypt_salt=expected["salt_crypt"], password=self.passwd,
+            crypt_salt=expected.get("salt") or expected["salt_crypt"],
+            password=self.passwd,
         )
         self.assertEqual(ret, expected["hashed"])
 
