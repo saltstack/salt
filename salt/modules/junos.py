@@ -213,7 +213,7 @@ def rpc(cmd=None, dest=None, **kwargs):
         op.update(kwargs)
 
     if cmd is None:
-        cmd = kwargs.pop('rpc')
+        cmd = kwargs.pop('rpc', None)
     if cmd is None:
         ret["message"] = "Please provide the rpc to execute."
         ret["out"] = False
@@ -789,7 +789,7 @@ def install_config(path=None, **kwargs):
 
     mode : exclusive
         The mode in which the configuration is locked. Can be one of
-        ``private``, ``dynamic``, ``batch``, ``exclusive``.
+        ``private``, ``dynamic``, ``batch``, ``exclusive``, ``ephemeral``
 
     dev_timeout : 30
         Set NETCONF RPC timeout. Can be used for commands which take a while to
@@ -927,13 +927,16 @@ def install_config(path=None, **kwargs):
         del op["overwrite"]
 
     db_mode = op.pop("mode", "exclusive")
-    if write_diff and db_mode == "dynamic":
-        ret["message"] = "Write diff is not supported with dynamic configuration mode"
+    if write_diff and db_mode == ["dynamic", "ephemeral"]:
+        ret["message"] = "Write diff is not supported with dynamic/ephemeral " \
+                         "configuration mode"
         ret["out"] = False
         return ret
 
     try:
-        with Config(conn, mode=db_mode) as cu:
+        with Config(conn, mode=db_mode,
+                    ephemeral_instance=op.pop('ephemeral_instance', None)
+                    ) as cu:
             try:
                 cu.load(**op)
             except Exception as exception:  # pylint: disable=broad-except
@@ -946,7 +949,9 @@ def install_config(path=None, **kwargs):
             finally:
                 salt.utils.files.safe_rm(template_cached_path)
 
-            if db_mode != "dynamic":
+            if db_mode in ["dynamic", "ephemeral"]:
+                log.debug("diff is not supported for dynamic and ephemeral")
+            else:
                 config_diff = cu.diff()
                 if config_diff is None:
                     ret["message"] = "Configuration already applied!"
@@ -961,7 +966,9 @@ def install_config(path=None, **kwargs):
 
             # Assume commit_check succeeds and initialize variable check
             check = True
-            if db_mode != "dynamic":
+            if db_mode in ["dynamic", "ephemeral"]:
+                log.debug("commit check not supported for dynamic and ephemeral")
+            else:
                 try:
                     check = cu.commit_check()
                 except Exception as exception:  # pylint: disable=broad-except
