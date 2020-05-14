@@ -46,7 +46,7 @@ def get_parameter(
     profile=None,
 ):
     """
-    Retrives a parameter from SSM Parameter Store
+    Retrieves a parameter from SSM Parameter Store
 
     .. versionadded:: 3000
 

@@ -1,6 +1,4 @@
 # coding: utf-8
-
-# Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
@@ -8,14 +6,12 @@ import shutil
 import tempfile
 import time
 
-# Salt libs
 import salt.utils.files
 import salt.utils.platform
 from salt.beacons import watchdog
 from salt.ext.six.moves import range
+from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
-
-# Salt testing libs
 from tests.support.unit import TestCase, skipIf
 
 
@@ -157,7 +153,7 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret[0]["path"], path)
         self.assertEqual(ret[0]["change"], "created")
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_trigger_all_possible_events(self):
         path = os.path.join(self.tmpdir, "tmpfile")
         moved = path + "_moved"

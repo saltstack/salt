@@ -349,7 +349,7 @@ def orchestrate(
     .. seealso:: More Orchestrate documentation
 
         * :ref:`Full Orchestrate Tutorial <orchestrate-runner>`
-        * :py:mod:`Docs for the ``salt`` state module <salt.states.saltmod>`
+        * Docs for the salt state module :py:mod:`salt.states.saltmod`
 
     CLI Examples:
 
@@ -2026,7 +2026,7 @@ def show_sls(mods, test=None, queue=False, **kwargs):
 
 def sls_exists(mods, test=None, queue=False, **kwargs):
     """
-    Tests for the existance the of a specific SLS or list of SLS files on the
+    Tests for the existence the of a specific SLS or list of SLS files on the
     master. Similar to :py:func:`state.show_sls <salt.modules.state.show_sls>`,
     rather than returning state details, returns True or False. The default
     environment is ``base``, use ``saltenv`` to specify a different environment.

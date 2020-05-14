@@ -926,6 +926,9 @@ class Pillar(object):
                                     ]
                                 )
                                 matched_pstates = [sub_sls]
+                            # If matched_pstates is empty, set to sub_sls
+                            if len(matched_pstates) < 1:
+                                matched_pstates = [sub_sls]
                             for m_sub_sls in matched_pstates:
                                 if m_sub_sls not in mods:
                                     nstate, mods, err = self.render_pstate(

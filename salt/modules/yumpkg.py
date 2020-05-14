@@ -1907,7 +1907,7 @@ def upgrade(
         .. versionadded:: 2019.2.0
 
     obsoletes : True
-        Controls wether yum/dnf should take obsoletes into account and remove them.
+        Controls whether yum/dnf should take obsoletes into account and remove them.
         If set to ``False`` yum will use ``update`` instead of ``upgrade``
         and dnf will be run with ``--obsoletes=False``
 
@@ -2804,7 +2804,7 @@ def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
             del filerepos[stanza]["comments"]
         content += "\n[{0}]".format(stanza)
         for line in filerepos[stanza]:
-            # A whitespace is needed at the begining of the new line in order
+            # A whitespace is needed at the beginning of the new line in order
             # to avoid breaking multiple line values allowed on repo files.
             value = filerepos[stanza][line]
             if isinstance(value, six.string_types) and "\n" in value:
@@ -2943,7 +2943,7 @@ def mod_repo(repo, basedir=None, **kwargs):
         )
         content += "[{0}]\n".format(stanza)
         for line in six.iterkeys(filerepos[stanza]):
-            # A whitespace is needed at the begining of the new line in order
+            # A whitespace is needed at the beginning of the new line in order
             # to avoid breaking multiple line values allowed on repo files.
             value = filerepos[stanza][line]
             if isinstance(value, six.string_types) and "\n" in value:

@@ -141,7 +141,7 @@ def esxcli(
     host, user, pwd, cmd, protocol=None, port=None, esxi_host=None, credstore=None
 ):
     """
-    Shell out and call the specified esxcli commmand, parse the result
+    Shell out and call the specified esxcli command, parse the result
     and return something sane.
 
     :param host: ESXi or vCenter host to connect to
@@ -2376,7 +2376,7 @@ def get_storage_system(service_instance, host_ref, hostname=None):
 
 def _get_partition_info(storage_system, device_path):
     """
-    Returns partition informations for a device path, of type
+    Returns partition information for a device path, of type
     vim.HostDiskPartitionInfo
     """
     try:

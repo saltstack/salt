@@ -22,7 +22,7 @@ import salt.utils.yaml
 from salt.ext import six
 from tests.integration.utils import testprogram
 from tests.support.case import ShellCase
-from tests.support.helpers import flaky, with_tempfile
+from tests.support.helpers import change_cwd, flaky, slowTest, with_tempfile
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
@@ -35,14 +35,14 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
 
     _call_binary_ = "salt-call"
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_default_output(self):
         out = self.run_call("-l quiet test.fib 3")
 
         expect = ["local:", "    - 2"]
         self.assertEqual(expect, out[:-1])
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_text_output(self):
         out = self.run_call("-l quiet --out txt test.fib 3")
 
@@ -50,7 +50,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
 
         self.assertEqual("".join(expect), "".join(out).rsplit(",", 1)[0])
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_json_out_indent(self):
         out = self.run_call("test.ping -l quiet --out=json --out-indent=-1")
         self.assertIn('"local": true', "".join(out))
@@ -61,7 +61,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         out = self.run_call("test.ping -l quiet --out=json --out-indent=1")
         self.assertIn('"local": true', "".join(out))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_local_sls_call(self):
         fileroot = os.path.join(RUNTIME_VARS.FILES, "file", "base")
         out = self.run_call(
@@ -73,7 +73,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         self.assertIn("Succeeded: 1", "".join(out))
 
     @with_tempfile()
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_local_salt_call(self, name):
         """
         This tests to make sure that salt-call does not execute the
@@ -101,12 +101,12 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         salt.utils.platform.is_windows() or salt.utils.platform.is_darwin(),
         "This test requires a supported master",
     )
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_user_delete_kw_output(self):
         ret = self.run_call("-l quiet -d user.delete")
         assert "salt '*' user.delete name remove=True force=True" in "".join(ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_salt_documentation_too_many_arguments(self):
         """
         Test to see if passing additional arguments shows an error
@@ -117,7 +117,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             "\n".join(data[1]),
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_issue_6973_state_highstate_exit_code(self):
         """
         If there is no tops/master_tops or state file matches
@@ -159,47 +159,50 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         self.assertTrue(True in ["returnTOmaster" in a for a in master_out])
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_syslog_file_not_found(self):
         """
         test when log_file is set to a syslog file that does not exist
         """
-        old_cwd = os.getcwd()
         config_dir = os.path.join(RUNTIME_VARS.TMP, "log_file_incorrect")
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir)
 
-        os.chdir(config_dir)
-
-        with salt.utils.files.fopen(self.get_config_file_path("minion"), "r") as fh_:
-            minion_config = salt.utils.yaml.load(fh_.read())
-            minion_config["log_file"] = "file:///dev/doesnotexist"
-            with salt.utils.files.fopen(os.path.join(config_dir, "minion"), "w") as fh_:
-                fh_.write(salt.utils.yaml.dump(minion_config, default_flow_style=False))
-        ret = self.run_script(
-            "salt-call",
-            '--config-dir {0} cmd.run "echo foo"'.format(config_dir),
-            timeout=120,
-            catch_stderr=True,
-            with_retcode=True,
-        )
-        try:
-            if sys.version_info >= (3, 5, 4):
-                self.assertIn("local:", ret[0])
-                self.assertIn(
-                    "[WARNING ] The log_file does not exist. Logging not setup correctly or syslog service not started.",
-                    ret[1],
-                )
-                self.assertEqual(ret[2], 0)
-            else:
-                self.assertIn(
-                    "Failed to setup the Syslog logging handler", "\n".join(ret[1])
-                )
-                self.assertEqual(ret[2], 2)
-        finally:
-            self.chdir(old_cwd)
-            if os.path.isdir(config_dir):
-                shutil.rmtree(config_dir)
+        with change_cwd(config_dir):
+            with salt.utils.files.fopen(
+                self.get_config_file_path("minion"), "r"
+            ) as fh_:
+                minion_config = salt.utils.yaml.load(fh_.read())
+                minion_config["log_file"] = "file:///dev/doesnotexist"
+                with salt.utils.files.fopen(
+                    os.path.join(config_dir, "minion"), "w"
+                ) as fh_:
+                    fh_.write(
+                        salt.utils.yaml.dump(minion_config, default_flow_style=False)
+                    )
+            ret = self.run_script(
+                "salt-call",
+                '--config-dir {0} cmd.run "echo foo"'.format(config_dir),
+                timeout=120,
+                catch_stderr=True,
+                with_retcode=True,
+            )
+            try:
+                if sys.version_info >= (3, 5, 4):
+                    self.assertIn("local:", ret[0])
+                    self.assertIn(
+                        "[WARNING ] The log_file does not exist. Logging not setup correctly or syslog service not started.",
+                        ret[1],
+                    )
+                    self.assertEqual(ret[2], 0)
+                else:
+                    self.assertIn(
+                        "Failed to setup the Syslog logging handler", "\n".join(ret[1])
+                    )
+                    self.assertEqual(ret[2], 2)
+            finally:
+                if os.path.isdir(config_dir):
+                    shutil.rmtree(config_dir)
 
     @skipIf(True, "This test is unreliable. Need to investigate why more deeply.")
     @flaky
@@ -210,7 +213,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             _ = self.run_script(
                 "salt-call",
                 "-c {0} --output-file={1} test.versions".format(
-                    self.config_dir, output_file_append
+                    RUNTIME_VARS.TMP_MINION_CONF_DIR, output_file_append
                 ),
                 catch_stderr=True,
                 with_retcode=True,
@@ -243,7 +246,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 self.run_script(
                     "salt-call",
                     "-c {0} --output-file={1} -l trace -g".format(
-                        self.config_dir, output_file
+                        RUNTIME_VARS.TMP_MINION_CONF_DIR, output_file
                     ),
                     catch_stderr=True,
                     with_retcode=True,
@@ -259,7 +262,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 self.run_script(
                     "salt-call",
                     "-c {0} --output-file={1} --output-file-append -g".format(
-                        self.config_dir, output_file
+                        RUNTIME_VARS.TMP_MINION_CONF_DIR, output_file
                     ),
                     catch_stderr=True,
                     with_retcode=True,
@@ -278,7 +281,9 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 # Not appending data
                 self.run_script(
                     "salt-call",
-                    "-c {0} --output-file={1} -g".format(self.config_dir, output_file),
+                    "-c {0} --output-file={1} -g".format(
+                        RUNTIME_VARS.TMP_MINION_CONF_DIR, output_file
+                    ),
                     catch_stderr=True,
                     with_retcode=True,
                 )
@@ -293,7 +298,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                     os.unlink(output_file)
 
     @skipIf(sys.platform.startswith("win"), "This test does not apply on Win")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_42116_cli_pillar_override(self):
         ret = self.run_call(
             "state.apply issue-42116-cli-pillar-override "
@@ -308,7 +313,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             log.debug("salt-call output:\n\n%s", "\n".join(ret))
             self.fail("CLI pillar override not found in pillar data")
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_pillar_items_masterless(self):
         """
         Test to ensure we get expected output
@@ -339,7 +344,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             user = user_info[-1].strip()
         super(CallTest, self).tearDown()
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_exit_status_unknown_argument(self):
         """
         Ensure correct exit status when an unknown argument is passed to salt-call.
@@ -357,7 +362,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             status, "EX_USAGE", message="unknown argument", stdout=stdout, stderr=stderr
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_masterless_highstate(self):
         """
         test state.highstate in masterless mode
@@ -376,7 +381,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
 
         self.assertTrue(os.path.exists(destpath))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_exit_status_correct_usage(self):
         """
         Ensure correct exit status when salt-call starts correctly.
