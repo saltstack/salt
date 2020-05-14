@@ -926,17 +926,18 @@ def install_config(path=None, **kwargs):
         del op["overwrite"]
 
     db_mode = op.pop("mode", "exclusive")
-    if write_diff and db_mode == ["dynamic", "ephemeral"]:
+    if write_diff and db_mode in ["dynamic", "ephemeral"]:
         ret["message"] = (
-            "Write diff is not supported with dynamic/ephemeral " "configuration mode"
+            "Write diff is not supported with dynamic/ephemeral configuration mode"
         )
         ret["out"] = False
         return ret
 
+    config_params = {}
+    if "ephemeral_instance" in op:
+        config_params["ephemeral_instance"] = op.pop("ephemeral_instance")
     try:
-        with Config(
-            conn, mode=db_mode, ephemeral_instance=op.pop("ephemeral_instance", None)
-        ) as cu:
+        with Config(conn, mode=db_mode, **config_params) as cu:
             try:
                 cu.load(**op)
             except Exception as exception:  # pylint: disable=broad-except
@@ -949,6 +950,7 @@ def install_config(path=None, **kwargs):
             finally:
                 salt.utils.files.safe_rm(template_cached_path)
 
+            config_diff = None
             if db_mode in ["dynamic", "ephemeral"]:
                 log.debug("diff is not supported for dynamic and ephemeral")
             else:
@@ -1013,10 +1015,10 @@ def install_config(path=None, **kwargs):
                     exception
                 )
                 ret["out"] = False
-    except ValueError:
-        ret[
-            "message"
-        ] = "Invalid mode. Modes supported: private, dynamic, batch, exclusive"
+    except ValueError as ex:
+        message = "install_config failed due to: {0}".format(str(ex))
+        log.error(message)
+        ret["message"] = message
         ret["out"] = False
     except LockError as ex:
         log.error("Configuration database is locked")
