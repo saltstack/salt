@@ -15,3 +15,4 @@ Developing Salt
     ../../ref/internals/index
     ../projects/index
     ../tutorials/writing_tests
+    faq-py2-deprecation
