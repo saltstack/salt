@@ -324,12 +324,14 @@ def install_config(name, path, **kwargs):
       execute.
 
     overwrite : False
-      Set to ``True`` if you want this file is to completely replace the
-       configuration file.
+        Set to ``True`` if you want this file is to completely replace the
+        configuration file. Sets action to override
 
-    replace : False
-      Specify whether the configuration file uses "replace:" statements.  Only
-      those statements under the 'replace' tag will be changed.
+        .. note:: This option cannot be used if **format** is "set".
+
+    merge : False
+        If set to ``True`` will set the load-config action to merge.
+        the default load-config action is 'replace' for xml/json/text config
 
     comment
       Provide a comment to the commit. (default = None)
@@ -502,14 +504,13 @@ def load(name, path, **kwargs):
 
     overwrite : False
         Set to ``True`` if you want this file is to completely replace the
-        configuration file.
+        configuration file. Sets action to override
 
-    replace : False
-        Specify whether the configuration file uses "replace:" statements.
-        Only those statements under the 'replace' tag will be changed.
+        .. note:: This option cannot be used if **format** is "set".
 
-    format:
-      Determines the format of the contents.
+    merge : False
+        If set to ``True`` will set the load-config action to merge.
+        the default load-config action is 'replace' for xml/json/text config
 
     update : False
         Compare a complete loaded configuration against the candidate
@@ -519,6 +520,9 @@ def load(name, path, **kwargs):
         the configuration is later committed, only system processes that are
         affected by the changed configuration elements parse the new
         configuration. This action is supported from PyEZ 2.1 (default = False)
+
+    format
+      Determines the format of the contents.
 
     template_vars
       Variables to be passed into the template processing engine in addition
