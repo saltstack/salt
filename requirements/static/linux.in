@@ -40,7 +40,7 @@ supervisor==3.3.5; python_version < '3'
 timelib
 toml
 vcert~=0.7.0
-virtualenv
+virtualenv>=20.0.20
 watchdog
 
 # Available template libraries that can be used

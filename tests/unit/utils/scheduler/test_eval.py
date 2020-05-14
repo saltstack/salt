@@ -45,6 +45,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
 
     def tearDown(self):
         self.schedule.reset()
+        super(SchedulerEvalTest, self).tearDown()
 
     @slowTest
     def test_eval(self):
