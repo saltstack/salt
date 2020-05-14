@@ -1543,21 +1543,21 @@ def get_table(
     pyez_tables_path = os.path.dirname(os.path.abspath(tables_dir.__file__))
     try:
         if path is not None:
-            file_loc = glob.glob(os.path.join(path, "{}".format(table_file)))
+            file_loc = glob.glob(os.path.join(path, "{0}".format(table_file)))
         else:
             file_loc = glob.glob(
-                os.path.join(pyez_tables_path, "{}".format(table_file))
+                os.path.join(pyez_tables_path, "{0}".format(table_file))
             )
         if len(file_loc) == 1:
             file_name = file_loc[0]
         elif len(file_loc) > 1:
             ret["message"] = (
-                "Given table file %s is located at multiple location" % table_file
+                "Given table file {0} is located at multiple location".format(table_file)
             )
             ret["out"] = False
             return ret
         elif len(file_loc) == 0:
-            ret["message"] = "Given table file %s cannot be located" % table_file
+            ret["message"] = "Given table file {0} cannot be located".format(table_file)
             ret["out"] = False
             return ret
         try:
@@ -1615,8 +1615,8 @@ def get_table(
                 ret["table"][table]["command"] = data.GET_CMD
     except ConnectClosedError:
         ret["message"] = (
-            "Got ConnectClosedError exception. Connection lost " "with %s" % conn
-        )
+            "Got ConnectClosedError exception. Connection lost " "with {0}".format(
+                str(conn)))
         ret["out"] = False
         return ret
     except Exception as err:  # pylint: disable=broad-except
