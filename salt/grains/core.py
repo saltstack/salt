@@ -832,21 +832,17 @@ def _virtual(osdata):
                 grains["virtual"] = "LXC"
                 break
         elif command == "virt-what":
-            try:
-                output = output.splitlines()[0]
-            except IndexError:
-                pass
-            for output in output.splitlines():
-                if output in ("kvm", "qemu", "uml", "xen", "lxc"):
-                    grains["virtual"] = output
+            for line in output.splitlines():
+                if line in ("kvm", "qemu", "uml", "xen", "lxc"):
+                    grains["virtual"] = line
                     break
-                elif "vmware" in output:
+                elif "vmware" in line:
                     grains["virtual"] = "VMware"
                     break
-                elif "parallels" in output:
+                elif "parallels" in line:
                     grains["virtual"] = "Parallels"
                     break
-                elif "hyperv" in output:
+                elif "hyperv" in line:
                     grains["virtual"] = "HyperV"
                     break
         elif command == "dmidecode":
