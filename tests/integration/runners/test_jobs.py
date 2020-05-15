@@ -5,9 +5,8 @@ Tests for the salt-run command
 from __future__ import absolute_import, print_function, unicode_literals
 
 import pytest
-from salt.ext import six
 from tests.support.case import ShellCase
-from tests.support.helpers import slowTest
+from tests.support.helpers import flaky, slowTest
 from tests.support.unit import skipIf
 
 
@@ -23,21 +22,18 @@ class JobsTest(ShellCase):
         jobs.master
         """
         ret = self.run_run_plus("jobs.master")
-        res = any(ele for ele in ret["return"] if ele["fun"] == "runner.jobs.master")
-        self.assertTrue(res)
+        self.assertEqual(ret["return"], [])
+        self.assertEqual(ret["out"], [])
 
+    @flaky
     @slowTest
     def test_active(self):
         """
         jobs.active
         """
         ret = self.run_run_plus("jobs.active")
-        res = any(
-            ele
-            for ele, val in six.iteritems(ret["return"])
-            if val["Function"] == "runner.jobs.active"
-        )
-        self.assertTrue(res)
+        self.assertEqual(ret["return"], {})
+        self.assertEqual(ret["out"], [])
 
     @slowTest
     def test_lookup_jid(self):
