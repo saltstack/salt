@@ -685,32 +685,35 @@ class GitModuleTest(ModuleCase):
         """
         Test git.rebase
         """
-        # Make a change to a different file than the one modifed in setUp
+        # Switch to the second branch
+        self.assertNotIn(
+            "ERROR",
+            self.run_function("git.checkout", [self.repo], rev=self.branches[0]),
+        )
+        # Make a change to a different file than the one modified in setUp
         file_path = os.path.join(self.repo, self.files[1])
         with salt.utils.files.fopen(file_path, "a") as fp_:
             fp_.write("Added a line\n")
         # Commit the change
-        self.assertTrue(
-            "ERROR"
-            not in self.run_function(
+        self.assertNotIn(
+            "ERROR",
+            self.run_function(
                 "git.commit",
                 [self.repo, "Added a line to " + self.files[1]],
                 filename=self.files[1],
-            )
+            ),
         )
         # Switch to the second branch
-        self.assertTrue(
-            "ERROR"
-            not in self.run_function("git.checkout", [self.repo], rev=self.branches[1])
+        self.assertNotIn(
+            "ERROR",
+            self.run_function("git.checkout", [self.repo], rev=self.branches[1]),
         )
         # Perform the rebase. The commit should show a comment about
         # self.files[0] being modified, as that is the file that was modified
         # in the second branch in the setUp function
-        self.assertEqual(
-            self.run_function("git.rebase", [self.repo]),
-            "First, rewinding head to replay your work on top of it...\n"
-            "Applying: Added a line to " + self.files[0],
-        )
+        ret = self.run_function("git.rebase", [self.repo], opts="-vvv")
+        self.assertNotIn("ERROR", ret)
+        self.assertNotIn("up to date", ret)
 
     # Test for git.remote_get is in test_remotes
 
