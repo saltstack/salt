@@ -93,19 +93,23 @@ def _gen_hash_passlib(crypt_salt=None, password=None, algorithm=None):
 
     if algorithm not in known_methods:
         raise SaltInvocationError(
-            "Algorithm '{0}' is not in passlib supported algorithms: {1}. "
-            "Try to change algorithm or install passlib.".format(
-                algorithm, list(known_methods)
-            )
+            "Algorithm '{0}' is not supported by gen_hash. We "
+            "support these algorithms: {1}".format(algorithm, list(known_methods))
         )
 
     # these are the passlib equivalents to the 'known_methods' defined in crypt
     schemes = ["sha512_crypt", "sha256_crypt", "bcrypt", "md5_crypt", "des_crypt"]
 
     ctx = passlib.context.CryptContext(schemes=schemes)
-    return ctx.hash(
-        password, salt=crypt_salt, scheme=schemes[known_methods.index(algorithm)]
-    )
+
+    kwargs = {"secret": password, "scheme": schemes[known_methods.index(algorithm)]}
+    if crypt_salt and "$" in crypt_salt:
+        roundstr, split_salt = crypt_salt.split("$")
+        rounds = int(roundstr.split("=")[-1])
+        kwargs.update({"salt": split_salt, "rounds": rounds})
+    else:
+        kwargs.update({"salt": crypt_salt})
+    return ctx.hash(**kwargs)
 
 
 def _gen_hash_crypt(crypt_salt=None, password=None, algorithm=None):
@@ -118,10 +122,9 @@ def _gen_hash_crypt(crypt_salt=None, password=None, algorithm=None):
 
     if algorithm not in methods:
         raise SaltInvocationError(
-            "Algorithm '{0}' is not in natively supported algorithms: {1}. "
-            "Try to change algorithm or install passlib.".format(
-                algorithm, list(methods)
-            )
+            "Algorithm '{0}' is not a natively supported algorithm: {1}. "
+            "Choose a supported algorithm or install passlib to hash "
+            "using any of: {2}.".format(algorithm, list(methods), known_methods)
         )
 
     if crypt_salt is None:
@@ -144,7 +147,6 @@ def gen_hash(crypt_salt=None, password=None, algorithm=None):
     if password is None:
         password = secure_password()
 
-    hash = None
     if HAS_CRYPT:
         try:
             return _gen_hash_crypt(
@@ -159,4 +161,6 @@ def gen_hash(crypt_salt=None, password=None, algorithm=None):
             crypt_salt=crypt_salt, password=password, algorithm=algorithm
         )
 
-    raise SaltInvocationError("Not crypt nor passlib hasing library is installed.")
+    raise SaltInvocationError(
+        "The passlib library is required to hash on this platform."
+    )
