@@ -486,13 +486,17 @@ def uptodate(
 
     post_info = wua.updates().list()
 
-    # First gather list of updates that weren't installed
-    updates_not_installed = [item for item in install.list() if item not in post_info]
+    # Updates not installed is a list of updates that the WUA first requested
+    # to be installed but became ineligible for installation because they were
+    # superseded by other updates
+    updates_not_installed = []
 
     # Verify the installation
     for item in install.list():
-        # Only check for items that were installed
-        if item not in updates_not_installed:
+        if item not in post_info:
+            # Update (item) was not installed for valid reason
+            updates_not_installed.append(item)
+        else:
             if not salt.utils.data.is_true(post_info[item]["Installed"]):
                 ret["changes"]["failed"] = {
                     item: {
@@ -511,7 +515,7 @@ def uptodate(
                 }
 
     # Add the list of updates not installed to the return
-    if len(updates_not_installed) > 0:
+    if updates_not_installed:
         ret["comment"] = "Updates that were not installed:"
         for update in updates_not_installed:
             ret["comment"] += "\n"
