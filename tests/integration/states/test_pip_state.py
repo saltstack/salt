@@ -411,8 +411,10 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             # of the system drive. Otherwise the path is too long and the pip
             # upgrade will fail. Also, I don't know why salt.utils.platform
             # doesn't work in this function, that's why I used sys.platform
-            venv_dir = os.path.join(
-                os.environ["SystemDrive"], "tmp-6833-pip-upgrade-pip"
+            # Need to use os.sep.join here instead of os.path.join because of
+            # the colon in SystemDrive
+            venv_dir = os.sep.join(
+                [os.environ["SystemDrive"], "tmp-6833-pip-upgrade-pip"]
             )
         else:
             venv_dir = os.path.join(RUNTIME_VARS.TMP, "6833-pip-upgrade-pip")
