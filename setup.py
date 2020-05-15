@@ -227,11 +227,13 @@ def _parse_requirements_file(requirements_file):
     with open(requirements_file) as rfh:
         for line in rfh.readlines():
             line = line.strip()
-            if not line or line.startswith('#'):
+            if not line or line.startswith("#"):
                 continue
-            if line.startswith('-r'):
+            if line.startswith("-r"):
                 file = line.split()[1]
-                ret_requirements = _parse_requirements_file(os.path.join(os.path.dirname(requirements_file), file))
+                ret_requirements = _parse_requirements_file(
+                    os.path.join(os.path.dirname(requirements_file), file)
+                )
                 parsed_requirements.extend(ret_requirements)
                 continue
             if IS_WINDOWS_PLATFORM:
