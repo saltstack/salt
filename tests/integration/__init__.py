@@ -1218,6 +1218,7 @@ class TestDaemon(object):
                 minion_opts["extension_modules"],
                 sub_minion_opts["extension_modules"],
                 sub_minion_opts["pki_dir"],
+                proxy_opts["pki_dir"],
                 master_opts["sock_dir"],
                 syndic_master_opts["sock_dir"],
                 sub_minion_opts["sock_dir"],
