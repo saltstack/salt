@@ -925,6 +925,7 @@ VALID_OPTS = immutabletypes.freeze(
         # Allow raw_shell option when using the ssh
         # client via the Salt API
         "netapi_allow_raw_shell": bool,
+        "disabled_requisites": (six.string_types, list),
     }
 )
 
@@ -1216,6 +1217,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "discovery": False,
         "schedule": {},
         "ssh_merge_pillar": True,
+        "disabled_requisites": [],
     }
 )
 
@@ -2948,7 +2950,9 @@ def apply_cloud_providers_config(overrides, defaults=None):
         # Merge provided extends
         keep_looping = False
         for alias, entries in six.iteritems(providers.copy()):
-            for driver, details in six.iteritems(entries):
+            for driver in list(six.iterkeys(entries)):
+                # Don't use iteritems, because the values of the dictionary will be changed
+                details = entries[driver]
 
                 if "extends" not in details:
                     # Extends resolved or non existing, continue!

@@ -51,7 +51,7 @@ import salt.utils.url
 
 # Explicit late import to avoid circular import. DO NOT MOVE THIS.
 import salt.utils.yamlloader as yamlloader
-from salt.exceptions import SaltRenderError, SaltReqTimeoutError
+from salt.exceptions import CommandExecutionError, SaltRenderError, SaltReqTimeoutError
 
 # Import third party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -97,6 +97,7 @@ STATE_RUNTIME_KEYWORDS = frozenset(
         "failhard",
         "onlyif",
         "unless",
+        "creates",
         "retry",
         "order",
         "parallel",
@@ -125,6 +126,7 @@ STATE_RUNTIME_KEYWORDS = frozenset(
         "__pub_pid",
         "__pub_tgt_type",
         "__prereq__",
+        "__prerequired__",
     ]
 )
 
@@ -900,6 +902,14 @@ class State(object):
                 # If either result is True, the returned result should be True
                 ret["skip_watch"] = _ret["skip_watch"] or ret["skip_watch"]
 
+        if "creates" in low_data:
+            _ret = self._run_check_creates(low_data)
+            ret["result"] = _ret["result"] or ret["result"]
+            ret["comment"].append(_ret["comment"])
+            if "skip_watch" in _ret:
+                # If either result is True, the returned result should be True
+                ret["skip_watch"] = _ret["skip_watch"] or ret["skip_watch"]
+
         return ret
 
     def _run_check_function(self, entry):
@@ -935,9 +945,13 @@ class State(object):
 
         for entry in low_data_onlyif:
             if isinstance(entry, six.string_types):
-                cmd = self.functions["cmd.retcode"](
-                    entry, ignore_retcode=True, python_shell=True, **cmd_opts
-                )
+                try:
+                    cmd = self.functions["cmd.retcode"](
+                        entry, ignore_retcode=True, python_shell=True, **cmd_opts
+                    )
+                except CommandExecutionError:
+                    # Command failed, notify onlyif to skip running the item
+                    cmd = 100
                 log.debug("Last command return code: %s", cmd)
                 _check_cmd(cmd)
             elif isinstance(entry, dict):
@@ -994,10 +1008,14 @@ class State(object):
 
         for entry in low_data_unless:
             if isinstance(entry, six.string_types):
-                cmd = self.functions["cmd.retcode"](
-                    entry, ignore_retcode=True, python_shell=True, **cmd_opts
-                )
-                log.debug("Last command return code: %s", cmd)
+                try:
+                    cmd = self.functions["cmd.retcode"](
+                        entry, ignore_retcode=True, python_shell=True, **cmd_opts
+                    )
+                    log.debug("Last command return code: %s", cmd)
+                except CommandExecutionError:
+                    # Command failed, so notify unless to skip the item
+                    cmd = 0
                 _check_cmd(cmd)
             elif isinstance(entry, dict):
                 if "fun" not in entry:
@@ -1059,6 +1077,30 @@ class State(object):
                     }
                 )
                 return ret
+        return ret
+
+    def _run_check_creates(self, low_data):
+        """
+        Check that listed files exist
+        """
+        ret = {"result": False}
+
+        if isinstance(low_data["creates"], six.string_types) and os.path.exists(
+            low_data["creates"]
+        ):
+            ret["comment"] = "{0} exists".format(low_data["creates"])
+            ret["result"] = True
+            ret["skip_watch"] = True
+        elif isinstance(low_data["creates"], list) and all(
+            [os.path.exists(path) for path in low_data["creates"]]
+        ):
+            ret["comment"] = "All files in creates exist"
+            ret["result"] = True
+            ret["skip_watch"] = True
+        else:
+            ret["comment"] = "Creates files not found"
+            ret["result"] = False
+
         return ret
 
     def reset_run_num(self):
@@ -1182,7 +1224,7 @@ class State(object):
             elif data["fun"] == "symlink":
                 if "bin" in data["name"]:
                     self.module_refresh()
-        elif data["state"] in ("pkg", "ports"):
+        elif data["state"] in ("pkg", "ports", "pip"):
             self.module_refresh()
 
     def verify_data(self, data):
@@ -1684,6 +1726,9 @@ class State(object):
         )
         extend = {}
         errors = []
+        disabled_reqs = self.opts.get("disabled_requisites", [])
+        if not isinstance(disabled_reqs, list):
+            disabled_reqs = [disabled_reqs]
         for id_, body in six.iteritems(high):
             if not isinstance(body, dict):
                 continue
@@ -1701,6 +1746,11 @@ class State(object):
                         # Split out the components
                         key = next(iter(arg))
                         if key not in req_in:
+                            continue
+                        if key in disabled_reqs:
+                            log.warning(
+                                "The %s requisite has been disabled, Ignoring.", key
+                            )
                             continue
                         rkey = key.split("_")[0]
                         items = arg[key]
@@ -2060,11 +2110,9 @@ class State(object):
             # that's not found in cdata, we look for what we're being passed in
             # the original data, namely, the special dunder __env__. If that's
             # not found we default to 'base'
+            req_list = ("unless", "onlyif", "creates")
             if (
-                "unless" in low
-                and "{0[state]}.mod_run_check".format(low) not in self.states
-            ) or (
-                "onlyif" in low
+                any(req in low for req in req_list)
                 and "{0[state]}.mod_run_check".format(low) not in self.states
             ):
                 ret.update(self._run_check(low))
@@ -2543,6 +2591,9 @@ class State(object):
         Look into the running data to check the status of all requisite
         states
         """
+        disabled_reqs = self.opts.get("disabled_requisites", [])
+        if not isinstance(disabled_reqs, list):
+            disabled_reqs = [disabled_reqs]
         present = False
         # If mod_watch is not available make it a require
         if "watch" in low:
@@ -2598,6 +2649,11 @@ class State(object):
             reqs["prerequired"] = []
         for r_state in reqs:
             if r_state in low and low[r_state] is not None:
+                if r_state in disabled_reqs:
+                    log.warning(
+                        "The %s requisite has been disabled, Ignoring.", r_state
+                    )
+                    continue
                 for req in low[r_state]:
                     if isinstance(req, six.string_types):
                         req = {"id": req}

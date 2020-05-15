@@ -4511,7 +4511,7 @@ class _policy_info(object):
             return "true"
         elif val.upper() == "Run Windows PowerShell scripts last".upper():
             return "false"
-        elif val is "Not Configured":
+        elif val == "Not Configured":
             return None
         else:
             return "Invalid Value"
@@ -5576,7 +5576,7 @@ def _getAdmlPresentationRefId(adml_data, ref_id):
                 if presentation_element:
                     presentation_element = presentation_element[0]
                     if TEXT_ELEMENT_XPATH(presentation_element):
-                        for p_item in presentation_element.getchildren():
+                        for p_item in presentation_element:
                             if p_item == result:
                                 break
                             if etree.QName(p_item.tag).localname == "text":
@@ -5738,7 +5738,7 @@ def _checkListItem(
     for list_element in xpath_object(policy_element):
         configured_items = 0
         required_items = 0
-        for item in list_element.getchildren():
+        for item in list_element:
             required_items = required_items + 1
             if "key" in item.attrib:
                 item_key = item.attrib["key"]
@@ -5808,7 +5808,7 @@ def _checkValueItemParent(
 
     """
     for element in xpath_object(policy_element):
-        for value_item in element.getchildren():
+        for value_item in element:
             search_string = _processValueItem(
                 value_item,
                 policy_key,
@@ -6541,7 +6541,7 @@ def _checkAllAdmxPolicies(
                     configured_elements = {}
                     policy_disabled_elements = 0
                     for elements_item in ELEMENTS_XPATH(admx_policy):
-                        for child_item in elements_item.getchildren():
+                        for child_item in elements_item:
                             this_element_name = _getFullPolicyName(
                                 policy_item=child_item,
                                 policy_name=child_item.attrib["id"],
@@ -6556,7 +6556,7 @@ def _checkAllAdmxPolicies(
 
                             if etree.QName(child_item).localname == "boolean":
                                 # https://msdn.microsoft.com/en-us/library/dn605978(v=vs.85).aspx
-                                if child_item.getchildren():
+                                if child_item:
                                     if (
                                         TRUE_VALUE_XPATH(child_item)
                                         and this_element_name not in configured_elements
@@ -6764,7 +6764,7 @@ def _checkAllAdmxPolicies(
                                         policy_disabled_elements + 1
                                     )
                                 else:
-                                    for enum_item in child_item.getchildren():
+                                    for enum_item in child_item:
                                         if _checkValueItemParent(
                                             enum_item,
                                             child_item.attrib["id"],
@@ -7500,7 +7500,7 @@ def _writeAdminTemplateRegPolFile(
                             if ELEMENTS_XPATH(this_policy):
                                 log.trace("checking elements of %s", admPolicy)
                                 for elements_item in ELEMENTS_XPATH(this_policy):
-                                    for child_item in elements_item.getchildren():
+                                    for child_item in elements_item:
                                         child_key = this_key
                                         child_valuename = this_valuename
                                         if "key" in child_item.attrib:
@@ -7668,7 +7668,7 @@ def _writeAdminTemplateRegPolFile(
                                 )
                             if ELEMENTS_XPATH(this_policy):
                                 for elements_item in ELEMENTS_XPATH(this_policy):
-                                    for child_item in elements_item.getchildren():
+                                    for child_item in elements_item:
                                         child_key = this_key
                                         child_valuename = this_valuename
                                         if "key" in child_item.attrib:
@@ -7790,9 +7790,7 @@ def _writeAdminTemplateRegPolFile(
                                                 etree.QName(child_item).localname
                                                 == "enum"
                                             ):
-                                                for (
-                                                    enum_item
-                                                ) in child_item.getchildren():
+                                                for enum_item in child_item:
                                                     if (
                                                         base_policy_settings[
                                                             adm_namespace
@@ -8431,7 +8429,7 @@ def get_policy_info(policy_name, policy_class, adml_language="en-US"):
     )
     if success:
         for elements_item in ELEMENTS_XPATH(policy_xml_item):
-            for child_item in elements_item.getchildren():
+            for child_item in elements_item:
                 this_element_name = _getFullPolicyName(
                     policy_item=child_item,
                     policy_name=child_item.attrib["id"],
@@ -8878,7 +8876,7 @@ def _get_policy_adm_setting(
             configured_elements = {}
             policy_disabled_elements = 0
             for elements_item in ELEMENTS_XPATH(admx_policy):
-                for child_item in elements_item.getchildren():
+                for child_item in elements_item:
                     this_element_name = _getFullPolicyName(
                         policy_item=child_item,
                         policy_name=child_item.attrib["id"],
@@ -8892,7 +8890,7 @@ def _get_policy_adm_setting(
                     )
                     if etree.QName(child_item).localname == "boolean":
                         # https://msdn.microsoft.com/en-us/library/dn605978(v=vs.85).aspx
-                        if child_item.getchildren():
+                        if child_item:
                             if (
                                 TRUE_VALUE_XPATH(child_item)
                                 and this_element_name not in configured_elements
@@ -9080,7 +9078,7 @@ def _get_policy_adm_setting(
                             configured_elements[this_element_name] = "Disabled"
                             policy_disabled_elements = policy_disabled_elements + 1
                         else:
-                            for enum_item in child_item.getchildren():
+                            for enum_item in child_item:
                                 if _checkValueItemParent(
                                     policy_element=enum_item,
                                     policy_name=child_item.attrib["id"],
@@ -9787,9 +9785,7 @@ def set_(
                                         dict,
                                     ):
                                         for elements_item in ELEMENTS_XPATH(the_policy):
-                                            for (
-                                                child_item
-                                            ) in elements_item.getchildren():
+                                            for child_item in elements_item:
                                                 # check each element
                                                 log.trace(
                                                     "checking element %s",
@@ -9922,9 +9918,7 @@ def set_(
                                                 ):
                                                     # make sure the value is in the enumeration
                                                     found = False
-                                                    for (
-                                                        enum_item
-                                                    ) in child_item.getchildren():
+                                                    for enum_item in child_item:
                                                         if (
                                                             _admTemplateData[
                                                                 policy_namespace
@@ -10045,7 +10039,7 @@ def set_(
                             _regedits[regedit]["value"] is not None
                             and _regedits[regedit]["value"] != "(value not set)"
                         ):
-                            _ret = __salt__["reg.set_value"](
+                            _ret = __utils__["reg.set_value"](
                                 _regedits[regedit]["policy"]["Registry"]["Hive"],
                                 _regedits[regedit]["policy"]["Registry"]["Path"],
                                 _regedits[regedit]["policy"]["Registry"]["Value"],
@@ -10053,13 +10047,13 @@ def set_(
                                 _regedits[regedit]["policy"]["Registry"]["Type"],
                             )
                         else:
-                            _ret = __salt__["reg.read_value"](
+                            _ret = __utils__["reg.read_value"](
                                 _regedits[regedit]["policy"]["Registry"]["Hive"],
                                 _regedits[regedit]["policy"]["Registry"]["Path"],
                                 _regedits[regedit]["policy"]["Registry"]["Value"],
                             )
                             if _ret["success"] and _ret["vdata"] != "(value not set)":
-                                _ret = __salt__["reg.delete_value"](
+                                _ret = __utils__["reg.delete_value"](
                                     _regedits[regedit]["policy"]["Registry"]["Hive"],
                                     _regedits[regedit]["policy"]["Registry"]["Path"],
                                     _regedits[regedit]["policy"]["Registry"]["Value"],

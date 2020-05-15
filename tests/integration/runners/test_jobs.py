@@ -6,16 +6,27 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import pytest
 from tests.support.case import ShellCase
+from tests.support.helpers import flaky, slowTest
 from tests.support.unit import skipIf
 
 
 @pytest.mark.windows_whitelisted
-class ManageTest(ShellCase):
+class JobsTest(ShellCase):
     """
-    Test the manage runner
+    Test the jobs runner.
     """
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
+    def test_master(self):
+        """
+        jobs.master
+        """
+        ret = self.run_run_plus("jobs.master")
+        self.assertEqual(ret["return"], [])
+        self.assertEqual(ret["out"], [])
+
+    @flaky
+    @slowTest
     def test_active(self):
         """
         jobs.active
@@ -24,7 +35,7 @@ class ManageTest(ShellCase):
         self.assertEqual(ret["return"], {})
         self.assertEqual(ret["out"], [])
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_lookup_jid(self):
         """
         jobs.lookup_jid
@@ -33,7 +44,7 @@ class ManageTest(ShellCase):
         self.assertEqual(ret["return"], {})
         self.assertEqual(ret["out"], [])
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_lookup_jid_invalid(self):
         """
         jobs.lookup_jid
@@ -57,7 +68,7 @@ class LocalCacheTargetTest(ShellCase):
     Test that a job stored in the local_cache has target information
     """
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_target_info(self):
         """
         This is a test case for issue #48734

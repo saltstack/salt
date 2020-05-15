@@ -439,3 +439,7 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
                 ["parted", "-m", "-s", "/dev/sda", "disk_toggle", "pmbr_boot"]
             )
             assert output == []
+
+    def test__is_fstype(self):
+        assert parted._is_fstype("fat")
+        assert not parted._is_fstype("thicc")

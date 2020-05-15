@@ -6,6 +6,7 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import logging
 import os
 
 # Import Salt Libs
@@ -16,11 +17,53 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
+DPKG_ERROR_MSG = """dpkg-query: package 'httpd' is not installed
+Use dpkg --contents (= dpkg-deb --contents) to list archive files contents.
+"""
+
+DPKG_L_OUTPUT = {
+    "hostname": """\
+/.
+/bin
+/bin/hostname
+/usr
+/usr/share
+/usr/share/doc
+/usr/share/doc/hostname
+/usr/share/doc/hostname/changelog.gz
+/usr/share/doc/hostname/copyright
+/usr/share/man
+/usr/share/man/man1
+/usr/share/man/man1/hostname.1.gz
+/bin/dnsdomainname
+/bin/domainname
+/bin/nisdomainname
+/bin/ypdomainname
+/usr/share/man/man1/dnsdomainname.1.gz
+/usr/share/man/man1/domainname.1.gz
+/usr/share/man/man1/nisdomainname.1.gz
+/usr/share/man/man1/ypdomainname.1.gz
+"""
+}
+
 
 class DpkgTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.modules.dpkg
     """
+
+    def setUp(self):
+        dpkg_lowpkg_logger = logging.getLogger("salt.modules.dpkg_lowpkg")
+        self.level = dpkg_lowpkg_logger.level
+        dpkg_lowpkg_logger.setLevel(logging.FATAL)
+
+    def tearDown(self):
+        logging.getLogger("salt.modules.dpkg_lowpkg").setLevel(self.level)
+
+    def dpkg_L_side_effect(self, cmd, **kwargs):
+        self.assertEqual(cmd[:2], ["dpkg", "-L"])
+        package = cmd[2]
+        return DPKG_L_OUTPUT[package]
 
     def setup_loader_modules(self):
         return {dpkg: {}}
@@ -49,15 +92,28 @@ class DpkgTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test if it lists the packages currently installed
         """
-        mock = MagicMock(return_value={"retcode": 0, "stderr": "", "stdout": "Salt"})
-        with patch.dict(dpkg.__salt__, {"cmd.run_all": mock}):
-            self.assertDictEqual(dpkg.list_pkgs("httpd"), {})
-
         mock = MagicMock(
-            return_value={"retcode": 1, "stderr": "error", "stdout": "Salt"}
+            return_value={
+                "retcode": 0,
+                "stderr": "",
+                "stdout": "installed\thostname\t3.21",
+            }
         )
         with patch.dict(dpkg.__salt__, {"cmd.run_all": mock}):
-            self.assertEqual(dpkg.list_pkgs("httpd"), "Error:  error")
+            self.assertDictEqual(dpkg.list_pkgs("hostname"), {"hostname": "3.21"})
+
+        mock = MagicMock(
+            return_value={
+                "retcode": 1,
+                "stderr": "dpkg-query: no packages found matching httpd",
+                "stdout": "",
+            }
+        )
+        with patch.dict(dpkg.__salt__, {"cmd.run_all": mock}):
+            self.assertEqual(
+                dpkg.list_pkgs("httpd"),
+                "Error:  dpkg-query: no packages found matching httpd",
+            )
 
     # 'file_list' function tests: 1
 
@@ -65,15 +121,47 @@ class DpkgTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test if it lists the files that belong to a package.
         """
-        mock = MagicMock(return_value={"retcode": 0, "stderr": "", "stdout": "Salt"})
-        with patch.dict(dpkg.__salt__, {"cmd.run_all": mock}):
-            self.assertDictEqual(dpkg.file_list("httpd"), {"errors": [], "files": []})
+        dpkg_query_mock = MagicMock(
+            return_value={"retcode": 0, "stderr": "", "stdout": "installed\thostname"}
+        )
+        dpkg_L_mock = MagicMock(side_effect=self.dpkg_L_side_effect)
+        with patch.dict(
+            dpkg.__salt__, {"cmd.run_all": dpkg_query_mock, "cmd.run": dpkg_L_mock}
+        ):
+            self.assertDictEqual(
+                dpkg.file_list("hostname"),
+                {
+                    "errors": [],
+                    "files": [
+                        "/.",
+                        "/bin",
+                        "/bin/dnsdomainname",
+                        "/bin/domainname",
+                        "/bin/hostname",
+                        "/bin/nisdomainname",
+                        "/bin/ypdomainname",
+                        "/usr",
+                        "/usr/share",
+                        "/usr/share/doc",
+                        "/usr/share/doc/hostname",
+                        "/usr/share/doc/hostname/changelog.gz",
+                        "/usr/share/doc/hostname/copyright",
+                        "/usr/share/man",
+                        "/usr/share/man/man1",
+                        "/usr/share/man/man1/dnsdomainname.1.gz",
+                        "/usr/share/man/man1/domainname.1.gz",
+                        "/usr/share/man/man1/hostname.1.gz",
+                        "/usr/share/man/man1/nisdomainname.1.gz",
+                        "/usr/share/man/man1/ypdomainname.1.gz",
+                    ],
+                },
+            )
 
         mock = MagicMock(
-            return_value={"retcode": 1, "stderr": "error", "stdout": "Salt"}
+            return_value={"retcode": 1, "stderr": DPKG_ERROR_MSG, "stdout": ""}
         )
         with patch.dict(dpkg.__salt__, {"cmd.run_all": mock}):
-            self.assertEqual(dpkg.file_list("httpd"), "Error:  error")
+            self.assertEqual(dpkg.file_list("httpd"), "Error:  " + DPKG_ERROR_MSG)
 
     # 'file_dict' function tests: 1
 
@@ -81,17 +169,47 @@ class DpkgTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test if it lists the files that belong to a package, grouped by package
         """
-        mock = MagicMock(return_value={"retcode": 0, "stderr": "", "stdout": "Salt"})
-        with patch.dict(dpkg.__salt__, {"cmd.run_all": mock}):
-            self.assertDictEqual(
-                dpkg.file_dict("httpd"), {"errors": [], "packages": {}}
-            )
+        dpkg_query_mock = MagicMock(
+            return_value={"retcode": 0, "stderr": "", "stdout": "installed\thostname"}
+        )
+        dpkg_L_mock = MagicMock(side_effect=self.dpkg_L_side_effect)
+        with patch.dict(
+            dpkg.__salt__, {"cmd.run_all": dpkg_query_mock, "cmd.run": dpkg_L_mock}
+        ):
+            expected = {
+                "errors": [],
+                "packages": {
+                    "hostname": [
+                        "/.",
+                        "/bin",
+                        "/bin/hostname",
+                        "/usr",
+                        "/usr/share",
+                        "/usr/share/doc",
+                        "/usr/share/doc/hostname",
+                        "/usr/share/doc/hostname/changelog.gz",
+                        "/usr/share/doc/hostname/copyright",
+                        "/usr/share/man",
+                        "/usr/share/man/man1",
+                        "/usr/share/man/man1/hostname.1.gz",
+                        "/bin/dnsdomainname",
+                        "/bin/domainname",
+                        "/bin/nisdomainname",
+                        "/bin/ypdomainname",
+                        "/usr/share/man/man1/dnsdomainname.1.gz",
+                        "/usr/share/man/man1/domainname.1.gz",
+                        "/usr/share/man/man1/nisdomainname.1.gz",
+                        "/usr/share/man/man1/ypdomainname.1.gz",
+                    ]
+                },
+            }
+            self.assertDictEqual(dpkg.file_dict("hostname"), expected)
 
         mock = MagicMock(
-            return_value={"retcode": 1, "stderr": "error", "stdout": "Salt"}
+            return_value={"retcode": 1, "stderr": DPKG_ERROR_MSG, "stdout": ""}
         )
         with patch.dict(dpkg.__salt__, {"cmd.run_all": mock}):
-            self.assertEqual(dpkg.file_dict("httpd"), "Error:  error")
+            self.assertEqual(dpkg.file_dict("httpd"), "Error:  " + DPKG_ERROR_MSG)
 
     def test_info(self):
         """

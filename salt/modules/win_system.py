@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Module for managing windows systems.
+Module for managing Windows systems and getting Windows system information.
+Support for reboot, shutdown, join domain, rename
 
 :depends:
     - pywintypes
@@ -8,8 +9,6 @@ Module for managing windows systems.
     - win32con
     - win32net
     - wmi
-
-Support for reboot, shutdown, etc
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -24,6 +23,7 @@ from datetime import datetime
 import salt.utils.functools
 import salt.utils.locales
 import salt.utils.platform
+import salt.utils.win_system
 import salt.utils.winapi
 from salt.exceptions import CommandExecutionError
 from salt.ext import six
@@ -440,13 +440,7 @@ def get_pending_computer_name():
 
         salt 'minion-id' system.get_pending_computer_name
     """
-    current = get_computer_name()
-    pending = __salt__["reg.read_value"](
-        "HKLM", r"SYSTEM\CurrentControlSet\Services\Tcpip\Parameters", "NV Hostname"
-    )["vdata"]
-    if pending:
-        return pending if pending != current else None
-    return False
+    return salt.utils.win_system.get_pending_computer_name()
 
 
 def get_computer_name():
@@ -462,8 +456,7 @@ def get_computer_name():
 
         salt 'minion-id' system.get_computer_name
     """
-    name = win32api.GetComputerNameEx(win32con.ComputerNamePhysicalDnsHostname)
-    return name if name else False
+    return salt.utils.win_system.get_computer_name()
 
 
 def set_computer_desc(desc=None):
@@ -605,7 +598,10 @@ def get_system_info():
             "os_version": system.Version,
             "windows_directory": system.WindowsDirectory,
         }
-
+        # Must get chassis_sku_number this way for backwards compatibility
+        # system.ChassisSKUNumber is only available on Windows 10/2016 and newer
+        product = conn.Win32_ComputerSystemProduct()[0]
+        ret.update({"chassis_sku_number": product.SKUNumber})
         system = conn.Win32_ComputerSystem()[0]
         # Get pc_system_type depending on Windows version
         if platform.release() in ["Vista", "7", "8"]:
@@ -620,7 +616,6 @@ def get_system_info():
                 "bootup_state": system.BootupState,
                 "caption": system.Caption,
                 "chassis_bootup_state": warning_states[system.ChassisBootupState],
-                "chassis_sku_number": system.ChassisSKUNumber,
                 "dns_hostname": system.DNSHostname,
                 "domain": system.Domain,
                 "domain_role": domain_role[system.DomainRole],
@@ -652,7 +647,14 @@ def get_system_info():
             ret["processors"] += 1
             ret["processors_logical"] += processor.NumberOfLogicalProcessors
             ret["processor_cores"] += processor.NumberOfCores
-            ret["processor_cores_enabled"] += processor.NumberOfEnabledCore
+            # Older versions of Windows do not have the NumberOfEnabledCore
+            # property. In that case, we'll just skip it
+            try:
+                ret["processor_cores_enabled"] += processor.NumberOfEnabledCore
+            except (AttributeError, TypeError):
+                pass
+        if ret["processor_cores_enabled"] == 0:
+            ret.pop("processor_cores_enabled", False)
 
         bios = conn.Win32_BIOS()[0]
         ret.update(
@@ -1221,7 +1223,7 @@ def set_system_date_time(
         # pylint: enable=invalid-name
         system_time_ptr = ctypes.pointer(system_time)
         succeeded = ctypes.windll.kernel32.SetLocalTime(system_time_ptr)
-        if succeeded is not 0:
+        if succeeded != 0:
             return True
         else:
             log.error("Failed to set local time")
@@ -1331,16 +1333,7 @@ def get_pending_component_servicing():
 
         salt '*' system.get_pending_component_servicing
     """
-    key = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending"
-
-    # So long as the registry key exists, a reboot is pending.
-    if __utils__["reg.key_exists"]("HKLM", key):
-        log.debug("Key exists: %s", key)
-        return True
-    else:
-        log.debug("Key does not exist: %s", key)
-
-    return False
+    return salt.utils.win_system.get_pending_component_servicing()
 
 
 def get_pending_domain_join():
@@ -1360,25 +1353,7 @@ def get_pending_domain_join():
 
         salt '*' system.get_pending_domain_join
     """
-    base_key = r"SYSTEM\CurrentControlSet\Services\Netlogon"
-    avoid_key = r"{0}\AvoidSpnSet".format(base_key)
-    join_key = r"{0}\JoinDomain".format(base_key)
-
-    # If either the avoid_key or join_key is present,
-    # then there is a reboot pending.
-    if __utils__["reg.key_exists"]("HKLM", avoid_key):
-        log.debug("Key exists: %s", avoid_key)
-        return True
-    else:
-        log.debug("Key does not exist: %s", avoid_key)
-
-    if __utils__["reg.key_exists"]("HKLM", join_key):
-        log.debug("Key exists: %s", join_key)
-        return True
-    else:
-        log.debug("Key does not exist: %s", join_key)
-
-    return False
+    return salt.utils.win_system.get_pending_domain_join()
 
 
 def get_pending_file_rename():
@@ -1398,23 +1373,7 @@ def get_pending_file_rename():
 
         salt '*' system.get_pending_file_rename
     """
-    vnames = ("PendingFileRenameOperations", "PendingFileRenameOperations2")
-    key = r"SYSTEM\CurrentControlSet\Control\Session Manager"
-
-    # If any of the value names exist and have value data set,
-    # then a reboot is pending.
-
-    for vname in vnames:
-        reg_ret = __salt__["reg.read_value"]("HKLM", key, vname)
-
-        if reg_ret["success"]:
-            log.debug("Found key: %s", key)
-
-            if reg_ret["vdata"] and (reg_ret["vdata"] != "(value not set)"):
-                return True
-        else:
-            log.debug("Unable to access key: %s", key)
-    return False
+    return salt.utils.win_system.get_pending_file_rename()
 
 
 def get_pending_servermanager():
@@ -1434,26 +1393,7 @@ def get_pending_servermanager():
 
         salt '*' system.get_pending_servermanager
     """
-    vname = "CurrentRebootAttempts"
-    key = r"SOFTWARE\Microsoft\ServerManager"
-
-    # There are situations where it's possible to have '(value not set)' as
-    # the value data, and since an actual reboot won't be pending in that
-    # instance, just catch instances where we try unsuccessfully to cast as int.
-
-    reg_ret = __salt__["reg.read_value"]("HKLM", key, vname)
-
-    if reg_ret["success"]:
-        log.debug("Found key: %s", key)
-
-        try:
-            if int(reg_ret["vdata"]) > 0:
-                return True
-        except ValueError:
-            pass
-    else:
-        log.debug("Unable to access key: %s", key)
-    return False
+    return salt.utils.win_system.get_pending_servermanager()
 
 
 def get_pending_update():
@@ -1471,22 +1411,7 @@ def get_pending_update():
 
         salt '*' system.get_pending_update
     """
-    key = r"SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired"
-
-    # So long as the registry key exists, a reboot is pending.
-    if __utils__["reg.key_exists"]("HKLM", key):
-        log.debug("Key exists: %s", key)
-        return True
-    else:
-        log.debug("Key does not exist: %s", key)
-
-    return False
-
-
-MINION_VOLATILE_KEY = r"SYSTEM\CurrentControlSet\Services\salt-minion\Volatile-Data"
-
-
-REBOOT_REQUIRED_NAME = "Reboot required"
+    return salt.utils.win_system.get_pending_update()
 
 
 def set_reboot_required_witnessed():
@@ -1516,14 +1441,7 @@ def set_reboot_required_witnessed():
 
         salt '*' system.set_reboot_required_witnessed
     """
-    return __salt__["reg.set_value"](
-        hive="HKLM",
-        key=MINION_VOLATILE_KEY,
-        volatile=True,
-        vname=REBOOT_REQUIRED_NAME,
-        vdata=1,
-        vtype="REG_DWORD",
-    )
+    return salt.utils.win_system.set_reboot_required_witnessed()
 
 
 def get_reboot_required_witnessed():
@@ -1548,10 +1466,7 @@ def get_reboot_required_witnessed():
         salt '*' system.get_reboot_required_witnessed
 
     """
-    value_dict = __salt__["reg.read_value"](
-        hive="HKLM", key=MINION_VOLATILE_KEY, vname=REBOOT_REQUIRED_NAME
-    )
-    return value_dict["vdata"] == 1
+    return salt.utils.win_system.get_reboot_required_witnessed()
 
 
 def get_pending_reboot():
@@ -1569,20 +1484,46 @@ def get_pending_reboot():
 
         salt '*' system.get_pending_reboot
     """
+    return salt.utils.win_system.get_pending_reboot()
 
-    # Order the checks for reboot pending in most to least likely.
-    checks = (
-        get_pending_update,
-        get_pending_file_rename,
-        get_pending_servermanager,
-        get_pending_component_servicing,
-        get_reboot_required_witnessed,
-        get_pending_computer_name,
-        get_pending_domain_join,
-    )
 
-    for check in checks:
-        if check():
-            return True
+def get_pending_reboot_details():
+    """
+    Determine which check is signalling that the system is pending a reboot.
+    Useful in determining why your system is signalling that it needs a reboot.
 
-    return False
+    .. versionadded:: Sodium
+
+    Returns:
+        dict: A dictionary of the results of each system that would indicate a
+        pending reboot
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.get_pending_reboot_details
+    """
+    return salt.utils.win_system.get_pending_reboot_details()
+
+
+def get_pending_windows_update():
+    """
+    Check the Windows Update system for a pending reboot state.
+
+    This leverages the Windows Update System to determine if the system is
+    pending a reboot.
+
+    .. versionadded:: Sodium
+
+    Returns:
+        bool: ``True`` if the Windows Update system reports a pending update,
+        otherwise ``False``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.get_pending_windows_update
+    """
+    return salt.utils.win_system.get_pending_windows_update()

@@ -4,7 +4,6 @@
     :codeauthor: :email:`David Murphy <dmurphy@saltstack.com>`
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
@@ -14,12 +13,8 @@ import time
 
 import salt.modules.gpg as gpg
 import salt.utils.files
-
-# Import Salt libs
 import salt.utils.platform
-
-# Import Salt Testing Libs
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -442,7 +437,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertEqual(ret, _expected_result)
 
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_gpg_import_pub_key(self):
         config_user = MagicMock(return_value="salt")
         user_info = MagicMock(
@@ -454,7 +449,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(ret["res"], True)
 
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_gpg_import_priv_key(self):
         config_user = MagicMock(return_value="salt")
         user_info = MagicMock(
@@ -466,7 +461,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(ret["res"], True)
 
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_gpg_sign(self):
         config_user = MagicMock(return_value="salt")
         user_info = MagicMock(

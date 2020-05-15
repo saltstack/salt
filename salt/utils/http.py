@@ -5,8 +5,6 @@ and the like, but also useful for basic HTTP testing.
 
 .. versionadded:: 2015.5.0
 """
-
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import cgi
@@ -20,15 +18,10 @@ import socket
 import ssl
 import zlib
 
-# Import salt libs
 import salt.config
-
-# pylint: disable=import-error,no-name-in-module
 import salt.ext.six.moves.http_client
 import salt.ext.six.moves.http_cookiejar
 import salt.ext.six.moves.urllib.request as urllib_request
-
-# Don't need a try/except block, since Salt depends on tornado
 import salt.ext.tornado.httputil
 import salt.ext.tornado.simple_httpclient
 import salt.loader
@@ -45,8 +38,6 @@ import salt.utils.xmlutil as xml
 import salt.utils.yaml
 import salt.version
 from salt._compat import ElementTree as ET
-
-# Import 3rd party libs
 from salt.ext import six
 from salt.ext.six.moves import StringIO
 from salt.ext.six.moves.urllib.error import URLError
@@ -58,8 +49,8 @@ from salt.template import compile_template
 from salt.utils.decorators.jinja import jinja_filter
 
 try:
-    from ssl import CertificateError  # pylint: disable=E0611
-    from ssl import match_hostname  # pylint: disable=E0611
+    from ssl import CertificateError
+    from ssl import match_hostname
 
     HAS_MATCHHOSTNAME = True
 except ImportError:
@@ -78,9 +69,6 @@ except ImportError:
         except ImportError:
             HAS_MATCHHOSTNAME = False
     # pylint: enable=no-name-in-module
-
-
-# pylint: enable=import-error,no-name-in-module
 
 
 try:
@@ -190,6 +178,7 @@ def query(
     formdata=False,
     formdata_fieldname=None,
     formdata_filename=None,
+    decode_body=True,
     **kwargs
 ):
     """
@@ -412,7 +401,7 @@ def query(
         result_text = result.content
         result_cookies = result.cookies
         body = result.content
-        if not isinstance(body, six.text_type):
+        if not isinstance(body, six.text_type) and decode_body:
             body = body.decode(result.encoding or "utf-8")
         ret["body"] = body
     elif backend == "urllib2":
@@ -516,7 +505,7 @@ def query(
                 and not isinstance(result_text, six.text_type)
             ):
                 result_text = result_text.decode(res_params["charset"])
-        if six.PY3 and isinstance(result_text, bytes):
+        if six.PY3 and isinstance(result_text, bytes) and decode_body:
             result_text = result_text.decode("utf-8")
         ret["body"] = result_text
     else:
@@ -641,10 +630,13 @@ def query(
             ret["status"] = exc.code
             ret["error"] = six.text_type(exc)
             return ret
-        except socket.gaierror as exc:
+        except (socket.herror, socket.error, socket.timeout, socket.gaierror) as exc:
             if status is True:
                 ret["status"] = 0
             ret["error"] = six.text_type(exc)
+            log.debug(
+                "Cannot perform 'http.query': {0} - {1}".format(url_full, ret["error"])
+            )
             return ret
 
         if stream is True or handle is True:
@@ -666,7 +658,7 @@ def query(
                 and not isinstance(result_text, six.text_type)
             ):
                 result_text = result_text.decode(res_params["charset"])
-        if six.PY3 and isinstance(result_text, bytes):
+        if six.PY3 and isinstance(result_text, bytes) and decode_body:
             result_text = result_text.decode("utf-8")
         ret["body"] = result_text
         if "Set-Cookie" in result_headers and cookies is not None:

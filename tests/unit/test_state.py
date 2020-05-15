@@ -2,27 +2,23 @@
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
-
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
 import tempfile
 
-# Import Salt libs
 import salt.exceptions
 import salt.state
 import salt.utils.files
 import salt.utils.platform
+from salt.exceptions import CommandExecutionError
 from salt.utils.decorators import state as statedecorators
 from salt.utils.odict import OrderedDict
-from tests.support.helpers import with_tempfile
+from tests.support.helpers import slowTest, with_tempfile
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 
 try:
@@ -51,7 +47,7 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         }
         salt.state.format_log(ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_render_error_on_invalid_requisite(self):
         """
         Test that the state compiler correctly deliver a rendering
@@ -120,6 +116,70 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             return_result = state_obj._run_check_onlyif(low_data, "")
             self.assertEqual(expected_result, return_result)
 
+    def test_verify_onlyif_cmd_error(self):
+        """
+        Simulates a failure in cmd.retcode from onlyif
+        This could occur is runas is specified with a user that does not exist
+        """
+        low_data = {
+            "onlyif": "somecommand",
+            "runas" "doesntexist" "name": "echo something",
+            "state": "cmd",
+            "__id__": "this is just a test",
+            "fun": "run",
+            "__env__": "base",
+            "__sls__": "sometest",
+            "order": 10000,
+        }
+        expected_result = {
+            "comment": "onlyif condition is false",
+            "result": True,
+            "skip_watch": True,
+        }
+
+        with patch("salt.state.State._gather_pillar") as state_patch:
+            minion_opts = self.get_temp_config("minion")
+            state_obj = salt.state.State(minion_opts)
+            mock = MagicMock(side_effect=CommandExecutionError("Boom!"))
+            with patch.dict(state_obj.functions, {"cmd.retcode": mock}):
+                #  The mock handles the exception, but the runas dict is being passed as it would actually be
+                return_result = state_obj._run_check_onlyif(
+                    low_data, {"runas": "doesntexist"}
+                )
+                self.assertEqual(expected_result, return_result)
+
+    def test_verify_unless_cmd_error(self):
+        """
+        Simulates a failure in cmd.retcode from unless
+        This could occur is runas is specified with a user that does not exist
+        """
+        low_data = {
+            "unless": "somecommand",
+            "runas" "doesntexist" "name": "echo something",
+            "state": "cmd",
+            "__id__": "this is just a test",
+            "fun": "run",
+            "__env__": "base",
+            "__sls__": "sometest",
+            "order": 10000,
+        }
+        expected_result = {
+            "comment": "unless condition is true",
+            "result": True,
+            "skip_watch": True,
+        }
+
+        with patch("salt.state.State._gather_pillar") as state_patch:
+            minion_opts = self.get_temp_config("minion")
+            state_obj = salt.state.State(minion_opts)
+            mock = MagicMock(side_effect=CommandExecutionError("Boom!"))
+            with patch.dict(state_obj.functions, {"cmd.retcode": mock}):
+                #  The mock handles the exception, but the runas dict is being passed as it would actually be
+                return_result = state_obj._run_check_unless(
+                    low_data, {"runas": "doesntexist"}
+                )
+                self.assertEqual(expected_result, return_result)
+
     def test_verify_unless_parse(self):
         low_data = {
             "unless": [{"fun": "test.arg", "args": ["arg1", "arg2"]}],
@@ -145,6 +205,72 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             state_obj = salt.state.State(minion_opts)
             return_result = state_obj._run_check_unless(low_data, "")
             self.assertEqual(expected_result, return_result)
+
+    def test_verify_creates(self):
+        low_data = {
+            "state": "cmd",
+            "name": 'echo "something"',
+            "__sls__": "tests.creates",
+            "__env__": "base",
+            "__id__": "do_a_thing",
+            "creates": "/tmp/thing",
+            "order": 10000,
+            "fun": "run",
+        }
+
+        with patch("salt.state.State._gather_pillar") as state_patch:
+            minion_opts = self.get_temp_config("minion")
+            state_obj = salt.state.State(minion_opts)
+            with patch("os.path.exists") as path_mock:
+                path_mock.return_value = True
+                expected_result = {
+                    "comment": "/tmp/thing exists",
+                    "result": True,
+                    "skip_watch": True,
+                }
+                return_result = state_obj._run_check_creates(low_data)
+                self.assertEqual(expected_result, return_result)
+
+                path_mock.return_value = False
+                expected_result = {
+                    "comment": "Creates files not found",
+                    "result": False,
+                }
+                return_result = state_obj._run_check_creates(low_data)
+                self.assertEqual(expected_result, return_result)
+
+    def test_verify_creates_list(self):
+        low_data = {
+            "state": "cmd",
+            "name": 'echo "something"',
+            "__sls__": "tests.creates",
+            "__env__": "base",
+            "__id__": "do_a_thing",
+            "creates": ["/tmp/thing", "/tmp/thing2"],
+            "order": 10000,
+            "fun": "run",
+        }
+
+        with patch("salt.state.State._gather_pillar") as state_patch:
+            minion_opts = self.get_temp_config("minion")
+            state_obj = salt.state.State(minion_opts)
+            with patch("os.path.exists") as path_mock:
+                path_mock.return_value = True
+                expected_result = {
+                    "comment": "All files in creates exist",
+                    "result": True,
+                    "skip_watch": True,
+                }
+                return_result = state_obj._run_check_creates(low_data)
+                self.assertEqual(expected_result, return_result)
+
+                path_mock.return_value = False
+                expected_result = {
+                    "comment": "Creates files not found",
+                    "result": False,
+                }
+                return_result = state_obj._run_check_creates(low_data)
+                self.assertEqual(expected_result, return_result)
 
     def _expand_win_path(self, path):
         """
@@ -191,6 +317,28 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             minion_opts = self.get_temp_config("minion")
             state_obj = salt.state.State(minion_opts)
             return_result = state_obj._run_check_onlyif(low_data, "")
+            self.assertEqual(expected_result, return_result)
+
+    def test_verify_onlyif_list_cmd(self):
+        low_data = {
+            "state": "cmd",
+            "name": 'echo "something"',
+            "__sls__": "tests.cmd",
+            "__env__": "base",
+            "__id__": "check onlyif",
+            "onlyif": ["/bin/true", "/bin/false"],
+            "order": 10001,
+            "fun": "run",
+        }
+        expected_result = {
+            "comment": "onlyif condition is false",
+            "result": True,
+            "skip_watch": True,
+        }
+        with patch("salt.state.State._gather_pillar") as state_patch:
+            minion_opts = self.get_temp_config("minion")
+            state_obj = salt.state.State(minion_opts)
+            return_result = state_obj._run_check_onlyif(low_data, {})
             self.assertEqual(expected_result, return_result)
 
     @with_tempfile()
@@ -273,6 +421,89 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             }
             with patch.object(state_obj, "_run_check", return_value=mock):
                 self.assertDictContainsSubset(expected_result, state_obj.call(low_data))
+
+    def test_render_requisite_require_disabled(self):
+        """
+        Test that the state compiler correctly deliver a rendering
+        exception when a requisite cannot be resolved
+        """
+        with patch("salt.state.State._gather_pillar") as state_patch:
+            high_data = {
+                "step_one": OrderedDict(
+                    [
+                        (
+                            "test",
+                            [
+                                OrderedDict(
+                                    [("require", [OrderedDict([("test", "step_two")])])]
+                                ),
+                                "succeed_with_changes",
+                                {"order": 10000},
+                            ],
+                        ),
+                        ("__sls__", "test.disable_require"),
+                        ("__env__", "base"),
+                    ]
+                ),
+                "step_two": {
+                    "test": ["succeed_with_changes", {"order": 10001}],
+                    "__env__": "base",
+                    "__sls__": "test.disable_require",
+                },
+            }
+
+            minion_opts = self.get_temp_config("minion")
+            minion_opts["disabled_requisites"] = ["require"]
+            state_obj = salt.state.State(minion_opts)
+            ret = state_obj.call_high(high_data)
+            run_num = ret["test_|-step_one_|-step_one_|-succeed_with_changes"][
+                "__run_num__"
+            ]
+            self.assertEqual(run_num, 0)
+
+    def test_render_requisite_require_in_disabled(self):
+        """
+        Test that the state compiler correctly deliver a rendering
+        exception when a requisite cannot be resolved
+        """
+        with patch("salt.state.State._gather_pillar") as state_patch:
+            high_data = {
+                "step_one": {
+                    "test": ["succeed_with_changes", {"order": 10000}],
+                    "__env__": "base",
+                    "__sls__": "test.disable_require_in",
+                },
+                "step_two": OrderedDict(
+                    [
+                        (
+                            "test",
+                            [
+                                OrderedDict(
+                                    [
+                                        (
+                                            "require_in",
+                                            [OrderedDict([("test", "step_one")])],
+                                        )
+                                    ]
+                                ),
+                                "succeed_with_changes",
+                                {"order": 10001},
+                            ],
+                        ),
+                        ("__sls__", "test.disable_require_in"),
+                        ("__env__", "base"),
+                    ]
+                ),
+            }
+
+            minion_opts = self.get_temp_config("minion")
+            minion_opts["disabled_requisites"] = ["require_in"]
+            state_obj = salt.state.State(minion_opts)
+            ret = state_obj.call_high(high_data)
+            run_num = ret["test_|-step_one_|-step_one_|-succeed_with_changes"][
+                "__run_num__"
+            ]
+            self.assertEqual(run_num, 0)
 
 
 class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
@@ -562,7 +793,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.state_obj.format_slots(cdata)
         self.assertEqual(cdata, {"args": ["arg"], "kwargs": {"key": "val"}})
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_format_slots_arg(self):
         """
         Test the format slots is calling a slot specified in args with corresponding arguments.
@@ -577,7 +808,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         mock.assert_called_once_with("fun_arg", fun_key="fun_val")
         self.assertEqual(cdata, {"args": ["fun_return"], "kwargs": {"key": "val"}})
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_format_slots_dict_arg(self):
         """
         Test the format slots is calling a slot specified in dict arg.
@@ -594,7 +825,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             cdata, {"args": [{"subarg": "fun_return"}], "kwargs": {"key": "val"}}
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_format_slots_listdict_arg(self):
         """
         Test the format slots is calling a slot specified in list containing a dict.
@@ -611,7 +842,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             cdata, {"args": [[{"subarg": "fun_return"}]], "kwargs": {"key": "val"}}
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_format_slots_liststr_arg(self):
         """
         Test the format slots is calling a slot specified in list containing a dict.
@@ -626,7 +857,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         mock.assert_called_once_with("fun_arg", fun_key="fun_val")
         self.assertEqual(cdata, {"args": [["fun_return"]], "kwargs": {"key": "val"}})
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_format_slots_kwarg(self):
         """
         Test the format slots is calling a slot specified in kwargs with corresponding arguments.
@@ -641,7 +872,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         mock.assert_called_once_with("fun_arg", fun_key="fun_val")
         self.assertEqual(cdata, {"args": ["arg"], "kwargs": {"key": "fun_return"}})
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_format_slots_multi(self):
         """
         Test the format slots is calling all slots with corresponding arguments when multiple slots
@@ -683,7 +914,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             },
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_format_slots_malformed(self):
         """
         Test the format slots keeps malformed slots untouched.
@@ -713,7 +944,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         mock.assert_not_called()
         self.assertEqual(cdata, sls_data)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_slot_traverse_dict(self):
         """
         Test the slot parsing of dict response.
@@ -729,7 +960,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         mock.assert_called_once_with("fun_arg", fun_key="fun_val")
         self.assertEqual(cdata, {"args": ["arg"], "kwargs": {"key": "value1"}})
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_slot_append(self):
         """
         Test the slot parsing of dict response.

@@ -1030,6 +1030,27 @@ def installed(
     Ensure that the package is installed, and that it is the correct version
     (if specified).
 
+    .. note::
+        Any argument which is either a) not explicitly defined for this state,
+        or b) not a global state argument like ``saltenv``, or
+        ``reload_modules``, will be passed through to the call to
+        ``pkg.install`` to install the package(s). For example, you can include
+        a ``disablerepo`` argument on platforms that use yum/dnf to disable
+        that repo:
+
+        .. code-block:: yaml
+
+            mypkg:
+              pkg.installed:
+                - disablerepo: base,updates
+
+        To see what is supported, check :ref:`this page <virtual-pkg>` to find
+        the documentation for your platform's ``pkg`` module, then look at the
+        documentation for the ``install`` function.
+
+        Any argument that is passed through to the ``install`` function, which
+        is not defined for that function, will be silently ignored.
+
     :param str name:
         The name of the package to be installed. This parameter is ignored if
         either "pkgs" or "sources" is used. Additionally, please note that this
@@ -1563,10 +1584,20 @@ def installed(
 
     .. seealso:: unless and onlyif
 
-        You can use the :ref:`unless <unless-requisite>` or
-        :ref:`onlyif <onlyif-requisite>` syntax to skip a full package run.
-        This can be helpful in large environments with multiple states that
-        include requisites for packages to be installed.
+        If running pkg commands together with :ref:`aggregate <mod-aggregate-state>`
+        isn't an option, you can use the :ref:`creates <creates-requisite>`,
+        :ref:`unless <unless-requisite>`, or :ref:`onlyif <onlyif-requisite>`
+        syntax to skip a full package run. This can be helpful in large environments
+        with multiple states that include requisites for packages to be installed.
+
+        .. code-block:: yaml
+
+            # Using creates for a simple single-factor check
+            install_nginx:
+              pkg.installed:
+                - name: nginx
+                - creates:
+                  - /etc/nginx/nginx.conf
 
         .. code-block:: yaml
 
@@ -1578,6 +1609,12 @@ def installed(
                   - fun: file.file_exists
                     args:
                       - /etc/nginx/nginx.conf
+
+            # Using unless with a shell test
+            install_nginx:
+              pkg.installed:
+                - name: nginx
+                - unless: test -f /etc/nginx/nginx.conf
 
         .. code-block:: yaml
 
@@ -1591,11 +1628,11 @@ def installed(
                       - /etc/nginx/nginx.conf
                       - 'user www-data;'
 
-        The above examples use two different methods to reasonably ensure
+        The above examples use different methods to reasonably ensure
         that a package has already been installed. First, with checking for a
         file that would be created with the package. Second, by checking for
         specific text within a file that would be created or managed by salt.
-        With these requisists satisfied, unless will return ``True`` and the
+        With these requisists satisfied, creates/unless will return ``True`` and the
         ``pkg.installed`` state will be skipped.
 
         .. code-block:: bash
@@ -2116,6 +2153,27 @@ def downloaded(
     Ensure that the package is downloaded, and that it is the correct version
     (if specified).
 
+    .. note::
+        Any argument which is either a) not explicitly defined for this state,
+        or b) not a global state argument like ``saltenv``, or
+        ``reload_modules``, will be passed through to the call to
+        ``pkg.install`` to download the package(s). For example, you can include
+        a ``disablerepo`` argument on platforms that use yum/dnf to disable
+        that repo:
+
+        .. code-block:: yaml
+
+            mypkg:
+              pkg.downloaded:
+                - disablerepo: base,updates
+
+        To see what is supported, check :ref:`this page <virtual-pkg>` to find
+        the documentation for your platform's ``pkg`` module, then look at the
+        documentation for the ``install`` function.
+
+        Any argument that is passed through to the ``install`` function, which
+        is not defined for that function, will be silently ignored.
+
     Currently supported for the following pkg providers:
     :mod:`yumpkg <salt.modules.yumpkg>`, :mod:`zypper <salt.modules.zypper>` and :mod:`zypper <salt.modules.aptpkg>`
 
@@ -2266,6 +2324,19 @@ def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
 
     Ensure that packages related to certain advisory ids are installed.
 
+    .. note::
+        Any argument which is either a) not explicitly defined for this state,
+        or b) not a global state argument like ``saltenv``, or
+        ``reload_modules``, will be passed through to the call to
+        ``pkg.install`` to install the patch(es).
+
+        To see what is supported, check :ref:`this page <virtual-pkg>` to find
+        the documentation for your platform's ``pkg`` module, then look at the
+        documentation for the ``install`` function.
+
+        Any argument that is passed through to the ``install`` function, which
+        is not defined for that function, will be silently ignored.
+
     Currently supported for the following pkg providers:
     :mod:`yumpkg <salt.modules.yumpkg>` and :mod:`zypper <salt.modules.zypper>`
 
@@ -2397,6 +2468,27 @@ def latest(
     :mod:`installed <salt.states.pkg.installed>` function to be
     used, as :mod:`latest <salt.states.pkg.latest>` will update the package
     whenever a new package is available.
+
+    .. note::
+        Any argument which is either a) not explicitly defined for this state,
+        or b) not a global state argument like ``saltenv``, or
+        ``reload_modules``, will be passed through to the call to
+        ``pkg.install`` to install the package(s). For example, you can include
+        a ``disablerepo`` argument on platforms that use yum/dnf to disable
+        that repo:
+
+        .. code-block:: yaml
+
+            mypkg:
+              pkg.latest:
+                - disablerepo: base,updates
+
+        To see what is supported, check :ref:`this page <virtual-pkg>` to find
+        the documentation for your platform's ``pkg`` module, then look at the
+        documentation for the ``install`` function.
+
+        Any argument that is passed through to the ``install`` function, which
+        is not defined for that function, will be silently ignored.
 
     name
         The name of the package to maintain at the latest available version.
