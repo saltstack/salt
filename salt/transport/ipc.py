@@ -749,7 +749,6 @@ class IPCMessageSubscriber(IPCClient):
         This class is a singleton so close have to be called only once during
         garbage collection when nobody uses this instance.
         '''
-        
 
     def close(self):
         """
@@ -768,7 +767,7 @@ class IPCMessageSubscriber(IPCClient):
             exc = self._read_stream_future.exception()
             if exc and not isinstance(exc, StreamClosedError):
                 log.error("Read future returned exception %r", exc)
-                
+
         if not self._closing:
             IPCClient._close(self)
             # This will prevent this message from showing up:
@@ -779,9 +778,9 @@ class IPCMessageSubscriber(IPCClient):
             if self._read_stream_future is not None and self._read_stream_future.done():
                 self._read_stream_future.exception()
 
-
     # pylint: disable=W1701
     def __del__(self):
         if IPCMessageSubscriber in globals():
             self.close()
+
     # pylint: enable=W1701
