@@ -2373,6 +2373,7 @@ def update(
         # From that point on, failures are not blocking to try to live update as much
         # as possible.
         commands = []
+        removable_changes = []
         if domain.isActive() and live:
             if cpu:
                 commands.append(
@@ -2392,7 +2393,6 @@ def update(
                 )
 
             # Look for removable device source changes
-            removable_changes = []
             new_disks = []
             for new_disk in changes["disk"].get("new", []):
                 device = new_disk.get("device", "disk")
