@@ -653,6 +653,7 @@ def cli(command=None, **kwargs):
         salt 'device_name' junos.cli 'show system alarms' format=xml dest=/home/user/cli_output.txt
     """
     conn = __proxy__["junos.conn"]()
+    conn.open()  # refresh stale session
 
     format_ = kwargs.pop("format", "text")
     if not format_:
