@@ -346,6 +346,17 @@ class TestAsyncEventPublisher(AsyncTestCase):
         self.data.pop("_stamp")  # drop the stamp
         self.assertEqual(self.data, {"data": "foo1"})
 
+    def test_event_unsubscribe_remove_error(self):
+        me = salt.utils.event.MinionEvent(self.opts, listen=True)
+        tag = "evt1"
+        me.fire_event({"data": "foo1"}, tag)
+
+        # Make sure no remove error is raised when tag is not found
+        for _ in range(2):
+            me.unsubscribe(tag)
+
+        me.unsubscribe("tag_does_not_exist")
+
 
 class TestEventReturn(TestCase):
     @skipIf(True, "SLOWTEST skip")
