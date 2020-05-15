@@ -402,10 +402,20 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 elif salt.utils.platform.is_windows():
                     self.assertEqual(salt.utils.win_dacl.get_owner(path), username)
 
+    @destructiveTest
     @slowTest
     def test_issue_6833_pip_upgrade_pip(self):
         # Create the testing virtualenv
-        venv_dir = os.path.join(RUNTIME_VARS.TMP, "6833-pip-upgrade-pip")
+        if sys.platform == "win32":
+            # To keeps the path short, we'll create this directory on the root
+            # of the system drive. Otherwise the path is too long and the pip
+            # upgrade will fail. Also, I don't know why salt.utils.platform
+            # doesn't work in this function, that's why I used sys.platform
+            venv_dir = os.path.join(
+                os.environ["SystemDrive"], "tmp-6833-pip-upgrade-pip"
+            )
+        else:
+            venv_dir = os.path.join(RUNTIME_VARS.TMP, "6833-pip-upgrade-pip")
         ret = self._create_virtualenv(venv_dir)
 
         self.assertEqual(
@@ -415,7 +425,6 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 pprint.pformat(ret)
             ),
         )
-        import salt.modules.virtualenv_mod
 
         if not (
             "New python executable" in ret["stdout"]
