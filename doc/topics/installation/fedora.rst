@@ -119,5 +119,5 @@ To start the Minion:
 Now go to the :ref:`Configuring Salt<configuring-salt>` page.
 
 .. _`Bootstrap Script`: https://github.com/saltstack/salt-bootstrap
-.. _`EPEL`: http://fedoraproject.org/wiki/EPEL
-.. _`PyPI`: https://pypi.python.org/pypi/salt
+.. _`EPEL`: https://fedoraproject.org/wiki/EPEL
+.. _`PyPI`: https://pypi.org/project/salt/

@@ -45,7 +45,7 @@ Ubuntu PPA packaging
 Thanks to Sean Channel (`@seanchannel`_, pentabular) :program:`salt-api` is
 available as a PPA on the SaltStack LaunchPad team.
 
-https://launchpad.net/~saltstack/+archive/salt
+https://launchpad.net/~saltstack/+archive/ubuntu/salt
 
 .. _`@seanchannel`: https://github.com/seanchannel
 

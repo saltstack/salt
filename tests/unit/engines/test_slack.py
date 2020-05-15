@@ -73,7 +73,7 @@ class EngineSlackTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(target_commandline, _expected)
 
-        # Check pillar is overrided
+        # Check pillar is overridden
         _expected = (
             True,
             {"tgt_type": "glob", "target": "*"},
@@ -86,7 +86,7 @@ class EngineSlackTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(target_commandline, _expected)
 
-        # Check target is overrided
+        # Check target is overridden
         _expected = (
             True,
             {"tgt_type": "glob", "target": "localhost"},

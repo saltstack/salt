@@ -8,9 +8,6 @@
 
     Some reusable class Mixins
 """
-# pylint: disable=repr-flag-used-in-string
-
-# Import python libs
 from __future__ import absolute_import, print_function
 
 import atexit
@@ -25,9 +22,7 @@ import sys
 import tempfile
 import time
 import types
-from collections import OrderedDict
 
-# Import salt libs
 import salt.config
 import salt.exceptions
 import salt.utils.event
@@ -39,27 +34,26 @@ import salt.utils.stringutils
 import salt.utils.yaml
 import salt.version
 from salt._compat import ElementTree as etree
-
-# Import 3rd-party libs
 from salt.ext import six
-from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
-from salt.ext.six.moves.queue import (  # pylint: disable=import-error,no-name-in-module
-    Empty,
-)
+from salt.ext.six.moves import zip
+from salt.ext.six.moves.queue import Empty
 from salt.utils.immutabletypes import freeze
 from salt.utils.verify import verify_env
-
-# Import Salt Testing Libs
 from tests.support.mock import patch
 from tests.support.paths import CODE_DIR
 from tests.support.runtests import RUNTIME_VARS
+
+try:
+    from salt.utils.odict import OrderedDict
+except ImportError:
+    from collections import OrderedDict
 
 log = logging.getLogger(__name__)
 
 
 class CheckShellBinaryNameAndVersionMixin(object):
     """
-    Simple class mix-in to subclass in companion to :class:`ShellTestCase<tests.support.case.ShellTestCase>` which
+    Simple class mix-in to subclass in companion to :class:`ShellCase<tests.support.case.ShellCase>` which
     adds a test case to verify proper version report from Salt's CLI tools.
     """
 
@@ -210,6 +204,10 @@ class AdaptedConfigurationTestCaseMixin(object):
 
     @staticmethod
     def get_config_file_path(filename):
+        if filename == "master":
+            return os.path.join(RUNTIME_VARS.TMP_CONF_DIR, filename)
+        if filename == "minion":
+            return os.path.join(RUNTIME_VARS.TMP_MINION_CONF_DIR, filename)
         if filename == "syndic_master":
             return os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, "master")
         if filename == "syndic":
@@ -221,9 +219,9 @@ class AdaptedConfigurationTestCaseMixin(object):
         if filename == "mm_sub_master":
             return os.path.join(RUNTIME_VARS.TMP_MM_SUB_CONF_DIR, "master")
         if filename == "mm_minion":
-            return os.path.join(RUNTIME_VARS.TMP_MM_CONF_DIR, "minion")
+            return os.path.join(RUNTIME_VARS.TMP_MM_MINION_CONF_DIR, "minion")
         if filename == "mm_sub_minion":
-            return os.path.join(RUNTIME_VARS.TMP_MM_SUB_CONF_DIR, "minion")
+            return os.path.join(RUNTIME_VARS.TMP_MM_SUB_MINION_CONF_DIR, "minion")
         return os.path.join(RUNTIME_VARS.TMP_CONF_DIR, filename)
 
     @property

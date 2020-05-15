@@ -171,7 +171,7 @@ def state(
 
     test
         Pass ``test=true`` or ``test=false`` through to the state function. This
-        can be used to overide a test mode set in the minion's config file. If
+        can be used to override a test mode set in the minion's config file. If
         left as the default of None and the 'test' mode is supplied on the
         command line, that value is passed instead.
 

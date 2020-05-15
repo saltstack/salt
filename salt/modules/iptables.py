@@ -167,7 +167,7 @@ def _regex_iptables_save(cmd_output, filters=None):
                 log.warning("Skipping regex rule: '%s': %s", pattern, e)
                 continue
 
-    if len(__context__["iptables.save_filters"]) > 0:
+    if __context__["iptables.save_filters"]:
         # line by line get rid of any regex matches
         _filtered_cmd_output = [
             line
@@ -718,7 +718,7 @@ def save(filename=None, family="ipv4"):
     ipt = __salt__["cmd.run"](cmd)
 
     # regex out the output if configured with filters
-    if len(_conf_save_filters()) > 0:
+    if _conf_save_filters():
         ipt = _regex_iptables_save(ipt)
 
     out = __salt__["file.write"](filename, ipt)
@@ -902,10 +902,7 @@ def append(table="filter", chain=None, rule=None, family="ipv4"):
         _iptables_cmd(family), wait, table, chain, rule
     )
     out = __salt__["cmd.run"](cmd)
-    if len(out) == 0:
-        return True
-    else:
-        return False
+    return not out
 
 
 def insert(table="filter", chain=None, position=None, rule=None, family="ipv4"):
@@ -945,7 +942,7 @@ def insert(table="filter", chain=None, position=None, rule=None, family="ipv4"):
         rules = get_rules(family=family)
         size = len(rules[table][chain]["rules"])
         position = (size + position) + 1
-        if position is 0:
+        if position == 0:
             position = 1
 
     wait = "--wait" if _has_option("--wait", family) else ""
@@ -1083,7 +1080,7 @@ def _parse_conf(conf_file=None, in_mem=False, family="ipv4"):
             ret_args = {}
             chain = parsed_args["append"]
             for arg in parsed_args:
-                if parsed_args[arg] and arg is not "append":
+                if parsed_args[arg] and arg != "append":
                     ret_args[arg] = parsed_args[arg]
             if parsed_args["comment"] is not None:
                 comment = parsed_args["comment"][0].strip('"')

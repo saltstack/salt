@@ -38,6 +38,49 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         ret = pip._pip_bin_env(None, None)
         self.assertIsNone(ret)
 
+    def test_install_frozen_app(self):
+        pkg = "pep8"
+        mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
+        with patch("sys.frozen", True, create=True):
+            with patch("sys._MEIPASS", True, create=True):
+                with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
+                    pip.install(pkg)
+                    expected = [
+                        sys.executable,
+                        "pip",
+                        "install",
+                        pkg,
+                    ]
+                    mock.assert_called_with(
+                        expected,
+                        python_shell=False,
+                        saltenv="base",
+                        use_vt=False,
+                        runas=None,
+                    )
+
+    def test_install_source_app(self):
+        pkg = "pep8"
+        mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
+        with patch("sys.frozen", False, create=True):
+            with patch("sys._MEIPASS", False, create=True):
+                with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
+                    pip.install(pkg)
+                    expected = [
+                        sys.executable,
+                        "-m",
+                        "pip",
+                        "install",
+                        pkg,
+                    ]
+                    mock.assert_called_with(
+                        expected,
+                        python_shell=False,
+                        saltenv="base",
+                        use_vt=False,
+                        runas=None,
+                    )
+
     def test_fix4361(self):
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):

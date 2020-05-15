@@ -814,7 +814,8 @@ class Pillar(object):
             defaults = {}
         err = ""
         errors = []
-        fn_ = self.client.get_state(sls, saltenv).get("dest", False)
+        state_data = self.client.get_state(sls, saltenv)
+        fn_ = state_data.get("dest", False)
         if not fn_:
             if sls in self.ignored_pillars.get(saltenv, []):
                 log.debug(
@@ -907,6 +908,16 @@ class Pillar(object):
                                     self.avail[saltenv],
                                     sub_sls.lstrip(".").replace("/", "."),
                                 )
+                                if sub_sls.startswith("."):
+                                    if state_data.get("source", "").endswith(
+                                        "/init.sls"
+                                    ):
+                                        include_parts = sls.split(".")
+                                    else:
+                                        include_parts = sls.split(".")[:-1]
+                                    sub_sls = ".".join(include_parts + [sub_sls[1:]])
+                                matches = fnmatch.filter(self.avail[saltenv], sub_sls,)
+                                matched_pstates.extend(matches)
                             except KeyError:
                                 errors.extend(
                                     [
@@ -914,6 +925,9 @@ class Pillar(object):
                                         "'{0}' found".format(saltenv)
                                     ]
                                 )
+                                matched_pstates = [sub_sls]
+                            # If matched_pstates is empty, set to sub_sls
+                            if len(matched_pstates) < 1:
                                 matched_pstates = [sub_sls]
                             for m_sub_sls in matched_pstates:
                                 if m_sub_sls not in mods:

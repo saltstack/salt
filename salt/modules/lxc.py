@@ -8,7 +8,6 @@ lxc >= 1.0 (even beta alpha) is required
 
 """
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
@@ -26,8 +25,6 @@ import textwrap
 import time
 
 import salt.config
-
-# Import salt libs
 import salt.utils.args
 import salt.utils.cloud
 import salt.utils.data
@@ -40,12 +37,10 @@ import salt.utils.odict
 import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import 3rd-party libs
 from salt.ext import six
 
 # pylint: disable=import-error,no-name-in-module
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
+from salt.ext.six.moves import range
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -1910,7 +1905,7 @@ def create(
             options='{"dist": "centos", "release": "6", "arch": "amd64"}'
 
         For available template options, refer to the lxc template scripts
-        which are ususally located under ``/usr/share/lxc/templates``,
+        which are usually located under ``/usr/share/lxc/templates``,
         or run ``lxc-create -t <template> -h``.
 
     image
@@ -1962,7 +1957,7 @@ def create(
     def select(key, default=None):
         kw_overrides_match = kw_overrides.pop(key, None)
         profile_match = profile.pop(key, default)
-        # Return the profile match if the the kwarg match was None, as the
+        # Return the profile match if the kwarg match was None, as the
         # lxc.present state will pass these kwargs set to None by default.
         if kw_overrides_match is None:
             return profile_match
@@ -3132,7 +3127,7 @@ def set_dns(name, dnsservers=None, searchdomains=None, path=None):
     # We need to handle that case with care:
     #  - we create the resolv.conf runtime directory (the
     #   linked directory) as anyway it will be shadowed when the real
-    #   runned tmpfs mountpoint will be mounted.
+    #   run tmpfs mountpoint will be mounted.
     #   ( /etc/resolv.conf -> ../run/resolvconf/resolv.conf)
     #   Indeed, it can save us in any other case (running, eg, in a
     #   bare chroot when repairing or preparing the container for

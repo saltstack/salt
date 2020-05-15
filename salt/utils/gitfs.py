@@ -556,7 +556,7 @@ class GitProvider(object):
                 elif self.disable_saltenv_mapping:
                     if per_saltenv_ref is None:
                         log.debug(
-                            "saltenv mapping is diabled for %s remote '%s' "
+                            "saltenv mapping is disabled for %s remote '%s' "
                             "and saltenv '%s' is not explicitly mapped",
                             self.role,
                             self.id,
@@ -609,8 +609,9 @@ class GitProvider(object):
         # According to stackoverflow (http://goo.gl/l74GC8), we are setting LANGUAGE as well
         # just to be sure.
         env = os.environ.copy()
-        env[b"LANGUAGE"] = b"C"
-        env[b"LC_ALL"] = b"C"
+        if not salt.utils.platform.is_windows():
+            env[b"LANGUAGE"] = b"C"
+            env[b"LC_ALL"] = b"C"
 
         cmd = subprocess.Popen(
             shlex.split(cmd_str),
