@@ -20,7 +20,7 @@ accomplished with module templating. The default module templating system used
 is `Jinja2`_  and may be configured by changing the :conf_master:`renderer`
 value in the master config.
 
-.. _`Jinja2`: http://jinja.pocoo.org/
+.. _`Jinja2`: https://jinja.palletsprojects.com/en/2.11.x/
 
 All states are passed through a templating system when they are initially read.
 To make use of the templating system, simply add some templating markup.

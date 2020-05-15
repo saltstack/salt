@@ -5,6 +5,7 @@ from __future__ import absolute_import
 import datetime
 import logging
 
+from tests.support.helpers import slowTest
 from tests.support.unit import skipIf
 from tests.unit.utils.scheduler.base import SchedulerTestsBase
 
@@ -32,8 +33,9 @@ class SchedulerPostponeTest(SchedulerTestsBase):
 
     def tearDown(self):
         self.schedule.reset()
+        super(SchedulerPostponeTest, self).tearDown()
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_postpone(self):
         """
         verify that scheduled job is postponed until the specified time.

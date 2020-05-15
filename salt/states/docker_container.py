@@ -49,16 +49,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import logging
-import os
 
 import salt.utils.args
 import salt.utils.data
 import salt.utils.dockermod
-
-# Import Salt libs
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
 from salt.ext import six
 
 # Enable proper logging
@@ -2017,7 +2012,7 @@ def running(
     # "not cleanup_temp" means that the temp container became permanent, either
     #     because the named container did not exist or changes were detected
     # "cleanup_temp" means that the container already existed and no changes
-    #     were detected, so the the temp container was discarded
+    #     were detected, so the temp container was discarded
     if (
         not cleanup_temp
         and (not exists or (exists and start))
@@ -2097,9 +2092,6 @@ def running(
 def run(
     name,
     image=None,
-    onlyif=None,
-    unless=None,
-    creates=None,
     bg=False,
     failhard=True,
     replace=False,
@@ -2134,15 +2126,6 @@ def run(
     control how logs are returned.
 
     Additionally, the following arguments are supported:
-
-    onlyif
-        A command or list of commands to run as a check. The container will
-        only run if any of the specified commands returns a zero exit status.
-
-    unless
-        A command or list of commands to run as a check. The container will
-        only run if any of the specified commands returns a non-zero exit
-        status.
 
     creates
         A path or list of paths. Only run if one or more of the specified paths
@@ -2217,11 +2200,6 @@ def run(
     elif not isinstance(image, six.string_types):
         image = six.text_type(image)
 
-    cret = mod_run_check(onlyif, unless, creates)
-    if isinstance(cret, dict):
-        ret.update(cret)
-        return ret
-
     try:
         if "networks" in kwargs and kwargs["networks"] is not None:
             kwargs["networks"] = _parse_networks(kwargs["networks"])
@@ -2233,11 +2211,6 @@ def run(
         else:
             ret["comment"] = exc.__str__()
             return ret
-
-    cret = mod_run_check(onlyif, unless, creates)
-    if isinstance(cret, dict):
-        ret.update(cret)
-        return ret
 
     if __opts__["test"]:
         ret["result"] = None
@@ -2534,82 +2507,6 @@ def absent(name, force=False):
         ret["comment"] = "{0} removed container '{1}'".format(method, name)
         ret["result"] = True
     return ret
-
-
-def mod_run_check(onlyif, unless, creates):
-    """
-    Execute the onlyif/unless/creates logic. Returns a result dict if any of
-    the checks fail, otherwise returns True
-    """
-    cmd_kwargs = {"use_vt": False, "bg": False}
-
-    if onlyif is not None:
-        if isinstance(onlyif, six.string_types):
-            onlyif = [onlyif]
-        if not isinstance(onlyif, list) or not all(
-            isinstance(x, six.string_types) for x in onlyif
-        ):
-            return {
-                "comment": "onlyif is not a string or list of strings",
-                "skip_watch": True,
-                "result": True,
-            }
-        for entry in onlyif:
-            retcode = __salt__["cmd.retcode"](
-                entry, ignore_retcode=True, python_shell=True
-            )
-            if retcode != 0:
-                return {
-                    "comment": "onlyif command {0} returned exit code of {1}".format(
-                        entry, retcode
-                    ),
-                    "skip_watch": True,
-                    "result": True,
-                }
-
-    if unless is not None:
-        if isinstance(unless, six.string_types):
-            unless = [unless]
-        if not isinstance(unless, list) or not all(
-            isinstance(x, six.string_types) for x in unless
-        ):
-            return {
-                "comment": "unless is not a string or list of strings",
-                "skip_watch": True,
-                "result": True,
-            }
-        for entry in unless:
-            retcode = __salt__["cmd.retcode"](
-                entry, ignore_retcode=True, python_shell=True
-            )
-            if retcode == 0:
-                return {
-                    "comment": "unless command {0} returned exit code of {1}".format(
-                        entry, retcode
-                    ),
-                    "skip_watch": True,
-                    "result": True,
-                }
-
-    if creates is not None:
-        if isinstance(creates, six.string_types):
-            creates = [creates]
-        if not isinstance(creates, list) or not all(
-            isinstance(x, six.string_types) for x in creates
-        ):
-            return {
-                "comment": "creates is not a string or list of strings",
-                "skip_watch": True,
-                "result": True,
-            }
-        if all(os.path.exists(x) for x in creates):
-            return {
-                "comment": "All specified paths in 'creates' " "argument exist",
-                "result": True,
-            }
-
-    # No reason to stop, return True
-    return True
 
 
 def mod_watch(name, sfun=None, **kwargs):

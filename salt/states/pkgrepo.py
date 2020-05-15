@@ -311,10 +311,10 @@ def managed(name, ppa=None, **kwargs):
     """
     if "refresh_db" in kwargs:
         salt.utils.versions.warn_until(
-            "Neon",
+            "Sodium",
             "The 'refresh_db' argument to 'pkg.mod_repo' has been "
             "renamed to 'refresh'. Support for using 'refresh_db' will be "
-            "removed in the Neon release of Salt.",
+            "removed in the Sodium release of Salt.",
         )
         kwargs["refresh"] = kwargs.pop("refresh_db")
 

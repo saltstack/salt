@@ -2,20 +2,16 @@
 """
 unit tests for the cache runner
 """
-
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import Salt Libs
 import salt.runners.queue as queue_mod
+from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 class QueueTest(TestCase, LoaderModuleMockMixin):
@@ -44,7 +40,7 @@ class QueueTest(TestCase, LoaderModuleMockMixin):
         }
         queue_insert.assert_called_once_with(**expected_call)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_process_runner(self):
         ret = [{"fun": "test.stdout_print", "args": [], "kwargs": {}}]
 

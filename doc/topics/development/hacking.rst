@@ -32,7 +32,7 @@ Create a new `virtualenv`_:
 
     virtualenv /path/to/your/virtualenv
 
-.. _`virtualenv`: https://pypi.python.org/pypi/virtualenv
+.. _`virtualenv`: https://pypi.org/project/virtualenv/
 
 Avoid making your :ref:`virtualenv path too long <too_long_socket_path>`.
 

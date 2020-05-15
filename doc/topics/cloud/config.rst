@@ -57,7 +57,7 @@ settings can be placed in the provider, profile or map configuration files:
           - web
 
 
-When salt cloud creates a new minon, it can automatically add grain information
+When salt cloud creates a new minion, it can automatically add grain information
 to the minion configuration file identifying the sources originally used
 to define it.
 

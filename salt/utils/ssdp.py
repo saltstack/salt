@@ -27,10 +27,14 @@ import logging
 import random
 import socket
 import time
-from collections import OrderedDict
 
 import salt.utils.json
 import salt.utils.stringutils
+
+try:
+    from salt.utils.odict import OrderedDict
+except ImportError:
+    from collections import OrderedDict
 
 _json = salt.utils.json.import_json()
 if not hasattr(_json, "dumps"):

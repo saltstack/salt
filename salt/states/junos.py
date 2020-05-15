@@ -41,8 +41,7 @@ def rpc(name, dest=None, format="xml", args=None, **kwargs):
     .. code-block:: yaml
 
         get-interface-information:
-            junos:
-              - rpc
+            junos.rpc:
               - dest: /home/user/rpc.log
               - interface_name: lo0
 
@@ -61,7 +60,7 @@ def rpc(name, dest=None, format="xml", args=None, **kwargs):
           The format in which the rpc reply must be stored in file specified in the dest
           (used only when dest is specified) (default = xml)
         * kwargs: keyworded arguments taken by rpc call like-
-            * timeout:
+            * timeout: 30
               Set NETCONF RPC timeout. Can be used for commands which
               take a while to execute. (default= 30 seconds)
             * filter:
@@ -73,9 +72,11 @@ def rpc(name, dest=None, format="xml", args=None, **kwargs):
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
     if args is not None:
-        ret["changes"] = __salt__["junos.rpc"](name, dest, format, *args, **kwargs)
+        ret["changes"] = __salt__["junos.rpc"](
+            name, dest=dest, format=format, args=args, **kwargs
+        )
     else:
-        ret["changes"] = __salt__["junos.rpc"](name, dest, format, **kwargs)
+        ret["changes"] = __salt__["junos.rpc"](name, dest=dest, format=format, **kwargs)
     return ret
 
 
@@ -87,8 +88,7 @@ def set_hostname(name, **kwargs):
     .. code-block:: yaml
 
             device_name:
-              junos:
-                - set_hostname
+              junos.set_hostname:
                 - comment: "Host-name set via saltstack."
 
 
@@ -121,8 +121,7 @@ def commit(name, **kwargs):
     .. code-block:: yaml
 
             commit the changes:
-              junos:
-                - commit
+              junos.commit:
                 - confirm: 10
 
 
@@ -165,8 +164,7 @@ def rollback(name, id, **kwargs):
     .. code-block:: yaml
 
             rollback the changes:
-              junos:
-                - rollback
+              junos.rollback:
                 - id: 5
 
     Parameters:
@@ -188,29 +186,30 @@ def rollback(name, id, **kwargs):
 
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
-    ret["changes"] = __salt__["junos.rollback"](id, **kwargs)
+    ret["changes"] = __salt__["junos.rollback"](id=id, **kwargs)
     return ret
 
 
 @resultdecorator
-def diff(name, d_id):
+def diff(name, d_id, **kwargs):
     """
+    .. versionchanged:: Sodium
+
     Gets the difference between the candidate and the current configuration.
 
     .. code-block:: yaml
 
             get the diff:
-              junos:
-                - diff
-                - id: 10
+              junos.diff:
+                - d_id: 10
 
     Parameters:
       Optional
-        * id:
-          The rollback id value [0-49]. (default = 0)
+        * d_id:
+          The rollback diff id (d_id) value [0-49]. (default = 0)
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
-    ret["changes"] = __salt__["junos.diff"](d_id)
+    ret["changes"] = __salt__["junos.diff"](id=d_id, **kwargs)
     return ret
 
 
@@ -222,8 +221,7 @@ def cli(name, **kwargs):
     .. code-block:: yaml
 
             show version:
-              junos:
-                - cli
+              junos.cli:
                 - format: xml
 
     Parameters:
@@ -255,8 +253,7 @@ def shutdown(name, **kwargs):
     .. code-block:: yaml
 
             shut the device:
-              junos:
-                - shutdown
+              junos.shutdown:
                 - in_min: 10
 
     Parameters:
@@ -282,8 +279,7 @@ def install_config(name, **kwargs):
     .. code-block:: yaml
 
             Install the mentioned config:
-              junos:
-                - install_config
+              junos.install_config:
                 - path: salt//configs/interface.set
                 - timeout: 100
                 - diffs_file: 'var/log/diff'
@@ -292,8 +288,7 @@ def install_config(name, **kwargs):
     .. code-block:: yaml
 
             Install the mentioned config:
-              junos:
-                - install_config
+              junos.install_config:
                 - template_path: salt//configs/interface.set
                 - timeout: 100
                 - template_vars:
@@ -372,8 +367,7 @@ def install_os(name, **kwargs):
     .. code-block:: yaml
 
             salt://images/junos_image.tgz:
-              junos:
-                - install_os
+              junos.install_os:
                 - timeout: 100
                 - reboot: True
 
@@ -407,8 +401,7 @@ def file_copy(name, dest=None, **kwargs):
     .. code-block:: yaml
 
             /home/m2/info.txt:
-              junos:
-                - file_copy
+              junos.file_copy:
                 - dest: info_copy.txt
 
     Parameters:
@@ -468,20 +461,24 @@ def load(name, **kwargs):
 
     .. code-block:: yaml
 
-            Install the mentioned config:
-              junos:
-                - load
-                - path: salt//configs/interface.set
+        Install the mentioned config:
+          junos.load:
+            - path: salt//configs/interface.set
 
     .. code-block:: yaml
 
-            Install the mentioned config:
-              junos:
-                - load
-                - template_path: salt//configs/interface.set
-                - template_vars:
-                    interface_name: lo0
-                    description: Creating interface via SaltStack.
+        Install the mentioned config:
+          junos.load:
+            - template_path: salt//configs/interface.set
+            - template_vars:
+                interface_name: lo0
+                description: Creating interface via SaltStack.
+
+    Sample template:
+
+    .. code-block:: bash
+
+        set interfaces {{ interface_name }} unit 0
 
 
     name
@@ -537,4 +534,52 @@ def commit_check(name):
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
     ret["changes"] = __salt__["junos.commit_check"]()
+    return ret
+
+
+@resultdecorator
+def get_table(name, table, table_file, **kwargs):
+    """
+    .. versionadded:: Sodium
+
+    Retrieve data from a Junos device using Tables/Views
+
+    .. code-block:: yaml
+
+        get route details:
+          junos.get_table:
+            - table: RouteTable
+            - file: routes.yml
+
+    name (required)
+        task definition
+
+    table (required)
+        Name of PyEZ Table
+
+    file
+        YAML file that has the table specified in table parameter
+
+    path:
+        Path of location of the YAML file.
+        defaults to op directory in jnpr.junos.op
+
+    target:
+        if command need to run on FPC, can specify fpc target
+
+    key:
+        To overwrite key provided in YAML
+
+    key_items:
+        To select only given key items
+
+    filters:
+        To select only filter for the dictionary from columns
+
+    template_args:
+        key/value pair which should render Jinja template command
+
+    """
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+    ret["changes"] = __salt__["junos.get_table"](table, table_file, **kwargs)
     return ret
