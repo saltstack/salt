@@ -505,6 +505,19 @@ def _get_disks(conn, dom):
                 source_name = source.get("name")
                 if source_name:
                     qemu_target = "{0}:{1}".format(qemu_target, source_name)
+
+                # Reverse the magic for the rbd and gluster pools
+                if source.get("protocol") in ["rbd", "gluster"]:
+                    for pool_i in conn.listAllStoragePools():
+                        pool_i_xml = ElementTree.fromstring(pool_i.XMLDesc())
+                        name_node = pool_i_xml.find("source/name")
+                        if name_node is not None and source_name.startswith(
+                            "{}/".format(name_node.text)
+                        ):
+                            qemu_target = "{}{}".format(
+                                pool_i.name(), source_name[len(name_node.text) :]
+                            )
+                            break
             elif disk_type == "volume":
                 pool_name = source.get("pool")
                 volume_name = source.get("volume")
@@ -3869,23 +3882,11 @@ def purge(vm_, dirs=False, removables=False, **kwargs):
             directories.add(os.path.dirname(disks[disk]["file"]))
         else:
             # We may have a volume to delete here
-            matcher = re.match(
-                "^(?:(?P<protocol>[^:]*):)?(?P<pool>[^/]+)/(?P<volume>.*)$",
-                disks[disk]["file"],
-            )
+            matcher = re.match("^(?P<pool>[^/]+)/(?P<volume>.*)$", disks[disk]["file"],)
             if matcher:
                 pool_name = matcher.group("pool")
                 pool = None
-                if matcher.group("protocol") in ["rbd", "gluster"]:
-                    # The pool name is not the libvirt one... we need to loop over the pool to find it
-                    for pool_i in conn.listAllStoragePools():
-                        pool_i_xml = ElementTree.fromstring(pool_i.XMLDesc())
-                        if pool_i_xml.get("type") == matcher.group("protocol"):
-                            name_node = pool_i_xml.find("source/name")
-                            if name_node is not None and name_node.text == pool_name:
-                                pool = pool_i
-                                break
-                elif pool_name in conn.listStoragePools():
+                if pool_name in conn.listStoragePools():
                     pool = conn.storagePoolLookupByName(pool_name)
 
                 if pool and matcher.group("volume") in pool.listVolumes():
