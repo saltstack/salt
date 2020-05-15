@@ -417,16 +417,15 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         )
         import salt.modules.virtualenv_mod
 
-        msg = "New python executable"
-        if salt.modules.virtualenv_mod.virtualenv_ver(venv_dir) >= (20, 0, 2):
-            msg = "created virtual environment"
-        self.assertIn(
-            msg,
-            ret["stdout"],
-            msg="Expected STDOUT did not match. Full return dictionary:\n{}".format(
+        if not (
+            "New python executable" in ret["stdout"]
+            or "created virtual environment" in ret["stdout"]
+        ):
+            assert (
+                False
+            ), "Expected STDOUT did not match. Full return dictionary:\n{}".format(
                 pprint.pformat(ret)
-            ),
-        )
+            )
 
         # Let's install a fixed version pip over whatever pip was
         # previously installed
