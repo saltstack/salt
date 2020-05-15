@@ -6,7 +6,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import pytest
 from tests.support.case import ShellCase
-from tests.support.helpers import flaky, slowTest
+from tests.support.helpers import slowTest
 from tests.support.unit import skipIf
 
 
@@ -25,7 +25,6 @@ class JobsTest(ShellCase):
         self.assertEqual(ret["return"], [])
         self.assertEqual(ret["out"], [])
 
-    @flaky
     @slowTest
     def test_active(self):
         """
