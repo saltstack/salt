@@ -313,7 +313,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         venv_create = self._create_virtualenv(
             venv_dir, user=username, password="PassWord1!"
         )
-        if venv_create["retcode"] > 0:
+        if venv_create.get("retcode", 1) > 0:
             self.skipTest(
                 "Failed to create testcase virtual environment: {0}"
                 "".format(venv_create)
@@ -366,7 +366,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         venv_create = self._create_virtualenv(
             venv_dir, user=username, password="PassWord1!"
         )
-        if venv_create["retcode"] > 0:
+        if venv_create.get("retcode", 1) > 0:
             self.skipTest(
                 "failed to create testcase virtual environment: {0}"
                 "".format(venv_create)
@@ -539,7 +539,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         # the state internal keywords
         venv_dir = os.path.join(RUNTIME_VARS.TMP, "pip-installed-unless")
         venv_create = self._create_virtualenv(venv_dir)
-        if venv_create["retcode"] > 0:
+        if venv_create.get("retcode", 1) > 0:
             self.skipTest(
                 "Failed to create testcase virtual environment: {0}".format(venv_create)
             )
