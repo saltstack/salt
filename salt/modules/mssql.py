@@ -70,14 +70,14 @@ def _get_connection(**kwargs):
     return pymssql.connect(**connection_args)
 
 
-def _close_connection(cursor=None,connect=None):
-    '''
+def _close_connection(cursor=None, connect=None):
+    """
     Close the database connection and cursor connection
     Args:
         cursor (cursor object):
         connect  (Connection object):
 
-    '''
+    """
     try:
         if cursor:
             cursor.close()
@@ -91,7 +91,7 @@ def _close_connection(cursor=None,connect=None):
 
 
 def _to_rawstrings(text):
-    '''
+    """
     Escape an argument string to be suitable to the appropriate caller.
     Special characters will be escaped.
     For example, if a Windows path is passed in, special characters need to be escaped
@@ -101,21 +101,21 @@ def _to_rawstrings(text):
 
     Returns:
         str: an escaped string
-    '''
-    s = ''
+    """
+    s = ""
     if six.PY2:
         if isinstance(text, str):
-            s = text.encode(encoding='string-escape')
+            s = text.encode(encoding="string-escape")
         elif isinstance(text, unicode):
-            s = text.encode(encoding='unicode-escape')
+            s = text.encode(encoding="unicode-escape")
     elif six.PY3:
         if isinstance(text, str):
-            s = text.encode(encoding='unicode-escape')
+            s = text.encode(encoding="unicode-escape")
     return s
 
 
 def quote_identifier(identifier):
-    r'''
+    r"""
     Return an identifier name (column, table, database, etc) escaped for MSSQL
 
     This means surrounded by "[]" character and escaping this character inside.
@@ -128,8 +128,8 @@ def quote_identifier(identifier):
     .. code-block:: bash
 
         salt '*' mssql.quote_identifier 'foo'bar'
-    '''
-    return '[' + identifier.replace('[', '').replace(']', '') + ']'
+    """
+    return "[" + identifier.replace("[", "").replace("]", "") + "]"
 
 
 class _MssqlEncoder(salt.utils.json.JSONEncoder):
