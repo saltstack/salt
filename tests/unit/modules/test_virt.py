@@ -2810,6 +2810,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
           </source>
         </pool>
         """
+        pool_mock.name.return_value = "test-ses"
         pool_mock.storageVolLookupByName.return_value.XMLDesc.return_value = [
             """
             <volume type='network'>
@@ -2827,7 +2828,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         ]
         pool_mock.listVolumes.return_value = ["my_vm_data2"]
         self.mock_conn.listAllStoragePools.return_value = [pool_mock]
-        self.mock_conn.listStoragePools.return_value = ["default"]
+        self.mock_conn.listStoragePools.return_value = ["test-ses"]
+        self.mock_conn.storagePoolLookupByName.return_value = pool_mock
 
         with patch.dict(os.path.__dict__, {"exists": MagicMock(return_value=False)}):
             res = virt.purge("test-vm")
