@@ -484,6 +484,22 @@ grains for the master.
 
     enable_gpu_grains: True
 
+.. conf_master:: skip_grains
+
+``skip_grains``
+---------------------
+
+Default: ``False``
+
+MasterMinions should omit grains. A MasterMinion is "a minion function object
+for generic use on the master" that omit pillar. A RunnerClient creates a
+MasterMinion omitting states and renderer. Setting to True can improve master
+performance.
+
+.. code-block:: yaml
+
+    skip_grains: True
+
 .. conf_master:: job_cache
 
 ``job_cache``
@@ -591,8 +607,8 @@ be found by analyzing the cache log with ``memcache_debug`` enabled.
 Default: ``False``
 
 If cache storage got full, i.e. the items count exceeds the
-``memcache_max_items`` value, memcache cleans up it's storage. If this option
-set to ``False`` memcache removes the only one oldest value from it's storage.
+``memcache_max_items`` value, memcache cleans up its storage. If this option
+set to ``False`` memcache removes the only one oldest value from its storage.
 If this set set to ``True`` memcache removes all the expired items and also
 removes the oldest one if there are no expired items.
 
@@ -1341,6 +1357,15 @@ salt-ssh.
       groupA: minion1,minion2
       groupB: minion1,minion3
 
+.. conf_master:: ssh_run_pre_flight
+
+Default: False
+
+Run the ssh_pre_flight script defined in the salt-ssh roster. By default
+the script will only run when the thin dir does not exist on the targeted
+minion. This will force the script to run and not check if the thin dir
+exists first.
+
 .. conf_master:: thin_extra_mods
 
 ``thin_extra_mods``
@@ -1443,7 +1468,7 @@ This should still be considered a less than secure option, due to the fact
 that trust is based on just the requesting minion id.
 
 .. versionchanged:: 2018.3.0
-    For security reasons the file must be readonly except for it's owner.
+    For security reasons the file must be readonly except for its owner.
     If :conf_master:`permissive_pki_access` is ``True`` the owning group can also
     have write access, but if Salt is running as ``root`` it must be a member of that group.
     A less strict requirement also existed in previous version.
@@ -1771,7 +1796,7 @@ Default: ``None``
 TLS/SSL connection options. This could be set to a dictionary containing
 arguments corresponding to python ``ssl.wrap_socket`` method. For details see
 `Tornado <http://www.tornadoweb.org/en/stable/tcpserver.html#tornado.tcpserver.TCPServer>`_
-and `Python <http://docs.python.org/2/library/ssl.html#ssl.wrap_socket>`_
+and `Python <https://docs.python.org/2/library/ssl.html#ssl.wrap_socket>`_
 documentation.
 
 Note: to set enum arguments values like ``cert_reqs`` and ``ssl_version`` use
@@ -2152,7 +2177,7 @@ To set the options for sls templates use :conf_master:`jinja_sls_env`.
 
 .. note::
 
-    The `Jinja2 Environment documentation <http://jinja.pocoo.org/docs/api/#jinja2.Environment>`_ is the official source for the default values.
+    The `Jinja2 Environment documentation <https://jinja.palletsprojects.com/en/2.11.x/api/#jinja2.Environment>`_ is the official source for the default values.
     Not all the options listed in the jinja documentation can be overridden using :conf_master:`jinja_env` or :conf_master:`jinja_sls_env`.
 
 The default options are:
@@ -2629,14 +2654,18 @@ nothing is ignored.
 ``master_roots``
 ----------------
 
-Default: ``/srv/salt-master``
+Default: ``''``
 
 A master-only copy of the :conf_master:`file_roots` dictionary, used by the
 state compiler.
 
+Example:
+
 .. code-block:: yaml
 
-    master_roots: /srv/salt-master
+    master_roots:
+      base:
+        - /srv/salt-master
 
 roots: Master's Local File Server
 ---------------------------------
@@ -4008,7 +4037,7 @@ ext_pillar keys to override those from :conf_master:`pillar_roots`.
 
     ext_pillar_first: False
 
-.. conf_minion:: pillarenv_from_saltenv
+.. conf_master:: pillarenv_from_saltenv
 
 ``pillarenv_from_saltenv``
 --------------------------
@@ -4126,7 +4155,7 @@ branch/tag (or from a per-remote ``env`` parameter), but if set this will
 override the process of deriving the env from the branch/tag name. For example,
 in the configuration below the ``foo`` branch would be assigned to the ``base``
 environment, while the ``bar`` branch would need to explicitly have ``bar``
-configured as it's environment to keep it from also being mapped to the
+configured as its environment to keep it from also being mapped to the
 ``base`` environment.
 
 .. code-block:: yaml

@@ -52,6 +52,11 @@ processes that used to be manual. Rather than having to remember to run several
 different tools before you commit, you only have to run ``git commit``, and you
 will be notified about style and lint issues before you ever open a PR.
 
+.. warning::
+    Currently there is an issue with the pip-tools-compile pre-commit hook on windows.
+    The details around this issue are included here:
+    https://github.com/saltstack/salt/issues/56642.
+    Please ensure you export ``SKIP=pip-tools-compile`` to skip pip-tools-compile.
 
 Salt Coding Style
 -----------------
@@ -83,6 +88,27 @@ existing copyright headers should be considered legacy and not an example to
 follow.
 
 .. _github-pull-request:
+
+New Features
+------------
+
+Feature requests through Salt go through a multi-stage process.
+
+All features are added to major releases only. Salt does not accept
+feature additions in bug-fix branches. Therefore, all feature work
+is done exclusively in the develop branch.
+
+To formally propose a new feature, the proposal must take the form
+of an RFC. To create an RFC, copy the template file found in the rfcs/
+directory of the Salt codebase and fill the outline with the reasoning
+for the new feature and with implementation details.
+
+Upon submitting the written RFC via a pull-request, it will be reviewed
+by the core development team as well as the community. Once discussed
+and agreed upon, the RFC may be merged.
+
+A merged RFC indicates that a feature has been accepted and will be
+added to an upcoming release of Salt.
 
 Sending a GitHub pull request
 -----------------------------
@@ -139,7 +165,7 @@ Fork a Repo Guide_>`_ and is well worth reading.
 
     GOOD
 
-    .. code-block::
+    .. code-block:: bash
 
         Fix broken things in file1 and file2
 
@@ -157,7 +183,7 @@ Fork a Repo Guide_>`_ and is well worth reading.
 
     BAD
 
-    .. code-block::
+    .. code-block:: bash
 
         Fixes broken things
 
@@ -177,11 +203,11 @@ Fork a Repo Guide_>`_ and is well worth reading.
 
         If your change fixes a bug or implements a feature already filed in the
         `issue tracker`_, be sure to
-	`reference the issue <https://help.github.com/en/articles/closing-issues-using-keywords>`_
+	`reference the issue <https://help.github.com/en/github/managing-your-work-on-github/linking-a-pull-request-to-an-issue>`_
         number in the commit message body.
 
     If you get stuck, there are many introductory Git resources on
-    http://help.github.com.
+    https://help.github.com/en.
 
 #.  Push your locally-committed changes to your GitHub fork.
 
@@ -259,7 +285,7 @@ Fork a Repo Guide_>`_ and is well worth reading.
     take a couple of hours.  Depending on your GitHub notification settings
     you may also receive an email message about the test results.
 
-    Test progress and results can be found at http://jenkins.saltstack.com/.
+    Test progress and results can be found at https://jenkinsci.saltstack.com/.
 
 .. _which-salt-branch:
 
@@ -411,7 +437,7 @@ root of the Salt repository.
 Bootstrap Script Changes
 ------------------------
 
-Salt's Bootstrap Script, known as `bootstrap-salt.sh`_ in the Salt repo, has it's own
+Salt's Bootstrap Script, known as `bootstrap-salt.sh`_ in the Salt repo, has its own
 repository, contributing guidelines, and release cadence.
 
 All changes to the Bootstrap Script should be made to `salt-bootstrap repo`_. Any
@@ -426,8 +452,8 @@ Script, see the Bootstrap Script's `Contributing Guidelines`_.
 .. _`issue tracker`: https://github.com/saltstack/salt/issues
 .. _`Fork saltstack/salt`: https://github.com/saltstack/salt/fork
 .. _'Git resources`: https://help.github.com/articles/good-resources-for-learning-git-and-github/
-.. _`Closing issues via commit message`: https://help.github.com/articles/closing-issues-via-commit-messages
-.. _`git format-patch`: https://www.kernel.org/pub/software/scm/git/docs/git-format-patch.html
+.. _`Closing issues via commit message`: https://help.github.com/en/github/managing-your-work-on-github/linking-a-pull-request-to-an-issue
+.. _`git format-patch`: https://mirrors.edge.kernel.org/pub/software/scm/git/docs/git-format-patch.html
 .. _salt-users: https://groups.google.com/forum/#!forum/salt-users
 .. _GPG Probot: https://probot.github.io/apps/gpg/
 .. _help articles: https://help.github.com/articles/signing-commits-with-gpg/
@@ -439,6 +465,6 @@ Script, see the Bootstrap Script's `Contributing Guidelines`_.
 .. _`SEP 15`: https://github.com/saltstack/salt-enhancement-proposals/pull/21
 .. _`pre-commit`: https://pre-commit.com/
 .. _`SaltStack Community Slack`: https://saltstackcommunity.herokuapp.com/
-.. _`#salt on freenode`: http://webchat.freenode.net/?channels=salt&uio=Mj10cnVlJjk9dHJ1ZSYxMD10cnVl83
+.. _`#salt on freenode`: https://webchat.freenode.net/#salt
 .. _`saltstack meetup`: https://www.meetup.com/pro/saltstack/
 .. _`saltstack on serverfault`: https://serverfault.com/questions/tagged/saltstack

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 An engine that reads messages from the salt event bus and pushes
 them onto a fluent endpoint.
 
@@ -34,10 +34,11 @@ All arguments are optional
         </match>
 
 :depends: fluent-logger
-'''
+"""
 
 # Import python libraries
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
 # Import salt libs
@@ -51,17 +52,19 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'fluent'
+__virtualname__ = "fluent"
 
 
 def __virtual__():
-    return __virtualname__ \
-        if sender is not None \
-        else (False, 'fluent-logger not installed')
+    return (
+        __virtualname__
+        if sender is not None
+        else (False, "fluent-logger not installed")
+    )
 
 
-def start(host='localhost', port=24224, app='engine'):
-    '''
+def start(host="localhost", port=24224, app="engine"):
+    """
     Listen to salt events and forward them to fluent
 
     args:
@@ -69,24 +72,24 @@ def start(host='localhost', port=24224, app='engine'):
         port (int): Port of fluentd agent. Default is 24224
         app (str): Text sent as fluentd tag. Default is "engine". This text is appended
                    to "saltstack." to form a fluentd tag, ex: "saltstack.engine"
-    '''
-    SENDER_NAME = 'saltstack'
+    """
+    SENDER_NAME = "saltstack"
 
     sender.setup(SENDER_NAME, host=host, port=port)
 
-    if __opts__.get('id').endswith('_master'):
+    if __opts__.get("id").endswith("_master"):
         event_bus = salt.utils.event.get_master_event(
-                __opts__,
-                __opts__['sock_dir'],
-                listen=True)
+            __opts__, __opts__["sock_dir"], listen=True
+        )
     else:
         event_bus = salt.utils.event.get_event(
-            'minion',
-            transport=__opts__['transport'],
+            "minion",
+            transport=__opts__["transport"],
             opts=__opts__,
-            sock_dir=__opts__['sock_dir'],
-            listen=True)
-    log.info('Fluent engine started')
+            sock_dir=__opts__["sock_dir"],
+            listen=True,
+        )
+    log.info("Fluent engine started")
 
     while True:
         salt_event = event_bus.get_event_block()
