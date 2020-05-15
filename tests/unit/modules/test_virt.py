@@ -2109,6 +2109,60 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             virt.update("my_vm", cpu=4, mem=2048),
         )
 
+    def test_update_backing_store(self):
+        """
+        Test updating a disk with a backing store
+        """
+        xml = """
+            <domain type='kvm' id='7'>
+              <name>my_vm</name>
+              <memory unit='KiB'>1048576</memory>
+              <currentMemory unit='KiB'>1048576</currentMemory>
+              <vcpu placement='auto'>1</vcpu>
+              <os>
+                <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
+              </os>
+              <devices>
+                <disk type='volume' device='disk'>
+                  <driver name='qemu' type='qcow2' cache='none' io='native'/>
+                  <source pool='default' volume='my_vm_system' index='1'/>
+                  <backingStore type='file' index='2'>
+                    <format type='qcow2'/>
+                    <source file='/path/to/base.qcow2'/>
+                    <backingStore/>
+                  </backingStore>
+                  <target dev='vda' bus='virtio'/>
+                  <alias name='virtio-disk0'/>
+                  <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x0'/>
+                </disk>
+              </devices>
+            </domain>
+        """
+        domain_mock = self.set_mock_vm("my_vm", xml)
+        domain_mock.OSType.return_value = "hvm"
+        self.mock_conn.defineXML.return_value = True
+        updatedev_mock = MagicMock(return_value=0)
+        domain_mock.updateDeviceFlags = updatedev_mock
+        self.mock_conn.listStoragePools.return_value = ["default"]
+        self.mock_conn.storagePoolLookupByName.return_value.XMLDesc.return_value = (
+            "<pool type='dir'/>"
+        )
+
+        ret = virt.update(
+            "my_vm",
+            disks=[
+                {
+                    "name": "system",
+                    "pool": "default",
+                    "backing_store_path": "/path/to/base.qcow2",
+                    "backing_store_format": "qcow2",
+                },
+            ],
+        )
+        self.assertFalse(ret["definition"])
+        self.assertFalse(ret["disk"]["attached"])
+        self.assertFalse(ret["disk"]["detached"])
+
     def test_update_removables(self):
         """
         Test attaching, detaching, changing removable devices

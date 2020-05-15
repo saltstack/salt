@@ -1968,8 +1968,17 @@ def _disks_equal(disk1, disk2):
         else ElementTree.Element("source")
     )
 
+    source1_dict = xmlutil.to_dict(source1, True)
+    source2_dict = xmlutil.to_dict(source2, True)
+
+    # Remove the index added by libvirt in the source for backing chain
+    if source1_dict:
+        source1_dict.pop("index", None)
+    if source2_dict:
+        source2_dict.pop("index", None)
+
     return (
-        xmlutil.to_dict(source1, True) == xmlutil.to_dict(source2, True)
+        source1_dict == source2_dict
         and target1 is not None
         and target2 is not None
         and target1.get("bus") == target2.get("bus")
