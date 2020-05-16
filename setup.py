@@ -35,6 +35,7 @@ from setuptools.command.develop import develop
 from setuptools.command.egg_info import egg_info
 from setuptools.command.install import install
 from setuptools.command.sdist import sdist
+from setuptools.command.bdist_egg import bdist_egg
 
 try:
     from urllib2 import urlopen
@@ -556,6 +557,14 @@ class Sdist(sdist):
             os.unlink(PACKAGED_FOR_SALT_SSH_FILE)
 
 
+class BDistEgg(bdist_egg):
+    def finalize_options(self):
+        bdist_egg.finalize_options(self)
+        self.distribution.build_egg = True
+        if not self.skip_build:
+            self.run_command("build")
+
+
 class CloudSdist(Sdist):  # pylint: disable=too-many-ancestors
     user_options = Sdist.user_options + [
         (
@@ -741,6 +750,11 @@ class Build(build):
 
         if getattr(self.distribution, "with_salt_version", False):
             # Write the hardcoded salt version module salt/_version.py
+            self.distribution.salt_version_hardcoded_path = salt_build_ver_file
+            self.run_command("write_salt_version")
+
+        if getattr(self.distribution, "build_egg", False):
+            # we are building an egg package. need to include _version.py
             self.distribution.salt_version_hardcoded_path = salt_build_ver_file
             self.run_command("write_salt_version")
 
@@ -995,6 +1009,7 @@ class SaltDistribution(distutils.dist.Distribution):
                 "clean": Clean,
                 "build": Build,
                 "sdist": Sdist,
+                "bdist_egg": BDistEgg,
                 "install": Install,
                 "develop": Develop,
                 "write_salt_version": WriteSaltVersion,
