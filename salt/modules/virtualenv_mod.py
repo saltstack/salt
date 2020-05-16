@@ -180,7 +180,12 @@ def create(
     if venv_bin is None:
         venv_bin = __opts__.get("venv_bin") or __pillar__.get("venv_bin")
 
-    cmd = [venv_bin]
+    if salt.utils.platform.is_windows():
+        # This is an attempt to address this issue when called from the test
+        # suite: https://github.com/saltstack/salt/issues/54821#issuecomment-629622472
+        cmd = ['cmd', '/c', venv_bin]
+    else:
+        cmd = [venv_bin]
 
     if "pyvenv" not in venv_bin:
         # ----- Stop the user if pyvenv only options are used --------------->
