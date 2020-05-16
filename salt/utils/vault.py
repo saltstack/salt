@@ -80,7 +80,6 @@ def _get_token_and_url_from_master():
             ttl=ttl,
             uses=uses,
         )
-
     if not result:
         log.error(
             "Failed to get token from master! No result returned - "
@@ -266,7 +265,11 @@ def get_cache():
         return _gen_new_connection()
 
     # Drop 10 seconds from ttl to be safe
-    ttl10 = connection["issued"] + connection["lease_duration"] - 10
+    if "lease_duration" in connection:
+        ttl = connection["lease_duration"]
+    else:
+        ttl = connection["ttl"]
+    ttl10 = connection["issued"] + ttl - 10
     cur_time = int(round(time.time()))
 
     # Determine if ttl still valid
@@ -306,7 +309,7 @@ def make_request(
             # Don't worry about setting verify if it doesn't exist
             pass
     url = "{0}/{1}".format(vault_url, resource)
-    headers = {"X-Vault-Token": token, "Content-Type": "application/json"}
+    headers = {"X-Vault-Token": str(token), "Content-Type": "application/json"}
     response = requests.request(method, url, headers=headers, **args)
     if not response.ok and response.json().get("errors", None) == ["permission denied"]:
         log.info("Permission denied from vault")
@@ -330,7 +333,11 @@ def make_request(
         return response
 
     # Decrement vault uses, only on secret URL lookups and multi use tokens
-    if not connection.get("unlimited_use_token") and not resource.startswith("v1/sys"):
+    if (
+        not connection.get("unlimited_use_token")
+        and not resource.startswith("v1/sys")
+        and not resource.startswith("v1/sec")
+    ):
         log.debug("Decrementing Vault uses on limited token for url: %s", resource)
         connection["uses"] -= 1
         if connection["uses"] <= 0:
