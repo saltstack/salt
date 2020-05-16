@@ -56,6 +56,13 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
 
     def tearDown(self):
         self._clear_archive_dir()
+        try:
+            salt.utils.files.rm_rf(
+                os.path.join(RUNTIME_VARS.TMP_ROOT_DIR, "cache", "archive_hash")
+            )
+        except OSError:
+            # some tests do notcreate the archive_hash directory
+            pass
 
     @staticmethod
     def _clear_archive_dir():
@@ -363,7 +370,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
             name=ARCHIVE_DIR,
             source=self.archive_local_tar_source,
             archive_format="tar",
-            skip_files_list_verify=False,
+            skip_files_list_verify=True,
             source_hash_update=True,
             source_hash=ARCHIVE_TAR_SHA_HASH,
             trim_output=1,
