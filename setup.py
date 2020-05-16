@@ -31,11 +31,11 @@ from distutils.version import LooseVersion  # pylint: disable=blacklisted-module
 # pylint: disable=E0611
 import setuptools
 from setuptools import setup
+from setuptools.command.bdist_egg import bdist_egg
 from setuptools.command.develop import develop
 from setuptools.command.egg_info import egg_info
 from setuptools.command.install import install
 from setuptools.command.sdist import sdist
-from setuptools.command.bdist_egg import bdist_egg
 
 try:
     from urllib2 import urlopen
