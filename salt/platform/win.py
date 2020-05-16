@@ -1132,6 +1132,8 @@ def CreateProcessWithTokenW(
     startupinfo=None,
 ):
     creationflags |= win32con.CREATE_UNICODE_ENVIRONMENT
+    log.error("WTF 1 %r", commandline)
+    log.error("WTF 2 %r", environment)
     if commandline is not None:
         commandline = ctypes.create_unicode_buffer(commandline)
     if startupinfo is None:

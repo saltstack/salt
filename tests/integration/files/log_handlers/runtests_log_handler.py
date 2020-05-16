@@ -35,11 +35,11 @@ __virtualname__ = "runtests_log_handler"
 def __virtual__():
     if "runtests_log_port" not in __opts__:
         return False, "'runtests_log_port' not in options"
-    if six.PY3:
-        return (
-            False,
-            "runtests external logging handler is temporarily disabled for Python 3 tests",
-        )
+    #if six.PY3:
+    #    return (
+    #        False,
+    #        "runtests external logging handler is temporarily disabled for Python 3 tests",
+    #    )
     return True
 
 
