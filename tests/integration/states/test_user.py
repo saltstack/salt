@@ -152,10 +152,14 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         # user
         ret = self.run_state("group.present", name=self.user_name)
         self.assertSaltTrueReturn(ret)
+        if salt.utils.platform.is_darwin():
+            gid = grp.getgrnam("staff").gr_gid
+        else:
+            gid = self.user_name
         ret = self.run_state(
             "user.present",
             name=self.user_name,
-            gid=self.user_name,
+            gid=gid,
             usergroup=False,
             home=self.user_home,
         )
