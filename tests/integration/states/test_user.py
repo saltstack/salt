@@ -169,7 +169,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         group_name = grp.getgrgid(ret["gid"]).gr_name
         if not salt.utils.platform.is_darwin():
             self.assertTrue(os.path.isdir(self.user_home))
-        self.assertEqual(group_name, self.user_name)
+            self.assertEqual(group_name, self.user_name)
         ret = self.run_state("user.absent", name=self.user_name)
         self.assertSaltTrueReturn(ret)
         ret = self.run_state("group.absent", name=self.user_name)
