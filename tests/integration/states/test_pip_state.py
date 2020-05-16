@@ -313,7 +313,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         venv_create = self._create_virtualenv(
             venv_dir, user=username, password="PassWord1!"
         )
-        if venv_create["retcode"] > 0:
+        if venv_create.get("retcode", 1) > 0:
             self.skipTest(
                 "Failed to create testcase virtual environment: {0}"
                 "".format(venv_create)
@@ -366,7 +366,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         venv_create = self._create_virtualenv(
             venv_dir, user=username, password="PassWord1!"
         )
-        if venv_create["retcode"] > 0:
+        if venv_create.get("retcode", 1) > 0:
             self.skipTest(
                 "failed to create testcase virtual environment: {0}"
                 "".format(venv_create)
@@ -411,8 +411,10 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             # of the system drive. Otherwise the path is too long and the pip
             # upgrade will fail. Also, I don't know why salt.utils.platform
             # doesn't work in this function, that's why I used sys.platform
-            venv_dir = os.path.join(
-                os.environ["SystemDrive"], "tmp-6833-pip-upgrade-pip"
+            # Need to use os.sep.join here instead of os.path.join because of
+            # the colon in SystemDrive
+            venv_dir = os.sep.join(
+                [os.environ["SystemDrive"], "tmp-6833-pip-upgrade-pip"]
             )
         else:
             venv_dir = os.path.join(RUNTIME_VARS.TMP, "6833-pip-upgrade-pip")
@@ -537,7 +539,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         # the state internal keywords
         venv_dir = os.path.join(RUNTIME_VARS.TMP, "pip-installed-unless")
         venv_create = self._create_virtualenv(venv_dir)
-        if venv_create["retcode"] > 0:
+        if venv_create.get("retcode", 1) > 0:
             self.skipTest(
                 "Failed to create testcase virtual environment: {0}".format(venv_create)
             )

@@ -7,7 +7,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import pytest
 from tests.support.case import ShellCase
 from tests.support.helpers import slowTest
-from tests.support.unit import skipIf
 
 
 @pytest.mark.windows_whitelisted
@@ -21,7 +20,7 @@ class JobsTest(ShellCase):
         """
         jobs.master
         """
-        ret = self.run_run_plus("jobs.master")
+        ret = self.run_run_plus("jobs.master", _output="json")
         self.assertEqual(ret["return"], [])
         self.assertEqual(ret["out"], [])
 
@@ -30,35 +29,45 @@ class JobsTest(ShellCase):
         """
         jobs.active
         """
-        ret = self.run_run_plus("jobs.active")
+        ret = self.run_run_plus("jobs.active", _output="json")
         self.assertEqual(ret["return"], {})
-        self.assertEqual(ret["out"], [])
+        self.assertEqual(ret["out"], {})
 
     @slowTest
     def test_lookup_jid(self):
         """
         jobs.lookup_jid
         """
-        ret = self.run_run_plus("jobs.lookup_jid", "23974239742394")
+        ret = self.run_run_plus("jobs.lookup_jid", "23974239742394", _output="json")
         self.assertEqual(ret["return"], {})
-        self.assertEqual(ret["out"], [])
+        self.assertEqual(ret["out"], {})
 
     @slowTest
     def test_lookup_jid_invalid(self):
         """
         jobs.lookup_jid
         """
-        ret = self.run_run_plus("jobs.lookup_jid")
+        ret = self.run_run_plus("jobs.lookup_jid", _output="json")
         expected = "Passed invalid arguments:"
         self.assertIn(expected, ret["return"])
 
-    @skipIf(True, "to be re-enabled when #23623 is merged")
+    @slowTest
     def test_list_jobs(self):
         """
         jobs.list_jobs
         """
-        ret = self.run_run_plus("jobs.list_jobs")
+        self.run_salt("minion test.echo test_list_jobs")
+        ret = self.run_run_plus("jobs.list_jobs", _output="json")
         self.assertIsInstance(ret["return"], dict)
+        for job in ret["return"].values():
+            if job["Function"] != "test.echo":
+                continue
+            if job["Arguments"] != ["test_list_jobs"]:
+                continue
+            # We our job in the list, we're good with the test
+            break
+        else:
+            self.fail("Did not our job from the jobs.list_jobs call")
 
 
 @pytest.mark.windows_whitelisted
@@ -87,7 +96,7 @@ class LocalCacheTargetTest(ShellCase):
         This is a regression test for fixing the local_cache behavior.
         """
         self.run_salt("minion test.echo target_info_test")
-        ret = self.run_run_plus("jobs.list_jobs")
+        ret = self.run_run_plus("jobs.list_jobs", _output="json")
         for item in ret["return"].values():
             if (
                 item["Function"] == "test.echo"
