@@ -363,7 +363,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
             name=ARCHIVE_DIR,
             source=self.archive_local_tar_source,
             archive_format="tar",
-            skip_files_list_verify=True,
+            skip_files_list_verify=False,
             source_hash_update=True,
             source_hash=ARCHIVE_TAR_SHA_HASH,
             trim_output=1,
