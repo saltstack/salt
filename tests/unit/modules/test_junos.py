@@ -1716,9 +1716,26 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_getsize:
             mock_getsize.return_value = 10
             mock_isfile.return_value = True
+            mock_install.return_value = True
             ret = dict()
             ret["out"] = True
             ret["message"] = "Installed the os."
+            self.assertEqual(junos.install_os("path"), ret)
+
+    def test_install_os_failure(self):
+        with patch("jnpr.junos.utils.sw.SW.install") as mock_install, patch(
+            "salt.utils.files.safe_rm"
+        ) as mock_safe_rm, patch("salt.utils.files.mkstemp") as mock_mkstemp, patch(
+            "os.path.isfile"
+        ) as mock_isfile, patch(
+            "os.path.getsize"
+        ) as mock_getsize:
+            mock_getsize.return_value = 10
+            mock_isfile.return_value = True
+            mock_install.return_value = False
+            ret = dict()
+            ret["out"] = False
+            ret["message"] = "Installation failed."
             self.assertEqual(junos.install_os("path"), ret)
 
     def test_install_os_with_reboot_arg(self):
@@ -1733,6 +1750,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_getsize:
             mock_getsize.return_value = 10
             mock_isfile.return_value = True
+            mock_install.return_value = True
             args = {
                 "__pub_user": "root",
                 "__pub_arg": [{"reboot": True}],
@@ -1776,6 +1794,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_getsize:
             mock_getsize.return_value = 10
             mock_isfile.return_value = True
+            mock_install.return_value = True
             mock_reboot.side_effect = self.raise_exception
             args = {
                 "__pub_user": "root",
@@ -1804,6 +1823,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_getsize:
             mock_getsize.return_value = 10
             mock_isfile.return_value = True
+            mock_install.return_value = True
             ret = dict()
             ret["out"] = True
             ret["message"] = "Installed the os."
@@ -1824,6 +1844,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_getsize:
             mock_getsize.return_value = 10
             mock_isfile.return_value = True
+            mock_install.return_value = True
             ret = dict()
             ret["out"] = True
             ret["message"] = "Installed the os."
@@ -1840,6 +1861,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_getsize:
             mock_getsize.return_value = 10
             mock_isfile.return_value = True
+            mock_install.return_value = True
             ret = dict()
             ret["out"] = True
             ret["message"] = "Installed the os."

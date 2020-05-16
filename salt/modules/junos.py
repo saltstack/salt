@@ -215,8 +215,6 @@ def rpc(cmd=None, dest=None, **kwargs):
         op.update(kwargs)
 
     if cmd is None:
-        cmd = kwargs.pop("rpc", None)
-    if cmd is None:
         ret["message"] = "Please provide the rpc to execute."
         ret["out"] = False
         return ret
@@ -870,14 +868,15 @@ def install_config(path=None, **kwargs):
         op.update(kwargs)
 
     test = op.pop("test", False)
-    template_vars = {}
+
+    kwargs = {}
     if "template_vars" in op:
-        template_vars = op["template_vars"]
+        kwargs = op["template_vars"]
 
     try:
         template_cached_path = salt.utils.files.mkstemp()
         __salt__["cp.get_template"](
-            path, template_cached_path, template_vars=template_vars
+            path, template_cached_path, **kwargs
         )
     except Exception as ex:  # pylint: disable=broad-except
         ret["message"] = (
@@ -1080,6 +1079,9 @@ def install_os(path=None, **kwargs):
         So this :timeout: value will be used in the context of the SW installation
         process.  Defaults to 30 minutes (30*60=1800 seconds)
 
+    timeout : 1800
+        Alias to dev_timeout for backward compatibility
+
     reboot : False
         Whether to reboot after installation
 
@@ -1136,7 +1138,7 @@ def install_os(path=None, **kwargs):
     # timeout value is not honoured by sw.install if not passed as argument
     # currently, timeout is set to be maximum of default 1800 and user passed timeout value
     # For info: https://github.com/Juniper/salt/issues/116
-    dev_timeout = op.pop("dev_timeout", 0)
+    dev_timeout = max(op.pop("dev_timeout", 0), op.pop("timeout", 0))
     timeout = max(1800, conn.timeout, dev_timeout)
     # Reboot should not be passed as a keyword argument to install(),
     # Please refer to https://github.com/Juniper/salt/issues/115 for more details
@@ -1172,9 +1174,9 @@ def install_os(path=None, **kwargs):
             return ret
 
     # install() should not reboot the device, reboot is handled in the next block
+    install_status = False
     try:
-        conn.sw.install(path, progress=True, timeout=timeout, **op)
-        ret["message"] = "Installed the os."
+        install_status = conn.sw.install(path, progress=True, timeout=timeout, **op)
     except Exception as exception:  # pylint: disable=broad-except
         ret["message"] = 'Installation failed due to: "{0}"'.format(exception)
         ret["out"] = False
@@ -1182,6 +1184,13 @@ def install_os(path=None, **kwargs):
     finally:
         if not no_copy_:
             salt.utils.files.safe_rm(image_cached_path)
+
+    if install_status is True:
+        ret["message"] = "Installed the os."
+    else:
+        ret["message"] = 'Installation failed.'
+        ret["out"] = False
+        return ret
 
     # Handle reboot, after the install has finished
     if reboot is True:
