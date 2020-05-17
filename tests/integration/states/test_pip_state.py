@@ -76,7 +76,7 @@ class VirtualEnv(object):
 class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
     def _win_user_where(self, username, password, program):
         cmd = "cmd.exe /c where {}".format(program)
-        ret = salt.utils.win_runas.runas(cmd, username, program)
+        ret = salt.utils.win_runas.runas(cmd, username, password)
         assert ret["retcode"] == 0, "{} returned {}".format(cmd, ret["retcode"])
         return ret["stdout"].strip().split("\n")[-1].strip()
 
