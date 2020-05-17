@@ -312,6 +312,9 @@ class Local_CacheTest(
         """
         self._add_job()
 
+        if salt.utils.platform.is_windows():
+            time.sleep(0.01)
+
         # remove job
         self.assertEqual(local_cache.clean_old_jobs(), None)
 
