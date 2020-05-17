@@ -14,6 +14,7 @@ import sys
 
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.win_runas
 import salt.version
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from tests.support.helpers import VirtualEnv, slowTest, with_tempdir
@@ -87,13 +88,17 @@ class InstallTest(TestCase):
             )
 
             # Let's also ensure we have a salt/_version.py from the installed salt wheel
-            installed_salt_path = (
-                pathlib.Path(venv.venv_dir)
-                / "lib"
-                / "python{}.{}".format(*sys.version_info)
-                / "site-packages"
-                / "salt"
-            )
+            subdir = [
+                "lib",
+                "python{}.{}".format(*sys.version_info),
+                "site-packages",
+                "salt",
+            ]
+            if salt.utils.platfrom.is_windows():
+                subdir.pop(1)
+
+            installed_salt_path = pathlib.Path(venv.venv_dir)
+            installed_salt_path = installed_salt_path.joinpath(*subdir)
             assert installed_salt_path.is_dir()
             salt_generated_version_file_path = installed_salt_path / "_version.py"
             assert salt_generated_version_file_path.is_file()
@@ -175,12 +180,15 @@ class InstallTest(TestCase):
             )
 
             # Let's also ensure we have a salt/_version.py from the installed salt egg
-            site_packages_dir = (
-                pathlib.Path(venv.venv_dir)
-                / "lib"
-                / "python{}.{}".format(*sys.version_info)
-                / "site-packages"
-            )
+            subdir = [
+                "lib",
+                "python{}.{}".format(*sys.version_info),
+                "site-packages",
+            ]
+            if salt.utils.platfrom.is_windows():
+                subdir.pop(1)
+            site_packages_dir = pathlib.Path(venv.venv_dir)
+            site_packages_dir = site_packages_dir.joinpath(*subdir)
             assert site_packages_dir.is_dir()
             installed_salt_path = list(site_packages_dir.glob("salt*.egg"))
             if not installed_salt_path:
@@ -193,6 +201,14 @@ class InstallTest(TestCase):
                 salt_generated_version_file_path.is_file()
             ), "{} is not a file".format(salt_generated_version_file_path)
 
+    # On python 3.5 Windows sdist fails with encoding errors. This is resolved
+    # in later versions.
+    @skipIf(
+        salt.utils.platform.is_windows()
+        and sys.version_info > (3,)
+        and sys.version_info < (3, 6),
+        "Skip on python 3.5",
+    )
     @slowTest
     @with_tempdir()
     def test_sdist(self, tempdir):
@@ -249,13 +265,17 @@ class InstallTest(TestCase):
             venv.install(str(salt_generated_package))
 
             # Let's also ensure we have a salt/_version.py from the installed salt wheel
-            installed_salt_path = (
-                pathlib.Path(venv.venv_dir)
-                / "lib"
-                / "python{}.{}".format(*sys.version_info)
-                / "site-packages"
-                / "salt"
-            )
+            subdir = [
+                "lib",
+                "python{}.{}".format(*sys.version_info),
+                "site-packages",
+                "salt",
+            ]
+            if salt.utils.platfrom.is_windows():
+                subdir.pop(1)
+
+            installed_salt_path = pathlib.Path(venv.venv_dir)
+            installed_salt_path = installed_salt_path.joinpath(*subdir)
             assert installed_salt_path.is_dir()
             salt_generated_version_file_path = installed_salt_path / "_version.py"
             assert salt_generated_version_file_path.is_file()
@@ -333,12 +353,15 @@ class InstallTest(TestCase):
             )
 
             # Let's also ensure we have a salt/_version.py from the installed salt
-            site_packages_dir = (
-                pathlib.Path(venv.venv_dir)
-                / "lib"
-                / "python{}.{}".format(*sys.version_info)
-                / "site-packages"
-            )
+            subdir = [
+                "lib",
+                "python{}.{}".format(*sys.version_info),
+                "site-packages",
+            ]
+            if salt.utils.platfrom.is_windows():
+                subdir.pop(1)
+            site_packages_dir = pathlib.Path(venv.venv_dir)
+            site_packages_dir = site_packages_dir.joinpath(*subdir)
             assert site_packages_dir.is_dir()
             installed_salt_path = list(site_packages_dir.glob("salt*.egg"))
             if not installed_salt_path:
