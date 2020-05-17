@@ -14,7 +14,6 @@ import sys
 
 import salt.utils.path
 import salt.utils.platform
-import salt.utils.win_runas
 import salt.version
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from tests.support.helpers import VirtualEnv, slowTest, with_tempdir
