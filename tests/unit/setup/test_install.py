@@ -94,7 +94,7 @@ class InstallTest(TestCase):
                 "site-packages",
                 "salt",
             ]
-            if salt.utils.platfrom.is_windows():
+            if salt.utils.platform.is_windows():
                 subdir.pop(1)
 
             installed_salt_path = pathlib.Path(venv.venv_dir)
@@ -185,7 +185,7 @@ class InstallTest(TestCase):
                 "python{}.{}".format(*sys.version_info),
                 "site-packages",
             ]
-            if salt.utils.platfrom.is_windows():
+            if salt.utils.platform.is_windows():
                 subdir.pop(1)
             site_packages_dir = pathlib.Path(venv.venv_dir)
             site_packages_dir = site_packages_dir.joinpath(*subdir)
@@ -271,7 +271,7 @@ class InstallTest(TestCase):
                 "site-packages",
                 "salt",
             ]
-            if salt.utils.platfrom.is_windows():
+            if salt.utils.platform.is_windows():
                 subdir.pop(1)
 
             installed_salt_path = pathlib.Path(venv.venv_dir)
@@ -358,7 +358,7 @@ class InstallTest(TestCase):
                 "python{}.{}".format(*sys.version_info),
                 "site-packages",
             ]
-            if salt.utils.platfrom.is_windows():
+            if salt.utils.platform.is_windows():
                 subdir.pop(1)
             site_packages_dir = pathlib.Path(venv.venv_dir)
             site_packages_dir = site_packages_dir.joinpath(*subdir)
