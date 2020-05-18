@@ -9,8 +9,6 @@
 
     Test support helpers
 """
-# pylint: disable=repr-flag-used-in-string,wrong-import-order
-
 from __future__ import absolute_import, print_function, unicode_literals
 
 import base64
@@ -38,11 +36,13 @@ import salt.ext.tornado.ioloop
 import salt.ext.tornado.web
 import salt.utils.files
 import salt.utils.platform
+import salt.utils.pycrypto
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.ext import six
 from salt.ext.six.moves import builtins, range
 from saltfactories.utils.ports import get_unused_localhost_port
+from saltfactories.utils.processes.bases import ProcessResult
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
@@ -747,6 +747,15 @@ def with_system_user(
                                 username
                             )
                         )
+            if not salt.utils.platform.is_windows() and password is not None:
+                if salt.utils.platform.is_darwin():
+                    hashed_password = password
+                else:
+                    hashed_password = salt.utils.pycrypto.gen_hash(password=password)
+                hashed_password = "'{0}'".format(hashed_password)
+                add_pwd = cls.run_function(
+                    "shadow.set_password", [username, hashed_password]
+                )
 
             failure = None
             try:
@@ -1658,20 +1667,17 @@ class VirtualEnv(object):
         return self.run(self.venv_python, "-m", "pip", "install", *args, **kwargs)
 
     def run(self, *args, **kwargs):
+        check = kwargs.pop("check", True)
         kwargs.setdefault("cwd", self.venv_dir)
-        kwargs.setdefault("check", True)
         kwargs.setdefault("stdout", subprocess.PIPE)
         kwargs.setdefault("stderr", subprocess.PIPE)
         kwargs.setdefault("universal_newlines", True)
-        try:
-            return subprocess.run(  # pylint: disable=subprocess-run-check
-                args, **kwargs
-            )
-        except subprocess.CalledProcessError as exc:
-            print(exc)
-            print(exc.stdout)
-            print(exc.stderr)
-            raise
+        proc = subprocess.run(args, check=False, **kwargs)
+        ret = ProcessResult(proc.returncode, proc.stdout, proc.stderr, proc.args)
+        log.debug(ret)
+        if check is True:
+            proc.check_returncode()
+        return ret
 
     def _get_real_python(self):
         """
@@ -1720,11 +1726,10 @@ def change_cwd(path):
     it at the end
     """
     old_cwd = os.getcwd()
-
-    os.chdir(path)
-
-    # Do stuff
-    yield
-
-    # Restore Old CWD
-    os.chdir(old_cwd)
+    try:
+        os.chdir(path)
+        # Do stuff
+        yield
+    finally:
+        # Restore Old CWD
+        os.chdir(old_cwd)

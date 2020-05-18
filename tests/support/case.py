@@ -13,6 +13,7 @@
 from __future__ import absolute_import, unicode_literals
 
 import errno
+import json
 import logging
 import os
 import re
@@ -166,6 +167,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         """
         Execute the runner function and return the return data and output in a dict
         """
+        output = kwargs.pop("_output", None)
         ret = {"fun": fun}
 
         # Late import
@@ -173,7 +175,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         import salt.output
         import salt.runner
 
-        opts = salt.config.master_config(self.get_config_file_path("master"))
+        opts = salt.config.client_config(self.get_config_file_path("master"))
 
         opts_arg = list(arg)
         if kwargs:
@@ -194,8 +196,13 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         opts["color"] = False
         opts["output_file"] = cStringIO()
         try:
-            salt.output.display_output(ret["return"], opts=opts)
-            ret["out"] = opts["output_file"].getvalue()
+            salt.output.display_output(ret["return"], opts=opts, out=output)
+            out = opts["output_file"].getvalue()
+            if output is None:
+                out = out.splitlines()
+            elif output == "json":
+                out = json.loads(out)
+            ret["out"] = out
         finally:
             opts["output_file"].close()
         log.debug(
@@ -242,8 +249,11 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             timeout = self.RUN_TIMEOUT
         if not config_dir:
             config_dir = RUNTIME_VARS.TMP_MINION_CONF_DIR
+        # arg_str = "{0} --config-dir {1} {2}".format(
+        #    "--local" if local else "", RUNTIME_VARS.TMP_CONF_DIR, arg_str
+        # )
         arg_str = "{0} --config-dir {1} {2}".format(
-            "--local" if local else "", RUNTIME_VARS.TMP_CONF_DIR, arg_str
+            "--local" if local else "", config_dir, arg_str
         )
         ret = self.run_script(
             "salt-call",
@@ -254,6 +264,29 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         )
         log.debug("Result of run_call for command '%s': %s", arg_str, ret)
         return ret
+
+    def run_function(
+        self,
+        function,
+        arg=(),
+        with_retcode=False,
+        catch_stderr=False,
+        local=False,
+        timeout=RUN_TIMEOUT,
+        **kwargs
+    ):
+        """
+        Execute function with salt-call.
+
+        This function is added for compatibility with ModuleCase. This makes it possible to use
+        decorators like @with_system_user.
+        """
+        arg_str = "{0} {1} {2}".format(
+            function,
+            " ".join((str(arg_) for arg_ in arg)),
+            " ".join(("{0}={1}".format(*item) for item in kwargs.items())),
+        )
+        return self.run_call(arg_str, with_retcode, catch_stderr, local, timeout)
 
     def run_cloud(self, arg_str, catch_stderr=False, timeout=None):
         """
@@ -896,6 +929,7 @@ class SSHCase(ShellCase):
     def _arg_str(self, function, arg):
         return "{0} {1}".format(function, " ".join(arg))
 
+    # pylint: disable=arguments-differ
     def run_function(
         self, function, arg=(), timeout=180, wipe=True, raw=False, **kwargs
     ):
@@ -921,6 +955,7 @@ class SSHCase(ShellCase):
         except Exception:  # pylint: disable=broad-except
             return ret
 
+    # pylint: enable=arguments-differ
     def custom_roster(self, new_roster, data):
         """
         helper method to create a custom roster to use for a ssh test

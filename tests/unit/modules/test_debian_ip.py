@@ -5,18 +5,22 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import tempfile
-from collections import OrderedDict as odict
 
 import jinja2.exceptions
 import salt.modules.debian_ip as debian_ip
-import salt.utils
 
 # Import Salt Testing Libs
+import salt.utils.files
 import salt.utils.platform
 from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
+
+try:
+    from salt.utils.odict import OrderedDict as odict
+except ImportError:
+    from collections import OrderedDict as odict
 
 # Big pile of interface data for unit tests
 #   To skip, search for 'DebianIpTestCase'

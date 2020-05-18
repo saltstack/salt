@@ -14,16 +14,9 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
+from collections.abc import Mapping
 
 from salt.ext import six
-
-try:
-    from collections.abc import Mapping
-except ImportError:
-    # pylint: disable=no-name-in-module
-    from collections import Mapping
-
-    # pylint: enable=no-name-in-module
 
 
 def diff(current_dict, past_dict):
