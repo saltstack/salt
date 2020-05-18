@@ -2,7 +2,7 @@
 """
     salt.serializers.plist
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    .. versionadded:: TODO
+    .. versionadded:: 3001
 
     Implements plist serializer.
 
