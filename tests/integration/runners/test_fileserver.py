@@ -5,12 +5,12 @@ Tests for the fileserver runner
 from __future__ import absolute_import, print_function, unicode_literals
 
 import contextlib
+import pathlib
 
 import pytest
-import salt.utils.platform
 from tests.support.case import ShellCase
 from tests.support.helpers import slowTest
-from tests.support.unit import skipIf
+from tests.support.runtests import RUNTIME_VARS
 
 
 @pytest.mark.windows_whitelisted
@@ -169,30 +169,31 @@ class FileserverTest(ShellCase):
         self.assertIsInstance(ret["return"], list)
         self.assertTrue("grail/scene33" in ret["return"])
 
-    # Git doesn't handle symlinks in Windows. See the thread below:
-    # http://stackoverflow.com/questions/5917249/git-symlinks-in-windows
-    @skipIf(
-        salt.utils.platform.is_windows(),
-        "Git for Windows does not preserve symbolic links when cloning",
-    )
     @slowTest
     def test_symlink_list(self):
         """
         fileserver.symlink_list
         """
+        source_sym = pathlib.Path(RUNTIME_VARS.TMP_BASEENV_STATE_TREE) / "source_sym_1"
+        source_sym.write_text("")
+        dest_sym = pathlib.Path(RUNTIME_VARS.TMP_BASEENV_STATE_TREE) / "dest_sym_1"
+        dest_sym.symlink_to(str(source_sym))
+        self.addCleanup(dest_sym.unlink)
+        self.addCleanup(source_sym.unlink)
+
         ret = self.run_run_plus(fun="fileserver.symlink_list")
         self.assertIsInstance(ret["return"], dict)
-        self.assertTrue("dest_sym" in ret["return"])
+        self.assertTrue("dest_sym_1" in ret["return"])
 
         # Backend submitted as a string
         ret = self.run_run_plus(fun="fileserver.symlink_list", backend="roots")
         self.assertIsInstance(ret["return"], dict)
-        self.assertTrue("dest_sym" in ret["return"])
+        self.assertTrue("dest_sym_1" in ret["return"])
 
         # Backend submitted as a list
         ret = self.run_run_plus(fun="fileserver.symlink_list", backend=["roots"])
         self.assertIsInstance(ret["return"], dict)
-        self.assertTrue("dest_sym" in ret["return"])
+        self.assertTrue("dest_sym_1" in ret["return"])
 
     @slowTest
     def test_update(self):
