@@ -5398,6 +5398,16 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               <alias name='virtio-disk0'/>
               <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x0'/>
             </disk>
+            <disk type='network' device='cdrom'>
+              <driver name='qemu' type='raw' cache='none' io='native'/>
+              <source protocol='http' name='/pub/iso/myimage.iso' query='foo=bar&amp;baz=flurb' index='1'>
+                <host name='dev-srv.tf.local' port='80'/>
+              </source>
+              <target dev='hda' bus='ide'/>
+              <readonly/>
+              <alias name='ide0-0-0'/>
+              <address type='drive' controller='0' bus='0' target='0' unit='0'/>
+            </disk>
           </devices>
         </domain>
         """
@@ -5456,6 +5466,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                             "file format": "raw",
                         },
                     },
+                },
+                "hda": {
+                    "type": "cdrom",
+                    "file format": "raw",
+                    "file": "http://dev-srv.tf.local:80/pub/iso/myimage.iso?foo=bar&baz=flurb",
                 },
             },
         )
