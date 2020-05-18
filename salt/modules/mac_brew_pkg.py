@@ -268,7 +268,6 @@ def remove(name=None, pkgs=None, **kwargs):
         salt '*' pkg.remove pkgs='["foo", "bar"]'
     """
     try:
-        name, pkgs = _fix_cask_namespace(name, pkgs)
         pkg_params = __salt__["pkg_resource.parse_targets"](name, pkgs, **kwargs)[0]
     except MinionError as exc:
         raise CommandExecutionError(exc)
@@ -405,7 +404,6 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
         salt '*' pkg.install 'package package package'
     """
     try:
-        name, pkgs = _fix_cask_namespace(name, pkgs)
         pkg_params, pkg_type = __salt__["pkg_resource.parse_targets"](
             name, pkgs, kwargs.get("sources", {})
         )
@@ -557,45 +555,3 @@ def info_installed(*names, **kwargs):
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
     """
     return _info(*names)
-
-
-def _fix_cask_namespace(name=None, pkgs=None):
-    """
-    Check if provided packages contains the old version of brew-cask namespace
-    and replace it by the new one.
-
-    This function also warns about the correct namespace for this packages
-    and it will stop working with the release of Sodium.
-
-    :param name: The name of the package to check
-    :param pkgs: A list of packages to check
-
-    :return: name and pkgs with the mocked namespace
-    """
-
-    show_warning = False
-
-    if name and name.startswith("caskroom/cask/"):
-        show_warning = True
-        name = name.replace("caskroom/cask/", "homebrew/cask/")
-
-    if pkgs:
-        pkgs_ = []
-        for pkg in pkgs:
-            if isinstance(pkg, str) and pkg.startswith("caskroom/cask/"):
-                show_warning = True
-                pkg = pkg.replace("caskroom/cask/", "homebrew/cask/")
-                pkgs_.append(pkg)
-            else:
-                pkgs_.append(pkg)
-                continue
-        pkgs = pkgs_
-
-    if show_warning:
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "The 'caskroom/cask/' namespace for brew-cask packages "
-            "is deprecated. Use 'homebrew/cask/' instead.",
-        )
-
-    return name, pkgs
