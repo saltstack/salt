@@ -496,7 +496,8 @@ def get_enabled(root=None):
         except ValueError:
             continue
         else:
-            if unit_state != "enabled":
+            # Arch Linux adds a third column, which we want to ignore
+            if unit_state.split()[0] != "enabled":
                 continue
         try:
             unit_name, unit_type = fullname.rsplit(".", 1)
@@ -537,7 +538,8 @@ def get_disabled(root=None):
         except ValueError:
             continue
         else:
-            if unit_state != "disabled":
+            # Arch Linux adds a third column, which we want to ignore
+            if unit_state.split()[0] != "disabled":
                 continue
         try:
             unit_name, unit_type = fullname.rsplit(".", 1)

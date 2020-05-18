@@ -853,7 +853,7 @@ called ``name`` can be used to resolve these conflicts:
       - https://github.com/foobar/baz:
         - name: baz_the_third
 
-.. _wiki: http://wpkg.org/Category:Silent_Installers
+.. _wiki: https://wpkg.org/Category:Silent_Installers
 
 Troubleshooting
 ===============

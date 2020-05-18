@@ -112,7 +112,6 @@ TEST_SUITES_UNORDERED = {
     "runners": {"display_name": "Runners", "path": "integration/runners"},
     "renderers": {"display_name": "Renderers", "path": "integration/renderers"},
     "returners": {"display_name": "Returners", "path": "integration/returners"},
-    "setup": {"display_name": "Setup", "path": "integration/setup"},
     "ssh-int": {"display_name": "SSH Integration", "path": "integration/ssh"},
     "spm": {"display_name": "SPM", "path": "integration/spm"},
     "loader": {"display_name": "Loader", "path": "integration/loader"},

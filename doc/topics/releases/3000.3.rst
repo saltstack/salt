@@ -1,0 +1,39 @@
+===========================
+Salt 3000.3 Release Notes
+===========================
+
+Version 3000.3 is a bug-fix release for :ref:`3000 <release-3000>`.
+
+Statistics
+==========
+
+- Total Merges: **2**
+- Total Issue References: **2**
+- Total PR References: **2**
+
+- Contributors: **2** (`dwoz`_, `frogunder`_)
+
+
+Changelog for v3000.2..v3000.3
+==============================
+
+*Generated at: 2020-05-06 02:53:12 UTC*
+
+* **PR** `#57097`_: (`frogunder`_) Update man_pages 3000.3
+  @ *2020-05-05 22:13:09 UTC*
+
+* **ISSUE** `#57027`_: (`ecarson`_) [BUG] Master running 2019.2.4 or 3000.2 unable to synchronize files using saltutil.sync_all to 2017.7.1 minion due to CVE fix (refs: `#57100`_)
+
+* **ISSUE** `#57016`_: (`idontwanttosignin`_) [BUG] Requested method not exposed: minion_runner (refs: `#57100`_)
+
+* **PR** `#57100`_: (`dwoz`_) Address Issues in CVE Release
+  @ *2020-05-05 22:09:25 UTC*
+
+.. _`#57016`: https://github.com/saltstack/salt/issues/57016
+.. _`#57027`: https://github.com/saltstack/salt/issues/57027
+.. _`#57097`: https://github.com/saltstack/salt/pull/57097
+.. _`#57100`: https://github.com/saltstack/salt/pull/57100
+.. _`dwoz`: https://github.com/dwoz
+.. _`ecarson`: https://github.com/ecarson
+.. _`frogunder`: https://github.com/frogunder
+.. _`idontwanttosignin`: https://github.com/idontwanttosignin

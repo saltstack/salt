@@ -1,15 +1,136 @@
 # -*- coding: utf-8 -*-
 
-# Import Python libs
 from __future__ import absolute_import
 
-# Import Salt libs
 import salt.config
 import salt.master
+from tests.support.helpers import slowTest
 from tests.support.mock import MagicMock, patch
+from tests.support.unit import TestCase
 
-# Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
+
+class TransportMethodsTest(TestCase):
+    def test_transport_methods(self):
+        class Foo(salt.master.TransportMethods):
+            expose_methods = ["bar"]
+
+            def bar(self):
+                pass
+
+            def bang(self):
+                pass
+
+        foo = Foo()
+        assert foo.get_method("bar") is not None
+        assert foo.get_method("bang") is None
+
+    def test_aes_funcs_white(self):
+        """
+        Validate methods exposed on AESFuncs exist and are callable
+        """
+        opts = salt.config.master_config(None)
+        aes_funcs = salt.master.AESFuncs(opts)
+        for name in aes_funcs.expose_methods:
+            func = getattr(aes_funcs, name, None)
+            assert callable(func)
+
+    def test_aes_funcs_black(self):
+        """
+        Validate methods on AESFuncs that should not be called remotely
+        """
+        opts = salt.config.master_config(None)
+        aes_funcs = salt.master.AESFuncs(opts)
+        # Any callable that should not explicitly be allowed should be added
+        # here.
+        blacklist_methods = [
+            "_AESFuncs__setup_fileserver",
+            "_AESFuncs__verify_load",
+            "_AESFuncs__verify_minion",
+            "_AESFuncs__verify_minion_publish",
+            "__class__",
+            "__delattr__",
+            "__dir__",
+            "__eq__",
+            "__format__",
+            "__ge__",
+            "__getattribute__",
+            "__gt__",
+            "__hash__",
+            "__init__",
+            "__init_subclass__",
+            "__le__",
+            "__lt__",
+            "__ne__",
+            "__new__",
+            "__reduce__",
+            "__reduce_ex__",
+            "__repr__",
+            "__setattr__",
+            "__sizeof__",
+            "__str__",
+            "__subclasshook__",
+            "get_method",
+            "run_func",
+        ]
+        for name in dir(aes_funcs):
+            if name in aes_funcs.expose_methods:
+                continue
+            if not callable(getattr(aes_funcs, name)):
+                continue
+            assert name in blacklist_methods, name
+
+    def test_clear_funcs_white(self):
+        """
+        Validate methods exposed on ClearFuncs exist and are callable
+        """
+        opts = salt.config.master_config(None)
+        clear_funcs = salt.master.ClearFuncs(opts, {})
+        for name in clear_funcs.expose_methods:
+            func = getattr(clear_funcs, name, None)
+            assert callable(func)
+
+    def test_clear_funcs_black(self):
+        """
+        Validate methods on ClearFuncs that should not be called remotely
+        """
+        opts = salt.config.master_config(None)
+        clear_funcs = salt.master.ClearFuncs(opts, {})
+        blacklist_methods = [
+            "__class__",
+            "__delattr__",
+            "__dir__",
+            "__eq__",
+            "__format__",
+            "__ge__",
+            "__getattribute__",
+            "__gt__",
+            "__hash__",
+            "__init__",
+            "__init_subclass__",
+            "__le__",
+            "__lt__",
+            "__ne__",
+            "__new__",
+            "__reduce__",
+            "__reduce_ex__",
+            "__repr__",
+            "__setattr__",
+            "__sizeof__",
+            "__str__",
+            "__subclasshook__",
+            "_prep_auth_info",
+            "_prep_jid",
+            "_prep_pub",
+            "_send_pub",
+            "_send_ssh_pub",
+            "get_method",
+        ]
+        for name in dir(clear_funcs):
+            if name in clear_funcs.expose_methods:
+                continue
+            if not callable(getattr(clear_funcs, name)):
+                continue
+            assert name in blacklist_methods, name
 
 
 class ClearFuncsTestCase(TestCase):
@@ -26,9 +147,13 @@ class ClearFuncsTestCase(TestCase):
     def tearDownClass(cls):
         del cls.clear_funcs
 
+    def test_get_method(self):
+        assert getattr(self.clear_funcs, "_send_pub", None) is not None
+        assert self.clear_funcs.get_method("_send_pub") is None
+
     # runner tests
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_runner_token_not_authenticated(self):
         """
         Asserts that a TokenAuthenticationError is returned when the token can't authenticate.
@@ -42,7 +167,7 @@ class ClearFuncsTestCase(TestCase):
         ret = self.clear_funcs.runner({"token": "asdfasdfasdfasdf"})
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_runner_token_authorization_error(self):
         """
         Asserts that a TokenAuthenticationError is returned when the token authenticates, but is
@@ -66,7 +191,7 @@ class ClearFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_runner_token_salt_invocation_error(self):
         """
         Asserts that a SaltInvocationError is returned when the token authenticates, but the
@@ -91,7 +216,7 @@ class ClearFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_runner_eauth_not_authenticated(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user can't authenticate.
@@ -106,7 +231,7 @@ class ClearFuncsTestCase(TestCase):
         ret = self.clear_funcs.runner({"eauth": "foo"})
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_runner_eauth_authorization_error(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user authenticates, but is
@@ -127,7 +252,7 @@ class ClearFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_runner_eauth_salt_invocation_error(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user authenticates, but the
@@ -149,7 +274,7 @@ class ClearFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_runner_user_not_authenticated(self):
         """
         Asserts that an UserAuthenticationError is returned when the user can't authenticate.
@@ -165,7 +290,7 @@ class ClearFuncsTestCase(TestCase):
 
     # wheel tests
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_wheel_token_not_authenticated(self):
         """
         Asserts that a TokenAuthenticationError is returned when the token can't authenticate.
@@ -179,7 +304,7 @@ class ClearFuncsTestCase(TestCase):
         ret = self.clear_funcs.wheel({"token": "asdfasdfasdfasdf"})
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_wheel_token_authorization_error(self):
         """
         Asserts that a TokenAuthenticationError is returned when the token authenticates, but is
@@ -203,7 +328,7 @@ class ClearFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_wheel_token_salt_invocation_error(self):
         """
         Asserts that a SaltInvocationError is returned when the token authenticates, but the
@@ -228,7 +353,7 @@ class ClearFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_wheel_eauth_not_authenticated(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user can't authenticate.
@@ -243,7 +368,7 @@ class ClearFuncsTestCase(TestCase):
         ret = self.clear_funcs.wheel({"eauth": "foo"})
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_wheel_eauth_authorization_error(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user authenticates, but is
@@ -264,7 +389,7 @@ class ClearFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_wheel_eauth_salt_invocation_error(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user authenticates, but the
@@ -286,7 +411,7 @@ class ClearFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_wheel_user_not_authenticated(self):
         """
         Asserts that an UserAuthenticationError is returned when the user can't authenticate.
@@ -302,7 +427,7 @@ class ClearFuncsTestCase(TestCase):
 
     # publish tests
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_publish_user_is_blacklisted(self):
         """
         Asserts that an AuthorizationError is returned when the user has been blacklisted.
@@ -320,7 +445,7 @@ class ClearFuncsTestCase(TestCase):
                 mock_ret, self.clear_funcs.publish({"user": "foo", "fun": "test.arg"})
             )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_publish_cmd_blacklisted(self):
         """
         Asserts that an AuthorizationError is returned when the command has been blacklisted.
@@ -340,7 +465,7 @@ class ClearFuncsTestCase(TestCase):
                 mock_ret, self.clear_funcs.publish({"user": "foo", "fun": "test.arg"})
             )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_publish_token_not_authenticated(self):
         """
         Asserts that an AuthenticationError is returned when the token can't authenticate.
@@ -364,7 +489,7 @@ class ClearFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.clear_funcs.publish(load))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_publish_token_authorization_error(self):
         """
         Asserts that an AuthorizationError is returned when the token authenticates, but is not
@@ -397,7 +522,7 @@ class ClearFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.clear_funcs.publish(load))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_publish_eauth_not_authenticated(self):
         """
         Asserts that an AuthenticationError is returned when the user can't authenticate.
@@ -421,7 +546,7 @@ class ClearFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.clear_funcs.publish(load))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_publish_eauth_authorization_error(self):
         """
         Asserts that an AuthorizationError is returned when the user authenticates, but is not
@@ -451,7 +576,7 @@ class ClearFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.clear_funcs.publish(load))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_publish_user_not_authenticated(self):
         """
         Asserts that an AuthenticationError is returned when the user can't authenticate.
@@ -470,7 +595,7 @@ class ClearFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.clear_funcs.publish(load))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_publish_user_authenticated_missing_auth_list(self):
         """
         Asserts that an AuthenticationError is returned when the user has an effective user id and is
@@ -501,7 +626,7 @@ class ClearFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.clear_funcs.publish(load))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_publish_user_authorization_error(self):
         """
         Asserts that an AuthorizationError is returned when the user authenticates, but is not

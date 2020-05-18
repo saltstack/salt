@@ -679,7 +679,7 @@ def create(vm_):
     elif "private_ips" in data:
         ip_address = six.text_type(data["private_ips"][0])  # first IP
     else:
-        raise SaltCloudExecutionFailure  # err.. not a good idea i reckon
+        raise SaltCloudExecutionFailure("Could not determine an IP address to use")
 
     log.debug("Using IP address %s", ip_address)
 

@@ -20,13 +20,14 @@ import salt.utils.jid
 import salt.utils.job
 import salt.utils.platform
 from salt.ext import six
+from tests.support.helpers import slowTest
 from tests.support.mixins import (
     AdaptedConfigurationTestCaseMixin,
     LoaderModuleMockMixin,
 )
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
 
@@ -304,12 +305,15 @@ class Local_CacheTest(
             "Dir/file does not exist: ", self.JOB_CACHE_DIR_FILES, status="present"
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_clean_old_jobs(self):
         """
         test to ensure jobs are removed from job cache
         """
         self._add_job()
+
+        if salt.utils.platform.is_windows():
+            time.sleep(0.01)
 
         # remove job
         self.assertEqual(local_cache.clean_old_jobs(), None)
@@ -318,7 +322,7 @@ class Local_CacheTest(
             "job cache was not removed: ", self.JOB_CACHE_DIR_FILES, status="removed"
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_not_clean_new_jobs(self):
         """
         test to ensure jobs are not removed when
@@ -333,7 +337,7 @@ class Local_CacheTest(
                 "job cache was removed: ", self.JOB_CACHE_DIR_FILES, status="present"
             )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_empty_jid_dir(self):
         """
         test to ensure removal of empty jid dir

@@ -8,7 +8,6 @@
 """
 # pylint: disable=string-substitution-usage-error
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
@@ -16,19 +15,15 @@ import os
 import sys
 import warnings
 
-# Import Salt libs
 import salt.modules.cmdmod
 import salt.utils.platform
 import salt.utils.versions
 import salt.version
-
-# Import 3rd-party libs
 from salt.ext import six
 from salt.utils.versions import LooseVersion, StrictVersion
+from tests.support.helpers import slowTest
 from tests.support.mock import patch
 from tests.support.paths import CODE_DIR
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 
 if six.PY2:
@@ -104,7 +99,7 @@ class VersionTestCase(TestCase):
             )
 
     @skipIf(not salt.utils.platform.is_linux(), "only need to run on linux")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_spelling_version_name(self):
         """
         check the spelling of the version name for the release

@@ -28,6 +28,7 @@ import salt.beacons
 import salt.cli.daemons
 import salt.client
 import salt.crypt
+import salt.defaults.events
 import salt.defaults.exitcodes
 import salt.engines
 
@@ -2417,7 +2418,7 @@ class Minion(MinionBase):
         self.module_refresh(force_refresh)
 
         if self.connected:
-            log.debug("Refreshing pillar")
+            log.debug("Refreshing pillar.")
             async_pillar = salt.pillar.get_async_pillar(
                 self.opts,
                 self.opts["grains"],
@@ -2437,10 +2438,11 @@ class Minion(MinionBase):
                 async_pillar.destroy()
         self.matchers_refresh()
         self.beacons_refresh()
-        evt = salt.utils.event.get_event("minion", opts=self.opts)
-        evt.fire_event(
-            {"complete": True}, tag="/salt/minion/minion_pillar_refresh_complete"
-        )
+        with salt.utils.event.get_event("minion", opts=self.opts, listen=False) as evt:
+            evt.fire_event(
+                {"complete": True},
+                tag=salt.defaults.events.MINION_PILLAR_REFRESH_COMPLETE,
+            )
 
     def manage_schedule(self, tag, data):
         """

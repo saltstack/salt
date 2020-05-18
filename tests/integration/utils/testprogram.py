@@ -29,9 +29,12 @@ import salt.utils.process
 import salt.utils.psutil_compat as psutils
 import salt.utils.yaml
 from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import range
+from saltfactories.utils.processes.helpers import (
+    terminate_process,
+    terminate_process_list,
+)
 from tests.support.cli_scripts import ScriptPathMixin
-from tests.support.processes import terminate_process, terminate_process_list
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
@@ -121,7 +124,10 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         self._parent_dir = parent_dir or None
         self.clean_on_exit = clean_on_exit
         self._root_dir = kwargs.pop("root_dir", self.name)
-        self.config_dir = kwargs.pop("config_dir", copy.copy(RUNTIME_VARS.TMP_CONF_DIR))
+        config_dir = kwargs.pop("config_dir", None)
+        if config_dir is None:
+            config_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        self.config_dir = config_dir
 
         config_attrs = copy.copy(self.config_attrs)
         config_attrs.update(kwargs.pop("config_attrs", set()))
@@ -499,24 +505,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
                     break
 
         if catch_stderr:
-            if sys.version_info < (2, 7):
-                # On python 2.6, the subprocess'es communicate() method uses
-                # select which, is limited by the OS to 1024 file descriptors
-                # We need more available descriptors to run the tests which
-                # need the stderr output.
-                # So instead of .communicate() we wait for the process to
-                # finish, but, as the python docs state "This will deadlock
-                # when using stdout=PIPE and/or stderr=PIPE and the child
-                # process generates enough output to a pipe such that it
-                # blocks waiting for the OS pipe buffer to accept more data.
-                # Use communicate() to avoid that." <- a catch, catch situation
-                #
-                # Use this work around were it's needed only, python 2.6
-                process.wait()
-                out = process.stdout.read()
-                err = process.stderr.read()
-            else:
-                out, err = process.communicate()
+            out, err = process.communicate()
             # Force closing stderr/stdout to release file descriptors
             if process.stdout is not None:
                 process.stdout.close()
