@@ -630,7 +630,7 @@ def _clean_create_kwargs(**kwargs):
         "wait": bool,
         "timeout": int,
         "reuse_ips": bool,
-        "network": (dict,list),
+        "network": (dict, list),
         "boot_from_volume": bool,
         "volume_size": int,
         "nat_destination": six.string_types,
