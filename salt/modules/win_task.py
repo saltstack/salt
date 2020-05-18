@@ -2340,7 +2340,9 @@ def add_trigger(
             else:
                 return 'Required parameter "months_of_year" not passed'
 
-            if kwargs.get("days_of_month", False) or kwargs.get("last_day_of_month", False):
+            if kwargs.get("days_of_month", False) or kwargs.get(
+                "last_day_of_month", False
+            ):
                 if kwargs.get("days_of_month", False):
                     bits_days = 0
                     for day in kwargs.get("days_of_month"):

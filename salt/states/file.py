@@ -1335,7 +1335,9 @@ def _shortcut_check(
             if arguments is not None:
                 state_checks.append(scut.Arguments == arguments)
             if working_dir is not None:
-                state_checks.append(scut.WorkingDirectory.lower() == working_dir.lower())
+                state_checks.append(
+                    scut.WorkingDirectory.lower() == working_dir.lower()
+                )
             if description is not None:
                 state_checks.append(scut.Description == description)
             if icon_location is not None:
@@ -8419,14 +8421,14 @@ def shortcut(
             else:
                 if _check_shortcut_ownership(name, user):
                     # The shortcut looks good!
-                    ret["comment"] = "Shortcut {0} is present and owned by " "{1}".format(
-                        name, user
-                    )
+                    ret[
+                        "comment"
+                    ] = "Shortcut {0} is present and owned by " "{1}".format(name, user)
                 else:
                     if _set_shortcut_ownership(name, user):
-                        ret["comment"] = "Set ownership of shortcut {0} to " "{1}".format(
-                            name, user
-                        )
+                        ret[
+                            "comment"
+                        ] = "Set ownership of shortcut {0} to " "{1}".format(name, user)
                         ret["changes"]["ownership"] = "{0}".format(user)
                     else:
                         ret["result"] = False
@@ -8451,20 +8453,23 @@ def shortcut(
                 scut.Save()
             except (AttributeError, pywintypes.com_error) as exc:
                 ret["result"] = False
-                ret["comment"] = "Unable to create new shortcut {0} -> " "{1}: {2}".format(
-                    name, target, exc
+                ret["comment"] = (
+                    "Unable to create new shortcut {0} -> "
+                    "{1}: {2}".format(name, target, exc)
                 )
                 return ret
             else:
-                ret["comment"] = "Created new shortcut {0} -> " "{1}".format(name, target)
+                ret["comment"] = "Created new shortcut {0} -> " "{1}".format(
+                    name, target
+                )
                 ret["changes"]["new"] = name
 
             if not _check_shortcut_ownership(name, user):
                 if not _set_shortcut_ownership(name, user):
                     ret["result"] = False
-                    ret["comment"] += ", but was unable to set ownership to " "{0}".format(
-                        user
-                    )
+                    ret[
+                        "comment"
+                    ] += ", but was unable to set ownership to " "{0}".format(user)
     return ret
 
 
