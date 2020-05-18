@@ -70,11 +70,14 @@ def _get_connection(**kwargs):
     return pymssql.connect(**connection_args)
 
 
+def _close_connection(cursor=None, connect=None):
+    """
     Close the database connection and cursor connection
     Args:
         cursor (cursor object):
         connect  (Connection object):
 
+    """
     try:
         if cursor:
             cursor.close()
@@ -88,6 +91,7 @@ def _get_connection(**kwargs):
 
 
 def _to_rawstrings(text):
+    """
     Escape an argument string to be suitable to the appropriate caller.
     Special characters will be escaped.
     For example, if a Windows path is passed in, special characters need to be escaped
@@ -97,6 +101,8 @@ def _to_rawstrings(text):
 
     Returns:
         str: an escaped string
+    """
+    s = ""
     if six.PY2:
         if isinstance(text, six.string_types):
         elif isinstance(text, six.text_type):
@@ -106,6 +112,7 @@ def _to_rawstrings(text):
 
 
 def quote_identifier(identifier):
+    r"""
     Return an identifier name (column, table, database, etc) escaped for MSSQL
 
     This means surrounded by "[]" character and escaping this character inside.
