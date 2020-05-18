@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import salt.proxy.junos as junos
 
 import sys
@@ -8,16 +9,14 @@ from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
 if sys.version < "3":
-    from six import StringIO
+    from salt.ext.six import StringIO
 else:
     from io import BytesIO as StringIO
 
 try:
-    from jnpr.junos.device import Device
+    from jnpr.junos.device import Device  # pylint: disable=unused-import
     from jnpr.junos.exception import ConnectError
     import jxmlease  # pylint: disable=unused-import
-    from ncclient.transport.ssh import SSHSession
-    from ncclient.devices.junos import JunosDeviceHandler
 
     HAS_JUNOS = True
 except ImportError:
