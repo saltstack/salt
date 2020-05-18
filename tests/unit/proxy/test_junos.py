@@ -9,7 +9,6 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
-
 try:
     from jnpr.junos.device import Device  # pylint: disable=unused-import
     from jnpr.junos.exception import ConnectError
