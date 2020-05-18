@@ -9,18 +9,10 @@ import logging
 
 # Import Python Libs
 import sys
+from collections.abc import Iterable, Mapping, Sequence
 
 # Import Salt Libs
 from salt.ext import six
-
-try:
-    from collections.abc import Iterable, Sequence, Mapping
-except ImportError:
-    # pylint: disable=no-name-in-module
-    from collections import Iterable, Sequence, Mapping
-
-    # pylint: enable=no-name-in-module
-
 
 log = logging.getLogger(__name__)
 

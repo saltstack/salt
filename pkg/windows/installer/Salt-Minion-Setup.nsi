@@ -11,7 +11,7 @@
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
 !define PRODUCT_UNINST_KEY_OTHER "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME_OTHER}"
 !define PRODUCT_UNINST_ROOT_KEY "HKLM"
-!define OUTFILE "Salt-Minion-${PRODUCT_VERSION}-${CPUARCH}-Setup.exe"
+!define OUTFILE "Salt-Minion-${PRODUCT_VERSION}-Py${PYTHON_VERSION}-${CPUARCH}-Setup.exe"
 
 # Import Libraries
 !include "MUI2.nsh"
@@ -29,6 +29,12 @@ ${StrStrAdv}
     !define PRODUCT_VERSION "${SaltVersion}"
 !else
     !define PRODUCT_VERSION "Undefined Version"
+!endif
+
+!ifdef PythonVersion
+    !define PYTHON_VERSION "${PythonVersion}"
+!else
+    !define PYTHON_VERSION "3"
 !endif
 
 !if "$%PROCESSOR_ARCHITECTURE%" == "AMD64"
@@ -389,7 +395,7 @@ FunctionEnd
 ###############################################################################
 # Installation Settings
 ###############################################################################
-Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
+Name "${PRODUCT_NAME} ${PRODUCT_VERSION} (Python ${PYTHON_VERSION})"
 OutFile "${OutFile}"
 InstallDir "c:\salt"
 InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""

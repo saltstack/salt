@@ -152,10 +152,14 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         # user
         ret = self.run_state("group.present", name=self.user_name)
         self.assertSaltTrueReturn(ret)
+        if salt.utils.platform.is_darwin():
+            gid = grp.getgrnam("staff").gr_gid
+        else:
+            gid = self.user_name
         ret = self.run_state(
             "user.present",
             name=self.user_name,
-            gid=self.user_name,
+            gid=gid,
             usergroup=False,
             home=self.user_home,
         )
@@ -165,7 +169,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         group_name = grp.getgrgid(ret["gid"]).gr_name
         if not salt.utils.platform.is_darwin():
             self.assertTrue(os.path.isdir(self.user_home))
-        self.assertEqual(group_name, self.user_name)
+            self.assertEqual(group_name, self.user_name)
         ret = self.run_state("user.absent", name=self.user_name)
         self.assertSaltTrueReturn(ret)
         ret = self.run_state("group.absent", name=self.user_name)
@@ -241,7 +245,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
 
     @skipIf(
         salt.utils.platform.is_windows(),
-        "windows minon does not support roomnumber or phone",
+        "windows minion does not support roomnumber or phone",
     )
     @slowTest
     def test_user_present_gecos(self):
@@ -265,7 +269,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
 
     @skipIf(
         salt.utils.platform.is_windows(),
-        "windows minon does not support roomnumber or phone",
+        "windows minion does not support roomnumber or phone",
     )
     @slowTest
     def test_user_present_gecos_none_fields(self):
@@ -295,7 +299,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual("", ret["homephone"])
 
     @skipIf(
-        salt.utils.platform.is_windows(), "windows minon does not support createhome"
+        salt.utils.platform.is_windows(), "windows minion does not support createhome"
     )
     @slowTest
     def test_user_present_home_directory_created(self):

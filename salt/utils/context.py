@@ -14,17 +14,10 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import copy
 import threading
+from collections.abc import MutableMapping
 from contextlib import contextmanager
 
 from salt.ext import six
-
-try:
-    from collections.abc import MutableMapping
-except ImportError:
-    # pylint: disable=no-name-in-module
-    from collections import MutableMapping
-
-    # pylint: enable=no-name-in-module
 
 
 @contextmanager

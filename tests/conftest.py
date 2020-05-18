@@ -35,6 +35,7 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.win_functions
+import saltfactories.utils.compat
 from _pytest.mark.evaluate import MarkEvaluator
 from salt.ext import six
 from salt.serializers import yaml
@@ -156,6 +157,10 @@ def pytest_addoption(parser):
         default=False,
         help="Run proxy tests",
     )
+    test_selection_group.addoption(
+        "--run-slow", action="store_true", default=False, help="Run slow tests.",
+    )
+
     output_options_group = parser.getgroup("Output Options")
     output_options_group.addoption(
         "--output-columns",
@@ -218,6 +223,9 @@ def pytest_configure(config):
     )
     # Make sure the test suite "knows" this is a pytest test run
     RUNTIME_VARS.PYTEST_SESSION = True
+
+    # "Flag" the slotTest decorator if we're skipping slow tests or not
+    os.environ["SLOW_TESTS"] = str(config.getoption("--run-slow"))
 
 
 # <---- Register Markers ---------------------------------------------------------------------------------------------
@@ -434,6 +442,11 @@ def pytest_runtest_setup(item):
     ):
         item._skipped_by_mark = True
         pytest.skip(PRE_PYTEST_SKIP_REASON)
+
+    if saltfactories.utils.compat.has_unittest_attr(item, "__slow_test__"):
+        if item.config.getoption("--run-slow") is False:
+            item._skipped_by_mark = True
+            pytest.skip("Slow tests are disabled!")
 
     requires_salt_modules_marker = item.get_closest_marker("requires_salt_modules")
     if requires_salt_modules_marker is not None:

@@ -37,6 +37,7 @@ if %errorLevel%==0 (
 @echo ---------------------------------------------------------------------
 
 set "Version="
+set "Python="
 :: First Parameter
 if not "%~1"=="" (
     echo.%1 | FIND /I "=" > nul && (
@@ -50,9 +51,34 @@ if not "%~1"=="" (
     )
 )
 
+:: Second Parameter
+if not "%~2"=="" (
+    echo.%2 | FIND /I "=" > nul && (
+        :: Named Parameter
+        set "%~2"
+    ) || (
+        :: Positional Parameter
+        set "Python=%~2"
+    )
+)
+
 :: If Version not defined, Get the version from Git
 if "%Version%"=="" (
     for /f "delims=" %%a in ('git describe') do @set "Version=%%a"
+)
+
+:: If Python not defined, Assume Python 3
+if "%Python%"=="" (
+    set Python=3
+)
+
+:: Verify valid Python value (3)
+:: We may need to add Python 4 in the future (delims=34)
+set "x="
+for /f "delims=3" %%i in ("%Python%") do set x=%%i
+if Defined x (
+    echo Invalid Python Version specified. Must be 3. Passed %Python%
+    goto eof
 )
 
 @echo =====================================================================
@@ -61,7 +87,12 @@ if "%Version%"=="" (
 :: Define Variables
 @echo %0 :: Defining Variables...
 @echo ---------------------------------------------------------------------
-Set "PyDir=C:\Python37"
+if %Python%==3 (
+    Set "PyDir=C:\Python37"
+) else (
+    :: Placeholder for future version
+    :: Set "PyDir=C:\Python4"
+)
 Set "PATH=%PATH%;%PyDir%;%PyDir%\Scripts"
 
 Set "CurDir=%~dp0"
@@ -106,7 +137,7 @@ if not %errorLevel%==0 (
 :: Build the Salt Package
 @echo %0 :: Build the Salt Package...
 @echo ---------------------------------------------------------------------
-call "%CurDir%build_pkg.bat" "%Version%"
+call "%CurDir%build_pkg.bat" "%Version%" "%Python%"
 @echo.
 
 :eof

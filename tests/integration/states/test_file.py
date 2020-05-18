@@ -577,6 +577,55 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 if os.path.exists(managed_files[typ]):
                     os.remove(managed_files[typ])
 
+    def test_prerequired_issues_55775(self):
+        """
+        Test that __prereqired__ is filter from file.replace
+        if __prereqired__ is not filter from file.replace an error will be raised
+        """
+        state_name = "Test_Issues_55775"
+        state_filename = state_name + ".sls"
+        state_file = os.path.join(RUNTIME_VARS.BASE_FILES, state_filename)
+        test_file = os.path.join(RUNTIME_VARS.BASE_FILES, "Issues_55775.txt")
+
+        try:
+            with salt.utils.files.fopen(state_file, "w") as fd_:
+                fd_.write(
+                    textwrap.dedent(
+                        """\
+                    /tmp/bug.txt:
+                      file.managed:
+                        - name: {0}
+                        - contents:
+                          - foo
+                    file.replace:
+                      file.replace:
+                        - name: {0}
+                        - pattern: 'foo'
+                        - repl: 'bar'
+                        - prereq:
+                          - test no changes
+                          - test changes
+                    test no changes:
+                      test.succeed_without_changes:
+                        - name: no changes
+                    test changes:
+                      test.succeed_with_changes:
+                        - name: changes
+                        - require:
+                          - test: test no changes
+                    """.format(
+                            test_file
+                        )
+                    )
+                )
+
+            ret = self.run_function("state.sls", [state_name])
+            self.assertSaltTrueReturn(ret)
+        finally:
+            for file in (state_file, test_file):
+                if os.path.exists(file):
+                    os.remove(file)
+
     def test_managed_contents_with_contents_newline(self):
         """
         test file.managed with contents by using the default content_newline

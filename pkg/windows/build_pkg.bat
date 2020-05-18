@@ -4,9 +4,10 @@
 @echo.
 
 :: Get Passed Parameters
-@echo %0 :: Get Passed Parameters...
+@echo Get Passed Parameters...
 @echo ---------------------------------------------------------------------
 Set "Version="
+Set "Python="
 :: First Parameter
 if not "%~1"=="" (
     echo.%1 | FIND /I "=" > nul && (
@@ -17,19 +18,50 @@ if not "%~1"=="" (
         set "Version=%~1"
     )
 )
+:: Second Parameter
+if not "%~2"=="" (
+    echo.%2 | FIND /I "=" > nul && (
+        :: Named Parameter
+        set "%~2"
+    ) || (
+        :: Positional Parameter
+        set "Python=%~2"
+    )
+)
+
 :: If Version not defined, Get the version from Git
 if "%Version%"=="" (
     for /f "delims=" %%a in ('git describe') do @set "Version=%%a"
 )
 
+:: If Python not defined, Assume Python 3
+if "%Python%"=="" (
+    set Python=3
+)
+
+:: Verify valid Python value (3)
+:: We may need to add Python 4 in the future (delims=34)
+set "x="
+for /f "delims=3" %%i in ("%Python%") do set x=%%i
+if Defined x (
+    echo Invalid Python Version specified. Must be 3. Passed %Python%
+    goto eof
+)
 @echo.
 
 :: Define Variables
 @echo Defining Variables...
 @echo ----------------------------------------------------------------------
-Set "PyDir=C:\Python37"
-Set "PyVerMajor=3"
-Set "PyVerMinor=7"
+if %Python%==3 (
+    Set "PyDir=C:\Python37"
+    Set "PyVerMajor=3"
+    Set "PyVerMinor=7"
+) else (
+    :: Placeholder for future version
+    :: Set "PyDir=C:\Python4"
+    :: Set "PyVerMajor=0"
+    :: Set "PyVerMinor=0"
+)
 
 :: Verify the Python Installation
 If not Exist "%PyDir%\python.exe" (
@@ -564,7 +596,7 @@ If Exist "%BinDir%\Scripts\salt-unity*"^
 @echo ----------------------------------------------------------------------
 :: Make the Master installer if the nullsoft script exists
 If Exist "%InsDir%\Salt-Setup.nsi"^
-    makensis.exe /DSaltVersion=%Version% "%InsDir%\Salt-Setup.nsi"
+    makensis.exe /DSaltVersion=%Version% /DPythonVersion=%Python% "%InsDir%\Salt-Setup.nsi"
 
 :: Remove files not needed for Salt Minion
 :: salt
@@ -596,7 +628,7 @@ if Exist "%CnfDir%\master"^
     del /Q "%CnfDir%\master" 1>nul
 
 :: Make the Salt Minion Installer
-makensis.exe /DSaltVersion=%Version% "%InsDir%\Salt-Minion-Setup.nsi"
+makensis.exe /DSaltVersion=%Version% /DPythonVersion=%Python% "%InsDir%\Salt-Minion-Setup.nsi"
 @echo.
 
 @echo.
