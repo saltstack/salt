@@ -46,7 +46,8 @@ def deserialize(stream_or_string, **options):
 
 def serialize(value, **options):
     """
-    Serialize Python data to plist.
+    Serialize Python data to plist. To create a binary plist pass
+    ``fmt: FMT_BINARY`` as an option.
 
     :param obj: the data structure to serialize
     :param options: options given to lower plist module.
