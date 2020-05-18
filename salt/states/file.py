@@ -7786,8 +7786,10 @@ def serialize(
                     "name": name,
                     "result": False,
                 }
-
-            with salt.utils.files.fopen(name, "rb") as fhr:
+            open_args = "r"
+            if formatter == "plist":
+                open_args += "b"
+            with salt.utils.files.fopen(name, open_args) as fhr:
                 try:
                     existing_data = __serializers__[deserializer_name](
                         fhr, **deserializer_options.get(deserializer_name, {})
@@ -7821,6 +7823,9 @@ def serialize(
 
     if isinstance(contents, str):
         contents += "\n"
+    # adding a new line to a binary plist will invalidate it.
+    elif isinstance(contents, bytes) and formatter != "plist":
+        contents += b"\n"
 
     # Make sure that any leading zeros stripped by YAML loader are added back
     mode = salt.utils.files.normalize_mode(mode)
