@@ -113,7 +113,7 @@ class UserTestCase(TestCase, LoaderModuleMockMixin):
         dunder_salt = {
             "user.info": mock_info,
             "file.group_to_gid": MagicMock(side_effect=["foo"]),
-            "file.gid_to_group": MagicMock(side_effect=[5000]),
+            "file.gid_to_group": MagicMock(side_effect=[5000, 5000]),
         }
         # side_effect used because these mocks should only be called once
         with patch.dict(user.__grains__, {"kernel": "Linux"}), patch.dict(
@@ -140,7 +140,7 @@ class UserTestCase(TestCase, LoaderModuleMockMixin):
         dunder_salt = {
             "user.info": mock_info,
             "file.group_to_gid": MagicMock(side_effect=["foo"]),
-            "file.gid_to_group": MagicMock(side_effect=[5000]),
+            "file.gid_to_group": MagicMock(side_effect=[5000, 5000]),
         }
         # side_effect used because these mocks should only be called once
         with patch.dict(user.__grains__, {"kernel": "Linux"}), patch.dict(
@@ -167,7 +167,7 @@ class UserTestCase(TestCase, LoaderModuleMockMixin):
         dunder_salt = {
             "user.info": mock_info,
             "file.group_to_gid": MagicMock(side_effect=["foo"]),
-            "file.gid_to_group": MagicMock(side_effect=[5000]),
+            "file.gid_to_group": MagicMock(side_effect=[5000, 5000]),
         }
         # side_effect used because these mocks should only be called once
         with patch.dict(user.__grains__, {"kernel": "Linux"}), patch.dict(
@@ -200,7 +200,7 @@ class UserTestCase(TestCase, LoaderModuleMockMixin):
         # confirm that no changes still need to be made.
         mock_info = MagicMock(side_effect=[before, before, after, after])
         mock_group_to_gid = MagicMock(side_effect=["foo", "othergroup"])
-        mock_gid_to_group = MagicMock(side_effect=[5000, 5001])
+        mock_gid_to_group = MagicMock(side_effect=[5000, 5000, 5001, 5001])
         dunder_salt = {
             "user.info": mock_info,
             "user.chuid": Mock(),
@@ -271,7 +271,7 @@ class UserTestCase(TestCase, LoaderModuleMockMixin):
             "shadow.info": shadow_info,
             "shadow.default_hash": shadow_hash,
             "file.group_to_gid": MagicMock(side_effect=["foo"]),
-            "file.gid_to_group": MagicMock(side_effect=[5000]),
+            "file.gid_to_group": MagicMock(side_effect=[5000, 5000]),
         }
 
         def mock_exists(*args):

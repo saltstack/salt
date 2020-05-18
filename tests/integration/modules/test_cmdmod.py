@@ -5,7 +5,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 import tempfile
-import textwrap
 from contextlib import contextmanager
 
 import pytest
@@ -14,9 +13,11 @@ import salt.utils.platform
 from salt.ext import six
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
+    dedent,
     destructiveTest,
     skip_if_binaries_missing,
     skip_if_not_root,
+    slowTest,
 )
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
@@ -50,7 +51,7 @@ class CMDModuleTest(ModuleCase):
             finally:
                 self.run_function("user.delete", [name], remove=True)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_run(self):
         """
         cmd.run
@@ -92,7 +93,7 @@ class CMDModuleTest(ModuleCase):
             "a:b",
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_stdout(self):
         """
         cmd.run_stdout
@@ -102,7 +103,7 @@ class CMDModuleTest(ModuleCase):
             "cheese" if not salt.utils.platform.is_windows() else '"cheese"',
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_stderr(self):
         """
         cmd.run_stderr
@@ -121,7 +122,7 @@ class CMDModuleTest(ModuleCase):
             "cheese" if not salt.utils.platform.is_windows() else '"cheese"',
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_run_all(self):
         """
         cmd.run_all
@@ -149,7 +150,7 @@ class CMDModuleTest(ModuleCase):
             "cheese" if not salt.utils.platform.is_windows() else '"cheese"',
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_retcode(self):
         """
         cmd.retcode
@@ -161,7 +162,7 @@ class CMDModuleTest(ModuleCase):
             self.run_function("cmd.retcode", ["exit 1"], python_shell=True), 1
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_run_all_with_success_retcodes(self):
         """
         cmd.run with success_retcodes
@@ -173,7 +174,7 @@ class CMDModuleTest(ModuleCase):
         self.assertTrue("retcode" in ret)
         self.assertEqual(ret.get("retcode"), 0)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_retcode_with_success_retcodes(self):
         """
         cmd.run with success_retcodes
@@ -184,7 +185,7 @@ class CMDModuleTest(ModuleCase):
 
         self.assertEqual(ret, 0)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_blacklist_glob(self):
         """
         cmd_blacklist_glob
@@ -194,7 +195,7 @@ class CMDModuleTest(ModuleCase):
             'ERROR: The shell command "bad_command --foo" is not permitted',
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_script(self):
         """
         cmd.script
@@ -204,7 +205,7 @@ class CMDModuleTest(ModuleCase):
         ret = self.run_function("cmd.script", [script, args])
         self.assertEqual(ret["stdout"], args)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_script_retcode(self):
         """
         cmd.script_retcode
@@ -213,7 +214,7 @@ class CMDModuleTest(ModuleCase):
         ret = self.run_function("cmd.script_retcode", [script])
         self.assertEqual(ret, 0)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_script_cwd(self):
         """
         cmd.script with cwd
@@ -224,7 +225,7 @@ class CMDModuleTest(ModuleCase):
         ret = self.run_function("cmd.script", [script, args], cwd=tmp_cwd)
         self.assertEqual(ret["stdout"], args)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_script_cwd_with_space(self):
         """
         cmd.script with cwd
@@ -254,10 +255,11 @@ class CMDModuleTest(ModuleCase):
         """
         cmd.which
         """
-        self.assertEqual(
-            self.run_function("cmd.which", ["cat"]).rstrip(),
-            self.run_function("cmd.run", ["which cat"]).rstrip(),
-        )
+        cmd_which = self.run_function("cmd.which", ["cat"])
+        self.assertIsInstance(cmd_which, str)
+        cmd_run = self.run_function("cmd.run", ["which cat"])
+        self.assertIsInstance(cmd_run, str)
+        self.assertEqual(cmd_which.rstrip(), cmd_run.rstrip())
 
     @skip_if_binaries_missing(["which"])
     def test_which_bin(self):
@@ -268,7 +270,7 @@ class CMDModuleTest(ModuleCase):
         ret = self.run_function("cmd.which_bin", [cmds])
         self.assertTrue(os.path.split(ret)[1] in cmds)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_has_exec(self):
         """
         cmd.has_exec
@@ -280,15 +282,16 @@ class CMDModuleTest(ModuleCase):
             self.run_function("cmd.has_exec", ["alllfsdfnwieulrrh9123857ygf"])
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_exec_code(self):
         """
         cmd.exec_code
         """
-        code = textwrap.dedent(
-            """\
-               import sys
-               sys.stdout.write('cheese')"""
+        code = dedent(
+            """
+                   import sys
+                   sys.stdout.write('cheese')
+               """
         )
         self.assertEqual(
             self.run_function(
@@ -297,15 +300,16 @@ class CMDModuleTest(ModuleCase):
             "cheese",
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_exec_code_with_single_arg(self):
         """
         cmd.exec_code
         """
-        code = textwrap.dedent(
-            """\
-               import sys
-               sys.stdout.write(sys.argv[1])"""
+        code = dedent(
+            """
+                   import sys
+                   sys.stdout.write(sys.argv[1])
+               """
         )
         arg = "cheese"
         self.assertEqual(
@@ -315,15 +319,16 @@ class CMDModuleTest(ModuleCase):
             arg,
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_exec_code_with_multiple_args(self):
         """
         cmd.exec_code
         """
-        code = textwrap.dedent(
-            """\
-               import sys
-               sys.stdout.write(sys.argv[1])"""
+        code = dedent(
+            """
+                   import sys
+                   sys.stdout.write(sys.argv[1])
+               """
         )
         arg = "cheese"
         self.assertEqual(
@@ -333,7 +338,7 @@ class CMDModuleTest(ModuleCase):
             arg,
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_quotes(self):
         """
         cmd.run with quoted command
@@ -352,18 +357,18 @@ class CMDModuleTest(ModuleCase):
         cmd.run with quoted command
         """
         cmd = """echo 'SELECT * FROM foo WHERE bar="baz"' """
-
         expected_result = 'SELECT * FROM foo WHERE bar="baz"'
-
-        runas = RUNTIME_VARS.RUNNING_TESTS_USER
-
-        result = self.run_function("cmd.run_stdout", [cmd], runas=runas).strip()
-        self.assertEqual(result, expected_result)
+        result = self.run_function(
+            "cmd.run_all", [cmd], runas=RUNTIME_VARS.RUNNING_TESTS_USER
+        )
+        errmsg = "The command returned: {}".format(result)
+        self.assertEqual(result["retcode"], 0, errmsg)
+        self.assertEqual(result["stdout"], expected_result, errmsg)
 
     @destructiveTest
     @skip_if_not_root
     @skipIf(salt.utils.platform.is_windows(), "skip windows, uses unix commands")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_avoid_injecting_shell_code_as_root(self):
         """
         cmd.run should execute the whole command as the "runas" user, not
@@ -385,7 +390,7 @@ class CMDModuleTest(ModuleCase):
     @destructiveTest
     @skip_if_not_root
     @skipIf(salt.utils.platform.is_windows(), "skip windows, uses unix commands")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_cwd_runas(self):
         """
         cmd.run should be able to change working directory correctly, whether
@@ -409,7 +414,7 @@ class CMDModuleTest(ModuleCase):
     @destructiveTest
     @skip_if_not_root
     @skipIf(not salt.utils.platform.is_darwin(), "applicable to MacOS only")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_runas_env(self):
         """
         cmd.run should be able to change working directory correctly, whether
@@ -427,7 +432,7 @@ class CMDModuleTest(ModuleCase):
     @destructiveTest
     @skip_if_not_root
     @skipIf(not salt.utils.platform.is_darwin(), "applicable to MacOS only")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_runas_complex_command_bad_cwd(self):
         """
         cmd.run should not accidentally run parts of a complex command when
@@ -457,7 +462,7 @@ class CMDModuleTest(ModuleCase):
     @skipIf(salt.utils.platform.is_windows(), "minion is windows")
     @skip_if_not_root
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_runas(self):
         """
         Ensure that the env is the runas user's
@@ -488,7 +493,7 @@ class CMDModuleTest(ModuleCase):
         )
         self.assertEqual(out, "hello")
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_hide_output(self):
         """
         Test the hide_output argument
@@ -525,7 +530,7 @@ class CMDModuleTest(ModuleCase):
         self.assertEqual(out["stdout"], "")
         self.assertEqual(out["stderr"], "")
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_cmd_run_whoami(self):
         """
         test return of whoami
@@ -537,7 +542,7 @@ class CMDModuleTest(ModuleCase):
             self.assertEqual("root", cmd)
 
     @skipIf(not salt.utils.platform.is_windows(), "minion is not windows")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_windows_env_handling(self):
         """
         Ensure that nt.environ is used properly with cmd.run*
@@ -570,7 +575,8 @@ class CMDModuleTest(ModuleCase):
         )
         self.assertEqual(out["stdout"], "salt")
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
+    @skipIf(not salt.utils.platform.is_windows(), "minion is not windows")
     def test_windows_powershell_script_args(self):
         """
         Ensure that powershell processes inline script in args

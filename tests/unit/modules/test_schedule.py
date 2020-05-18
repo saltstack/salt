@@ -3,21 +3,18 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 
-# Import Salt Libs
 import salt.modules.schedule as schedule
 from salt.utils.event import SaltEvent
+from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
 
@@ -44,7 +41,7 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'purge' function tests: 1
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_purge(self):
         """
         Test if it purge all the jobs currently scheduled on the minion.
@@ -64,7 +61,7 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'delete' function tests: 1
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_delete(self):
         """
         Test if it delete a job from the minion's schedule.
@@ -138,7 +135,7 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'add' function tests: 1
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_add(self):
         """
         Test if it add a job to the schedule.
@@ -187,7 +184,7 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'run_job' function tests: 1
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_run_job(self):
         """
         Test if it run a scheduled job on the minion immediately.
@@ -206,7 +203,7 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'enable_job' function tests: 1
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_enable_job(self):
         """
         Test if it enable a job in the minion's schedule.
@@ -223,7 +220,7 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'disable_job' function tests: 1
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_disable_job(self):
         """
         Test if it disable a job in the minion's schedule.
@@ -240,7 +237,7 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'save' function tests: 1
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_save(self):
         """
         Test if it save all scheduled jobs on the minion.
@@ -283,7 +280,7 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'move' function tests: 1
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_move(self):
         """
         Test if it move scheduled job to another minion or minions.
@@ -372,7 +369,7 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'copy' function tests: 1
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_copy(self):
         """
         Test if it copy scheduled job to another minion or minions.
@@ -465,7 +462,7 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'modify' function tests: 1
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_modify(self):
         """
         Test if modifying job to the schedule.

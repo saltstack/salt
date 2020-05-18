@@ -9,7 +9,6 @@ salt for Windows with their corresponding licenses:
 | cffi | MIT |
 | CherryPy | BSD |
 | cryptography | BSD |
-| enum34 | BSD |
 | gitdb | BSD |
 | GitPython | BSD |
 | idna | BSD-like |
