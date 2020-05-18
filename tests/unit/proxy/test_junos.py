@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from io import BytesIO as StringIO
+
 import salt.proxy.junos as junos
 
 # Import Salt Testing Libs
@@ -7,7 +9,6 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
-from io import BytesIO as StringIO
 
 try:
     from jnpr.junos.device import Device  # pylint: disable=unused-import
