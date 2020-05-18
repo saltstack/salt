@@ -860,6 +860,22 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(len(diskp), 1)
             self.assertEqual(diskp[0]["source_file"], ("/path/to/my/image.qcow2"))
 
+    def test_disk_profile_cdrom_default(self):
+        """
+        Test virt._gen_xml(), KVM case with cdrom.
+        """
+        with patch.dict(os.path.__dict__, {"exists": MagicMock(return_value=True)}):
+            diskp = virt._disk_profile(
+                self.mock_conn,
+                None,
+                "kvm",
+                [{"name": "mydisk", "device": "cdrom"}],
+                "hello",
+            )
+
+            self.assertEqual(len(diskp), 1)
+            self.assertEqual(diskp[0]["model"], "ide")
+
     def test_disk_profile_pool_disk_type(self):
         """
         Test virt._disk_profile(), with a disk pool of disk type
@@ -2109,6 +2125,60 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             virt.update("my_vm", cpu=4, mem=2048),
         )
 
+    def test_update_backing_store(self):
+        """
+        Test updating a disk with a backing store
+        """
+        xml = """
+            <domain type='kvm' id='7'>
+              <name>my_vm</name>
+              <memory unit='KiB'>1048576</memory>
+              <currentMemory unit='KiB'>1048576</currentMemory>
+              <vcpu placement='auto'>1</vcpu>
+              <os>
+                <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
+              </os>
+              <devices>
+                <disk type='volume' device='disk'>
+                  <driver name='qemu' type='qcow2' cache='none' io='native'/>
+                  <source pool='default' volume='my_vm_system' index='1'/>
+                  <backingStore type='file' index='2'>
+                    <format type='qcow2'/>
+                    <source file='/path/to/base.qcow2'/>
+                    <backingStore/>
+                  </backingStore>
+                  <target dev='vda' bus='virtio'/>
+                  <alias name='virtio-disk0'/>
+                  <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x0'/>
+                </disk>
+              </devices>
+            </domain>
+        """
+        domain_mock = self.set_mock_vm("my_vm", xml)
+        domain_mock.OSType.return_value = "hvm"
+        self.mock_conn.defineXML.return_value = True
+        updatedev_mock = MagicMock(return_value=0)
+        domain_mock.updateDeviceFlags = updatedev_mock
+        self.mock_conn.listStoragePools.return_value = ["default"]
+        self.mock_conn.storagePoolLookupByName.return_value.XMLDesc.return_value = (
+            "<pool type='dir'/>"
+        )
+
+        ret = virt.update(
+            "my_vm",
+            disks=[
+                {
+                    "name": "system",
+                    "pool": "default",
+                    "backing_store_path": "/path/to/base.qcow2",
+                    "backing_store_format": "qcow2",
+                },
+            ],
+        )
+        self.assertFalse(ret["definition"])
+        self.assertFalse(ret["disk"]["attached"])
+        self.assertFalse(ret["disk"]["detached"])
+
     def test_update_removables(self):
         """
         Test attaching, detaching, changing removable devices
@@ -2810,6 +2880,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
           </source>
         </pool>
         """
+        pool_mock.name.return_value = "test-ses"
         pool_mock.storageVolLookupByName.return_value.XMLDesc.return_value = [
             """
             <volume type='network'>
@@ -2827,7 +2898,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         ]
         pool_mock.listVolumes.return_value = ["my_vm_data2"]
         self.mock_conn.listAllStoragePools.return_value = [pool_mock]
-        self.mock_conn.listStoragePools.return_value = ["default"]
+        self.mock_conn.listStoragePools.return_value = ["test-ses"]
+        self.mock_conn.storagePoolLookupByName.return_value = pool_mock
 
         with patch.dict(os.path.__dict__, {"exists": MagicMock(return_value=False)}):
             res = virt.purge("test-vm")
@@ -4154,6 +4226,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         mock_pool = MagicMock()
         mock_pool.delete = MagicMock(return_value=0)
+        mock_pool.XMLDesc.return_value = "<pool type='dir'/>"
         self.mock_conn.storagePoolLookupByName = MagicMock(return_value=mock_pool)
 
         res = virt.pool_delete("test-pool")
@@ -4166,6 +4239,44 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         mock_pool.delete.assert_called_once_with(
             self.mock_libvirt.VIR_STORAGE_POOL_DELETE_NORMAL
         )
+
+    def test_pool_delete_secret(self):
+        """
+        Test virt.pool_delete function where the pool has a secret
+        """
+        mock_pool = MagicMock()
+        mock_pool.delete = MagicMock(return_value=0)
+        mock_pool.XMLDesc.return_value = """
+            <pool type='rbd'>
+              <name>test-ses</name>
+              <source>
+                <host name='myhost'/>
+                <name>libvirt-pool</name>
+                <auth type='ceph' username='libvirt'>
+                  <secret usage='pool_test-ses'/>
+                </auth>
+              </source>
+            </pool>
+        """
+        self.mock_conn.storagePoolLookupByName = MagicMock(return_value=mock_pool)
+        mock_undefine = MagicMock(return_value=0)
+        self.mock_conn.secretLookupByUsage.return_value.undefine = mock_undefine
+
+        res = virt.pool_delete("test-ses")
+        self.assertTrue(res)
+
+        self.mock_conn.storagePoolLookupByName.assert_called_once_with("test-ses")
+
+        # Shouldn't be called with another parameter so far since those are not implemented
+        # and thus throwing exceptions.
+        mock_pool.delete.assert_called_once_with(
+            self.mock_libvirt.VIR_STORAGE_POOL_DELETE_NORMAL
+        )
+
+        self.mock_conn.secretLookupByUsage.assert_called_once_with(
+            self.mock_libvirt.VIR_SECRET_USAGE_TYPE_CEPH, "pool_test-ses"
+        )
+        mock_undefine.assert_called_once()
 
     def test_full_info(self):
         """
@@ -5326,6 +5437,16 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               <alias name='virtio-disk0'/>
               <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x0'/>
             </disk>
+            <disk type='network' device='cdrom'>
+              <driver name='qemu' type='raw' cache='none' io='native'/>
+              <source protocol='http' name='/pub/iso/myimage.iso' query='foo=bar&amp;baz=flurb' index='1'>
+                <host name='dev-srv.tf.local' port='80'/>
+              </source>
+              <target dev='hda' bus='ide'/>
+              <readonly/>
+              <alias name='ide0-0-0'/>
+              <address type='drive' controller='0' bus='0' target='0' unit='0'/>
+            </disk>
           </devices>
         </domain>
         """
@@ -5384,6 +5505,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                             "file format": "raw",
                         },
                     },
+                },
+                "hda": {
+                    "type": "cdrom",
+                    "file format": "raw",
+                    "file": "http://dev-srv.tf.local:80/pub/iso/myimage.iso?foo=bar&baz=flurb",
                 },
             },
         )
