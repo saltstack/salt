@@ -1,6 +1,6 @@
-salt.modules.pcs module
-=======================
+================
+salt.modules.pcs
+================
 
 .. automodule:: salt.modules.pcs
     :members:
-

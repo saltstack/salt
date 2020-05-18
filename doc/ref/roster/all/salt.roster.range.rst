@@ -1,5 +1,6 @@
-salt.roster.range module
-========================
+=================
+salt.roster.range
+=================
 
 .. automodule:: salt.roster.range
     :members:

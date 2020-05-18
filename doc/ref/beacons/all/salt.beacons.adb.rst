@@ -1,5 +1,6 @@
-salt.beacons.adb module
-=======================
+================
+salt.beacons.adb
+================
 
 .. automodule:: salt.beacons.adb
     :members:

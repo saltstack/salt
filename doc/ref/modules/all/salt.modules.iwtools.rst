@@ -1,5 +1,6 @@
-salt.modules.iwtools module
-===========================
+====================
+salt.modules.iwtools
+====================
 
 .. automodule:: salt.modules.iwtools
     :members:

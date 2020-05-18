@@ -1,7 +1,6 @@
-==================================
-salt.modules.dummyproxy_pkg module
-==================================
+===========================
+salt.modules.dummyproxy_pkg
+===========================
 
 .. automodule:: salt.modules.dummyproxy_pkg
     :members:
-    :undoc-members:

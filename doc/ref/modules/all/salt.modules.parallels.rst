@@ -1,6 +1,6 @@
-salt.modules.parallels module
-=============================
+======================
+salt.modules.parallels
+======================
 
 .. automodule:: salt.modules.parallels
     :members:
-

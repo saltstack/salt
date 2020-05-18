@@ -1,5 +1,6 @@
-salt.states.mssql_login module
-==============================
+=======================
+salt.states.mssql_login
+=======================
 
 .. automodule:: salt.states.mssql_login
     :members:

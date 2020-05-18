@@ -1,5 +1,6 @@
-salt.states.virt module
-=======================
+================
+salt.states.virt
+================
 
 .. automodule:: salt.states.virt
     :members:

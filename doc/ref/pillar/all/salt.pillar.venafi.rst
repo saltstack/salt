@@ -1,6 +1,6 @@
-salt.pillar.venafi module
-=========================
+==================
+salt.pillar.venafi
+==================
 
 .. automodule:: salt.pillar.venafi
     :members:
-    :undoc-members:

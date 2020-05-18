@@ -1,6 +1,6 @@
-salt.returners.mattermost_returner module
-=========================================
+==================================
+salt.returners.mattermost_returner
+==================================
 
 .. automodule:: salt.returners.mattermost_returner
     :members:
-    :undoc-members:

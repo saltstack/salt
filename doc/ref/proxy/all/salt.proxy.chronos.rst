@@ -1,5 +1,6 @@
-salt.proxy.chronos module
-=========================
+==================
+salt.proxy.chronos
+==================
 
 .. automodule:: salt.proxy.chronos
     :members:

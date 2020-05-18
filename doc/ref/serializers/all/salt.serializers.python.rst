@@ -1,5 +1,6 @@
-salt.serializers.python module
-==============================
+=======================
+salt.serializers.python
+=======================
 
 .. automodule:: salt.serializers.python
     :members:

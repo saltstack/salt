@@ -1,6 +1,6 @@
-salt.modules.snapper module
-===========================
+====================
+salt.modules.snapper
+====================
 
 .. automodule:: salt.modules.snapper
     :members:
-    :undoc-members:

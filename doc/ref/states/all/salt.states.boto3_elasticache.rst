@@ -1,6 +1,6 @@
-salt.states.boto3_elasticache module
-====================================
+=============================
+salt.states.boto3_elasticache
+=============================
 
 .. automodule:: salt.states.boto3_elasticache
     :members:
-    :undoc-members:

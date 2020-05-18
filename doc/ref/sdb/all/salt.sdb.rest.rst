@@ -1,5 +1,6 @@
-salt.sdb.rest module
-====================
+=============
+salt.sdb.rest
+=============
 
 .. automodule:: salt.sdb.rest
     :members:

@@ -1,6 +1,6 @@
-=================================
-salt.modules.napalm_probes module
-=================================
+==========================
+salt.modules.napalm_probes
+==========================
 
 .. automodule:: salt.modules.napalm_probes
     :members:

@@ -1,5 +1,6 @@
-salt.modules.bcache module
-==========================
+===================
+salt.modules.bcache
+===================
 
 .. automodule:: salt.modules.bcache
     :members:

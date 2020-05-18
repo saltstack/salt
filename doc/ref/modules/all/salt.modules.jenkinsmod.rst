@@ -1,5 +1,6 @@
-salt.modules.jenkinsmod module
-==============================
+=======================
+salt.modules.jenkinsmod
+=======================
 
 .. automodule:: salt.modules.jenkinsmod
     :members:

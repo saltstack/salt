@@ -1,5 +1,6 @@
-salt.states.github module
-=========================
+==================
+salt.states.github
+==================
 
 .. automodule:: salt.states.github
     :members:

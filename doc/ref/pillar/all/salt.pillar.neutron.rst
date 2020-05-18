@@ -1,5 +1,6 @@
-salt.pillar.neutron module
-==========================
+===================
+salt.pillar.neutron
+===================
 
 .. automodule:: salt.pillar.neutron
     :members:

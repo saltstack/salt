@@ -1,5 +1,6 @@
-salt.proxy.marathon module
-==========================
+===================
+salt.proxy.marathon
+===================
 
 .. automodule:: salt.proxy.marathon
     :members:

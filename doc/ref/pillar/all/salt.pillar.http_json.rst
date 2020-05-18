@@ -1,6 +1,6 @@
-salt.pillar.http_json module
-============================
+=====================
+salt.pillar.http_json
+=====================
 
 .. automodule:: salt.pillar.http_json
     :members:
-    :undoc-members:

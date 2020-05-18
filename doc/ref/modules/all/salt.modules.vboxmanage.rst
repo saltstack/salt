@@ -1,5 +1,6 @@
-salt.modules.vboxmanage module
-==============================
+=======================
+salt.modules.vboxmanage
+=======================
 
 .. automodule:: salt.modules.vboxmanage
     :members:

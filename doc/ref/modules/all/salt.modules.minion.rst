@@ -1,5 +1,6 @@
-salt.modules.minion module
-==========================
+===================
+salt.modules.minion
+===================
 
 .. automodule:: salt.modules.minion
     :members:
