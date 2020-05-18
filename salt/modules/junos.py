@@ -949,7 +949,7 @@ def install_config(path=None, **kwargs):
 
             config_diff = None
             if db_mode in ["dynamic", "ephemeral"]:
-                log.debug("diff is not supported for dynamic and ephemeral")
+                log.warning("diff is not supported for dynamic and ephemeral")
             else:
                 config_diff = cu.diff()
                 if config_diff is None:
@@ -966,7 +966,7 @@ def install_config(path=None, **kwargs):
             # Assume commit_check succeeds and initialize variable check
             check = True
             if db_mode in ["dynamic", "ephemeral"]:
-                log.debug("commit check not supported for dynamic and ephemeral")
+                log.warning("commit check not supported for dynamic and ephemeral")
             else:
                 try:
                     check = cu.commit_check()
