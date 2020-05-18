@@ -14,6 +14,7 @@ import textwrap
 
 import salt.grains.core as core
 import salt.modules.cmdmod
+import salt.modules.network
 import salt.modules.smbios
 
 # Import Salt Libs
@@ -667,6 +668,15 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._run_os_grains_tests("debian-9", _os_release_map, expectation)
 
+    def test_unicode_error(self):
+        raise_unicode_mock = MagicMock(
+            name="raise_unicode_error", side_effect=UnicodeError
+        )
+        with patch("salt.grains.core.hostname"):
+            with patch("socket.getaddrinfo", raise_unicode_mock):
+                ret = salt.grains.core.ip_fqdn()
+                assert ret["fqdn_ip4"] == ret["fqdn_ip6"] == []
+
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     def test_ubuntu_xenial_os_grains(self):
         """
@@ -859,6 +869,12 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         with patch("platform.release", MagicMock(return_value="7")):
             version = core._windows_os_release_grain(caption, 1)
             self.assertEqual(version, "7")
+
+        # Microsoft Hyper-V Server 2019
+        # Issue https://github.com/saltstack/salt/issue/55212
+        caption = "Microsoft Hyper-V Server"
+        version = core._windows_os_release_grain(caption, 1)
+        self.assertEqual(version, "2019Server")
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     def test_linux_memdata(self):
@@ -1177,6 +1193,41 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             assert core.dns() == ret
 
+    def test_enablefqdnsFalse(self):
+        """
+        tests enable_fqdns_grains is set to False
+        """
+        with patch.dict("salt.grains.core.__opts__", {"enable_fqdns_grains": False}):
+            assert core.fqdns() == {"fqdns": []}
+
+    def test_enablefqdnsTrue(self):
+        """
+        testing that grains uses network.fqdns module
+        """
+        with patch.dict(
+            "salt.grains.core.__salt__",
+            {"network.fqdns": MagicMock(return_value="my.fake.domain")},
+        ):
+            with patch.dict("salt.grains.core.__opts__", {"enable_fqdns_grains": True}):
+                assert core.fqdns() == "my.fake.domain"
+
+    def test_enablefqdnsNone(self):
+        """
+        testing default fqdns grains is returned when enable_fqdns_grains is None
+        """
+        with patch.dict("salt.grains.core.__opts__", {"enable_fqdns_grains": None}):
+            assert core.fqdns() == {"fqdns": []}
+
+    def test_enablefqdnswithoutpaching(self):
+        """
+        testing fqdns grains is enabled by default
+        """
+        with patch.dict(
+            "salt.grains.core.__salt__",
+            {"network.fqdns": MagicMock(return_value="my.fake.domain")},
+        ):
+            assert core.fqdns() == "my.fake.domain"
+
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     @patch(
         "salt.utils.network.ip_addrs", MagicMock(return_value=["1.2.3.4", "5.6.7.8"])
@@ -1200,11 +1251,12 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             ("bluesniff.foo.bar", [], ["fe80::a8b2:93ff:dead:beef"]),
         ]
         ret = {"fqdns": ["bluesniff.foo.bar", "foo.bar.baz", "rinzler.evil-corp.com"]}
-        with patch.object(socket, "gethostbyaddr", side_effect=reverse_resolv_mock):
-            fqdns = core.fqdns()
-            self.assertIn("fqdns", fqdns)
-            self.assertEqual(len(fqdns["fqdns"]), len(ret["fqdns"]))
-            self.assertEqual(set(fqdns["fqdns"]), set(ret["fqdns"]))
+        with patch.dict(core.__salt__, {"network.fqdns": salt.modules.network.fqdns}):
+            with patch.object(socket, "gethostbyaddr", side_effect=reverse_resolv_mock):
+                fqdns = core.fqdns()
+                assert "fqdns" in fqdns
+                assert len(fqdns["fqdns"]) == len(ret["fqdns"])
+                assert set(fqdns["fqdns"]) == set(ret["fqdns"])
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     @patch("salt.utils.network.ip_addrs", MagicMock(return_value=["1.2.3.4"]))
@@ -1224,20 +1276,26 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
 
         for errno in (0, core.HOST_NOT_FOUND, core.NO_DATA):
             mock_log = MagicMock()
-            with patch.object(
-                socket, "gethostbyaddr", side_effect=_gen_gethostbyaddr(errno)
+            with patch.dict(
+                core.__salt__, {"network.fqdns": salt.modules.network.fqdns}
             ):
-                with patch("salt.grains.core.log", mock_log):
-                    self.assertEqual(core.fqdns(), {"fqdns": []})
-                    mock_log.debug.assert_called_once()
-                    mock_log.error.assert_not_called()
+                with patch.object(
+                    socket, "gethostbyaddr", side_effect=_gen_gethostbyaddr(errno)
+                ):
+                    with patch("salt.modules.network.log", mock_log):
+                        self.assertEqual(core.fqdns(), {"fqdns": []})
+                        mock_log.debug.assert_called()
+                        mock_log.error.assert_not_called()
 
         mock_log = MagicMock()
-        with patch.object(socket, "gethostbyaddr", side_effect=_gen_gethostbyaddr(-1)):
-            with patch("salt.grains.core.log", mock_log):
-                self.assertEqual(core.fqdns(), {"fqdns": []})
-                mock_log.debug.assert_not_called()
-                mock_log.error.assert_called_once()
+        with patch.dict(core.__salt__, {"network.fqdns": salt.modules.network.fqdns}):
+            with patch.object(
+                socket, "gethostbyaddr", side_effect=_gen_gethostbyaddr(-1)
+            ):
+                with patch("salt.modules.network.log", mock_log):
+                    self.assertEqual(core.fqdns(), {"fqdns": []})
+                    mock_log.debug.assert_called_once()
+                    mock_log.error.assert_called()
 
     def test_core_virtual(self):
         """
@@ -1791,3 +1849,175 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(os.environ, {"PATH": path}):
             result = core.path()
         assert result == {"path": path, "systempath": comps}, result
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    @patch("os.path.exists")
+    @patch("salt.utils.platform.is_proxy")
+    def test__hw_data_linux_empty(self, is_proxy, exists):
+        is_proxy.return_value = False
+        exists.return_value = True
+        with patch("salt.utils.files.fopen", mock_open(read_data="")):
+            self.assertEqual(
+                core._hw_data({"kernel": "Linux"}),
+                {
+                    "biosreleasedate": "",
+                    "biosversion": "",
+                    "manufacturer": "",
+                    "productname": "",
+                    "serialnumber": "",
+                    "uuid": "",
+                },
+            )
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    @patch("os.path.exists")
+    @patch("salt.utils.platform.is_proxy")
+    def test__hw_data_linux_unicode_error(self, is_proxy, exists):
+        def _fopen(*args):
+            class _File(object):
+                def __enter__(self):
+                    return self
+
+                def __exit__(self, *args):
+                    pass
+
+                def read(self):
+                    raise UnicodeDecodeError("enconding", b"", 1, 2, "reason")
+
+            return _File()
+
+        is_proxy.return_value = False
+        exists.return_value = True
+        with patch("salt.utils.files.fopen", _fopen):
+            self.assertEqual(core._hw_data({"kernel": "Linux"}), {})
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    def test_kernelparams_return(self):
+        expectations = [
+            (
+                "BOOT_IMAGE=/vmlinuz-3.10.0-693.2.2.el7.x86_64",
+                {
+                    "kernelparams": [
+                        ("BOOT_IMAGE", "/vmlinuz-3.10.0-693.2.2.el7.x86_64")
+                    ]
+                },
+            ),
+            (
+                "root=/dev/mapper/centos_daemon-root",
+                {"kernelparams": [("root", "/dev/mapper/centos_daemon-root")]},
+            ),
+            (
+                "rhgb quiet ro",
+                {"kernelparams": [("rhgb", None), ("quiet", None), ("ro", None)]},
+            ),
+            ('param="value1"', {"kernelparams": [("param", "value1")]}),
+            (
+                'param="value1 value2 value3"',
+                {"kernelparams": [("param", "value1 value2 value3")]},
+            ),
+            (
+                'param="value1 value2 value3" LANG="pl" ro',
+                {
+                    "kernelparams": [
+                        ("param", "value1 value2 value3"),
+                        ("LANG", "pl"),
+                        ("ro", None),
+                    ]
+                },
+            ),
+            ("ipv6.disable=1", {"kernelparams": [("ipv6.disable", "1")]}),
+            (
+                'param="value1:value2:value3"',
+                {"kernelparams": [("param", "value1:value2:value3")]},
+            ),
+            (
+                'param="value1,value2,value3"',
+                {"kernelparams": [("param", "value1,value2,value3")]},
+            ),
+            (
+                'param="value1" param="value2" param="value3"',
+                {
+                    "kernelparams": [
+                        ("param", "value1"),
+                        ("param", "value2"),
+                        ("param", "value3"),
+                    ]
+                },
+            ),
+        ]
+
+        for cmdline, expectation in expectations:
+            with patch("salt.utils.files.fopen", mock_open(read_data=cmdline)):
+                self.assertEqual(core.kernelparams(), expectation)
+
+    @patch("salt.utils.path.which", MagicMock(return_value="/usr/sbin/lspci"))
+    def test_linux_gpus(self):
+        """
+        Test GPU detection on Linux systems
+        """
+
+        def _cmd_side_effect(cmd):
+            ret = ""
+            for device in devices:
+                ret += textwrap.dedent(
+                    """
+                                          Class:	{0}
+                                          Vendor:	{1}
+                                          Device:	{2}
+                                          SVendor:	Evil Corp.
+                                          SDevice:	Graphics XXL
+                                          Rev:	c1
+                                          NUMANode:	0"""
+                ).format(*device)
+                ret += "\n"
+            return ret.strip()
+
+        devices = [
+            [
+                "VGA compatible controller",
+                "Advanced Micro Devices, Inc. [AMD/ATI]",
+                "Vega [Radeon RX Vega]]",
+                "amd",
+            ],  # AMD
+            [
+                "Audio device",
+                "Advanced Micro Devices, Inc. [AMD/ATI]",
+                "Device aaf8",
+                None,
+            ],  # non-GPU device
+            [
+                "VGA compatible controller",
+                "NVIDIA Corporation",
+                "GK208 [GeForce GT 730]",
+                "nvidia",
+            ],  # Nvidia
+            [
+                "VGA compatible controller",
+                "Intel Corporation",
+                "Device 5912",
+                "intel",
+            ],  # Intel
+            [
+                "VGA compatible controller",
+                "ATI Technologies Inc",
+                "RC410 [Radeon Xpress 200M]",
+                "ati",
+            ],  # ATI
+            [
+                "3D controller",
+                "NVIDIA Corporation",
+                "GeForce GTX 950M",
+                "nvidia",
+            ],  # 3D controller
+        ]
+        with patch.dict(
+            core.__salt__, {"cmd.run": MagicMock(side_effect=_cmd_side_effect)}
+        ):
+            ret = core._linux_gpu_data()["gpus"]
+            count = 0
+            for device in devices:
+                if device[3] is None:
+                    continue
+                assert ret[count]["model"] == device[2]
+                assert ret[count]["vendor"] == device[3]
+                count += 1

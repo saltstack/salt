@@ -70,14 +70,13 @@ def list_employees(order_by="id"):
     ret = {}
     status, result = _query(action="employees", command="directory")
     root = ET.fromstring(result)
-    directory = root.getchildren()
-    for cat in directory:
+    for cat in root:
         if cat.tag != "employees":
             continue
         for item in cat:
             emp_id = item.items()[0][1]
             emp_ret = {"id": emp_id}
-            for details in item.getchildren():
+            for details in item:
                 emp_ret[details.items()[0][1]] = details.text
             ret[emp_ret[order_by]] = emp_ret
     return ret
@@ -144,10 +143,9 @@ def show_employee(emp_id, fields=None):
     status, result = _query(action="employees", command=emp_id, args={"fields": fields})
 
     root = ET.fromstring(result)
-    items = root.getchildren()
 
     ret = {"id": emp_id}
-    for item in items:
+    for item in root:
         ret[item.items()[0][1]] = item.text
     return ret
 
@@ -206,15 +204,14 @@ def list_users(order_by="id"):
     ret = {}
     status, result = _query(action="meta", command="users")
     root = ET.fromstring(result)
-    users = root.getchildren()
-    for user in users:
+    for user in root:
         user_id = None
         user_ret = {}
         for item in user.items():
             user_ret[item[0]] = item[1]
             if item[0] == "id":
                 user_id = item[1]
-        for item in user.getchildren():
+        for item in user:
             user_ret[item.tag] = item.text
         ret[user_ret[order_by]] = user_ret
     return ret
@@ -231,8 +228,7 @@ def list_meta_fields():
     ret = {}
     status, result = _query(action="meta", command="fields")
     root = ET.fromstring(result)
-    fields = root.getchildren()
-    for field in fields:
+    for field in root:
         field_id = None
         field_ret = {"name": field.text}
         for item in field.items():

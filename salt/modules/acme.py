@@ -58,6 +58,9 @@ LEA = salt.utils.path.which_bin(
 )
 LE_LIVE = "/etc/letsencrypt/live/"
 
+if salt.utils.platform.is_freebsd():
+    LE_LIVE = "/usr/local" + LE_LIVE
+
 
 def __virtual__():
     """
@@ -305,7 +308,9 @@ def certs():
         salt 'vhost.example.com' acme.certs
     """
     return [
-        item for item in __salt__["file.readdir"](LE_LIVE)[2:] if os.path.isdir(item)
+        item
+        for item in __salt__["file.readdir"](LE_LIVE)[2:]
+        if os.path.isdir(os.path.join(LE_LIVE, item))
     ]
 
 

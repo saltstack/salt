@@ -1,6 +1,6 @@
 '*':
   - unit.test_module_names
-  - unit.test_doc
+  - unit.utils.test_doc
   - unit.test_virtualname
   - integration.modules.test_sysmod
 
@@ -109,6 +109,7 @@ salt/cli/salt.py:
 salt/client/*:
   - integration.client.test_kwarg
   - integration.client.test_runner
+  - integration.client.test_saltcli
   - integration.client.test_standard
 
 salt/cloud/*:
@@ -224,12 +225,13 @@ salt/utils/docker/*:
   - unit.utils.test_docker
 
 salt/utils/schedule.py:
-  - integration.scheduler.test_error
-  - integration.scheduler.test_eval
-  - integration.scheduler.test_postpone
-  - integration.scheduler.test_skip
-  - integration.scheduler.test_maxrunning
-  - integration.scheduler.test_helpers
+  - unit.utils.scheduler.test_error
+  - unit.utils.scheduler.test_eval
+  - unit.utils.scheduler.test_postpone
+  - unit.utils.scheduler.test_skip
+  - unit.utils.scheduler.test_maxrunning
+  - unit.utils.scheduler.test_helpers
+  - unit.utils.scheduler.test_schedule
 
 salt/utils/vt.py:
   - integration.cli.test_custom_module

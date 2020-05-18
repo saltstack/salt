@@ -152,7 +152,7 @@ you could run functions from this module on any host where an appropriate
 version of ``racadm`` is installed, and that host would reach out over the network
 and communicate with the chassis.
 
-``Chassis.cmd`` acts as a "shim" between the execution module and the proxy.  It's
+``Chassis.cmd`` acts as a "shim" between the execution module and the proxy.  Its
 first parameter is always the function from salt.modules.dracr to execute.  If the
 function takes more positional or keyword arguments you can append them to the call.
 It's this shim that speaks to the chassis through the proxy, arranging for the

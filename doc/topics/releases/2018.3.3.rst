@@ -3565,7 +3565,7 @@ Changelog for v2018.3.2..v2018.3.3
 
   * 406efb161e Merge pull request `#48015`_ from garethgreenaway/47546_more_unicode_nonsense
 
-  * f457f9cb84 Adding a test to ensure archive.list returns the right results when a tar file contains a file with unicode in it's name.
+  * f457f9cb84 Adding a test to ensure archive.list returns the right results when a tar file contains a file with unicode in its name.
 
   * 9af49bc595 Ensure member names are decoded before adding to various lists.
 

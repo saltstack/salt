@@ -577,6 +577,55 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 if os.path.exists(managed_files[typ]):
                     os.remove(managed_files[typ])
 
+    def test_prerequired_issues_55775(self):
+        """
+        Test that __prereqired__ is filter from file.replace
+        if __prereqired__ is not filter from file.replace an error will be raised
+        """
+        state_name = "Test_Issues_55775"
+        state_filename = state_name + ".sls"
+        state_file = os.path.join(RUNTIME_VARS.BASE_FILES, state_filename)
+        test_file = os.path.join(RUNTIME_VARS.BASE_FILES, "Issues_55775.txt")
+
+        try:
+            with salt.utils.files.fopen(state_file, "w") as fd_:
+                fd_.write(
+                    textwrap.dedent(
+                        """\
+                    /tmp/bug.txt:
+                      file.managed:
+                        - name: {0}
+                        - contents:
+                          - foo
+                    file.replace:
+                      file.replace:
+                        - name: {0}
+                        - pattern: 'foo'
+                        - repl: 'bar'
+                        - prereq:
+                          - test no changes
+                          - test changes
+                    test no changes:
+                      test.succeed_without_changes:
+                        - name: no changes
+                    test changes:
+                      test.succeed_with_changes:
+                        - name: changes
+                        - require:
+                          - test: test no changes
+                    """.format(
+                            test_file
+                        )
+                    )
+                )
+
+            ret = self.run_function("state.sls", [state_name])
+            self.assertSaltTrueReturn(ret)
+        finally:
+            for file in (state_file, test_file):
+                if os.path.exists(file):
+                    os.remove(file)
+
     def test_managed_contents_with_contents_newline(self):
         """
         test file.managed with contents by using the default content_newline
@@ -2704,6 +2753,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         os.remove(dest)
 
     @destructiveTest
+    @skip_if_not_root
     @skipIf(IS_WINDOWS, "Windows does not report any file modes. Skipping.")
     @with_tempfile()
     def test_file_copy_make_dirs(self, source):
@@ -2845,7 +2895,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         temp_file_stats = os.stat(tempfile)
 
         # Normalize the mode
-        temp_file_mode = six.text_type(oct(stat.S_IMODE(temp_file_stats.st_mode)))
+        temp_file_mode = str(oct(stat.S_IMODE(temp_file_stats.st_mode)))
         temp_file_mode = salt.utils.files.normalize_mode(temp_file_mode)
 
         self.assertEqual(temp_file_mode, "4750")
@@ -2895,31 +2945,88 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(master_data, minion_data)
         self.assertSaltTrueReturn(ret)
 
+    @with_tempfile()
+    def test_keyvalue(self, name):
+        """
+        file.keyvalue
+        """
+        content = dedent(
+            """\
+            # This is the sshd server system-wide configuration file.  See
+            # sshd_config(5) for more information.
+
+            # The strategy used for options in the default sshd_config shipped with
+            # OpenSSH is to specify options with their default value where
+            # possible, but leave them commented.  Uncommented options override the
+            # default value.
+
+            #Port 22
+            #AddressFamily any
+            #ListenAddress 0.0.0.0
+            #ListenAddress ::
+
+            #HostKey /etc/ssh/ssh_host_rsa_key
+            #HostKey /etc/ssh/ssh_host_ecdsa_key
+            #HostKey /etc/ssh/ssh_host_ed25519_key
+
+            # Ciphers and keying
+            #RekeyLimit default none
+
+            # Logging
+            #SyslogFacility AUTH
+            #LogLevel INFO
+
+            # Authentication:
+
+            #LoginGraceTime 2m
+            #PermitRootLogin prohibit-password
+            #StrictModes yes
+            #MaxAuthTries 6
+            #MaxSessions 10
+            """
+        )
+
+        with salt.utils.files.fopen(name, "w+") as fp_:
+            fp_.write(content)
+
+        ret = self.run_state(
+            "file.keyvalue",
+            name=name,
+            key="permitrootlogin",
+            value="no",
+            separator=" ",
+            uncomment=" #",
+            key_ignore_case=True,
+        )
+
+        with salt.utils.files.fopen(name, "r") as fp_:
+            file_contents = fp_.read()
+            self.assertNotIn("#PermitRootLogin", file_contents)
+            self.assertNotIn("prohibit-password", file_contents)
+            self.assertIn("PermitRootLogin no", file_contents)
+
+        self.assertSaltTrueReturn(ret)
+
 
 @pytest.mark.windows_whitelisted
 class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
     marker_start = "# start"
     marker_end = "# end"
     content = dedent(
-        six.text_type(
-            """\
+        """\
         Line 1 of block
         Line 2 of block
         """
-        )
     )
     without_block = dedent(
-        six.text_type(
-            """\
+        """\
         Hello world!
 
         # comment here
         """
-        )
     )
     with_non_matching_block = dedent(
-        six.text_type(
-            """\
+        """\
         Hello world!
 
         # start
@@ -2927,22 +3034,18 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         # end
         # comment here
         """
-        )
     )
     with_non_matching_block_and_marker_end_not_after_newline = dedent(
-        six.text_type(
-            """\
+        """\
         Hello world!
 
         # start
         No match here# end
         # comment here
         """
-        )
     )
     with_matching_block = dedent(
-        six.text_type(
-            """\
+        """\
         Hello world!
 
         # start
@@ -2951,11 +3054,9 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         # end
         # comment here
         """
-        )
     )
     with_matching_block_and_extra_newline = dedent(
-        six.text_type(
-            """\
+        """\
         Hello world!
 
         # start
@@ -2965,11 +3066,9 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         # end
         # comment here
         """
-        )
     )
     with_matching_block_and_marker_end_not_after_newline = dedent(
-        six.text_type(
-            """\
+        """\
         Hello world!
 
         # start
@@ -2977,7 +3076,6 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         Line 2 of block# end
         # comment here
         """
-        )
     )
     content_explicit_posix_newlines = "Line 1 of block\n" "Line 2 of block\n"
     content_explicit_windows_newlines = "Line 1 of block\r\n" "Line 2 of block\r\n"

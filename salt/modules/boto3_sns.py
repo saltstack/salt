@@ -116,6 +116,14 @@ def describe_topic(name, region=None, key=None, keyid=None, profile=None):
             ret["Attributes"] = get_topic_attributes(
                 arn, region=region, key=key, keyid=keyid, profile=profile
             )
+            # Grab extended attributes for the above subscriptions
+            for sub in range(len(ret["Subscriptions"])):
+                sub_arn = ret["Subscriptions"][sub]["SubscriptionArn"]
+                if not sub_arn.startswith("arn:aws:sns:"):
+                    # Sometimes a sub is in e.g. PendingAccept or other
+                    # wierd states and doesn't have an ARN yet
+                    log.debug("Subscription with invalid ARN %s skipped...", sub_arn)
+                    continue
     return ret
 
 
@@ -382,6 +390,17 @@ def unsubscribe(SubscriptionArn, region=None, key=None, keyid=None, profile=None
 
         salt myminion boto3_sns.unsubscribe my_subscription_arn region=us-east-1
     """
+    if not SubscriptionArn.startswith("arn:aws:sns:"):
+        # Grrr, AWS sent us an ARN that's NOT and ARN....
+        # This can happen if, for instance, a subscription is left in PendingAcceptance or similar
+        # Note that anything left in PendingConfirmation will be auto-deleted by AWS after 30 days
+        # anyway, so this isn't as ugly a hack as it might seem at first...
+        log.info(
+            "Invalid subscription ARN `%s` passed - likely a PendingConfirmaton or such.  "
+            "Skipping unsubscribe attempt as it would almost certainly fail...",
+            SubscriptionArn,
+        )
+        return True
     subs = list_subscriptions(region=region, key=key, keyid=keyid, profile=profile)
     sub = [s for s in subs if s.get("SubscriptionArn") == SubscriptionArn]
     if not sub:

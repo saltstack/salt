@@ -300,6 +300,7 @@ def export(
     out = __salt__[svn_cmd](cwd, name, basename, user, username, password, rev, *opts)
     ret["changes"]["new"] = name
     ret["changes"]["comment"] = name + " was Exported to " + target
+    ret["comment"] = out
 
     return ret
 

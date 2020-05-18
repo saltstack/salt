@@ -13,7 +13,7 @@ Remove this section if not relevant
 **[NOTICE] Bug fixes or features added to Salt require tests.**
 <!-- Please review the [test documentation](https://docs.saltstack.com/en/master/topics/tutorials/writing_tests.html) for details on how to implement tests into Salt's test suite. -->
 - [ ] Docs
-- [ ] Changelog - https://docs.saltstack.com/en/latest/topics/development/changelog.html
+- [ ] Changelog - https://docs.saltstack.com/en/master/topics/development/changelog.html
 - [ ] Tests written/updated
 
 ### Commits signed with GPG?

@@ -14,6 +14,24 @@ from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
 
+class ListPackages(object):
+    def __init__(self):
+        self._iteration = 0
+
+    def __call__(self):
+        pkg_lists = [
+            {"openvpn": "2.4.8_2"},
+            {
+                "gettext-runtime": "0.20.1",
+                "openvpn": "2.4.8_2",
+                "p5-Mojolicious": "8.40",
+            },
+        ]
+        pkgs = pkg_lists[self._iteration]
+        self._iteration += 1
+        return pkgs
+
+
 class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.modules.pkgng
@@ -174,3 +192,43 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False,
                 ignore_retcode=True,
             )
+
+    def test_upgrade_without_fromrepo(self):
+        """
+        Test pkg upgrade to upgrade all available packages
+        """
+        pkg_cmd = MagicMock(return_value={"retcode": 0})
+
+        with patch.dict(pkgng.__salt__, {"cmd.run_all": pkg_cmd}):
+            with patch("salt.modules.pkgng.list_pkgs", ListPackages()):
+                result = pkgng.upgrade()
+                expected = {
+                    "gettext-runtime": {"new": "0.20.1", "old": ""},
+                    "p5-Mojolicious": {"new": "8.40", "old": ""},
+                }
+                self.assertDictEqual(result, expected)
+                pkg_cmd.assert_called_with(
+                    ["pkg", "upgrade", "-y"],
+                    output_loglevel="trace",
+                    python_shell=False,
+                )
+
+    def test_upgrade_with_fromrepo(self):
+        """
+        Test pkg upgrade to upgrade all available packages
+        """
+        pkg_cmd = MagicMock(return_value={"retcode": 0})
+
+        with patch.dict(pkgng.__salt__, {"cmd.run_all": pkg_cmd}):
+            with patch("salt.modules.pkgng.list_pkgs", ListPackages()):
+                result = pkgng.upgrade(fromrepo="FreeBSD")
+                expected = {
+                    "gettext-runtime": {"new": "0.20.1", "old": ""},
+                    "p5-Mojolicious": {"new": "8.40", "old": ""},
+                }
+                self.assertDictEqual(result, expected)
+                pkg_cmd.assert_called_with(
+                    ["pkg", "upgrade", "-y", "--repository", "FreeBSD"],
+                    output_loglevel="trace",
+                    python_shell=False,
+                )

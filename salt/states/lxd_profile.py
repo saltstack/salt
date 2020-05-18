@@ -102,7 +102,7 @@ def present(
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
 
     See the `lxd-docs`_ for the details about the config and devices dicts.
     See the `requests-docs` for the SSL stuff.
@@ -217,7 +217,7 @@ def absent(name, remote_addr=None, cert=None, key=None, verify_cert=True):
     verify_cert : True
         Wherever to verify the cert, this is by default True
         but in the most cases you want to set it off as LXD
-        normaly uses self-signed certificates.
+        normally uses self-signed certificates.
 
     See the `requests-docs` for the SSL stuff.
 

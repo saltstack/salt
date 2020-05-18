@@ -150,21 +150,23 @@ def list_pkgs(*packages):
     .. code-block:: bash
 
         salt '*' lowpkg.list_pkgs
-        salt '*' lowpkg.list_pkgs httpd
+        salt '*' lowpkg.list_pkgs hostname
+        salt '*' lowpkg.list_pkgs hostname mount
     """
-    pkgs = {}
-    cmd = "dpkg -l {0}".format(" ".join(packages))
+    cmd = [
+        "dpkg-query",
+        "-f=${db:Status-Status}\t${binary:Package}\t${Version}\n",
+        "-W",
+    ] + list(packages)
     out = __salt__["cmd.run_all"](cmd, python_shell=False)
     if out["retcode"] != 0:
         msg = "Error:  " + out["stderr"]
         log.error(msg)
         return msg
-    out = out["stdout"]
 
-    for line in out.splitlines():
-        if line.startswith("ii "):
-            comps = line.split()
-            pkgs[comps[1]] = comps[2]
+    lines = [line.split("\t", 1) for line in out["stdout"].splitlines()]
+    pkgs = dict([line.split("\t") for status, line in lines if status == "installed"])
+
     return pkgs
 
 
@@ -178,35 +180,29 @@ def file_list(*packages):
 
     .. code-block:: bash
 
-        salt '*' lowpkg.file_list httpd
-        salt '*' lowpkg.file_list httpd postfix
+        salt '*' lowpkg.file_list hostname
+        salt '*' lowpkg.file_list hostname mount
         salt '*' lowpkg.file_list
     """
     errors = []
     ret = set([])
-    pkgs = {}
-    cmd = "dpkg -l {0}".format(" ".join(packages))
+    cmd = ["dpkg-query", "-f=${db:Status-Status}\t${binary:Package}\n", "-W"] + list(
+        packages
+    )
     out = __salt__["cmd.run_all"](cmd, python_shell=False)
     if out["retcode"] != 0:
         msg = "Error:  " + out["stderr"]
         log.error(msg)
         return msg
-    out = out["stdout"]
 
-    for line in out.splitlines():
-        if line.startswith("ii "):
-            comps = line.split()
-            pkgs[comps[1]] = {"version": comps[2], "description": " ".join(comps[3:])}
-        if "No packages found" in line:
-            errors.append(line)
+    lines = [line.split("\t") for line in out["stdout"].splitlines()]
+    pkgs = [package for (status, package) in lines if status == "installed"]
+
     for pkg in pkgs:
-        files = []
-        cmd = "dpkg -L {0}".format(pkg)
-        for line in __salt__["cmd.run"](cmd, python_shell=False).splitlines():
-            files.append(line)
-        fileset = set(files)
+        output = __salt__["cmd.run"](["dpkg", "-L", pkg], python_shell=False)
+        fileset = set(output.splitlines())
         ret = ret.union(fileset)
-    return {"errors": errors, "files": list(ret)}
+    return {"errors": errors, "files": sorted(ret)}
 
 
 def file_dict(*packages):
@@ -219,33 +215,27 @@ def file_dict(*packages):
 
     .. code-block:: bash
 
-        salt '*' lowpkg.file_list httpd
-        salt '*' lowpkg.file_list httpd postfix
-        salt '*' lowpkg.file_list
+        salt '*' lowpkg.file_dict hostname
+        salt '*' lowpkg.file_dict hostname mount
+        salt '*' lowpkg.file_dict
     """
     errors = []
     ret = {}
-    pkgs = {}
-    cmd = "dpkg -l {0}".format(" ".join(packages))
+    cmd = ["dpkg-query", "-f=${db:Status-Status}\t${binary:Package}\n", "-W"] + list(
+        packages
+    )
     out = __salt__["cmd.run_all"](cmd, python_shell=False)
     if out["retcode"] != 0:
         msg = "Error:  " + out["stderr"]
         log.error(msg)
         return msg
-    out = out["stdout"]
 
-    for line in out.splitlines():
-        if line.startswith("ii "):
-            comps = line.split()
-            pkgs[comps[1]] = {"version": comps[2], "description": " ".join(comps[3:])}
-        if "No packages found" in line:
-            errors.append(line)
+    lines = [line.split("\t") for line in out["stdout"].splitlines()]
+    pkgs = [package for (status, package) in lines if status == "installed"]
+
     for pkg in pkgs:
-        files = []
-        cmd = "dpkg -L {0}".format(pkg)
-        for line in __salt__["cmd.run"](cmd, python_shell=False).splitlines():
-            files.append(line)
-        ret[pkg] = files
+        cmd = ["dpkg", "-L", pkg]
+        ret[pkg] = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
     return {"errors": errors, "packages": ret}
 
 

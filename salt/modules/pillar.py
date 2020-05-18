@@ -66,7 +66,7 @@ def get(
         The value specified by this option will be returned if the desired
         pillar key does not exist.
 
-        If a default value is specified, then it will be an empty string,
+        If a default value is not specified, then it will be an empty string,
         unless :conf_minion:`pillar_raise_on_missing` is set to ``True``, in
         which case an error will be raised.
 

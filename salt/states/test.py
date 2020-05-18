@@ -59,23 +59,26 @@ from salt.state import _gen_tag
 
 def nop(name, **kwargs):
     """
-    A no-op state that does nothing. Useful in conjunction with the `use`
-    requisite, or in templates which could otherwise be empty due to jinja
-    rendering
-
     .. versionadded:: 2015.8.1
+
+    A no-op state that does nothing. Useful in conjunction with the ``use``
+    requisite, or in templates which could otherwise be empty due to jinja
+    rendering.
+
+    name
+        A unique string to serve as the state's ID
     """
     return succeed_without_changes(name)
 
 
 def succeed_without_changes(name, **kwargs):  # pylint: disable=unused-argument
     """
-    Returns successful.
-
     .. versionadded:: 2014.7.0
 
+    Returns successful
+
     name
-        A unique string.
+        A unique string to serve as the state's ID
     """
     comment = kwargs.get("comment", "Success!")
 
@@ -85,12 +88,12 @@ def succeed_without_changes(name, **kwargs):  # pylint: disable=unused-argument
 
 def fail_without_changes(name, **kwargs):  # pylint: disable=unused-argument
     """
-    Returns failure.
-
     .. versionadded:: 2014.7.0
 
-    name:
-        A unique string.
+    Returns failure
+
+    name
+        A unique string to serve as the state's ID
     """
     comment = kwargs.get("comment", "Failure!")
 
@@ -105,12 +108,13 @@ def fail_without_changes(name, **kwargs):  # pylint: disable=unused-argument
 
 def succeed_with_changes(name, **kwargs):  # pylint: disable=unused-argument
     """
-    Returns successful and changes is not empty
-
     .. versionadded:: 2014.7.0
 
-    name:
-        A unique string.
+    Returns ``True`` with an non-empty ``changes`` dictionary. Useful for
+    testing requisites.
+
+    name
+        A unique string to serve as the state's ID
     """
     comment = kwargs.get("comment", "Success!")
 
@@ -124,21 +128,20 @@ def succeed_with_changes(name, **kwargs):  # pylint: disable=unused-argument
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = (
-            "If we weren't testing, this would be successful " "with changes"
-        )
+        ret["comment"] = "If we weren't testing, this would be successful with changes"
 
     return ret
 
 
 def fail_with_changes(name, **kwargs):  # pylint: disable=unused-argument
     """
-    Returns failure and changes is not empty.
-
     .. versionadded:: 2014.7.0
 
-    name:
-        A unique string.
+    Returns ``False`` with an non-empty ``changes`` dictionary. Useful for
+    testing requisites.
+
+    name
+        A unique string to serve as the state's ID
     """
     comment = kwargs.get("comment", "Failure!")
 
@@ -159,71 +162,92 @@ def fail_with_changes(name, **kwargs):  # pylint: disable=unused-argument
 
 def configurable_test_state(name, changes=True, result=True, comment="", warnings=None):
     """
-    A configurable test state which determines its output based on the inputs.
-
     .. versionadded:: 2014.7.0
 
-    name:
-        A unique string.
-    changes:
-        Do we return anything in the changes field?
-        Accepts True, False, and 'Random'
-        Default is True
-    result:
-        Do we return successfully or not?
-        Accepts True, False, and 'Random'
-        Default is True
-        If test is True and changes is True, this will be None.  If test is
-        True and and changes is False, this will be True.
-    comment:
-        String to fill the comment field with.
-        Default is ''
+    A configurable test state which allows for more control over the return
+    data
 
-    .. versionadded:: 3000
+    name
+        A unique string to serve as the state's ID
 
-    warnings:
+    changes : True
+        Controls whether or not the state reports that there were changes.
+        There are three supported values for this argument:
+
+        - If ``True``, the state will report changes
+        - If ``False``, the state will report no changes
+        - If ``"Random"``, the state will randomly report either changes or no
+          changes.
+
+    result : True
+        Controls the result for for the state. Like ``changes``, there are
+        three supported values for this argument:
+
+        - If ``True``, the state will report a ``True`` result
+        - If ``False``, the state will report a ``False`` result
+        - If ``"Random"``, the state will randomly report either ``True``
+
+        .. note::
+            The result will be reported as ``None`` if *all* of the following
+            are true:
+
+            1. The state is being run in test mode (i.e. ``test=True`` on the
+            CLI)
+
+            2. ``result`` is ``True`` (either explicitly, or via being set to
+               ``"Random"``)
+
+            3. ``changes`` is ``True`` (either explicitly, or via being set to
+               ``"Random"``)
+
+    comment : ""
+        Comment field field for the state. By default, this is an empty string.
+
+    warnings
         A string (or a list of strings) to fill the warnings field with.
         Default is None
+
+        .. versionadded:: 3000
     """
     ret = {"name": name, "changes": {}, "result": False, "comment": comment}
     change_data = {
         "testing": {"old": "Unchanged", "new": "Something pretended to change"}
     }
 
-    if changes == "Random":
-        if random.choice([True, False]):
-            # Following the docs as written here
-            # http://docs.saltstack.com/ref/states/writing.html#return-data
-            ret["changes"] = change_data
-    elif changes is True:
+    if changes is True:
         # If changes is True we place our dummy change dictionary into it.
         # Following the docs as written here
         # http://docs.saltstack.com/ref/states/writing.html#return-data
         ret["changes"] = change_data
     elif changes is False:
-        ret["changes"] = {}
+        # Don't modify changes from the "ret" dict set above
+        pass
     else:
-        err = (
-            "You have specified the state option 'Changes' with"
-            " invalid arguments. It must be either "
-            " 'True', 'False', or 'Random'"
-        )
-        raise SaltInvocationError(err)
+        if six.text_type(changes).lower() == "random":
+            if random.choice((True, False)):
+                # Following the docs as written here
+                # http://docs.saltstack.com/ref/states/writing.html#return-data
+                ret["changes"] = change_data
+        else:
+            err = (
+                "You have specified the state option 'changes' with "
+                "invalid arguments. It must be either "
+                "True, False, or 'Random'"
+            )
+            raise SaltInvocationError(err)
 
-    if result == "Random":
-        # since result is a boolean, if its random we just set it here,
-        ret["result"] = random.choice([True, False])
-    elif result is True:
-        ret["result"] = True
-    elif result is False:
-        ret["result"] = False
+    if isinstance(result, bool):
+        ret["result"] = result
     else:
-        raise SaltInvocationError(
-            "You have specified the state option "
-            "'Result' with invalid arguments. It must "
-            "be either 'True', 'False', or "
-            "'Random'"
-        )
+        if six.text_type(result).lower() == "random":
+            ret["result"] = random.choice((True, False))
+        else:
+            raise SaltInvocationError(
+                "You have specified the state option "
+                "'result' with invalid arguments. It must "
+                "be either True, False, or "
+                "'Random'"
+            )
 
     if warnings is None:
         pass
@@ -234,7 +258,7 @@ def configurable_test_state(name, changes=True, result=True, comment="", warning
     else:
         raise SaltInvocationError(
             "You have specified the state option "
-            "'Warnings' with invalid arguments. It must "
+            "'warnings' with invalid arguments. It must "
             "be a string or a list of strings"
         )
 
@@ -247,15 +271,15 @@ def configurable_test_state(name, changes=True, result=True, comment="", warning
 
 def show_notification(name, text=None, **kwargs):
     """
-    Simple notification using text argument.
-
     .. versionadded:: 2015.8.0
 
+    Simple notification using text argument.
+
     name
-        A unique string.
+        A unique string to serve as the state's ID
 
     text
-        Text to return in the comment.
+        Text to return in the comment field
     """
 
     if not text:
@@ -355,8 +379,8 @@ def check_pillar(
     verbose=False,
 ):
     """
-    Checks the presence and, optionally, the type of
-    given keys in Pillar.
+    Checks the presence and, optionally, the type of given keys in Pillar
+
     Supported kwargs for types are:
     - boolean (bool)
     - integer (int)

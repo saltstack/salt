@@ -565,6 +565,15 @@
 #
 #state_aggregate: False
 
+# Disable requisites during state runs by specifying a single requisite
+# or a list of requisites to disable.
+#
+# disabled_requisites: require_in
+#
+# disabled_requisites:
+#     - require
+#     - require_in
+
 #####     File Directory Settings    #####
 ##########################################
 # The Salt Minion can redirect all file server operations to a local directory,

@@ -7,19 +7,13 @@
 
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 """
-
-# Import Python libs
 from __future__ import absolute_import, print_function
 
-# Import 3rd-party libs
 # pylint: disable=import-error
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
-
-# Import salt libs
 from tests.support.case import ShellCase
+from tests.support.helpers import slowTest
 from tests.support.mixins import ShellCaseCommonTestsMixin
-
-# Import salt testing libs
 from tests.support.unit import skipIf
 
 try:
@@ -36,18 +30,21 @@ class SaltCloudCliTest(ShellCase, ShellCaseCommonTestsMixin):
 
     _call_binary_ = "salt-cloud"
 
+    @slowTest
     def test_function_arguments(self):
         self.assertIn(
             "error: --function expects two arguments: " "<function-name> <provider>",
             "\n".join(self.run_cloud("--function show_image -h", catch_stderr=True)[1]),
         )
 
+    @slowTest
     def test_list_providers_accepts_no_arguments(self):
         self.assertIn(
             "error: '--list-providers' does not accept any " "arguments",
             "\n".join(self.run_cloud("--list-providers ec2", catch_stderr=True)[1]),
         )
 
+    @slowTest
     def test_mutually_exclusive_query_options(self):
         test_options = ["--query", "--full-query", "--select-query", "--list-providers"]
         while True:
@@ -70,6 +67,7 @@ class SaltCloudCliTest(ShellCase, ShellCaseCommonTestsMixin):
                 # Only one left? Stop iterating
                 break
 
+    @slowTest
     def test_mutually_exclusive_list_options(self):
         test_options = ["--list-locations", "--list-images", "--list-sizes"]
         while True:
