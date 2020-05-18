@@ -1,7 +1,6 @@
-==============================
-salt.modules.napalm_ntp module
-==============================
+=======================
+salt.modules.napalm_ntp
+=======================
 
 .. automodule:: salt.modules.napalm_ntp
     :members:
-

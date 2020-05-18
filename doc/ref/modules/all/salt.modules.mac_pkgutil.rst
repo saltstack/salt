@@ -1,5 +1,6 @@
-salt.modules.mac_pkgutil module
-===============================
+========================
+salt.modules.mac_pkgutil
+========================
 
 .. automodule:: salt.modules.mac_pkgutil
     :members:

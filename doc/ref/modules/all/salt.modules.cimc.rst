@@ -1,5 +1,6 @@
-salt.modules.cimc module
-========================
+=================
+salt.modules.cimc
+=================
 
 .. automodule:: salt.modules.cimc
     :members:

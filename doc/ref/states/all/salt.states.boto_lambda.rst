@@ -1,5 +1,6 @@
-salt.states.boto_lambda module
-==============================
+=======================
+salt.states.boto_lambda
+=======================
 
 .. automodule:: salt.states.boto_lambda
     :members:

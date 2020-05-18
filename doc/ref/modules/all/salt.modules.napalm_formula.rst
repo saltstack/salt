@@ -1,7 +1,6 @@
-==================================
-salt.modules.napalm_formula module
-==================================
+===========================
+salt.modules.napalm_formula
+===========================
 
 .. automodule:: salt.modules.napalm_formula
     :members:
-

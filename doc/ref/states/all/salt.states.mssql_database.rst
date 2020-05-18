@@ -1,5 +1,6 @@
-salt.states.mssql_database module
-=================================
+==========================
+salt.states.mssql_database
+==========================
 
 .. automodule:: salt.states.mssql_database
     :members:

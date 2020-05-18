@@ -1,5 +1,6 @@
-salt.states.glassfish module
-============================
+=====================
+salt.states.glassfish
+=====================
 
 .. automodule:: salt.states.glassfish
     :members:

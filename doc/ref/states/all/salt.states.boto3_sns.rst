@@ -1,5 +1,6 @@
-salt.states.boto3_sns module
-============================
+=====================
+salt.states.boto3_sns
+=====================
 
 .. automodule:: salt.states.boto3_sns
     :members:

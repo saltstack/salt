@@ -1,6 +1,6 @@
-salt.modules.boto_ssm module
-============================
+=====================
+salt.modules.boto_ssm
+=====================
 
 .. automodule:: salt.modules.boto_ssm
     :members:
-    :undoc-members:

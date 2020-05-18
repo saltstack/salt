@@ -1,6 +1,6 @@
-salt.modules.nxos module
-========================
+=================
+salt.modules.nxos
+=================
 
 .. automodule:: salt.modules.nxos
     :members:
-

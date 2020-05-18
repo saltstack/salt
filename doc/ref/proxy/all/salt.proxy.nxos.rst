@@ -1,6 +1,6 @@
-salt.proxy.nxos module
-======================
+===============
+salt.proxy.nxos
+===============
 
 .. automodule:: salt.proxy.nxos
     :members:
-

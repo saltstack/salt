@@ -1,5 +1,6 @@
-salt.states.openvswitch_bridge module
-=====================================
+==============================
+salt.states.openvswitch_bridge
+==============================
 
 .. automodule:: salt.states.openvswitch_bridge
     :members:

@@ -1,5 +1,6 @@
-salt.states.lxd module
-======================
+===============
+salt.states.lxd
+===============
 
 .. automodule:: salt.states.lxd
     :members:

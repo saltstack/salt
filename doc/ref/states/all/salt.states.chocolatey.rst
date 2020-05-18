@@ -1,5 +1,6 @@
-salt.states.chocolatey module
-=============================
+======================
+salt.states.chocolatey
+======================
 
 .. automodule:: salt.states.chocolatey
     :members:

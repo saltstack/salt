@@ -1,6 +1,6 @@
-salt.modules.gcp_addon module
-=============================
+======================
+salt.modules.gcp_addon
+======================
 
 .. automodule:: salt.modules.gcp_addon
     :members:
-    :undoc-members:

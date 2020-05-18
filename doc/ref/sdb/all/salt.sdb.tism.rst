@@ -1,6 +1,6 @@
-salt.sdb.tism module
-====================
+=============
+salt.sdb.tism
+=============
 
 .. automodule:: salt.sdb.tism
     :members:
-    :undoc-members:

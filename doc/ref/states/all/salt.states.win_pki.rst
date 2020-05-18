@@ -1,6 +1,6 @@
-salt.states.win_pki module
-==========================
+===================
+salt.states.win_pki
+===================
 
 .. automodule:: salt.states.win_pki
     :members:
-    :undoc-members:

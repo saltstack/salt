@@ -1,5 +1,6 @@
-salt.queues.pgjsonb_queue module
-================================
+=========================
+salt.queues.pgjsonb_queue
+=========================
 
 .. automodule:: salt.queues.pgjsonb_queue
     :members:

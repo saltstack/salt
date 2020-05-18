@@ -1,6 +1,6 @@
-salt.modules.solrcloud module
-=============================
+======================
+salt.modules.solrcloud
+======================
 
 .. automodule:: salt.modules.solrcloud
     :members:
-    :undoc-members:

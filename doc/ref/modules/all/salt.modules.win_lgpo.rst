@@ -1,6 +1,6 @@
-salt.modules.win_lgpo module
-============================
+=====================
+salt.modules.win_lgpo
+=====================
 
 .. automodule:: salt.modules.win_lgpo
     :members:
-    :undoc-members:

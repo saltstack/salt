@@ -1,5 +1,6 @@
-salt.states.kapacitor module
-============================
+=====================
+salt.states.kapacitor
+=====================
 
 .. automodule:: salt.states.kapacitor
     :members:

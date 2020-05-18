@@ -1,6 +1,6 @@
-salt.states.nxos module
-=======================
+================
+salt.states.nxos
+================
 
 .. automodule:: salt.states.nxos
     :members:
-

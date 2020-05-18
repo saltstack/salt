@@ -1,6 +1,6 @@
-salt.sdb.env module
-===================
+============
+salt.sdb.env
+============
 
 .. automodule:: salt.sdb.env
     :members:
-    :undoc-members:

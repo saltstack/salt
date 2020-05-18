@@ -1,5 +1,6 @@
-salt.states.wordpress module
-============================
+=====================
+salt.states.wordpress
+=====================
 
 .. automodule:: salt.states.wordpress
     :members:

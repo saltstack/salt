@@ -1,5 +1,6 @@
-salt.states.mac_xattr module
-============================
+=====================
+salt.states.mac_xattr
+=====================
 
 .. automodule:: salt.states.mac_xattr
     :members:

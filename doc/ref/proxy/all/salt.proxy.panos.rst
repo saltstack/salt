@@ -1,5 +1,6 @@
-salt.proxy.panos module
-=======================
+================
+salt.proxy.panos
+================
 
 .. automodule:: salt.proxy.panos
     :members:

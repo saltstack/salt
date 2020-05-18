@@ -1,5 +1,6 @@
-salt.states.win_certutil module
-===============================
+========================
+salt.states.win_certutil
+========================
 
 .. automodule:: salt.states.win_certutil
     :members:

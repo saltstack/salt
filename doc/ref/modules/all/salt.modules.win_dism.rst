@@ -1,5 +1,6 @@
-salt.modules.win_dism module
-============================
+=====================
+salt.modules.win_dism
+=====================
 
 .. automodule:: salt.modules.win_dism
     :members:

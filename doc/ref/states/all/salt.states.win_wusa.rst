@@ -1,5 +1,6 @@
-salt.states.win_wusa module
-===========================
+====================
+salt.states.win_wusa
+====================
 
 .. automodule:: salt.states.win_wusa
     :members:

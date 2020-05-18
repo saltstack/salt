@@ -1,5 +1,6 @@
-salt.modules.mac_sysctl module
-==============================
+=======================
+salt.modules.mac_sysctl
+=======================
 
 .. automodule:: salt.modules.mac_sysctl
     :members:

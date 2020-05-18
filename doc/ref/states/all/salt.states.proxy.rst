@@ -1,5 +1,6 @@
-salt.states.proxy module
-========================
+=================
+salt.states.proxy
+=================
 
 .. automodule:: salt.states.proxy
     :members:

@@ -1,5 +1,6 @@
-salt.engines.thorium module
-===========================
+====================
+salt.engines.thorium
+====================
 
 .. automodule:: salt.engines.thorium
     :members:

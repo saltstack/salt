@@ -1,5 +1,6 @@
-salt.returners.splunk module
-============================
+=====================
+salt.returners.splunk
+=====================
 
 .. automodule:: salt.returners.splunk
     :members:

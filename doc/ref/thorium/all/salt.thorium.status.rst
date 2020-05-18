@@ -1,6 +1,6 @@
-salt.thorium.status module
-==========================
+===================
+salt.thorium.status
+===================
 
 .. automodule:: salt.thorium.status
     :members:
-    :undoc-members:

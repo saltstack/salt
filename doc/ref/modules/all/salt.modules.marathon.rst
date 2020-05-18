@@ -1,5 +1,6 @@
-salt.modules.marathon module
-============================
+=====================
+salt.modules.marathon
+=====================
 
 .. automodule:: salt.modules.marathon
     :members:

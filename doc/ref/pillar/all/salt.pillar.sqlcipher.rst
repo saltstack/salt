@@ -1,5 +1,6 @@
-salt.pillar.sqlcipher module
-============================
+=====================
+salt.pillar.sqlcipher
+=====================
 
 .. automodule:: salt.pillar.sqlcipher
     :members:

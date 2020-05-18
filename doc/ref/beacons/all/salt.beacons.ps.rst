@@ -1,5 +1,6 @@
-salt.beacons.ps module
-======================
+===============
+salt.beacons.ps
+===============
 
 .. automodule:: salt.beacons.ps
     :members:
