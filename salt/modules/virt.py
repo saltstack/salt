@@ -1251,6 +1251,10 @@ def _disk_profile(conn, profile, hypervisor, disks, vm_name):
     pool_caps = _pool_capabilities(conn)
 
     for disk in disklist:
+        # Set default model for cdrom devices before the overlay sets the wrong one
+        if disk.get("device", "disk") == "cdrom" and "model" not in disk:
+            disk["model"] = "ide"
+
         # Add the missing properties that have defaults
         for key, val in six.iteritems(overlay):
             if key not in disk:

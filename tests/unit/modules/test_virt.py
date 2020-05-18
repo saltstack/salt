@@ -860,6 +860,22 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(len(diskp), 1)
             self.assertEqual(diskp[0]["source_file"], ("/path/to/my/image.qcow2"))
 
+    def test_disk_profile_cdrom_default(self):
+        """
+        Test virt._gen_xml(), KVM case with cdrom.
+        """
+        with patch.dict(os.path.__dict__, {"exists": MagicMock(return_value=True)}):
+            diskp = virt._disk_profile(
+                self.mock_conn,
+                None,
+                "kvm",
+                [{"name": "mydisk", "device": "cdrom"}],
+                "hello",
+            )
+
+            self.assertEqual(len(diskp), 1)
+            self.assertEqual(diskp[0]["model"], "ide")
+
     def test_disk_profile_pool_disk_type(self):
         """
         Test virt._disk_profile(), with a disk pool of disk type
