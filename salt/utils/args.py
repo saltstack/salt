@@ -96,7 +96,7 @@ def condition_input(args, kwargs):
     return ret
 
 
-def parse_input(args, kwargs=None, condition=True, no_parse=None):
+def parse_input(args, condition=True, no_parse=None):
     """
     Parse out the args and kwargs from a list of input values. Optionally,
     return the args and kwargs without passing them to condition_input().
@@ -105,8 +105,6 @@ def parse_input(args, kwargs=None, condition=True, no_parse=None):
     """
     if no_parse is None:
         no_parse = ()
-    if kwargs is None:
-        kwargs = {}
     _args = []
     _kwargs = {}
     for arg in args:
@@ -128,7 +126,6 @@ def parse_input(args, kwargs=None, condition=True, no_parse=None):
                 _args.append(arg)
         else:
             _args.append(arg)
-    _kwargs.update(kwargs)
     if condition:
         return condition_input(_args, _kwargs)
     return _args, _kwargs
@@ -158,14 +155,21 @@ def yamlify_arg(arg):
     if not isinstance(arg, six.string_types):
         return arg
 
-    if arg.strip() == "":
-        # Because YAML loads empty (or all whitespace) strings as None, we
-        # return the original string
-        # >>> import yaml
-        # >>> yaml.load('') is None
-        # True
-        # >>> yaml.load('      ') is None
-        # True
+    # YAML loads empty (or all whitespace) strings as None:
+    #
+    # >>> import yaml
+    # >>> yaml.load('') is None
+    # True
+    # >>> yaml.load('      ') is None
+    # True
+    #
+    # Similarly, YAML document start/end markers would not load properly if
+    # passed through PyYAML, as loading '---' results in None and '...' raises
+    # an exception.
+    #
+    # Therefore, skip YAML loading for these cases and just return the string
+    # that was passed in.
+    if arg.strip() in ("", "---", "..."):
         return arg
 
     elif "_" in arg and all([x in "0123456789_" for x in arg.strip()]):
@@ -173,6 +177,15 @@ def yamlify_arg(arg):
         # underscores are ignored and the digits are combined together and
         # loaded as an int. We don't want that, so return the original value.
         return arg
+
+    else:
+        if any(np_char in arg for np_char in ("\t", "\r", "\n")):
+            # Don't mess with this CLI arg, since it has one or more
+            # non-printable whitespace char. Since the CSafeLoader will
+            # sanitize these chars rather than raise an exception, just
+            # skip YAML loading of this argument and keep the argument as
+            # passed on the CLI.
+            return arg
 
     try:
         # Explicit late import to avoid circular import. DO NOT MOVE THIS.

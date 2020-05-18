@@ -14,6 +14,7 @@ import pprint
 import re
 import uuid
 import warnings
+from collections.abc import Hashable
 from functools import wraps
 from xml.dom import minidom
 from xml.etree.ElementTree import Element, SubElement, tostring
@@ -38,13 +39,6 @@ from salt.ext import six
 from salt.utils.decorators.jinja import jinja_filter, jinja_global, jinja_test
 from salt.utils.odict import OrderedDict
 from salt.utils.versions import LooseVersion
-
-try:
-    from collections.abc import Hashable
-except ImportError:
-    # pylint: disable=no-name-in-module
-    from collections import Hashable
-
 
 log = logging.getLogger(__name__)
 

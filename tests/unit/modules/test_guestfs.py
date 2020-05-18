@@ -3,16 +3,13 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.guestfs as guestfs
-
-# Import Salt Testing Libs
+from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 class GuestfsTestCase(TestCase, LoaderModuleMockMixin):
@@ -85,7 +82,7 @@ class GuestfsTestCase(TestCase, LoaderModuleMockMixin):
             )
             makedirs_mock.assert_called_once()
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_umount(self):
         """
         Test the guestfs.unmount function

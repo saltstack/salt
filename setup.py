@@ -11,6 +11,7 @@ The setup script for salt
 # For Python 2.5.  A no-op on 2.6 and above.
 from __future__ import absolute_import, print_function, with_statement
 
+import contextlib
 import distutils.dist
 import glob
 import inspect
@@ -31,6 +32,7 @@ from distutils.version import LooseVersion  # pylint: disable=blacklisted-module
 # pylint: disable=E0611
 import setuptools
 from setuptools import setup
+from setuptools.command.bdist_egg import bdist_egg
 from setuptools.command.develop import develop
 from setuptools.command.egg_info import egg_info
 from setuptools.command.install import install
@@ -460,18 +462,25 @@ class DownloadWindowsDlls(Command):
         if getattr(self.distribution, "salt_download_windows_dlls", None) is None:
             print("This command is not meant to be called on it's own")
             exit(1)
-        import pip
+        try:
+            import pip
 
-        # pip has moved many things to `_internal` starting with pip 10
-        if LooseVersion(pip.__version__) < LooseVersion("10.0"):
-            # pylint: disable=no-name-in-module
-            from pip.utils.logging import indent_log
+            # pip has moved many things to `_internal` starting with pip 10
+            if LooseVersion(pip.__version__) < LooseVersion("10.0"):
+                # pylint: disable=no-name-in-module
+                from pip.utils.logging import indent_log
 
-            # pylint: enable=no-name-in-module
-        else:
-            from pip._internal.utils.logging import (
-                indent_log,
-            )  # pylint: disable=no-name-in-module
+                # pylint: enable=no-name-in-module
+            else:
+                from pip._internal.utils.logging import (
+                    indent_log,
+                )  # pylint: disable=no-name-in-module
+        except ImportError:
+            # TODO: Impliment indent_log here so we don't require pip
+            @contextlib.contextmanager
+            def indent_log():
+                yield
+
         platform_bits, _ = platform.architecture()
         url = "https://repo.saltstack.com/windows/dependencies/{bits}/{fname}.dll"
         dest = os.path.join(os.path.dirname(sys.executable), "{fname}.dll")
@@ -554,6 +563,14 @@ class Sdist(sdist):
         sdist.make_distribution(self)
         if self.distribution.ssh_packaging:
             os.unlink(PACKAGED_FOR_SALT_SSH_FILE)
+
+
+class BDistEgg(bdist_egg):
+    def finalize_options(self):
+        bdist_egg.finalize_options(self)
+        self.distribution.build_egg = True
+        if not self.skip_build:
+            self.run_command("build")
 
 
 class CloudSdist(Sdist):  # pylint: disable=too-many-ancestors
@@ -741,6 +758,11 @@ class Build(build):
 
         if getattr(self.distribution, "with_salt_version", False):
             # Write the hardcoded salt version module salt/_version.py
+            self.distribution.salt_version_hardcoded_path = salt_build_ver_file
+            self.run_command("write_salt_version")
+
+        if getattr(self.distribution, "build_egg", False):
+            # we are building an egg package. need to include _version.py
             self.distribution.salt_version_hardcoded_path = salt_build_ver_file
             self.run_command("write_salt_version")
 
@@ -995,6 +1017,7 @@ class SaltDistribution(distutils.dist.Distribution):
                 "clean": Clean,
                 "build": Build,
                 "sdist": Sdist,
+                "bdist_egg": BDistEgg,
                 "install": Install,
                 "develop": Develop,
                 "write_salt_version": WriteSaltVersion,
