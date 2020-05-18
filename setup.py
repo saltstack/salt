@@ -1417,3 +1417,4 @@ class SaltDistribution(distutils.dist.Distribution):
 
 if __name__ == "__main__":
     setup(distclass=SaltDistribution)
+
