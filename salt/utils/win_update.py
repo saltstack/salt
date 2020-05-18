@@ -997,7 +997,9 @@ class WindowsUpdateAgent(object):
                                         "Result"
                                     ] = "Uninstallation Succeeded"
                                 else:
-                                    ret["Updates"][uid]["Result"] = "Uninstallation Failed"
+                                    ret["Updates"][uid][
+                                        "Result"
+                                    ] = "Uninstallation Failed"
                                 ret["Updates"][uid]["RebootBehavior"] = reboot[
                                     update.InstallationBehavior.RebootBehavior
                                 ]
