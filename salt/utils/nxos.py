@@ -18,15 +18,15 @@ Util functions for the NXOS modules.
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python std lib
 import collections
+import http.client
 import json
 import logging
 import os
 import re
 import socket
+from collections.abc import Iterable
 
-# Import salt libs
 import salt.utils.http
 from salt.exceptions import (
     CommandExecutionError,
@@ -34,27 +34,18 @@ from salt.exceptions import (
     NxosError,
     NxosRequestNotSupported,
 )
-from salt.ext.six.moves import zip
 from salt.utils.args import clean_kwargs
-
-# Disable pylint check since httplib is not available in python3
-try:
-    import httplib  # pylint: disable=W1699
-except ImportError:
-    import http.client
-
-    httplib = http.client
 
 log = logging.getLogger(__name__)
 
 
-class UHTTPConnection(httplib.HTTPConnection):  # pylint: disable=W1699
+class UHTTPConnection(http.client.HTTPConnection):
     """
     Subclass of Python library HTTPConnection that uses a unix-domain socket.
     """
 
     def __init__(self, path):
-        httplib.HTTPConnection.__init__(self, "localhost")
+        http.client.HTTPConnection.__init__(self, "localhost")
         self.path = path
 
     def connect(self):
@@ -211,13 +202,13 @@ class NxapiClient(object):
         Parse NX-API JSON response from the NX-OS device.
         """
         # Check for 500 level NX-API Server Errors
-        if isinstance(response, collections.Iterable) and "status" in response:
+        if isinstance(response, Iterable) and "status" in response:
             if int(response["status"]) >= 500:
                 raise NxosError("{}".format(response))
             else:
                 raise NxosError("NX-API Request Not Supported: {}".format(response))
 
-        if isinstance(response, collections.Iterable):
+        if isinstance(response, Iterable):
             body = response["dict"]
         else:
             body = response
