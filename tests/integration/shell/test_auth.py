@@ -42,7 +42,11 @@ def gen_password():
     password = "".join(
         random.choice(string.ascii_letters + string.digits) for _ in range(20)
     )
-    hashed_pwd = gen_hash("salt", password, "sha512")
+    hashed_pwd = (
+        password
+        if salt.utils.platform.is_darwin()
+        else gen_hash("salt", password, "sha512")
+    )
 
     return password, hashed_pwd
 
@@ -77,9 +81,7 @@ class UserAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
         password, hashed_pwd = gen_password()
 
         # set user password
-        set_pw_cmd = "shadow.set_password {0} '{1}'".format(
-            self.user, password if salt.utils.platform.is_darwin() else hashed_pwd
-        )
+        set_pw_cmd = "shadow.set_password {0} '{1}'".format(self.user, hashed_pwd)
         stdout, stderr, retcode = self.run_call(
             set_pw_cmd, catch_stderr=True, with_retcode=True
         )
@@ -130,7 +132,10 @@ class GroupAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
         )
         self.assertSaltTrueReturn(ret)
         stdout, stderr, retcode = self.run_call(
-            "user.chgroups {0} {1} True".format(self.user, self.group), local=True
+            "user.chgroups {0} {1} True".format(self.user, self.group),
+            local=True,
+            with_retcode=True,
+            catch_stderr=True,
         )
         if stderr:
             log.warning(stderr)
@@ -150,9 +155,7 @@ class GroupAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
         password, hashed_pwd = gen_password()
 
         # set user password
-        set_pw_cmd = "shadow.set_password {0} '{1}'".format(
-            self.user, password if salt.utils.platform.is_darwin() else hashed_pwd
-        )
+        set_pw_cmd = "shadow.set_password {0} '{1}'".format(self.user, hashed_pwd)
         stdout, stderr, retcode = self.run_call(
             set_pw_cmd, catch_stderr=True, with_retcode=True
         )
