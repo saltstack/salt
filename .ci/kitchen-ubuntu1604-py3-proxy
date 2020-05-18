@@ -1,4 +1,4 @@
-@Library('salt@master-1.7') _
+@Library('salt@slow-seconds') _
 
 runTestSuite(
     concurrent_builds: 1,
