@@ -19,6 +19,7 @@ import textwrap
 
 import pytest
 import salt.serializers.configparser
+import salt.serializers.plist
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
@@ -1995,6 +1996,78 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         # deserializing with default of x = baz will perform interpolation on %(x)s
         # and bar will then = baz
         assert serialized_data["foo"]["bar"] == merged["foo"]["bar"]
+
+    @with_tempfile(create=False)
+    def test_serializer_plist_binary_file_open(self, name):
+        """
+        Test the serialization and deserialization of plists which should include
+        the "rb" file open arguments change specifically for this formatter to handle
+        binary plists.
+        """
+        data1 = {"foo": {"bar": "%(x)s"}}
+        data2 = {"foo": {"abc": 123}}
+        merged = {"foo": {"abc": 123, "bar": "%(x)s"}}
+
+        ret = self.run_state(
+            "file.serialize",
+            name=name,
+            dataset=data1,
+            formatter="plist",
+            serializer_opts=[{"fmt": "FMT_BINARY"}],
+        )
+        ret = ret[next(iter(ret))]
+        assert ret["result"], ret
+
+        # Run with merge_if_exists so we test the deserializer.
+        ret = self.run_state(
+            "file.serialize",
+            name=name,
+            dataset=data2,
+            formatter="plist",
+            merge_if_exists=True,
+            serializer_opts=[{"fmt": "FMT_BINARY"}],
+        )
+        ret = ret[next(iter(ret))]
+        assert ret["result"], ret
+
+        with salt.utils.files.fopen(name, "rb") as fp_:
+            serialized_data = salt.serializers.plist.deserialize(fp_)
+
+        # make sure our serialized data matches what we expect
+        assert serialized_data["foo"] == merged["foo"]
+
+    @with_tempfile(create=False)
+    def test_serializer_plist_file_open(self, name):
+        """
+        Test the serialization and deserialization of non binary plists with
+        the new line concatenation.
+        """
+        data1 = {"foo": {"bar": "%(x)s"}}
+        data2 = {"foo": {"abc": 123}}
+        merged = {"foo": {"abc": 123, "bar": "%(x)s"}}
+
+        ret = self.run_state(
+            "file.serialize", name=name, dataset=data1, formatter="plist",
+        )
+        ret = ret[next(iter(ret))]
+        assert ret["result"], ret
+
+        # Run with merge_if_exists so we test the deserializer.
+        ret = self.run_state(
+            "file.serialize",
+            name=name,
+            dataset=data2,
+            formatter="plist",
+            merge_if_exists=True,
+        )
+        ret = ret[next(iter(ret))]
+        assert ret["result"], ret
+
+        with salt.utils.files.fopen(name, "rb") as fp_:
+            serialized_data = salt.serializers.plist.deserialize(fp_)
+
+        # make sure our serialized data matches what we expect
+        assert serialized_data["foo"] == merged["foo"]
 
     @with_tempdir()
     def test_replace_issue_18841_omit_backup(self, base_dir):
