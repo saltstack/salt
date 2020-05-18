@@ -6292,6 +6292,22 @@ def pool_delete(name, **kwargs):
     conn = __get_conn(**kwargs)
     try:
         pool = conn.storagePoolLookupByName(name)
+        desc = ElementTree.fromstring(pool.XMLDesc())
+
+        # Is there a secret that we generated and would need to be removed?
+        # Don't remove the other secrets
+        auth_node = desc.find("source/auth")
+        if auth_node is not None:
+            auth_types = {
+                "ceph": libvirt.VIR_SECRET_USAGE_TYPE_CEPH,
+                "iscsi": libvirt.VIR_SECRET_USAGE_TYPE_ISCSI,
+            }
+            secret_type = auth_types[auth_node.get("type")]
+            secret_usage = auth_node.find("secret").get("usage")
+            if secret_type and "pool_{}".format(name) == secret_usage:
+                secret = conn.secretLookupByUsage(secret_type, secret_usage)
+                secret.undefine()
+
         return not bool(pool.delete(libvirt.VIR_STORAGE_POOL_DELETE_NORMAL))
     finally:
         conn.close()
