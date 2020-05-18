@@ -108,7 +108,7 @@ from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-from salt.ext.six.moves.urllib.parse import urlparse
+from salt.ext.six.moves.urllib.parse import urlparse, urlunparse
 from salt.utils.virt import check_remote, download_remote
 
 try:
@@ -518,6 +518,23 @@ def _get_disks(conn, dom):
                                 pool_i.name(), source_name[len(name_node.text) :]
                             )
                             break
+
+                # Reverse the magic for cdroms with remote URLs
+                if elem.get("device", "disk") == "cdrom":
+                    host_node = source.find("host")
+                    if host_node is not None:
+                        hostname = host_node.get("name")
+                        port = host_node.get("port")
+                        qemu_target = urlunparse(
+                            (
+                                source.get("protocol"),
+                                "{}:{}".format(hostname, port) if port else hostname,
+                                source_name,
+                                "",
+                                saxutils.unescape(source.get("query", "")),
+                                "",
+                            )
+                        )
             elif disk_type == "volume":
                 pool_name = source.get("pool")
                 volume_name = source.get("volume")
