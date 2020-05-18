@@ -75,7 +75,7 @@ def swarm_tokens():
 
 def swarm_init(advertise_addr=str, listen_addr=int, force_new_cluster=bool):
     """
-    Initalize Docker on Minion as a Swarm Manager
+    Initialize Docker on Minion as a Swarm Manager
 
     advertise_addr
         The ip of the manager
@@ -210,7 +210,7 @@ def service_create(
         The target port on the container
 
     published_port
-        port thats published on the host/os
+        port that's published on the host/os
 
     CLI Example:
 
@@ -445,7 +445,7 @@ def update_node(availability=str, node_name=str, role=str, node_id=str, version=
 
     .. code-block:: bash
 
-        salt '*' docker_util.update_node availability=drain node_name=minion2 \
+        salt '*' swarm.update_node availability=drain node_name=minion2 \
             role=worker node_id=3k9x7t8m4pel9c0nqr3iajnzp version=19
     """
     client = docker.APIClient(base_url="unix://var/run/docker.sock")

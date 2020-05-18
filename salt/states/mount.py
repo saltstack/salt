@@ -1101,7 +1101,7 @@ def fstab_present(
     match_on="auto",
     not_change=False,
 ):
-    """Makes sure that a fstab mount point is pressent.
+    """Makes sure that a fstab mount point is present.
 
     name
         The name of block device. Can be any valid fs_spec value.

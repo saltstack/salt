@@ -89,9 +89,10 @@ def __virtual__():
     """
     Provides zpool state
     """
-    if not __grains__.get("zfs_support"):
+    if __grains__["zfs_support"]:
+        return __virtualname__
+    else:
         return False, "The zpool state cannot be loaded: zfs not supported"
-    return __virtualname__
 
 
 def _layout_to_vdev(layout, device_dir=None):
@@ -188,7 +189,7 @@ def present(
 
         The following configuration properties can be toggled in the config parameter.
           - import (true) - try to import the pool before creating it if absent
-          - import_dirs (None) - specify additional locations to scan for devices on import (comma-seperated)
+          - import_dirs (None) - specify additional locations to scan for devices on import (comma-separated)
           - device_dir (None, SunOS=/dev/dsk, Linux=/dev) - specify device directory to prepend for none
             absolute device paths
           - force (false) - try to force the import or creation
@@ -398,7 +399,7 @@ def absent(name, export=False, force=False):
     name : string
         name of storage pool
     export : boolean
-        export instead of destroy the zpool if present
+        export instread of destroy the zpool if present
     force : boolean
         force destroy or export
 

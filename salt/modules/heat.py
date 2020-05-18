@@ -264,7 +264,7 @@ def _poll_for_events(
             event_args={"sort_dir": "asc", "marker": marker},
         )
 
-        if len(events) == 0:
+        if not events:
             no_event_polls += 1
         else:
             no_event_polls = 0
@@ -419,7 +419,7 @@ def delete_stack(name=None, poll=0, timeout=60, profile=None):
             ret["comment"] = "Deleted stack {0}.".format(name)
             return ret
         except Exception as ex:  # pylint: disable=W0703
-            log.exception("Delete failed {0}".format(ex))
+            log.exception("Delete failed %s", ex)
             ret["result"] = False
             ret["comment"] = "{0}".format(ex)
             return ret
@@ -551,7 +551,7 @@ def create_stack(
     try:
         h_client.stacks.validate(**kwargs)
     except Exception as ex:  # pylint: disable=W0703
-        log.exception("Template not valid {0}".format(ex))
+        log.exception("Template not valid %s", ex)
         ret["result"] = False
         ret["comment"] = "Template not valid {0}".format(ex)
         return ret
@@ -623,7 +623,7 @@ def create_stack(
     try:
         h_client.stacks.create(**fields)
     except Exception as ex:  # pylint: disable=W0703
-        log.exception("Create failed {0}".format(ex))
+        log.exception("Create failed %s", ex)
         ret["result"] = False
         ret["comment"] = "{0}".format(ex)
         return ret
@@ -762,7 +762,7 @@ def update_stack(
     try:
         h_client.stacks.validate(**kwargs)
     except Exception as ex:  # pylint: disable=W0703
-        log.exception("Template not valid {0}".format(ex))
+        log.exception("Template not valid %s", ex)
         ret["result"] = False
         ret["comment"] = "Template not valid {0}".format(ex)
         return ret
@@ -832,7 +832,7 @@ def update_stack(
     try:
         h_client.stacks.update(name, **fields)
     except Exception as ex:  # pylint: disable=W0703
-        log.exception("Update failed {0}".format(ex))
+        log.exception("Update failed %s", ex)
         ret["result"] = False
         ret["comment"] = "Update failed {0}".format(ex)
         return ret

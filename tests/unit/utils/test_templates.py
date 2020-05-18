@@ -19,6 +19,13 @@ import salt.utils.templates
 from tests.support.helpers import with_tempdir
 from tests.support.unit import TestCase, skipIf
 
+try:
+    import Cheetah as _
+
+    HAS_CHEETAH = True
+except ImportError:
+    HAS_CHEETAH = False
+
 log = logging.getLogger(__name__)
 
 
@@ -157,16 +164,19 @@ class RenderTestCase(TestCase):
         self.assertEqual(res, "<RU>OK</RU>")
 
     ### Tests for cheetah template (line-oriented and xml-friendly)
+    @skipIf(not HAS_CHEETAH, "The Cheetah Python module is missing.")
     def test_render_cheetah_sanity(self):
         tmpl = """OK"""
         res = salt.utils.templates.render_cheetah_tmpl(tmpl, dict(self.context))
         self.assertEqual(res, "OK")
 
+    @skipIf(not HAS_CHEETAH, "The Cheetah Python module is missing.")
     def test_render_cheetah_evaluate(self):
         tmpl = """<%="OK"%>"""
         res = salt.utils.templates.render_cheetah_tmpl(tmpl, dict(self.context))
         self.assertEqual(res, "OK")
 
+    @skipIf(not HAS_CHEETAH, "The Cheetah Python module is missing.")
     def test_render_cheetah_evaluate_xml(self):
         tmpl = """
         <% if 1: %>
@@ -177,6 +187,7 @@ class RenderTestCase(TestCase):
         stripped = res.strip()
         self.assertEqual(stripped, "OK")
 
+    @skipIf(not HAS_CHEETAH, "The Cheetah Python module is missing.")
     def test_render_cheetah_evaluate_text(self):
         tmpl = """
         #if 1
@@ -188,6 +199,7 @@ class RenderTestCase(TestCase):
         stripped = res.strip()
         self.assertEqual(stripped, "OK")
 
+    @skipIf(not HAS_CHEETAH, "The Cheetah Python module is missing.")
     def test_render_cheetah_variable(self):
         tmpl = """$var"""
 

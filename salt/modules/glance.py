@@ -359,7 +359,11 @@ def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
     except exc.HTTPNotFound:
         return {"result": False, "comment": "No image with ID {0}".format(id)}
     pformat = pprint.PrettyPrinter(indent=4).pformat
-    log.debug("Properties of image {0}:\n{1}".format(image.name, pformat(image)))
+    log.debug(
+        "Properties of image %s:\n%s",
+        image.name,
+        pprint.PrettyPrinter(indent=4).pformat(image),
+    )
 
     schema = image_schema(profile=profile)
     if len(schema.keys()) == 1:
@@ -398,7 +402,7 @@ def image_list(id=None, profile=None, name=None):  # pylint: disable=C0103
                         'name "{0}"'.format(name),
                     }
                 _add_image(ret, image)
-    log.debug("Returning images: {0}".format(ret))
+    log.debug("Returning images: %s", ret)
     return ret
 
 
@@ -441,7 +445,7 @@ def image_update(id=None, name=None, profile=None, **kwargs):  # pylint: disable
         img_list = image_list(name=name, profile=profile)
         if img_list is dict and "result" in img_list:
             return img_list
-        elif len(img_list) == 0:
+        elif not img_list:
             return {
                 "result": False,
                 "comment": "No image with name '{0}' " "found.".format(name),
@@ -453,13 +457,13 @@ def image_update(id=None, name=None, profile=None, **kwargs):  # pylint: disable
                 image = img_list[name]
     else:
         raise SaltInvocationError
-    log.debug("Found image:\n{0}".format(image))
+    log.debug("Found image:\n%s", image)
     to_update = {}
     for key, value in kwargs.items():
         if key.startswith("_"):
             continue
         if key not in image or image[key] != value:
-            log.debug("add <{0}={1}> to to_update".format(key, value))
+            log.debug("add <%s=%s> to to_update", key, value)
             to_update[key] = value
     g_client = _auth(profile)
     updated = g_client.images.update(image["id"], **to_update)
@@ -481,11 +485,14 @@ def schema_get(name, profile=None):
         salt '*' glance.schema_get name=f16-jeos
     """
     g_client = _auth(profile)
-    pformat = pprint.PrettyPrinter(indent=4).pformat
     schema_props = {}
     for prop in g_client.schemas.get(name).properties:
         schema_props[prop.name] = prop.description
-    log.debug("Properties of schema {0}:\n{1}".format(name, pformat(schema_props)))
+    log.debug(
+        "Properties of schema %s:\n%s",
+        name,
+        pprint.PrettyPrinter(indent=4).pformat(schema_props),
+    )
     return {name: schema_props}
 
 

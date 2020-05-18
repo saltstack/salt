@@ -162,10 +162,10 @@ def sync_modules(saltenv="base", extmod_whitelist=None, extmod_blacklist=None):
         one environment, pass a comma-separated list.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 
@@ -191,10 +191,10 @@ def sync_states(saltenv="base", extmod_whitelist=None, extmod_blacklist=None):
         one environment, pass a comma-separated list.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 
@@ -220,10 +220,10 @@ def sync_grains(saltenv="base", extmod_whitelist=None, extmod_blacklist=None):
         one environment, pass a comma-separated list.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 
@@ -249,10 +249,10 @@ def sync_renderers(saltenv="base", extmod_whitelist=None, extmod_blacklist=None)
         one environment, pass a comma-separated list.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 
@@ -278,10 +278,10 @@ def sync_returners(saltenv="base", extmod_whitelist=None, extmod_blacklist=None)
         one environment, pass a comma-separated list.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 
@@ -307,10 +307,10 @@ def sync_output(saltenv="base", extmod_whitelist=None, extmod_blacklist=None):
         one environment, pass a comma-separated list.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 
@@ -336,10 +336,10 @@ def sync_proxymodules(saltenv="base", extmod_whitelist=None, extmod_blacklist=No
         one environment, pass a comma-separated list.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 
@@ -365,10 +365,10 @@ def sync_runners(saltenv="base", extmod_whitelist=None, extmod_blacklist=None):
         one environment, pass a comma-separated list.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 
@@ -394,10 +394,10 @@ def sync_wheel(saltenv="base", extmod_whitelist=None, extmod_blacklist=None):
         one environment, pass a comma-separated list.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 
@@ -423,10 +423,10 @@ def sync_engines(saltenv="base", extmod_whitelist=None, extmod_blacklist=None):
         one environment, pass a comma-separated list.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 
@@ -454,10 +454,10 @@ def sync_thorium(saltenv="base", extmod_whitelist=None, extmod_blacklist=None):
         one environment, pass a comma-separated list.
 
     extmod_whitelist
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 
@@ -483,10 +483,10 @@ def sync_queues(saltenv="base", extmod_whitelist=None, extmod_blacklist=None):
         one environment, pass a comma-separated list.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 
@@ -512,10 +512,10 @@ def sync_pillar(saltenv="base", extmod_whitelist=None, extmod_blacklist=None):
         one environment, pass a comma-separated list.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 
@@ -543,10 +543,10 @@ def sync_utils(saltenv="base", extmod_whitelist=None, extmod_blacklist=None):
         one environment, pass a comma-separated list.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 
@@ -574,10 +574,10 @@ def sync_sdb(saltenv="base", extmod_whitelist=None, extmod_blacklist=None):
         one environment, pass a comma-separated list.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 
@@ -630,10 +630,10 @@ def sync_cache(saltenv="base", extmod_whitelist=None, extmod_blacklist=None):
         one environment, pass a comma-separated list.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 
@@ -661,10 +661,10 @@ def sync_fileserver(saltenv="base", extmod_whitelist=None, extmod_blacklist=None
         one environment, pass a comma-separated list.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 
@@ -692,10 +692,10 @@ def sync_clouds(saltenv="base", extmod_whitelist=None, extmod_blacklist=None):
         one environment, pass a comma-separated list.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 
@@ -723,10 +723,10 @@ def sync_roster(saltenv="base", extmod_whitelist=None, extmod_blacklist=None):
         one environment, pass a comma-separated list.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 
@@ -754,10 +754,10 @@ def sync_eauth_tokens(saltenv="base", extmod_whitelist=None, extmod_blacklist=No
         one environment, pass a comma-separated list.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 

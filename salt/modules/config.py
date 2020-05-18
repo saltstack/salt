@@ -485,8 +485,7 @@ def get(
     else:
         if merge not in ("recurse", "overwrite"):
             log.warning(
-                "Unsupported merge strategy '{0}'. Falling back "
-                "to 'recurse'.".format(merge)
+                "Unsupported merge strategy '%s'. Falling back " "to 'recurse'.", merge
             )
             merge = "recurse"
 
@@ -553,7 +552,7 @@ def gather_bootstrap_script(bootstrap=None):
     if not HAS_CLOUD:
         return False, "config.gather_bootstrap_script is unavailable"
     ret = salt.utils.cloud.update_bootstrap(__opts__, url=bootstrap)
-    if "Success" in ret and len(ret["Success"]["Files updated"]) > 0:
+    if "Success" in ret and ret["Success"]["Files updated"]:
         return ret["Success"]["Files updated"][0]
 
 

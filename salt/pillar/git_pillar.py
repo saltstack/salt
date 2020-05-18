@@ -151,7 +151,7 @@ The corresponding Pillar top file would look like this:
 With the addition of pygit2_ support, git_pillar can now interact with
 authenticated remotes. Authentication works just like in gitfs (as outlined in
 the :ref:`Git Fileserver Backend Walkthrough <gitfs-authentication>`), only
-with the global authenication parameter names prefixed with ``git_pillar``
+with the global authentication parameter names prefixed with ``git_pillar``
 instead of ``gitfs`` (e.g. :conf_master:`git_pillar_pubkey`,
 :conf_master:`git_pillar_privkey`, :conf_master:`git_pillar_passphrase`, etc.).
 

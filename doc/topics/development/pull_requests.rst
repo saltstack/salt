@@ -161,14 +161,14 @@ All PR requirements
 
 Bug Fix PR requirements
 -----------------------
-  * Test Coverage: regression test written to cover bug fix. Contributers only need
+  * Test Coverage: regression test written to cover bug fix. Contributors only need
     to write test coverage for their specific changes.
   * Point to the issue the PR is resolving. If there is not an issue one will need
     to be created.
 
 Feature PR requirements
 -----------------------
-  * Test Coverage: tests written to cover new feature. Contributers only need to write
+  * Test Coverage: tests written to cover new feature. Contributors only need to write
     test coverage for their specific changes.
   * Release Notes: Add note in release notes of new feature for relative release.
   * Add .. versionadded:: <release> to module's documentation. If you are not certain

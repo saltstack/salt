@@ -18,7 +18,7 @@ from salt.serializers import DeserializationError, SerializationError
 
 # Import pytoml
 try:
-    import pytoml as toml
+    import toml
 
     available = True
 except ImportError:

@@ -611,7 +611,7 @@ def hdparms(disks, args=None):
         disk_data = {}
         for line in _hdparm("-{0} {1}".format(args, disk), False).splitlines():
             line = line.strip()
-            if len(line) == 0 or line == disk + ":":
+            if not line or line == disk + ":":
                 continue
 
             if ":" in line:
@@ -647,7 +647,7 @@ def hdparms(disks, args=None):
                             rvals.append(val)
                 if valdict:
                     rvals.append(valdict)
-                if len(rvals) == 0:
+                if not rvals:
                     continue
                 elif len(rvals) == 1:
                     rvals = rvals[0]

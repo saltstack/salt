@@ -344,6 +344,8 @@ def _run(
         # Strip whitespace
         if isinstance(cmd, six.string_types):
             cmd = cmd.strip()
+        elif isinstance(cmd, list):
+            cmd = " ".join(cmd).strip()
 
         # If we were called by script(), then fakeout the Windows
         # shell to run a Powershell script.
@@ -366,7 +368,6 @@ def _run(
 
     # munge the cmd and cwd through the template
     (cmd, cwd) = _render_cmd(cmd, cwd, template, saltenv, pillarenv, pillar_override)
-
     ret = {}
 
     # If the pub jid is here then this is a remote ex or salt call command and needs to be
@@ -852,11 +853,11 @@ def _run(
             )
             log.error(log_callback(msg))
         if ret["stdout"]:
-            log.log(output_loglevel, "stdout: {0}".format(log_callback(ret["stdout"])))
+            log.log(output_loglevel, "stdout: %s", log_callback(ret["stdout"]))
         if ret["stderr"]:
-            log.log(output_loglevel, "stderr: {0}".format(log_callback(ret["stderr"])))
+            log.log(output_loglevel, "stderr: %s", log_callback(ret["stderr"]))
         if ret["retcode"]:
-            log.log(output_loglevel, "retcode: {0}".format(ret["retcode"]))
+            log.log(output_loglevel, "retcode: %s", ret["retcode"])
 
     return ret
 
@@ -3339,7 +3340,7 @@ def shell_info(shell, list_modules=False):
             hive="HKEY_LOCAL_MACHINE", key="Software\\Microsoft\\PowerShell"
         )
         pw_keys.sort(key=int)
-        if len(pw_keys) == 0:
+        if not pw_keys:
             return {
                 "error": "Unable to locate 'powershell' Reason: Cannot be "
                 "found in registry.",

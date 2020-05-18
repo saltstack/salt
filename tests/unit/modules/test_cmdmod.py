@@ -23,47 +23,12 @@ from tests.support.helpers import TstSuiteLoggingHandler
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, Mock, mock_open, patch
+from tests.support.mock import MagicMock, Mock, MockTimedProc, mock_open, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
 DEFAULT_SHELL = "foo/bar"
 MOCK_SHELL_FILE = "# List of acceptable shells\n" "\n" "/bin/bash\n"
-
-
-class MockTimedProc(object):
-    """
-    Class used as a stand-in for salt.utils.timed_subprocess.TimedProc
-    """
-
-    class _Process(object):
-        """
-        Used to provide a dummy "process" attribute
-        """
-
-        def __init__(self, returncode=0, pid=12345):
-            self.returncode = returncode
-            self.pid = pid
-
-    def __init__(self, stdout=None, stderr=None, returncode=0, pid=12345):
-        if stdout is not None and not isinstance(stdout, bytes):
-            raise TypeError("Must pass stdout to MockTimedProc as bytes")
-        if stderr is not None and not isinstance(stderr, bytes):
-            raise TypeError("Must pass stderr to MockTimedProc as bytes")
-        self._stdout = stdout
-        self._stderr = stderr
-        self.process = self._Process(returncode=returncode, pid=pid)
-
-    def run(self):
-        pass
-
-    @property
-    def stdout(self):
-        return self._stdout
-
-    @property
-    def stderr(self):
-        return self._stderr
 
 
 class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
@@ -260,7 +225,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                             MagicMock(side_effect=OSError(expected_error)),
                         ):
                             with self.assertRaises(CommandExecutionError) as error:
-                                cmdmod.run("foo")
+                                cmdmod.run("foo", cwd="/")
                             assert error.exception.args[0].endswith(
                                 expected_error
                             ), repr(error.exception.args[0])
@@ -279,7 +244,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                             MagicMock(side_effect=IOError(expected_error)),
                         ):
                             with self.assertRaises(CommandExecutionError) as error:
-                                cmdmod.run("foo")
+                                cmdmod.run("foo", cwd="/")
                             assert error.exception.args[0].endswith(
                                 expected_error
                             ), repr(error.exception.args[0])
@@ -630,7 +595,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
             cmdmod.__salt__, {"mount.mount": MagicMock(), "mount.umount": MagicMock()}
         ):
             with patch("salt.modules.cmdmod.run_all") as run_all_mock:
-                cmdmod.run_chroot("/mnt", "ls", runas="foobar")
+                cmdmod.run_chroot("/mnt", "ls", runas="foobar", shell="/bin/sh")
         run_all_mock.assert_called_with(
             "chroot --userspec foobar: /mnt /bin/sh -c ls",
             bg=False,
@@ -647,7 +612,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
             reset_system_locale=True,
             rstrip=True,
             saltenv="base",
-            shell="/bin/bash",
+            shell="/bin/sh",
             stdin=None,
             success_retcodes=None,
             template=None,
