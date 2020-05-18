@@ -1188,10 +1188,21 @@ def upgrade(*names, **kwargs):
         .. code-block:: bash
 
             salt '*' pkg.upgrade <package name> dryrun=True
+
+    fromrepo
+        In multi-repo mode, override the pkg.conf ordering and only attempt
+        to upgrade packages from the named repository.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.upgrade <package name> fromrepo=repo
     """
     jail = kwargs.pop("jail", None)
     chroot = kwargs.pop("chroot", None)
     root = kwargs.pop("root", None)
+    fromrepo = kwargs.pop("fromrepo", None)
     force = kwargs.pop("force", False)
     local = kwargs.pop("local", False)
     dryrun = kwargs.pop("dryrun", False)
@@ -1214,6 +1225,8 @@ def upgrade(*names, **kwargs):
         cmd.extend(names)
     if pkgs:
         cmd.extend(pkgs)
+    if fromrepo:
+        cmd.extend(["--repository", fromrepo])
 
     old = list_pkgs()
     result = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
