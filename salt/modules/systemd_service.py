@@ -9,6 +9,11 @@ Provides the service module for systemd
     minion, and it is using a different module (or gives an error similar to
     *'service.start' is not available*), see :ref:`here
     <module-provider-override>`.
+
+.. important::
+    This is an implementation of virtual 'service' module. As such, you must
+    call it under the name 'service' and NOT 'systemd'. You can see that also
+    in the examples below.
 """
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -20,7 +25,6 @@ import logging
 import os
 import re
 import shlex
-import time
 
 # Import Salt libs
 import salt.utils.files
@@ -66,7 +70,7 @@ def __virtual__():
     """
     Only work on systems that have been booted with systemd
     """
-    if __grains__["kernel"] == "Linux" and salt.utils.systemd.booted(__context__):
+    if __grains__.get("kernel") == "Linux" and salt.utils.systemd.booted(__context__):
         return __virtualname__
     return (
         False,
@@ -194,7 +198,6 @@ def _default_runlevel():
         pass
 
     # The default runlevel can also be set via the kernel command-line.
-    # Kinky.
     try:
         valid_strings = set(
             ("0", "1", "2", "3", "4", "5", "6", "s", "S", "-s", "single")
@@ -493,7 +496,8 @@ def get_enabled(root=None):
         except ValueError:
             continue
         else:
-            if unit_state != "enabled":
+            # Arch Linux adds a third column, which we want to ignore
+            if unit_state.split()[0] != "enabled":
                 continue
         try:
             unit_name, unit_type = fullname.rsplit(".", 1)
@@ -534,7 +538,8 @@ def get_disabled(root=None):
         except ValueError:
             continue
         else:
-            if unit_state != "disabled":
+            # Arch Linux adds a third column, which we want to ignore
+            if unit_state.split()[0] != "disabled":
                 continue
         try:
             unit_name, unit_type = fullname.rsplit(".", 1)
@@ -1079,29 +1084,22 @@ def force_reload(name, no_block=True, unmask=False, unmask_runtime=False):
 
 # The unused sig argument is required to maintain consistency with the API
 # established by Salt's service management states.
-def status(name, sig=None, wait=3):  # pylint: disable=unused-argument
+def status(name, sig=None):  # pylint: disable=unused-argument
     """
-    Check whether or not a service is active.
-    If the name contains globbing, a dict mapping service names to True/False
+    Return the status for a service via systemd.
+    If the name contains globbing, a dict mapping service name to True/False
     values is returned.
 
     .. versionchanged:: 2018.3.0
         The service name can now be a glob (e.g. ``salt*``)
 
-    name
-        The name of the service to check
+    Args:
+        name (str): The name of the service to check
+        sig (str): Not implemented
 
-    sig
-        Not implemented, but required to be accepted as it is passed by service
-        states
-
-    wait : 3
-        If the service is in the process of changing states (i.e. it is in
-        either the ``activating`` or ``deactivating`` state), wait up to this
-        amount of seconds (checking again periodically) before determining
-        whether the service is active.
-
-        .. versionadded:: 2019.2.3
+    Returns:
+        bool: True if running, False otherwise
+        dict: Maps service name to True if running, False otherwise
 
     CLI Example:
 
@@ -1109,38 +1107,25 @@ def status(name, sig=None, wait=3):  # pylint: disable=unused-argument
 
         salt '*' service.status <service name> [service signature]
     """
-
-    def _get_status(service):
-        ret = __salt__["cmd.run_all"](
-            _systemctl_cmd("is-active", service),
-            python_shell=False,
-            ignore_retcode=True,
-            redirect_stderr=True,
-        )
-        return ret["retcode"] == 0, ret["stdout"]
-
     contains_globbing = bool(re.search(r"\*|\?|\[.+\]", name))
     if contains_globbing:
         services = fnmatch.filter(get_all(), name)
     else:
         services = [name]
-    ret = {}
+    results = {}
     for service in services:
         _check_for_unit_changes(service)
-        ret[service], _message = _get_status(service)
-        if not ret[service]:
-            # Check if the service is in the process of activating/deactivating
-            start_time = time.time()
-            # match both 'activating' and 'deactivating'
-            while "activating" in _message and (time.time() - start_time <= wait):
-                time.sleep(0.5)
-                ret[service], _message = _get_status(service)
-                if ret[service]:
-                    break
-
+        results[service] = (
+            __salt__["cmd.retcode"](
+                _systemctl_cmd("is-active", service),
+                python_shell=False,
+                ignore_retcode=True,
+            )
+            == 0
+        )
     if contains_globbing:
-        return ret
-    return ret[name]
+        return results
+    return results[name]
 
 
 # **kwargs is required to maintain consistency with the API established by

@@ -11,6 +11,7 @@ import salt.modules.win_groupadd as win_groupadd
 import salt.utils.win_functions
 
 # Import Salt Testing Libs
+from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.unit import TestCase, skipIf
@@ -247,17 +248,25 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test adding a user and encountering an error
         """
+        msg = "An unknown directory object was requested"
+        error = pywintypes.com_error(
+            -1234, "Exception occurred.", (0, None, msg, None, 0, -2147352567), None
+        )
+
         # Create mock group object with mocked Add function which raises the
         # exception we need in order to test the error case.
         class GroupObj(MockGroupObj):
             def Add(self, name):
-                raise PYWINTYPES_ERROR
+                raise error
 
         obj_group_mock = MagicMock(return_value=GroupObj("foo", ["WinNT://HOST/steve"]))
         with patch.object(
             win_groupadd, "_get_group_object", obj_group_mock
         ), patch.object(salt.utils.win_functions, "get_sam_name", sam_mock):
-            self.assertFalse(win_groupadd.adduser("foo", "username"))
+            with TstSuiteLoggingHandler() as handler:
+                self.assertFalse(win_groupadd.adduser("foo", "username"))
+                expected = "ERROR:Failed to add HOST\\username to group foo. An unknown directory object was requested"
+                self.assertIn(expected, handler.messages)
 
     def test_adduser_group_does_not_exist(self):
         obj_group_mock = MagicMock(side_effect=PYWINTYPES_ERROR)
@@ -406,3 +415,40 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         """
         with patch.dict(win_groupadd.__context__, {"group.list_groups": True}):
             self.assertTrue(win_groupadd.list_groups())
+
+    def test__get_computer_object(self):
+        """
+        Test the _get_computer_object function. Should return a Com object, but
+        we're going to mock just an object
+        """
+        with patch("salt.utils.winapi.Com", MagicMock()), patch(
+            "win32com.client.Dispatch", autospec=True
+        ) as com_obj:
+            com_obj.GetObject = [object]
+            test = win_groupadd._get_computer_object()
+            assert isinstance(test, object)
+
+    def test__get_group_object(self):
+        """
+        Test the _get_group_object function. Should return a Com object, but
+        we're going to mock just an object
+        """
+        with patch("salt.utils.winapi.Com", MagicMock()), patch(
+            "win32com.client.Dispatch", autospec=True
+        ) as com_obj:
+            com_obj.GetObject = [object]
+            test = win_groupadd._get_group_object("steve")
+            assert isinstance(test, object)
+
+    def test__get_all_groups(self):
+        """
+        Test the _get_all_groups function. It doesn't actually return a list.
+        It returns a Com Object that is an iterator, so we're just going to mock
+        an object
+        """
+        with patch("salt.utils.winapi.Com", MagicMock()), patch(
+            "win32com.client.Dispatch", autospec=True
+        ) as com_obj:
+            com_obj.GetObject = [object]
+            test = win_groupadd._get_all_groups()
+            assert isinstance(test, object)

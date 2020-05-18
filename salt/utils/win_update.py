@@ -32,7 +32,7 @@ __virtualname__ = "win_update"
 
 def __virtual__():
     if not salt.utils.platform.is_windows():
-        return False, "win_update: Not available on Windows"
+        return False, "win_update: Only available on Windows"
     if not HAS_PYWIN32:
         return False, "win_update: Missing pywin32"
     return __virtualname__
@@ -43,7 +43,8 @@ class Updates(object):
     Wrapper around the 'Microsoft.Update.UpdateColl' instance
     Adds the list and summary functions. For use by the WindowUpdateAgent class.
 
-    Usage:
+    Code Example:
+
     .. code-block:: python
 
         # Create an instance
@@ -110,24 +111,25 @@ class Updates(object):
 
         .. code-block:: cfg
 
-            List of Updates:
-            {'<GUID>': {'Title': <title>,
-                        'KB': <KB>,
-                        'GUID': <the globally unique identifier for the update>
-                        'Description': <description>,
-                        'Downloaded': <has the update been downloaded>,
-                        'Installed': <has the update been installed>,
-                        'Mandatory': <is the update mandatory>,
-                        'UserInput': <is user input required>,
-                        'EULAAccepted': <has the EULA been accepted>,
-                        'Severity': <update severity>,
-                        'NeedsReboot': <is the update installed and awaiting reboot>,
-                        'RebootBehavior': <will the update require a reboot>,
-                        'Categories': [ '<category 1>',
-                                        '<category 2>',
-                                        ...]
-                        }
-            }
+            Dict of Updates:
+            {'<GUID>': {
+                'Title': <title>,
+                'KB': <KB>,
+                'GUID': <the globally unique identifier for the update>,
+                'Description': <description>,
+                'Downloaded': <has the update been downloaded>,
+                'Installed': <has the update been installed>,
+                'Mandatory': <is the update mandatory>,
+                'UserInput': <is user input required>,
+                'EULAAccepted': <has the EULA been accepted>,
+                'Severity': <update severity>,
+                'NeedsReboot': <is the update installed and awaiting reboot>,
+                'RebootBehavior': <will the update require a reboot>,
+                'Categories': [
+                    '<category 1>',
+                    '<category 2>',
+                    ... ]
+            }}
 
         Code Example:
 
@@ -182,10 +184,12 @@ class Updates(object):
              'Available': <updates that are not downloaded or installed>,
              'Downloaded': <updates that are downloaded but not installed>,
              'Installed': <updates installed (usually 0 unless installed=True)>,
-             'Categories': { <category 1>: <total for that category>,
-                             <category 2>: <total for category 2>,
-                             ... }
+             'Categories': {
+                <category 1>: <total for that category>,
+                <category 2>: <total for category 2>,
+                ... }
             }
+
         Code Example:
 
         .. code-block:: python
@@ -251,7 +255,6 @@ class Updates(object):
 class WindowsUpdateAgent(object):
     """
     Class for working with the Windows update agent
-
     """
 
     # Error codes found at the following site:
@@ -285,11 +288,20 @@ class WindowsUpdateAgent(object):
         -4292607995: "Reboot required: 0x00240005",
     }
 
-    def __init__(self):
+    def __init__(self, online=True):
         """
         Initialize the session and load all updates into the ``_updates``
         collection. This collection is used by the other class functions instead
         of querying Windows update (expensive).
+
+        Args:
+
+            online (bool):
+                Tells the Windows Update Agent go online to update its local
+                update database. ``True`` will go online. ``False`` will use the
+                local update database as is. Default is ``True``
+
+                .. versionadded:: Sodium
 
         Need to look at the possibility of loading this into ``__context__``
         """
@@ -302,7 +314,7 @@ class WindowsUpdateAgent(object):
             # Create Collection for Updates
             self._updates = win32com.client.Dispatch("Microsoft.Update.UpdateColl")
 
-        self.refresh()
+        self.refresh(online=online)
 
     def updates(self):
         """
@@ -310,8 +322,12 @@ class WindowsUpdateAgent(object):
         Updates class to expose the list and summary functions.
 
         Returns:
-            Updates: An instance of the Updates class with all updates for the
-            system.
+
+            Updates:
+                An instance of the Updates class with all updates for the
+                system.
+
+        Code Example:
 
         .. code-block:: python
 
@@ -333,11 +349,20 @@ class WindowsUpdateAgent(object):
 
         return updates
 
-    def refresh(self):
+    def refresh(self, online=True):
         """
         Refresh the contents of the ``_updates`` collection. This gets all
         updates in the Windows Update system and loads them into the collection.
         This is the part that is slow.
+
+        Args:
+
+            online (bool):
+                Tells the Windows Update Agent go online to update its local
+                update database. ``True`` will go online. ``False`` will use the
+                local update database as is. Default is ``True``
+
+                .. versionadded:: Sodium
 
         Code Example:
 
@@ -352,6 +377,7 @@ class WindowsUpdateAgent(object):
 
         # Create searcher object
         searcher = self._session.CreateUpdateSearcher()
+        searcher.Online = online
         self._session.ClientApplicationID = "Salt: Load Updates"
 
         # Load all updates into the updates collection
@@ -373,6 +399,32 @@ class WindowsUpdateAgent(object):
 
         self._updates = results.Updates
 
+    def installed(self):
+        """
+        Gets a list of all updates available on the system that have the
+        ``IsInstalled`` attribute set to ``True``.
+
+        Returns:
+
+            Updates: An instance of Updates with the results.
+
+        Code Example:
+
+        .. code-block:: python
+
+            import salt.utils.win_update
+            wua = salt.utils.win_update.WindowsUpdateAgent(online=False)
+            installed_updates = wua.installed()
+        """
+        # https://msdn.microsoft.com/en-us/library/windows/desktop/aa386099(v=vs.85).aspx
+        updates = Updates()
+
+        for update in self._updates:
+            if salt.utils.data.is_true(update.IsInstalled):
+                updates.updates.Add(update)
+
+        return updates
+
     def available(
         self,
         skip_hidden=True,
@@ -390,23 +442,27 @@ class WindowsUpdateAgent(object):
 
         Args:
 
-            skip_hidden (bool): Skip hidden updates. Default is True
+            skip_hidden (bool):
+                Skip hidden updates. Default is ``True``
 
-            skip_installed (bool): Skip installed updates. Default is True
+            skip_installed (bool):
+                Skip installed updates. Default is ``True``
 
-            skip_mandatory (bool): Skip mandatory updates. Default is False
+            skip_mandatory (bool):
+                Skip mandatory updates. Default is ``False``
 
-            skip_reboot (bool): Skip updates that can or do require reboot.
-            Default is False
+            skip_reboot (bool):
+                Skip updates that can or do require reboot. Default is ``False``
 
-            software (bool): Include software updates. Default is True
+            software (bool):
+                Include software updates. Default is ``True``
 
-            drivers (bool): Include driver updates. Default is True
+            drivers (bool):
+                Include driver updates. Default is ``True``
 
-            categories (list): Include updates that have these categories.
-            Default is none (all categories).
-
-                Categories include the following:
+            categories (list):
+                Include updates that have these categories. Default is none
+                (all categories). Categories include the following:
 
                 * Critical Updates
                 * Definition Updates
@@ -422,16 +478,17 @@ class WindowsUpdateAgent(object):
                 * Windows 8.1 and later drivers
                 * Windows Defender
 
-            severities (list): Include updates that have these severities.
-            Default is none (all severities).
-
-                Severities include the following:
+            severities (list):
+                Include updates that have these severities. Default is none
+                (all severities). Severities include the following:
 
                 * Critical
                 * Important
 
-        .. note:: All updates are either software or driver updates. If both
-        ``software`` and ``drivers`` is False, nothing will be returned.
+        .. note::
+
+            All updates are either software or driver updates. If both
+            ``software`` and ``drivers`` is ``False``, nothing will be returned.
 
         Returns:
 
@@ -445,7 +502,7 @@ class WindowsUpdateAgent(object):
             wua = salt.utils.win_update.WindowsUpdateAgent()
 
             # Gets all updates and shows a summary
-            updates = wua.available
+            updates = wua.available()
             updates.summary()
 
             # Get a list of Critical updates
@@ -502,11 +559,11 @@ class WindowsUpdateAgent(object):
 
         Args:
 
-            search_string (str, list): The search string to use to find the
-            update. This can be the GUID or KB of the update (preferred). It can
-            also be the full Title of the update or any part of the Title. A
-            partial Title search is less specific and can return multiple
-            results.
+            search_string (str, list):
+                The search string to use to find the update. This can be the
+                GUID or KB of the update (preferred). It can also be the full
+                Title of the update or any part of the Title. A partial Title
+                search is less specific and can return multiple results.
 
         Returns:
             Updates: An instance of Updates with the results of the search
@@ -568,8 +625,9 @@ class WindowsUpdateAgent(object):
 
         Args:
 
-            updates (Updates): An instance of the Updates class containing a
-            the updates to be downloaded.
+            updates (Updates):
+                An instance of the Updates class containing a the updates to be
+                downloaded.
 
         Returns:
             dict: A dictionary containing the results of the download
@@ -597,79 +655,79 @@ class WindowsUpdateAgent(object):
         with salt.utils.winapi.Com():
             download_list = win32com.client.Dispatch("Microsoft.Update.UpdateColl")
 
-        ret = {"Updates": {}}
+            ret = {"Updates": {}}
 
-        # Check for updates that aren't already downloaded
-        for update in updates.updates:
+            # Check for updates that aren't already downloaded
+            for update in updates.updates:
 
-            # Define uid to keep the lines shorter
-            uid = update.Identity.UpdateID
-            ret["Updates"][uid] = {}
-            ret["Updates"][uid]["Title"] = update.Title
-            ret["Updates"][uid]["AlreadyDownloaded"] = bool(update.IsDownloaded)
+                # Define uid to keep the lines shorter
+                uid = update.Identity.UpdateID
+                ret["Updates"][uid] = {}
+                ret["Updates"][uid]["Title"] = update.Title
+                ret["Updates"][uid]["AlreadyDownloaded"] = bool(update.IsDownloaded)
 
-            # Accept EULA
-            if not salt.utils.data.is_true(update.EulaAccepted):
-                log.debug("Accepting EULA: %s", update.Title)
-                update.AcceptEula()  # pylint: disable=W0104
+                # Accept EULA
+                if not salt.utils.data.is_true(update.EulaAccepted):
+                    log.debug("Accepting EULA: %s", update.Title)
+                    update.AcceptEula()  # pylint: disable=W0104
 
-            # Update already downloaded
-            if not salt.utils.data.is_true(update.IsDownloaded):
-                log.debug("To Be Downloaded: %s", uid)
-                log.debug("\tTitle: %s", update.Title)
-                download_list.Add(update)
+                # Update already downloaded
+                if not salt.utils.data.is_true(update.IsDownloaded):
+                    log.debug("To Be Downloaded: %s", uid)
+                    log.debug("\tTitle: %s", update.Title)
+                    download_list.Add(update)
 
-        # Check the download list
-        if download_list.Count == 0:
-            ret = {"Success": True, "Updates": "Nothing to download"}
-            return ret
+            # Check the download list
+            if download_list.Count == 0:
+                ret = {"Success": True, "Updates": "Nothing to download"}
+                return ret
 
-        # Send the list to the downloader
-        downloader.Updates = download_list
+            # Send the list to the downloader
+            downloader.Updates = download_list
 
-        # Download the list
-        try:
-            log.debug("Downloading Updates")
-            result = downloader.Download()
-        except pywintypes.com_error as error:
-            # Something happened, raise an error
-            hr, msg, exc, arg = error.args  # pylint: disable=W0633
+            # Download the list
             try:
-                failure_code = self.fail_codes[exc[5]]
-            except KeyError:
-                failure_code = "Unknown Failure: {0}".format(error)
+                log.debug("Downloading Updates")
+                result = downloader.Download()
+            except pywintypes.com_error as error:
+                # Something happened, raise an error
+                hr, msg, exc, arg = error.args  # pylint: disable=W0633
+                try:
+                    failure_code = self.fail_codes[exc[5]]
+                except KeyError:
+                    failure_code = "Unknown Failure: {0}".format(error)
 
-            log.error("Download Failed: %s", failure_code)
-            raise CommandExecutionError(failure_code)
+                log.error("Download Failed: %s", failure_code)
+                raise CommandExecutionError(failure_code)
 
-        # Lookup dictionary
-        result_code = {
-            0: "Download Not Started",
-            1: "Download In Progress",
-            2: "Download Succeeded",
-            3: "Download Succeeded With Errors",
-            4: "Download Failed",
-            5: "Download Aborted",
-        }
+            # Lookup dictionary
+            result_code = {
+                0: "Download Not Started",
+                1: "Download In Progress",
+                2: "Download Succeeded",
+                3: "Download Succeeded With Errors",
+                4: "Download Failed",
+                5: "Download Aborted",
+            }
 
-        log.debug("Download Complete")
-        log.debug(result_code[result.ResultCode])
-        ret["Message"] = result_code[result.ResultCode]
+            log.debug("Download Complete")
+            log.debug(result_code[result.ResultCode])
+            ret["Message"] = result_code[result.ResultCode]
 
-        # Was the download successful?
-        if result.ResultCode in [2, 3]:
-            log.debug("Downloaded Successfully")
-            ret["Success"] = True
-        else:
-            log.debug("Download Failed")
-            ret["Success"] = False
+            # Was the download successful?
+            if result.ResultCode in [2, 3]:
+                log.debug("Downloaded Successfully")
+                ret["Success"] = True
+            else:
+                log.debug("Download Failed")
+                ret["Success"] = False
 
-        # Report results for each update
-        for i in range(download_list.Count):
-            uid = download_list.Item(i).Identity.UpdateID
-            ret["Updates"][uid]["Result"] = result_code[
-                result.GetUpdateResult(i).ResultCode
-            ]
+            # Report results for each update
+            for i in range(download_list.Count):
+                uid = download_list.Item(i).Identity.UpdateID
+                ret["Updates"][uid]["Result"] = result_code[
+                    result.GetUpdateResult(i).ResultCode
+                ]
 
         return ret
 
@@ -681,8 +739,9 @@ class WindowsUpdateAgent(object):
 
         Args:
 
-            updates (Updates): An instance of the Updates class containing a
-            the updates to be installed.
+            updates (Updates):
+                An instance of the Updates class containing a the updates to be
+                installed.
 
         Returns:
             dict: A dictionary containing the results of the installation
@@ -709,78 +768,78 @@ class WindowsUpdateAgent(object):
         with salt.utils.winapi.Com():
             install_list = win32com.client.Dispatch("Microsoft.Update.UpdateColl")
 
-        ret = {"Updates": {}}
+            ret = {"Updates": {}}
 
-        # Check for updates that aren't already installed
-        for update in updates.updates:
+            # Check for updates that aren't already installed
+            for update in updates.updates:
 
-            # Define uid to keep the lines shorter
-            uid = update.Identity.UpdateID
-            ret["Updates"][uid] = {}
-            ret["Updates"][uid]["Title"] = update.Title
-            ret["Updates"][uid]["AlreadyInstalled"] = bool(update.IsInstalled)
+                # Define uid to keep the lines shorter
+                uid = update.Identity.UpdateID
+                ret["Updates"][uid] = {}
+                ret["Updates"][uid]["Title"] = update.Title
+                ret["Updates"][uid]["AlreadyInstalled"] = bool(update.IsInstalled)
 
-            # Make sure the update has actually been installed
-            if not salt.utils.data.is_true(update.IsInstalled):
-                log.debug("To Be Installed: %s", uid)
-                log.debug("\tTitle: %s", update.Title)
-                install_list.Add(update)
+                # Make sure the update has actually been installed
+                if not salt.utils.data.is_true(update.IsInstalled):
+                    log.debug("To Be Installed: %s", uid)
+                    log.debug("\tTitle: %s", update.Title)
+                    install_list.Add(update)
 
-        # Check the install list
-        if install_list.Count == 0:
-            ret = {"Success": True, "Updates": "Nothing to install"}
-            return ret
+            # Check the install list
+            if install_list.Count == 0:
+                ret = {"Success": True, "Updates": "Nothing to install"}
+                return ret
 
-        # Send the list to the installer
-        installer.Updates = install_list
+            # Send the list to the installer
+            installer.Updates = install_list
 
-        # Install the list
-        try:
-            log.debug("Installing Updates")
-            result = installer.Install()
-
-        except pywintypes.com_error as error:
-            # Something happened, raise an error
-            hr, msg, exc, arg = error.args  # pylint: disable=W0633
+            # Install the list
             try:
-                failure_code = self.fail_codes[exc[5]]
-            except KeyError:
-                failure_code = "Unknown Failure: {0}".format(error)
+                log.debug("Installing Updates")
+                result = installer.Install()
 
-            log.error("Install Failed: %s", failure_code)
-            raise CommandExecutionError(failure_code)
+            except pywintypes.com_error as error:
+                # Something happened, raise an error
+                hr, msg, exc, arg = error.args  # pylint: disable=W0633
+                try:
+                    failure_code = self.fail_codes[exc[5]]
+                except KeyError:
+                    failure_code = "Unknown Failure: {0}".format(error)
 
-        # Lookup dictionary
-        result_code = {
-            0: "Installation Not Started",
-            1: "Installation In Progress",
-            2: "Installation Succeeded",
-            3: "Installation Succeeded With Errors",
-            4: "Installation Failed",
-            5: "Installation Aborted",
-        }
+                log.error("Install Failed: %s", failure_code)
+                raise CommandExecutionError(failure_code)
 
-        log.debug("Install Complete")
-        log.debug(result_code[result.ResultCode])
-        ret["Message"] = result_code[result.ResultCode]
+            # Lookup dictionary
+            result_code = {
+                0: "Installation Not Started",
+                1: "Installation In Progress",
+                2: "Installation Succeeded",
+                3: "Installation Succeeded With Errors",
+                4: "Installation Failed",
+                5: "Installation Aborted",
+            }
 
-        if result.ResultCode in [2, 3]:
-            ret["Success"] = True
-            ret["NeedsReboot"] = result.RebootRequired
-            log.debug("NeedsReboot: %s", result.RebootRequired)
-        else:
-            log.debug("Install Failed")
-            ret["Success"] = False
+            log.debug("Install Complete")
+            log.debug(result_code[result.ResultCode])
+            ret["Message"] = result_code[result.ResultCode]
 
-        reboot = {0: "Never Reboot", 1: "Always Reboot", 2: "Poss Reboot"}
-        for i in range(install_list.Count):
-            uid = install_list.Item(i).Identity.UpdateID
-            ret["Updates"][uid]["Result"] = result_code[
-                result.GetUpdateResult(i).ResultCode
-            ]
-            ret["Updates"][uid]["RebootBehavior"] = reboot[
-                install_list.Item(i).InstallationBehavior.RebootBehavior
-            ]
+            if result.ResultCode in [2, 3]:
+                ret["Success"] = True
+                ret["NeedsReboot"] = result.RebootRequired
+                log.debug("NeedsReboot: %s", result.RebootRequired)
+            else:
+                log.debug("Install Failed")
+                ret["Success"] = False
+
+            reboot = {0: "Never Reboot", 1: "Always Reboot", 2: "Poss Reboot"}
+            for i in range(install_list.Count):
+                uid = install_list.Item(i).Identity.UpdateID
+                ret["Updates"][uid]["Result"] = result_code[
+                    result.GetUpdateResult(i).ResultCode
+                ]
+                ret["Updates"][uid]["RebootBehavior"] = reboot[
+                    install_list.Item(i).InstallationBehavior.RebootBehavior
+                ]
 
         return ret
 
@@ -789,19 +848,23 @@ class WindowsUpdateAgent(object):
         Uninstall the updates passed in the updates collection. Load the updates
         collection using the ``search`` or ``available`` functions.
 
-        .. note:: Starting with Windows 10 the Windows Update Agent is unable to
-        uninstall updates. An ``Uninstall Not Allowed`` error is returned. If
-        this error is encountered this function will instead attempt to use
-        ``dism.exe`` to perform the uninstallation. ``dism.exe`` may fail to
-        to find the KB number for the package. In that case, removal will fail.
+        .. note::
+
+            Starting with Windows 10 the Windows Update Agent is unable to
+            uninstall updates. An ``Uninstall Not Allowed`` error is returned.
+            If this error is encountered this function will instead attempt to
+            use ``dism.exe`` to perform the un-installation. ``dism.exe`` may
+            fail to to find the KB number for the package. In that case, removal
+            will fail.
 
         Args:
 
-            updates (Updates): An instance of the Updates class containing a
-            the updates to be uninstalled.
+            updates (Updates):
+                An instance of the Updates class containing a the updates to be
+                uninstalled.
 
         Returns:
-            dict: A dictionary containing the results of the uninstallation
+            dict: A dictionary containing the results of the un-installation
 
         Code Example:
 
@@ -825,157 +888,159 @@ class WindowsUpdateAgent(object):
             return ret
 
         installer = self._session.CreateUpdateInstaller()
-        self._session.ClientApplicationID = "Salt: Install Update"
+        self._session.ClientApplicationID = "Salt: Uninstall Update"
         with salt.utils.winapi.Com():
             uninstall_list = win32com.client.Dispatch("Microsoft.Update.UpdateColl")
 
-        ret = {"Updates": {}}
+            ret = {"Updates": {}}
 
-        # Check for updates that aren't already installed
-        for update in updates.updates:
+            # Check for updates that aren't already installed
+            for update in updates.updates:
 
-            # Define uid to keep the lines shorter
-            uid = update.Identity.UpdateID
-            ret["Updates"][uid] = {}
-            ret["Updates"][uid]["Title"] = update.Title
-            ret["Updates"][uid]["AlreadyUninstalled"] = not bool(update.IsInstalled)
+                # Define uid to keep the lines shorter
+                uid = update.Identity.UpdateID
+                ret["Updates"][uid] = {}
+                ret["Updates"][uid]["Title"] = update.Title
+                ret["Updates"][uid]["AlreadyUninstalled"] = not bool(update.IsInstalled)
 
-            # Make sure the update has actually been Uninstalled
-            if salt.utils.data.is_true(update.IsInstalled):
-                log.debug("To Be Uninstalled: %s", uid)
-                log.debug("\tTitle: %s", update.Title)
-                uninstall_list.Add(update)
+                # Make sure the update has actually been Uninstalled
+                if salt.utils.data.is_true(update.IsInstalled):
+                    log.debug("To Be Uninstalled: %s", uid)
+                    log.debug("\tTitle: %s", update.Title)
+                    uninstall_list.Add(update)
 
-        # Check the install list
-        if uninstall_list.Count == 0:
-            ret = {"Success": False, "Updates": "Nothing to uninstall"}
-            return ret
-
-        # Send the list to the installer
-        installer.Updates = uninstall_list
-
-        # Uninstall the list
-        try:
-            log.debug("Uninstalling Updates")
-            result = installer.Uninstall()
-
-        except pywintypes.com_error as error:
-            # Something happened, return error or try using DISM
-            hr, msg, exc, arg = error.args  # pylint: disable=W0633
-            try:
-                failure_code = self.fail_codes[exc[5]]
-            except KeyError:
-                failure_code = "Unknown Failure: {0}".format(error)
-
-            # If "Uninstall Not Allowed" error, try using DISM
-            if exc[5] == -2145124312:
-                log.debug("Uninstall Failed with WUA, attempting with DISM")
-                try:
-
-                    # Go through each update...
-                    for item in uninstall_list:
-
-                        # Look for the KB numbers
-                        for kb in item.KBArticleIDs:
-
-                            # Get the list of packages
-                            cmd = ["dism", "/Online", "/Get-Packages"]
-                            pkg_list = self._run(cmd)[0].splitlines()
-
-                            # Find the KB in the pkg_list
-                            for item in pkg_list:
-
-                                # Uninstall if found
-                                if "kb" + kb in item.lower():
-                                    pkg = item.split(" : ")[1]
-
-                                    ret["DismPackage"] = pkg
-
-                                    cmd = [
-                                        "dism",
-                                        "/Online",
-                                        "/Remove-Package",
-                                        "/PackageName:{0}".format(pkg),
-                                        "/Quiet",
-                                        "/NoRestart",
-                                    ]
-
-                                    self._run(cmd)
-
-                except CommandExecutionError as exc:
-                    log.debug("Uninstall using DISM failed")
-                    log.debug("Command: %s", " ".join(cmd))
-                    log.debug("Error: %s", exc)
-                    raise CommandExecutionError(
-                        "Uninstall using DISM failed: {0}".format(exc)
-                    )
-
-                # DISM Uninstall Completed Successfully
-                log.debug("Uninstall Completed using DISM")
-
-                # Populate the return dictionary
-                ret["Success"] = True
-                ret["Message"] = "Uninstalled using DISM"
-                ret["NeedsReboot"] = needs_reboot()
-                log.debug("NeedsReboot: %s", ret["NeedsReboot"])
-
-                # Refresh the Updates Table
-                self.refresh()
-
-                reboot = {0: "Never Reboot", 1: "Always Reboot", 2: "Poss Reboot"}
-
-                # Check the status of each update
-                for update in self._updates:
-                    uid = update.Identity.UpdateID
-                    for item in uninstall_list:
-                        if item.Identity.UpdateID == uid:
-                            if not update.IsInstalled:
-                                ret["Updates"][uid][
-                                    "Result"
-                                ] = "Uninstallation Succeeded"
-                            else:
-                                ret["Updates"][uid]["Result"] = "Uninstallation Failed"
-                            ret["Updates"][uid]["RebootBehavior"] = reboot[
-                                update.InstallationBehavior.RebootBehavior
-                            ]
-
+            # Check the install list
+            if uninstall_list.Count == 0:
+                ret = {"Success": False, "Updates": "Nothing to uninstall"}
                 return ret
 
-            # Found a differenct exception, Raise error
-            log.error("Uninstall Failed: %s", failure_code)
-            raise CommandExecutionError(failure_code)
+            # Send the list to the installer
+            installer.Updates = uninstall_list
 
-        # Lookup dictionary
-        result_code = {
-            0: "Uninstallation Not Started",
-            1: "Uninstallation In Progress",
-            2: "Uninstallation Succeeded",
-            3: "Uninstallation Succeeded With Errors",
-            4: "Uninstallation Failed",
-            5: "Uninstallation Aborted",
-        }
+            # Uninstall the list
+            try:
+                log.debug("Uninstalling Updates")
+                result = installer.Uninstall()
 
-        log.debug("Uninstall Complete")
-        log.debug(result_code[result.ResultCode])
-        ret["Message"] = result_code[result.ResultCode]
+            except pywintypes.com_error as error:
+                # Something happened, return error or try using DISM
+                hr, msg, exc, arg = error.args  # pylint: disable=W0633
+                try:
+                    failure_code = self.fail_codes[exc[5]]
+                except KeyError:
+                    failure_code = "Unknown Failure: {0}".format(error)
 
-        if result.ResultCode in [2, 3]:
-            ret["Success"] = True
-            ret["NeedsReboot"] = result.RebootRequired
-            log.debug("NeedsReboot: %s", result.RebootRequired)
-        else:
-            log.debug("Uninstall Failed")
-            ret["Success"] = False
+                # If "Uninstall Not Allowed" error, try using DISM
+                if exc[5] == -2145124312:
+                    log.debug("Uninstall Failed with WUA, attempting with DISM")
+                    try:
 
-        reboot = {0: "Never Reboot", 1: "Always Reboot", 2: "Poss Reboot"}
-        for i in range(uninstall_list.Count):
-            uid = uninstall_list.Item(i).Identity.UpdateID
-            ret["Updates"][uid]["Result"] = result_code[
-                result.GetUpdateResult(i).ResultCode
-            ]
-            ret["Updates"][uid]["RebootBehavior"] = reboot[
-                uninstall_list.Item(i).InstallationBehavior.RebootBehavior
-            ]
+                        # Go through each update...
+                        for item in uninstall_list:
+
+                            # Look for the KB numbers
+                            for kb in item.KBArticleIDs:
+
+                                # Get the list of packages
+                                cmd = ["dism", "/Online", "/Get-Packages"]
+                                pkg_list = self._run(cmd)[0].splitlines()
+
+                                # Find the KB in the pkg_list
+                                for item in pkg_list:
+
+                                    # Uninstall if found
+                                    if "kb" + kb in item.lower():
+                                        pkg = item.split(" : ")[1]
+
+                                        ret["DismPackage"] = pkg
+
+                                        cmd = [
+                                            "dism",
+                                            "/Online",
+                                            "/Remove-Package",
+                                            "/PackageName:{0}".format(pkg),
+                                            "/Quiet",
+                                            "/NoRestart",
+                                        ]
+
+                                        self._run(cmd)
+
+                    except CommandExecutionError as exc:
+                        log.debug("Uninstall using DISM failed")
+                        log.debug("Command: %s", " ".join(cmd))
+                        log.debug("Error: %s", exc)
+                        raise CommandExecutionError(
+                            "Uninstall using DISM failed: {0}".format(exc)
+                        )
+
+                    # DISM Uninstall Completed Successfully
+                    log.debug("Uninstall Completed using DISM")
+
+                    # Populate the return dictionary
+                    ret["Success"] = True
+                    ret["Message"] = "Uninstalled using DISM"
+                    ret["NeedsReboot"] = needs_reboot()
+                    log.debug("NeedsReboot: %s", ret["NeedsReboot"])
+
+                    # Refresh the Updates Table
+                    self.refresh(online=False)
+
+                    reboot = {0: "Never Reboot", 1: "Always Reboot", 2: "Poss Reboot"}
+
+                    # Check the status of each update
+                    for update in self._updates:
+                        uid = update.Identity.UpdateID
+                        for item in uninstall_list:
+                            if item.Identity.UpdateID == uid:
+                                if not update.IsInstalled:
+                                    ret["Updates"][uid][
+                                        "Result"
+                                    ] = "Uninstallation Succeeded"
+                                else:
+                                    ret["Updates"][uid][
+                                        "Result"
+                                    ] = "Uninstallation Failed"
+                                ret["Updates"][uid]["RebootBehavior"] = reboot[
+                                    update.InstallationBehavior.RebootBehavior
+                                ]
+
+                    return ret
+
+                # Found a different exception, Raise error
+                log.error("Uninstall Failed: %s", failure_code)
+                raise CommandExecutionError(failure_code)
+
+            # Lookup dictionary
+            result_code = {
+                0: "Uninstallation Not Started",
+                1: "Uninstallation In Progress",
+                2: "Uninstallation Succeeded",
+                3: "Uninstallation Succeeded With Errors",
+                4: "Uninstallation Failed",
+                5: "Uninstallation Aborted",
+            }
+
+            log.debug("Uninstall Complete")
+            log.debug(result_code[result.ResultCode])
+            ret["Message"] = result_code[result.ResultCode]
+
+            if result.ResultCode in [2, 3]:
+                ret["Success"] = True
+                ret["NeedsReboot"] = result.RebootRequired
+                log.debug("NeedsReboot: %s", result.RebootRequired)
+            else:
+                log.debug("Uninstall Failed")
+                ret["Success"] = False
+
+            reboot = {0: "Never Reboot", 1: "Always Reboot", 2: "Poss Reboot"}
+            for i in range(uninstall_list.Count):
+                uid = uninstall_list.Item(i).Identity.UpdateID
+                ret["Updates"][uid]["Result"] = result_code[
+                    result.GetUpdateResult(i).ResultCode
+                ]
+                ret["Updates"][uid]["RebootBehavior"] = reboot[
+                    uninstall_list.Item(i).InstallationBehavior.RebootBehavior
+                ]
 
         return ret
 
@@ -984,7 +1049,8 @@ class WindowsUpdateAgent(object):
         Internal function for running commands. Used by the uninstall function.
 
         Args:
-            cmd (str, list): The command to run
+            cmd (str, list):
+                The command to run
 
         Returns:
             str: The stdout of the command
@@ -1012,7 +1078,7 @@ def needs_reboot():
 
     Returns:
 
-        bool: True if the system requires a reboot, False if not
+        bool: ``True`` if the system requires a reboot, ``False`` if not
 
     CLI Examples:
 
@@ -1027,4 +1093,4 @@ def needs_reboot():
     with salt.utils.winapi.Com():
         # Create an AutoUpdate object
         obj_sys = win32com.client.Dispatch("Microsoft.Update.SystemInfo")
-    return salt.utils.data.is_true(obj_sys.RebootRequired)
+        return salt.utils.data.is_true(obj_sys.RebootRequired)

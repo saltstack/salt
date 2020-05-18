@@ -21,20 +21,20 @@
 """
 # pylint: disable=unused-import,blacklisted-module,deprecated-method
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import inspect
 import logging
 import os
 import sys
+import types
 from unittest import TestCase as _TestCase
 from unittest import TestLoader as _TestLoader
 from unittest import TestResult
 from unittest import TestSuite as _TestSuite
 from unittest import TextTestResult as _TextTestResult
 from unittest import TextTestRunner as _TextTestRunner
-from unittest import expectedFailure, skip
-from unittest import skipIf as _skipIf
+from unittest import expectedFailure, skip, skipIf
 from unittest.case import SkipTest, _id
 
 from salt.ext import six
@@ -118,6 +118,43 @@ class TestSuite(_TestSuite):
                             attr,
                         )
                         delattr(previousClass, attr)
+
+    def _handleModuleFixture(self, test, result):
+        # We override _handleModuleFixture so that we can inspect all test classes in the module.
+        # If all tests in a test class are going to be skipped, mark the class to skip.
+        # This avoids running setUpClass and tearDownClass unnecessarily
+        currentModule = test.__class__.__module__
+        try:
+            module = sys.modules[currentModule]
+        except KeyError:
+            return
+        for attr in dir(module):
+            klass = getattr(module, attr)
+            if not inspect.isclass(klass):
+                # Not even a class? Carry on...
+                continue
+            if klass.__module__ != currentModule:
+                # This class is not defined in the module being tested? Carry on...
+                continue
+            if not issubclass(klass, TestCase):
+                # This class is not a subclass of TestCase, carry on
+                continue
+
+            skip_klass = True
+            test_functions = [name for name in dir(klass) if name.startswith("test_")]
+            for name in test_functions:
+                func = getattr(klass, name)
+                if not isinstance(func, types.FunctionType):
+                    # Not even a function, carry on
+                    continue
+                if getattr(func, "__unittest_skip__", False) is False:
+                    # At least one test is not going to be skipped.
+                    # Stop searching.
+                    skip_klass = False
+                    break
+            if skip_klass is True:
+                klass.__unittest_skip__ = True
+        return super(TestSuite, self)._handleModuleFixture(test, result)
 
 
 class TestLoader(_TestLoader):
@@ -392,16 +429,6 @@ class TextTestRunner(_TextTestRunner):
     """
 
     resultclass = TextTestResult
-
-
-def skipIf(skip, reason):
-    from tests.support.runtests import RUNTIME_VARS
-
-    if RUNTIME_VARS.PYTEST_SESSION:
-        import pytest
-
-        return pytest.mark.skipif(skip, reason=reason)
-    return _skipIf(skip, reason)
 
 
 __all__ = [

@@ -11,7 +11,6 @@
     Tests related paths
 """
 
-# Import python libs
 from __future__ import absolute_import
 
 import logging
@@ -70,13 +69,16 @@ SCRIPT_DIR = os.path.join(CODE_DIR, "scripts")
 TMP_STATE_TREE = os.path.join(SYS_TMP_DIR, "salt-temp-state-tree")
 TMP_PILLAR_TREE = os.path.join(SYS_TMP_DIR, "salt-temp-pillar-tree")
 TMP_PRODENV_STATE_TREE = os.path.join(SYS_TMP_DIR, "salt-temp-prodenv-state-tree")
-TMP_CONF_DIR = os.path.join(TMP, "config")
+TMP_PRODENV_PILLAR_TREE = os.path.join(SYS_TMP_DIR, "salt-temp-prodenv-pillar-tree")
+TMP_CONF_DIR = TMP_MINION_CONF_DIR = os.path.join(TMP, "config")
 TMP_SUB_MINION_CONF_DIR = os.path.join(TMP_CONF_DIR, "sub-minion")
 TMP_SYNDIC_MINION_CONF_DIR = os.path.join(TMP_CONF_DIR, "syndic-minion")
 TMP_SYNDIC_MASTER_CONF_DIR = os.path.join(TMP_CONF_DIR, "syndic-master")
-TMP_MM_CONF_DIR = os.path.join(TMP_CONF_DIR, "multimaster")
-TMP_MM_SUB_CONF_DIR = os.path.join(TMP_CONF_DIR, "sub-multimaster")
-TMP_PROXY_CONF_DIR = os.path.join(TMP_CONF_DIR, "proxy")
+TMP_MM_CONF_DIR = TMP_MM_MINION_CONF_DIR = os.path.join(TMP_CONF_DIR, "multimaster")
+TMP_MM_SUB_CONF_DIR = TMP_MM_SUB_MINION_CONF_DIR = os.path.join(
+    TMP_CONF_DIR, "sub-multimaster"
+)
+TMP_PROXY_CONF_DIR = TMP_CONF_DIR
 CONF_DIR = os.path.join(INTEGRATION_TEST_DIR, "files", "conf")
 PILLAR_DIR = os.path.join(FILES, "pillar")
 TMP_SCRIPT_DIR = os.path.join(TMP, "scripts")

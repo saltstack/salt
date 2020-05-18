@@ -2,8 +2,6 @@
 """
     :codeauthor: Erik Johnson <erik@saltstack.com>
 """
-
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
@@ -16,8 +14,6 @@ import textwrap
 
 import salt.ext.six
 import salt.ext.tornado.ioloop
-
-# Import salt libs
 import salt.fileserver.gitfs as gitfs
 import salt.utils.files
 import salt.utils.gitfs
@@ -32,11 +28,9 @@ from salt.utils.gitfs import (
     PYGIT2_MINVER,
     PYGIT2_VERSION,
 )
-from tests.support.helpers import patched_environ
+from tests.support.helpers import patched_environ, slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
-
-# Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
@@ -252,6 +246,7 @@ class GitFSTestFuncs(object):
     2. Do *NOT* move the gitfs.update() into the setUp.
     """
 
+    @slowTest
     def test_file_list(self):
         gitfs.update()
         ret = gitfs.file_list(LOAD)
@@ -261,6 +256,7 @@ class GitFSTestFuncs(object):
         # forward slash, hence it being explicitly used to join here.
         self.assertIn("/".join((UNICODE_DIRNAME, "foo.txt")), ret)
 
+    @slowTest
     def test_dir_list(self):
         gitfs.update()
         ret = gitfs.dir_list(LOAD)
@@ -336,6 +332,7 @@ class GitFSTestFuncs(object):
 
             self.assertDictEqual(ret, {"data": data, "dest": "testfile"})
 
+    @slowTest
     def test_envs(self):
         gitfs.update()
         ret = gitfs.envs(ignore_cache=True)
@@ -343,6 +340,7 @@ class GitFSTestFuncs(object):
         self.assertIn(UNICODE_ENVNAME, ret)
         self.assertIn(TAG_NAME, ret)
 
+    @slowTest
     def test_ref_types_global(self):
         """
         Test the global gitfs_ref_types config option
@@ -356,6 +354,7 @@ class GitFSTestFuncs(object):
             self.assertIn(UNICODE_ENVNAME, ret)
             self.assertNotIn(TAG_NAME, ret)
 
+    @slowTest
     def test_ref_types_per_remote(self):
         """
         Test the per_remote ref_types config option, using a different
@@ -371,6 +370,7 @@ class GitFSTestFuncs(object):
             self.assertNotIn(UNICODE_ENVNAME, ret)
             self.assertIn(TAG_NAME, ret)
 
+    @slowTest
     def test_disable_saltenv_mapping_global_with_mapping_defined_globally(self):
         """
         Test the global gitfs_disable_saltenv_mapping config option, combined
@@ -394,6 +394,7 @@ class GitFSTestFuncs(object):
             # the envs list, but the branches should not.
             self.assertEqual(ret, ["base", "foo"])
 
+    @slowTest
     def test_saltenv_blacklist(self):
         """
         test saltenv_blacklist
@@ -412,6 +413,7 @@ class GitFSTestFuncs(object):
             assert UNICODE_ENVNAME in ret
             assert "mytag" in ret
 
+    @slowTest
     def test_saltenv_whitelist(self):
         """
         test saltenv_whitelist
@@ -430,6 +432,7 @@ class GitFSTestFuncs(object):
             assert UNICODE_ENVNAME not in ret
             assert "mytag" not in ret
 
+    @slowTest
     def test_env_deprecated_opts(self):
         """
         ensure deprecated options gitfs_env_whitelist
@@ -451,6 +454,7 @@ class GitFSTestFuncs(object):
             assert UNICODE_ENVNAME in ret
             assert "mytag" in ret
 
+    @slowTest
     def test_disable_saltenv_mapping_global_with_mapping_defined_per_remote(self):
         """
         Test the global gitfs_disable_saltenv_mapping config option, combined
@@ -478,6 +482,7 @@ class GitFSTestFuncs(object):
             # the envs list, but the branches should not.
             self.assertEqual(ret, ["bar", "base"])
 
+    @slowTest
     def test_disable_saltenv_mapping_per_remote_with_mapping_defined_globally(self):
         """
         Test the per-remote disable_saltenv_mapping config option, combined
@@ -506,6 +511,7 @@ class GitFSTestFuncs(object):
             # the envs list, but the branches should not.
             self.assertEqual(ret, ["base", "hello"])
 
+    @slowTest
     def test_disable_saltenv_mapping_per_remote_with_mapping_defined_per_remote(self):
         """
         Test the per-remote disable_saltenv_mapping config option, combined

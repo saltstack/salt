@@ -7,34 +7,22 @@
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
-import random
-import string
-
-import pytest
-from salt.ext.six.moves import range
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import (
+    destructiveTest,
+    random_string,
+    runs_on,
+    skip_if_not_root,
+)
 
 
-@pytest.mark.skip_unless_on_freebsd
+@runs_on(kernel="FreeBSD")
 class PwUserModuleTest(ModuleCase):
-    def setUp(self):
-        super(PwUserModuleTest, self).setUp()
-        os_grain = self.run_function("grains.item", ["kernel"])
-        if os_grain["kernel"] != "FreeBSD":
-            self.skipTest("Test not applicable to '{kernel}' kernel".format(**os_grain))
-
-    def __random_string(self, size=6):
-        return "".join(
-            random.choice(string.ascii_uppercase + string.digits) for x in range(size)
-        )
-
     @destructiveTest
     @skip_if_not_root
     def test_groups_includes_primary(self):
-        # Let's create a user, which usually creates the group matching the
-        # name
-        uname = self.__random_string()
+        # Let's create a user, which usually creates the group matching the name
+        uname = random_string("PWU-", lowercase=False)
         if self.run_function("user.add", [uname]) is not True:
             # Skip because creating is not what we're testing here
             self.run_function("user.delete", [uname, True, True])
@@ -50,7 +38,7 @@ class PwUserModuleTest(ModuleCase):
             self.run_function("user.delete", [uname, True, True])
 
             # Now, a weird group id
-            gname = self.__random_string()
+            gname = random_string("PWU-", lowercase=False)
             if self.run_function("group.add", [gname]) is not True:
                 self.run_function("group.delete", [gname, True, True])
                 self.skipTest("Failed to create group")

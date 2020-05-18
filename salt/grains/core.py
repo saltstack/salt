@@ -9,8 +9,6 @@ will always be executed first, so that any grains loaded here in the core
 module can be overwritten just by returning dict keys with the same value
 as those returned here
 """
-
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
@@ -23,14 +21,8 @@ import socket
 import sys
 import time
 import uuid
-import warnings
 from errno import EACCES, EPERM
 
-# Extend the default list of supported distros. This will be used for the
-# /etc/DISTRO-release checking that is part of linux_distribution()
-from platform import _supported_dists
-
-# Import salt libs
 import salt.exceptions
 import salt.log
 
@@ -38,6 +30,7 @@ import salt.log
 # of the modules are loaded and are generally available for any usage.
 import salt.modules.cmdmod
 import salt.modules.smbios
+import salt.utils.args
 import salt.utils.dns
 import salt.utils.files
 import salt.utils.network
@@ -45,64 +38,23 @@ import salt.utils.path
 import salt.utils.pkg.rpm
 import salt.utils.platform
 import salt.utils.stringutils
+from distro import linux_distribution
 from salt.ext import six
 from salt.ext.six.moves import range
 
-# pylint: disable=import-error
 try:
-    import dateutil.tz
+    import dateutil.tz  # pylint: disable=import-error
 
     _DATEUTIL_TZ = True
 except ImportError:
     _DATEUTIL_TZ = False
 
-__proxyenabled__ = ["*"]
-__FQDN__ = None
-
-
-_supported_dists += (
-    "arch",
-    "mageia",
-    "meego",
-    "vmware",
-    "bluewhite64",
-    "slamd64",
-    "ovs",
-    "system",
-    "mint",
-    "oracle",
-    "void",
-)
-
-# linux_distribution deprecated in py3.7
-try:
-    from platform import linux_distribution as _deprecated_linux_distribution
-
-    def linux_distribution(**kwargs):
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            return _deprecated_linux_distribution(**kwargs)
-
-
-except ImportError:
-    from distro import linux_distribution
-
-
-if salt.utils.platform.is_windows():
-    import salt.utils.win_osinfo
-
-
-__salt__ = {
-    "cmd.run": salt.modules.cmdmod._run_quiet,
-    "cmd.retcode": salt.modules.cmdmod._retcode_quiet,
-    "cmd.run_all": salt.modules.cmdmod._run_all_quiet,
-    "smbios.records": salt.modules.smbios.records,
-    "smbios.get": salt.modules.smbios.get,
-}
 log = logging.getLogger(__name__)
 
 HAS_WMI = False
 if salt.utils.platform.is_windows():
+    import salt.utils.win_osinfo
+
     # attempt to import the python wmi module
     # the Windows minion uses WMI for some of its grains
     try:
@@ -117,9 +69,19 @@ if salt.utils.platform.is_windows():
             "Unable to import Python wmi module, some core grains " "will be missing"
         )
 
-HAS_UNAME = True
-if not hasattr(os, "uname"):
-    HAS_UNAME = False
+
+__proxyenabled__ = ["*"]
+__FQDN__ = None
+
+__salt__ = {
+    "cmd.run": salt.modules.cmdmod._run_quiet,
+    "cmd.retcode": salt.modules.cmdmod._retcode_quiet,
+    "cmd.run_all": salt.modules.cmdmod._run_all_quiet,
+    "smbios.records": salt.modules.smbios.records,
+    "smbios.get": salt.modules.smbios.get,
+}
+
+HAS_UNAME = hasattr(os, "uname")
 
 _INTERFACES = {}
 
@@ -280,7 +242,7 @@ def _linux_gpu_data():
 
     gpus = []
     for gpu in devs:
-        vendor_strings = gpu["Vendor"].lower().split()
+        vendor_strings = re.split("[^A-Za-z0-9]", gpu["Vendor"].lower())
         # default vendor to 'unknown', overwrite if we match a known one
         vendor = "unknown"
         for name in known_vendors:
@@ -1063,6 +1025,12 @@ def _virtual(osdata):
                         grains["virtual"] = "gce"
                     elif "BHYVE" in output:
                         grains["virtual"] = "bhyve"
+            except UnicodeDecodeError:
+                # Some firmwares provide non-valid 'product_name'
+                # files, ignore them
+                log.debug(
+                    "The content in /sys/devices/virtual/dmi/id/product_name is not valid"
+                )
             except IOError:
                 pass
     elif osdata["kernel"] == "FreeBSD":
@@ -1319,14 +1287,18 @@ def _windows_os_release_grain(caption, product_type):
     version = "Unknown"
     release = ""
     if "Server" in caption:
-        for item in caption.split(" "):
-            # If it's all digits, then it's version
-            if re.match(r"\d+", item):
-                version = item
-            # If it starts with R and then numbers, it's the release
-            # ie: R2
-            if re.match(r"^R\d+$", item):
-                release = item
+        # Edge case here to handle MS Product that doesn't contain a year
+        if re.match(r"^Microsoft Hyper-V Server$", caption):
+            version = "2019"
+        else:
+            for item in caption.split(" "):
+                # If it's all digits, then it's version
+                if re.match(r"\d+", item):
+                    version = item
+                # If it starts with R and then numbers, it's the release
+                # ie: R2
+                if re.match(r"^R\d+$", item):
+                    release = item
         os_release = "{0}Server{1}".format(version, release)
     else:
         for item in caption.split(" "):
@@ -2060,8 +2032,7 @@ def os_data():
             "platform.linux_distribution()"
         )
         (osname, osrelease, oscodename) = [
-            x.strip('"').strip("'")
-            for x in linux_distribution(supported_dists=_supported_dists)
+            x.strip('"').strip("'") for x in linux_distribution()
         ]
         # Try to assign these three names based on the lsb info, they tend to
         # be more accurate than what python gets from /etc/DISTRO-release.
@@ -2427,7 +2398,7 @@ def ip_fqdn():
                 start_time = datetime.datetime.utcnow()
                 info = socket.getaddrinfo(_fqdn, None, socket_type)
                 ret[key] = list(set(item[4][0] for item in info))
-            except socket.error:
+            except (socket.error, UnicodeError):
                 timediff = datetime.datetime.utcnow() - start_time
                 if timediff.seconds > 5 and __opts__["__role"] == "master":
                     log.warning(
@@ -2710,6 +2681,12 @@ def _hw_data(osdata):
                         )
                         if key == "uuid":
                             grains["uuid"] = grains["uuid"].lower()
+                except UnicodeDecodeError:
+                    # Some firmwares provide non-valid 'product_name'
+                    # files, ignore them
+                    log.debug(
+                        "The content in /sys/devices/virtual/dmi/id/product_name is not valid"
+                    )
                 except (IOError, OSError) as err:
                     # PermissionError is new to Python 3, but corresponds to the EACESS and
                     # EPERM error numbers. Use those instead here for PY2 compatibility.
@@ -3048,4 +3025,27 @@ def default_gateway():
                     break
         except Exception:  # pylint: disable=broad-except
             continue
+    return grains
+
+
+def kernelparams():
+    """
+    Return the kernel boot parameters
+    """
+    try:
+        with salt.utils.files.fopen("/proc/cmdline", "r") as fhr:
+            cmdline = fhr.read()
+            grains = {"kernelparams": []}
+            for data in [
+                item.split("=") for item in salt.utils.args.shlex_split(cmdline)
+            ]:
+                value = None
+                if len(data) == 2:
+                    value = data[1].strip('"')
+
+                grains["kernelparams"] += [(data[0], value)]
+    except IOError as exc:
+        grains = {}
+        log.debug("Failed to read /proc/cmdline: %s", exc)
+
     return grains

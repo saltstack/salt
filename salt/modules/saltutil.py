@@ -23,6 +23,7 @@ import salt
 import salt.client
 import salt.client.ssh.client
 import salt.config
+import salt.defaults.events
 import salt.payload
 import salt.runner
 import salt.state
@@ -219,10 +220,10 @@ def sync_beacons(
         to prevent this refresh.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 
@@ -257,10 +258,10 @@ def sync_sdb(saltenv=None, extmod_whitelist=None, extmod_blacklist=None):
         other sync functions.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 
@@ -313,10 +314,10 @@ def sync_modules(
         why this is necessary.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 
@@ -354,10 +355,10 @@ def sync_states(
         ``False`` to prevent this refresh.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Examples:
 
@@ -431,10 +432,10 @@ def sync_grains(
         refresh.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Examples:
 
@@ -474,10 +475,10 @@ def sync_renderers(
         this refresh.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Examples:
 
@@ -515,10 +516,10 @@ def sync_returners(
         to ``False`` to prevent this refresh.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Examples:
 
@@ -555,10 +556,10 @@ def sync_proxymodules(
         Set to ``False`` to prevent this refresh.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Examples:
 
@@ -636,10 +637,10 @@ def sync_engines(
         Set to ``False`` to prevent this refresh.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Examples:
 
@@ -676,10 +677,10 @@ def sync_thorium(
         Set to ``False`` to prevent this refresh.
 
     extmod_whitelist
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Examples:
 
@@ -714,10 +715,10 @@ def sync_output(
         Set to ``False`` to prevent this refresh.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Examples:
 
@@ -754,10 +755,10 @@ def sync_clouds(
         synced. Set to ``False`` to prevent this refresh.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Examples:
 
@@ -795,10 +796,10 @@ def sync_utils(
         synced. Set to ``False`` to prevent this refresh.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Examples:
 
@@ -901,10 +902,10 @@ def sync_log_handlers(
         Set to ``False`` to prevent this refresh.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Examples:
 
@@ -936,10 +937,10 @@ def sync_pillar(
         pillar data.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     .. note::
         This function will raise an error if executed on a traditional (i.e.
@@ -1128,7 +1129,7 @@ def refresh_matchers():
 
 def refresh_pillar(wait=False, timeout=30):
     """
-    Signal the minion to refresh the pillar data.
+    Signal the minion to refresh the in-memory pillar data. See :ref:`pillar-in-memory`.
 
     :param wait:            Wait for pillar refresh to complete, defaults to False.
     :type wait:             bool, optional
@@ -1141,19 +1142,31 @@ def refresh_pillar(wait=False, timeout=30):
     .. code-block:: bash
 
         salt '*' saltutil.refresh_pillar
+        salt '*' saltutil.refresh_pillar wait=True timeout=60
     """
     try:
-        ret = __salt__["event.fire"]({}, "pillar_refresh")
+        if wait:
+            #  If we're going to block, first setup a listener
+            with salt.utils.event.get_event(
+                "minion", opts=__opts__, listen=True
+            ) as eventer:
+                ret = __salt__["event.fire"]({}, "pillar_refresh")
+                # Wait for the finish event to fire
+                log.trace("refresh_pillar waiting for pillar refresh to complete")
+                # Blocks until we hear this event or until the timeout expires
+                event_ret = eventer.get_event(
+                    tag=salt.defaults.events.MINION_PILLAR_REFRESH_COMPLETE,
+                    wait=timeout,
+                )
+                if not event_ret or event_ret["complete"] is False:
+                    log.warn(
+                        "Pillar refresh did not complete within timeout %s", timeout
+                    )
+        else:
+            ret = __salt__["event.fire"]({}, "pillar_refresh")
     except KeyError:
-        log.error("Event module not available. Module refresh failed.")
+        log.error("Event module not available. Pillar refresh failed.")
         ret = False  # Effectively a no-op, since we can't really return without an event system
-    if wait:
-        eventer = salt.utils.event.get_event("minion", opts=__opts__, listen=True)
-        event_ret = eventer.get_event(
-            tag="/salt/minion/minion_pillar_refresh_complete", wait=timeout
-        )
-        if not event_ret or event_ret["complete"] is False:
-            log.warn("Pillar refresh did not complete within timeout %s", timeout)
     return ret
 
 
@@ -1177,17 +1190,19 @@ def refresh_modules(**kwargs):
     asynchronous = bool(kwargs.get("async", True))
     try:
         if asynchronous:
-            #  If we're going to block, first setup a listener
             ret = __salt__["event.fire"]({}, "module_refresh")
         else:
+            #  If we're going to block, first setup a listener
             with salt.utils.event.get_event(
                 "minion", opts=__opts__, listen=True
-            ) as event_bus:
+            ) as eventer:
                 ret = __salt__["event.fire"]({"notify": True}, "module_refresh")
                 # Wait for the finish event to fire
                 log.trace("refresh_modules waiting for module refresh to complete")
                 # Blocks until we hear this event or until the timeout expires
-                event_bus.get_event(tag="/salt/minion/minion_mod_complete", wait=30)
+                eventer.get_event(
+                    tag=salt.defaults.events.MINION_MOD_REFRESH_COMPLETE, wait=30
+                )
     except KeyError:
         log.error("Event module not available. Module refresh failed.")
         ret = False  # Effectively a no-op, since we can't really return without an event system

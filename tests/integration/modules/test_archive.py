@@ -15,7 +15,7 @@ import salt.utils.platform
 import salt.utils.stringutils
 from salt.ext import six
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, slowTest
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -158,6 +158,7 @@ class ArchiveTest(ModuleCase):
         self.assertTrue(file_in_ret)
 
     @skipIf(not salt.utils.path.which("tar"), "Cannot find tar executable")
+    @slowTest
     def test_tar_pack(self):
         """
         Validate using the tar function to create archives
@@ -172,6 +173,7 @@ class ArchiveTest(ModuleCase):
         self._tear_down()
 
     @skipIf(not salt.utils.path.which("tar"), "Cannot find tar executable")
+    @slowTest
     def test_tar_unpack(self):
         """
         Validate using the tar function to extract archives
@@ -187,6 +189,7 @@ class ArchiveTest(ModuleCase):
         self._tear_down()
 
     @skipIf(not salt.utils.path.which("tar"), "Cannot find tar executable")
+    @slowTest
     def test_tar_pack_unicode(self):
         """
         Validate using the tar function to create archives
@@ -201,6 +204,7 @@ class ArchiveTest(ModuleCase):
         self._tear_down()
 
     @skipIf(not salt.utils.path.which("tar"), "Cannot find tar executable")
+    @slowTest
     def test_tar_unpack_unicode(self):
         """
         Validate using the tar function to extract archives
@@ -216,6 +220,7 @@ class ArchiveTest(ModuleCase):
         self._tear_down()
 
     @skipIf(not salt.utils.path.which("tar"), "Cannot find tar executable")
+    @slowTest
     def test_tar_list_unicode(self):
         """
         Validate using the tar function to extract archives
@@ -291,6 +296,7 @@ class ArchiveTest(ModuleCase):
         self._tear_down()
 
     @skipIf(not HAS_ZIPFILE, "Cannot find zipfile python module")
+    @slowTest
     def test_zip(self):
         """
         Validate using the zip function
@@ -305,6 +311,7 @@ class ArchiveTest(ModuleCase):
         self._tear_down()
 
     @skipIf(not HAS_ZIPFILE, "Cannot find zipfile python module")
+    @slowTest
     def test_unzip(self):
         """
         Validate using the unzip function

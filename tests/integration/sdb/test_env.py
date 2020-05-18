@@ -10,6 +10,7 @@ import textwrap
 import pytest
 import salt.utils.files
 from tests.support.case import ModuleCase
+from tests.support.helpers import slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 
@@ -47,6 +48,7 @@ class EnvTestCase(ModuleCase, SaltReturnAssertsMixin):
     def tearDown(self):
         os.remove(self.state_file_set_var)
 
+    @slowTest
     def test_env_module_sets_key(self):
         state_key = "test_|-always-changes-and-succeeds_|-foo_|-succeed_with_changes"
         ret = self.run_function("state.sls", [self.state_name])

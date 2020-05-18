@@ -27,29 +27,29 @@ of the following fields:
 9.   pid
 10.   raw (the raw event data forwarded from the device)
 
-The topic title can consist of any of the combination of above fields, but the
-topic has to start with ``jnpr/syslog``. Here are a couple example
-combinations:
+The topic title can consist of any of the combination of above fields,
+but the topic has to start with 'jnpr/syslog'.
+So, we can have different combinations:
 
-- jnpr/syslog/hostip/daemon/event
-- jnpr/syslog/daemon/severity
+ - jnpr/syslog/hostip/daemon/event
+ - jnpr/syslog/daemon/severity
 
 The corresponding dynamic topic sent on salt event bus would look something like:
 
-- jnpr/syslog/1.1.1.1/mgd/UI_COMMIT_COMPLETED
-- jnpr/syslog/sshd/7
+ - jnpr/syslog/1.1.1.1/mgd/UI_COMMIT_COMPLETED
+ - jnpr/syslog/sshd/7
 
-The default topic title is ``jnpr/syslog/hostname/event``.
+The default topic title is 'jnpr/syslog/hostname/event'.
 
-One can choose the type of data they want from the event bus. For example, if
-one wants only events pertaining to a particular daemon, this can be specified
-in the configuration file:
+The user can choose the type of data they wants of the event bus.
+Like, if one wants only events pertaining to a particular daemon, they can
+specify that in the configuration file:
 
 .. code-block:: yaml
 
     daemon: mgd
 
-One can even have a list of daemons:
+One can even have a list of daemons like:
 
 .. code-block:: yaml
 
@@ -72,15 +72,15 @@ Example configuration (to be written in master config file)
 For junos_syslog engine to receive events, syslog must be set on the junos device.
 This can be done via following configuration:
 
-.. code-block:: text
+.. code-block:: bash
 
     set system syslog host <ip-of-the-salt-device> port 516 any any
 
 Below is a sample syslog event which is received from the junos device:
 
-.. code-block:: text
+.. code-block:: bash
 
-    <30>May 29 05:18:12 bng-ui-vm-9 mspd[1492]: No chassis configuration found
+    '<30>May 29 05:18:12 bng-ui-vm-9 mspd[1492]: No chassis configuration found'
 
 The source for parsing the syslog messages is taken from:
 https://gist.github.com/leandrosilva/3651640#file-xlog-py
@@ -154,7 +154,7 @@ class _Parser(object):
         priority = Suppress("<") + ints + Suppress(">")
 
         # timestamp
-        month = Word(string.uppercase, string.lowercase, exact=3)
+        month = Word(string.ascii_uppercase, string.ascii_lowercase, exact=3)
         day = ints
         hour = Combine(ints + ":" + ints + ":" + ints)
 
@@ -319,7 +319,7 @@ class _SyslogServerFactory(DatagramProtocol):
                  if the event is to be sent on the bus.
 
         """
-        data = self.obj.parse(data)
+        data = self.obj.parse(data.decode())
         data["hostip"] = host
         log.debug(
             "Junos Syslog - received %s from %s, sent from port %s", data, host, port

@@ -10,7 +10,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 
@@ -27,6 +27,7 @@ class NetworkTest(ModuleCase, SaltReturnAssertsMixin):
                 "Network state only supported on RedHat and Debian based systems"
             )
 
+    @slowTest
     def test_managed(self):
         """
         network.managed
@@ -38,6 +39,7 @@ class NetworkTest(ModuleCase, SaltReturnAssertsMixin):
             "Interface dummy0 is set to be added.", ret[state_key]["comment"]
         )
 
+    @slowTest
     def test_routes(self):
         """
         network.routes
@@ -51,6 +53,7 @@ class NetworkTest(ModuleCase, SaltReturnAssertsMixin):
             ret[state_key]["comment"], "Interface dummy0 routes are set to be added."
         )
 
+    @slowTest
     def test_system(self):
         """
         network.system

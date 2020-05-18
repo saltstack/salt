@@ -143,3 +143,45 @@ but these are things we consider when reviewing a pull request.
 
 * Should this be split into multiple PRs to make them easier to test and reason
   about?
+
+Pull Request Requirements
+=========================
+
+The following outlines what is required before a pull request can be merged into
+the salt project. For each of these requirements, an exception can be made
+that requires 3 approvals before merge. The exceptions are detailed more below.
+
+All PR requirements
+-------------------
+  * Approval Required: approval review from core team member OR 1 approval review
+    from captain of working group
+  * Cannot merge your own PR until 1 reviewer approves from defined list above that
+    is not the author.
+  * All Tests Pass
+
+Bug Fix PR requirements
+-----------------------
+  * Test Coverage: regression test written to cover bug fix. Contributors only need
+    to write test coverage for their specific changes.
+  * Point to the issue the PR is resolving. If there is not an issue one will need
+    to be created.
+
+Feature PR requirements
+-----------------------
+  * Test Coverage: tests written to cover new feature. Contributors only need to write
+    test coverage for their specific changes.
+  * Release Notes: Add note in release notes of new feature for relative release.
+  * Add .. versionadded:: <release> to module's documentation. If you are not certain
+    which release your fix will be included in you can include TBD and the PR reviewer
+    will let you know the correct name of the release you need to update to the versionadded.
+
+Exceptions to all requirements
+------------------------------
+As previously stated, all of the above requirements can be bypassed with 3 approvals.
+PR's that do not require tests include:
+
+  * documentation
+  * cosmetic changes (for example changing from log.debug to log.trace)
+  * fixing tests
+  * pylint
+  * changes outside of the salt directory

@@ -21,6 +21,7 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
 
     base:
       pkgrepo.managed:
+        - humanname: Logstash PPA
         - name: deb http://ppa.launchpad.net/wolfnet/logstash/ubuntu precise main
         - dist: precise
         - file: /etc/apt/sources.list.d/logstash.list
@@ -37,6 +38,7 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
 
     base:
       pkgrepo.managed:
+        - humanname: deb-multimedia
         - name: deb http://www.deb-multimedia.org stable main
         - file: /etc/apt/sources.list.d/deb-multimedia.list
         - key_url: salt://deb-multimedia/files/marillat.pub
@@ -45,6 +47,7 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
 
     base:
       pkgrepo.managed:
+        - humanname: Google Chrome
         - name: deb http://dl.google.com/linux/chrome/deb/ stable main
         - dist: stable
         - file: /etc/apt/sources.list.d/chrome-browser.list
@@ -91,6 +94,7 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.pkg.deb
 import salt.utils.pkg.rpm
+import salt.utils.versions
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -104,9 +108,7 @@ def __virtual__():
     """
     Only load if modifying repos is available for this package type
     """
-    if "pkg.mod_repo" in __salt__:
-        return True
-    return (False, "pkg module could not be loaded")
+    return "pkg.mod_repo" in __salt__
 
 
 def managed(name, ppa=None, **kwargs):
@@ -230,7 +232,7 @@ def managed(name, ppa=None, **kwargs):
         Included to reduce confusion due to YUM/DNF/Zypper's use of the
         ``enabled`` argument. If this is passed for an APT-based distro, then
         the reverse will be passed as ``disabled``. For example, passing
-        ``enabled=False`` will assume ``disabled=True``.
+        ``enabled=False`` will assume ``disabled=False``.
 
     architectures
         On apt-based systems, architectures can restrict the available
@@ -299,10 +301,8 @@ def managed(name, ppa=None, **kwargs):
        on debian based systems.
 
     refresh_db : True
-       This argument has been deprecated. Please use ``refresh`` instead.
-       The ``refresh_db`` argument will continue to work to ensure backwards
-       compatibility, but we recommend using the preferred ``refresh``
-       argument instead.
+       .. deprecated:: 2018.3.0
+           Use ``refresh`` instead.
 
     require_in
        Set this to a list of pkg.installed or pkg.latest to trigger the
@@ -310,6 +310,12 @@ def managed(name, ppa=None, **kwargs):
        packages. Setting a require in the pkg state will not work for this.
     """
     if "refresh_db" in kwargs:
+        salt.utils.versions.warn_until(
+            "Sodium",
+            "The 'refresh_db' argument to 'pkg.mod_repo' has been "
+            "renamed to 'refresh'. Support for using 'refresh_db' will be "
+            "removed in the Sodium release of Salt.",
+        )
         kwargs["refresh"] = kwargs.pop("refresh_db")
 
     ret = {"name": name, "changes": {}, "result": None, "comment": ""}
@@ -395,7 +401,7 @@ def managed(name, ppa=None, **kwargs):
         kwargs.pop(kwarg, None)
 
     try:
-        pre = __salt__["pkg.get_repo"](repo, ppa_auth=kwargs.get("ppa_auth", None))
+        pre = __salt__["pkg.get_repo"](repo=repo, **kwargs)
     except CommandExecutionError as exc:
         ret["result"] = False
         ret["comment"] = "Failed to examine repo '{0}': {1}".format(name, exc)
@@ -431,7 +437,7 @@ def managed(name, ppa=None, **kwargs):
                         break
                 else:
                     break
-            elif kwarg == "comps":
+            elif kwarg in ("comps", "key_url"):
                 if sorted(sanitizedkwargs[kwarg]) != sorted(pre[kwarg]):
                     break
             elif kwarg == "line" and __grains__["os_family"] == "Debian":
@@ -516,7 +522,7 @@ def managed(name, ppa=None, **kwargs):
         return ret
 
     try:
-        post = __salt__["pkg.get_repo"](repo, ppa_auth=kwargs.get("ppa_auth", None))
+        post = __salt__["pkg.get_repo"](repo=repo, **kwargs)
         if pre:
             for kwarg in sanitizedkwargs:
                 if post.get(kwarg) != pre.get(kwarg):
@@ -605,7 +611,7 @@ def absent(name, **kwargs):
         return ret
 
     try:
-        repo = __salt__["pkg.get_repo"](name, ppa_auth=kwargs.get("ppa_auth", None))
+        repo = __salt__["pkg.get_repo"](name, **kwargs)
     except CommandExecutionError as exc:
         ret["result"] = False
         ret["comment"] = "Failed to configure repo '{0}': {1}".format(name, exc)

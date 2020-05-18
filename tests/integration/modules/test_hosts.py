@@ -12,6 +12,7 @@ import pytest
 import salt.utils.files
 import salt.utils.stringutils
 from tests.support.case import ModuleCase
+from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
@@ -40,6 +41,7 @@ class HostsModuleTest(ModuleCase):
         shutil.copyfile(os.path.join(RUNTIME_VARS.FILES, "hosts"), self.hosts_file)
         self.addCleanup(self.__clear_hosts)
 
+    @slowTest
     def test_list_hosts(self):
         """
         hosts.list_hosts
@@ -49,6 +51,7 @@ class HostsModuleTest(ModuleCase):
         self.assertEqual(hosts["::1"], {"aliases": ["ip6-localhost", "ip6-loopback"]})
         self.assertEqual(hosts["127.0.0.1"], {"aliases": ["localhost", "myname"]})
 
+    @slowTest
     def test_list_hosts_nofile(self):
         """
         hosts.list_hosts
@@ -59,6 +62,7 @@ class HostsModuleTest(ModuleCase):
         hosts = self.run_function("hosts.list_hosts")
         self.assertEqual(hosts, {})
 
+    @slowTest
     def test_get_ip(self):
         """
         hosts.get_ip
@@ -68,6 +72,7 @@ class HostsModuleTest(ModuleCase):
         self.__clear_hosts()
         self.assertEqual(self.run_function("hosts.get_ip", ["othername"]), "")
 
+    @slowTest
     def test_get_alias(self):
         """
         hosts.get_alias
@@ -79,6 +84,7 @@ class HostsModuleTest(ModuleCase):
         self.__clear_hosts()
         self.assertEqual(self.run_function("hosts.get_alias", ["127.0.0.1"]), [])
 
+    @slowTest
     def test_has_pair(self):
         """
         hosts.has_pair
@@ -88,6 +94,7 @@ class HostsModuleTest(ModuleCase):
             self.run_function("hosts.has_pair", ["127.0.0.1", "othername"])
         )
 
+    @slowTest
     def test_set_host(self):
         """
         hosts.set_hosts
@@ -101,6 +108,7 @@ class HostsModuleTest(ModuleCase):
             "should remove second entry",
         )
 
+    @slowTest
     def test_add_host(self):
         """
         hosts.add_host
@@ -113,12 +121,14 @@ class HostsModuleTest(ModuleCase):
         )
         self.assertEqual(len(self.run_function("hosts.list_hosts")), 11)
 
+    @slowTest
     def test_rm_host(self):
         self.assertTrue(self.run_function("hosts.has_pair", ["127.0.0.1", "myname"]))
         self.assertTrue(self.run_function("hosts.rm_host", ["127.0.0.1", "myname"]))
         self.assertFalse(self.run_function("hosts.has_pair", ["127.0.0.1", "myname"]))
         self.assertTrue(self.run_function("hosts.rm_host", ["127.0.0.1", "unknown"]))
 
+    @slowTest
     def test_add_host_formatting(self):
         """
         Ensure that hosts.add_host isn't adding duplicates and that
