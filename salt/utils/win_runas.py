@@ -192,7 +192,6 @@ def runas(cmdLine, username, password=None, cwd=None):
 
     # Create the environment for the user
     env = create_env(user_token, False)
-    # env = win32profile.CreateEnvironmentBlock(user_token, False)
 
     hProcess = None
     try:
