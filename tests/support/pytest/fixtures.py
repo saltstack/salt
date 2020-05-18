@@ -103,6 +103,7 @@ def base_env_state_tree_root_dir(state_tree_root_dir):
     dirname = state_tree_root_dir.join("base")
     dirname.ensure(dir=True)
     RUNTIME_VARS.TMP_STATE_TREE = dirname.realpath().strpath
+    RUNTIME_VARS.TMP_BASEENV_STATE_TREE = RUNTIME_VARS.TMP_STATE_TREE
     return dirname
 
 
@@ -127,6 +128,7 @@ def base_env_pillar_tree_root_dir(pillar_tree_root_dir):
     dirname = pillar_tree_root_dir.join("base")
     dirname.ensure(dir=True)
     RUNTIME_VARS.TMP_PILLAR_TREE = dirname.realpath().strpath
+    RUNTIME_VARS.TMP_BASEENV_PILLAR_TREE = RUNTIME_VARS.TMP_PILLAR_TREE
     return dirname
 
 
