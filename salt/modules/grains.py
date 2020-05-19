@@ -275,7 +275,7 @@ def setvals(grains, destructive=False, refresh_pillar=True):
             grains[key] = val
             __grains__[key] = val
     try:
-        with salt.utils.files.fopen(gfn, "w+") as fp_:
+        with salt.utils.files.fopen(gfn, "w+", encoding="utf-8") as fp_:
             salt.utils.yaml.safe_dump(grains, fp_, default_flow_style=False)
     except (IOError, OSError):
         log.error("Unable to write to grains file at %s. Check permissions.", gfn)

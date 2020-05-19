@@ -31,6 +31,7 @@ contextlib2==0.5.5        # via cherrypy
 croniter==0.3.29
 cryptography==2.6.1
 distlib==0.3.0            # via virtualenv
+distro==1.5.0
 dnspython==1.16.0
 docker-pycreds==0.4.0     # via docker
 docker==3.7.2
@@ -120,7 +121,7 @@ toml==0.10.0
 transitions==0.8.1        # via junos-eznc
 urllib3==1.24.2           # via botocore, kubernetes, python-etcd, requests
 vcert==0.7.3
-virtualenv==20.0.10
+virtualenv==20.0.20
 vultr==1.0.1
 watchdog==0.9.0
 wcwidth==0.1.7            # via pytest

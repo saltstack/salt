@@ -340,7 +340,7 @@ class LocalClient(object):
             >>> local.run_job('*', 'test.sleep', [300])
             {'jid': '20131219215650131543', 'minions': ['jerry']}
         """
-        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
+        arg = salt.utils.args.condition_input(arg, kwarg)
 
         try:
             pub_data = self.pub(
@@ -404,7 +404,7 @@ class LocalClient(object):
             >>> local.run_job_async('*', 'test.sleep', [300])
             {'jid': '20131219215650131543', 'minions': ['jerry']}
         """
-        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
+        arg = salt.utils.args.condition_input(arg, kwarg)
 
         try:
             pub_data = yield self.pub_async(
@@ -550,7 +550,7 @@ class LocalClient(object):
         # Late import - not used anywhere else in this file
         import salt.cli.batch
 
-        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
+        arg = salt.utils.args.condition_input(arg, kwarg)
         opts = {
             "tgt": tgt,
             "fun": fun,
@@ -582,7 +582,6 @@ class LocalClient(object):
         for key, val in six.iteritems(self.opts):
             if key not in opts:
                 opts[key] = val
-
         batch = salt.cli.batch.Batch(opts, eauth=eauth, quiet=True)
         for ret in batch.run():
             yield ret
@@ -2141,7 +2140,7 @@ class Caller(object):
         """
         func = self.sminion.functions[fun]
         args, kwargs = salt.minion.load_args_and_kwargs(
-            func, salt.utils.args.parse_input(args, kwargs=kwargs),
+            func, salt.utils.args.parse_input(args), kwargs
         )
         return func(*args, **kwargs)
 
