@@ -1,6 +1,5 @@
 -r req_win.txt
 backports.ssl-match-hostname==3.7.0.1; python_version < '3.7'
-certifi
 cffi==1.12.2
 CherryPy==17.4.1
 cryptography==2.6.1
