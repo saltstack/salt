@@ -128,7 +128,7 @@ def get_vsan_cluster_config_system(service_instance):
 
     # TODO Replace when better connection mechanism is available
 
-    # For python 2.7.9 and later, the defaul SSL conext has more strict
+    # For python 2.7.9 and later, the default SSL conext has more strict
     # connection handshaking rule. We may need turn of the hostname checking
     # and client side cert verification
     context = None
@@ -152,7 +152,7 @@ def get_vsan_disk_management_system(service_instance):
 
     # TODO Replace when better connection mechanism is available
 
-    # For python 2.7.9 and later, the defaul SSL conext has more strict
+    # For python 2.7.9 and later, the default SSL conext has more strict
     # connection handshaking rule. We may need turn of the hostname checking
     # and client side cert verification
     context = None

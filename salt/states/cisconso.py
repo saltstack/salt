@@ -16,7 +16,9 @@ import salt.utils.compat
 
 
 def __virtual__():
-    return "cisconso.set_data_value" in __salt__
+    if "cisconso.set_data_value" in __salt__:
+        return True
+    return (False, "cisconso module could not be loaded")
 
 
 def value_present(name, datastore, path, config):

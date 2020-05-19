@@ -74,10 +74,10 @@ def __virtual__():
     Confirm this module is on a Debian based system
     """
     if __grains__["os_family"] != "Debian":
-        return False
+        return (False, "debconf state only runs on Debian systems")
     # Check that debconf was loaded
     if "debconf.show" not in __salt__:
-        return False
+        return (False, "debconf module could not be loaded")
 
     return __virtualname__
 
@@ -209,7 +209,7 @@ def set(name, data, **kwargs):
             current is not None
             and [key, args["type"], six.text_type(args["value"])] in current
         ):
-            if ret["comment"] is "":
+            if ret["comment"] == "":
                 ret["comment"] = "Unchanged answers: "
             ret["comment"] += ("{0} ").format(key)
         else:

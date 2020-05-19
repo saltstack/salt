@@ -237,6 +237,42 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
                 rabbitmq.delete_user("saltstack"), {"Deleted": "saltstack"}
             )
 
+    # 'check_password' function tests: 2
+
+    def test_check_password_lt_38(self):
+        """
+        Test if it checks a user's password for RabbitMQ less than v3.8.
+        """
+        mock_run = MagicMock(return_value='{rabbit,"RabbitMQ","3.5.7"}')
+        mock_run2 = MagicMock(
+            return_value={
+                "retcode": 0,
+                "stdout": 'Authenticating user "saltstack" ...\nSuccess',
+                "stderr": "",
+            }
+        )
+        with patch.dict(
+            rabbitmq.__salt__, {"cmd.run": mock_run, "cmd.run_all": mock_run2}
+        ):
+            self.assertEqual(rabbitmq.check_password("saltstack", "salt@123"), True)
+
+    def test_check_password_gt_38(self):
+        """
+        Test if it checks a user's password for RabbitMQ greater than v3.8.
+        """
+        mock_run = MagicMock(return_value="RabbitMQ version: 3.8.3")
+        mock_run2 = MagicMock(
+            return_value={
+                "retcode": 0,
+                "stdout": 'Authenticating user "saltstack" ...\nSuccess',
+                "stderr": "",
+            }
+        )
+        with patch.dict(
+            rabbitmq.__salt__, {"cmd.run": mock_run, "cmd.run_all": mock_run2}
+        ):
+            self.assertEqual(rabbitmq.check_password("saltstack", "salt@123"), True)
+
     # 'change_password' function tests: 1
 
     def test_change_password(self):

@@ -46,7 +46,10 @@ __virtualname__ = "ciscoconfparse"
 
 
 def __virtual__():
-    return HAS_CISCOCONFPARSE
+    if HAS_CISCOCONFPARSE:
+        return HAS_CISCOCONFPARSE
+    else:
+        return (False, "Missing dependency ciscoconfparse")
 
 
 # ------------------------------------------------------------------------------

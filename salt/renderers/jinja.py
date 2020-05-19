@@ -75,6 +75,7 @@ def render(
         context=context,
         tmplpath=tmplpath,
         proxy=__proxy__,
+        from_str=from_str,
         **kws
     )
     if not tmp_data.get("result", False):

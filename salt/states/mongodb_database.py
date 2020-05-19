@@ -17,7 +17,7 @@ __virtualname__ = "mongodb_database"
 def __virtual__():
     if "mongodb.db_exists" in __salt__:
         return __virtualname__
-    return False
+    return (False, "mongodb module could not be loaded")
 
 
 def absent(name, user=None, password=None, host=None, port=None, authdb=None):

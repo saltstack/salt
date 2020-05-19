@@ -59,7 +59,7 @@ def display(name):
         salt '*' alternatives.display editor
     """
     cmd = [_get_cmd(), "--display", name]
-    out = __salt__["cmd.run_all"](cmd, python_shell=False)
+    out = __salt__["cmd.run_all"](cmd, python_shell=False, ignore_retcode=True)
     if out["retcode"] > 0 and out["stderr"] != "":
         return out["stderr"]
     return out["stdout"]
@@ -134,7 +134,7 @@ def check_exists(name, path):
         salt '*' alternatives.check_exists name path
     """
     cmd = [_get_cmd(), "--display", name]
-    out = __salt__["cmd.run_all"](cmd, python_shell=False)
+    out = __salt__["cmd.run_all"](cmd, python_shell=False, ignore_retcode=True)
 
     if out["retcode"] > 0 and out["stderr"] != "":
         return False

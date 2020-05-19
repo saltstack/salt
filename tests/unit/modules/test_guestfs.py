@@ -3,15 +3,12 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.guestfs as guestfs
-
-# Import Salt Testing Libs
+from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, call, patch
 from tests.support.unit import TestCase
 
 
@@ -84,3 +81,25 @@ class GuestfsTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False,
             )
             makedirs_mock.assert_called_once()
+
+    @slowTest
+    def test_umount(self):
+        """
+        Test the guestfs.unmount function
+        """
+        run_mock = MagicMock(side_effect=["", "lsof output line", ""])
+        with patch.dict(guestfs.__salt__, {"cmd.run": run_mock}):
+            guestfs.umount("/tmp/mnt/opensuse.qcow", disk="/path/to/opensuse.qcow")
+            expected = [
+                call("guestunmount -q /tmp/mnt/opensuse.qcow"),
+                call("lsof /path/to/opensuse.qcow"),
+                call("lsof /path/to/opensuse.qcow"),
+            ]
+            self.assertEqual(expected, run_mock.call_args_list)
+
+        # Test without the disk image path
+        run_mock = MagicMock(side_effect=[""])
+        with patch.dict(guestfs.__salt__, {"cmd.run": run_mock}):
+            guestfs.umount("/tmp/mnt/opensuse.qcow")
+            expected = [call("guestunmount -q /tmp/mnt/opensuse.qcow")]
+            self.assertEqual(expected, run_mock.call_args_list)

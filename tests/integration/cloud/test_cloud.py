@@ -3,17 +3,14 @@
 Integration tests for functions located in the salt.cloud.__init__.py file.
 """
 
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 import salt.cloud
-
-# Import Salt Testing libs
 from tests.integration.cloud.helpers.cloud_test_base import CloudTest
-from tests.support.helpers import expensiveTest
+from tests.support.helpers import PRE_PYTEST_SKIP, expensiveTest
 
 
+@PRE_PYTEST_SKIP
 class CloudClientTestCase(CloudTest):
     """
     Integration tests for the CloudClient class. Uses DigitalOcean as a salt-cloud provider.

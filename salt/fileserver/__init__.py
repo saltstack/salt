@@ -13,6 +13,7 @@ import os
 import re
 import sys
 import time
+from collections.abc import Sequence
 
 # Import salt libs
 import salt.loader
@@ -26,15 +27,6 @@ import salt.utils.versions
 from salt.ext import six
 from salt.utils.args import get_function_argspec as _argspec
 from salt.utils.decorators import ensure_unicode_args
-
-try:
-    from collections.abc import Sequence
-except ImportError:
-    # pylint: disable=no-name-in-module
-    from collections import Sequence
-
-    # pylint: enable=no-name-in-module
-
 
 log = logging.getLogger(__name__)
 
@@ -371,9 +363,9 @@ class Fileserver(object):
 
         if isinstance(back, Sequence):
             # The test suite uses an ImmutableList type (based on
-            # collections.Sequence) for lists, which breaks this function in
+            # collections.abc.Sequence) for lists, which breaks this function in
             # the test suite. This normalizes the value from the opts into a
-            # list if it is based on collections.Sequence.
+            # list if it is based on collections.abc.Sequence.
             back = list(back)
 
         ret = []

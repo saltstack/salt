@@ -10,6 +10,8 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import logging
+
 # Import salt libs
 import salt.modules.mysql as mysql
 
@@ -18,11 +20,19 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch
 from tests.support.unit import TestCase, skipIf
 
+log = logging.getLogger(__name__)
 NO_MYSQL = False
+NO_PyMYSQL = False
 try:
     import MySQLdb  # pylint: disable=W0611
-except Exception:  # pylint: disable=broad-except
+except ImportError:
     NO_MYSQL = True
+
+try:
+    # MySQLdb import failed, try to import PyMySQL
+    import pymysql
+except ImportError:
+    NO_PyMYSQL = True
 
 __all_privileges__ = [
     "ALTER",
@@ -69,6 +79,15 @@ __all_privileges__ = [
     "UPDATE",
     "XA_RECOVER_ADMIN",
 ]
+
+
+class MockMySQLConnect(object):
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+
+    def autocommit(self, *args, **kwards):
+        return True
 
 
 @skipIf(NO_MYSQL, "Install MySQL bindings before running MySQL unit tests.")
@@ -620,6 +639,31 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
             "auth_socket",
         )
 
+    def test_sanitize_comment(self):
+        """
+        Test comment sanitization
+        """
+        input_data = """/*
+        multiline
+        comment
+        */
+        CREATE TABLE test_update (a VARCHAR(25)); # end of line comment
+        # example comment
+        insert into test_update values ("some #hash value");            -- ending comment
+        insert into test_update values ("crazy -- not comment"); -- another ending comment
+        -- another comment type
+        """
+        expected_response = """/*
+multiline
+comment
+*/
+CREATE TABLE test_update (a VARCHAR(25));
+insert into test_update values ("some #hash value");
+insert into test_update values ("crazy -- not comment");
+"""
+        output = mysql._sanitize_comments(input_data)
+        self.assertEqual(output, expected_response)
+
     def _test_call(self, function, expected_sql, *args, **kwargs):
         connect_mock = MagicMock()
         with patch.object(mysql, "_connect", connect_mock):
@@ -636,3 +680,52 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                 else:
                     calls = call().cursor().execute("{0}".format(expected_sql))
                 connect_mock.assert_has_calls((calls,), True)
+
+    @skipIf(
+        NO_PyMYSQL, "Install pymysql bindings before running test__connect_pymysql."
+    )
+    def test__connect_pymysql_exception(self):
+        """
+        Test the _connect function in the MySQL module
+        """
+        with patch.dict(mysql.__salt__, {"config.option": MagicMock()}):
+            with patch(
+                "MySQLdb.connect",
+                side_effect=pymysql.err.InternalError(
+                    1698, "Access denied for user 'root'@'localhost'"
+                ),
+            ):
+                ret = mysql._connect()
+                self.assertIn("mysql.error", mysql.__context__)
+                self.assertEqual(
+                    mysql.__context__["mysql.error"],
+                    "MySQL Error 1698: Access denied for user 'root'@'localhost'",
+                )
+
+    @skipIf(not NO_PyMYSQL, "With pymysql installed use test__connect_pymysql.")
+    def test__connect_mysqldb_exception(self):
+        """
+        Test the _connect function in the MySQL module
+        """
+        with patch.dict(mysql.__salt__, {"config.option": MagicMock()}):
+            with patch(
+                "MySQLdb.connect",
+                side_effect=mysql.OperationalError(
+                    1698, "Access denied for user 'root'@'localhost'"
+                ),
+            ):
+                ret = mysql._connect()
+                self.assertIn("mysql.error", mysql.__context__)
+                self.assertEqual(
+                    mysql.__context__["mysql.error"],
+                    "MySQL Error 1698: Access denied for user 'root'@'localhost'",
+                )
+
+    def test__connect_mysqldb(self):
+        """
+        Test the _connect function in the MySQL module
+        """
+        with patch.dict(mysql.__salt__, {"config.option": MagicMock()}):
+            with patch("MySQLdb.connect", return_value=MockMySQLConnect()):
+                ret = mysql._connect()
+                self.assertNotIn("mysql.error", mysql.__context__)

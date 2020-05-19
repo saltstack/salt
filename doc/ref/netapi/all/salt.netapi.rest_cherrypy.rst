@@ -5,6 +5,8 @@ rest_cherrypy
 .. contents::
     :local:
 
+.. automodule:: salt.netapi.rest_cherrypy
+
 .. automodule:: salt.netapi.rest_cherrypy.app
 
 .. automodule:: salt.netapi.rest_cherrypy.wsgi

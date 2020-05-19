@@ -38,12 +38,14 @@ class YumKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
     LATEST = KERNEL_LIST[-1]
     OS_ARCH = "x86_64"
     OS_NAME = "RedHat"
+    OS_MAJORRELEASE = "7"
 
     def setup_loader_modules(self):
         return {
             kernelpkg: {
                 "__grains__": {
                     "os": self.OS_NAME,
+                    "osmajorrelease": self.OS_MAJORRELEASE,
                     "kernelrelease": "{0}.{1}".format(
                         self.KERNEL_LIST[0], self.OS_ARCH
                     ),

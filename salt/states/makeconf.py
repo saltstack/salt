@@ -21,7 +21,9 @@ def __virtual__():
     """
     Only load if the makeconf module is available in __salt__
     """
-    return "makeconf" if "makeconf.get_var" in __salt__ else False
+    if "makeconf.get_var" in __salt__:
+        return "makeconf"
+    return (False, "makeconf module could not be loaded")
 
 
 def _make_set(var):

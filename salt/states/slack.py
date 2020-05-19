@@ -36,7 +36,9 @@ def __virtual__():
     """
     Only load if the slack module is available in __salt__
     """
-    return "slack" if "slack.post_message" in __salt__ else False
+    if "slack.post_message" in __salt__:
+        return "slack"
+    return (False, "slack module could not be loaded")
 
 
 def post_message(name, **kwargs):
@@ -90,8 +92,8 @@ def post_message(name, **kwargs):
             An optional flag indicating whether the value is short
             enough to be displayed side-by-side with other values.
 
-        identifier
-            The identifier of WebHook.
+        webhook
+            The identifier of WebHook (URL or token).
 
         channel
             The channel to use instead of the WebHook default.

@@ -8,16 +8,15 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
-
     """
     Load only if network is loaded
     """
-
-    return "firewall" if "network.connect" in __salt__ else False
+    if "network.connect" in __salt__:
+        return "firewall"
+    return (False, "network module could not be loaded")
 
 
 def check(name, port=None, **kwargs):
-
     """
     Checks if there is an open connection from the minion to the defined
     host on a specific port.

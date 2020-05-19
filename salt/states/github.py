@@ -35,7 +35,9 @@ def __virtual__():
     """
     Only load if the github module is available in __salt__
     """
-    return "github" if "github.list_users" in __salt__ else False
+    if "github.list_users" in __salt__:
+        return "github"
+    return (False, "github module could not be loaded")
 
 
 def present(name, profile="github", **kwargs):

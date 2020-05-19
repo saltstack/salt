@@ -198,7 +198,7 @@ class IPCServer(object):
                 # an error code of 0, it's a spurious exception.
                 if exc.errno == 0:
                     log.trace(
-                        "Exception occured with error number 0, "
+                        "Exception occurred with error number 0, "
                         "spurious exception: %s",
                         exc,
                     )

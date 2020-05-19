@@ -28,7 +28,17 @@ def __virtual__():
     return True
 
 
-def present(version, name, port=None, encoding=None, locale=None, datadir=None):
+def present(
+    version,
+    name,
+    port=None,
+    encoding=None,
+    locale=None,
+    datadir=None,
+    allow_group_access=None,
+    data_checksums=None,
+    wal_segsize=None,
+):
     """
     Ensure that the named cluster is present with the specified properties.
     For more information about all of these options see man pg_createcluster(1)
@@ -50,6 +60,15 @@ def present(version, name, port=None, encoding=None, locale=None, datadir=None):
 
     datadir
         Where the cluster is stored
+
+    allow_group_access
+        Allows users in the same group as the cluster owner to read all cluster files created by initdb
+
+    data_checksums
+        Use checksums on data pages
+
+    wal_segsize
+        Set the WAL segment size, in megabytes
 
         .. versionadded:: 2015.XX
     """
@@ -87,6 +106,9 @@ def present(version, name, port=None, encoding=None, locale=None, datadir=None):
         locale=locale,
         encoding=encoding,
         datadir=datadir,
+        allow_group_access=allow_group_access,
+        data_checksums=data_checksums,
+        wal_segsize=wal_segsize,
     )
     if cluster:
         msg = "The cluster {0}/{1} has been created"

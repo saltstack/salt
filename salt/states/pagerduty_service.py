@@ -24,7 +24,9 @@ def __virtual__():
     """
     Only load if the pygerduty module is available in __salt__
     """
-    return "pagerduty_service" if "pagerduty_util.get_resource" in __salt__ else False
+    if "pagerduty_util.get_resource" in __salt__:
+        return "pagerduty_service"
+    return (False, "pagerduty_util module could not be loaded")
 
 
 def present(profile="pagerduty", subdomain=None, api_key=None, **kwargs):

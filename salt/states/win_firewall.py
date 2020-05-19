@@ -12,7 +12,9 @@ def __virtual__():
     """
     Load if the module firewall is loaded
     """
-    return "win_firewall" if "firewall.get_config" in __salt__ else False
+    if "firewall.get_config" in __salt__:
+        return "win_firewall"
+    return (False, "firewall module could not be loaded")
 
 
 def disabled(name="allprofiles"):

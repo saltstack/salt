@@ -184,6 +184,8 @@ class KeyCLI(object):
                 ret.pop("local", None)
             return ret
 
+        if cmd in ("accept", "reject", "delete") and args is None:
+            args = self.opts.get("match_dict", {}).get("minions")
         fstr = "key.{0}".format(cmd)
         fun = self.client.functions[fstr]
         args, kwargs = self._get_args_kwargs(fun, args)

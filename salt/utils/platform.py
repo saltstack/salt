@@ -2,29 +2,14 @@
 """
 Functions for identifying which platform a machine is
 """
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import subprocess
 import sys
-import warnings
 
-# Import Salt libs
+from distro import linux_distribution
 from salt.utils.decorators import memoize as real_memoize
-
-# linux_distribution deprecated in py3.7
-try:
-    from platform import linux_distribution as _deprecated_linux_distribution
-
-    def linux_distribution(**kwargs):
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            return _deprecated_linux_distribution(**kwargs)
-
-
-except ImportError:
-    from distro import linux_distribution
 
 
 @real_memoize
@@ -107,16 +92,19 @@ def is_smartos_globalzone():
     if not is_smartos():
         return False
     else:
-        cmd = ["zonename"]
         try:
-            zonename = subprocess.Popen(
-                cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            zonename_proc = subprocess.Popen(
+                ["zonename"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             )
+            zonename_output = (
+                zonename_proc.communicate()[0].strip().decode(__salt_system_encoding__)
+            )
+            zonename_retcode = zonename_proc.poll()
         except OSError:
             return False
-        if zonename.returncode:
+        if zonename_retcode:
             return False
-        if zonename.stdout.read().strip() == "global":
+        if zonename_output == "global":
             return True
 
         return False
@@ -130,16 +118,19 @@ def is_smartos_zone():
     if not is_smartos():
         return False
     else:
-        cmd = ["zonename"]
         try:
-            zonename = subprocess.Popen(
-                cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            zonename_proc = subprocess.Popen(
+                ["zonename"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             )
+            zonename_output = (
+                zonename_proc.communicate()[0].strip().decode(__salt_system_encoding__)
+            )
+            zonename_retcode = zonename_proc.poll()
         except OSError:
             return False
-        if zonename.returncode:
+        if zonename_retcode:
             return False
-        if zonename.stdout.read().strip() == "global":
+        if zonename_output == "global":
             return False
 
         return True

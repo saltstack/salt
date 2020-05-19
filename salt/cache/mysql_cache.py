@@ -125,7 +125,7 @@ def _create_table():
     """
     Create table if needed
     """
-    # Explicitely check if the table already exists as the library logs a
+    # Explicitly check if the table already exists as the library logs a
     # warning on CREATE TABLE
     query = """SELECT COUNT(TABLE_NAME) FROM information_schema.tables
         WHERE table_schema = '{0}' AND table_name = '{1}'""".format(

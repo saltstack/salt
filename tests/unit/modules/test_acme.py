@@ -42,7 +42,14 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
                     return_value=[".", "..", "README", "test_expired", "test_valid"]
                 )
             },
-        ), patch("os.path.isdir", side_effect=[False, True, True]):
+        ), patch(
+            "os.path.isdir",
+            side_effect=lambda path: path
+            in [
+                os.path.join(acme.LE_LIVE, "test_expired"),
+                os.path.join(acme.LE_LIVE, "test_valid"),
+            ],
+        ):
             self.assertEqual(acme.certs(), ["test_expired", "test_valid"])
 
     def test_has(self):
@@ -94,6 +101,10 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(acme.needs_renewal("test_valid", window=5))
             # Test with string-like window parameter
             self.assertTrue(acme.needs_renewal("test_valid", window="5"))
+            # Test with 'force' parameter
+            self.assertTrue(acme.needs_renewal("test_valid", window="force"))
+            # Test with 'true' parameter
+            self.assertTrue(acme.needs_renewal("test_valid", window=True))
             # Test with invalid window parameter
             self.assertRaises(
                 SaltInvocationError, acme.needs_renewal, "test_valid", window="foo"

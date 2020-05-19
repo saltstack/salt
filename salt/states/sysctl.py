@@ -27,10 +27,12 @@ def __virtual__():
     """
     This state is only available on Minions which support sysctl
     """
-    return "sysctl.show" in __salt__
+    if "sysctl.show" in __salt__:
+        return True
+    return (False, "sysctl module could not be loaded")
 
 
-def present(name, value, config=None):
+def present(name, value, config=None, ignore=False):
     """
     Ensure that the named sysctl value is set in memory and persisted to the
     named configuration file. The default sysctl configuration file is
@@ -45,6 +47,13 @@ def present(name, value, config=None):
     config
         The location of the sysctl configuration file. If not specified, the
         proper location will be detected based on platform.
+
+    ignore
+        ..versionadded:: neon
+
+        Adds --ignore to sysctl commands. This suppresses errors in environments
+        where sysctl settings may have been disabled in kernel boot configuration.
+        Defaults to False
     """
     ret = {"name": name, "result": True, "changes": {}, "comment": ""}
 
@@ -105,7 +114,7 @@ def present(name, value, config=None):
         return ret
 
     try:
-        update = __salt__["sysctl.persist"](name, value, config)
+        update = __salt__["sysctl.persist"](name, value, config, ignore)
     except CommandExecutionError as exc:
         ret["result"] = False
         ret["comment"] = "Failed to set {0} to {1}: {2}".format(name, value, exc)
@@ -116,5 +125,7 @@ def present(name, value, config=None):
         ret["comment"] = "Updated sysctl value {0} = {1}".format(name, value)
     elif update == "Already set":
         ret["comment"] = "Sysctl value {0} = {1} is already set".format(name, value)
+    elif update == "Ignored":
+        ret["comment"] = "Sysctl value {0} = {1} was ignored".format(name, value)
 
     return ret

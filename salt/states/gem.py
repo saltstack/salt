@@ -28,7 +28,9 @@ def __virtual__():
     """
     Only load if gem module is available in __salt__
     """
-    return "gem.list" in __salt__
+    if "gem.list" in __salt__:
+        return True
+    return (False, "gem module could not be loaded")
 
 
 def installed(
