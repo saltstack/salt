@@ -168,6 +168,7 @@ def update():
                 line = salt.utils.stringutils.to_unicode(line)
                 try:
                     file_path, mtime = line.replace("\n", "").split(":", 1)
+                    mtime = float(mtime)
                     old_mtime_map[file_path] = mtime
                     if mtime != new_mtime_map.get(file_path, mtime):
                         data["files"]["changed"].append(file_path)
