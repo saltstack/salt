@@ -1953,6 +1953,11 @@ def create_policy_version(
     policy_arn = _get_policy_arn(policy_name, region, key, keyid, profile)
     try:
         ret = conn.create_policy_version(policy_arn, policy_document, **params)
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        log.error("Failed to create IAM policy %s.", policy_name)
+        return {"created": False, "error": __utils__["boto.get_error"](e)}
+    try:
         vid = (
             ret.get("create_policy_version_response", {})
             .get("create_policy_version_result", {})

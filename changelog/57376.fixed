@@ -1,0 +1,2 @@
+Fix bug whereby exception can occur before a version identifier could be resolved,
+resulting in an exception during exception handling.
