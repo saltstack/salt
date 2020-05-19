@@ -32,7 +32,6 @@ if __name__ == "__main__":
 import nox  # isort:skip
 from nox.command import CommandFailed  # isort:skip
 
-
 IS_PY3 = sys.version_info > (2,)
 
 # Be verbose when runing under a CI context
@@ -43,6 +42,7 @@ CI_RUN = (
 )
 PIP_INSTALL_SILENT = CI_RUN is False
 SKIP_REQUIREMENTS_INSTALL = "SKIP_REQUIREMENTS_INSTALL" in os.environ
+EXTRA_REQUIREMENTS_INSTALL = os.environ.get("EXTRA_REQUIREMENTS_INSTALL")
 
 # Global Path Definitions
 REPO_ROOT = os.path.abspath(os.path.dirname(__file__))
@@ -50,7 +50,7 @@ SITECUSTOMIZE_DIR = os.path.join(REPO_ROOT, "tests", "support", "coverage")
 IS_DARWIN = sys.platform.lower().startswith("darwin")
 IS_WINDOWS = sys.platform.lower().startswith("win")
 # Python versions to run against
-_PYTHON_VERSIONS = ("2", "2.7", "3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9")
+_PYTHON_VERSIONS = ("3", "3.5", "3.6", "3.7", "3.8", "3.9")
 
 # Nox options
 #  Reuse existing virtualenvs
@@ -129,8 +129,8 @@ def _get_session_python_site_packages_dir(session):
 
 def _get_pydir(session):
     version_info = _get_session_python_version_info(session)
-    if version_info < (2, 7):
-        session.error("Only Python >= 2.7 is supported")
+    if version_info < (3, 5):
+        session.error("Only Python >= 3.5 is supported")
     return "py{}.{}".format(*version_info)
 
 
@@ -292,10 +292,11 @@ def _install_requirements(session, transport, *extra_requirements):
         )
         return
     # Install requirements
+    requirements_file = _get_pip_requirements_file(session, transport)
     install_command = [
         "--progress-bar=off",
         "-r",
-        _get_pip_requirements_file(session, transport),
+        requirements_file,
     ]
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
@@ -304,6 +305,18 @@ def _install_requirements(session, transport, *extra_requirements):
             "--progress-bar=off",
         ]
         install_command += list(extra_requirements)
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+
+    if EXTRA_REQUIREMENTS_INSTALL:
+        session.log(
+            "Installing the following extra requirements because the EXTRA_REQUIREMENTS_INSTALL environment variable "
+            "was set: %s",
+            EXTRA_REQUIREMENTS_INSTALL,
+        )
+        # We pass --constraint in this step because in case any of these extra dependencies has a requirement
+        # we're already using, we want to maintain the locked version
+        install_command = ["--progress-bar=off", "--constraint", requirements_file]
+        install_command += EXTRA_REQUIREMENTS_INSTALL.split()
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
 
