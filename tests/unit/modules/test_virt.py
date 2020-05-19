@@ -4226,7 +4226,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         mock_pool = MagicMock()
         mock_pool.delete = MagicMock(return_value=0)
-        mock_pool.XMLDesc.return_value = "<pool type='dir'/>"
         self.mock_conn.storagePoolLookupByName = MagicMock(return_value=mock_pool)
 
         res = virt.pool_delete("test-pool")
@@ -4240,12 +4239,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.mock_libvirt.VIR_STORAGE_POOL_DELETE_NORMAL
         )
 
-    def test_pool_delete_secret(self):
+    def test_pool_undefine_secret(self):
         """
-        Test virt.pool_delete function where the pool has a secret
+        Test virt.pool_undefine function where the pool has a secret
         """
         mock_pool = MagicMock()
-        mock_pool.delete = MagicMock(return_value=0)
+        mock_pool.undefine = MagicMock(return_value=0)
         mock_pool.XMLDesc.return_value = """
             <pool type='rbd'>
               <name>test-ses</name>
@@ -4262,16 +4261,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         mock_undefine = MagicMock(return_value=0)
         self.mock_conn.secretLookupByUsage.return_value.undefine = mock_undefine
 
-        res = virt.pool_delete("test-ses")
+        res = virt.pool_undefine("test-ses")
         self.assertTrue(res)
 
         self.mock_conn.storagePoolLookupByName.assert_called_once_with("test-ses")
-
-        # Shouldn't be called with another parameter so far since those are not implemented
-        # and thus throwing exceptions.
-        mock_pool.delete.assert_called_once_with(
-            self.mock_libvirt.VIR_STORAGE_POOL_DELETE_NORMAL
-        )
+        mock_pool.undefine.assert_called_once_with()
 
         self.mock_conn.secretLookupByUsage.assert_called_once_with(
             self.mock_libvirt.VIR_SECRET_USAGE_TYPE_CEPH, "pool_test-ses"
