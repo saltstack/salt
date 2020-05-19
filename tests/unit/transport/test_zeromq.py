@@ -161,7 +161,9 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
             master_ip="localhost", master_port=self.minion_config["master_port"]
         )
 
-        channel = salt.transport.Channel.factory(self.minion_config, master_uri=uri)
+        channel = salt.transport.client.ReqChannel.factory(
+            self.minion_config, master_uri=uri
+        )
         self.assertIn("localhost", channel.master_uri)
         del channel
 
