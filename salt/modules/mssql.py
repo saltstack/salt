@@ -59,6 +59,10 @@ def __virtual__():
 
 
 def _get_connection(**kwargs):
+    """
+    Getting the database connection
+
+    """
     connection_args = {}
     for arg in ("server", "port", "user", "password", "database", "as_dict"):
         if arg in kwargs:
@@ -67,7 +71,9 @@ def _get_connection(**kwargs):
             connection_args[arg] = __salt__["config.option"](
                 "mssql." + arg, _DEFAULTS.get(arg, None)
             )
-    return pymssql.connect(**connection_args)
+    conn = pymssql.connect(**connection_args)
+    conn.autocommit(True)
+    return conn
 
 
 def _close_connection(cursor=None, connect=None):
@@ -105,9 +111,12 @@ def _to_rawstrings(text):
     s = ""
     if six.PY2:
         if isinstance(text, six.string_types):
+            s = text.encode(encoding="string-escape")
         elif isinstance(text, six.text_type):
+            s = text.encode(encoding="unicode-escape")
     elif six.PY3:
         if isinstance(text, six.text_type):
+            s = text.encode(encoding="unicode-escape")
     return s
 
 
@@ -236,7 +245,7 @@ def db_create(database, containment="NONE", new_database_options=None, **kwargs)
     conn = None
     try:
         conn = _get_connection(**kwargs)
-        conn.autocommit(True)
+        # conn.autocommit(True)
         # cur = conn.cursor()
         # cur.execute(sql)
         conn.cursor().execute(sql)
@@ -244,7 +253,7 @@ def db_create(database, containment="NONE", new_database_options=None, **kwargs)
         return "Could not create the database: {0}".format(e)
     finally:
         if conn:
-            conn.autocommit(False)
+            # conn.autocommit(False)
             conn.close()
     return True
 
@@ -269,7 +278,7 @@ def db_remove(database_name, **kwargs):
         ]:
             database_name = quote_identifier(database_name)
             conn = _get_connection(**kwargs)
-            conn.autocommit(True)
+            # conn.autocommit(True)
             cur = conn.cursor()
             cur.execute(
                 "ALTER DATABASE {0} SET SINGLE_USER WITH ROLLBACK IMMEDIATE".format(
@@ -277,7 +286,7 @@ def db_remove(database_name, **kwargs):
                 )
             )
             cur.execute("DROP DATABASE {0}".format(database_name))
-            conn.autocommit(False)
+            # conn.autocommit(False)
             conn.close()
             return True
         else:
@@ -340,7 +349,7 @@ def role_create(role, owner=None, grants=None, **kwargs):
     conn = None
     try:
         conn = _get_connection(**kwargs)
-        conn.autocommit(True)
+        # conn.autocommit(True)
         # cur = conn.cursor()
         # cur.execute(sql)
         conn.cursor().execute(sql)
@@ -350,7 +359,7 @@ def role_create(role, owner=None, grants=None, **kwargs):
         return "Could not create the role: {0}".format(e)
     finally:
         if conn:
-            conn.autocommit(False)
+            # conn.autocommit(False)
             conn.close()
     return True
 
@@ -368,10 +377,10 @@ def role_remove(role, **kwargs):
     try:
         role = quote_identifier(role)
         conn = _get_connection(**kwargs)
-        conn.autocommit(True)
+        # conn.autocommit(True)
         cur = conn.cursor()
         cur.execute("DROP ROLE {0}".format(role))
-        conn.autocommit(True)
+        # conn.autocommit(True)
         conn.close()
         return True
     except Exception as e:  # pylint: disable=broad-except
@@ -462,7 +471,7 @@ def login_create(
     conn = None
     try:
         conn = _get_connection(**kwargs)
-        conn.autocommit(True)
+        # conn.autocommit(True)
         # cur = conn.cursor()
         # cur.execute(sql)
         conn.cursor().execute(sql)
@@ -474,7 +483,7 @@ def login_create(
         return "Could not create the login: {0}".format(e)
     finally:
         if conn:
-            conn.autocommit(False)
+            # conn.autocommit(False)
             conn.close()
     return True
 
@@ -491,10 +500,10 @@ def login_remove(login, **kwargs):
     """
     try:
         conn = _get_connection(**kwargs)
-        conn.autocommit(True)
+        # conn.autocommit(True)
         cur = conn.cursor()
         cur.execute("DROP LOGIN [{0}]".format(login))
-        conn.autocommit(False)
+        # conn.autocommit(False)
         conn.close()
         return True
     except Exception as e:  # pylint: disable=broad-except
@@ -589,7 +598,7 @@ def user_create(
     conn = None
     try:
         conn = _get_connection(**kwargs)
-        conn.autocommit(True)
+        # conn.autocommit(True)
         # cur = conn.cursor()
         # cur.execute(sql)
         conn.cursor().execute(sql)
@@ -601,7 +610,7 @@ def user_create(
         return "Could not create the user: {0}".format(e)
     finally:
         if conn:
-            conn.autocommit(False)
+            # conn.autocommit(False)
             conn.close()
     return True
 
@@ -622,10 +631,10 @@ def user_remove(username, **kwargs):
     try:
         username = quote_identifier(username)
         conn = _get_connection(**kwargs)
-        conn.autocommit(True)
+        # conn.autocommit(True)
         cur = conn.cursor()
         cur.execute("DROP USER {0}".format(username))
-        conn.autocommit(False)
+        # conn.autocommit(False)
         conn.close()
         return True
     except Exception as e:  # pylint: disable=broad-except
