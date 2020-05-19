@@ -1026,8 +1026,10 @@ def wait_for_psexecsvc(host, port, username, password, timeout=900):
         if time.time() - start > timeout:
             return False
         log.debug(
-            "Retrying psexec connection to host {0} on port {1} "
-            "(try {2})".format(host, port, try_count)
+            "Retrying psexec connection to host %s on port %s (try %s)",
+            host,
+            port,
+            try_count,
         )
         time.sleep(1)
 
@@ -1535,7 +1537,7 @@ def deploy_script(
                     )
             if sudo:
                 comps = tmp_dir.lstrip("/").rstrip("/").split("/")
-                if len(comps) > 0:
+                if comps:
                     if len(comps) > 1 or comps[0] != "tmp":
                         ret = root_cmd(
                             'chown {0} "{1}"'.format(username, tmp_dir),

@@ -230,7 +230,7 @@ def version(*names, **kwargs):
 info = salt.utils.functools.alias_function(version, "info")
 
 
-def refresh_db(jail=None, chroot=None, root=None, force=False):
+def refresh_db(jail=None, chroot=None, root=None, force=False, **kwargs):
     """
     Refresh PACKAGESITE contents
 
@@ -1198,6 +1198,16 @@ def upgrade(*names, **kwargs):
         .. code-block:: bash
 
             salt '*' pkg.upgrade <package name> fromrepo=repo
+
+    fetchonly
+        Do not perform installation of packages, merely fetch
+        packages that should be upgraded and detect possible conflicts.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.upgrade <package name> fetchonly=True
     """
     jail = kwargs.pop("jail", None)
     chroot = kwargs.pop("chroot", None)
@@ -1206,12 +1216,15 @@ def upgrade(*names, **kwargs):
     force = kwargs.pop("force", False)
     local = kwargs.pop("local", False)
     dryrun = kwargs.pop("dryrun", False)
+    fetchonly = kwargs.pop("fetchonly", False)
     pkgs = kwargs.pop("pkgs", [])
     opts = ""
     if force:
         opts += "f"
     if local:
         opts += "L"
+    if fetchonly:
+        opts += "F"
     if dryrun:
         opts += "n"
     if not dryrun:
@@ -2445,7 +2458,7 @@ def _parse_upgrade(stdout):
     return result
 
 
-def version_cmp(pkg1, pkg2, ignore_epoch=False):
+def version_cmp(pkg1, pkg2, ignore_epoch=False, **kwargs):
     """
     Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
     pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem

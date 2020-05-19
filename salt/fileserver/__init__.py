@@ -363,9 +363,9 @@ class Fileserver(object):
 
         if isinstance(back, Sequence):
             # The test suite uses an ImmutableList type (based on
-            # collections.Sequence) for lists, which breaks this function in
+            # collections.abc.Sequence) for lists, which breaks this function in
             # the test suite. This normalizes the value from the opts into a
-            # list if it is based on collections.Sequence.
+            # list if it is based on collections.abc.Sequence.
             back = list(back)
 
         ret = []
