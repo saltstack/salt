@@ -5831,15 +5831,19 @@ def _pool_set_secret(
         if secret_type:
             # Get the previously defined secret if any
             secret = None
-            if usage:
-                usage_type = (
-                    libvirt.VIR_SECRET_USAGE_TYPE_CEPH
-                    if secret_type == "ceph"
-                    else libvirt.VIR_SECRET_USAGE_TYPE_ISCSI
-                )
-                secret = conn.secretLookupByUsage(usage_type, usage)
-            elif uuid:
-                secret = conn.secretLookupByUUIDString(uuid)
+            try:
+                if usage:
+                    usage_type = (
+                        libvirt.VIR_SECRET_USAGE_TYPE_CEPH
+                        if secret_type == "ceph"
+                        else libvirt.VIR_SECRET_USAGE_TYPE_ISCSI
+                    )
+                    secret = conn.secretLookupByUsage(usage_type, usage)
+                elif uuid:
+                    secret = conn.secretLookupByUUIDString(uuid)
+            except libvirt.libvirtError as err:
+                # For some reason the secret has been removed. Don't fail since we'll recreate it
+                log.info("Secret not found: %s", err.get_error_message())
 
             # Create secret if needed
             if not secret:
