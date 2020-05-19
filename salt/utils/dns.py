@@ -130,9 +130,7 @@ def _tree(domain, tld=False):
                 domain,
             ).group()
             log.info(
-                "Without tldextract, dns.util resolves the TLD of {0} to {1}".format(
-                    domain, tld
-                )
+                "Without tldextract, dns.util resolves the TLD of %s to %s", domain, tld
             )
 
     res = [domain]

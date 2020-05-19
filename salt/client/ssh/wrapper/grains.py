@@ -3,22 +3,25 @@
 Return/control aspects of the grains data
 """
 
-# Import python libs
 from __future__ import absolute_import, print_function
 
-import collections
 import copy
 import math
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.json
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
-
-# Import 3rd-party libs
 from salt.ext import six
+
+try:
+    # Python 3
+    from collections.abc import Mapping
+except ImportError:
+    # We still allow Py2 import because this could be executed in a machine with Py2.
+    from collections import Mapping  # pylint: disable=no-name-in-module
+
 
 # Seed the grains dict so cython will build
 __grains__ = {}
@@ -261,15 +264,15 @@ def filter_by(lookup_dict, grain="os_family", merge=None, default="default", bas
         if ret is None:
             ret = base_values
 
-        elif isinstance(base_values, collections.Mapping):
-            if not isinstance(ret, collections.Mapping):
+        elif isinstance(base_values, Mapping):
+            if not isinstance(ret, Mapping):
                 raise SaltException(
                     "filter_by default and look-up values must both be dictionaries."
                 )
             ret = salt.utils.dictupdate.update(copy.deepcopy(base_values), ret)
 
     if merge:
-        if not isinstance(merge, collections.Mapping):
+        if not isinstance(merge, Mapping):
             raise SaltException("filter_by merge argument must be a dictionary.")
         else:
             if ret is None:
