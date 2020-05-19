@@ -1,6 +1,5 @@
-======================
-salt.modules.kapacitor
-======================
+salt.modules.kapacitor module
+=============================
 
 .. automodule:: salt.modules.kapacitor
     :members:

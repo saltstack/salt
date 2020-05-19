@@ -1,6 +1,5 @@
-=====================
-salt.beacons.sensehat
-=====================
+salt.beacons.sensehat module
+============================
 
 .. automodule:: salt.beacons.sensehat
     :members:

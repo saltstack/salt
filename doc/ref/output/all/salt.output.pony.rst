@@ -1,6 +1,6 @@
-================
-salt.output.pony
-================
+salt.output.pony module
+=======================
 
 .. automodule:: salt.output.pony
     :members:
+    :undoc-members:

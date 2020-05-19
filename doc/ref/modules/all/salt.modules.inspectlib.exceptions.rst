@@ -1,6 +1,5 @@
-==================================
-salt.modules.inspectlib.exceptions
-==================================
+salt.modules.inspectlib.exceptions module
+=========================================
 
 .. automodule:: salt.modules.inspectlib.exceptions
     :members:

@@ -1,6 +1,5 @@
-===========================
-salt.beacons.smartos_imgadm
-===========================
+salt.beacons.smartos_imgadm module
+==================================
 
 .. automodule:: salt.beacons.smartos_imgadm
     :members:

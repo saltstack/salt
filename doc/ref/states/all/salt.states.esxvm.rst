@@ -1,6 +1,5 @@
-=================
-salt.states.esxvm
-=================
+salt.states.esxvm module
+========================
 
 .. automodule:: salt.states.esxvm
     :members:

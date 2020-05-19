@@ -1,6 +1,6 @@
-=================
-salt.proxy.docker
-=================
+salt.proxy.docker module
+========================
 
 .. automodule:: salt.proxy.docker
     :members:
+    :undoc-members:

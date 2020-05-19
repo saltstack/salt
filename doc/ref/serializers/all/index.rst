@@ -13,7 +13,6 @@ serializer modules
     configparser
     json
     msgpack
-    plist
     python
     toml
     yaml

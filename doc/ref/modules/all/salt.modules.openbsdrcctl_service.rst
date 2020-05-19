@@ -1,6 +1,6 @@
-=================================
-salt.modules.openbsdrcctl_service
-=================================
+====================================
+salt.modules.openbsdrcctl_service.py
+====================================
 
 .. automodule:: salt.modules.openbsdrcctl_service
     :members:
