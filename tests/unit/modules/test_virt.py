@@ -4534,24 +4534,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
           </source>
         </pool>"""
 
-        expected_xml = (
-            '<pool type="rbd">'
-            "<name>default</name>"
-            "<uuid>20fbe05c-ab40-418a-9afa-136d512f0ede</uuid>"
-            '<capacity unit="bytes">1999421108224</capacity>'
-            '<allocation unit="bytes">713207042048</allocation>'
-            '<available unit="bytes">1286214066176</available>'
-            "<source>"
-            '<host name="ses4.tf.local" />'
-            '<host name="ses5.tf.local" />'
-            '<auth type="ceph" username="libvirt">'
-            '<secret uuid="14e9a0f1-8fbf-4097-b816-5b094c182212" />'
-            "</auth>"
-            "<name>iscsi-images</name>"
-            "</source>"
-            "</pool>"
-        )
-
         mock_secret = MagicMock()
         self.mock_conn.secretLookupByUUIDString = MagicMock(return_value=mock_secret)
 
@@ -4570,6 +4552,23 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             )
         )
         self.mock_conn.storagePoolDefineXML.assert_not_called()
+        mock_secret.setValue.assert_called_once_with(b"secret")
+
+        # Case where the secret can't be found
+        self.mock_conn.secretLookupByUUIDString = MagicMock(
+            side_effect=self.mock_libvirt.libvirtError("secret not found")
+        )
+        self.assertFalse(
+            virt.pool_update(
+                "default",
+                "rbd",
+                source_name="iscsi-images",
+                source_hosts=["ses4.tf.local", "ses5.tf.local"],
+                source_auth={"username": "libvirt", "password": "c2VjcmV0"},
+            )
+        )
+        self.mock_conn.storagePoolDefineXML.assert_not_called()
+        self.mock_conn.secretDefineXML.assert_called_once()
         mock_secret.setValue.assert_called_once_with(b"secret")
 
     def test_pool_update_password_create(self):
