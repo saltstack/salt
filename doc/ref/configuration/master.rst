@@ -1140,7 +1140,7 @@ Supported on POSIX platforms only.
 .. conf_master:: fileserver_update_niceness
 
 ``fileserver_update_niceness``
-------------------------
+------------------------------
 
 .. versionadded:: neon
 
