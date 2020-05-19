@@ -1,6 +1,6 @@
-=======================
-salt.beacons.log_beacon
+salt.beacons.log module
 =======================
 
-.. automodule:: salt.beacons.log_beacon
+.. automodule:: salt.beacons.log
     :members:
+    :undoc-members:

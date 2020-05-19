@@ -1,6 +1,7 @@
-=====================
-salt.netapi.rest_wsgi
-=====================
+=========
+rest_wsgi
+=========
 
 .. automodule:: salt.netapi.rest_wsgi
-    :members:
+
+.. py:currentmodule:: salt.netapi.rest_wsgi

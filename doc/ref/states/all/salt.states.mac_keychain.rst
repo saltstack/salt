@@ -1,6 +1,5 @@
-========================
-salt.states.mac_keychain
-========================
+salt.states.mac_keychain module
+===============================
 
 .. automodule:: salt.states.mac_keychain
     :members:

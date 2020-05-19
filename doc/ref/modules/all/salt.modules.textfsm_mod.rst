@@ -1,6 +1,5 @@
-========================
-salt.modules.textfsm_mod
-========================
+salt.modules.textfsm_mod module
+===============================
 
 .. automodule:: salt.modules.textfsm_mod
     :members:

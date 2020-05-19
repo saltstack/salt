@@ -1,6 +1,5 @@
-===================
-salt.states.jenkins
-===================
+salt.states.jenkins module
+==========================
 
 .. automodule:: salt.states.jenkins
     :members:

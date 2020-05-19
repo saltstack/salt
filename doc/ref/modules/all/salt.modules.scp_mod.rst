@@ -1,6 +1,7 @@
-====================
-salt.modules.scp_mod
-====================
+=======================
+salt.modules.scp module
+=======================
 
 .. automodule:: salt.modules.scp_mod
     :members:
+

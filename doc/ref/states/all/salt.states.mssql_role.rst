@@ -1,6 +1,5 @@
-======================
-salt.states.mssql_role
-======================
+salt.states.mssql_role module
+=============================
 
 .. automodule:: salt.states.mssql_role
     :members:

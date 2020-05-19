@@ -1,6 +1,5 @@
-========================
-salt.modules.win_license
-========================
+salt.modules.win_license module
+===============================
 
 .. automodule:: salt.modules.win_license
     :members:

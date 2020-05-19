@@ -1,6 +1,5 @@
-=================================
-salt.modules.boto_cognitoidentity
-=================================
+salt.modules.boto_cognitoidentity module
+========================================
 
 .. automodule:: salt.modules.boto_cognitoidentity
     :members:

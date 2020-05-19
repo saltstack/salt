@@ -1,6 +1,5 @@
-==============
-salt.sdb.vault
-==============
+salt.sdb.vault module
+=====================
 
 .. automodule:: salt.sdb.vault
     :members:

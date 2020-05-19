@@ -1,6 +1,5 @@
-====================
-salt.beacons.glxinfo
-====================
+salt.beacons.glxinfo module
+===========================
 
 .. automodule:: salt.beacons.glxinfo
     :members:

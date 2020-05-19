@@ -1,6 +1,5 @@
-==========================
-salt.modules.mac_assistive
-==========================
+salt.modules.mac_assistive module
+=================================
 
 .. automodule:: salt.modules.mac_assistive
     :members:

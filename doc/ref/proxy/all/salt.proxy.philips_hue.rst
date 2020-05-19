@@ -1,6 +1,5 @@
-======================
-salt.proxy.philips_hue
-======================
+salt.proxy.philips_hue module
+=============================
 
 .. automodule:: salt.proxy.philips_hue
     :members:

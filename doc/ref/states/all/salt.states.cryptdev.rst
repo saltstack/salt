@@ -1,6 +1,5 @@
-====================
-salt.states.cryptdev
-====================
+salt.states.cryptdev module
+===========================
 
 .. automodule:: salt.states.cryptdev
     :members:
