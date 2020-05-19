@@ -211,6 +211,7 @@ def update():
             event.fire_event(
                 data, salt.utils.event.tagify(["roots", "update"], prefix="fileserver")
             )
+    return data
 
 
 def file_hash(load, fnd):

@@ -148,3 +148,15 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         self.assertEqual("dynamo.sls", ret1["rel"])
         self.assertIn("top.sls", ret2)
         self.assertIn("dynamo.sls", ret2)
+
+    def test_update_no_change(self):
+        # process all changes that may have happen
+        ret = roots.update()
+        self.assertTrue(ret["changed"])
+
+        # check if no changes took place
+        ret = roots.update()
+        self.assertFalse(ret["changed"])
+        self.assertEqual(ret["files"]["changed"], [])
+        self.assertEqual(ret["files"]["removed"], [])
+        self.assertEqual(ret["files"]["added"], [])
