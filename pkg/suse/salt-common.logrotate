@@ -35,6 +35,7 @@
 }
 
 /var/log/salt/syndic {
+	su salt salt
 	weekly
 	missingok
 	rotate 7
@@ -43,6 +44,7 @@
 }
 
 /var/log/salt/proxy {
+	su salt salt
 	weekly
 	missingok
 	rotate 7
