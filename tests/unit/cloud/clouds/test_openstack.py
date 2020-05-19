@@ -6,16 +6,14 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 from salt.cloud.clouds import openstack
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import patch
+from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
+
+# pylint: disable=confusing-with-statement
 
 
 class MockImage(object):
@@ -135,3 +133,41 @@ class OpenstackTestCase(TestCase, LoaderModuleMockMixin):
         with patch("salt.cloud.clouds.openstack._get_ips", return_value=[]):
             ret = openstack.show_instance(conn.node.name, conn=conn, call="action")
             self.assertEqual(ret["image"], MockImage.name)
+
+    def test_request_instance_should_use_provided_connection_if_not_None(self):
+        fake_conn = MagicMock()
+
+        patch_get_conn = patch("salt.cloud.clouds.openstack.get_conn", autospec=True)
+        patch_utils = patch.dict(
+            openstack.__utils__,
+            {"cloud.check_name": MagicMock(), "dictupdate.update": MagicMock()},
+        )
+        patch_shade = patch.object(
+            openstack, "shade.exc.OpenStackCloudException", Exception, create=True
+        )
+
+        with patch_get_conn as fake_get_conn, patch_utils, patch_shade:
+            openstack.request_instance(
+                vm_={"name": "fnord", "driver": "fnord"}, conn=fake_conn
+            )
+
+            fake_get_conn.assert_not_called()
+
+    def test_request_instance_should_create_conn_if_provided_is_None(self):
+        none_conn = None
+
+        patch_get_conn = patch("salt.cloud.clouds.openstack.get_conn", autospec=True)
+        patch_utils = patch.dict(
+            openstack.__utils__,
+            {"cloud.check_name": MagicMock(), "dictupdate.update": MagicMock()},
+        )
+        patch_shade = patch.object(
+            openstack, "shade.exc.OpenStackCloudException", Exception, create=True
+        )
+
+        with patch_get_conn as fake_get_conn, patch_utils, patch_shade:
+            openstack.request_instance(
+                vm_={"name": "fnord", "driver": "fnord"}, conn=none_conn
+            )
+
+            fake_get_conn.assert_called_once_with()
