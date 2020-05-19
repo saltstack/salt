@@ -2417,7 +2417,6 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 RUNTIME_VARS.TMP, os.path.sep
             ): {
                 "comment": "Empty file",
-                "pchanges": {},
                 "name": "{0}{1}test.txt".format(RUNTIME_VARS.TMP, os.path.sep),
                 "start_time": "18:10:20.341753",
                 "result": True,

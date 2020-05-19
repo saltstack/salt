@@ -2794,7 +2794,6 @@ class TestFileTidied(TestCase):
                     os.path.join("test", "file3"),
                 ]
             },
-            "pchanges": {},
             "result": True,
             "comment": "Removed 3 files or directories from directory {0}".format(name),
         }
@@ -2826,7 +2825,6 @@ class TestFileTidied(TestCase):
                     os.path.join("test", "test2"),
                 ]
             },
-            "pchanges": {},
             "result": True,
             "comment": "Removed 6 files or directories from directory {0}".format(name),
         }
@@ -2837,7 +2835,6 @@ class TestFileTidied(TestCase):
         exp = {
             "name": "test/",
             "changes": {},
-            "pchanges": {},
             "result": False,
             "comment": "Specified file test/ is not an absolute path",
         }
@@ -2845,7 +2842,6 @@ class TestFileTidied(TestCase):
         exp = {
             "name": "/bad-directory-name/",
             "changes": {},
-            "pchanges": {},
             "result": False,
             "comment": "/bad-directory-name/ does not exist or is not a directory.",
         }
