@@ -35,7 +35,9 @@ from salt.ext import six
 
 def __virtual__():
     # Only load if telemetry is available.
-    return "telemetry_alert" if "telemetry.get_alert_config" in __salt__ else False
+    if "telemetry.get_alert_config" in __salt__:
+        return "telemetry_alert"
+    return (False, "telemetry module could not be loaded")
 
 
 def present(

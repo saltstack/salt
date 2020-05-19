@@ -17,7 +17,9 @@ def __virtual__():
     """
     Only make these states available if Zabbix module is available.
     """
-    return "zabbix.mediatype_create" in __salt__
+    if "zabbix.mediatype_create" in __salt__:
+        return True
+    return (False, "zabbix module could not be loaded")
 
 
 def present(name, mediatype, **kwargs):
@@ -65,7 +67,7 @@ def present(name, mediatype, **kwargs):
         }
     }
 
-    # Zabbix API expects script parameters as a string of arguments seperated by newline characters
+    # Zabbix API expects script parameters as a string of arguments separated by newline characters
     if "exec_params" in kwargs:
         if isinstance(kwargs["exec_params"], list):
             kwargs["exec_params"] = "\n".join(kwargs["exec_params"]) + "\n"

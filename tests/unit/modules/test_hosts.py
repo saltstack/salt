@@ -36,10 +36,10 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         """
         with patch(
             "salt.modules.hosts._list_hosts",
-            MagicMock(return_value={"10.10.10.10": ["Salt1", "Salt2"]}),
+            MagicMock(return_value={"10.10.10.10": {"aliases": ["Salt1", "Salt2"]}}),
         ):
             self.assertDictEqual(
-                {"10.10.10.10": ["Salt1", "Salt2"]}, hosts.list_hosts()
+                {"10.10.10.10": {"aliases": ["Salt1", "Salt2"]}}, hosts.list_hosts()
             )
 
     # 'get_ip' function tests: 3
@@ -50,7 +50,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         """
         with patch(
             "salt.modules.hosts._list_hosts",
-            MagicMock(return_value={"10.10.10.10": ["Salt1", "Salt2"]}),
+            MagicMock(return_value={"10.10.10.10": {"aliases": ["Salt1", "Salt2"]}}),
         ):
             self.assertEqual("10.10.10.10", hosts.get_ip("Salt1"))
 
@@ -71,7 +71,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         """
         with patch(
             "salt.modules.hosts._list_hosts",
-            MagicMock(return_value={"10.10.10.10": ["Salt1", "Salt2"]}),
+            MagicMock(return_value={"10.10.10.10": {"aliases": ["Salt1", "Salt2"]}}),
         ):
             self.assertListEqual(["Salt1", "Salt2"], hosts.get_alias("10.10.10.10"))
 
@@ -81,7 +81,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         """
         with patch(
             "salt.modules.hosts._list_hosts",
-            MagicMock(return_value={"10.10.10.10": ["Salt1", "Salt2"]}),
+            MagicMock(return_value={"10.10.10.10": {"aliases": ["Salt1", "Salt2"]}}),
         ):
             self.assertListEqual([], hosts.get_alias("10.10.10.11"))
 
@@ -93,7 +93,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         """
         with patch(
             "salt.modules.hosts._list_hosts",
-            MagicMock(return_value={"10.10.10.10": ["Salt1", "Salt2"]}),
+            MagicMock(return_value={"10.10.10.10": {"aliases": ["Salt1", "Salt2"]}}),
         ):
             self.assertTrue(hosts.has_pair("10.10.10.10", "Salt1"))
 
@@ -290,3 +290,27 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
             mock_opt = MagicMock(return_value=None)
             with patch.dict(hosts.__salt__, {"config.option": mock_opt}):
                 self.assertTrue(hosts.add_host("10.10.10.10", "Salt1"))
+
+    def test_set_comment(self):
+        """
+        Tests return True / False when setting a comment
+        """
+        hosts_file = "/etc/hosts"
+        if salt.utils.platform.is_windows():
+            hosts_file = r"C:\Windows\System32\Drivers\etc\hosts"
+
+        with patch("salt.utils.files.fopen", mock_open()), patch(
+            "salt.modules.hosts.__get_hosts_filename",
+            MagicMock(return_value=hosts_file),
+        ):
+            mock_opt = MagicMock(return_value=None)
+            with patch.dict(hosts.__salt__, {"config.option": mock_opt}):
+                with patch(
+                    "salt.modules.hosts._list_hosts",
+                    MagicMock(
+                        return_value={"10.10.10.10": {"aliases": ["Salt1", "Salt2"]}}
+                    ),
+                ):
+                    self.assertTrue(hosts.set_comment("10.10.10.10", "A comment"))
+
+                    self.assertFalse(hosts.set_comment("10.10.10.11", "A comment"))

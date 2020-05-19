@@ -1,13 +1,10 @@
 # encoding: utf-8
-
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import time
 
-# Import Salt libs
 import salt.config
 import salt.netapi
 from salt.exceptions import EauthAuthenticationError
@@ -16,10 +13,9 @@ from tests.support.helpers import (
     SaveRequestsPostHandler,
     Webserver,
     requires_sshd_server,
+    slowTest,
 )
 from tests.support.mock import patch
-
-# Import Salt Testing libs
 from tests.support.paths import TMP, TMP_CONF_DIR
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
@@ -46,6 +42,7 @@ class NetapiClientTest(TestCase):
     def tearDown(self):
         del self.netapi
 
+    @slowTest
     def test_local(self):
         low = {"client": "local", "tgt": "*", "fun": "test.ping", "timeout": 300}
         low.update(self.eauth_creds)
@@ -58,6 +55,7 @@ class NetapiClientTest(TestCase):
         ret.pop("proxytest", None)
         self.assertEqual(ret, {"minion": True, "sub_minion": True})
 
+    @slowTest
     def test_local_batch(self):
         low = {"client": "local_batch", "tgt": "*", "fun": "test.ping", "timeout": 300}
         low.update(self.eauth_creds)
@@ -95,6 +93,7 @@ class NetapiClientTest(TestCase):
         with self.assertRaises(EauthAuthenticationError) as excinfo:
             ret = self.netapi.run(low)
 
+    @slowTest
     def test_wheel(self):
         low = {"client": "wheel", "fun": "key.list_all"}
         low.update(self.eauth_creds)
@@ -122,6 +121,7 @@ class NetapiClientTest(TestCase):
             )
         )
 
+    @slowTest
     def test_wheel_async(self):
         # Give this test a little breathing room
         time.sleep(3)
@@ -200,6 +200,7 @@ class NetapiSSHClientTest(SSHCase):
         cls.post_webserver.stop()
         del cls.post_webserver
 
+    @slowTest
     def test_ssh(self):
         low = {
             "client": "ssh",
@@ -221,12 +222,14 @@ class NetapiSSHClientTest(SSHCase):
         self.assertEqual(ret["localhost"]["id"], "localhost")
         self.assertEqual(ret["localhost"]["fun"], "test.ping")
 
+    @slowTest
     def test_ssh_unauthenticated(self):
         low = {"client": "ssh", "tgt": "localhost", "fun": "test.ping"}
 
         with self.assertRaises(EauthAuthenticationError) as excinfo:
             ret = self.netapi.run(low)
 
+    @slowTest
     def test_ssh_unauthenticated_raw_shell_curl(self):
 
         fun = "-o ProxyCommand curl {0}".format(self.post_web_root)
@@ -239,6 +242,7 @@ class NetapiSSHClientTest(SSHCase):
         self.assertEqual(self.post_web_handler.received_requests, [])
         self.assertEqual(ret, None)
 
+    @slowTest
     def test_ssh_unauthenticated_raw_shell_touch(self):
 
         badfile = os.path.join(TMP, "badfile.txt")
@@ -252,6 +256,7 @@ class NetapiSSHClientTest(SSHCase):
         self.assertEqual(ret, None)
         self.assertFalse(os.path.exists("badfile.txt"))
 
+    @slowTest
     def test_ssh_authenticated_raw_shell_disabled(self):
 
         badfile = os.path.join(TMP, "badfile.txt")

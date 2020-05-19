@@ -16,7 +16,7 @@ def __virtual__():
     """
     if "influxdb.db_exists" in __salt__:
         return "influxdb_database"
-    return False
+    return (False, "influxdb module could not be loaded")
 
 
 def present(name, **client_args):

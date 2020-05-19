@@ -237,7 +237,7 @@ def send(name, *args, **kwargs):
     Remaining args and kwargs will be passed on to the function to run.
 
     :rtype: bool
-    :return: Whether executing the function and storing the information was succesful.
+    :return: Whether executing the function and storing the information was successful.
 
     .. versionchanged:: 3000
 
@@ -571,7 +571,7 @@ def valid():
         if function_name:
             mine_data[function_alias] = {
                 function_name: function_args
-                + [{key, value} for key, value in six.iteritems(function_kwargs)]
+                + [{key: value} for key, value in six.iteritems(function_kwargs)]
             }
         else:
             mine_data[function_alias] = function_data

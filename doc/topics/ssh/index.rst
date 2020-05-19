@@ -311,3 +311,13 @@ It is recommended that one modify this command a bit by removing the ``-l quiet`
 .. toctree::
 
     roster
+    ssh_ext_alternatives
+
+Different Python Versions
+=========================
+The Sodium release removed python 2 support in Salt. Even though this python 2 support
+is being dropped we have provided multiple ways to work around this with Salt-SSH. You
+can use the following options:
+
+  * :ref:`ssh_pre_flight <ssh_pre_flight>`
+  * :ref:`SSH ext alternatives <ssh-ext-alternatives>`

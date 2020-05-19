@@ -526,7 +526,7 @@ def update_one(
     objects = six.text_type(objects)
     objs = re.split(r"}\s+{", objects)
 
-    if len(objs) is not 2:
+    if len(objs) != 2:
         return (
             "Your request does not contain a valid "
             + '\'{_"id": "my_id"} {"my_doc": "my_val"}\''
@@ -551,7 +551,7 @@ def update_one(
     test_f = find(collection, objs[0], user, password, host, port, database, authdb)
     if not isinstance(test_f, list):
         return "The find result is not well formatted. An error appears; cannot update."
-    elif len(test_f) < 1:
+    elif not test_f:
         return "Did not find any result. You should try an insert before."
     elif len(test_f) > 1:
         return "Too many results. Please try to be more specific."

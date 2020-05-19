@@ -611,7 +611,7 @@ def hdparms(disks, args=None):
         disk_data = {}
         for line in _hdparm("-{0} {1}".format(args, disk), False).splitlines():
             line = line.strip()
-            if len(line) == 0 or line == disk + ":":
+            if not line or line == disk + ":":
                 continue
 
             if ":" in line:
@@ -647,7 +647,7 @@ def hdparms(disks, args=None):
                             rvals.append(val)
                 if valdict:
                     rvals.append(valdict)
-                if len(rvals) == 0:
+                if not rvals:
                     continue
                 elif len(rvals) == 1:
                     rvals = rvals[0]
@@ -685,7 +685,7 @@ def hpa(disks, size=None):
 
     hpa_data = {}
     for disk, data in hdparms(disks, "N").items():
-        visible, total, status = data.values()[0]
+        visible, total, status = next(iter(data.values()))
         if visible == total or "disabled" in status:
             hpa_data[disk] = {"total": total}
         else:

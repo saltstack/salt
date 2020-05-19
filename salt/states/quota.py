@@ -20,7 +20,9 @@ def __virtual__():
     """
     Only load if the quota module is available in __salt__
     """
-    return "quota" if "quota.report" in __salt__ else False
+    if "quota.report" in __salt__:
+        return "quota"
+    return (False, "quota module could not be loaded")
 
 
 def mode(name, mode, quotatype):

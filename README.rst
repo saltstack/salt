@@ -78,3 +78,10 @@ services`_ offerings.
 .. _PyCryptodome: https://pypi.org/project/pycryptodome/
 .. _Issue #52674: https://github.com/saltstack/salt/issues/52674
 .. _Issue #54115: https://github.com/saltstack/salt/issues/54115
+
+License
+=======
+
+SaltStack is licensed by the SaltStack Team under the Apache 2.0 license. Please see the
+LICENSE file for the full text of the Apache license, followed by a full summary
+of the licensing used by external modules.

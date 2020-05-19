@@ -37,7 +37,9 @@ def __virtual__():
     """
     Only load if the kmod module is available in __salt__
     """
-    return "kmod.available" in __salt__
+    if "kmod.available" in __salt__:
+        return True
+    return (False, "kmod module could not be loaded")
 
 
 def _append_comment(ret, comment):

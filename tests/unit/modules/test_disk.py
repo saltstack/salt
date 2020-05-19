@@ -188,6 +188,16 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         ), patch("salt.modules.disk.blkid", MagicMock(return_value=STUB_DISK_BLKID)):
             self.assertDictEqual(STUB_DISK_BLKID, disk.blkid())
 
+    @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
+    @skipIf(salt.utils.platform.is_darwin(), "Skip on Darwin")
+    def test_blkid_token(self):
+        run_stdout_mock = MagicMock(return_value={"retcode": 1})
+        with patch.dict(disk.__salt__, {"cmd.run_all": run_stdout_mock}):
+            disk.blkid(token="TYPE=ext4")
+            run_stdout_mock.assert_called_with(
+                ["blkid", "-t", "TYPE=ext4"], python_shell=False
+            )
+
     def test_dump(self):
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
         with patch.dict(disk.__salt__, {"cmd.run_all": mock}):

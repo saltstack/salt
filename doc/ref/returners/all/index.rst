@@ -10,6 +10,7 @@ returner modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    appoptics_return
     carbon_return
     cassandra_cql_return
     cassandra_return

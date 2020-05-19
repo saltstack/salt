@@ -3,7 +3,6 @@
     :codeauthor: Gareth J. Greenaway <gareth@saltstack.com>
 """
 
-# Import python libs
 from __future__ import absolute_import
 
 import copy
@@ -11,13 +10,10 @@ import logging
 
 import salt.ext.tornado
 import salt.ext.tornado.testing
-
-# Import salt libs
 import salt.minion
 import salt.syspaths
+from tests.support.helpers import slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
@@ -25,6 +21,7 @@ __opts__ = {}
 
 
 class ProxyMinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
+    @slowTest
     def test_post_master_init_metaproxy_called(self):
         """
         Tests that when the _post_master_ini function is called, _metaproxy_call is also called.
@@ -42,6 +39,7 @@ class ProxyMinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         finally:
             proxy_minion.destroy()
 
+    @slowTest
     def test_handle_decoded_payload_metaproxy_called(self):
         """
         Tests that when the _handle_decoded_payload function is called, _metaproxy_call is also called.
@@ -62,6 +60,7 @@ class ProxyMinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         finally:
             proxy_minion.destroy()
 
+    @slowTest
     def test_handle_payload_metaproxy_called(self):
         """
         Tests that when the _handle_payload function is called, _metaproxy_call is also called.

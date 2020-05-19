@@ -139,6 +139,10 @@ DEBUG="{{DEBUG}}"
 if [ -n "$DEBUG" ]
     then set -x
 fi
+SET_PATH="{{SET_PATH}}"
+if [ -n "$SET_PATH" ]
+    then export PATH={{SET_PATH}}
+fi
 SUDO=""
 if [ -n "{{SUDO}}" ]
     then SUDO="sudo "
@@ -907,6 +911,7 @@ class Single(object):
 
         self.fun, self.args, self.kwargs = self.__arg_comps()
         self.id = id_
+        self.set_path = kwargs.get("set_path", "")
 
         self.mods = mods if isinstance(mods, dict) else {}
         args = {
@@ -1311,6 +1316,7 @@ ARGS = {arguments}\n'''.format(
                 SUDO_USER=sudo_user,
                 SSH_PY_CODE=py_code_enc,
                 HOST_PY_MAJOR=sys.version_info[0],
+                SET_PATH=self.set_path,
             )
         else:
             cmd = saltwinshell.gen_shim(py_code_enc)

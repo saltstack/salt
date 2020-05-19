@@ -8,6 +8,7 @@ from __future__ import absolute_import, unicode_literals
 import ctypes
 import logging
 import os
+import time
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
@@ -60,6 +61,29 @@ def split_username(username):
     if "\\" in username:
         domain, username = username.split("\\")
     return username, domain
+
+
+def create_env(user_token, inherit, timeout=1):
+    """
+    CreateEnvironmentBlock might fail when we close a login session and then
+    try to re-open one very quickly. Run the method multiple times to work
+    around the async nature of logoffs.
+    """
+    start = time.time()
+    env = None
+    exc = None
+    while True:
+        try:
+            env = win32profile.CreateEnvironmentBlock(user_token, False)
+        except pywintypes.error as exc:
+            pass
+        else:
+            break
+        if time.time() - start > timeout:
+            break
+    if env is not None:
+        return env
+    raise exc
 
 
 def runas(cmdLine, username, password=None, cwd=None):
@@ -167,7 +191,7 @@ def runas(cmdLine, username, password=None, cwd=None):
     )
 
     # Create the environment for the user
-    env = win32profile.CreateEnvironmentBlock(user_token, False)
+    env = create_env(user_token, False)
 
     hProcess = None
     try:
@@ -197,7 +221,7 @@ def runas(cmdLine, username, password=None, cwd=None):
         # Resume the process
         psutil.Process(dwProcessId).resume()
 
-        # Wait for the process to exit and get it's return code.
+        # Wait for the process to exit and get its return code.
         if (
             win32event.WaitForSingleObject(hProcess, win32event.INFINITE)
             == win32con.WAIT_OBJECT_0

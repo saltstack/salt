@@ -59,6 +59,7 @@ from salt.exceptions import FileserverConfigError
 
 PER_REMOTE_OVERRIDES = (
     "base",
+    "fallback",
     "mountpoint",
     "root",
     "ssl_verify",

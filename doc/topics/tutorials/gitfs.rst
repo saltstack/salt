@@ -93,9 +93,9 @@ releases pygit2_ 0.20.3 and libgit2_ 0.20.0 is the recommended combination.
 .. _changelog: https://github.com/libgit2/pygit2#changelog
 .. _saltstack-issue-tracker: https://github.com/saltstack/salt/issues
 .. _pygit2-install-instructions: http://www.pygit2.org/install.html
-.. _libgit2: https://libgit2.github.com/
-.. _libssh2: http://www.libssh2.org/
-.. _python-cffi: https://pypi.python.org/pypi/cffi
+.. _libgit2: https://libgit2.org/
+.. _libssh2: https://www.libssh2.org/
+.. _python-cffi: https://pypi.org/project/cffi
 .. _libffi: http://sourceware.org/libffi/
 
 
@@ -486,7 +486,7 @@ be useful to fetch custom refs (such as those created for `GitHub pull
 requests`__). To change the refspecs GitFS fetches, use the
 :conf_master:`gitfs_refspecs` config option:
 
-.. __: https://help.github.com/articles/checking-out-pull-requests-locally/
+.. __: https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/checking-out-pull-requests-locally
 
 .. code-block:: yaml
 
@@ -532,7 +532,7 @@ would only fetch branches and tags (the default).
 Global Remotes
 ==============
 
-.. versionadded:: 2018.3.0
+.. versionadded:: 2018.3.0 for all_saltenvs, sodium for fallback
 
 The ``all_saltenvs`` per-remote configuration parameter overrides the logic
 Salt uses to map branches/tags to fileserver environments (i.e. saltenvs). This
@@ -543,6 +543,8 @@ allows a single branch/tag to appear in *all* GitFS saltenvs.
    configured using ``all_saltenvs`` will *not* show up in a fileserver
    environment defined via some other fileserver backend (e.g.
    :conf_master:`file_roots`).
+
+The ``fallback`` global or per-remote configuration can also be used.
 
 This is very useful in particular when working with :ref:`salt formulas
 <conventions-formula>`. Prior to the addition of this feature, it was necessary
@@ -559,6 +561,15 @@ single branch.
     gitfs_remotes:
       - http://foo.com/quux.git:
         - all_saltenvs: anything
+
+If you want to also test working branches of the formula repository, use
+``fallback``:
+
+.. code-block:: yaml
+
+    gitfs_remotes:
+      - http://foo.com/quux.git:
+        - fallback: anything
 
 .. _gitfs-update-intervals:
 
@@ -1144,7 +1155,7 @@ anything, so long as the usage is consistent.
 The ``root`` user name in the hook script and sudo policy should be changed to
 match the user under which the minion is running.
 
-.. _`post-receive hook`: http://www.git-scm.com/book/en/Customizing-Git-Git-Hooks#Server-Side-Hooks
+.. _`post-receive hook`: https://www.git-scm.com/book/en/v2/Customizing-Git-Git-Hooks#Server-Side-Hooks
 
 .. _git-as-ext_pillar:
 

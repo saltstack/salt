@@ -1,20 +1,16 @@
 # -*- coding: utf-8 -*-
-
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import random
 import string
 
-# Import Salt libs
 import salt.config
 import salt.loader
 import salt.states.boto_cognitoidentity as boto_cognitoidentity
 from salt.ext.six.moves import range
 from salt.utils.versions import LooseVersion
-
-# Import Salt Testing libs
+from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -349,6 +345,7 @@ class BotoCognitoIdentityTestCase(
         self.assertTrue(self.conn.create_identity_pool.call_count == 0)
         self.assertTrue(self.conn.set_identity_pool_roles.call_count == 0)
 
+    @slowTest
     def test_present_when_failing_to_set_identity_pool_roles(self):
         """
         Tests present on a unique instance of identity pool having the matching
@@ -393,6 +390,7 @@ class BotoCognitoIdentityTestCase(
                 self.conn.set_identity_pool_roles.call_args == expected_call_args
             )
 
+    @slowTest
     def test_present_when_pool_name_does_not_exist(self):
         """
         Tests the successful case of creating a new instance, and updating its
@@ -444,6 +442,7 @@ class BotoCognitoIdentityTestCase(
             )
             self.assertTrue(self.conn.update_identity_pool.call_count == 0)
 
+    @slowTest
     def test_present_when_pool_name_exists(self):
         """
         Tests the successful case of updating a single instance with matching

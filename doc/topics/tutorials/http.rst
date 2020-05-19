@@ -188,7 +188,7 @@ password may be passed in as ``username`` and ``password``, respectively.
     salt.utils.http.query(
         'http://example.com',
         username='larry',
-        password=`5700g3543v4r`,
+        password='5700g3543v4r',
     )
 
 Cookies and Sessions

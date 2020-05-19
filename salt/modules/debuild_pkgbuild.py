@@ -513,7 +513,7 @@ def build(
         dscs = make_src_pkg(dsc_dir, spec, sources, env, saltenv, runas)
     except Exception as exc:  # pylint: disable=broad-except
         shutil.rmtree(dsc_dir)
-        log.error("Failed to make src package, exception '{0}'".format(exc))
+        log.error("Failed to make src package, exception '%s'", exc)
         return ret
 
     root_user = "root"
@@ -586,7 +586,7 @@ def build(
                         ret.setdefault("Packages", []).append(bdist)
 
             except Exception as exc:  # pylint: disable=broad-except
-                log.error("Error building from '{0}', execption '{1}'".format(dsc, exc))
+                log.error("Error building from '%s', execption '%s'", dsc, exc)
 
     # remove any Packages file created for local dependency processing
     for pkgzfile in os.listdir(dest_dir):

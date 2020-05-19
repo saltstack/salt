@@ -14,7 +14,7 @@ are already installed, but not Salted.
 
 Use of this module requires some configuration in cloud profile and provider
 files as described in the
-:ref:`Gettting Started with Saltify <getting-started-with-saltify>` documentation.
+:ref:`Getting Started with Saltify <getting-started-with-saltify>` documentation.
 """
 
 # Import python libs
@@ -267,6 +267,10 @@ def create(vm_):
     deploy_config = config.get_cloud_config_value(
         "deploy", vm_, __opts__, default=False
     )
+
+    # If ssh_host is not set, default to the minion name
+    if not config.get_cloud_config_value("ssh_host", vm_, __opts__, default=""):
+        vm_["ssh_host"] = vm_["name"]
 
     if deploy_config:
         wol_mac = config.get_cloud_config_value(

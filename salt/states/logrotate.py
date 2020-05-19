@@ -27,7 +27,7 @@ def __virtual__():
     """
     if "logrotate.show_conf" in __salt__:
         return __virtualname__
-    return False
+    return (False, "logrotate module could not be loaded")
 
 
 def _convert_if_int(value):
