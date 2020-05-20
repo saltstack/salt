@@ -61,7 +61,6 @@ def __virtual__():
 def _get_connection(**kwargs):
     """
     Getting the database connection
-
     """
     connection_args = {}
     for arg in ("server", "port", "user", "password", "database", "as_dict"):
@@ -71,8 +70,8 @@ def _get_connection(**kwargs):
             connection_args[arg] = __salt__["config.option"](
                 "mssql." + arg, _DEFAULTS.get(arg, None)
             )
+    connection_args['autocommit'] = True
     conn = pymssql.connect(**connection_args)
-    conn.autocommit(True)
     return conn
 
 
@@ -109,14 +108,10 @@ def _to_rawstrings(text):
         str: an escaped string
     """
     s = ""
-    if six.PY2:
-        if isinstance(text, six.string_types):
-            s = text.encode(encoding="string-escape")
-        elif isinstance(text, six.text_type):
-            s = text.encode(encoding="unicode-escape")
-    elif six.PY3:
-        if isinstance(text, six.text_type):
-            s = text.encode(encoding="unicode-escape")
+    if isinstance(text, six.text_type):
+        s = text.encode(encoding="unicode-escape")
+    elif isinstance(text, six.string_types):
+        s = text.encode(encoding="string-escape")
     return s
 
 
@@ -133,7 +128,7 @@ def quote_identifier(identifier):
 
     .. code-block:: bash
 
-        salt '*' mssql.quote_identifier 'foo'bar'
+        salt '*' mssql.quote_identifier "foo'bar"
     """
     return "[" + identifier.replace("[", "").replace("]", "") + "]"
 
@@ -254,7 +249,7 @@ def db_create(database, containment="NONE", new_database_options=None, **kwargs)
     finally:
         if conn:
             conn.autocommit(False)
-            conn.close()
+            _close_connection(connect=conn)
     return True
 
 
@@ -287,7 +282,7 @@ def db_remove(database_name, **kwargs):
             )
             cur.execute("DROP DATABASE {0}".format(database_name))
             conn.autocommit(False)
-            conn.close()
+            _close_connection(cursor=cur, connect=conn)
             return True
         else:
             return False
@@ -360,7 +355,7 @@ def role_create(role, owner=None, grants=None, **kwargs):
     finally:
         if conn:
             conn.autocommit(False)
-            conn.close()
+            _close_connection(connect=conn)
     return True
 
 
@@ -381,7 +376,7 @@ def role_remove(role, **kwargs):
         cur = conn.cursor()
         cur.execute("DROP ROLE {0}".format(role))
         conn.autocommit(False)
-        conn.close()
+        _close_connection(cursor=cur, connect=conn)
         return True
     except Exception as e:  # pylint: disable=broad-except
         return "Could not remove the role: {0}".format(e)
@@ -484,7 +479,7 @@ def login_create(
     finally:
         if conn:
             conn.autocommit(False)
-            conn.close()
+            _close_connection(connect=conn)
     return True
 
 
@@ -504,7 +499,7 @@ def login_remove(login, **kwargs):
         cur = conn.cursor()
         cur.execute("DROP LOGIN [{0}]".format(login))
         conn.autocommit(False)
-        conn.close()
+        _close_connection(cursor=cur, connect=conn)
         return True
     except Exception as e:  # pylint: disable=broad-except
         return "Could not remove the login: {0}".format(e)
@@ -611,7 +606,7 @@ def user_create(
     finally:
         if conn:
             conn.autocommit(False)
-            conn.close()
+            _close_connection(connect=conn)
     return True
 
 
@@ -635,7 +630,7 @@ def user_remove(username, **kwargs):
         cur = conn.cursor()
         cur.execute("DROP USER {0}".format(username))
         conn.autocommit(False)
-        conn.close()
+        _close_connection(cursor=cur, connect=conn)
         return True
     except Exception as e:  # pylint: disable=broad-except
         return "Could not remove the user: {0}".format(e)
