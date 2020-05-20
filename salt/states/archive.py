@@ -430,14 +430,25 @@ def extracted(
         .. versionadded:: 2016.3.0
 
     skip_files_list_verify : False
-        Set this to ``True`` if archive should be extracted if source_hash has
+        Set this to ``True`` if archive should be extracted if ``source_hash`` has
         changed but only checksums of the archive will be checked to determine if
         the extraction is required.
+
+        It will try to find a local cache of the ``source`` and check its hash agains
+        the ``source_hash``. If there is no local cache available, for example if you
+        set the ``keep_source`` to ``False``,  it will try to find a cached source hash
+        file in the Minion archives cache directory.
 
         .. note::
             The current limitation of this logic is that you have to set
             minions ``hash_type`` config option to the same one that you're going
             to pass via ``source_hash`` argument.
+
+        .. warning::
+            With this argument set to ``True`` Salt will only check for the ``source_hash``
+            agains the local hash of the ``sourse``. So if you, for example, remove extracted
+            files without clearing the Salt Minion cache next time you execute the state Salt
+            will not notice that extraction is required if the hashes are still match.
 
         .. versionadded:: 3000
 
@@ -981,6 +992,7 @@ def extracted(
         else:
             cached = __salt__["cp.is_cached"](source_match, saltenv=__env__)
 
+        # If file was already cached we can just re-generate its hash.
         if cached:
             existing_cached_source_sum = _read_cached_checksum(cached)
             log.debug(
@@ -988,17 +1000,29 @@ def extracted(
                 existing_cached_source_sum,
                 source_sum,
             )
-            if source_sum and existing_cached_source_sum:
-                if existing_cached_source_sum["hsum"] == source_sum["hsum"]:
-                    ret["result"] = None if __opts__["test"] else True
-                    ret["comment"] = (
-                        "Archive {0} existing source sum is the same as the "
-                        "expected one and skip_files_list_verify argument was set "
-                        "to True. Extraction is not needed".format(
-                            salt.utils.url.redact_http_basic_auth(source_match)
-                        )
+
+        # If file was not cached we still could have a pre-existing hash file which would be
+        # generated if update_source was set to True.
+        else:
+            parsed = _urlparse(source_match)
+            # This path would be generated if this file would be cached by file.cached state
+            # We have to mimic it due to questionable logic in the _checksum_file_path function
+            expected_cached_path = salt.utils.path.join(
+                __opts__["cachedir"], "extrn_files", __env__, parsed.netloc, parsed.path
+            )
+            existing_cached_source_sum = _read_cached_checksum(expected_cached_path)
+
+        if source_sum and existing_cached_source_sum:
+            if existing_cached_source_sum["hsum"] == source_sum["hsum"]:
+                ret["result"] = None if __opts__["test"] else True
+                ret["comment"] = (
+                    "Archive {0} existing source sum is the same as the "
+                    "expected one and skip_files_list_verify argument was set "
+                    "to True. Extraction is not needed".format(
+                        salt.utils.url.redact_http_basic_auth(source_match)
                     )
-                    return ret
+                )
+                return ret
         else:
             log.debug("There is no cached source %s available on minion", source_match)
 

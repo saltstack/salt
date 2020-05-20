@@ -39,7 +39,7 @@ class PkgTestCase(TestCase, LoaderModuleMockMixin):
             }
         )
         upgrade = MagicMock(return_value=self.pkgs)
-        version = MagicMock(side_effect=lambda pkgname: self.pkgs[pkgname]["old"])
+        version = MagicMock(side_effect=lambda pkgname, **_: self.pkgs[pkgname]["old"])
 
         with patch.dict(
             pkg.__salt__,
@@ -52,7 +52,6 @@ class PkgTestCase(TestCase, LoaderModuleMockMixin):
 
             # Run state with test=false
             with patch.dict(pkg.__opts__, {"test": False}):
-
                 ret = pkg.uptodate("dummy", test=True)
                 self.assertTrue(ret["result"])
                 self.assertDictEqual(ret["changes"], self.pkgs)
@@ -80,7 +79,7 @@ class PkgTestCase(TestCase, LoaderModuleMockMixin):
             }
         )
         upgrade = MagicMock(return_value=self.pkgs)
-        version = MagicMock(side_effect=lambda pkgname: pkgs[pkgname]["old"])
+        version = MagicMock(side_effect=lambda pkgname, **_: pkgs[pkgname]["old"])
 
         with patch.dict(
             pkg.__salt__,
@@ -181,7 +180,7 @@ class PkgTestCase(TestCase, LoaderModuleMockMixin):
             }
         )
         upgrade = MagicMock(return_value={})
-        version = MagicMock(side_effect=lambda pkgname: pkgs[pkgname]["old"])
+        version = MagicMock(side_effect=lambda pkgname, **_: pkgs[pkgname]["old"])
 
         with patch.dict(
             pkg.__salt__,

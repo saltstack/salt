@@ -127,6 +127,7 @@ execution modules
     debian_service
     debuild_pkgbuild
     defaults
+    devinfo
     devmap
     dig
     disk
@@ -232,6 +233,7 @@ execution modules
     keystoneng
     keystore
     kmod
+    kubeadm
     kubernetesmod
     launchctl_service
     layman
