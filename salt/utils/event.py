@@ -1248,7 +1248,7 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
         else:
             # Only a single event returner
             log.debug(
-                "Calling event returner %s, only one " "configured.",
+                "Calling event returner %s, only one configured.",
                 self.opts["event_return"],
             )
             event_return = "{0}.event_return".format(self.opts["event_return"])
