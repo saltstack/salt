@@ -127,7 +127,7 @@ class RSAX931Test(TestCase):
     @skipIf(not salt.utils.platform.is_windows(), "Host OS is not Windows.")
     def test_find_libcrypto_win32(self):
         """
-        Test find_libcrypto on Windows hosts.
+        Test _find_libcrypto on Windows hosts.
         """
         lib_path = _find_libcrypto()
         self.assertEqual(lib_path, "libeay32")
@@ -138,7 +138,7 @@ class RSAX931Test(TestCase):
     )
     def test_find_libcrypto_smartos(self):
         """
-        Test find_libcrypto on a SmartOS host.
+        Test _find_libcrypto on a SmartOS host.
         """
         lib_path = _find_libcrypto()
         self.assertTrue(
@@ -150,7 +150,7 @@ class RSAX931Test(TestCase):
     @skipIf(not salt.utils.platform.is_sunos(), "Host OS is not Solaris-like.")
     def test_find_libcrypto_sunos(self):
         """
-        Test find_libcrypto on a Solaris-like host.
+        Test _find_libcrypto on a Solaris-like host.
         """
         lib_path = _find_libcrypto()
         passed = False
@@ -163,7 +163,7 @@ class RSAX931Test(TestCase):
     @skipIf(not salt.utils.platform.is_aix(), "Host OS is not IBM AIX.")
     def test_find_libcrypto_aix(self):
         """
-        Test find_libcrypto on an IBM AIX host.
+        Test _find_libcrypto on an IBM AIX host.
         """
         lib_path = _find_libcrypto()
         if os.path.isdir("/opt/salt/lib"):
@@ -176,7 +176,7 @@ class RSAX931Test(TestCase):
     @skipIf(not salt.utils.platform.is_darwin(), "Host OS is not Darwin-like or macOS.")
     def test_find_libcrypto_darwin(self):
         """
-        Test find_libcrypto on a Darwin-like or macOS host.
+        Test _find_libcrypto on a Darwin-like or macOS host.
         """
         lib_path = _find_libcrypto()
         passed = False
@@ -195,7 +195,7 @@ class RSAX931Test(TestCase):
     @patch.object(sys, "platform", "unknown")
     def test_find_libcrypto_unsupported(self):
         """
-        Ensure that find_libcrypto works correctly on an unsupported host OS.
+        Ensure that _find_libcrypto works correctly on an unsupported host OS.
         """
         with self.assertRaises(OSError):
             _find_libcrypto()
