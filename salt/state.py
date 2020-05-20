@@ -2838,6 +2838,7 @@ class State(object):
         Check if a chunk has any requires, execute the requires and then
         the chunk
         """
+        log.error("{}\n\n{}\n\n{}".format(low, running, chunks))
         low = self._mod_aggregate(low, running, chunks)
         self._mod_init(low)
         tag = _gen_tag(low)
@@ -2866,6 +2867,7 @@ class State(object):
                 lost[requisite] = []
                 if requisite not in low:
                     continue
+                log.error("{}".format(requisite))
                 for req in low[requisite]:
                     if isinstance(req, six.string_types):
                         req = {"id": req}
@@ -2902,6 +2904,10 @@ class State(object):
                 or lost["prereq"]
                 or lost["onfail"]
                 or lost["onchanges"]
+                or lost["require_any"]
+                or lost["watch_any"]
+                or lost["onfail_any"]
+                or lost["onchanges_any"]
                 or lost.get("prerequired")
             ):
                 comment = "The following requisites were not found:\n"
@@ -2963,6 +2969,7 @@ class State(object):
                         running["__FAILHARD__"] = True
                         return running
             if low.get("__prereq__"):
+                log.error("{}#{}#{}".format(chunk, running, chunks))
                 status, reqs = self.check_requisite(low, running, chunks)
                 self.pre[tag] = self.call(low, chunks, running)
                 if not self.pre[tag]["changes"] and status == "change":
