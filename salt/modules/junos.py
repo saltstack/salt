@@ -18,7 +18,6 @@ Refer to :mod:`junos <salt.proxy.junos>` for information on connecting to junos 
 from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
-import glob
 import json
 import logging
 import os
@@ -31,7 +30,6 @@ import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
 import yaml
-from salt.exceptions import MinionError
 from salt.ext import six
 import tempfile
 
@@ -80,6 +78,7 @@ class HandleFileCopy:
     master to proxy
 
     """
+
     def __init__(self, path, **kwargs):
         self._file_path = path
         self._cached_folder = None
@@ -97,22 +96,29 @@ class HandleFileCopy:
                 if master_hash.get("hsum") == proxy_hash:
                     if self._kwargs:
                         self._cached_file = salt.utils.files.mkstemp()
-                        with open(self._cached_file, "w") as fp:
+                        with salt.utils.files.fopen(self._cached_file, "w") as fp:
                             template_string = __salt__["slsutil.renderer"](
-                                path=local_cache_path, default_renderer="jinja",
-                                **self._kwargs)
+                                path=local_cache_path,
+                                default_renderer="jinja",
+                                **self._kwargs
+                            )
                             fp.write(template_string)
                         return self._cached_file
                     else:
                         return local_cache_path
                 # continue for else part
             self._cached_folder = tempfile.mkdtemp()
-            log.debug("Caching file {0} at {1}".format(self._file_path, self._cached_folder))
+            log.debug(
+                "Caching file {0} at {1}".format(self._file_path, self._cached_folder)
+            )
             if self._kwargs:
-                self._cached_file = __salt__["cp.get_template"](self._file_path, self._cached_folder,
-                                                          **self._kwargs)
+                self._cached_file = __salt__["cp.get_template"](
+                    self._file_path, self._cached_folder, **self._kwargs
+                )
             else:
-                self._cached_file = __salt__["cp.get_file"](self._file_path, self._cached_folder)
+                self._cached_file = __salt__["cp.get_file"](
+                    self._file_path, self._cached_folder
+                )
             if self._cached_file != "":
                 return self._cached_file
         else:
@@ -120,10 +126,12 @@ class HandleFileCopy:
             if __salt__["file.file_exists"](self._file_path):
                 if self._kwargs:
                     self._cached_file = salt.utils.files.mkstemp()
-                    with open(self._cached_file, "w") as fp:
+                    with salt.utils.files.fopen(self._cached_file, "w") as fp:
                         template_string = __salt__["slsutil.renderer"](
-                            path=self._file_path, default_renderer="jinja",
-                            **self._kwargs)
+                            path=self._file_path,
+                            default_renderer="jinja",
+                            **self._kwargs
+                        )
                         fp.write(template_string)
                     return self._cached_file
                 else:
@@ -994,9 +1002,9 @@ def install_config(path=None, **kwargs):
                 try:
                     cu.load(**op)
                 except Exception as exception:  # pylint: disable=broad-except
-                    ret["message"] = 'Could not load configuration due to : "{0}"'.format(
-                        exception
-                    )
+                    ret[
+                        "message"
+                    ] = 'Could not load configuration due to : "{0}"'.format(exception)
                     ret["format"] = op["format"]
                     ret["out"] = False
                     return ret
@@ -1062,7 +1070,9 @@ def install_config(path=None, **kwargs):
                         with salt.utils.files.fopen(write_diff, "w") as fp:
                             fp.write(salt.utils.stringutils.to_str(config_diff))
                 except Exception as exception:  # pylint: disable=broad-except
-                    ret["message"] = 'Could not write into diffs_file due to: "{0}"'.format(
+                    ret[
+                        "message"
+                    ] = 'Could not write into diffs_file due to: "{0}"'.format(
                         exception
                     )
                     ret["out"] = False
@@ -1212,7 +1222,9 @@ def install_os(path=None, **kwargs):
                 ret["out"] = False
                 return ret
             try:
-                install_status = conn.sw.install(image_path, progress=True, timeout=timeout, **op)
+                install_status = conn.sw.install(
+                    image_path, progress=True, timeout=timeout, **op
+                )
             except Exception as exception:  # pylint: disable=broad-except
                 ret["message"] = 'Installation failed due to: "{0}"'.format(exception)
                 ret["out"] = False
@@ -1282,7 +1294,9 @@ def file_copy(src, dest):
         try:
             with SCP(conn, progress=True) as scp:
                 scp.put(fp, dest)
-            ret["message"] = "Successfully copied file from {0} to {1}".format(src, dest)
+            ret["message"] = "Successfully copied file from {0} to {1}".format(
+                src, dest
+            )
         except Exception as exception:  # pylint: disable=broad-except
             ret["message"] = 'Could not copy file : "{0}"'.format(exception)
             ret["out"] = False
@@ -1475,7 +1489,9 @@ def load(path=None, **kwargs):
             conn.cu.load(**op)
             ret["message"] = "Successfully loaded the configuration."
         except Exception as exception:  # pylint: disable=broad-except
-            ret["message"] = 'Could not load configuration due to : "{0}"'.format(exception)
+            ret["message"] = 'Could not load configuration due to : "{0}"'.format(
+                exception
+            )
             ret["format"] = op["format"]
             ret["out"] = False
             return ret
@@ -1581,12 +1597,16 @@ def get_table(
 
         with HandleFileCopy(file_path) as file_loc:
             if file_loc is None:
-                ret["message"] = "Given table file {0} cannot be located".format(table_file)
+                ret["message"] = "Given table file {0} cannot be located".format(
+                    table_file
+                )
                 ret["out"] = False
                 return ret
             try:
                 with salt.utils.files.fopen(file_loc) as fp:
-                    ret["table"] = yaml.load(fp.read(), Loader=yamlordereddictloader.Loader)
+                    ret["table"] = yaml.load(
+                        fp.read(), Loader=yamlordereddictloader.Loader
+                    )
                     globals().update(FactoryLoader().load(ret["table"]))
             except IOError as err:
                 ret[
@@ -1610,7 +1630,9 @@ def get_table(
             except ConnectClosedError:
                 ret[
                     "message"
-                ] = "Got ConnectClosedError exception. Connection lost with {}".format(conn)
+                ] = "Got ConnectClosedError exception. Connection lost with {}".format(
+                    conn
+                )
                 ret["out"] = False
                 return ret
             ret["reply"] = json.loads(data.to_json())
