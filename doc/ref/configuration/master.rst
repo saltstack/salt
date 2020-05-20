@@ -1026,7 +1026,7 @@ The TCP port for ``mworkers`` to connect to on the master.
 .. conf_master:: auth_events
 
 ``auth_events``
---------------------
+---------------
 
 .. versionadded:: 2017.7.3
 
@@ -1091,7 +1091,7 @@ Should be greater than overall download time.
     http_request_timeout: 3600
 
 ``use_yamlloader_old``
-------------------------
+----------------------
 
 .. versionadded:: 2019.2.1
 
@@ -1108,9 +1108,9 @@ See the :ref:`2019.2.1 release notes <release-2019-2-1>` for more details.
 .. conf_master:: req_server_niceness
 
 ``req_server_niceness``
-------------------------
+-----------------------
 
-.. versionadded:: neon
+.. versionadded:: Sodium
 
 Default: ``None``
 
@@ -1124,9 +1124,9 @@ Supported on POSIX platforms only.
 .. conf_master:: pub_server_niceness
 
 ``pub_server_niceness``
-------------------------
+-----------------------
 
-.. versionadded:: neon
+.. versionadded:: Sodium
 
 Default: ``None``
 
@@ -1142,7 +1142,7 @@ Supported on POSIX platforms only.
 ``fileserver_update_niceness``
 ------------------------------
 
-.. versionadded:: neon
+.. versionadded:: Sodium
 
 Default: ``None``
 
@@ -1158,7 +1158,7 @@ Supported on POSIX platforms only.
 ``maintenance_niceness``
 ------------------------
 
-.. versionadded:: neon
+.. versionadded:: Sodium
 
 Default: ``None``
 
@@ -1172,9 +1172,9 @@ Supported on POSIX platforms only.
 .. conf_master:: mworker_niceness
 
 ``mworker_niceness``
-------------------------
+--------------------
 
-.. versionadded:: neon
+.. versionadded:: Sodium
 
 Default: ``None``
 
@@ -1188,9 +1188,9 @@ Supported on POSIX platforms only.
 .. conf_master:: mworker_queue_niceness
 
 ``mworker_queue_niceness``
-------------------------
+--------------------------
 
-.. versionadded:: neon
+.. versionadded:: Sodium
 
 default: ``None``
 
@@ -1204,9 +1204,9 @@ supported on POSIX platforms only.
 .. conf_master:: event_return_niceness
 
 ``event_return_niceness``
-------------------------
+-------------------------
 
-.. versionadded:: neon
+.. versionadded:: Sodium
 
 default: ``None``
 
@@ -1221,9 +1221,9 @@ supported on POSIX platforms only.
 .. conf_master:: event_publisher_niceness
 
 ``event_publisher_niceness``
-------------------------
+----------------------------
 
-.. versionadded:: neon
+.. versionadded:: Sodium
 
 default: ``none``
 
@@ -1237,9 +1237,9 @@ supported on POSIX platforms only.
 .. conf_master:: reactor_niceness
 
 ``reactor_niceness``
-------------------------
+--------------------
 
-.. versionadded:: neon
+.. versionadded:: Sodium
 
 default: ``None``
 
