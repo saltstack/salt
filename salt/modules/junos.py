@@ -21,6 +21,7 @@ import copy
 import json
 import logging
 import os
+import tempfile
 import traceback
 from functools import wraps
 
@@ -31,7 +32,6 @@ import salt.utils.json
 import salt.utils.stringutils
 import yaml
 from salt.ext import six
-import tempfile
 
 try:
     from lxml import etree
