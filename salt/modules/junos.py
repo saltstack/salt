@@ -94,8 +94,10 @@ class HandleFileCopy:
                 proxy_hash = __salt__["file.get_hash"](local_cache_path)
                 # check if hash is same, else copy newly
                 if master_hash.get("hsum") == proxy_hash:
+                    # kwargs will have values when path is a template
                     if self._kwargs:
                         self._cached_file = salt.utils.files.mkstemp()
+                        # local copy is a template, hence need to render
                         with salt.utils.files.fopen(self._cached_file, "w") as fp:
                             template_string = __salt__["slsutil.renderer"](
                                 path=local_cache_path,
