@@ -296,8 +296,10 @@ def rpc(cmd=None, dest=None, **kwargs):
         return ret
 
     format_ = op.pop("format", "xml")
-    # when called from state, dest becomes part of op via __pub_arg
-    dest = dest or op.pop("dest", None)
+    # dest becomes part of op via __pub_arg if not None
+    # rpc commands opjecting to dest as part of op
+    if dest:
+        op.pop("dest", None)
 
     if cmd in ["get-config", "get_config"]:
         filter_reply = None
@@ -945,15 +947,30 @@ def install_config(path=None, **kwargs):
 
     test = op.pop("test", False)
 
-    kwargs = {}
+    template_vars = {}
     if "template_vars" in op:
-        kwargs = op["template_vars"]
+        template_vars = op["template_vars"]
 
-    with HandleFileCopy(path, **kwargs) as template_cached_path:
-        if template_cached_path is None:
-            ret["message"] = "Invalid file path."
-            ret["out"] = False
-            return ret
+    try:
+        template_cached_path = salt.utils.files.mkstemp()
+        __salt__['cp.get_template']( path, template_cached_path, template_vars=template_vars)
+    except Exception as ex:  # pylint: disable=broad-except
+        ret["message"] = (
+            "Salt failed to render the template, please check file path and syntax."
+            "\nError: {0}".format(str(ex))
+        )
+        ret["out"] = False
+        return ret
+
+    if not os.path.isfile(template_cached_path):
+        ret["message"] = "Invalid file path."
+        ret["out"] = False
+        return ret
+
+    if os.path.getsize(template_cached_path) == 0:
+        ret["message"] = "Template failed to render"
+        ret["out"] = False
+        return ret
 
         if os.path.getsize(template_cached_path) == 0:
             ret["message"] = "Template failed to render"
@@ -1433,15 +1450,20 @@ def load(path=None, **kwargs):
     else:
         op.update(kwargs)
 
-    kwargs = {}
+    template_vars = {}
     if "template_vars" in op:
-        kwargs = op["template_vars"]
+        template_vars = op["template_vars"]
 
-    with HandleFileCopy(path, **kwargs) as template_cached_path:
-        if template_cached_path is None:
-            ret["message"] = "Invalid file path."
-            ret["out"] = False
-            return ret
+    try:
+        template_cached_path = salt.utils.files.mkstemp()
+        __salt__['cp.get_template']( path, template_cached_path, template_vars=template_vars)
+    except Exception as ex:  # pylint: disable=broad-except
+        ret["message"] = (
+            "Salt failed to render the template, please check file path and syntax."
+            "\nError: {0}".format(str(ex))
+        )
+        ret["out"] = False
+        return ret
 
         if os.path.getsize(template_cached_path) == 0:
             ret["message"] = "Template failed to render"
