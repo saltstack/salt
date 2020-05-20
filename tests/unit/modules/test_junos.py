@@ -10,6 +10,7 @@ import os
 # Import salt modules
 import salt.modules.junos as junos
 from salt.ext import six
+
 # Import test libs
 from tests.support.mixins import LoaderModuleMockMixin, XMLEqualityMixin
 from tests.support.mock import ANY, MagicMock, PropertyMock, call, mock_open, patch
