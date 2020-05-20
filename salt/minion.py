@@ -1173,11 +1173,7 @@ class MinionManager(MinionBase):
 
     def stop(self, signum):
         for minion in self.minions:
-            minion.process_manager.stop_restarting()
-            minion.process_manager.send_signal_to_processes(signum)
-            # kill any remaining processes
-            minion.process_manager.kill_children()
-            minion.destroy()
+            minion.stop(signum)
 
     def destroy(self):
         for minion in self.minions:
@@ -1284,7 +1280,11 @@ class Minion(MinionBase):
             # No custom signal handling was added, install our own
             signal.signal(signal.SIGTERM, self._handle_signals)
 
-    def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
+    def _handle_signals(self, signum, _):
+        self.stop(signum)
+        sys.exit(0)
+
+    def stop(self, signum):
         self._running = False
         # escalate the signals to the process manager
         self.process_manager.stop_restarting()
@@ -1293,7 +1293,6 @@ class Minion(MinionBase):
         self.process_manager.kill_children()
         self.subprocess_list.terminate()
         time.sleep(1)
-        sys.exit(0)
 
     def sync_connect_master(self, timeout=None, failed=False):
         """
@@ -1768,10 +1767,42 @@ class Minion(MinionBase):
             else:
                 return Minion._thread_return(minion_instance, opts, data)
 
+        @contextlib.contextmanager
+        def exit_context():
+            try:
+                yield
+            except (SystemExit, KeyboardInterrupt) as ex:
+                log.warning(
+                    "Minion job %s is terminated due to minion termination", data["jid"]
+                )
+                ret = {
+                    "fun": data["fun"],
+                    "fun_args": data["arg"],
+                    "jid": data["jid"],
+                    "retcode": salt.defaults.exitcodes.EX_GENERIC,
+                    "return": "Minion terminated",
+                    "success": False,
+                }
+                if "master_id" in data:
+                    ret["master_id"] = data["master_id"]
+                if "metadata" in data:
+                    if isinstance(data["metadata"], dict):
+                        ret["metadata"] = data["metadata"]
+                    else:
+                        log.warning(
+                            "The metadata parameter must be a dictionary. Ignoring."
+                        )
+                if minion_instance.connected:
+                    minion_instance._return_pub(
+                        ret, timeout=minion_instance._return_retry_timer()
+                    )
+
         with salt.ext.tornado.stack_context.StackContext(
             functools.partial(RequestContext, {"data": data, "opts": opts})
         ):
-            with salt.ext.tornado.stack_context.StackContext(minion_instance.ctx):
+            with salt.ext.tornado.stack_context.StackContext(
+                minion_instance.ctx
+            ), salt.ext.tornado.stack_context.StackContext(exit_context):
                 run_func(minion_instance, opts, data)
 
     @classmethod
