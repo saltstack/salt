@@ -71,6 +71,23 @@ __virtualname__ = "junos"
 __proxyenabled__ = ["junos"]
 
 
+def __virtual__():
+    """
+    We need the Junos adapter libraries for this
+    module to work.  We also need a proxymodule entry in __opts__
+    in the opts dictionary
+    """
+    if HAS_JUNOS and "proxy" in __opts__:
+        return __virtualname__
+    else:
+        return (
+            False,
+            "The junos or dependent module could not be loaded: "
+            "junos-eznc or jxmlease or yamlordereddictloader or "
+            "proxy could not be loaded.",
+        )
+
+
 class HandleFileCopy:
     """
     To figure out proper path either from proxy local file system
@@ -146,23 +163,6 @@ class HandleFileCopy:
         if self._cached_folder is not None:
             __salt__["file.rmdir"](self._cached_folder)
             log.debug("Deleted cached folder: {0}".format(self._cached_folder))
-
-
-def __virtual__():
-    """
-    We need the Junos adapter libraries for this
-    module to work.  We also need a proxymodule entry in __opts__
-    in the opts dictionary
-    """
-    if HAS_JUNOS and "proxy" in __opts__:
-        return __virtualname__
-    else:
-        return (
-            False,
-            "The junos or dependent module could not be loaded: "
-            "junos-eznc or jxmlease or yamlordereddictloader or "
-            "proxy could not be loaded.",
-        )
 
 
 def timeoutDecorator(function):
