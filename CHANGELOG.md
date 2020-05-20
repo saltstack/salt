@@ -1,4 +1,3 @@
-# Changelog
 All notable changes to Salt will be documented in this file.
 
 This changelog follows [keepachangelog](https://keepachangelog.com/en/1.0.0/) format, and is intended for human consumption.
@@ -6,7 +5,8 @@ This changelog follows [keepachangelog](https://keepachangelog.com/en/1.0.0/) fo
 This project versioning is _similar_ to [Semantic Versioning](https://semver.org), and is documented in [SEP 14](https://github.com/saltstack/salt-enhancement-proposals/pull/20/files).
 Versions are `MAJOR.PATCH`.
 
-## 3001 - Sodium
+# Changelog
+
 ## 3001 - Sodium [yyyy-mm-dd]
 
 ### Removed
@@ -23,10 +23,11 @@ Versions are `MAJOR.PATCH`.
 - [#56637](https://github.com/saltstack/salt/pull/56637) - Add ``win_wua.installed`` to the ``win_wua`` execution module
 
 ## 3000.1
+### 3000.3
 
-### Removed
+### Fixed
+- [#57100](https://github.com/saltstack/salt/pull/57100) - Address Issues in CVE Release
 
-### Deprecated
 
 ### Changed
 - [#56751](https://github.com/saltstack/salt/pull/56751) - Backport 49981
@@ -50,6 +51,13 @@ Versions are `MAJOR.PATCH`.
 
 ### Changed
 - [#56730](https://github.com/saltstack/salt/pull/56730) - Backport #52992
+### 3000.2
+
+### Fixed
+- [#56987](https://github.com/saltstack/salt/pull/56987) - CVE fix
+
+
+### 3000.1
 
 ### Fixed
 
@@ -86,7 +94,7 @@ Versions are `MAJOR.PATCH`.
 
 ### Added
 
-## 3000 - Neon [2020-02-10]
+### 3000 - Neon [2020-02-10]
 
 ### Removed
 

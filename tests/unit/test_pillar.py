@@ -1025,6 +1025,70 @@ sub_with_slashes:
         self.assertEqual(compiled_pillar["found"], "my precious")
         self.assertEqual(compiled_pillar["mojo"], "bad risin'")
 
+    @with_tempdir()
+    def test_missing_include(self, tempdir):
+        opts = {
+            "optimization_order": [0, 1, 2],
+            "renderer": "yaml",
+            "renderer_blacklist": [],
+            "renderer_whitelist": [],
+            "state_top": "top.sls",
+            "pillar_roots": {"base": [tempdir]},
+            "extension_modules": "",
+            "saltenv": "base",
+            "file_roots": [],
+            "file_ignore_regex": None,
+            "file_ignore_glob": None,
+        }
+        grains = {
+            "os": "Ubuntu",
+            "os_family": "Debian",
+            "oscodename": "raring",
+            "osfullname": "Ubuntu",
+            "osrelease": "13.04",
+            "kernel": "Linux",
+        }
+
+        join = os.path.join
+        with fopen(join(tempdir, "top.sls"), "w") as f:
+            print(
+                textwrap.dedent(
+                    """
+                    base:
+                      '*':
+                        - simple_include
+                """
+                ),
+                file=f,
+            )
+        include_dir = join(tempdir, "simple_include")
+        os.makedirs(include_dir)
+        with fopen(join(include_dir, "init.sls"), "w") as f:
+            print(
+                textwrap.dedent(
+                    """
+                    include:
+                      - simple_include.missing_include
+                    simple_include: is ok
+                    """
+                ),
+                file=f,
+            )
+
+        pillar = salt.pillar.Pillar(opts, grains, "minion", "base")
+        # Make sure that confirm_top.confirm_top returns True
+        pillar.matchers["confirm_top.confirm_top"] = lambda *x, **y: True
+
+        # Act
+        compiled_pillar = pillar.compile_pillar()
+
+        # Assert
+        self.assertEqual(compiled_pillar["simple_include"], "is ok")
+        self.assertTrue("_errors" in compiled_pillar)
+        self.assertTrue(
+            "simple_include.missing_include" in compiled_pillar["_errors"][0]
+        )
+
 
 @patch("salt.transport.client.ReqChannel.factory", MagicMock())
 class RemotePillarTestCase(TestCase):

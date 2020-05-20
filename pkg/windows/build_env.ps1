@@ -167,10 +167,10 @@ If (Test-Path "$($ini[$bitPaths]['VCppBuildToolsDir'])\vcbuildtools.bat") {
 #------------------------------------------------------------------------------
 # Install Python
 #------------------------------------------------------------------------------
-Write-Output " - Checking for Python 3.5 installation . . ."
+Write-Output " - Checking for Python 3 installation . . ."
 If (Test-Path "$($ini['Settings']['Python3Dir'])\python.exe") {
     # Found Python 3.5, do nothing
-    Write-Output " - Python 3.5 Found . . ."
+    Write-Output " - Python 3 Found . . ."
 } Else {
     Write-Output " - Downloading $($ini[$bitPrograms]['Python3']) . . ."
     $file = "$($ini[$bitPrograms]['Python3'])"
@@ -220,10 +220,11 @@ If ($NoPipDependencies -eq $false) {
   Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req.txt" "pip install"
 }
 
-#==============================================================================
-# Cleaning Up PyWin32
-#==============================================================================
-If (Test-Path "$($ini['Settings']['SitePkgs3Dir'])\pywin32_system32" -PathType Container ) {
+If (Test-Path "$($ini['Settings']['SitePkgs3Dir'])\pywin32_system32" -PathType Container )
+{
+    #==============================================================================
+    # Cleaning Up PyWin32
+    #==============================================================================
     Write-Output " ----------------------------------------------------------------"
     Write-Output " - $script_name :: Cleaning Up PyWin32 . . ."
     Write-Output " ----------------------------------------------------------------"

@@ -38,7 +38,7 @@ Don't forget to reload after you made your changes.
 
     firewall-cmd --reload
 
-.. _`FirewallD`: https://fedoraproject.org/wiki/FirewallD
+.. _`FirewallD`: https://fedoraproject.org/wiki/Firewalld
 
 RHEL 6 / CentOS 6
 =================
@@ -148,7 +148,7 @@ Different Linux distributions store their `iptables` (also known as
 standardize firewall documentation. Included are some of the more
 common locations, but your mileage may vary.
 
-.. _`netfilter`: http://www.netfilter.org/
+.. _`netfilter`: https://netfilter.org/
 
 **Fedora / RHEL / CentOS**:
 

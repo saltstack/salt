@@ -2,14 +2,10 @@
 """
 Simple Smoke Tests for Connected SSH minions
 """
-
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Testing libs
 from tests.support.case import SSHCase
-from tests.support.helpers import requires_system_grains, skip_if_not_root
-from tests.support.unit import skipIf
+from tests.support.helpers import requires_system_grains, skip_if_not_root, slowTest
 
 
 class SSHMasterTestCase(SSHCase):
@@ -17,7 +13,7 @@ class SSHMasterTestCase(SSHCase):
     Test ssh master functionality
     """
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_can_it_ping(self):
         """
         Ensure the proxy can ping
@@ -27,7 +23,7 @@ class SSHMasterTestCase(SSHCase):
 
     @requires_system_grains
     @skip_if_not_root
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_service(self, grains):
         service = "cron"
         os_family = grains["os_family"]
@@ -51,7 +47,7 @@ class SSHMasterTestCase(SSHCase):
         self.assertTrue(ret)
 
     @requires_system_grains
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_grains_items(self, grains):
         os_family = grains["os_family"]
         ret = self.run_function("grains.items")
@@ -60,13 +56,13 @@ class SSHMasterTestCase(SSHCase):
         else:
             self.assertEqual(ret["kernel"], "Linux")
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_state_apply(self):
         ret = self.run_function("state.apply", ["core"])
         for key, value in ret.items():
             self.assertTrue(value["result"])
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_state_highstate(self):
         ret = self.run_function("state.highstate")
         for key, value in ret.items():
