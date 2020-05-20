@@ -15,7 +15,7 @@
 
 :: This script accepts two parameters.
 ::   Version: The version of Salt being built. If not passed, the version will
-::            determined using `git describe`
+::            determined using `git describe`. The leading `v` will be removed
 ::   Python: The version of Python to build Salt on (Default is 3)
 
 :: These parameters can be passed positionally or as named parameters. Named
@@ -94,9 +94,14 @@ if not "%~2"=="" (
 )
 
 :: If Version not defined, Get the version from Git
+set git=0
 if "%Version%"=="" (
+    echo Getting version from git
     for /f "delims=" %%a in ('git describe') do @set "Version=%%a"
+    set git=1
 )
+:: Strip off the leading `v` when getting version from git describe
+if %git%==1 set Version=%Version:~1%
 
 :: If Python not defined, Assume Python 3
 if "%Python%"=="" (
