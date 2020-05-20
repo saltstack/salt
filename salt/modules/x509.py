@@ -442,6 +442,23 @@ def _make_regex(pem_type):
     )
 
 
+def _valid_pem(pem, pem_type=None):
+    pem_type = "[0-9A-Z ]+" if pem_type is None else pem_type
+    _dregex = _make_regex(pem_type)
+    for _match in _dregex.finditer(pem):
+        if _match:
+            return _match
+    return None
+
+
+def _match_minions(test, minion):
+    if "@" in test:
+        match = __salt__["publish.publish"](tgt=minion, fun="match.compound", arg=test)
+        return match.get(minion, False)
+    else:
+        return __salt__["match.glob"](test, minion)
+
+
 def get_pem_entry(text, pem_type=None):
     """
     Returns a properly formatted PEM string from the input text fixing
@@ -464,8 +481,6 @@ def get_pem_entry(text, pem_type=None):
     text = _text_or_file(text)
     # Replace encoded newlines
     text = text.replace("\\n", "\n")
-
-    _match = None
 
     if (
         len(text.splitlines()) == 1
@@ -490,19 +505,16 @@ def get_pem_entry(text, pem_type=None):
                     pem_temp = pem_temp[pem_temp.index("-") :]
         text = "\n".join(pem_fixed)
 
-    _dregex = _make_regex("[0-9A-Z ]+")
     errmsg = "PEM text not valid:\n{0}".format(text)
     if pem_type:
-        _dregex = _make_regex(pem_type)
         errmsg = "PEM does not contain a single entry of type {0}:\n" "{1}".format(
             pem_type, text
         )
 
-    for _match in _dregex.finditer(text):
-        if _match:
-            break
+    _match = _valid_pem(text, pem_type)
     if not _match:
         raise salt.exceptions.SaltInvocationError(errmsg)
+
     _match_dict = _match.groupdict()
     pem_header = _match_dict["pem_header"]
     proc_type = _match_dict["proc_type"]
@@ -785,8 +797,8 @@ def write_pem(text, path, overwrite=True, pem_type=None):
 
         salt '*' x509.write_pem "-----BEGIN CERTIFICATE-----MIIGMzCCBBugA..." path=/etc/pki/mycert.crt
     """
+    text = get_pem_entry(text, pem_type=pem_type)
     with salt.utils.files.set_umask(0o077):
-        text = get_pem_entry(text, pem_type=pem_type)
         _dhparams = ""
         _private_key = ""
         if (
@@ -1091,10 +1103,7 @@ def sign_remote_certificate(argdic, **kwargs):
     if "minions" in signing_policy:
         if "__pub_id" not in kwargs:
             return "minion sending this request could not be identified"
-        matcher = "match.glob"
-        if "@" in signing_policy["minions"]:
-            matcher = "match.compound"
-        if not __salt__[matcher](signing_policy["minions"], kwargs["__pub_id"]):
+        if not _match_minions(signing_policy["minions"], kwargs["__pub_id"]):
             return "{0} not permitted to use signing policy {1}".format(
                 kwargs["__pub_id"], argdic["signing_policy"]
             )
@@ -1356,6 +1365,19 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
         ``minions`` key is included in the signing policy, only minions
         matching that pattern (see match.glob and match.compound) will be
         permitted to remotely request certificates from that policy.
+        In order to ``match.compound`` to work salt master must peers permit
+        peers to call it.
+
+        Example:
+
+        /etc/salt/master.d/peer.conf
+
+        .. code-block:: yaml
+
+            peer:
+              .*:
+                - match.compound
+
 
         Example:
 
@@ -1456,6 +1478,9 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
             )
 
         cert_txt = certs[ca_server]
+        if isinstance(cert_txt, str):
+            if not _valid_pem(cert_txt, "CERTIFICATE"):
+                raise salt.exceptions.SaltInvocationError(cert_txt)
 
         if path:
             return write_pem(

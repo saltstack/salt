@@ -19,6 +19,7 @@ import textwrap
 
 import pytest
 import salt.serializers.configparser
+import salt.serializers.plist
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
@@ -576,6 +577,55 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             for typ in managed_files:
                 if os.path.exists(managed_files[typ]):
                     os.remove(managed_files[typ])
+
+    def test_prerequired_issues_55775(self):
+        """
+        Test that __prereqired__ is filter from file.replace
+        if __prereqired__ is not filter from file.replace an error will be raised
+        """
+        state_name = "Test_Issues_55775"
+        state_filename = state_name + ".sls"
+        state_file = os.path.join(RUNTIME_VARS.BASE_FILES, state_filename)
+        test_file = os.path.join(RUNTIME_VARS.BASE_FILES, "Issues_55775.txt")
+
+        try:
+            with salt.utils.files.fopen(state_file, "w") as fd_:
+                fd_.write(
+                    textwrap.dedent(
+                        """\
+                    /tmp/bug.txt:
+                      file.managed:
+                        - name: {0}
+                        - contents:
+                          - foo
+                    file.replace:
+                      file.replace:
+                        - name: {0}
+                        - pattern: 'foo'
+                        - repl: 'bar'
+                        - prereq:
+                          - test no changes
+                          - test changes
+                    test no changes:
+                      test.succeed_without_changes:
+                        - name: no changes
+                    test changes:
+                      test.succeed_with_changes:
+                        - name: changes
+                        - require:
+                          - test: test no changes
+                    """.format(
+                            test_file
+                        )
+                    )
+                )
+
+            ret = self.run_function("state.sls", [state_name])
+            self.assertSaltTrueReturn(ret)
+        finally:
+            for file in (state_file, test_file):
+                if os.path.exists(file):
+                    os.remove(file)
 
     def test_managed_contents_with_contents_newline(self):
         """
@@ -1946,6 +1996,78 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         # deserializing with default of x = baz will perform interpolation on %(x)s
         # and bar will then = baz
         assert serialized_data["foo"]["bar"] == merged["foo"]["bar"]
+
+    @with_tempfile(create=False)
+    def test_serializer_plist_binary_file_open(self, name):
+        """
+        Test the serialization and deserialization of plists which should include
+        the "rb" file open arguments change specifically for this formatter to handle
+        binary plists.
+        """
+        data1 = {"foo": {"bar": "%(x)s"}}
+        data2 = {"foo": {"abc": 123}}
+        merged = {"foo": {"abc": 123, "bar": "%(x)s"}}
+
+        ret = self.run_state(
+            "file.serialize",
+            name=name,
+            dataset=data1,
+            formatter="plist",
+            serializer_opts=[{"fmt": "FMT_BINARY"}],
+        )
+        ret = ret[next(iter(ret))]
+        assert ret["result"], ret
+
+        # Run with merge_if_exists so we test the deserializer.
+        ret = self.run_state(
+            "file.serialize",
+            name=name,
+            dataset=data2,
+            formatter="plist",
+            merge_if_exists=True,
+            serializer_opts=[{"fmt": "FMT_BINARY"}],
+        )
+        ret = ret[next(iter(ret))]
+        assert ret["result"], ret
+
+        with salt.utils.files.fopen(name, "rb") as fp_:
+            serialized_data = salt.serializers.plist.deserialize(fp_)
+
+        # make sure our serialized data matches what we expect
+        assert serialized_data["foo"] == merged["foo"]
+
+    @with_tempfile(create=False)
+    def test_serializer_plist_file_open(self, name):
+        """
+        Test the serialization and deserialization of non binary plists with
+        the new line concatenation.
+        """
+        data1 = {"foo": {"bar": "%(x)s"}}
+        data2 = {"foo": {"abc": 123}}
+        merged = {"foo": {"abc": 123, "bar": "%(x)s"}}
+
+        ret = self.run_state(
+            "file.serialize", name=name, dataset=data1, formatter="plist",
+        )
+        ret = ret[next(iter(ret))]
+        assert ret["result"], ret
+
+        # Run with merge_if_exists so we test the deserializer.
+        ret = self.run_state(
+            "file.serialize",
+            name=name,
+            dataset=data2,
+            formatter="plist",
+            merge_if_exists=True,
+        )
+        ret = ret[next(iter(ret))]
+        assert ret["result"], ret
+
+        with salt.utils.files.fopen(name, "rb") as fp_:
+            serialized_data = salt.serializers.plist.deserialize(fp_)
+
+        # make sure our serialized data matches what we expect
+        assert serialized_data["foo"] == merged["foo"]
 
     @with_tempdir()
     def test_replace_issue_18841_omit_backup(self, base_dir):

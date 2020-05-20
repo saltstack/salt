@@ -848,8 +848,8 @@ def set_wu_settings(
         # Create an AutoUpdate object
         obj_au = win32com.client.Dispatch("Microsoft.Update.AutoUpdate")
 
-    # Create an AutoUpdate Settings Object
-    obj_au_settings = obj_au.Settings
+        # Create an AutoUpdate Settings Object
+        obj_au_settings = obj_au.Settings
 
     # Only change the setting if it's passed
     if level is not None:
@@ -951,42 +951,42 @@ def set_wu_settings(
         with salt.utils.winapi.Com():
             obj_sm = win32com.client.Dispatch("Microsoft.Update.ServiceManager")
 
-        # Give it a bogus name
-        obj_sm.ClientApplicationID = "My App"
+            # Give it a bogus name
+            obj_sm.ClientApplicationID = "My App"
 
-        if msupdate:
-            # msupdate is true, so add it to the services
-            try:
-                obj_sm.AddService2("7971f918-a847-4430-9279-4a52d1efe18d", 7, "")
-                ret["msupdate"] = msupdate
-            except Exception as error:  # pylint: disable=broad-except
-                # pylint: disable=unpacking-non-sequence,unbalanced-tuple-unpacking
-                (hr, msg, exc, arg,) = error.args
-                # pylint: enable=unpacking-non-sequence,unbalanced-tuple-unpacking
-                # Consider checking for -2147024891 (0x80070005) Access Denied
-                ret["Comment"] = "Failed with failure code: {0}".format(exc[5])
-                ret["Success"] = False
-        else:
-            # msupdate is false, so remove it from the services
-            # check to see if the update is there or the RemoveService function
-            # will fail
-            if _get_msupdate_status():
-                # Service found, remove the service
+            if msupdate:
+                # msupdate is true, so add it to the services
                 try:
-                    obj_sm.RemoveService("7971f918-a847-4430-9279-4a52d1efe18d")
+                    obj_sm.AddService2("7971f918-a847-4430-9279-4a52d1efe18d", 7, "")
                     ret["msupdate"] = msupdate
                 except Exception as error:  # pylint: disable=broad-except
                     # pylint: disable=unpacking-non-sequence,unbalanced-tuple-unpacking
                     (hr, msg, exc, arg,) = error.args
                     # pylint: enable=unpacking-non-sequence,unbalanced-tuple-unpacking
-                    # Consider checking for the following
-                    # -2147024891 (0x80070005) Access Denied
-                    # -2145091564 (0x80248014) Service Not Found (shouldn't get
-                    # this with the check for _get_msupdate_status above
+                    # Consider checking for -2147024891 (0x80070005) Access Denied
                     ret["Comment"] = "Failed with failure code: {0}".format(exc[5])
                     ret["Success"] = False
             else:
-                ret["msupdate"] = msupdate
+                # msupdate is false, so remove it from the services
+                # check to see if the update is there or the RemoveService function
+                # will fail
+                if _get_msupdate_status():
+                    # Service found, remove the service
+                    try:
+                        obj_sm.RemoveService("7971f918-a847-4430-9279-4a52d1efe18d")
+                        ret["msupdate"] = msupdate
+                    except Exception as error:  # pylint: disable=broad-except
+                        # pylint: disable=unpacking-non-sequence,unbalanced-tuple-unpacking
+                        (hr, msg, exc, arg,) = error.args
+                        # pylint: enable=unpacking-non-sequence,unbalanced-tuple-unpacking
+                        # Consider checking for the following
+                        # -2147024891 (0x80070005) Access Denied
+                        # -2145091564 (0x80248014) Service Not Found (shouldn't get
+                        # this with the check for _get_msupdate_status above
+                        ret["Comment"] = "Failed with failure code: {0}".format(exc[5])
+                        ret["Success"] = False
+                else:
+                    ret["msupdate"] = msupdate
 
     ret["Reboot"] = get_needs_reboot()
 
@@ -1071,29 +1071,29 @@ def get_wu_settings():
         # Create an AutoUpdate object
         obj_au = win32com.client.Dispatch("Microsoft.Update.AutoUpdate")
 
-    # Create an AutoUpdate Settings Object
-    obj_au_settings = obj_au.Settings
+        # Create an AutoUpdate Settings Object
+        obj_au_settings = obj_au.Settings
 
-    # Populate the return dictionary
-    ret["Featured Updates"] = obj_au_settings.FeaturedUpdatesEnabled
-    ret["Group Policy Required"] = obj_au_settings.Required
-    ret["Microsoft Update"] = _get_msupdate_status()
-    ret["Needs Reboot"] = get_needs_reboot()
-    ret["Non Admins Elevated"] = obj_au_settings.NonAdministratorsElevated
-    ret["Notification Level"] = obj_au_settings.NotificationLevel
-    ret["Read Only"] = obj_au_settings.ReadOnly
-    ret["Recommended Updates"] = obj_au_settings.IncludeRecommendedUpdates
-    ret["Scheduled Day"] = day[obj_au_settings.ScheduledInstallationDay]
-    # Scheduled Installation Time requires special handling to return the time
-    # in the right format
-    if obj_au_settings.ScheduledInstallationTime < 10:
-        ret["Scheduled Time"] = "0{0}:00".format(
-            obj_au_settings.ScheduledInstallationTime
-        )
-    else:
-        ret["Scheduled Time"] = "{0}:00".format(
-            obj_au_settings.ScheduledInstallationTime
-        )
+        # Populate the return dictionary
+        ret["Featured Updates"] = obj_au_settings.FeaturedUpdatesEnabled
+        ret["Group Policy Required"] = obj_au_settings.Required
+        ret["Microsoft Update"] = _get_msupdate_status()
+        ret["Needs Reboot"] = get_needs_reboot()
+        ret["Non Admins Elevated"] = obj_au_settings.NonAdministratorsElevated
+        ret["Notification Level"] = obj_au_settings.NotificationLevel
+        ret["Read Only"] = obj_au_settings.ReadOnly
+        ret["Recommended Updates"] = obj_au_settings.IncludeRecommendedUpdates
+        ret["Scheduled Day"] = day[obj_au_settings.ScheduledInstallationDay]
+        # Scheduled Installation Time requires special handling to return the time
+        # in the right format
+        if obj_au_settings.ScheduledInstallationTime < 10:
+            ret["Scheduled Time"] = "0{0}:00".format(
+                obj_au_settings.ScheduledInstallationTime
+            )
+        else:
+            ret["Scheduled Time"] = "{0}:00".format(
+                obj_au_settings.ScheduledInstallationTime
+            )
 
     return ret
 
@@ -1110,14 +1110,14 @@ def _get_msupdate_status():
         # Create a ServiceManager Object
         obj_sm = win32com.client.Dispatch("Microsoft.Update.ServiceManager")
 
-    # Return a collection of loaded Services
-    col_services = obj_sm.Services
+        # Return a collection of loaded Services
+        col_services = obj_sm.Services
 
-    # Loop through the collection to find the Microsoft Udpate Service
-    # If it exists return True otherwise False
-    for service in col_services:
-        if service.name == "Microsoft Update":
-            return True
+        # Loop through the collection to find the Microsoft Udpate Service
+        # If it exists return True otherwise False
+        for service in col_services:
+            if service.name == "Microsoft Update":
+                return True
 
     return False
 
