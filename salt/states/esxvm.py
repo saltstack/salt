@@ -133,7 +133,7 @@ Creates a virtual machine with a given configuration.
 vm_registered
 -------------
 
-Registers a virtual machine with it's configuration file path.
+Registers a virtual machine with its configuration file path.
 
 Dependencies
 ============

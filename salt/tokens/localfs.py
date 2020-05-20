@@ -13,6 +13,7 @@ import os
 import salt.payload
 import salt.utils.files
 import salt.utils.path
+import salt.utils.verify
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -27,7 +28,7 @@ def mk_token(opts, tdata):
     This module uses the hash of random 512 bytes as a token.
 
     :param opts: Salt master config options
-    :param tdata: Token data to be stored with 'token' attirbute of this dict set to the token.
+    :param tdata: Token data to be stored with 'token' attribute of this dict set to the token.
     :returns: tdata with token if successful. Empty dict if failed.
     """
     hash_type = getattr(hashlib, opts.get("hash_type", "md5"))
@@ -59,6 +60,8 @@ def get_token(opts, tok):
     :returns: Token data if successful. Empty dict if failed.
     """
     t_path = os.path.join(opts["token_dir"], tok)
+    if not salt.utils.verify.clean_path(opts["token_dir"], t_path):
+        return {}
     if not os.path.isfile(t_path):
         return {}
     serial = salt.payload.Serial(opts)

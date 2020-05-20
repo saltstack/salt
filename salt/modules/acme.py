@@ -58,6 +58,9 @@ LEA = salt.utils.path.which_bin(
 )
 LE_LIVE = "/etc/letsencrypt/live/"
 
+if salt.utils.platform.is_freebsd():
+    LE_LIVE = "/usr/local" + LE_LIVE
+
 
 def __virtual__():
     """
@@ -305,7 +308,9 @@ def certs():
         salt 'vhost.example.com' acme.certs
     """
     return [
-        item for item in __salt__["file.readdir"](LE_LIVE)[2:] if os.path.isdir(item)
+        item
+        for item in __salt__["file.readdir"](LE_LIVE)[2:]
+        if os.path.isdir(os.path.join(LE_LIVE, item))
     ]
 
 
@@ -335,7 +340,7 @@ def info(name):
         # Strip out the extensions object contents;
         # these trip over our poor state output
         # and they serve no real purpose here anyway
-        cert_info["extensions"] = cert_info["extensions"].keys()
+        cert_info["extensions"] = list(cert_info["extensions"])
     elif "x509.read_certificate" in __salt__:
         cert_info = __salt__["x509.read_certificate"](cert_file)
     else:

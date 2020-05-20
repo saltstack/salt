@@ -158,7 +158,7 @@ def present(name, subscriptions=None, region=None, key=None, keyid=None, profile
             )
 
         if subscription not in _subscriptions:
-            # Ensure the endpoint is set back to it's original value,
+            # Ensure the endpoint is set back to its original value,
             # incase we starred out a password
             subscription["endpoint"] = _endpoint
 

@@ -5,11 +5,11 @@ integration.client.test_kwarg
 integration.client.test_runner
 integration.client.test_standard
 integration.client.test_syndic
-integration.doc.test_man
 integration.grains.test_core
 integration.grains.test_custom
 integration.loader.test_ext_grains
 integration.loader.test_ext_modules
+integration.master.test_clear_funcs
 integration.minion.test_blackout
 integration.minion.test_pillar
 integration.minion.test_timeout
@@ -69,10 +69,6 @@ integration.runners.test_manage
 integration.runners.test_runner_returns
 integration.runners.test_nacl
 integration.runners.test_salt
-integration.scheduler.test_eval
-integration.scheduler.test_postpone
-integration.scheduler.test_skip
-integration.scheduler.test_helpers
 integration.sdb.test_env
 integration.shell.test_arguments
 integration.shell.test_auth

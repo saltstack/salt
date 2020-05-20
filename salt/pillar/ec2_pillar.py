@@ -200,7 +200,7 @@ def ext_pillar(
             # we have an untrusted grain_instance_id, use it to narrow the search
             # even more. Combination will be unique even if uqdn is set.
             find_filter.update({"instance-id": grain_instance_id})
-        # Add this if running state is not dependant on EC2Config
+        # Add this if running state is not dependent on EC2Config
         # find_filter.update('instance-state-name': 'running')
 
     # no minion-id is instance-id and no suitable filter, try use_grain if enabled
@@ -241,6 +241,10 @@ def ext_pillar(
 
     # Get the Master's instance info, primarily the region
     (_, region) = _get_instance_info()
+
+    # If the Minion's region is available, use it instead
+    if use_grain:
+        region = __grains__.get("ec2", {}).get("region", region)
 
     try:
         conn = boto.ec2.connect_to_region(region)

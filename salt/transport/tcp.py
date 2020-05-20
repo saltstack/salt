@@ -576,7 +576,7 @@ class AsyncTCPPubChannel(
                 yield self.auth.authenticate()
             if self.auth.authenticated:
                 # if this is changed from the default, we assume it was intentional
-                if int(self.opts.get("publish_port", 4506)) != 4506:
+                if int(self.opts.get("publish_port", 4505)) != 4505:
                     self.publish_port = self.opts.get("publish_port")
                 # else take the relayed publish_port master reports
                 else:
@@ -732,7 +732,7 @@ class TCPReqServerChannel(
     @salt.ext.tornado.gen.coroutine
     def handle_message(self, stream, header, payload):
         """
-        Handle incoming messages from underylying tcp streams
+        Handle incoming messages from underlying tcp streams
         """
         try:
             try:
@@ -1166,7 +1166,7 @@ class SaltMessageClient(object):
                 self._connecting_future.set_result(True)
                 break
             except Exception as exc:  # pylint: disable=broad-except
-                log.warn("TCP Message Client encountered an exception %r", exc)
+                log.warning("TCP Message Client encountered an exception %r", exc)
                 yield salt.ext.tornado.gen.sleep(1)  # TODO: backoff
                 # self._connecting_future.set_exception(e)
 

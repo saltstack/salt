@@ -1,9 +1,9 @@
 # coding: utf-8
-
 from __future__ import absolute_import, print_function, unicode_literals
 
 import pytest
 import salt.wheel
+from tests.support.helpers import slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.unit import TestCase
 
@@ -16,11 +16,13 @@ class KeyWheelModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
     def tearDown(self):
         del self.wheel
 
+    @slowTest
     def test_list_all(self):
         ret = self.wheel.cmd("key.list_all", print_event=False)
         for host in ["minion", "sub_minion"]:
             self.assertIn(host, ret["minions"])
 
+    @slowTest
     def test_gen(self):
         ret = self.wheel.cmd(
             "key.gen", kwarg={"id_": "soundtechniciansrock"}, print_event=False
@@ -39,6 +41,7 @@ class KeyWheelModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
             ret.get("priv", "").startswith("-----BEGIN RSA PRIVATE KEY-----")
         )
 
+    @slowTest
     def test_master_key_str(self):
         ret = self.wheel.cmd("key.master_key_str", print_event=False)
         self.assertIn("local", ret)

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Import pytohn libs
+# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
@@ -158,3 +158,100 @@ class ArtifactoryTestCase(TestCase, LoaderModuleMockMixin):
                 "http://artifactory.example.com/artifactory/libs-snapshots/com/company/sampleapp/web-module/web/1.0_RC10-SNAPSHOT/web-1.0_RC10-20131127.105838-2.war",
             )
             self.assertEqual(file_name, "web-1.0_RC10-20131127.105838-2.war")
+
+    def test_get_snapshot_url_with_classifier(self):
+        with patch(
+            "salt.modules.artifactory._get_snapshot_version_metadata_xml",
+            MagicMock(
+                return_value="""<?xml version="1.0" encoding="UTF-8"?>
+                    <metadata>
+                      <groupId>com.company.sampleapp.web-module</groupId>
+                      <artifactId>web</artifactId>
+                      <version>1.1_RC8-SNAPSHOT</version>
+                      <versioning>
+                        <snapshot>
+                          <timestamp>20140418.150212</timestamp>
+                          <buildNumber>1</buildNumber>
+                        </snapshot>
+                        <lastUpdated>20140623104055</lastUpdated>
+                        <snapshotVersions>
+                          <snapshotVersion>
+                            <extension>pom</extension>
+                            <value>1.1_RC8-20140418.150212-1</value>
+                            <updated>20140418150212</updated>
+                          </snapshotVersion>
+                          <snapshotVersion>
+                            <classifier>test</classifier>
+                            <extension>war</extension>
+                            <value>1.1_RC8-20140418.150212-1</value>
+                            <updated>20140418150212</updated>
+                          </snapshotVersion>
+                        </snapshotVersions>
+                      </versioning>
+                    </metadata>
+                """
+            ),
+        ):
+            artifact_url, file_name = artifactory._get_snapshot_url(
+                artifactory_url="http://artifactory.example.com/artifactory",
+                repository="libs-snapshots",
+                group_id="com.company.sampleapp.web-module",
+                artifact_id="web",
+                version="1.1_RC8-SNAPSHOT",
+                packaging="war",
+                classifier="test",
+                headers={},
+            )
+
+            self.assertEqual(
+                artifact_url,
+                "http://artifactory.example.com/artifactory/libs-snapshots/com/company/sampleapp/web-module/web/1.1_RC8-SNAPSHOT/web-1.1_RC8-20140418.150212-1-test.war",
+            )
+
+    def test_get_snapshot_url_without_classifier(self):
+        """
+        test when classifier not set and packaging
+        does not match snapshot_versions in the metadata.
+        """
+        with patch(
+            "salt.modules.artifactory._get_snapshot_version_metadata_xml",
+            MagicMock(
+                return_value="""<?xml version="1.0" encoding="UTF-8"?>
+                    <metadata>
+                      <groupId>com.company.sampleapp.web-module</groupId>
+                      <artifactId>web</artifactId>
+                      <version>1.1_RC8-SNAPSHOT</version>
+                      <versioning>
+                        <snapshot>
+                          <timestamp>20140418.150212</timestamp>
+                          <buildNumber>1</buildNumber>
+                        </snapshot>
+                        <lastUpdated>20140623104055</lastUpdated>
+                        <snapshotVersions>
+                          <snapshotVersion>
+                            <extension>pom</extension>
+                            <value>1.1_RC8-20140418.150212-1</value>
+                            <updated>20140418150212</updated>
+                          </snapshotVersion>
+                          <snapshotVersion>
+                            <classifier>test</classifier>
+                            <extension>war</extension>
+                            <value>1.1_RC8-20140418.150212-1</value>
+                            <updated>20140418150212</updated>
+                          </snapshotVersion>
+                        </snapshotVersions>
+                      </versioning>
+                    </metadata>
+                """
+            ),
+        ):
+            with self.assertRaises(artifactory.ArtifactoryError):
+                artifact_url, file_name = artifactory._get_snapshot_url(
+                    artifactory_url="http://artifactory.example.com/artifactory",
+                    repository="libs-snapshots",
+                    group_id="com.company.sampleapp.web-module",
+                    artifact_id="web",
+                    version="1.1_RC8-SNAPSHOT",
+                    packaging="war",
+                    headers={},
+                )

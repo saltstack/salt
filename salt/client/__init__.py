@@ -450,9 +450,8 @@ class LocalClient(object):
             >>> local.cmd_async('*', 'test.sleep', [300])
             '20131219215921857715'
         """
-        arg = salt.utils.args.condition_input(arg, kwarg)
         pub_data = self.run_job(
-            tgt, fun, arg, tgt_type, ret, jid=jid, listen=False, **kwargs
+            tgt, fun, arg, tgt_type, ret, jid=jid, kwarg=kwarg, listen=False, **kwargs
         )
         try:
             return pub_data["jid"]
@@ -703,12 +702,20 @@ class LocalClient(object):
             minion ID. A compound command will return a sub-dictionary keyed by
             function name.
         """
-        arg = salt.utils.args.condition_input(arg, kwarg)
         was_listening = self.event.cpub
 
         try:
             pub_data = self.run_job(
-                tgt, fun, arg, tgt_type, ret, timeout, jid, listen=True, **kwargs
+                tgt,
+                fun,
+                arg,
+                tgt_type,
+                ret,
+                timeout,
+                jid,
+                kwarg=kwarg,
+                listen=True,
+                **kwargs
             )
 
             if not pub_data:
@@ -758,12 +765,19 @@ class LocalClient(object):
         :param verbose: Print extra information about the running command
         :returns: A generator
         """
-        arg = salt.utils.args.condition_input(arg, kwarg)
         was_listening = self.event.cpub
 
         try:
             self.pub_data = self.run_job(
-                tgt, fun, arg, tgt_type, ret, timeout, listen=True, **kwargs
+                tgt,
+                fun,
+                arg,
+                tgt_type,
+                ret,
+                timeout,
+                kwarg=kwarg,
+                listen=True,
+                **kwargs
             )
 
             if not self.pub_data:
@@ -832,12 +846,19 @@ class LocalClient(object):
             {'dave': {'ret': True}}
             {'stewart': {'ret': True}}
         """
-        arg = salt.utils.args.condition_input(arg, kwarg)
         was_listening = self.event.cpub
 
         try:
             pub_data = self.run_job(
-                tgt, fun, arg, tgt_type, ret, timeout, listen=True, **kwargs
+                tgt,
+                fun,
+                arg,
+                tgt_type,
+                ret,
+                timeout,
+                kwarg=kwarg,
+                listen=True,
+                **kwargs
             )
 
             if not pub_data:
@@ -896,12 +917,19 @@ class LocalClient(object):
             None
             {'stewart': {'ret': True}}
         """
-        arg = salt.utils.args.condition_input(arg, kwarg)
         was_listening = self.event.cpub
 
         try:
             pub_data = self.run_job(
-                tgt, fun, arg, tgt_type, ret, timeout, listen=True, **kwargs
+                tgt,
+                fun,
+                arg,
+                tgt_type,
+                ret,
+                timeout,
+                kwarg=kwarg,
+                listen=True,
+                **kwargs
             )
 
             if not pub_data:
@@ -941,12 +969,19 @@ class LocalClient(object):
         """
         Execute a salt command and return
         """
-        arg = salt.utils.args.condition_input(arg, kwarg)
         was_listening = self.event.cpub
 
         try:
             pub_data = self.run_job(
-                tgt, fun, arg, tgt_type, ret, timeout, listen=True, **kwargs
+                tgt,
+                fun,
+                arg,
+                tgt_type,
+                ret,
+                timeout,
+                kwarg=kwarg,
+                listen=True,
+                **kwargs
             )
 
             if not pub_data:
@@ -1620,7 +1655,12 @@ class LocalClient(object):
                             yield {
                                 id_: {
                                     "out": "no_return",
-                                    "ret": "Minion did not return. [No response]",
+                                    "ret": "Minion did not return. [No response]"
+                                    "\nThe minions may not have all finished running and any "
+                                    "remaining minions will return upon completion. To look "
+                                    "up the return data for this job later, run the following "
+                                    "command:\n\n"
+                                    "salt-run jobs.lookup_jid {0}".format(jid),
                                     "retcode": salt.defaults.exitcodes.EX_GENERIC,
                                 }
                             }

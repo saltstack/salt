@@ -1,6 +1,5 @@
 # coding: utf-8
 
-# Import Python libs
 from __future__ import absolute_import
 
 import copy
@@ -8,7 +7,6 @@ import hashlib
 import os
 import shutil
 
-# Import Salt libs
 import salt.auth
 import salt.utils.event
 import salt.utils.json
@@ -20,9 +18,7 @@ from salt.ext.six.moves.urllib.parse import (  # pylint: disable=no-name-in-modu
     urlparse,
 )
 from tests.support.events import eventpublisher_process
-from tests.support.helpers import patched_environ
-
-# Import Salt Testing Libs
+from tests.support.helpers import patched_environ, slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -33,7 +29,6 @@ try:
 except ImportError:
     HAS_TORNADO = False
 
-# Import 3rd-party libs
 # pylint: disable=import-error
 try:
     import salt.ext.tornado.escape
@@ -960,6 +955,7 @@ class TestEventListener(AsyncTestCase):
         self.addCleanup(shutil.rmtree, self.sock_dir, ignore_errors=True)
         super(TestEventListener, self).setUp()
 
+    @slowTest
     def test_simple(self):
         """
         Test getting a few events
@@ -983,6 +979,7 @@ class TestEventListener(AsyncTestCase):
             self.assertEqual(event_future.result()["tag"], "evt1")
             self.assertEqual(event_future.result()["data"]["data"], "foo1")
 
+    @slowTest
     def test_set_event_handler(self):
         """
         Test subscribing events using set_event_handler
@@ -1003,6 +1000,7 @@ class TestEventListener(AsyncTestCase):
             # check that we subscribed the event we wanted
             self.assertEqual(len(event_listener.timeout_map), 0)
 
+    @slowTest
     def test_timeout(self):
         """
         Make sure timeouts work correctly
@@ -1021,6 +1019,7 @@ class TestEventListener(AsyncTestCase):
             with self.assertRaises(saltnado.TimeoutException):
                 event_future.result()
 
+    @slowTest
     def test_clean_by_request(self):
         """
         Make sure the method clean_by_request clean up every related data in EventListener

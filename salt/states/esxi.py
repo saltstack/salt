@@ -927,7 +927,7 @@ def syslog_configured(
         After a successful parameter set, reset the service. Defaults to ``True``.
 
     reset_syslog_config
-        Resets the syslog service to it's default settings. Defaults to ``False``.
+        Resets the syslog service to its default settings. Defaults to ``False``.
         If set to ``True``, default settings defined by the list of syslog configs
         in ``reset_configs`` will be reset before running any other syslog settings.
 

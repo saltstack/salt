@@ -140,7 +140,7 @@ all interfaces are ignored unless specified.
         - type: eth
         - proto: dhcp
         - noifupdown: True  # Do not restart the interface
-                            # you need to reboot/reconfigure manualy
+                            # you need to reboot/reconfigure manually
 
     bond0:
       network.managed:

@@ -368,7 +368,7 @@ def node_add_label(node_name, label_name, label_value, **kwargs):
     """
     Set the value of the label identified by `label_name` to `label_value` on
     the node identified by the name `node_name`.
-    Creates the lable if not present.
+    Creates the label if not present.
 
     CLI Examples::
 
