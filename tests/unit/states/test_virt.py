@@ -11,7 +11,7 @@ import tempfile
 # Import Salt Libs
 import salt.states.virt as virt
 import salt.utils.files
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -2756,3 +2756,561 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(virt.__opts__, {"test": True}):
                 expected["result"] = None
                 self.assertDictEqual(expected, virt.pool_deleted("test01", purge=True))
+
+    def test_volume_defined(self):
+        """
+        test the virt.volume_defined state
+        """
+        with patch.dict(virt.__opts__, {"test": False}):
+            # test case: creating a volume
+            define_mock = MagicMock()
+            with patch.dict(
+                virt.__salt__,
+                {
+                    "virt.list_pools": MagicMock(return_value=["mypool"]),
+                    "virt.volume_infos": MagicMock(return_value={"mypool": {}}),
+                    "virt.volume_define": define_mock,
+                },
+            ):
+                self.assertDictEqual(
+                    virt.volume_defined(
+                        "mypool",
+                        "myvol",
+                        "1234",
+                        allocation="12345",
+                        format="qcow2",
+                        type="file",
+                        permissions={"mode": "0755", "owner": "123", "group": "456"},
+                        backing_store={"path": "/path/to/image", "format": "raw"},
+                        nocow=True,
+                        connection="test:///",
+                        username="jdoe",
+                        password="supersecret",
+                    ),
+                    {
+                        "name": "myvol",
+                        "changes": {"mypool/myvol": {"old": "", "new": "defined"}},
+                        "result": True,
+                        "comment": "Volume myvol defined in pool mypool",
+                    },
+                )
+                define_mock.assert_called_once_with(
+                    "mypool",
+                    "myvol",
+                    "1234",
+                    allocation="12345",
+                    format="qcow2",
+                    type="file",
+                    permissions={"mode": "0755", "owner": "123", "group": "456"},
+                    backing_store={"path": "/path/to/image", "format": "raw"},
+                    nocow=True,
+                    connection="test:///",
+                    username="jdoe",
+                    password="supersecret",
+                )
+
+            # test case: with existing volume
+            define_mock.reset_mock()
+            with patch.dict(
+                virt.__salt__,
+                {
+                    "virt.list_pools": MagicMock(return_value=["mypool"]),
+                    "virt.volume_infos": MagicMock(
+                        return_value={
+                            "mypool": {
+                                "myvol": {
+                                    "format": "qcow2",
+                                    "capacity": "1293942784",
+                                    "backing_store": {
+                                        "path": "/path/to/image",
+                                        "format": "raw",
+                                    },
+                                }
+                            }
+                        }
+                    ),
+                    "virt.volume_define": define_mock,
+                },
+            ):
+                self.assertDictEqual(
+                    virt.volume_defined(
+                        "mypool",
+                        "myvol",
+                        "1234",
+                        allocation="12345",
+                        format="qcow2",
+                        type="file",
+                        permissions={"mode": "0755", "owner": "123", "group": "456"},
+                        backing_store={"path": "/path/to/image", "format": "raw"},
+                        nocow=True,
+                        connection="test:///",
+                        username="jdoe",
+                        password="supersecret",
+                    ),
+                    {
+                        "name": "myvol",
+                        "changes": {},
+                        "result": True,
+                        "comment": "volume is existing",
+                    },
+                )
+                define_mock.assert_not_called()
+
+            # test case: with existing volume, different sizes
+            define_mock.reset_mock()
+            with patch.dict(
+                virt.__salt__,
+                {
+                    "virt.list_pools": MagicMock(return_value=["mypool"]),
+                    "virt.volume_infos": MagicMock(
+                        return_value={
+                            "mypool": {
+                                "myvol": {
+                                    "format": "qcow2",
+                                    "capacity": "12345",
+                                    "backing_store": {
+                                        "path": "/path/to/image",
+                                        "format": "raw",
+                                    },
+                                }
+                            }
+                        }
+                    ),
+                    "virt.volume_define": define_mock,
+                },
+            ):
+                self.assertDictEqual(
+                    virt.volume_defined(
+                        "mypool",
+                        "myvol",
+                        "1234",
+                        allocation="12345",
+                        format="qcow2",
+                        type="file",
+                        permissions={"mode": "0755", "owner": "123", "group": "456"},
+                        backing_store={"path": "/path/to/image", "format": "raw"},
+                        nocow=True,
+                        connection="test:///",
+                        username="jdoe",
+                        password="supersecret",
+                    ),
+                    {
+                        "name": "myvol",
+                        "changes": {},
+                        "result": True,
+                        "comment": "The capacity of the volume is different, but no resize performed",
+                    },
+                )
+                define_mock.assert_not_called()
+
+            # test case: with existing volume, different backing store
+            with patch.dict(
+                virt.__salt__,
+                {
+                    "virt.list_pools": MagicMock(return_value=["mypool"]),
+                    "virt.volume_infos": MagicMock(
+                        return_value={
+                            "mypool": {
+                                "myvol": {
+                                    "format": "qcow2",
+                                    "capacity": "1234",
+                                    "backing_store": {
+                                        "path": "/path/to/other/image",
+                                        "format": "raw",
+                                    },
+                                }
+                            }
+                        }
+                    ),
+                    "virt.volume_define": define_mock,
+                },
+            ):
+                self.assertDictEqual(
+                    virt.volume_defined(
+                        "mypool",
+                        "myvol",
+                        "1234",
+                        allocation="12345",
+                        format="qcow2",
+                        type="file",
+                        permissions={"mode": "0755", "owner": "123", "group": "456"},
+                        backing_store={"path": "/path/to/image", "format": "raw"},
+                        nocow=True,
+                        connection="test:///",
+                        username="jdoe",
+                        password="supersecret",
+                    ),
+                    {
+                        "name": "myvol",
+                        "changes": {},
+                        "result": False,
+                        "comment": "A volume with the same name but different backing store or format is existing",
+                    },
+                )
+                define_mock.assert_not_called()
+
+            # test case: with existing volume, different format
+            with patch.dict(
+                virt.__salt__,
+                {
+                    "virt.list_pools": MagicMock(return_value=["mypool"]),
+                    "virt.volume_infos": MagicMock(
+                        return_value={
+                            "mypool": {
+                                "myvol": {
+                                    "format": "raw",
+                                    "capacity": "1234",
+                                    "backing_store": {
+                                        "path": "/path/to/image",
+                                        "format": "raw",
+                                    },
+                                }
+                            }
+                        }
+                    ),
+                    "virt.volume_define": define_mock,
+                },
+            ):
+                self.assertDictEqual(
+                    virt.volume_defined(
+                        "mypool",
+                        "myvol",
+                        "1234",
+                        allocation="12345",
+                        format="qcow2",
+                        type="file",
+                        permissions={"mode": "0755", "owner": "123", "group": "456"},
+                        backing_store={"path": "/path/to/image", "format": "raw"},
+                        nocow=True,
+                        connection="test:///",
+                        username="jdoe",
+                        password="supersecret",
+                    ),
+                    {
+                        "name": "myvol",
+                        "changes": {},
+                        "result": False,
+                        "comment": "A volume with the same name but different backing store or format is existing",
+                    },
+                )
+                define_mock.assert_not_called()
+
+            # test case: no pool
+            with patch.dict(
+                virt.__salt__,
+                {
+                    "virt.list_pools": MagicMock(return_value=["mypool"]),
+                    "virt.volume_infos": MagicMock(
+                        return_value={
+                            "mypool": {
+                                "myvol": {
+                                    "format": "qcow2",
+                                    "capacity": "1234",
+                                    "backing_store": {
+                                        "path": "/path/to/other/image",
+                                        "format": "raw",
+                                    },
+                                }
+                            }
+                        }
+                    ),
+                    "virt.volume_define": define_mock,
+                },
+            ):
+                self.assertDictEqual(
+                    virt.volume_defined(
+                        "mypool",
+                        "myvol",
+                        "1234",
+                        allocation="12345",
+                        format="qcow2",
+                        type="file",
+                        permissions={"mode": "0755", "owner": "123", "group": "456"},
+                        backing_store={"path": "/path/to/image", "format": "raw"},
+                        nocow=True,
+                        connection="test:///",
+                        username="jdoe",
+                        password="supersecret",
+                    ),
+                    {
+                        "name": "myvol",
+                        "changes": {},
+                        "result": False,
+                        "comment": "A volume with the same name but different backing store or format is existing",
+                    },
+                )
+                define_mock.assert_not_called()
+
+            # test case: with existing volume, different format
+            with patch.dict(
+                virt.__salt__,
+                {
+                    "virt.list_pools": MagicMock(return_value=[]),
+                    "virt.volume_infos": MagicMock(return_value={}),
+                    "virt.volume_define": define_mock,
+                },
+            ):
+                self.assertRaisesRegex(
+                    SaltInvocationError,
+                    "Storage pool mypool not existing",
+                    virt.volume_defined,
+                    "mypool",
+                    "myvol",
+                    "1234",
+                    allocation="12345",
+                    format="qcow2",
+                    type="file",
+                    permissions={"mode": "0755", "owner": "123", "group": "456"},
+                    backing_store={"path": "/path/to/image", "format": "raw"},
+                    nocow=True,
+                    connection="test:///",
+                    username="jdoe",
+                    password="supersecret",
+                )
+
+        # Test mode cases
+        with patch.dict(virt.__opts__, {"test": True}):
+            # test case: creating a volume
+            define_mock.reset_mock()
+            with patch.dict(
+                virt.__salt__,
+                {
+                    "virt.list_pools": MagicMock(return_value=["mypool"]),
+                    "virt.volume_infos": MagicMock(return_value={"mypool": {}}),
+                    "virt.volume_define": define_mock,
+                },
+            ):
+                self.assertDictEqual(
+                    virt.volume_defined(
+                        "mypool",
+                        "myvol",
+                        "1234",
+                        allocation="12345",
+                        format="qcow2",
+                        type="file",
+                        permissions={"mode": "0755", "owner": "123", "group": "456"},
+                        backing_store={"path": "/path/to/image", "format": "raw"},
+                        nocow=True,
+                        connection="test:///",
+                        username="jdoe",
+                        password="supersecret",
+                    ),
+                    {
+                        "name": "myvol",
+                        "changes": {"mypool/myvol": {"old": "", "new": "defined"}},
+                        "result": None,
+                        "comment": "Volume myvol would be defined in pool mypool",
+                    },
+                )
+                define_mock.assert_not_called()
+
+            # test case: with existing volume, different sizes
+            with patch.dict(
+                virt.__salt__,
+                {
+                    "virt.list_pools": MagicMock(return_value=["mypool"]),
+                    "virt.volume_infos": MagicMock(
+                        return_value={
+                            "mypool": {
+                                "myvol": {
+                                    "format": "qcow2",
+                                    "capacity": "12345",
+                                    "backing_store": {
+                                        "path": "/path/to/image",
+                                        "format": "raw",
+                                    },
+                                }
+                            }
+                        }
+                    ),
+                    "virt.volume_define": define_mock,
+                },
+            ):
+                self.assertDictEqual(
+                    virt.volume_defined(
+                        "mypool",
+                        "myvol",
+                        "1234",
+                        allocation="12345",
+                        format="qcow2",
+                        type="file",
+                        permissions={"mode": "0755", "owner": "123", "group": "456"},
+                        backing_store={"path": "/path/to/image", "format": "raw"},
+                        nocow=True,
+                        connection="test:///",
+                        username="jdoe",
+                        password="supersecret",
+                    ),
+                    {
+                        "name": "myvol",
+                        "changes": {},
+                        "result": True,
+                        "comment": "The capacity of the volume is different, but no resize performed",
+                    },
+                )
+                define_mock.assert_not_called()
+
+            # test case: with existing volume, different backing store
+            with patch.dict(
+                virt.__salt__,
+                {
+                    "virt.list_pools": MagicMock(return_value=["mypool"]),
+                    "virt.volume_infos": MagicMock(
+                        return_value={
+                            "mypool": {
+                                "myvol": {
+                                    "format": "qcow2",
+                                    "capacity": "1234",
+                                    "backing_store": {
+                                        "path": "/path/to/other/image",
+                                        "format": "raw",
+                                    },
+                                }
+                            }
+                        }
+                    ),
+                    "virt.volume_define": define_mock,
+                },
+            ):
+                self.assertDictEqual(
+                    virt.volume_defined(
+                        "mypool",
+                        "myvol",
+                        "1234",
+                        allocation="12345",
+                        format="qcow2",
+                        type="file",
+                        permissions={"mode": "0755", "owner": "123", "group": "456"},
+                        backing_store={"path": "/path/to/image", "format": "raw"},
+                        nocow=True,
+                        connection="test:///",
+                        username="jdoe",
+                        password="supersecret",
+                    ),
+                    {
+                        "name": "myvol",
+                        "changes": {},
+                        "result": False,
+                        "comment": "A volume with the same name but different backing store or format is existing",
+                    },
+                )
+                define_mock.assert_not_called()
+
+            # test case: with existing volume, different format
+            with patch.dict(
+                virt.__salt__,
+                {
+                    "virt.list_pools": MagicMock(return_value=["mypool"]),
+                    "virt.volume_infos": MagicMock(
+                        return_value={
+                            "mypool": {
+                                "myvol": {
+                                    "format": "raw",
+                                    "capacity": "1234",
+                                    "backing_store": {
+                                        "path": "/path/to/image",
+                                        "format": "raw",
+                                    },
+                                }
+                            }
+                        }
+                    ),
+                    "virt.volume_define": define_mock,
+                },
+            ):
+                self.assertDictEqual(
+                    virt.volume_defined(
+                        "mypool",
+                        "myvol",
+                        "1234",
+                        allocation="12345",
+                        format="qcow2",
+                        type="file",
+                        permissions={"mode": "0755", "owner": "123", "group": "456"},
+                        backing_store={"path": "/path/to/image", "format": "raw"},
+                        nocow=True,
+                        connection="test:///",
+                        username="jdoe",
+                        password="supersecret",
+                    ),
+                    {
+                        "name": "myvol",
+                        "changes": {},
+                        "result": False,
+                        "comment": "A volume with the same name but different backing store or format is existing",
+                    },
+                )
+                define_mock.assert_not_called()
+
+            # test case: no pool
+            with patch.dict(
+                virt.__salt__,
+                {
+                    "virt.list_pools": MagicMock(return_value=["mypool"]),
+                    "virt.volume_infos": MagicMock(
+                        return_value={
+                            "mypool": {
+                                "myvol": {
+                                    "format": "qcow2",
+                                    "capacity": "1234",
+                                    "backing_store": {
+                                        "path": "/path/to/other/image",
+                                        "format": "raw",
+                                    },
+                                }
+                            }
+                        }
+                    ),
+                    "virt.volume_define": define_mock,
+                },
+            ):
+                self.assertDictEqual(
+                    virt.volume_defined(
+                        "mypool",
+                        "myvol",
+                        "1234",
+                        allocation="12345",
+                        format="qcow2",
+                        type="file",
+                        permissions={"mode": "0755", "owner": "123", "group": "456"},
+                        backing_store={"path": "/path/to/image", "format": "raw"},
+                        nocow=True,
+                        connection="test:///",
+                        username="jdoe",
+                        password="supersecret",
+                    ),
+                    {
+                        "name": "myvol",
+                        "changes": {},
+                        "result": False,
+                        "comment": "A volume with the same name but different backing store or format is existing",
+                    },
+                )
+                define_mock.assert_not_called()
+
+            # test case: with existing volume, different format
+            with patch.dict(
+                virt.__salt__,
+                {
+                    "virt.list_pools": MagicMock(return_value=[]),
+                    "virt.volume_infos": MagicMock(return_value={}),
+                    "virt.volume_define": define_mock,
+                },
+            ):
+                self.assertRaisesRegex(
+                    SaltInvocationError,
+                    "Storage pool mypool not existing",
+                    virt.volume_defined,
+                    "mypool",
+                    "myvol",
+                    "1234",
+                    allocation="12345",
+                    format="qcow2",
+                    type="file",
+                    permissions={"mode": "0755", "owner": "123", "group": "456"},
+                    backing_store={"path": "/path/to/image", "format": "raw"},
+                    nocow=True,
+                    connection="test:///",
+                    username="jdoe",
+                    password="supersecret",
+                )

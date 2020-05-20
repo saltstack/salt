@@ -32,6 +32,7 @@ EXCLUDED_DIRS = [
     os.path.join("tests", "unit", "files"),
     os.path.join("tests", "integration", "cloud", "helpers"),
     os.path.join("tests", "kitchen", "tests"),
+    os.path.join("tests", "unit", "modules", "nxos"),
 ]
 INCLUDED_DIRS = [
     os.path.join("tests", "kitchen", "tests", "*", "tests", "*"),
@@ -138,6 +139,7 @@ class BadTestModuleNamesTestCase(TestCase):
             "unit.utils.scheduler.test_postpone",
             "unit.utils.scheduler.test_skip",
             "unit.utils.scheduler.test_schedule",
+            "unit.setup.test_install",
             "integration.cli.test_custom_module",
             "integration.cli.test_grains",
             "integration.client.test_kwarg",
@@ -173,8 +175,6 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.reactor.test_reactor",
             "integration.returners.test_noop_return",
             "integration.runners.test_runner_returns",
-            "integration.setup.test_bdist",
-            "integration.setup.test_egg",
             "integration.shell.test_spm",
             "integration.shell.test_cp",
             "integration.shell.test_syndic",

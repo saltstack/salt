@@ -2,29 +2,14 @@
 """
 Functions for identifying which platform a machine is
 """
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import subprocess
 import sys
-import warnings
 
-# Import Salt libs
+from distro import linux_distribution
 from salt.utils.decorators import memoize as real_memoize
-
-# linux_distribution deprecated in py3.7
-try:
-    from platform import linux_distribution as _deprecated_linux_distribution
-
-    def linux_distribution(**kwargs):
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            return _deprecated_linux_distribution(**kwargs)
-
-
-except ImportError:
-    from distro import linux_distribution
 
 
 @real_memoize

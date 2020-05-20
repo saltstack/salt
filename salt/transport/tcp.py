@@ -732,7 +732,7 @@ class TCPReqServerChannel(
     @salt.ext.tornado.gen.coroutine
     def handle_message(self, stream, header, payload):
         """
-        Handle incoming messages from underylying tcp streams
+        Handle incoming messages from underlying tcp streams
         """
         try:
             try:

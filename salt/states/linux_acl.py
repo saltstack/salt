@@ -152,18 +152,34 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
         if user:
             octal_sum = sum([_octal.get(i, i) for i in perms])
             need_refresh = False
-            for path in __current_perms:
-                acl_found = False
-                for user_acl in __current_perms[path].get(_acl_type, []):
-                    if (
-                        _search_name in user_acl
-                        and user_acl[_search_name]["octal"] == octal_sum
-                    ):
-                        acl_found = True
+            # If recursive check all paths retrieved via acl.getfacl
+            if recurse:
+                for path in __current_perms:
+                    acl_found = False
+                    if _default:
+                        # Recusive default acls only apply to directories
+                        if not os.path.isdir(path):
+                            continue
+                        _current_perms_path = __current_perms[path].get("defaults", {})
+                    else:
+                        _current_perms_path = __current_perms[path]
+                    for user_acl in _current_perms_path.get(_acl_type, []):
+                        if (
+                            _search_name in user_acl
+                            and user_acl[_search_name]["octal"] == octal_sum
+                        ):
+                            acl_found = True
+                    if not acl_found:
+                        need_refresh = True
                         break
-                if not acl_found:
-                    need_refresh = True
-                    break
+
+            # Check the permissions from the already located file
+            elif user[_search_name]["octal"] == sum([_octal.get(i, i) for i in perms]):
+                need_refresh = False
+            # If they don't match then refresh
+            else:
+                need_refresh = True
+
             if not need_refresh:
                 ret["comment"] = "Permissions are in the desired state"
             else:
