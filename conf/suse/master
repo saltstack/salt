@@ -302,7 +302,7 @@ syndic_user: salt
 # the autosign_file and the auto_accept setting.
 #autoreject_file: /etc/salt/autoreject.conf
 
-# If the autosign_grains_dir is specified, incoming keys from minons with grain
+# If the autosign_grains_dir is specified, incoming keys from minions with grain
 # values matching those defined in files in this directory will be accepted
 # automatically. This is insecure. Minions need to be configured to send the grains.
 #autosign_grains_dir: /etc/salt/autosign_grains
@@ -1202,7 +1202,7 @@ syndic_user: salt
 ############################################
 # Warning: Failure to set TCP keepalives on the salt-master can result in
 # not detecting the loss of a minion when the connection is lost or when
-# it's host has been terminated without first closing the socket.
+# its host has been terminated without first closing the socket.
 # Salt's Presence System depends on this connection status to know if a minion
 # is "present".
 # ZeroMQ now includes support for configuring SO_KEEPALIVE if supported by

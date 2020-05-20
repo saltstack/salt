@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Support for Postfix
 
 This module is currently little more than a config file viewer and editor. It
@@ -10,12 +10,13 @@ configuration files).
 The design of this module is such that when files are edited, a minimum of
 changes are made to them. Each file should look as if it has been edited by
 hand; order, comments and whitespace are all preserved.
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
+import logging
 
 # Import python libs
 import re
-import logging
 
 # Import salt libs
 import salt.utils.files
@@ -25,25 +26,25 @@ import salt.utils.stringutils
 # Import 3rd-party libs
 from salt.ext import six
 
-SWWS = re.compile(r'^\s')
+SWWS = re.compile(r"^\s")
 
 log = logging.getLogger(__name__)
 
-MAIN_CF = '/etc/postfix/main.cf'
-MASTER_CF = '/etc/postfix/master.cf'
+MAIN_CF = "/etc/postfix/main.cf"
+MASTER_CF = "/etc/postfix/master.cf"
 
 
 def __virtual__():
-    '''
+    """
     Only load the module if Postfix is installed
-    '''
-    if salt.utils.path.which('postfix'):
+    """
+    if salt.utils.path.which("postfix"):
         return True
-    return (False, 'postfix execution module not loaded: postfix not installed.')
+    return (False, "postfix execution module not loaded: postfix not installed.")
 
 
 def _parse_master(path=MASTER_CF):
-    '''
+    """
     Parse the master.cf file. This file is essentially a whitespace-delimited
     columnar file. The columns are: service, type, private (yes), unpriv (yes),
     chroot (yes), wakeup (never), maxproc (100), command + args.
@@ -54,8 +55,8 @@ def _parse_master(path=MASTER_CF):
 
     Returns a dict of the active config lines, and a list of the entire file,
     in order. These compliment each other.
-    '''
-    with salt.utils.files.fopen(path, 'r') as fh_:
+    """
+    with salt.utils.files.fopen(path, "r") as fh_:
         full_conf = salt.utils.stringutils.to_unicode(fh_.read())
 
     # Condense the file based on line continuations, but keep order, comments
@@ -63,21 +64,21 @@ def _parse_master(path=MASTER_CF):
     conf_list = []
     conf_dict = {}
     for line in full_conf.splitlines():
-        if not line.strip() or line.strip().startswith('#'):
+        if not line.strip() or line.strip().startswith("#"):
             conf_list.append(line)
             continue
         comps = line.strip().split()
         conf_line = {
-            'service': comps[0],
-            'conn_type': comps[1],
-            'private': comps[2],
-            'unpriv': comps[3],
-            'chroot': comps[4],
-            'wakeup': comps[5],
-            'maxproc': comps[6],
-            'command': ' '.join(comps[7:]),
+            "service": comps[0],
+            "conn_type": comps[1],
+            "private": comps[2],
+            "unpriv": comps[3],
+            "chroot": comps[4],
+            "wakeup": comps[5],
+            "maxproc": comps[6],
+            "command": " ".join(comps[7:]),
         }
-        dict_key = '{0} {1}'.format(comps[0], comps[1])
+        dict_key = "{0} {1}".format(comps[0], comps[1])
         conf_list.append(conf_line)
         conf_dict[dict_key] = conf_line
 
@@ -85,7 +86,7 @@ def _parse_master(path=MASTER_CF):
 
 
 def show_master(path=MASTER_CF):
-    '''
+    """
     Return a dict of active config values. This does not include comments,
     spacing or order.
 
@@ -96,22 +97,24 @@ def show_master(path=MASTER_CF):
 
         salt <minion> postfix.show_master
         salt <minion> postfix.show_master path=/path/to/master.cf
-    '''
+    """
     conf_dict, conf_list = _parse_master(path)  # pylint: disable=W0612
     return conf_dict
 
 
-def set_master(service,
-               conn_type,
-               private='y',
-               unpriv='y',
-               chroot='y',
-               wakeup='n',
-               maxproc='100',
-               command='',
-               write_conf=True,
-               path=MASTER_CF):
-    '''
+def set_master(
+    service,
+    conn_type,
+    private="y",
+    unpriv="y",
+    chroot="y",
+    wakeup="n",
+    maxproc="100",
+    command="",
+    write_conf=True,
+    path=MASTER_CF,
+):
+    """
     Set a single config value in the master.cf file. If the value does not
     already exist, it will be appended to the end.
 
@@ -132,24 +135,17 @@ def set_master(service,
     CLI Example:
 
         salt <minion> postfix.set_master smtp inet n y n n 100 smtpd
-    '''
+    """
     conf_dict, conf_list = _parse_master(path)
 
     new_conf = []
-    dict_key = '{0} {1}'.format(service, conn_type)
+    dict_key = "{0} {1}".format(service, conn_type)
     new_line = _format_master(
-        service,
-        conn_type,
-        private,
-        unpriv,
-        chroot,
-        wakeup,
-        maxproc,
-        command,
+        service, conn_type, private, unpriv, chroot, wakeup, maxproc, command,
     )
     for line in conf_list:
         if isinstance(line, dict):
-            if line['service'] == service and line['conn_type'] == conn_type:
+            if line["service"] == service and line["conn_type"] == conn_type:
                 # This is the one line that we're changing
                 new_conf.append(new_line)
             else:
@@ -166,58 +162,46 @@ def set_master(service,
 
     if write_conf:
         _write_conf(new_conf, path)
-    return '\n'.join(new_conf)
+    return "\n".join(new_conf)
 
 
-def _format_master(service,
-                   conn_type,
-                   private,
-                   unpriv,
-                   chroot,
-                   wakeup,
-                   maxproc,
-                   command):
-    '''
+def _format_master(
+    service, conn_type, private, unpriv, chroot, wakeup, maxproc, command
+):
+    """
     Format the given values into the style of line normally used in the
     master.cf file.
-    '''
-    #==========================================================================
-    #service type  private unpriv  chroot  wakeup  maxproc command + args
+    """
+    # ==========================================================================
+    # service type  private unpriv  chroot  wakeup  maxproc command + args
     #              (yes)   (yes)   (yes)   (never) (100)
-    #==========================================================================
-    #smtp      inet  n       -       n       -       -       smtpd
-    if private == 'y':
-        private = '-'
+    # ==========================================================================
+    # smtp      inet  n       -       n       -       -       smtpd
+    if private == "y":
+        private = "-"
 
-    if unpriv == 'y':
-        unpriv = '-'
+    if unpriv == "y":
+        unpriv = "-"
 
-    if chroot == 'y':
-        chroot = '-'
+    if chroot == "y":
+        chroot = "-"
 
-    if wakeup == 'n':
-        wakeup = '-'
+    if wakeup == "n":
+        wakeup = "-"
 
     maxproc = six.text_type(maxproc)
-    if maxproc == '100':
-        maxproc = '-'
+    if maxproc == "100":
+        maxproc = "-"
 
-    conf_line = '{0:9s} {1:5s} {2:7s} {3:7s} {4:7s} {5:7s} {6:7s} {7}'.format(
-        service,
-        conn_type,
-        private,
-        unpriv,
-        chroot,
-        wakeup,
-        maxproc,
-        command,
+    conf_line = "{0:9s} {1:5s} {2:7s} {3:7s} {4:7s} {5:7s} {6:7s} {7}".format(
+        service, conn_type, private, unpriv, chroot, wakeup, maxproc, command,
     )
-    #print(conf_line)
+    # print(conf_line)
     return conf_line
 
 
 def _parse_main(path=MAIN_CF):
-    '''
+    """
     Parse files in the style of main.cf. This is not just a "name = value" file;
     there are other rules:
 
@@ -227,8 +211,8 @@ def _parse_main(path=MAIN_CF):
     * The whitespace rule applies to comments.
     * Keys defined in the file may be referred to as variables further down in
         the file.
-    '''
-    with salt.utils.files.fopen(path, 'r') as fh_:
+    """
+    with salt.utils.files.fopen(path, "r") as fh_:
         full_conf = salt.utils.stringutils.to_unicode(fh_.read())
 
     # Condense the file based on line continuations, but keep order, comments
@@ -244,9 +228,9 @@ def _parse_main(path=MAIN_CF):
                 conf_list.append(line)
                 continue
             if not isinstance(conf_list[-1], six.string_types):
-                conf_list[-1] = ''
+                conf_list[-1] = ""
             # This line is a continuation of the previous line
-            conf_list[-1] = '\n'.join([conf_list[-1], line])
+            conf_list[-1] = "\n".join([conf_list[-1], line])
         else:
             conf_list.append(line)
 
@@ -255,17 +239,17 @@ def _parse_main(path=MAIN_CF):
     for line in conf_list:
         if not line.strip():
             continue
-        if line.startswith('#'):
+        if line.startswith("#"):
             continue
-        comps = line.split('=')
-        pairs[comps[0].strip()] = '='.join(comps[1:]).strip()
+        comps = line.split("=")
+        pairs[comps[0].strip()] = "=".join(comps[1:]).strip()
 
     # Return both sets of data, they compliment each other elsewhere
     return pairs, conf_list
 
 
 def show_main(path=MAIN_CF):
-    '''
+    """
     Return a dict of active config values. This does not include comments,
     spacing or order. Bear in mind that order is functionally important in the
     main.cf file, since keys can be referred to as variables. This means that
@@ -276,20 +260,20 @@ def show_main(path=MAIN_CF):
 
         salt <minion> postfix.show_main
         salt <minion> postfix.show_main path=/path/to/main.cf
-    '''
+    """
     pairs, conf_list = _parse_main(path)  # pylint: disable=W0612
     return pairs
 
 
 def set_main(key, value, path=MAIN_CF):
-    '''
+    """
     Set a single config value in the main.cf file. If the value does not already
     exist, it will be appended to the end.
 
     CLI Example:
 
         salt <minion> postfix.set_main mailq_path /usr/bin/mailq
-    '''
+    """
     pairs, conf_list = _parse_main(path)
 
     new_conf = []
@@ -297,11 +281,11 @@ def set_main(key, value, path=MAIN_CF):
     if key in pairs:
         for line in conf_list:
             if re.match(key_line_match, line):
-                new_conf.append('{0} = {1}'.format(key, value))
+                new_conf.append("{0} = {1}".format(key, value))
             else:
                 new_conf.append(line)
     else:
-        conf_list.append('{0} = {1}'.format(key, value))
+        conf_list.append("{0} = {1}".format(key, value))
         new_conf = conf_list
 
     _write_conf(new_conf, path)
@@ -309,21 +293,21 @@ def set_main(key, value, path=MAIN_CF):
 
 
 def _write_conf(conf, path=MAIN_CF):
-    '''
+    """
     Write out configuration file.
-    '''
-    with salt.utils.files.fopen(path, 'w') as fh_:
+    """
+    with salt.utils.files.fopen(path, "w") as fh_:
         for line in conf:
             line = salt.utils.stringutils.to_str(line)
             if isinstance(line, dict):
-                fh_.write(' '.join(line))
+                fh_.write(" ".join(line))
             else:
                 fh_.write(line)
-            fh_.write('\n')
+            fh_.write("\n")
 
 
 def show_queue():
-    '''
+    """
     Show contents of the mail queue
 
     CLI Example:
@@ -332,33 +316,43 @@ def show_queue():
 
         salt '*' postfix.show_queue
 
-    '''
-    cmd = 'mailq'
-    out = __salt__['cmd.run'](cmd).splitlines()
+    """
+    cmd = "mailq"
+    out = __salt__["cmd.run"](cmd).splitlines()
     queue = []
 
-    queue_pattern = re.compile(r"(?P<queue_id>^[A-Z0-9]+)\s+(?P<size>\d+)\s(?P<timestamp>\w{3}\s\w{3}\s\d{1,2}\s\d{2}\:\d{2}\:\d{2})\s+(?P<sender>.+)")
+    queue_pattern = re.compile(
+        r"(?P<queue_id>^[A-Z0-9]+)\s+(?P<size>\d+)\s(?P<timestamp>\w{3}\s\w{3}\s\d{1,2}\s\d{2}\:\d{2}\:\d{2})\s+(?P<sender>.+)"
+    )
     recipient_pattern = re.compile(r"^\s+(?P<recipient>.+)")
     for line in out:
-        if re.match('^[-|postqueue:|Mail]', line):
+        if re.match("^[-|postqueue:|Mail]", line):
             # discard in-queue wrapper
             continue
         if re.match(queue_pattern, line):
             m = re.match(queue_pattern, line)
-            queue_id = m.group('queue_id')
-            size = m.group('size')
-            timestamp = m.group('timestamp')
-            sender = m.group('sender')
+            queue_id = m.group("queue_id")
+            size = m.group("size")
+            timestamp = m.group("timestamp")
+            sender = m.group("sender")
         elif re.match(recipient_pattern, line):  # recipient/s
             m = re.match(recipient_pattern, line)
-            recipient = m.group('recipient')
+            recipient = m.group("recipient")
         elif not line:  # end of record
-            queue.append({'queue_id': queue_id, 'size': size, 'timestamp': timestamp, 'sender': sender, 'recipient': recipient})
+            queue.append(
+                {
+                    "queue_id": queue_id,
+                    "size": size,
+                    "timestamp": timestamp,
+                    "sender": sender,
+                    "recipient": recipient,
+                }
+            )
     return queue
 
 
 def delete(queue_id):
-    '''
+    """
     Delete message(s) from the mail queue
 
     CLI Example:
@@ -369,45 +363,47 @@ def delete(queue_id):
 
         salt '*' postfix.delete ALL
 
-    '''
+    """
 
-    ret = {'message': '',
-           'result': True
-           }
+    ret = {"message": "", "result": True}
 
     if not queue_id:
-        log.error('Require argument queue_id')
+        log.error("Require argument queue_id")
 
-    if not queue_id == 'ALL':
+    if not queue_id == "ALL":
         queue = show_queue()
         _message = None
         for item in queue:
-            if item['queue_id'] == queue_id:
+            if item["queue_id"] == queue_id:
                 _message = item
 
         if not _message:
-            ret['message'] = 'No message in queue with ID {0}'.format(queue_id)
-            ret['result'] = False
+            ret["message"] = "No message in queue with ID {0}".format(queue_id)
+            ret["result"] = False
             return ret
 
-    cmd = 'postsuper -d {0}'.format(queue_id)
-    result = __salt__['cmd.run_all'](cmd)
+    cmd = "postsuper -d {0}".format(queue_id)
+    result = __salt__["cmd.run_all"](cmd)
 
-    if result['retcode'] == 0:
-        if queue_id == 'ALL':
-            ret['message'] = 'Successfully removed all messages'
+    if result["retcode"] == 0:
+        if queue_id == "ALL":
+            ret["message"] = "Successfully removed all messages"
         else:
-            ret['message'] = 'Successfully removed message with queue id {0}'.format(queue_id)
+            ret["message"] = "Successfully removed message with queue id {0}".format(
+                queue_id
+            )
     else:
-        if queue_id == 'ALL':
-            ret['message'] = 'Unable to removed all messages'
+        if queue_id == "ALL":
+            ret["message"] = "Unable to removed all messages"
         else:
-            ret['message'] = 'Unable to remove message with queue id {0}: {1}'.format(queue_id, result['stderr'])
+            ret["message"] = "Unable to remove message with queue id {0}: {1}".format(
+                queue_id, result["stderr"]
+            )
     return ret
 
 
 def hold(queue_id):
-    '''
+    """
     Put message(s) on hold from the mail queue
 
     CLI Example:
@@ -418,45 +414,49 @@ def hold(queue_id):
 
         salt '*' postfix.hold ALL
 
-    '''
+    """
 
-    ret = {'message': '',
-           'result': True
-           }
+    ret = {"message": "", "result": True}
 
     if not queue_id:
-        log.error('Require argument queue_id')
+        log.error("Require argument queue_id")
 
-    if not queue_id == 'ALL':
+    if not queue_id == "ALL":
         queue = show_queue()
         _message = None
         for item in queue:
-            if item['queue_id'] == queue_id:
+            if item["queue_id"] == queue_id:
                 _message = item
 
         if not _message:
-            ret['message'] = 'No message in queue with ID {0}'.format(queue_id)
-            ret['result'] = False
+            ret["message"] = "No message in queue with ID {0}".format(queue_id)
+            ret["result"] = False
             return ret
 
-    cmd = 'postsuper -h {0}'.format(queue_id)
-    result = __salt__['cmd.run_all'](cmd)
+    cmd = "postsuper -h {0}".format(queue_id)
+    result = __salt__["cmd.run_all"](cmd)
 
-    if result['retcode'] == 0:
-        if queue_id == 'ALL':
-            ret['message'] = 'Successfully placed all messages on hold'
+    if result["retcode"] == 0:
+        if queue_id == "ALL":
+            ret["message"] = "Successfully placed all messages on hold"
         else:
-            ret['message'] = 'Successfully placed message on hold with queue id {0}'.format(queue_id)
+            ret[
+                "message"
+            ] = "Successfully placed message on hold with queue id {0}".format(queue_id)
     else:
-        if queue_id == 'ALL':
-            ret['message'] = 'Unable to place all messages on hold'
+        if queue_id == "ALL":
+            ret["message"] = "Unable to place all messages on hold"
         else:
-            ret['message'] = 'Unable to place message on hold with queue id {0}: {1}'.format(queue_id, result['stderr'])
+            ret[
+                "message"
+            ] = "Unable to place message on hold with queue id {0}: {1}".format(
+                queue_id, result["stderr"]
+            )
     return ret
 
 
 def unhold(queue_id):
-    '''
+    """
     Set held message(s) in the mail queue to unheld
 
     CLI Example:
@@ -467,45 +467,49 @@ def unhold(queue_id):
 
         salt '*' postfix.unhold ALL
 
-    '''
+    """
 
-    ret = {'message': '',
-           'result': True
-           }
+    ret = {"message": "", "result": True}
 
     if not queue_id:
-        log.error('Require argument queue_id')
+        log.error("Require argument queue_id")
 
-    if not queue_id == 'ALL':
+    if not queue_id == "ALL":
         queue = show_queue()
         _message = None
         for item in queue:
-            if item['queue_id'] == queue_id:
+            if item["queue_id"] == queue_id:
                 _message = item
 
         if not _message:
-            ret['message'] = 'No message in queue with ID {0}'.format(queue_id)
-            ret['result'] = False
+            ret["message"] = "No message in queue with ID {0}".format(queue_id)
+            ret["result"] = False
             return ret
 
-    cmd = 'postsuper -H {0}'.format(queue_id)
-    result = __salt__['cmd.run_all'](cmd)
+    cmd = "postsuper -H {0}".format(queue_id)
+    result = __salt__["cmd.run_all"](cmd)
 
-    if result['retcode'] == 0:
-        if queue_id == 'ALL':
-            ret['message'] = 'Successfully set all message as unheld'
+    if result["retcode"] == 0:
+        if queue_id == "ALL":
+            ret["message"] = "Successfully set all message as unheld"
         else:
-            ret['message'] = 'Successfully set message as unheld with queue id {0}'.format(queue_id)
+            ret[
+                "message"
+            ] = "Successfully set message as unheld with queue id {0}".format(queue_id)
     else:
-        if queue_id == 'ALL':
-            ret['message'] = 'Unable to set all message as unheld.'
+        if queue_id == "ALL":
+            ret["message"] = "Unable to set all message as unheld."
         else:
-            ret['message'] = 'Unable to set message as unheld with queue id {0}: {1}'.format(queue_id, result['stderr'])
+            ret[
+                "message"
+            ] = "Unable to set message as unheld with queue id {0}: {1}".format(
+                queue_id, result["stderr"]
+            )
     return ret
 
 
 def requeue(queue_id):
-    '''
+    """
     Requeue message(s) in the mail queue
 
     CLI Example:
@@ -516,38 +520,40 @@ def requeue(queue_id):
 
         salt '*' postfix.requeue ALL
 
-    '''
+    """
 
-    ret = {'message': '',
-           'result': True
-           }
+    ret = {"message": "", "result": True}
 
     if not queue_id:
-        log.error('Required argument queue_id')
+        log.error("Required argument queue_id")
 
-    if not queue_id == 'ALL':
+    if not queue_id == "ALL":
         queue = show_queue()
         _message = None
         for item in queue:
-            if item['queue_id'] == queue_id:
+            if item["queue_id"] == queue_id:
                 _message = item
 
         if not _message:
-            ret['message'] = 'No message in queue with ID {0}'.format(queue_id)
-            ret['result'] = False
+            ret["message"] = "No message in queue with ID {0}".format(queue_id)
+            ret["result"] = False
             return ret
 
-    cmd = 'postsuper -r {0}'.format(queue_id)
-    result = __salt__['cmd.run_all'](cmd)
+    cmd = "postsuper -r {0}".format(queue_id)
+    result = __salt__["cmd.run_all"](cmd)
 
-    if result['retcode'] == 0:
-        if queue_id == 'ALL':
-            ret['message'] = 'Successfully requeued all messages'
+    if result["retcode"] == 0:
+        if queue_id == "ALL":
+            ret["message"] = "Successfully requeued all messages"
         else:
-            ret['message'] = 'Successfully requeued message with queue id {0}'.format(queue_id)
+            ret["message"] = "Successfully requeued message with queue id {0}".format(
+                queue_id
+            )
     else:
-        if queue_id == 'ALL':
-            ret['message'] = 'Unable to requeue all messages'
+        if queue_id == "ALL":
+            ret["message"] = "Unable to requeue all messages"
         else:
-            ret['message'] = 'Unable to requeue message with queue id {0}: {1}'.format(queue_id, result['stderr'])
+            ret["message"] = "Unable to requeue message with queue id {0}: {1}".format(
+                queue_id, result["stderr"]
+            )
     return ret

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Display values only, separated by newlines
 ==========================================
 
@@ -75,7 +75,7 @@ Output
 
     8
     10
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -102,7 +102,7 @@ def _get_values(data):
 
 
 def _one_level_values(data):
-    return '\n'.join(_string_list(_get_values(data)))
+    return "\n".join(_string_list(_get_values(data)))
 
 
 def _string_list(a_list):
@@ -110,7 +110,7 @@ def _string_list(a_list):
 
 
 def output(data, **kwargs):  # pylint: disable=unused-argument
-    '''
+    """
     Display modified ret data
-    '''
+    """
     return _one_level_values(data)

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module for working with the Grafana v4 API
 
 .. versionadded:: 2017.7.0
@@ -19,51 +19,53 @@ Module for working with the Grafana v4 API
             grafana_user: admin
             grafana_password: admin
             grafana_timeout: 3
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
+from salt.ext.six import string_types
 
 try:
     import requests
+
     HAS_LIBS = True
 except ImportError:
     HAS_LIBS = False
 
-from salt.ext.six import string_types
 
-
-__virtualname__ = 'grafana4'
+__virtualname__ = "grafana4"
 
 
 def __virtual__():
-    '''
+    """
     Only load if requests is installed
-    '''
+    """
     if HAS_LIBS:
         return __virtualname__
     else:
-        return False, 'The "{0}" module could not be loaded: ' \
-                      '"requests" is not installed.'.format(__virtualname__)
+        return (
+            False,
+            'The "{0}" module could not be loaded: '
+            '"requests" is not installed.'.format(__virtualname__),
+        )
 
 
 def _get_headers(profile):
-    headers = {'Content-type': 'application/json'}
-    if profile.get('grafana_token', False):
-        headers['Authorization'] = 'Bearer {0}'.format(
-            profile['grafana_token'])
+    headers = {"Content-type": "application/json"}
+    if profile.get("grafana_token", False):
+        headers["Authorization"] = "Bearer {0}".format(profile["grafana_token"])
     return headers
 
 
 def _get_auth(profile):
-    if profile.get('grafana_token', False):
+    if profile.get("grafana_token", False):
         return None
     return requests.auth.HTTPBasicAuth(
-        profile['grafana_user'],
-        profile['grafana_password']
+        profile["grafana_user"], profile["grafana_password"]
     )
 
 
-def get_users(profile='grafana'):
-    '''
+def get_users(profile="grafana"):
+    """
     List all users.
 
     profile
@@ -75,22 +77,22 @@ def get_users(profile='grafana'):
     .. code-block:: bash
 
         salt '*' grafana4.get_users
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     response = requests.get(
-        '{0}/api/users'.format(profile['grafana_url']),
+        "{0}/api/users".format(profile["grafana_url"]),
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     if response.status_code >= 400:
         response.raise_for_status()
     return response.json()
 
 
-def get_user(login, profile='grafana'):
-    '''
+def get_user(login, profile="grafana"):
+    """
     Show a single user.
 
     login
@@ -105,16 +107,16 @@ def get_user(login, profile='grafana'):
     .. code-block:: bash
 
         salt '*' grafana4.get_user <login>
-    '''
+    """
     data = get_users(profile)
     for user in data:
-        if user['login'] == login:
+        if user["login"] == login:
             return user
     return None
 
 
-def get_user_data(userid, profile='grafana'):
-    '''
+def get_user_data(userid, profile="grafana"):
+    """
     Get user data.
 
     userid
@@ -129,22 +131,22 @@ def get_user_data(userid, profile='grafana'):
     .. code-block:: bash
 
         salt '*' grafana4.get_user_data <user_id>
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     response = requests.get(
-        '{0}/api/users/{1}'.format(profile['grafana_url'], userid),
+        "{0}/api/users/{1}".format(profile["grafana_url"], userid),
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     if response.status_code >= 400:
         response.raise_for_status()
     return response.json()
 
 
-def create_user(profile='grafana', **kwargs):
-    '''
+def create_user(profile="grafana", **kwargs):
+    """
     Create a new user.
 
     login
@@ -168,23 +170,23 @@ def create_user(profile='grafana', **kwargs):
     .. code-block:: bash
 
         salt '*' grafana4.create_user login=<login> password=<password> email=<email>
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     response = requests.post(
-        '{0}/api/admin/users'.format(profile['grafana_url']),
+        "{0}/api/admin/users".format(profile["grafana_url"]),
         json=kwargs,
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     if response.status_code >= 400:
         response.raise_for_status()
     return response.json()
 
 
-def update_user(userid, profile='grafana', **kwargs):
-    '''
+def update_user(userid, profile="grafana", **kwargs):
+    """
     Update an existing user.
 
     userid
@@ -208,23 +210,23 @@ def update_user(userid, profile='grafana', **kwargs):
     .. code-block:: bash
 
         salt '*' grafana4.update_user <user_id> login=<login> email=<email>
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     response = requests.put(
-        '{0}/api/users/{1}'.format(profile['grafana_url'], userid),
+        "{0}/api/users/{1}".format(profile["grafana_url"], userid),
         json=kwargs,
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     if response.status_code >= 400:
         response.raise_for_status()
     return response.json()
 
 
-def update_user_password(userid, profile='grafana', **kwargs):
-    '''
+def update_user_password(userid, profile="grafana", **kwargs):
+    """
     Update a user password.
 
     userid
@@ -242,24 +244,23 @@ def update_user_password(userid, profile='grafana', **kwargs):
     .. code-block:: bash
 
         salt '*' grafana4.update_user_password <user_id> password=<password>
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     response = requests.put(
-        '{0}/api/admin/users/{1}/password'.format(
-            profile['grafana_url'], userid),
+        "{0}/api/admin/users/{1}/password".format(profile["grafana_url"], userid),
         json=kwargs,
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     if response.status_code >= 400:
         response.raise_for_status()
     return response.json()
 
 
-def update_user_permissions(userid, profile='grafana', **kwargs):
-    '''
+def update_user_permissions(userid, profile="grafana", **kwargs):
+    """
     Update a user password.
 
     userid
@@ -277,24 +278,23 @@ def update_user_permissions(userid, profile='grafana', **kwargs):
     .. code-block:: bash
 
         salt '*' grafana4.update_user_permissions <user_id> isGrafanaAdmin=<true|false>
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     response = requests.put(
-        '{0}/api/admin/users/{1}/permissions'.format(
-            profile['grafana_url'], userid),
+        "{0}/api/admin/users/{1}/permissions".format(profile["grafana_url"], userid),
         json=kwargs,
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     if response.status_code >= 400:
         response.raise_for_status()
     return response.json()
 
 
-def delete_user(userid, profile='grafana'):
-    '''
+def delete_user(userid, profile="grafana"):
+    """
     Delete a user.
 
     userid
@@ -309,22 +309,22 @@ def delete_user(userid, profile='grafana'):
     .. code-block:: bash
 
         salt '*' grafana4.delete_user <user_id>
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     response = requests.delete(
-        '{0}/api/admin/users/{1}'.format(profile['grafana_url'], userid),
+        "{0}/api/admin/users/{1}".format(profile["grafana_url"], userid),
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     if response.status_code >= 400:
         response.raise_for_status()
     return response.json()
 
 
-def get_user_orgs(userid, profile='grafana'):
-    '''
+def get_user_orgs(userid, profile="grafana"):
+    """
     Get the list of organisations a user belong to.
 
     userid
@@ -339,22 +339,22 @@ def get_user_orgs(userid, profile='grafana'):
     .. code-block:: bash
 
         salt '*' grafana4.get_user_orgs <user_id>
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     response = requests.get(
-        '{0}/api/users/{1}/orgs'.format(profile['grafana_url'], userid),
+        "{0}/api/users/{1}/orgs".format(profile["grafana_url"], userid),
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     if response.status_code >= 400:
         response.raise_for_status()
     return response.json()
 
 
-def delete_user_org(userid, orgid, profile='grafana'):
-    '''
+def delete_user_org(userid, orgid, profile="grafana"):
+    """
     Remove a user from an organization.
 
     userid
@@ -372,23 +372,22 @@ def delete_user_org(userid, orgid, profile='grafana'):
     .. code-block:: bash
 
         salt '*' grafana4.delete_user_org <user_id> <org_id>
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     response = requests.delete(
-        '{0}/api/orgs/{1}/users/{2}'.format(
-            profile['grafana_url'], orgid, userid),
+        "{0}/api/orgs/{1}/users/{2}".format(profile["grafana_url"], orgid, userid),
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     if response.status_code >= 400:
         response.raise_for_status()
     return response.json()
 
 
-def get_orgs(profile='grafana'):
-    '''
+def get_orgs(profile="grafana"):
+    """
     List all organizations.
 
     profile
@@ -400,22 +399,22 @@ def get_orgs(profile='grafana'):
     .. code-block:: bash
 
         salt '*' grafana4.get_orgs
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     response = requests.get(
-        '{0}/api/orgs'.format(profile['grafana_url']),
+        "{0}/api/orgs".format(profile["grafana_url"]),
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     if response.status_code >= 400:
         response.raise_for_status()
     return response.json()
 
 
-def get_org(name, profile='grafana'):
-    '''
+def get_org(name, profile="grafana"):
+    """
     Show a single organization.
 
     name
@@ -430,22 +429,22 @@ def get_org(name, profile='grafana'):
     .. code-block:: bash
 
         salt '*' grafana4.get_org <name>
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     response = requests.get(
-        '{0}/api/orgs/name/{1}'.format(profile['grafana_url'], name),
+        "{0}/api/orgs/name/{1}".format(profile["grafana_url"], name),
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     if response.status_code >= 400:
         response.raise_for_status()
     return response.json()
 
 
-def switch_org(orgname, profile='grafana'):
-    '''
+def switch_org(orgname, profile="grafana"):
+    """
     Switch the current organization.
 
     name
@@ -460,23 +459,23 @@ def switch_org(orgname, profile='grafana'):
     .. code-block:: bash
 
         salt '*' grafana4.switch_org <name>
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     org = get_org(orgname, profile)
     response = requests.post(
-        '{0}/api/user/using/{1}'.format(profile['grafana_url'], org['id']),
+        "{0}/api/user/using/{1}".format(profile["grafana_url"], org["id"]),
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     if response.status_code >= 400:
         response.raise_for_status()
     return org
 
 
-def get_org_users(orgname=None, profile='grafana'):
-    '''
+def get_org_users(orgname=None, profile="grafana"):
+    """
     Get the list of users that belong to the organization.
 
     orgname
@@ -491,24 +490,24 @@ def get_org_users(orgname=None, profile='grafana'):
     .. code-block:: bash
 
         salt '*' grafana4.get_org_users <orgname>
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     if orgname:
         switch_org(orgname, profile)
     response = requests.get(
-        '{0}/api/org/users'.format(profile['grafana_url']),
+        "{0}/api/org/users".format(profile["grafana_url"]),
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     if response.status_code >= 400:
         response.raise_for_status()
     return response.json()
 
 
-def create_org_user(orgname=None, profile='grafana', **kwargs):
-    '''
+def create_org_user(orgname=None, profile="grafana", **kwargs):
+    """
     Add user to the organization.
 
     loginOrEmail
@@ -533,25 +532,25 @@ def create_org_user(orgname=None, profile='grafana', **kwargs):
     .. code-block:: bash
 
         salt '*' grafana4.create_org_user <orgname> loginOrEmail=<loginOrEmail> role=<role>
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     if orgname:
         switch_org(orgname, profile)
     response = requests.post(
-        '{0}/api/org/users'.format(profile['grafana_url']),
+        "{0}/api/org/users".format(profile["grafana_url"]),
         json=kwargs,
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     if response.status_code >= 400:
         response.raise_for_status()
     return response.json()
 
 
-def update_org_user(userid, orgname=None, profile='grafana', **kwargs):
-    '''
+def update_org_user(userid, orgname=None, profile="grafana", **kwargs):
+    """
     Update user role in the organization.
 
     userid
@@ -579,25 +578,25 @@ def update_org_user(userid, orgname=None, profile='grafana', **kwargs):
     .. code-block:: bash
 
         salt '*' grafana4.update_org_user <user_id> <orgname> loginOrEmail=<loginOrEmail> role=<role>
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     if orgname:
         switch_org(orgname, profile)
     response = requests.patch(
-        '{0}/api/org/users/{1}'.format(profile['grafana_url'], userid),
+        "{0}/api/org/users/{1}".format(profile["grafana_url"], userid),
         json=kwargs,
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     if response.status_code >= 400:
         response.raise_for_status()
     return response.json()
 
 
-def delete_org_user(userid, orgname=None, profile='grafana'):
-    '''
+def delete_org_user(userid, orgname=None, profile="grafana"):
+    """
     Remove user from the organization.
 
     userid
@@ -615,24 +614,24 @@ def delete_org_user(userid, orgname=None, profile='grafana'):
     .. code-block:: bash
 
         salt '*' grafana4.delete_org_user <user_id> <orgname>
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     if orgname:
         switch_org(orgname, profile)
     response = requests.delete(
-        '{0}/api/org/users/{1}'.format(profile['grafana_url'], userid),
+        "{0}/api/org/users/{1}".format(profile["grafana_url"], userid),
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     if response.status_code >= 400:
         response.raise_for_status()
     return response.json()
 
 
-def get_org_address(orgname=None, profile='grafana'):
-    '''
+def get_org_address(orgname=None, profile="grafana"):
+    """
     Get the organization address.
 
     orgname
@@ -647,24 +646,24 @@ def get_org_address(orgname=None, profile='grafana'):
     .. code-block:: bash
 
         salt '*' grafana4.get_org_address <orgname>
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     if orgname:
         switch_org(orgname, profile)
     response = requests.get(
-        '{0}/api/org/address'.format(profile['grafana_url']),
+        "{0}/api/org/address".format(profile["grafana_url"]),
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     if response.status_code >= 400:
         response.raise_for_status()
     return response.json()
 
 
-def update_org_address(orgname=None, profile='grafana', **kwargs):
-    '''
+def update_org_address(orgname=None, profile="grafana", **kwargs):
+    """
     Update the organization address.
 
     orgname
@@ -697,25 +696,25 @@ def update_org_address(orgname=None, profile='grafana', **kwargs):
     .. code-block:: bash
 
         salt '*' grafana4.update_org_address <orgname> country=<country>
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     if orgname:
         switch_org(orgname, profile)
     response = requests.put(
-        '{0}/api/org/address'.format(profile['grafana_url']),
+        "{0}/api/org/address".format(profile["grafana_url"]),
         json=kwargs,
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     if response.status_code >= 400:
         response.raise_for_status()
     return response.json()
 
 
-def get_org_prefs(orgname=None, profile='grafana'):
-    '''
+def get_org_prefs(orgname=None, profile="grafana"):
+    """
     Get the organization preferences.
 
     orgname
@@ -730,24 +729,24 @@ def get_org_prefs(orgname=None, profile='grafana'):
     .. code-block:: bash
 
         salt '*' grafana4.get_org_prefs <orgname>
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     if orgname:
         switch_org(orgname, profile)
     response = requests.get(
-        '{0}/api/org/preferences'.format(profile['grafana_url']),
+        "{0}/api/org/preferences".format(profile["grafana_url"]),
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     if response.status_code >= 400:
         response.raise_for_status()
     return response.json()
 
 
-def update_org_prefs(orgname=None, profile='grafana', **kwargs):
-    '''
+def update_org_prefs(orgname=None, profile="grafana", **kwargs):
+    """
     Update the organization preferences.
 
     orgname
@@ -771,25 +770,25 @@ def update_org_prefs(orgname=None, profile='grafana', **kwargs):
     .. code-block:: bash
 
         salt '*' grafana4.update_org_prefs <orgname> theme=<theme> timezone=<timezone>
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     if orgname:
         switch_org(orgname, profile)
     response = requests.put(
-        '{0}/api/org/preferences'.format(profile['grafana_url']),
+        "{0}/api/org/preferences".format(profile["grafana_url"]),
         json=kwargs,
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     if response.status_code >= 400:
         response.raise_for_status()
     return response.json()
 
 
-def create_org(profile='grafana', **kwargs):
-    '''
+def create_org(profile="grafana", **kwargs):
+    """
     Create a new organization.
 
     name
@@ -804,23 +803,23 @@ def create_org(profile='grafana', **kwargs):
     .. code-block:: bash
 
         salt '*' grafana4.create_org <name>
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     response = requests.post(
-        '{0}/api/orgs'.format(profile['grafana_url']),
+        "{0}/api/orgs".format(profile["grafana_url"]),
         json=kwargs,
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     if response.status_code >= 400:
         response.raise_for_status()
     return response.json()
 
 
-def update_org(orgid, profile='grafana', **kwargs):
-    '''
+def update_org(orgid, profile="grafana", **kwargs):
+    """
     Update an existing organization.
 
     orgid
@@ -838,23 +837,23 @@ def update_org(orgid, profile='grafana', **kwargs):
     .. code-block:: bash
 
         salt '*' grafana4.update_org <org_id> name=<name>
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     response = requests.put(
-        '{0}/api/orgs/{1}'.format(profile['grafana_url'], orgid),
+        "{0}/api/orgs/{1}".format(profile["grafana_url"], orgid),
         json=kwargs,
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     if response.status_code >= 400:
         response.raise_for_status()
     return response.json()
 
 
-def delete_org(orgid, profile='grafana'):
-    '''
+def delete_org(orgid, profile="grafana"):
+    """
     Delete an organization.
 
     orgid
@@ -869,22 +868,22 @@ def delete_org(orgid, profile='grafana'):
     .. code-block:: bash
 
         salt '*' grafana4.delete_org <org_id>
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     response = requests.delete(
-        '{0}/api/orgs/{1}'.format(profile['grafana_url'], orgid),
+        "{0}/api/orgs/{1}".format(profile["grafana_url"], orgid),
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     if response.status_code >= 400:
         response.raise_for_status()
     return response.json()
 
 
-def get_datasources(orgname=None, profile='grafana'):
-    '''
+def get_datasources(orgname=None, profile="grafana"):
+    """
     List all datasources in an organisation.
 
     orgname
@@ -899,24 +898,24 @@ def get_datasources(orgname=None, profile='grafana'):
     .. code-block:: bash
 
         salt '*' grafana4.get_datasources <orgname>
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     if orgname:
         switch_org(orgname, profile)
     response = requests.get(
-        '{0}/api/datasources'.format(profile['grafana_url']),
+        "{0}/api/datasources".format(profile["grafana_url"]),
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     if response.status_code >= 400:
         response.raise_for_status()
     return response.json()
 
 
-def get_datasource(name, orgname=None, profile='grafana'):
-    '''
+def get_datasource(name, orgname=None, profile="grafana"):
+    """
     Show a single datasource in an organisation.
 
     name
@@ -934,16 +933,16 @@ def get_datasource(name, orgname=None, profile='grafana'):
     .. code-block:: bash
 
         salt '*' grafana4.get_datasource <name> <orgname>
-    '''
+    """
     data = get_datasources(orgname=orgname, profile=profile)
     for datasource in data:
-        if datasource['name'] == name:
+        if datasource["name"] == name:
             return datasource
     return None
 
 
-def create_datasource(orgname=None, profile='grafana', **kwargs):
-    '''
+def create_datasource(orgname=None, profile="grafana", **kwargs):
+    """
     Create a new datasource in an organisation.
 
     name
@@ -1003,25 +1002,25 @@ def create_datasource(orgname=None, profile='grafana', **kwargs):
 
         salt '*' grafana4.create_datasource
 
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     if orgname:
         switch_org(orgname, profile)
     response = requests.post(
-        '{0}/api/datasources'.format(profile['grafana_url']),
+        "{0}/api/datasources".format(profile["grafana_url"]),
         json=kwargs,
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     if response.status_code >= 400:
         response.raise_for_status()
     return response.json()
 
 
-def update_datasource(datasourceid, orgname=None, profile='grafana', **kwargs):
-    '''
+def update_datasource(datasourceid, orgname=None, profile="grafana", **kwargs):
+    """
     Update a datasource.
 
     datasourceid
@@ -1081,25 +1080,25 @@ def update_datasource(datasourceid, orgname=None, profile='grafana', **kwargs):
 
         salt '*' grafana4.update_datasource <datasourceid>
 
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     response = requests.put(
-        '{0}/api/datasources/{1}'.format(profile['grafana_url'], datasourceid),
+        "{0}/api/datasources/{1}".format(profile["grafana_url"], datasourceid),
         json=kwargs,
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     if response.status_code >= 400:
         response.raise_for_status()
     # temporary fix for https://github.com/grafana/grafana/issues/6869
-    #return response.json()
+    # return response.json()
     return {}
 
 
-def delete_datasource(datasourceid, orgname=None, profile='grafana'):
-    '''
+def delete_datasource(datasourceid, orgname=None, profile="grafana"):
+    """
     Delete a datasource.
 
     datasourceid
@@ -1114,22 +1113,22 @@ def delete_datasource(datasourceid, orgname=None, profile='grafana'):
     .. code-block:: bash
 
         salt '*' grafana4.delete_datasource <datasource_id>
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     response = requests.delete(
-        '{0}/api/datasources/{1}'.format(profile['grafana_url'], datasourceid),
+        "{0}/api/datasources/{1}".format(profile["grafana_url"], datasourceid),
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     if response.status_code >= 400:
         response.raise_for_status()
     return response.json()
 
 
-def get_dashboard(slug, orgname=None, profile='grafana'):
-    '''
+def get_dashboard(slug, orgname=None, profile="grafana"):
+    """
     Get a dashboard.
 
     slug
@@ -1147,27 +1146,27 @@ def get_dashboard(slug, orgname=None, profile='grafana'):
     .. code-block:: bash
 
         salt '*' grafana4.get_dashboard <slug>
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     if orgname:
         switch_org(orgname, profile)
     response = requests.get(
-        '{0}/api/dashboards/db/{1}'.format(profile['grafana_url'], slug),
+        "{0}/api/dashboards/db/{1}".format(profile["grafana_url"], slug),
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     data = response.json()
     if response.status_code == 404:
         return None
     if response.status_code >= 400:
         response.raise_for_status()
-    return data.get('dashboard')
+    return data.get("dashboard")
 
 
-def delete_dashboard(slug, orgname=None, profile='grafana'):
-    '''
+def delete_dashboard(slug, orgname=None, profile="grafana"):
+    """
     Delete a dashboard.
 
     slug
@@ -1185,24 +1184,24 @@ def delete_dashboard(slug, orgname=None, profile='grafana'):
     .. code-block:: bash
 
         salt '*' grafana4.delete_dashboard <slug>
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     if orgname:
         switch_org(orgname, profile)
     response = requests.delete(
-        '{0}/api/dashboards/db/{1}'.format(profile['grafana_url'], slug),
+        "{0}/api/dashboards/db/{1}".format(profile["grafana_url"], slug),
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     if response.status_code >= 400:
         response.raise_for_status()
     return response.json()
 
 
-def create_update_dashboard(orgname=None, profile='grafana', **kwargs):
-    '''
+def create_update_dashboard(orgname=None, profile="grafana", **kwargs):
+    """
     Create or update a dashboard.
 
     dashboard
@@ -1223,17 +1222,17 @@ def create_update_dashboard(orgname=None, profile='grafana', **kwargs):
     .. code-block:: bash
 
         salt '*' grafana4.create_update_dashboard dashboard=<dashboard> overwrite=True orgname=<orgname>
-    '''
+    """
     if isinstance(profile, string_types):
-        profile = __salt__['config.option'](profile)
+        profile = __salt__["config.option"](profile)
     if orgname:
         switch_org(orgname, profile)
     response = requests.post(
-        "{0}/api/dashboards/db".format(profile.get('grafana_url')),
+        "{0}/api/dashboards/db".format(profile.get("grafana_url")),
         json=kwargs,
         auth=_get_auth(profile),
         headers=_get_headers(profile),
-        timeout=profile.get('grafana_timeout', 3),
+        timeout=profile.get("grafana_timeout", 3),
     )
     if response.status_code >= 400:
         response.raise_for_status()

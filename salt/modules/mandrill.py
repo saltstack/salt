@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Mandrill
 ========
 
@@ -16,10 +16,11 @@ In the minion configuration file, the following block is required:
     key: <API_KEY>
 
 .. versionadded:: 2018.3.0
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
 # Import Salt libs
@@ -29,106 +30,92 @@ import salt.utils.versions
 # import third party
 try:
     import requests
+
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
 
-__virtualname__ = 'mandrill'
+__virtualname__ = "mandrill"
 
 log = logging.getLogger(__file__)
 
-BASE_URL = 'https://mandrillapp.com/api'
+BASE_URL = "https://mandrillapp.com/api"
 DEFAULT_VERSION = 1
 
 
 def __virtual__():
-    '''
+    """
     Return the execution module virtualname.
-    '''
+    """
     if HAS_REQUESTS is False:
-        return False, 'The requests python package is required for the mandrill execution module'
+        return (
+            False,
+            "The requests python package is required for the mandrill execution module",
+        )
     return __virtualname__
 
 
 def _default_ret():
-    '''
+    """
     Default dictionary returned.
-    '''
-    return {
-        'result': False,
-        'comment': '',
-        'out': None
-    }
+    """
+    return {"result": False, "comment": "", "out": None}
 
 
-def _get_api_params(api_url=None,
-                    api_version=None,
-                    api_key=None):
-    '''
+def _get_api_params(api_url=None, api_version=None, api_key=None):
+    """
     Retrieve the API params from the config file.
-    '''
-    mandrill_cfg = __salt__['config.merge']('mandrill')
+    """
+    mandrill_cfg = __salt__["config.merge"]("mandrill")
     if not mandrill_cfg:
         mandrill_cfg = {}
     return {
-        'api_url': api_url or mandrill_cfg.get('api_url') or BASE_URL,  # optional
-        'api_key': api_key or mandrill_cfg.get('key'),  # mandatory
-        'api_version': api_version or mandrill_cfg.get('api_version') or DEFAULT_VERSION
+        "api_url": api_url or mandrill_cfg.get("api_url") or BASE_URL,  # optional
+        "api_key": api_key or mandrill_cfg.get("key"),  # mandatory
+        "api_version": api_version
+        or mandrill_cfg.get("api_version")
+        or DEFAULT_VERSION,
     }
 
 
-def _get_url(method,
-             api_url,
-             api_version):
-    '''
+def _get_url(method, api_url, api_version):
+    """
     Build the API URL.
-    '''
-    return '{url}/{version}/{method}.json'.format(url=api_url,
-                                                  version=float(api_version),
-                                                  method=method)
+    """
+    return "{url}/{version}/{method}.json".format(
+        url=api_url, version=float(api_version), method=method
+    )
 
 
 def _get_headers():
-    '''
+    """
     Return HTTP headers required for the Mandrill API.
-    '''
-    return {
-        'content-type': 'application/json',
-        'user-agent': 'Mandrill-Python/1.0.57'
-    }
+    """
+    return {"content-type": "application/json", "user-agent": "Mandrill-Python/1.0.57"}
 
 
-def _http_request(url,
-                  headers=None,
-                  data=None):
-    '''
+def _http_request(url, headers=None, data=None):
+    """
     Make the HTTP request and return the body as python object.
-    '''
+    """
     if not headers:
         headers = _get_headers()
     session = requests.session()
-    log.debug('Querying %s', url)
-    req = session.post(url,
-                       headers=headers,
-                       data=salt.utils.json.dumps(data))
+    log.debug("Querying %s", url)
+    req = session.post(url, headers=headers, data=salt.utils.json.dumps(data))
     req_body = req.json()
     ret = _default_ret()
-    log.debug('Status code: %d', req.status_code)
-    log.debug('Response body:')
+    log.debug("Status code: %d", req.status_code)
+    log.debug("Response body:")
     log.debug(req_body)
     if req.status_code != 200:
         if req.status_code == 500:
-            ret['comment'] = req_body.pop('message', '')
-            ret['out'] = req_body
+            ret["comment"] = req_body.pop("message", "")
+            ret["out"] = req_body
             return ret
-        ret.update({
-            'comment': req_body.get('error', '')
-        })
+        ret.update({"comment": req_body.get("error", "")})
         return ret
-    ret.update({
-        'result': True,
-        'out': req.json()
-    })
+    ret.update({"result": True, "out": req.json()})
     return ret
 
 
@@ -137,15 +124,17 @@ def _http_request(url,
 # ------------------------------------------------------------------------------
 
 
-def send(message,
-         asynchronous=False,
-         ip_pool=None,
-         send_at=None,
-         api_url=None,
-         api_version=None,
-         api_key=None,
-         **kwargs):
-    '''
+def send(
+    message,
+    asynchronous=False,
+    ip_pool=None,
+    send_at=None,
+    api_url=None,
+    api_version=None,
+    api_key=None,
+    **kwargs
+):
+    """
     Send out the email using the details from the ``message`` argument.
 
     message
@@ -230,23 +219,24 @@ def send(message,
                       sent
             result:
                 True
-    '''
-    if 'async' in kwargs:  # Remove this in Sodium
-        salt.utils.versions.warn_until('Sodium', 'Parameter "async" is renamed to "asynchronous" '
-                                                 'and will be removed in version {version}.')
-        asynchronous = bool(kwargs['async'])
+    """
+    if "async" in kwargs:  # Remove this in Sodium
+        salt.utils.versions.warn_until(
+            "Sodium",
+            'Parameter "async" is renamed to "asynchronous" '
+            "and will be removed in version {version}.",
+        )
+        asynchronous = bool(kwargs["async"])
 
-    params = _get_api_params(api_url=api_url,
-                             api_version=api_version,
-                             api_key=api_key)
-    url = _get_url('messages/send',
-                   api_url=params['api_url'],
-                   api_version=params['api_version'])
+    params = _get_api_params(api_url=api_url, api_version=api_version, api_key=api_key)
+    url = _get_url(
+        "messages/send", api_url=params["api_url"], api_version=params["api_version"]
+    )
     data = {
-        'key': params['api_key'],
-        'message': message,
-        'async': asynchronous,
-        'ip_pool': ip_pool,
-        'send_at': send_at
+        "key": params["api_key"],
+        "message": message,
+        "async": asynchronous,
+        "ip_pool": ip_pool,
+        "send_at": send_at,
     }
     return _http_request(url, data=data)

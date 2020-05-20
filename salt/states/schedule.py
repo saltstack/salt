@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Management of the Salt scheduler
 ==============================================
 
@@ -96,13 +96,12 @@ Management of the Salt scheduler
     Wednesday and Friday, and 3pm on Tuesday and Thursday.  Requires that
     python-dateutil is installed on the minion.
 
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 
-def present(name,
-            **kwargs):
-    '''
+def present(name, **kwargs):
+    """
     Ensure a job is present in the schedule
 
     name
@@ -136,8 +135,9 @@ def present(name,
         Requires python-croniter.
 
     run_on_start
-        Whether the job will run when Salt minion start.  Value should be
-        a boolean.
+        Whether the job will run when Salt minion starts, or the job will be
+        skipped **once** and run at the next scheduled run.  Value should be a
+        boolean.
 
     function
         The function that should be executed by the scheduled job.
@@ -206,68 +206,65 @@ def present(name,
         Whether the job should run immediately after the skip_during_range time
         period ends.
 
-    '''
+    """
 
-    ret = {'name': name,
-           'result': True,
-           'changes': {},
-           'comment': []}
+    ret = {"name": name, "result": True, "changes": {}, "comment": []}
 
-    current_schedule = __salt__['schedule.list'](show_all=True, return_yaml=False)
+    current_schedule = __salt__["schedule.list"](show_all=True, return_yaml=False)
 
     if name in current_schedule:
-        new_item = __salt__['schedule.build_schedule_item'](name, **kwargs)
+        new_item = __salt__["schedule.build_schedule_item"](name, **kwargs)
 
         # See if the new_item is valid
         if isinstance(new_item, dict):
-            if 'result' in new_item and not new_item['result']:
-                ret['result'] = new_item['result']
-                ret['comment'] = new_item['comment']
+            if "result" in new_item and not new_item["result"]:
+                ret["result"] = new_item["result"]
+                ret["comment"] = new_item["comment"]
                 return ret
 
             # The schedule.list gives us an item that is guaranteed to have an
             # 'enabled' argument. Before comparing, add 'enabled' if it's not
             # available (assume True, like schedule.list does)
-            if 'enabled' not in new_item:
-                new_item['enabled'] = True
+            if "enabled" not in new_item:
+                new_item["enabled"] = True
 
         if new_item == current_schedule[name]:
-            ret['comment'].append('Job {0} in correct state'.format(name))
+            ret["comment"].append("Job {0} in correct state".format(name))
         else:
-            if 'test' in __opts__ and __opts__['test']:
-                kwargs['test'] = True
-                result = __salt__['schedule.modify'](name, **kwargs)
-                ret['comment'].append(result['comment'])
-                ret['changes'] = result['changes']
+            if "test" in __opts__ and __opts__["test"]:
+                kwargs["test"] = True
+                result = __salt__["schedule.modify"](name, **kwargs)
+                ret["comment"].append(result["comment"])
+                ret["changes"] = result["changes"]
             else:
-                result = __salt__['schedule.modify'](name, **kwargs)
-                if not result['result']:
-                    ret['result'] = result['result']
-                    ret['comment'] = result['comment']
+                result = __salt__["schedule.modify"](name, **kwargs)
+                if not result["result"]:
+                    ret["result"] = result["result"]
+                    ret["comment"] = result["comment"]
                     return ret
                 else:
-                    ret['comment'].append('Modifying job {0} in schedule'.format(name))
-                    ret['changes'] = result['changes']
+                    ret["comment"].append("Modifying job {0} in schedule".format(name))
+                    ret["changes"] = result["changes"]
     else:
-        if 'test' in __opts__ and __opts__['test']:
-            kwargs['test'] = True
-            result = __salt__['schedule.add'](name, **kwargs)
-            ret['comment'].append(result['comment'])
+        if "test" in __opts__ and __opts__["test"]:
+            kwargs["test"] = True
+            result = __salt__["schedule.add"](name, **kwargs)
+            ret["comment"].append(result["comment"])
         else:
-            result = __salt__['schedule.add'](name, **kwargs)
-            if not result['result']:
-                ret['result'] = result['result']
-                ret['comment'] = result['comment']
+            result = __salt__["schedule.add"](name, **kwargs)
+            if not result["result"]:
+                ret["result"] = result["result"]
+                ret["comment"] = result["comment"]
                 return ret
             else:
-                ret['comment'].append('Adding new job {0} to schedule'.format(name))
+                ret["comment"].append("Adding new job {0} to schedule".format(name))
 
-    ret['comment'] = '\n'.join(ret['comment'])
+    ret["comment"] = "\n".join(ret["comment"])
     return ret
 
 
 def absent(name, **kwargs):
-    '''
+    """
     Ensure a job is absent from the schedule
 
     name
@@ -275,36 +272,33 @@ def absent(name, **kwargs):
 
     persist
         Whether the job should persist between minion restarts, defaults to True.
-    '''
+    """
 
-    ret = {'name': name,
-           'result': True,
-           'changes': {},
-           'comment': []}
+    ret = {"name": name, "result": True, "changes": {}, "comment": []}
 
-    current_schedule = __salt__['schedule.list'](show_all=True, return_yaml=False)
+    current_schedule = __salt__["schedule.list"](show_all=True, return_yaml=False)
     if name in current_schedule:
-        if 'test' in __opts__ and __opts__['test']:
-            kwargs['test'] = True
-            result = __salt__['schedule.delete'](name, **kwargs)
-            ret['comment'].append(result['comment'])
+        if "test" in __opts__ and __opts__["test"]:
+            kwargs["test"] = True
+            result = __salt__["schedule.delete"](name, **kwargs)
+            ret["comment"].append(result["comment"])
         else:
-            result = __salt__['schedule.delete'](name, **kwargs)
-            if not result['result']:
-                ret['result'] = result['result']
-                ret['comment'] = result['comment']
+            result = __salt__["schedule.delete"](name, **kwargs)
+            if not result["result"]:
+                ret["result"] = result["result"]
+                ret["comment"] = result["comment"]
                 return ret
             else:
-                ret['comment'].append('Removed job {0} from schedule'.format(name))
+                ret["comment"].append("Removed job {0} from schedule".format(name))
     else:
-        ret['comment'].append('Job {0} not present in schedule'.format(name))
+        ret["comment"].append("Job {0} not present in schedule".format(name))
 
-    ret['comment'] = '\n'.join(ret['comment'])
+    ret["comment"] = "\n".join(ret["comment"])
     return ret
 
 
 def enabled(name, **kwargs):
-    '''
+    """
     Ensure a job is enabled in the schedule
 
     name
@@ -313,36 +307,33 @@ def enabled(name, **kwargs):
     persist
         Whether the job should persist between minion restarts, defaults to True.
 
-    '''
+    """
 
-    ret = {'name': name,
-           'result': True,
-           'changes': {},
-           'comment': []}
+    ret = {"name": name, "result": True, "changes": {}, "comment": []}
 
-    current_schedule = __salt__['schedule.list'](show_all=True, return_yaml=False)
+    current_schedule = __salt__["schedule.list"](show_all=True, return_yaml=False)
     if name in current_schedule:
-        if 'test' in __opts__ and __opts__['test']:
-            kwargs['test'] = True
-            result = __salt__['schedule.enable_job'](name, **kwargs)
-            ret['comment'].append(result['comment'])
+        if "test" in __opts__ and __opts__["test"]:
+            kwargs["test"] = True
+            result = __salt__["schedule.enable_job"](name, **kwargs)
+            ret["comment"].append(result["comment"])
         else:
-            result = __salt__['schedule.enable_job'](name, **kwargs)
-            if not result['result']:
-                ret['result'] = result['result']
-                ret['comment'] = result['comment']
+            result = __salt__["schedule.enable_job"](name, **kwargs)
+            if not result["result"]:
+                ret["result"] = result["result"]
+                ret["comment"] = result["comment"]
                 return ret
             else:
-                ret['comment'].append('Enabled job {0} from schedule'.format(name))
+                ret["comment"].append("Enabled job {0} from schedule".format(name))
     else:
-        ret['comment'].append('Job {0} not present in schedule'.format(name))
+        ret["comment"].append("Job {0} not present in schedule".format(name))
 
-    ret['comment'] = '\n'.join(ret['comment'])
+    ret["comment"] = "\n".join(ret["comment"])
     return ret
 
 
 def disabled(name, **kwargs):
-    '''
+    """
     Ensure a job is disabled in the schedule
 
     name
@@ -351,29 +342,26 @@ def disabled(name, **kwargs):
     persist
         Whether the job should persist between minion restarts, defaults to True.
 
-    '''
+    """
 
-    ret = {'name': name,
-           'result': True,
-           'changes': {},
-           'comment': []}
+    ret = {"name": name, "result": True, "changes": {}, "comment": []}
 
-    current_schedule = __salt__['schedule.list'](show_all=True, return_yaml=False)
+    current_schedule = __salt__["schedule.list"](show_all=True, return_yaml=False)
     if name in current_schedule:
-        if 'test' in __opts__ and __opts__['test']:
-            kwargs['test'] = True
-            result = __salt__['schedule.disable_job'](name, **kwargs)
-            ret['comment'].append(result['comment'])
+        if "test" in __opts__ and __opts__["test"]:
+            kwargs["test"] = True
+            result = __salt__["schedule.disable_job"](name, **kwargs)
+            ret["comment"].append(result["comment"])
         else:
-            result = __salt__['schedule.disable_job'](name, **kwargs)
-            if not result['result']:
-                ret['result'] = result['result']
-                ret['comment'] = result['comment']
+            result = __salt__["schedule.disable_job"](name, **kwargs)
+            if not result["result"]:
+                ret["result"] = result["result"]
+                ret["comment"] = result["comment"]
                 return ret
             else:
-                ret['comment'].append('Disabled job {0} from schedule'.format(name))
+                ret["comment"].append("Disabled job {0} from schedule".format(name))
     else:
-        ret['comment'].append('Job {0} not present in schedule'.format(name))
+        ret["comment"].append("Job {0} not present in schedule".format(name))
 
-    ret['comment'] = '\n'.join(ret['comment'])
+    ret["comment"] = "\n".join(ret["comment"])
     return ret
