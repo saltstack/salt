@@ -953,7 +953,9 @@ def install_config(path=None, **kwargs):
 
     try:
         template_cached_path = salt.utils.files.mkstemp()
-        __salt__['cp.get_template']( path, template_cached_path, template_vars=template_vars)
+        __salt__["cp.get_template"](
+            path, template_cached_path, template_vars=template_vars
+        )
     except Exception as ex:  # pylint: disable=broad-except
         ret["message"] = (
             "Salt failed to render the template, please check file path and syntax."
@@ -1456,7 +1458,9 @@ def load(path=None, **kwargs):
 
     try:
         template_cached_path = salt.utils.files.mkstemp()
-        __salt__['cp.get_template']( path, template_cached_path, template_vars=template_vars)
+        __salt__["cp.get_template"](
+            path, template_cached_path, template_vars=template_vars
+        )
     except Exception as ex:  # pylint: disable=broad-except
         ret["message"] = (
             "Salt failed to render the template, please check file path and syntax."
