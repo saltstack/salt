@@ -345,11 +345,7 @@ class AsyncReqMessageClientPoolTest(TestCase):
         ]
 
     def tearDown(self):
-        with patch(
-            "salt.transport.zeromq.AsyncReqMessageClient.destroy",
-            MagicMock(return_value=None),
-        ):
-            del self.original_message_clients
+        del self.original_message_clients
         super(AsyncReqMessageClientPoolTest, self).tearDown()
 
     def test_send(self):
@@ -362,10 +358,6 @@ class AsyncReqMessageClientPoolTest(TestCase):
         self.message_client_pool.message_clients[2].send_queue = [0]
         self.message_client_pool.message_clients[2].send.return_value = [1]
         self.assertEqual([1], self.message_client_pool.send())
-
-    def test_destroy(self):
-        self.message_client_pool.destroy()
-        self.assertEqual([], self.message_client_pool.message_clients)
 
 
 class ZMQConfigTest(TestCase):
