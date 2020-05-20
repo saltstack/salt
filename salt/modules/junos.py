@@ -33,6 +33,7 @@ import salt.utils.stringutils
 import yaml
 from salt.exceptions import MinionError
 from salt.ext import six
+import tempfile
 
 try:
     from lxml import etree
@@ -70,6 +71,71 @@ log = logging.getLogger(__name__)
 __virtualname__ = "junos"
 
 __proxyenabled__ = ["junos"]
+
+
+class HandleFileCopy:
+    """
+    To figure out proper path either from proxy local file system
+    or proxy cache or on master. If required, then only copy from
+    master to proxy
+
+    """
+    def __init__(self, path, **kwargs):
+        self._file_path = path
+        self._cached_folder = None
+        self._cached_file = None
+        self._kwargs = kwargs
+
+    def __enter__(self):
+        if self._file_path.startswith("salt://"):
+            # check if file exists in cache
+            local_cache_path = __salt__["cp.is_cached"](self._file_path)
+            if local_cache_path:
+                master_hash = __salt__["cp.hash_file"](self._file_path)
+                proxy_hash = __salt__["file.get_hash"](local_cache_path)
+                # check if hash is same, else copy newly
+                if master_hash.get("hsum") == proxy_hash:
+                    if self._kwargs:
+                        self._cached_file = salt.utils.files.mkstemp()
+                        with open(self._cached_file, "w") as fp:
+                            template_string = __salt__["slsutil.renderer"](
+                                path=local_cache_path, default_renderer="jinja",
+                                **self._kwargs)
+                            fp.write(template_string)
+                        return self._cached_file
+                    else:
+                        return local_cache_path
+                # continue for else part
+            self._cached_folder = tempfile.mkdtemp()
+            log.debug("Caching file {0} at {1}".format(self._file_path, self._cached_folder))
+            if self._kwargs:
+                self._cached_file = __salt__["cp.get_template"](self._file_path, self._cached_folder,
+                                                          **self._kwargs)
+            else:
+                self._cached_file = __salt__["cp.get_file"](self._file_path, self._cached_folder)
+            if self._cached_file != "":
+                return self._cached_file
+        else:
+            # check for local location of file
+            if __salt__["file.file_exists"](self._file_path):
+                if self._kwargs:
+                    self._cached_file = salt.utils.files.mkstemp()
+                    with open(self._cached_file, "w") as fp:
+                        template_string = __salt__["slsutil.renderer"](
+                            path=self._file_path, default_renderer="jinja",
+                            **self._kwargs)
+                        fp.write(template_string)
+                    return self._cached_file
+                else:
+                    return self._file_path
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        if self._cached_file is not None:
+            salt.utils.files.safe_rm(self._cached_file)
+            log.debug("Deleted cached file: {0}".format(self._cached_file))
+        if self._cached_folder is not None:
+            __salt__["file.rmdir"](self._cached_folder)
+            log.debug("Deleted cached folder: {0}".format(self._cached_folder))
 
 
 def __virtual__():
@@ -873,156 +939,144 @@ def install_config(path=None, **kwargs):
     if "template_vars" in op:
         kwargs = op["template_vars"]
 
-    try:
-        template_cached_path = salt.utils.files.mkstemp()
-        __salt__["cp.get_template"](path, template_cached_path, **kwargs)
-    except Exception as ex:  # pylint: disable=broad-except
-        ret["message"] = (
-            "Salt failed to render the template, please check file path and syntax."
-            "\nError: {0}".format(str(ex))
-        )
-        ret["out"] = False
-        return ret
+    with HandleFileCopy(path, **kwargs) as template_cached_path:
+        if template_cached_path is None:
+            ret["message"] = "Invalid file path."
+            ret["out"] = False
+            return ret
 
-    if not os.path.isfile(template_cached_path):
-        ret["message"] = "Invalid file path."
-        ret["out"] = False
-        return ret
+        if os.path.getsize(template_cached_path) == 0:
+            ret["message"] = "Template failed to render"
+            ret["out"] = False
+            return ret
 
-    if os.path.getsize(template_cached_path) == 0:
-        ret["message"] = "Template failed to render"
-        ret["out"] = False
-        return ret
+        write_diff = ""
+        if "diffs_file" in op and op["diffs_file"] is not None:
+            write_diff = op["diffs_file"]
+            del op["diffs_file"]
 
-    write_diff = ""
-    if "diffs_file" in op and op["diffs_file"] is not None:
-        write_diff = op["diffs_file"]
-        del op["diffs_file"]
+        op["path"] = template_cached_path
 
-    op["path"] = template_cached_path
-
-    if "format" not in op:
-        if path.endswith("set"):
-            template_format = "set"
-        elif path.endswith("xml"):
-            template_format = "xml"
-        elif path.endswith("json"):
-            template_format = "json"
-        else:
-            template_format = "text"
-
-        op["format"] = template_format
-
-    if "replace" in op and op["replace"]:
-        op["merge"] = False
-        del op["replace"]
-    elif "overwrite" in op and op["overwrite"]:
-        op["overwrite"] = True
-    elif "overwrite" in op and not op["overwrite"]:
-        op["merge"] = True
-        del op["overwrite"]
-
-    db_mode = op.pop("mode", "exclusive")
-    if write_diff and db_mode in ["dynamic", "ephemeral"]:
-        ret[
-            "message"
-        ] = "Write diff is not supported with dynamic/ephemeral configuration mode"
-        ret["out"] = False
-        return ret
-
-    config_params = {}
-    if "ephemeral_instance" in op:
-        config_params["ephemeral_instance"] = op.pop("ephemeral_instance")
-    try:
-        with Config(conn, mode=db_mode, **config_params) as cu:
-            try:
-                cu.load(**op)
-            except Exception as exception:  # pylint: disable=broad-except
-                ret["message"] = 'Could not load configuration due to : "{0}"'.format(
-                    exception
-                )
-                ret["format"] = op["format"]
-                ret["out"] = False
-                return ret
-            finally:
-                salt.utils.files.safe_rm(template_cached_path)
-
-            config_diff = None
-            if db_mode in ["dynamic", "ephemeral"]:
-                log.warning("diff is not supported for dynamic and ephemeral")
+        if "format" not in op:
+            if path.endswith("set"):
+                template_format = "set"
+            elif path.endswith("xml"):
+                template_format = "xml"
+            elif path.endswith("json"):
+                template_format = "json"
             else:
-                config_diff = cu.diff()
-                if config_diff is None:
-                    ret["message"] = "Configuration already applied!"
+                template_format = "text"
+
+            op["format"] = template_format
+
+        if "replace" in op and op["replace"]:
+            op["merge"] = False
+            del op["replace"]
+        elif "overwrite" in op and op["overwrite"]:
+            op["overwrite"] = True
+        elif "overwrite" in op and not op["overwrite"]:
+            op["merge"] = True
+            del op["overwrite"]
+
+        db_mode = op.pop("mode", "exclusive")
+        if write_diff and db_mode in ["dynamic", "ephemeral"]:
+            ret[
+                "message"
+            ] = "Write diff is not supported with dynamic/ephemeral configuration mode"
+            ret["out"] = False
+            return ret
+
+        config_params = {}
+        if "ephemeral_instance" in op:
+            config_params["ephemeral_instance"] = op.pop("ephemeral_instance")
+        try:
+            with Config(conn, mode=db_mode, **config_params) as cu:
+                try:
+                    cu.load(**op)
+                except Exception as exception:  # pylint: disable=broad-except
+                    ret["message"] = 'Could not load configuration due to : "{0}"'.format(
+                        exception
+                    )
+                    ret["format"] = op["format"]
+                    ret["out"] = False
+                    return ret
+
+                config_diff = None
+                if db_mode in ["dynamic", "ephemeral"]:
+                    log.warning("diff is not supported for dynamic and ephemeral")
+                else:
+                    config_diff = cu.diff()
+                    if config_diff is None:
+                        ret["message"] = "Configuration already applied!"
+                        ret["out"] = True
+                        return ret
+
+                commit_params = {}
+                if "confirm" in op:
+                    commit_params["confirm"] = op["confirm"]
+                if "comment" in op:
+                    commit_params["comment"] = op["comment"]
+
+                # Assume commit_check succeeds and initialize variable check
+                check = True
+                if db_mode in ["dynamic", "ephemeral"]:
+                    log.warning("commit check not supported for dynamic and ephemeral")
+                else:
+                    try:
+                        check = cu.commit_check()
+                    except Exception as exception:  # pylint: disable=broad-except
+                        ret[
+                            "message"
+                        ] = 'Commit check threw the following exception: "{0}"'.format(
+                            exception
+                        )
+                        ret["out"] = False
+                        return ret
+
+                if check and not test:
+                    try:
+                        cu.commit(**commit_params)
+                        ret["message"] = "Successfully loaded and committed!"
+                    except Exception as exception:  # pylint: disable=broad-except
+                        ret[
+                            "message"
+                        ] = 'Commit check successful but commit failed with "{0}"'.format(
+                            exception
+                        )
+                        ret["out"] = False
+                        return ret
+                elif not check:
+                    cu.rollback()
+                    ret[
+                        "message"
+                    ] = "Loaded configuration but commit check failed, hence rolling back configuration."
+                    ret["out"] = False
+                else:
+                    cu.rollback()
+                    ret[
+                        "message"
+                    ] = "Commit check passed, but skipping commit for dry-run and rolling back configuration."
                     ret["out"] = True
-                    return ret
-
-            commit_params = {}
-            if "confirm" in op:
-                commit_params["confirm"] = op["confirm"]
-            if "comment" in op:
-                commit_params["comment"] = op["comment"]
-
-            # Assume commit_check succeeds and initialize variable check
-            check = True
-            if db_mode in ["dynamic", "ephemeral"]:
-                log.warning("commit check not supported for dynamic and ephemeral")
-            else:
                 try:
-                    check = cu.commit_check()
+                    if write_diff and config_diff is not None:
+                        with salt.utils.files.fopen(write_diff, "w") as fp:
+                            fp.write(salt.utils.stringutils.to_str(config_diff))
                 except Exception as exception:  # pylint: disable=broad-except
-                    ret[
-                        "message"
-                    ] = 'Commit check threw the following exception: "{0}"'.format(
+                    ret["message"] = 'Could not write into diffs_file due to: "{0}"'.format(
                         exception
                     )
                     ret["out"] = False
-                    return ret
+        except ValueError as ex:
+            message = "install_config failed due to: {0}".format(str(ex))
+            log.error(message)
+            ret["message"] = message
+            ret["out"] = False
+        except LockError as ex:
+            log.error("Configuration database is locked")
+            ret["message"] = ex.message
+            ret["out"] = False
 
-            if check and not test:
-                try:
-                    cu.commit(**commit_params)
-                    ret["message"] = "Successfully loaded and committed!"
-                except Exception as exception:  # pylint: disable=broad-except
-                    ret[
-                        "message"
-                    ] = 'Commit check successful but commit failed with "{0}"'.format(
-                        exception
-                    )
-                    ret["out"] = False
-                    return ret
-            elif not check:
-                cu.rollback()
-                ret[
-                    "message"
-                ] = "Loaded configuration but commit check failed, hence rolling back configuration."
-                ret["out"] = False
-            else:
-                cu.rollback()
-                ret[
-                    "message"
-                ] = "Commit check passed, but skipping commit for dry-run and rolling back configuration."
-                ret["out"] = True
-            try:
-                if write_diff and config_diff is not None:
-                    with salt.utils.files.fopen(write_diff, "w") as fp:
-                        fp.write(salt.utils.stringutils.to_str(config_diff))
-            except Exception as exception:  # pylint: disable=broad-except
-                ret["message"] = 'Could not write into diffs_file due to: "{0}"'.format(
-                    exception
-                )
-                ret["out"] = False
-    except ValueError as ex:
-        message = "install_config failed due to: {0}".format(str(ex))
-        log.error(message)
-        ret["message"] = message
-        ret["out"] = False
-    except LockError as ex:
-        log.error("Configuration database is locked")
-        ret["message"] = ex.message
-        ret["out"] = False
-
-    return ret
+        return ret
 
 
 def zeroize():
@@ -1150,38 +1204,26 @@ def install_os(path=None, **kwargs):
         ret["out"] = False
         return ret
 
+    install_status = False
     if not no_copy_:
-        # To handle invalid image path scenario
+        with HandleFileCopy(path) as image_path:
+            if image_path is None:
+                ret["message"] = "Invalid path. Please provide a valid image path"
+                ret["out"] = False
+                return ret
+            try:
+                install_status = conn.sw.install(image_path, progress=True, timeout=timeout, **op)
+            except Exception as exception:  # pylint: disable=broad-except
+                ret["message"] = 'Installation failed due to: "{0}"'.format(exception)
+                ret["out"] = False
+                return ret
+    else:
         try:
-            image_cached_path = salt.utils.files.mkstemp()
-            __salt__["cp.get_file"](path, image_cached_path)
-
-            if not os.path.isfile(image_cached_path):
-                ret["message"] = "Invalid image path."
-                ret["out"] = False
-                return ret
-
-            if os.path.getsize(image_cached_path) == 0:
-                ret["message"] = "Failed to copy image"
-                ret["out"] = False
-                return ret
-            path = image_cached_path
-        except MinionError:
-            ret["message"] = "Invalid path. Please provide a valid image path"
+            install_status = conn.sw.install(path, progress=True, timeout=timeout, **op)
+        except Exception as exception:  # pylint: disable=broad-except
+            ret["message"] = 'Installation failed due to: "{0}"'.format(exception)
             ret["out"] = False
             return ret
-
-    # install() should not reboot the device, reboot is handled in the next block
-    install_status = False
-    try:
-        install_status = conn.sw.install(path, progress=True, timeout=timeout, **op)
-    except Exception as exception:  # pylint: disable=broad-except
-        ret["message"] = 'Installation failed due to: "{0}"'.format(exception)
-        ret["out"] = False
-        return ret
-    finally:
-        if not no_copy_:
-            salt.utils.files.safe_rm(image_cached_path)
 
     if install_status is True:
         ret["message"] = "Installed the os."
@@ -1211,7 +1253,7 @@ def install_os(path=None, **kwargs):
     return ret
 
 
-def file_copy(src=None, dest=None):
+def file_copy(src, dest):
     """
     Copies the file from the local device to the junos device
 
@@ -1231,30 +1273,20 @@ def file_copy(src=None, dest=None):
     ret = {}
     ret["out"] = True
 
-    if src is None:
-        ret["message"] = "Please provide the absolute path of the file to be copied."
-        ret["out"] = False
-        return ret
-    if not os.path.isfile(src):
-        ret["message"] = "Invalid source file path"
-        ret["out"] = False
-        return ret
+    with HandleFileCopy(src) as fp:
+        if fp is None:
+            ret["message"] = "Invalid source file path {0}".format(src)
+            ret["out"] = False
+            return ret
 
-    if dest is None:
-        ret[
-            "message"
-        ] = "Please provide the absolute path of the destination where the file is to be copied."
-        ret["out"] = False
+        try:
+            with SCP(conn, progress=True) as scp:
+                scp.put(fp, dest)
+            ret["message"] = "Successfully copied file from {0} to {1}".format(src, dest)
+        except Exception as exception:  # pylint: disable=broad-except
+            ret["message"] = 'Could not copy file : "{0}"'.format(exception)
+            ret["out"] = False
         return ret
-
-    try:
-        with SCP(conn, progress=True) as scp:
-            scp.put(src, dest)
-        ret["message"] = "Successfully copied file from {0} to {1}".format(src, dest)
-    except Exception as exception:  # pylint: disable=broad-except
-        ret["message"] = 'Could not copy file : "{0}"'.format(exception)
-        ret["out"] = False
-    return ret
 
 
 def lock():
@@ -1389,78 +1421,66 @@ def load(path=None, **kwargs):
     if "template_vars" in op:
         kwargs = op["template_vars"]
 
-    try:
-        template_cached_path = salt.utils.files.mkstemp()
-        __salt__["cp.get_template"](path, template_cached_path, **kwargs)
-    except Exception as ex:  # pylint: disable=broad-except
-        ret["message"] = (
-            "Salt failed to render the template, please check file path and syntax."
-            "\nError: {0}".format(str(ex))
-        )
-        ret["out"] = False
+    with HandleFileCopy(path, **kwargs) as template_cached_path:
+        if template_cached_path is None:
+            ret["message"] = "Invalid file path."
+            ret["out"] = False
+            return ret
+
+        if os.path.getsize(template_cached_path) == 0:
+            ret["message"] = "Template failed to render"
+            ret["out"] = False
+            return ret
+
+        op["path"] = template_cached_path
+
+        if "format" not in op:
+            if path.endswith("set"):
+                template_format = "set"
+            elif path.endswith("xml"):
+                template_format = "xml"
+            elif path.endswith("json"):
+                template_format = "json"
+            else:
+                template_format = "text"
+
+            op["format"] = template_format
+
+        # Currently, four config_actions are supported: overwrite, replace, update, merge
+        # Allow only one config_action, providing multiple config_action value is not allowed
+        actions = [
+            item
+            for item in ("overwrite", "replace", "update", "merge")
+            if op.get(item, False)
+        ]
+        if len(list(actions)) > 1:
+            ret["message"] = "Only one config_action is allowed. Provided: {0}".format(
+                actions
+            )
+            ret["out"] = False
+            return ret
+
+        if "replace" in op and op["replace"]:
+            op["merge"] = False
+            del op["replace"]
+        elif "overwrite" in op and op["overwrite"]:
+            op["overwrite"] = True
+        elif "merge" in op and op["merge"]:
+            op["merge"] = True
+        elif "overwrite" in op and not op["overwrite"]:
+            op["merge"] = True
+            del op["overwrite"]
+
+        try:
+            conn.cu.load(**op)
+            ret["message"] = "Successfully loaded the configuration."
+        except Exception as exception:  # pylint: disable=broad-except
+            ret["message"] = 'Could not load configuration due to : "{0}"'.format(exception)
+            ret["format"] = op["format"]
+            ret["out"] = False
+            return ret
+
         return ret
-
-    if not os.path.isfile(template_cached_path):
-        ret["message"] = "Invalid file path."
-        ret["out"] = False
-        return ret
-
-    if os.path.getsize(template_cached_path) == 0:
-        ret["message"] = "Template failed to render"
-        ret["out"] = False
-        return ret
-
-    op["path"] = template_cached_path
-
-    if "format" not in op:
-        if path.endswith("set"):
-            template_format = "set"
-        elif path.endswith("xml"):
-            template_format = "xml"
-        elif path.endswith("json"):
-            template_format = "json"
-        else:
-            template_format = "text"
-
-        op["format"] = template_format
-
-    # Currently, four config_actions are supported: overwrite, replace, update, merge
-    # Allow only one config_action, providing multiple config_action value is not allowed
-    actions = [
-        item
-        for item in ("overwrite", "replace", "update", "merge")
-        if op.get(item, False)
-    ]
-    if len(list(actions)) > 1:
-        ret["message"] = "Only one config_action is allowed. Provided: {0}".format(
-            actions
-        )
-        ret["out"] = False
-        return ret
-
-    if "replace" in op and op["replace"]:
-        op["merge"] = False
-        del op["replace"]
-    elif "overwrite" in op and op["overwrite"]:
-        op["overwrite"] = True
-    elif "merge" in op and op["merge"]:
-        op["merge"] = True
-    elif "overwrite" in op and not op["overwrite"]:
-        op["merge"] = True
-        del op["overwrite"]
-
-    try:
-        conn.cu.load(**op)
-        ret["message"] = "Successfully loaded the configuration."
-    except Exception as exception:  # pylint: disable=broad-except
-        ret["message"] = 'Could not load configuration due to : "{0}"'.format(exception)
-        ret["format"] = op["format"]
-        ret["out"] = False
-        return ret
-    finally:
-        salt.utils.files.safe_rm(template_cached_path)
-
-    return ret
 
 
 def commit_check():
@@ -1532,6 +1552,8 @@ def get_table(
     .. code-block:: bash
 
         salt 'device_name' junos.get_table RouteTable routes.yml
+        salt 'device_name' junos.get_table EthPortTable ethport.yml table_args='{"interface_name": "ge-3/2/2"}'
+        salt 'device_name' junos.get_table EthPortTable ethport.yml salt://tables
     """
 
     conn = __proxy__["junos.conn"]()
@@ -1553,78 +1575,68 @@ def get_table(
     pyez_tables_path = os.path.dirname(os.path.abspath(tables_dir.__file__))
     try:
         if path is not None:
-            file_loc = glob.glob(os.path.join(path, "{0}".format(table_file)))
+            file_path = os.path.join(path, "{0}".format(table_file))
         else:
-            file_loc = glob.glob(
-                os.path.join(pyez_tables_path, "{0}".format(table_file))
-            )
-        if len(file_loc) == 1:
-            file_name = file_loc[0]
-        elif len(file_loc) > 1:
-            ret[
-                "message"
-            ] = "Given table file {0} is located at multiple location".format(
-                table_file
-            )
-            ret["out"] = False
-            return ret
-        elif len(file_loc) == 0:
-            ret["message"] = "Given table file {0} cannot be located".format(table_file)
-            ret["out"] = False
-            return ret
-        try:
-            with salt.utils.files.fopen(file_name) as fp:
-                ret["table"] = yaml.load(fp.read(), Loader=yamlordereddictloader.Loader)
-                globals().update(FactoryLoader().load(ret["table"]))
-        except IOError as err:
-            ret[
-                "message"
-            ] = "Uncaught exception during YAML Load - please report: {0}".format(
-                six.text_type(err)
-            )
-            ret["out"] = False
-            return ret
-        try:
-            data = globals()[table](conn)
-            data.get(**get_kvargs)
-        except KeyError as err:
-            ret[
-                "message"
-            ] = "Uncaught exception during get API call - please report: {0}".format(
-                six.text_type(err)
-            )
-            ret["out"] = False
-            return ret
-        except ConnectClosedError:
-            ret[
-                "message"
-            ] = "Got ConnectClosedError exception. Connection lost with {}".format(conn)
-            ret["out"] = False
-            return ret
-        ret["reply"] = json.loads(data.to_json())
-        if data.__class__.__bases__[0] in [OpTable, CfgTable]:
-            # Sets key value if not present in YAML. To be used by returner
-            if ret["table"][table].get("key") is None:
-                ret["table"][table]["key"] = data.ITEM_NAME_XPATH
-            # If key is provided from salt state file.
-            if key is not None:
-                ret["table"][table]["key"] = data.KEY
-            if table_args is not None:
-                args = copy.copy(data.GET_ARGS)
-                args.update(table_args)
-                ret["table"][table]["args"] = args
-        else:
-            if target is not None:
-                ret["table"][table]["target"] = data.TARGET
-            if key is not None:
-                ret["table"][table]["key"] = data.KEY
-            if key_items is not None:
-                ret["table"][table]["key_items"] = data.KEY_ITEMS
-            if table_args is not None:
-                args = copy.copy(data.CMD_ARGS)
-                args.update(table_args)
-                ret["table"][table]["args"] = args
-                ret["table"][table]["command"] = data.GET_CMD
+            file_path = os.path.join(pyez_tables_path, "{0}".format(table_file))
+
+        with HandleFileCopy(file_path) as file_loc:
+            if file_loc is None:
+                ret["message"] = "Given table file {0} cannot be located".format(table_file)
+                ret["out"] = False
+                return ret
+            try:
+                with salt.utils.files.fopen(file_loc) as fp:
+                    ret["table"] = yaml.load(fp.read(), Loader=yamlordereddictloader.Loader)
+                    globals().update(FactoryLoader().load(ret["table"]))
+            except IOError as err:
+                ret[
+                    "message"
+                ] = "Uncaught exception during YAML Load - please report: {0}".format(
+                    six.text_type(err)
+                )
+                ret["out"] = False
+                return ret
+            try:
+                data = globals()[table](conn)
+                data.get(**get_kvargs)
+            except KeyError as err:
+                ret[
+                    "message"
+                ] = "Uncaught exception during get API call - please report: {0}".format(
+                    six.text_type(err)
+                )
+                ret["out"] = False
+                return ret
+            except ConnectClosedError:
+                ret[
+                    "message"
+                ] = "Got ConnectClosedError exception. Connection lost with {}".format(conn)
+                ret["out"] = False
+                return ret
+            ret["reply"] = json.loads(data.to_json())
+            if data.__class__.__bases__[0] in [OpTable, CfgTable]:
+                # Sets key value if not present in YAML. To be used by returner
+                if ret["table"][table].get("key") is None:
+                    ret["table"][table]["key"] = data.ITEM_NAME_XPATH
+                # If key is provided from salt state file.
+                if key is not None:
+                    ret["table"][table]["key"] = data.KEY
+                if table_args is not None:
+                    args = copy.copy(data.GET_ARGS)
+                    args.update(table_args)
+                    ret["table"][table]["args"] = args
+            else:
+                if target is not None:
+                    ret["table"][table]["target"] = data.TARGET
+                if key is not None:
+                    ret["table"][table]["key"] = data.KEY
+                if key_items is not None:
+                    ret["table"][table]["key_items"] = data.KEY_ITEMS
+                if table_args is not None:
+                    args = copy.copy(data.CMD_ARGS)
+                    args.update(table_args)
+                    ret["table"][table]["args"] = args
+                    ret["table"][table]["command"] = data.GET_CMD
     except ConnectClosedError:
         ret["message"] = (
             "Got ConnectClosedError exception. Connection lost "
