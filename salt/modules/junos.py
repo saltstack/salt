@@ -297,9 +297,8 @@ def rpc(cmd=None, dest=None, **kwargs):
 
     format_ = op.pop("format", "xml")
     # dest becomes part of op via __pub_arg if not None
-    # rpc commands opjecting to dest as part of op
-    if dest:
-        op.pop("dest", None)
+    # rpc commands objecting to dest as part of op
+    op.pop("dest", dest)
 
     if cmd in ["get-config", "get_config"]:
         filter_reply = None
