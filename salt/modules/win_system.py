@@ -739,7 +739,7 @@ def set_hostname(hostname):
     with salt.utils.winapi.Com():
         conn = wmi.WMI()
         comp = conn.Win32_ComputerSystem()[0]
-    return comp.Rename(Name=hostname)
+        return comp.Rename(Name=hostname)
 
 
 def join_domain(
@@ -862,13 +862,6 @@ def _join_domain(
 
     Returns:
         int:
-
-    :param domain:
-    :param username:
-    :param password:
-    :param account_ou:
-    :param account_exists:
-    :return:
     """
     NETSETUP_JOIN_DOMAIN = 0x1  # pylint: disable=invalid-name
     NETSETUP_ACCOUNT_CREATE = 0x2  # pylint: disable=invalid-name
@@ -884,18 +877,18 @@ def _join_domain(
 
     with salt.utils.winapi.Com():
         conn = wmi.WMI()
-    comp = conn.Win32_ComputerSystem()[0]
+        comp = conn.Win32_ComputerSystem()[0]
 
-    # Return the results of the command as an error
-    # JoinDomainOrWorkgroup returns a strangely formatted value that looks like
-    # (0,) so return the first item
-    return comp.JoinDomainOrWorkgroup(
-        Name=domain,
-        Password=password,
-        UserName=username,
-        AccountOU=account_ou,
-        FJoinOptions=join_options,
-    )[0]
+        # Return the results of the command as an error
+        # JoinDomainOrWorkgroup returns a strangely formatted value that looks like
+        # (0,) so return the first item
+        return comp.JoinDomainOrWorkgroup(
+            Name=domain,
+            Password=password,
+            UserName=username,
+            AccountOU=account_ou,
+            FJoinOptions=join_options,
+        )[0]
 
 
 def unjoin_domain(
@@ -982,29 +975,29 @@ def unjoin_domain(
 
     with salt.utils.winapi.Com():
         conn = wmi.WMI()
-    comp = conn.Win32_ComputerSystem()[0]
-    err = comp.UnjoinDomainOrWorkgroup(
-        Password=password, UserName=username, FUnjoinOptions=unjoin_options
-    )
+        comp = conn.Win32_ComputerSystem()[0]
+        err = comp.UnjoinDomainOrWorkgroup(
+            Password=password, UserName=username, FUnjoinOptions=unjoin_options
+        )
 
-    # you have to do this because UnjoinDomainOrWorkgroup returns a
-    # strangely formatted value that looks like (0,)
-    if not err[0]:
-        err = comp.JoinDomainOrWorkgroup(Name=workgroup)
+        # you have to do this because UnjoinDomainOrWorkgroup returns a
+        # strangely formatted value that looks like (0,)
         if not err[0]:
-            ret = {"Workgroup": workgroup, "Restart": False}
-            if restart:
-                ret["Restart"] = reboot()
+            err = comp.JoinDomainOrWorkgroup(Name=workgroup)
+            if not err[0]:
+                ret = {"Workgroup": workgroup, "Restart": False}
+                if restart:
+                    ret["Restart"] = reboot()
 
-            return ret
+                return ret
+            else:
+                log.error(win32api.FormatMessage(err[0]).rstrip())
+                log.error("Failed to unjoin the computer from %s", workgroup)
+                return False
         else:
             log.error(win32api.FormatMessage(err[0]).rstrip())
-            log.error("Failed to join the computer to %s", workgroup)
+            log.error("Failed to unjoin computer from %s", status["Domain"])
             return False
-    else:
-        log.error(win32api.FormatMessage(err[0]).rstrip())
-        log.error("Failed to unjoin computer from %s", status["Domain"])
-        return False
 
 
 def get_domain_workgroup():

@@ -899,7 +899,7 @@ class CkMinions(object):
         # if we take out all the allowed minions, and there are any left, then
         # the target includes minions that are not allowed by eauth
         # so we can give up here.
-        if len(minions - allowed_minions_from_auth_list) > 0:
+        if minions - allowed_minions_from_auth_list:
             return False
 
         try:
