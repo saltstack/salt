@@ -60,6 +60,7 @@ import logging
 # Import python libs
 import os
 import time
+from collections.abc import MutableMapping
 from multiprocessing.util import Finalize
 
 # Import salt libs
@@ -83,15 +84,6 @@ import salt.utils.zeromq
 # Import third party libs
 from salt.ext import six
 from salt.ext.six.moves import range
-
-try:
-    from collections.abc import MutableMapping
-except ImportError:
-    # pylint: disable=no-name-in-module
-    from collections import MutableMapping
-
-    # pylint: enable=no-name-in-module
-
 
 log = logging.getLogger(__name__)
 
@@ -1256,7 +1248,7 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
         else:
             # Only a single event returner
             log.debug(
-                "Calling event returner %s, only one " "configured.",
+                "Calling event returner %s, only one configured.",
                 self.opts["event_return"],
             )
             event_return = "{0}.event_return".format(self.opts["event_return"])

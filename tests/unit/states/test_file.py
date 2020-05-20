@@ -4,12 +4,14 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
+import plistlib
 import pprint
 import shutil
 from datetime import datetime
 
 import salt.modules.file as filemod
 import salt.serializers.json as jsonserializer
+import salt.serializers.plist as plistserializer
 import salt.serializers.python as pythonserializer
 import salt.serializers.yaml as yamlserializer
 import salt.states.file as filestate
@@ -20,7 +22,7 @@ import salt.utils.win_functions
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError
 from salt.ext.six.moves import range
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, call, mock_open, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -49,6 +51,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     "yaml.serialize": yamlserializer.serialize,
                     "python.serialize": pythonserializer.serialize,
                     "json.serialize": jsonserializer.serialize,
+                    "plist.serialize": plistserializer.serialize,
                 },
                 "__opts__": {"test": False, "cachedir": ""},
                 "__instance_id__": "",
@@ -84,6 +87,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
             filestate.serialize("/tmp", dataset, formatter="json")
             self.assertEqual(salt.utils.json.loads(returner.returned), dataset)
+
+            filestate.serialize("/tmp", dataset, formatter="plist")
+            self.assertEqual(plistlib.loads(returner.returned), dataset)
 
             filestate.serialize("/tmp", dataset, formatter="python")
             self.assertEqual(returner.returned, pprint.pformat(dataset) + "\n")
@@ -2517,7 +2523,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             self.assertTrue(filestate.mod_run_check_cmd(cmd, filename))
 
     @skipIf(not HAS_DATEUTIL, NO_DATEUTIL_REASON)
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_retention_schedule(self):
         """
         Test to execute the retention_schedule logic.

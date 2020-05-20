@@ -3,23 +3,21 @@
 integration tests for mac_service
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
-import salt.utils.path
-import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
-from tests.support.unit import skipIf
+from tests.support.helpers import (
+    destructiveTest,
+    runs_on,
+    skip_if_binaries_missing,
+    skip_if_not_root,
+    slowTest,
+)
 
 
-@skipIf(not salt.utils.platform.is_darwin(), "Test only available on macOS")
-@skipIf(not salt.utils.path.which("launchctl"), "Test requires launchctl binary")
-@skipIf(not salt.utils.path.which("plutil"), "Test requires plutil binary")
 @skip_if_not_root
+@runs_on(kernel="Darwin")
+@skip_if_binaries_missing("launchctl", "plutil")
 class MacServiceModuleTest(ModuleCase):
     """
     Validate the mac_service module
@@ -45,7 +43,7 @@ class MacServiceModuleTest(ModuleCase):
             self.run_function("service.stop", [self.SERVICE_NAME])
             self.run_function("service.disable", [self.SERVICE_NAME])
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_show(self):
         """
         Test service.show
@@ -60,7 +58,7 @@ class MacServiceModuleTest(ModuleCase):
             "Service not found", self.run_function("service.show", ["spongebob"])
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_launchctl(self):
         """
         Test service.launchctl
@@ -82,7 +80,7 @@ class MacServiceModuleTest(ModuleCase):
             self.run_function("service.launchctl", ["error", "bootstrap"]),
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_list(self):
         """
         Test service.list
@@ -99,7 +97,7 @@ class MacServiceModuleTest(ModuleCase):
         )
 
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_enable(self):
         """
         Test service.enable
@@ -111,7 +109,7 @@ class MacServiceModuleTest(ModuleCase):
         )
 
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_disable(self):
         """
         Test service.disable
@@ -123,7 +121,7 @@ class MacServiceModuleTest(ModuleCase):
         )
 
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_start(self):
         """
         Test service.start
@@ -137,7 +135,7 @@ class MacServiceModuleTest(ModuleCase):
         )
 
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_stop(self):
         """
         Test service.stop
@@ -149,7 +147,7 @@ class MacServiceModuleTest(ModuleCase):
         )
 
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_status(self):
         """
         Test service.status
@@ -167,7 +165,7 @@ class MacServiceModuleTest(ModuleCase):
         # Service not found
         self.assertEqual("", self.run_function("service.status", ["spongebob"]))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_available(self):
         """
         Test service.available
@@ -175,7 +173,7 @@ class MacServiceModuleTest(ModuleCase):
         self.assertTrue(self.run_function("service.available", [self.SERVICE_NAME]))
         self.assertFalse(self.run_function("service.available", ["spongebob"]))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_missing(self):
         """
         Test service.missing
@@ -184,7 +182,7 @@ class MacServiceModuleTest(ModuleCase):
         self.assertTrue(self.run_function("service.missing", ["spongebob"]))
 
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_enabled(self):
         """
         Test service.enabled
@@ -198,7 +196,7 @@ class MacServiceModuleTest(ModuleCase):
         self.assertFalse(self.run_function("service.enabled", ["spongebob"]))
 
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_disabled(self):
         """
         Test service.disabled
@@ -213,7 +211,7 @@ class MacServiceModuleTest(ModuleCase):
 
         self.assertFalse(self.run_function("service.disabled", ["spongebob"]))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_get_all(self):
         """
         Test service.get_all
@@ -222,7 +220,7 @@ class MacServiceModuleTest(ModuleCase):
         self.assertIsInstance(services, list)
         self.assertIn(self.SERVICE_NAME, services)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_get_enabled(self):
         """
         Test service.get_enabled

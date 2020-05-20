@@ -47,15 +47,15 @@ Using the tables above, select the Salt Minion type.
 
 Choices:
   * ``SSH`` Proxy Minion (See `Salt Proxy Minion Configuration`_ Section)
-  * ``NX-API`` Proxy Minon (See `Salt Proxy Minion Configuration`_ Section)
+  * ``NX-API`` Proxy Minion (See `Salt Proxy Minion Configuration`_ Section)
   * ``GuestShell`` Native Minion (See `GuestShell Salt Minion Installation`_ Section)
-      * Some platforms support a native minon installed directly on the NX-OS device inside the GuestShell
+      * Some platforms support a native minion installed directly on the NX-OS device inside the GuestShell
       * The GuestShell is a secure Linux container environment running CentOS
 
 STEP 3: Network Connectivity
 ----------------------------
 
-Ensure that IP reachability exists between the NX-OS Salt Minon device and the SaltStack Master.
+Ensure that IP reachability exists between the NX-OS Salt Minion device and the SaltStack Master.
 
 **Note:** The management interface exists in a separate VRF context and requires additional configuration as shown.
 
@@ -89,7 +89,7 @@ Here is a sample Proxy Minion directory structure
   ├── n7k-proxy.sls
   └── top.sls
 
-This displays a top sls file and two proxy minon sls files for a Nexus 3k and Nexus 7k device.
+This displays a top sls file and two proxy minion sls files for a Nexus 3k and Nexus 7k device.
 
 Sample contents for the ``top.sls`` file.
 
@@ -105,7 +105,7 @@ Sample contents for the ``top.sls`` file.
 Proxy Minion Pillar Data
 ------------------------
 
-Here is a sample Proxy Minon pillar data file.
+Here is a sample Proxy Minion pillar data file.
 
 All of the data for both ssh and nxapi proxy minion types can be stored in the same pillar data file.  To choose ``ssh`` or ``nxapi``, simply set the ``connection:`` parameter accordingly.
 
@@ -305,7 +305,7 @@ Example:
   - #id: salt
   + id: n3k-guestshell-minion
 
-Start the Minon in the Guestshell and accept the key on the SaltStack Master.
+Start the Minion in the Guestshell and accept the key on the SaltStack Master.
 
   ``[root@guestshell ~]# systemctl start salt-minion``
 
@@ -327,7 +327,7 @@ Start the Minon in the Guestshell and accept the key on the SaltStack Master.
   Proceed? [n/Y] Y
   Key for minion n3k-guestshell-minion accepted.
 
-Ping the SaltStack Minon running in the Guestshell.
+Ping the SaltStack Minion running in the Guestshell.
 
 .. code:: bash
 

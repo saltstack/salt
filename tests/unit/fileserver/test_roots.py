@@ -2,23 +2,19 @@
 """
     :codeauthor: Mike Place <mp@saltstack.com>
 """
-
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import os
+import pathlib
+import shutil
 import tempfile
 
 import salt.fileclient
-
-# Import Salt libs
 import salt.fileserver.roots as roots
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.mixins import (
     AdaptedConfigurationTestCaseMixin,
     LoaderModuleMockMixin,
@@ -26,11 +22,6 @@ from tests.support.mixins import (
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
-
-try:
-    import win32file
-except ImportError:
-    pass
 
 UNICODE_FILENAME = "питон.txt"
 UNICODE_DIRNAME = UNICODE_ENVNAME = "соль"
@@ -46,48 +37,12 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
 
     @classmethod
     def setUpClass(cls):
-        """
-        Create special file_roots for symlink test on Windows
-        """
-        if salt.utils.platform.is_windows():
-            root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-            source_sym = os.path.join(root_dir, "source_sym")
-            with salt.utils.files.fopen(source_sym, "w") as fp_:
-                fp_.write("hello world!\n")
-            cwd = os.getcwd()
-            try:
-                os.chdir(root_dir)
-                win32file.CreateSymbolicLink("dest_sym", "source_sym", 0)
-            finally:
-                os.chdir(cwd)
-            cls.test_symlink_list_file_roots = {"base": [root_dir]}
-        else:
-            dest_sym = os.path.join(RUNTIME_VARS.BASE_FILES, "dest_sym")
-            if not os.path.islink(dest_sym):
-                # Fix broken symlink by recreating it
-                if os.path.exists(dest_sym):
-                    os.remove(dest_sym)
-                os.symlink("source_sym", dest_sym)
-            cls.test_symlink_list_file_roots = None
         cls.tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         full_path_to_file = os.path.join(RUNTIME_VARS.BASE_FILES, "testfile")
-        with salt.utils.files.fopen(full_path_to_file, "rb") as s_fp:
-            with salt.utils.files.fopen(
-                os.path.join(cls.tmp_dir, "testfile"), "wb"
-            ) as d_fp:
-                for line in s_fp:
-                    d_fp.write(line)
+        shutil.copyfile(full_path_to_file, os.path.join(cls.tmp_dir, "testfile"))
 
     @classmethod
     def tearDownClass(cls):
-        """
-        Remove special file_roots for symlink test
-        """
-        if salt.utils.platform.is_windows():
-            try:
-                salt.utils.files.rm_rf(cls.test_symlink_list_file_roots["base"][0])
-            except OSError:
-                pass
         salt.utils.files.rm_rf(cls.tmp_dir)
 
     def tearDown(self):
@@ -168,15 +123,14 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         self.assertIn(UNICODE_DIRNAME, ret)
 
     def test_symlink_list(self):
-        orig_file_roots = self.opts["file_roots"]
-        try:
-            if self.test_symlink_list_file_roots:
-                self.opts["file_roots"] = self.test_symlink_list_file_roots
-            ret = roots.symlink_list({"saltenv": "base"})
-            self.assertDictEqual(ret, {"dest_sym": "source_sym"})
-        finally:
-            if self.test_symlink_list_file_roots:
-                self.opts["file_roots"] = orig_file_roots
+        source_sym = pathlib.Path(RUNTIME_VARS.TMP_BASEENV_STATE_TREE) / "source_sym"
+        source_sym.write_text("")
+        dest_sym = pathlib.Path(RUNTIME_VARS.TMP_BASEENV_STATE_TREE) / "dest_sym"
+        dest_sym.symlink_to(str(source_sym))
+        self.addCleanup(dest_sym.unlink)
+        self.addCleanup(source_sym.unlink)
+        ret = roots.symlink_list({"saltenv": "base"})
+        self.assertDictEqual(ret, {"dest_sym": str(source_sym)})
 
     def test_dynamic_file_roots(self):
         dyn_root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)

@@ -21,9 +21,16 @@ on most systems.
 Modules placed in ``_modules/`` will be synced to the minions when any of the
 following Salt functions are called:
 
-* :mod:`state.apply <salt.modules.state.apply_>`
+* :mod:`state.highstate <salt.modules.state.highstate>` (or :mod:`state.apply
+  <salt.modules.state.apply_>` with no state argument)
 * :mod:`saltutil.sync_modules <salt.modules.saltutil.sync_modules>`
 * :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>`
+
+Modules placed in ``_modules/`` will be synced to masters when any of the
+following Salt runners are called:
+
+* :mod:`saltutil.sync_modules <salt.runners.saltutil.sync_modules>`
+* :mod:`saltutil.sync_all <salt.runners.saltutil.sync_all>`
 
 Note that a module's default name is its filename
 (i.e. ``foo.py`` becomes module ``foo``), but that its name can be overridden
