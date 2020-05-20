@@ -3060,7 +3060,7 @@ def blockreplace(
         )
 
     diff = __utils__["stringutils.get_diff"](orig_file, new_file)
-    has_changes = diff is not ""
+    has_changes = diff != ""
     if has_changes and not dry_run:
         # changes detected
         # backup file attrs
