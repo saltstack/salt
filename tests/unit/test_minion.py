@@ -340,6 +340,34 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             minion.destroy()
 
 
+class MasterMinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
+    """
+    MasterMinion test class
+    """
+    def setUp(self):
+        super(MasterMinionTestCase, self).setUp()
+        self.opts = {}
+        self.addCleanup(delattr, self, "opts")
+
+    def test_grains_init(self):
+        """
+        Test basic initialization of grains, ensuring they are empty.
+        """
+        with patch.dict(self.opts, {"conf_file": None}):
+            with patch("salt.minion.MasterMinion.gen_modules"):
+                ret = salt.minion.MasterMinion(self.opts)
+                self.assertEqual(ret.opts["grains"], {})
+
+    def test_pillar_init(self):
+        """
+        Test basic initialization of pillar, ensuring they are empty.
+        """
+        with patch.dict(self.opts, {"conf_file": None}):
+            with patch("salt.minion.MasterMinion.gen_modules"):
+                ret = salt.minion.MasterMinion(self.opts)
+                self.assertEqual(ret.opts["pillar"], {})
+
+
 class MinionAsyncTestCase(TestCase, AdaptedConfigurationTestCaseMixin, tornado.testing.AsyncTestCase):
 
     def setUp(self):
