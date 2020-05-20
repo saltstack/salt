@@ -1954,6 +1954,28 @@ pattern() = package-c"""
             }
 
     @patch("salt.modules.zypperpkg._get_visible_patterns")
+    def test__get_installed_patterns_with_alias(self, get_visible_patterns):
+        """Test installed patterns in the system if they have alias"""
+        get_visible_patterns.return_value = {
+            "package-a": {"installed": True, "summary": "description a"},
+            "package-b": {"installed": False, "summary": "description b"},
+        }
+
+        salt_mock = {
+            "cmd.run": MagicMock(
+                return_value="""pattern() = .package-a-alias
+pattern() = package-a
+pattern-visible()
+pattern() = package-c"""
+            ),
+        }
+        with patch.dict("salt.modules.zypperpkg.__salt__", salt_mock):
+            assert zypper._get_installed_patterns() == {
+                "package-a": {"installed": True, "summary": "description a"},
+                "package-c": {"installed": True, "summary": "Non-visible pattern"},
+            }
+
+    @patch("salt.modules.zypperpkg._get_visible_patterns")
     def test_list_patterns(self, get_visible_patterns):
         """Test available patterns in the repo"""
         get_visible_patterns.return_value = {
