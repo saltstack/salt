@@ -31,3 +31,8 @@ class S3fsFileTest(TestCase, LoaderModuleMockMixin):
 
         s3fs._write_buckets_cache_file(metadata, cache_file)
         assert s3fs._read_buckets_cache_file(cache_file) == metadata
+
+    def test_ignore_pickle_load_exceptions(self):
+        #  TODO: parameterized test with patched pickle.load that raises the
+        #  various allowable exception from _read_buckets_cache_file
+        pass
