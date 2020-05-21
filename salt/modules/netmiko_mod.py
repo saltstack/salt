@@ -184,8 +184,6 @@ outside a ``netmiko`` Proxy, e.g.:
 """
 from __future__ import absolute_import
 
-import inspect
-
 # Import python stdlib
 import logging
 
@@ -251,7 +249,7 @@ def _prepare_connection(**kwargs):
     fun_kwargs = {}
     netmiko_kwargs = __salt__["config.get"]("netmiko", {})
     netmiko_kwargs.update(kwargs)  # merge the CLI args with the opts/pillar
-    netmiko_init_args, _, _, netmiko_defaults = inspect.getargspec(
+    netmiko_init_args, _, _, netmiko_defaults = __utils__["args.get_function_argspec"](
         BaseConnection.__init__
     )
     check_self = netmiko_init_args.pop(0)
