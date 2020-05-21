@@ -151,12 +151,14 @@ def _get_test_versions_ids(pysaltcombo):
     )
 
 
-@pytest.fixture(params=_get_test_versions(), ids=_get_test_versions_ids, scope="module")
+@pytest.fixture(
+    params=_get_test_versions(), ids=_get_test_versions_ids, scope="function"
+)
 def pysaltcombo(request):
     return request.param
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def minion_id(pysaltcombo):
     return random_string(
         "py{}-{}-".format(pysaltcombo.python_version, pysaltcombo.salt_version),
@@ -164,14 +166,14 @@ def minion_id(pysaltcombo):
     )
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def artefacts_path(minion_id):
     with pytest.helpers.temp_directory(minion_id) as temp_directory:
         yield temp_directory
 
 
 @pytest.mark.skip_if_binaries_missing("docker")
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def salt_minion(
     request,
     salt_factories,
@@ -205,7 +207,7 @@ def salt_minion(
             os.unlink(minion_key_file)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def package_name():
     return "comps-extras"
 
