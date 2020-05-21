@@ -1227,6 +1227,21 @@ class RemotePillarTestCase(TestCase):
             dictkey="pillar",
         )
 
+    def test_pillar_file_client_master_remote(self):
+        """
+        Test condition where local file_client and use_master_when_local option
+        returns a remote file client.
+        """
+        mocked_minion = MagicMock()
+        opts = {
+            "file_client": "local",
+            "use_master_when_local": True,
+            "pillar_cache": None,
+        }
+        pillar = salt.pillar.get_pillar(opts, self.grains, mocked_minion)
+        self.assertEqual(type(pillar), salt.pillar.RemotePillar)
+        self.assertNotEqual(type(pillar), salt.pillar.PillarCache)
+
 
 @patch("salt.transport.client.AsyncReqChannel.factory", MagicMock())
 class AsyncRemotePillarTestCase(TestCase):
