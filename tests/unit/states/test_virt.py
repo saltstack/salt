@@ -1978,6 +1978,72 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     password="secret",
                 )
 
+            # Define a pool that doesn't handle build
+            for mock in mocks:
+                mocks[mock].reset_mock()
+            with patch.dict(
+                virt.__salt__,
+                {  # pylint: disable=no-member
+                    "virt.pool_info": MagicMock(
+                        side_effect=[
+                            {},
+                            {"mypool": {"state": "stopped", "autostart": True}},
+                        ]
+                    ),
+                    "virt.pool_define": mocks["define"],
+                    "virt.pool_build": mocks["build"],
+                    "virt.pool_set_autostart": mocks["autostart"],
+                },
+            ):
+                ret.update(
+                    {
+                        "changes": {"mypool": "Pool defined, marked for autostart"},
+                        "comment": "Pool mypool defined, marked for autostart",
+                    }
+                )
+                self.assertDictEqual(
+                    virt.pool_defined(
+                        "mypool",
+                        ptype="rbd",
+                        source={
+                            "name": "libvirt-pool",
+                            "hosts": ["ses2.tf.local", "ses3.tf.local"],
+                            "auth": {
+                                "username": "libvirt",
+                                "password": "AQAz+PRdtquBBRAASMv7nlMZYfxIyLw3St65Xw==",
+                            },
+                        },
+                        autostart=True,
+                    ),
+                    ret,
+                )
+                mocks["define"].assert_called_with(
+                    "mypool",
+                    ptype="rbd",
+                    target=None,
+                    permissions=None,
+                    source_devices=None,
+                    source_dir=None,
+                    source_adapter=None,
+                    source_hosts=["ses2.tf.local", "ses3.tf.local"],
+                    source_auth={
+                        "username": "libvirt",
+                        "password": "AQAz+PRdtquBBRAASMv7nlMZYfxIyLw3St65Xw==",
+                    },
+                    source_name="libvirt-pool",
+                    source_format=None,
+                    source_initiator=None,
+                    start=False,
+                    transient=False,
+                    connection=None,
+                    username=None,
+                    password=None,
+                )
+                mocks["autostart"].assert_called_with(
+                    "mypool", state="on", connection=None, username=None, password=None,
+                )
+                mocks["build"].assert_not_called()
+
             mocks["update"] = MagicMock(return_value=False)
             for mock in mocks:
                 mocks[mock].reset_mock()
@@ -2027,6 +2093,9 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             for mock in mocks:
                 mocks[mock].reset_mock()
             mocks["update"] = MagicMock(return_value=True)
+            mocks["build"] = MagicMock(
+                side_effect=self.mock_libvirt.libvirtError("Existing VG")
+            )
             with patch.dict(
                 virt.__salt__,
                 {  # pylint: disable=no-member
@@ -2130,6 +2199,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     ),
                     ret,
                 )
+                mocks["build"].assert_not_called()
                 mocks["update"].assert_called_with(
                     "mypool",
                     ptype="logical",
@@ -2477,8 +2547,8 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             ):
                 ret.update(
                     {
-                        "changes": {"mypool": "Pool updated, built, restarted"},
-                        "comment": "Pool mypool updated, built, restarted",
+                        "changes": {"mypool": "Pool updated, restarted"},
+                        "comment": "Pool mypool updated, restarted",
                         "result": True,
                     }
                 )
@@ -2504,9 +2574,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                 mocks["start"].assert_called_with(
                     "mypool", connection=None, username=None, password=None
                 )
-                mocks["build"].assert_called_with(
-                    "mypool", connection=None, username=None, password=None
-                )
+                mocks["build"].assert_not_called()
                 mocks["update"].assert_called_with(
                     "mypool",
                     ptype="logical",

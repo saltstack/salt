@@ -363,9 +363,9 @@ class Fileserver(object):
 
         if isinstance(back, Sequence):
             # The test suite uses an ImmutableList type (based on
-            # collections.Sequence) for lists, which breaks this function in
+            # collections.abc.Sequence) for lists, which breaks this function in
             # the test suite. This normalizes the value from the opts into a
-            # list if it is based on collections.Sequence.
+            # list if it is based on collections.abc.Sequence.
             back = list(back)
 
         ret = []
@@ -387,15 +387,11 @@ class Fileserver(object):
                 for sub in back:
                     if "{0}.envs".format(sub[1:]) in server_funcs:
                         ret.remove(sub[1:])
-                    elif "{0}.envs".format(sub[1:-2]) in server_funcs:
-                        ret.remove(sub[1:-2])
                 return ret
 
         for sub in back:
             if "{0}.envs".format(sub) in server_funcs:
                 ret.append(sub)
-            elif "{0}.envs".format(sub[:-2]) in server_funcs:
-                ret.append(sub[:-2])
         return ret
 
     def master_opts(self, load):
@@ -721,9 +717,6 @@ class Fileserver(object):
                 )
 
         for back in file_list_backends:
-            # Account for the fact that the file_list cache directory for gitfs
-            # is 'git', hgfs is 'hg', etc.
-            back_virtualname = re.sub("fs$", "", back)
             try:
                 cache_files = os.listdir(os.path.join(list_cachedir, back))
             except OSError as exc:
@@ -740,7 +733,7 @@ class Fileserver(object):
                 if extension != "p":
                     # Filename does not end in ".p". Not a cache file, ignore.
                     continue
-                elif back_virtualname not in fsb or (
+                elif back not in fsb or (
                     saltenv is not None and cache_saltenv not in saltenv
                 ):
                     log.debug(
@@ -761,6 +754,11 @@ class Fileserver(object):
                         cache_saltenv,
                         back,
                     )
+
+        # Ensure reproducible ordering of returns
+        for key in ret:
+            ret[key].sort()
+
         return ret
 
     @ensure_unicode_args

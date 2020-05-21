@@ -437,9 +437,10 @@ def query(
                 try:
                     match_hostname(sockwrap.getpeercert(), hostname)
                 except CertificateError as exc:
-                    ret["error"] = (
-                        "The certificate was invalid. Error returned was: %s",
-                        pprint.pformat(exc),
+                    ret[
+                        "error"
+                    ] = "The certificate was invalid. Error returned was: {0}".format(
+                        pprint.pformat(exc)
                     )
                     return ret
 
@@ -634,9 +635,7 @@ def query(
             if status is True:
                 ret["status"] = 0
             ret["error"] = six.text_type(exc)
-            log.debug(
-                "Cannot perform 'http.query': {0} - {1}".format(url_full, ret["error"])
-            )
+            log.debug("Cannot perform 'http.query': %s - %s", url_full, ret["error"])
             return ret
 
         if stream is True or handle is True:
@@ -1048,7 +1047,7 @@ def _sanitize_url_components(comp_list, field):
     """
     Recursive function to sanitize each component of the url.
     """
-    if len(comp_list) == 0:
+    if not comp_list:
         return ""
     elif comp_list[0].startswith("{0}=".format(field)):
         ret = "{0}=XXXXXXXXXX&".format(field)
