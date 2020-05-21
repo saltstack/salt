@@ -12,6 +12,7 @@ as those returned here
 from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
+import hashlib
 import locale
 import logging
 import os
@@ -2918,28 +2919,7 @@ def get_server_id():
     if salt.utils.platform.is_proxy():
         return {}
     id_ = __opts__.get("id", "")
-    id_hash = None
-    py_ver = sys.version_info[:2]
-    if py_ver >= (3, 3):
-        # Python 3.3 enabled hash randomization, so we need to shell out to get
-        # a reliable hash.
-        id_hash = __salt__["cmd.run"](
-            [sys.executable, "-c", 'print(hash("{0}"))'.format(id_)],
-            env={"PYTHONHASHSEED": "0"},
-        )
-        try:
-            id_hash = int(id_hash)
-        except (TypeError, ValueError):
-            log.debug(
-                "Failed to hash the ID to get the server_id grain. Result of "
-                "hash command: %s",
-                id_hash,
-            )
-            id_hash = None
-    if id_hash is None:
-        # Python < 3.3 or error encountered above
-        id_hash = hash(id_)
-
+    id_hash = int(hashlib.sha256(id_.encode()).hexdigest(), 16)
     return {"server_id": abs(id_hash % (2 ** 31))}
 
 
