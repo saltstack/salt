@@ -45,10 +45,14 @@ def rpc(name, dest=None, format="xml", args=None, **kwargs):
               - dest: /home/user/rpc.log
               - interface_name: lo0
 
+        fetch interface information with terse:
+            junos.rpc:
+                - name: get-interface-information
+                - terse: True
 
     Parameters:
       Required
-        * cmd:
+        * name:
           The rpc to be executed. (default = None)
       Optional
         * dest:
@@ -191,7 +195,7 @@ def rollback(name, id, **kwargs):
 
 
 @resultdecorator
-def diff(name, d_id, **kwargs):
+def diff(name, d_id=0, **kwargs):
     """
     .. versionchanged:: Sodium
 
@@ -224,10 +228,16 @@ def cli(name, **kwargs):
               junos.cli:
                 - format: xml
 
+            get software version of device:
+              junos.cli:
+                - name: show version
+                - format: text
+                - dest: /home/user/show_version.log
+
     Parameters:
       Required
-        * command:
-          The command that need to be executed on Junos CLI. (default = None)
+        * name:
+          The command that need to be executed on Junos CLI.
       Optional
         * kwargs: Keyworded arguments which can be provided like-
             * format:
@@ -280,16 +290,16 @@ def install_config(name, **kwargs):
 
             Install the mentioned config:
               junos.install_config:
-                - path: salt//configs/interface.set
+                - name: salt://configs/interface.set
                 - timeout: 100
-                - diffs_file: 'var/log/diff'
+                - diffs_file: '/var/log/diff'
 
 
     .. code-block:: yaml
 
             Install the mentioned config:
               junos.install_config:
-                - template_path: salt//configs/interface.set
+                - path: salt://configs/interface.set
                 - timeout: 100
                 - template_vars:
                     interface_name: lo0
@@ -312,12 +322,14 @@ def install_config(name, **kwargs):
       execute.
 
     overwrite : False
-      Set to ``True`` if you want this file is to completely replace the
-       configuration file.
+        Set to ``True`` if you want this file is to completely replace the
+        configuration file. Sets action to override
 
-    replace : False
-      Specify whether the configuration file uses "replace:" statements.  Only
-      those statements under the 'replace' tag will be changed.
+        .. note:: This option cannot be used if **format** is "set".
+
+    merge : False
+        If set to ``True`` will set the load-config action to merge.
+        the default load-config action is 'replace' for xml/json/text config
 
     comment
       Provide a comment to the commit. (default = None)
@@ -463,13 +475,13 @@ def load(name, **kwargs):
 
         Install the mentioned config:
           junos.load:
-            - path: salt//configs/interface.set
+            - name: salt://configs/interface.set
 
     .. code-block:: yaml
 
         Install the mentioned config:
           junos.load:
-            - template_path: salt//configs/interface.set
+            - name: salt://configs/interface.set
             - template_vars:
                 interface_name: lo0
                 description: Creating interface via SaltStack.
@@ -492,12 +504,11 @@ def load(name, **kwargs):
         Set to ``True`` if you want this file is to completely replace the
         configuration file.
 
-    replace : False
-        Specify whether the configuration file uses "replace:" statements.
-        Only those statements under the 'replace' tag will be changed.
+        .. note:: This option cannot be used if **format** is "set".
 
-    format:
-      Determines the format of the contents.
+    merge : False
+        If set to ``True`` will set the load-config action to merge.
+        the default load-config action is 'replace' for xml/json/text config
 
     update : False
         Compare a complete loaded configuration against the candidate
@@ -549,7 +560,14 @@ def get_table(name, table, table_file, **kwargs):
         get route details:
           junos.get_table:
             - table: RouteTable
-            - file: routes.yml
+            - table_file: routes.yml
+
+        get interface details:
+          junos.get_table:
+            - table: EthPortTable
+            - table_file: ethport.yml
+            - table_args:
+                interface_name: ge-0/0/0
 
     name (required)
         task definition

@@ -638,3 +638,17 @@ repos:
           - invoke-pre-commit
           - --
           - docs.check
+
+  - repo: https://github.com/saltstack/salt-nox-pre-commit
+    rev: master
+    hooks:
+      - id: nox-py2
+        alias: check-filemap
+        name: Check Filename Map Change Matching
+        files: ^tests/filename_map\.yml$
+        pass_filenames: false
+        args:
+          - -e
+          - invoke-pre-commit
+          - --
+          - filemap.check

@@ -108,7 +108,7 @@ from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-from salt.ext.six.moves.urllib.parse import urlparse
+from salt.ext.six.moves.urllib.parse import urlparse, urlunparse
 from salt.utils.virt import check_remote, download_remote
 
 try:
@@ -505,6 +505,36 @@ def _get_disks(conn, dom):
                 source_name = source.get("name")
                 if source_name:
                     qemu_target = "{0}:{1}".format(qemu_target, source_name)
+
+                # Reverse the magic for the rbd and gluster pools
+                if source.get("protocol") in ["rbd", "gluster"]:
+                    for pool_i in conn.listAllStoragePools():
+                        pool_i_xml = ElementTree.fromstring(pool_i.XMLDesc())
+                        name_node = pool_i_xml.find("source/name")
+                        if name_node is not None and source_name.startswith(
+                            "{}/".format(name_node.text)
+                        ):
+                            qemu_target = "{}{}".format(
+                                pool_i.name(), source_name[len(name_node.text) :]
+                            )
+                            break
+
+                # Reverse the magic for cdroms with remote URLs
+                if elem.get("device", "disk") == "cdrom":
+                    host_node = source.find("host")
+                    if host_node is not None:
+                        hostname = host_node.get("name")
+                        port = host_node.get("port")
+                        qemu_target = urlunparse(
+                            (
+                                source.get("protocol"),
+                                "{}:{}".format(hostname, port) if port else hostname,
+                                source_name,
+                                "",
+                                saxutils.unescape(source.get("query", "")),
+                                "",
+                            )
+                        )
             elif disk_type == "volume":
                 pool_name = source.get("pool")
                 volume_name = source.get("volume")
@@ -1238,6 +1268,10 @@ def _disk_profile(conn, profile, hypervisor, disks, vm_name):
     pool_caps = _pool_capabilities(conn)
 
     for disk in disklist:
+        # Set default model for cdrom devices before the overlay sets the wrong one
+        if disk.get("device", "disk") == "cdrom" and "model" not in disk:
+            disk["model"] = "ide"
+
         # Add the missing properties that have defaults
         for key, val in six.iteritems(overlay):
             if key not in disk:
@@ -1955,8 +1989,17 @@ def _disks_equal(disk1, disk2):
         else ElementTree.Element("source")
     )
 
+    source1_dict = xmlutil.to_dict(source1, True)
+    source2_dict = xmlutil.to_dict(source2, True)
+
+    # Remove the index added by libvirt in the source for backing chain
+    if source1_dict:
+        source1_dict.pop("index", None)
+    if source2_dict:
+        source2_dict.pop("index", None)
+
     return (
-        xmlutil.to_dict(source1, True) == xmlutil.to_dict(source2, True)
+        source1_dict == source2_dict
         and target1 is not None
         and target2 is not None
         and target1.get("bus") == target2.get("bus")
@@ -2373,6 +2416,7 @@ def update(
         # From that point on, failures are not blocking to try to live update as much
         # as possible.
         commands = []
+        removable_changes = []
         if domain.isActive() and live:
             if cpu:
                 commands.append(
@@ -2392,7 +2436,6 @@ def update(
                 )
 
             # Look for removable device source changes
-            removable_changes = []
             new_disks = []
             for new_disk in changes["disk"].get("new", []):
                 device = new_disk.get("device", "disk")
@@ -3869,23 +3912,11 @@ def purge(vm_, dirs=False, removables=False, **kwargs):
             directories.add(os.path.dirname(disks[disk]["file"]))
         else:
             # We may have a volume to delete here
-            matcher = re.match(
-                "^(?:(?P<protocol>[^:]*):)?(?P<pool>[^/]+)/(?P<volume>.*)$",
-                disks[disk]["file"],
-            )
+            matcher = re.match("^(?P<pool>[^/]+)/(?P<volume>.*)$", disks[disk]["file"],)
             if matcher:
                 pool_name = matcher.group("pool")
                 pool = None
-                if matcher.group("protocol") in ["rbd", "gluster"]:
-                    # The pool name is not the libvirt one... we need to loop over the pool to find it
-                    for pool_i in conn.listAllStoragePools():
-                        pool_i_xml = ElementTree.fromstring(pool_i.XMLDesc())
-                        if pool_i_xml.get("type") == matcher.group("protocol"):
-                            name_node = pool_i_xml.find("source/name")
-                            if name_node is not None and name_node.text == pool_name:
-                                pool = pool_i
-                                break
-                elif pool_name in conn.listStoragePools():
+                if pool_name in conn.listStoragePools():
                     pool = conn.storagePoolLookupByName(pool_name)
 
                 if pool and matcher.group("volume") in pool.listVolumes():
@@ -5800,15 +5831,19 @@ def _pool_set_secret(
         if secret_type:
             # Get the previously defined secret if any
             secret = None
-            if usage:
-                usage_type = (
-                    libvirt.VIR_SECRET_USAGE_TYPE_CEPH
-                    if secret_type == "ceph"
-                    else libvirt.VIR_SECRET_USAGE_TYPE_ISCSI
-                )
-                secret = conn.secretLookupByUsage(usage_type, usage)
-            elif uuid:
-                secret = conn.secretLookupByUUIDString(uuid)
+            try:
+                if usage:
+                    usage_type = (
+                        libvirt.VIR_SECRET_USAGE_TYPE_CEPH
+                        if secret_type == "ceph"
+                        else libvirt.VIR_SECRET_USAGE_TYPE_ISCSI
+                    )
+                    secret = conn.secretLookupByUsage(usage_type, usage)
+                elif uuid:
+                    secret = conn.secretLookupByUUIDString(uuid)
+            except libvirt.libvirtError as err:
+                # For some reason the secret has been removed. Don't fail since we'll recreate it
+                log.info("Secret not found: %s", err.get_error_message())
 
             # Create secret if needed
             if not secret:
@@ -6236,6 +6271,22 @@ def pool_undefine(name, **kwargs):
     conn = __get_conn(**kwargs)
     try:
         pool = conn.storagePoolLookupByName(name)
+        desc = ElementTree.fromstring(pool.XMLDesc())
+
+        # Is there a secret that we generated and would need to be removed?
+        # Don't remove the other secrets
+        auth_node = desc.find("source/auth")
+        if auth_node is not None:
+            auth_types = {
+                "ceph": libvirt.VIR_SECRET_USAGE_TYPE_CEPH,
+                "iscsi": libvirt.VIR_SECRET_USAGE_TYPE_ISCSI,
+            }
+            secret_type = auth_types[auth_node.get("type")]
+            secret_usage = auth_node.find("secret").get("usage")
+            if secret_type and "pool_{}".format(name) == secret_usage:
+                secret = conn.secretLookupByUsage(secret_type, secret_usage)
+                secret.undefine()
+
         return not bool(pool.undefine())
     finally:
         conn.close()

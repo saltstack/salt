@@ -460,9 +460,7 @@ def _pack_alternative(extended_cfg, digest_collector, tfp):
             )
             if not os.path.exists(top):
                 log.error(
-                    "File path {} does not exist. Unable to add to salt-ssh thin".format(
-                        top
-                    )
+                    "File path %s does not exist. Unable to add to salt-ssh thin", top
                 )
                 continue
             if not os.path.isdir(top):
