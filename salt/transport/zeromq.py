@@ -142,6 +142,16 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
     # This class is only a singleton per minion/master pair
     # mapping of io_loop -> {key -> channel}
     instance_map = weakref.WeakKeyDictionary()
+    async_methods = [
+        "crypted_transfer_decode_dictentry",
+        "_crypted_transfer",
+        "_do_transfer",
+        "_uncrypted_transfer",
+        "send",
+    ]
+    close_methods = [
+        "close",
+    ]
 
     def __new__(cls, opts, **kwargs):
         """
@@ -441,6 +451,14 @@ class AsyncZeroMQPubChannel(
     A transport channel backed by ZeroMQ for a Salt Publisher to use to
     publish commands to connected minions
     """
+
+    async_methods = [
+        "connect",
+        "_decode_messages",
+    ]
+    close_methods = [
+        "close",
+    ]
 
     def __init__(self, opts, **kwargs):
         self.opts = opts
