@@ -30,8 +30,6 @@ except ImportError:
     HAS_RANDOM = False
 
 try:
-    # Windows does not have the crypt module
-    # consider using passlib.hash instead
     import crypt
 
     HAS_CRYPT = True
@@ -87,16 +85,6 @@ def _gen_hash_passlib(crypt_salt=None, password=None, algorithm=None):
     """
     Generate a /etc/shadow-compatible hash for a non-local system
     """
-    if algorithm is None:
-        # use the most secure natively supported method
-        algorithm = known_methods[0]
-
-    if algorithm not in known_methods:
-        raise SaltInvocationError(
-            "Algorithm '{0}' is not supported by gen_hash. We "
-            "support these algorithms: {1}".format(algorithm, list(known_methods))
-        )
-
     # these are the passlib equivalents to the 'known_methods' defined in crypt
     schemes = ["sha512_crypt", "sha256_crypt", "bcrypt", "md5_crypt", "des_crypt"]
 
@@ -104,8 +92,10 @@ def _gen_hash_passlib(crypt_salt=None, password=None, algorithm=None):
 
     kwargs = {"secret": password, "scheme": schemes[known_methods.index(algorithm)]}
     if crypt_salt and "$" in crypt_salt:
-        roundstr, split_salt = crypt_salt.split("$")
-        rounds = int(roundstr.split("=")[-1])
+        # this salt has a rounds specifier.
+        #  passlib takes it as a separate parameter, split it out
+        roundsstr, split_salt = crypt_salt.split("$")
+        rounds = int(roundsstr.split("=")[-1])
         kwargs.update({"salt": split_salt, "rounds": rounds})
     else:
         kwargs.update({"salt": crypt_salt})
@@ -116,26 +106,20 @@ def _gen_hash_crypt(crypt_salt=None, password=None, algorithm=None):
     """
     Generate /etc/shadow hash using the native crypt module
     """
-    if algorithm is None:
-        # use the most secure natively supported method
-        algorithm = crypt.methods[0].name.lower()
-
-    if algorithm not in methods:
-        raise SaltInvocationError(
-            "Algorithm '{0}' is not a natively supported algorithm: {1}. "
-            "Choose a supported algorithm or install passlib to hash "
-            "using any of: {2}.".format(algorithm, list(methods), known_methods)
-        )
-
     if crypt_salt is None:
+        # setting crypt_salt to the algorithm makes crypt generate
+        #  a salt compatible with the specified algorithm.
         crypt_salt = methods[algorithm]
-    elif methods[algorithm].ident:
-        crypt_salt = "${}${}".format(methods[algorithm].ident, crypt_salt)
-    else:  # method is crypt (DES)
-        if len(crypt_salt) != 2:
-            raise ValueError(
-                "Invalid salt for hash, 'crypt' salt must be 2 characters."
-            )
+    else:
+        if algorithm == "crypt":
+            if len(crypt_salt) != 2:
+                # excess salt characters would be added to the password, blow up instead
+                raise ValueError(
+                    "Invalid salt for hash, 'crypt' salt must be 2 characters."
+                )
+        else:
+            # all other algorithms need to be specified in the salt
+            crypt_salt = "${}${}".format(methods[algorithm].ident, crypt_salt)
 
     return crypt.crypt(password, crypt_salt)
 
@@ -147,20 +131,23 @@ def gen_hash(crypt_salt=None, password=None, algorithm=None):
     if password is None:
         password = secure_password()
 
-    if HAS_CRYPT:
-        try:
-            return _gen_hash_crypt(
-                crypt_salt=crypt_salt, password=password, algorithm=algorithm
-            )
-        except KeyError:
-            if not HAS_PASSLIB:
-                raise
+    if algorithm is None:
+        # prefer the most secure natively supported method
+        algorithm = crypt.methods[0].name.lower() if HAS_CRYPT else known_methods[0]
 
-    if HAS_PASSLIB:
+    if HAS_CRYPT and algorithm in methods:
+        return _gen_hash_crypt(
+            crypt_salt=crypt_salt, password=password, algorithm=algorithm
+        )
+    elif HAS_PASSLIB and algorithm in known_methods:
         return _gen_hash_passlib(
             crypt_salt=crypt_salt, password=password, algorithm=algorithm
         )
-
-    raise SaltInvocationError(
-        "The passlib library is required to hash on this platform."
-    )
+    else:
+        raise SaltInvocationError(
+            "Cannot hash using '{0}' hash algorithm. Natively supported "
+            "algorithms are: {1}. If passlib is installed ({4}), the supported "
+            "algorithms are: {2}.".format(
+                algorithm, list(methods), known_methods, HAS_PASSLIB
+            )
+        )

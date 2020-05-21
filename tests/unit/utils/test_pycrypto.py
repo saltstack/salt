@@ -40,7 +40,7 @@ class PycryptoTestCase(TestCase):
         },
         "crypt": {"hashed": "goVHulDpuGA7w", "salt": "go", "badsalt": "ba"},
     }
-    invalid_salt = "thissaltistoolongthissaltistoolongthissaltistoolongthissaltistoolongthissaltistoolong"
+    invalid_salt = "thissaltistoolong" * 10
 
     @skipIf(not salt.utils.pycrypto.HAS_CRYPT, "crypt not available")
     def test_gen_hash_crypt(self):
@@ -141,13 +141,21 @@ class PycryptoTestCase(TestCase):
             )
             self.assertEqual(ret, expected["hashed"])
 
-    @patch("salt.utils.pycrypto.methods", {})
+    @patch("salt.utils.pycrypto.HAS_CRYPT", False)
+    @patch("salt.utils.pycrypto.HAS_PASSLIB", False)
     def test_gen_hash_no_lib(self):
         """
         test gen_hash with no crypt library available
         """
         with self.assertRaises(SaltInvocationError):
             salt.utils.pycrypto.gen_hash()
+
+    def test_gen_hash_bad_algorithm(self):
+        """
+        test gen_hash with no crypt library available
+        """
+        with self.assertRaises(SaltInvocationError):
+            salt.utils.pycrypto.gen_hash(algorithm="doesntexist")
 
     def test_secure_password(self):
         """
