@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 BGP Finder
 ==========
 
@@ -96,57 +96,52 @@ Configuration
               - holdtime
               - flap_count
             outputter: yaml
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
-
-# Import third party libs
-try:
-    from netaddr import IPNetwork
-    from netaddr import IPAddress
-    # pylint: disable=unused-import
-    from napalm_base import helpers as napalm_helpers
-    # pylint: enable=unused-import
-    HAS_NAPALM_BASE = True
-except ImportError:
-    HAS_NAPALM_BASE = False
 
 # Import salt lib
 import salt.output
 from salt.ext import six
 from salt.ext.six.moves import map
 
+# Import third party libs
+try:
+    from netaddr import IPNetwork
+    from netaddr import IPAddress
+
+    # pylint: disable=unused-import
+    from napalm_base import helpers as napalm_helpers
+
+    # pylint: enable=unused-import
+    HAS_NAPALM_BASE = True
+except ImportError:
+    HAS_NAPALM_BASE = False
+
+
 # -----------------------------------------------------------------------------
 # module properties
 # -----------------------------------------------------------------------------
 
-__virtualname__ = 'bgp'
+__virtualname__ = "bgp"
 
 # -----------------------------------------------------------------------------
 # global variables
 # -----------------------------------------------------------------------------
 
-_DEFAULT_TARGET = '*'
-_DEFAULT_EXPR_FORM = 'glob'
+_DEFAULT_TARGET = "*"
+_DEFAULT_EXPR_FORM = "glob"
 _DEFAULT_DISPLAY = True
-_DEFAULT_OUTPUTTER = 'table'
-_DEFAULT_INCLUDED_FIELDS = [
-    'device',
-    'as_number',
-    'neighbor_address'
-]
-_DEFAULT_RETURN_FIELDS = [
-    'connection_stats',
-    'import_policy',
-    'export_policy'
-]
+_DEFAULT_OUTPUTTER = "table"
+_DEFAULT_INCLUDED_FIELDS = ["device", "as_number", "neighbor_address"]
+_DEFAULT_RETURN_FIELDS = ["connection_stats", "import_policy", "export_policy"]
 _DEFAULT_LABELS_MAPPING = {
-    'device': 'Device',
-    'as_number': 'AS Number',
-    'neighbor_address': 'Neighbor IP',
-    'connection_stats': 'State|#Active/Received/Accepted/Damped',
-    'import_policy': 'Policy IN',
-    'export_policy': 'Policy OUT',
-    'vrf': 'VRF'
+    "device": "Device",
+    "as_number": "AS Number",
+    "neighbor_address": "Neighbor IP",
+    "connection_stats": "State|#Active/Received/Accepted/Damped",
+    "import_policy": "Policy IN",
+    "export_policy": "Policy OUT",
+    "vrf": "VRF",
 }
 
 # -----------------------------------------------------------------------------
@@ -157,7 +152,8 @@ _DEFAULT_LABELS_MAPPING = {
 def __virtual__():
     if HAS_NAPALM_BASE:
         return __virtualname__
-    return (False, 'The napalm-base module could not be imported')
+    return (False, "The napalm-base module could not be imported")
+
 
 # -----------------------------------------------------------------------------
 # helper functions -- will not be exported
@@ -165,64 +161,62 @@ def __virtual__():
 
 
 def _get_bgp_runner_opts():
-    '''
+    """
     Return the bgp runner options.
-    '''
-    runner_opts = __opts__.get('runners', {}).get('bgp', {})
+    """
+    runner_opts = __opts__.get("runners", {}).get("bgp", {})
     return {
-        'tgt': runner_opts.get('tgt', _DEFAULT_TARGET),
-        'tgt_type': runner_opts.get('tgt_type', _DEFAULT_EXPR_FORM),
-        'display': runner_opts.get('display', _DEFAULT_DISPLAY),
-        'return_fields': _DEFAULT_INCLUDED_FIELDS + runner_opts.get('return_fields', _DEFAULT_RETURN_FIELDS),
-        'outputter': runner_opts.get('outputter', _DEFAULT_OUTPUTTER),
+        "tgt": runner_opts.get("tgt", _DEFAULT_TARGET),
+        "tgt_type": runner_opts.get("tgt_type", _DEFAULT_EXPR_FORM),
+        "display": runner_opts.get("display", _DEFAULT_DISPLAY),
+        "return_fields": _DEFAULT_INCLUDED_FIELDS
+        + runner_opts.get("return_fields", _DEFAULT_RETURN_FIELDS),
+        "outputter": runner_opts.get("outputter", _DEFAULT_OUTPUTTER),
     }
 
 
 def _get_mine(opts=None):
-    '''
+    """
     Helper to return the mine data from the minions, as configured on the runner opts.
-    '''
+    """
     if not opts:
         # not a massive improvement, but better than recomputing the runner opts dict
         opts = _get_bgp_runner_opts()
-    return __salt__['mine.get'](opts['tgt'],
-                                'bgp.neighbors',
-                                tgt_type=opts['tgt_type'])
+    return __salt__["mine.get"](opts["tgt"], "bgp.neighbors", tgt_type=opts["tgt_type"])
 
 
 def _compare_match(dict1, dict2):
-    '''
+    """
     Compare two dictionaries and return a boolean value if their values match.
-    '''
+    """
     for karg, warg in six.iteritems(dict1):
         if karg in dict2 and dict2[karg] != warg:
             return False
     return True
 
 
-def _display_runner(rows,
-                    labels,
-                    title,
-                    display=_DEFAULT_DISPLAY,
-                    outputter=_DEFAULT_OUTPUTTER):
-    '''
+def _display_runner(
+    rows, labels, title, display=_DEFAULT_DISPLAY, outputter=_DEFAULT_OUTPUTTER
+):
+    """
     Display or return the rows.
-    '''
+    """
     if display:
-        if outputter == 'table':
-            ret = salt.output.out_format({'rows': rows, 'labels': labels},
-                                         'table',
-                                         __opts__,
-                                         title=title,
-                                         rows_key='rows',
-                                         labels_key='labels')
+        if outputter == "table":
+            ret = salt.output.out_format(
+                {"rows": rows, "labels": labels},
+                "table",
+                __opts__,
+                title=title,
+                rows_key="rows",
+                labels_key="labels",
+            )
         else:
-            ret = salt.output.out_format(rows,
-                                         outputter,
-                                         __opts__)
+            ret = salt.output.out_format(rows, outputter, __opts__)
         print(ret)
     else:
         return rows
+
 
 # -----------------------------------------------------------------------------
 # callable functions
@@ -230,7 +224,7 @@ def _display_runner(rows,
 
 
 def neighbors(*asns, **kwargs):
-    '''
+    """
     Search for BGP neighbors details in the mines of the ``bgp.neighbors`` function.
 
     Arguments:
@@ -294,64 +288,85 @@ def neighbors(*asns, **kwargs):
         ________________________________________________________________________________________________________________________________________________________________
         | edge01.tbg01 |   13335   |          192.168.172.17         |          Established 0/1/1/0           |       import-policy       |        export-policy       |
         ________________________________________________________________________________________________________________________________________________________________
-    '''
+    """
     opts = _get_bgp_runner_opts()
-    title = kwargs.pop('title', None)
-    display = kwargs.pop('display', opts['display'])
-    outputter = kwargs.pop('outputter', opts['outputter'])
+    title = kwargs.pop("title", None)
+    display = kwargs.pop("display", opts["display"])
+    outputter = kwargs.pop("outputter", opts["outputter"])
 
     # cleaning up the kwargs
     # __pub args not used in this runner (yet)
     kwargs_copy = {}
     kwargs_copy.update(kwargs)
     for karg, _ in six.iteritems(kwargs_copy):
-        if karg.startswith('__pub'):
+        if karg.startswith("__pub"):
             kwargs.pop(karg)
     if not asns and not kwargs:
         if display:
-            print('Please specify at least an AS Number or an output filter')
+            print("Please specify at least an AS Number or an output filter")
         return []
-    device = kwargs.pop('device', None)
-    neighbor_ip = kwargs.pop('ip', None)
-    ipnet = kwargs.pop('network', None)
+    device = kwargs.pop("device", None)
+    neighbor_ip = kwargs.pop("ip", None)
+    ipnet = kwargs.pop("network", None)
     ipnet_obj = IPNetwork(ipnet) if ipnet else None
     # any other key passed on the CLI can be used as a filter
 
     rows = []
     # building the labels
     labels = {}
-    for field in opts['return_fields']:
+    for field in opts["return_fields"]:
         if field in _DEFAULT_LABELS_MAPPING:
             labels[field] = _DEFAULT_LABELS_MAPPING[field]
         else:
             # transform from 'previous_connection_state' to 'Previous Connection State'
-            labels[field] = ' '.join(map(lambda word: word.title(), field.split('_')))
-    display_fields = list(set(opts['return_fields']) - set(_DEFAULT_INCLUDED_FIELDS))
+            labels[field] = " ".join(map(lambda word: word.title(), field.split("_")))
+    display_fields = list(set(opts["return_fields"]) - set(_DEFAULT_INCLUDED_FIELDS))
     get_bgp_neighbors_all = _get_mine(opts=opts)
 
     if not title:
         title_parts = []
         if asns:
-            title_parts.append('BGP Neighbors for {asns}'.format(
-                asns=', '.join([six.text_type(asn) for asn in asns])
-            ))
+            title_parts.append(
+                "BGP Neighbors for {asns}".format(
+                    asns=", ".join([six.text_type(asn) for asn in asns])
+                )
+            )
         if neighbor_ip:
-            title_parts.append('Selecting neighbors having the remote IP address: {ipaddr}'.format(ipaddr=neighbor_ip))
+            title_parts.append(
+                "Selecting neighbors having the remote IP address: {ipaddr}".format(
+                    ipaddr=neighbor_ip
+                )
+            )
         if ipnet:
-            title_parts.append('Selecting neighbors within the IP network: {ipnet}'.format(ipnet=ipnet))
+            title_parts.append(
+                "Selecting neighbors within the IP network: {ipnet}".format(ipnet=ipnet)
+            )
         if kwargs:
-            title_parts.append('Searching for BGP neighbors having the attributes: {attrmap}'.format(
-                attrmap=', '.join(map(lambda key: '{key}={value}'.format(key=key, value=kwargs[key]), kwargs))
-            ))
-        title = '\n'.join(title_parts)
-    for minion, get_bgp_neighbors_minion in six.iteritems(get_bgp_neighbors_all):  # pylint: disable=too-many-nested-blocks
-        if not get_bgp_neighbors_minion.get('result'):
+            title_parts.append(
+                "Searching for BGP neighbors having the attributes: {attrmap}".format(
+                    attrmap=", ".join(
+                        map(
+                            lambda key: "{key}={value}".format(
+                                key=key, value=kwargs[key]
+                            ),
+                            kwargs,
+                        )
+                    )
+                )
+            )
+        title = "\n".join(title_parts)
+    for minion, get_bgp_neighbors_minion in six.iteritems(
+        get_bgp_neighbors_all
+    ):  # pylint: disable=too-many-nested-blocks
+        if not get_bgp_neighbors_minion.get("result"):
             continue  # ignore empty or failed mines
         if device and minion != device:
             # when requested to display only the neighbors on a certain device
             continue
-        get_bgp_neighbors_minion_out = get_bgp_neighbors_minion.get('out', {})
-        for vrf, vrf_bgp_neighbors in six.iteritems(get_bgp_neighbors_minion_out):  # pylint: disable=unused-variable
+        get_bgp_neighbors_minion_out = get_bgp_neighbors_minion.get("out", {})
+        for vrf, vrf_bgp_neighbors in six.iteritems(
+            get_bgp_neighbors_minion_out
+        ):  # pylint: disable=unused-variable
             for asn, get_bgp_neighbors_minion_asn in six.iteritems(vrf_bgp_neighbors):
                 if asns and asn not in asns:
                     # if filtering by AS number(s),
@@ -363,45 +378,52 @@ def neighbors(*asns, **kwargs):
                         # requested filtering by neighbors stats
                         # but this one does not correspond
                         continue
-                    if neighbor_ip and neighbor_ip != neighbor.get('remote_address'):
+                    if neighbor_ip and neighbor_ip != neighbor.get("remote_address"):
                         # requested filtering by neighbors IP addr
                         continue
-                    if ipnet_obj and neighbor.get('remote_address'):
-                        neighbor_ip_obj = IPAddress(neighbor.get('remote_address'))
+                    if ipnet_obj and neighbor.get("remote_address"):
+                        neighbor_ip_obj = IPAddress(neighbor.get("remote_address"))
                         if neighbor_ip_obj not in ipnet_obj:
                             # Neighbor not in this network
                             continue
                     row = {
-                        'device': minion,
-                        'neighbor_address': neighbor.get('remote_address'),
-                        'as_number': asn
+                        "device": minion,
+                        "neighbor_address": neighbor.get("remote_address"),
+                        "as_number": asn,
                     }
-                    if 'vrf' in display_fields:
-                        row['vrf'] = vrf
-                    if 'connection_stats' in display_fields:
-                        connection_stats = '{state} {active}/{received}/{accepted}/{damped}'.format(
-                            state=neighbor.get('connection_state', -1),
-                            active=neighbor.get('active_prefix_count', -1),
-                            received=neighbor.get('received_prefix_count', -1),
-                            accepted=neighbor.get('accepted_prefix_count', -1),
-                            damped=neighbor.get('suppressed_prefix_count', -1),
+                    if "vrf" in display_fields:
+                        row["vrf"] = vrf
+                    if "connection_stats" in display_fields:
+                        connection_stats = "{state} {active}/{received}/{accepted}/{damped}".format(
+                            state=neighbor.get("connection_state", -1),
+                            active=neighbor.get("active_prefix_count", -1),
+                            received=neighbor.get("received_prefix_count", -1),
+                            accepted=neighbor.get("accepted_prefix_count", -1),
+                            damped=neighbor.get("suppressed_prefix_count", -1),
                         )
-                        row['connection_stats'] = connection_stats
-                    if 'interface_description' in display_fields or 'interface_name' in display_fields:
-                        net_find = __salt__['net.interfaces'](device=minion,
-                                                              ipnet=neighbor.get('remote_address'),
-                                                              display=False)
+                        row["connection_stats"] = connection_stats
+                    if (
+                        "interface_description" in display_fields
+                        or "interface_name" in display_fields
+                    ):
+                        net_find = __salt__["net.interfaces"](
+                            device=minion,
+                            ipnet=neighbor.get("remote_address"),
+                            display=False,
+                        )
                         if net_find:
-                            if 'interface_description' in display_fields:
-                                row['interface_description'] = net_find[0]['interface_description']
-                            if 'interface_name' in display_fields:
-                                row['interface_name'] = net_find[0]['interface']
+                            if "interface_description" in display_fields:
+                                row["interface_description"] = net_find[0][
+                                    "interface_description"
+                                ]
+                            if "interface_name" in display_fields:
+                                row["interface_name"] = net_find[0]["interface"]
                         else:
                             # if unable to find anything, leave blank
-                            if 'interface_description' in display_fields:
-                                row['interface_description'] = ''
-                            if 'interface_name' in display_fields:
-                                row['interface_name'] = ''
+                            if "interface_description" in display_fields:
+                                row["interface_description"] = ""
+                            if "interface_name" in display_fields:
+                                row["interface_name"] = ""
                     for field in display_fields:
                         if field in neighbor:
                             row[field] = neighbor[field]

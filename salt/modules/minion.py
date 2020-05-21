@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module to provide information about minions
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
@@ -9,22 +9,21 @@ import os
 import sys
 import time
 
+import salt.key
+
 # Import Salt libs
 import salt.utils.data
-import salt.key
 
 # Import third party libs
 from salt.ext import six
 from salt.ext.six.moves import range
 
 # Don't shadow built-ins.
-__func_alias__ = {
-    'list_': 'list'
-}
+__func_alias__ = {"list_": "list"}
 
 
 def list_():
-    '''
+    """
     Return a list of accepted, denied, unaccepted and rejected keys.
     This is the same output as `salt-key -L`
 
@@ -33,11 +32,11 @@ def list_():
     .. code-block:: bash
 
         salt 'master' minion.list
-    '''
-    pki_dir = __salt__['config.get']('pki_dir', '')
+    """
+    pki_dir = __salt__["config.get"]("pki_dir", "")
 
     # We have to replace the minion/master directories
-    pki_dir = pki_dir.replace('minion', 'master')
+    pki_dir = pki_dir.replace("minion", "master")
 
     # The source code below is (nearly) a copy of salt.key.Key.list_keys
     key_dirs = _check_minions_directories(pki_dir)
@@ -48,7 +47,7 @@ def list_():
         ret[os.path.basename(dir_)] = []
         try:
             for fn_ in salt.utils.data.sorted_ignorecase(os.listdir(dir_)):
-                if not fn_.startswith('.'):
+                if not fn_.startswith("."):
                     if os.path.isfile(os.path.join(dir_, fn_)):
                         ret[os.path.basename(dir_)].append(fn_)
         except (OSError, IOError):
@@ -59,11 +58,11 @@ def list_():
 
 
 def _check_minions_directories(pki_dir):
-    '''
+    """
     Return the minion keys directory paths.
 
     This function is a copy of salt.key.Key._check_minions_directories.
-    '''
+    """
     minions_accepted = os.path.join(pki_dir, salt.key.Key.ACC)
     minions_pre = os.path.join(pki_dir, salt.key.Key.PEND)
     minions_rejected = os.path.join(pki_dir, salt.key.Key.REJ)
@@ -73,7 +72,7 @@ def _check_minions_directories(pki_dir):
 
 
 def kill(timeout=15):
-    '''
+    """
     Kill the salt minion.
 
     timeout
@@ -101,49 +100,49 @@ def kill(timeout=15):
     The result of the salt command shows the process ID of the minions and the
     results of a kill signal to the minion in as the ``retcode`` value: ``0``
     is success, anything else is a failure.
-    '''
+    """
 
     ret = {
-        'killed': None,
-        'retcode': 1,
+        "killed": None,
+        "retcode": 1,
     }
     comment = []
-    pid = __grains__.get('pid')
+    pid = __grains__.get("pid")
     if not pid:
         comment.append('Unable to find "pid" in grains')
-        ret['retcode'] = salt.defaults.exitcodes.EX_SOFTWARE
+        ret["retcode"] = salt.defaults.exitcodes.EX_SOFTWARE
     else:
-        if 'ps.kill_pid' not in __salt__:
-            comment.append('Missing command: ps.kill_pid')
-            ret['retcode'] = salt.defaults.exitcodes.EX_SOFTWARE
+        if "ps.kill_pid" not in __salt__:
+            comment.append("Missing command: ps.kill_pid")
+            ret["retcode"] = salt.defaults.exitcodes.EX_SOFTWARE
         else:
             # The retcode status comes from the first kill signal
-            ret['retcode'] = int(not __salt__['ps.kill_pid'](pid))
+            ret["retcode"] = int(not __salt__["ps.kill_pid"](pid))
 
             # If the signal was successfully delivered then wait for the
             # process to die - check by sending signals until signal delivery
             # fails.
-            if ret['retcode']:
-                comment.append('ps.kill_pid failed')
+            if ret["retcode"]:
+                comment.append("ps.kill_pid failed")
             else:
                 for _ in range(timeout):
                     time.sleep(1)
-                    signaled = __salt__['ps.kill_pid'](pid)
+                    signaled = __salt__["ps.kill_pid"](pid)
                     if not signaled:
-                        ret['killed'] = pid
+                        ret["killed"] = pid
                         break
                 else:
                     # The process did not exit before the timeout
-                    comment.append('Timed out waiting for minion to exit')
-                    ret['retcode'] = salt.defaults.exitcodes.EX_TEMPFAIL
+                    comment.append("Timed out waiting for minion to exit")
+                    ret["retcode"] = salt.defaults.exitcodes.EX_TEMPFAIL
 
     if comment:
-        ret['comment'] = comment
+        ret["comment"] = comment
     return ret
 
 
 def restart():
-    '''
+    """
     Kill and restart the salt minion.
 
     The configuration key ``minion_restart_command`` is an argv list for the
@@ -202,56 +201,58 @@ def restart():
     in the restart it will be reflected in a non-zero ``retcode`` and possibly
     output in the ``stderr`` and/or ``stdout`` values along with addition
     information in the ``comment`` field as is demonstrated with ``minion2``.
-    '''
+    """
 
     should_kill = True
     should_restart = True
     comment = []
     ret = {
-        'killed': None,
-        'restart': {},
-        'retcode': 0,
+        "killed": None,
+        "restart": {},
+        "retcode": 0,
     }
 
-    restart_cmd = __salt__['config.get']('minion_restart_command')
+    restart_cmd = __salt__["config.get"]("minion_restart_command")
     if restart_cmd:
-        comment.append('Using configuration minion_restart_command:')
-        comment.extend(['    {0}'.format(arg) for arg in restart_cmd])
+        comment.append("Using configuration minion_restart_command:")
+        comment.extend(["    {0}".format(arg) for arg in restart_cmd])
     else:
-        if '-d' in sys.argv:
+        if "-d" in sys.argv:
             restart_cmd = sys.argv
-            comment.append('Restart using process argv:')
-            comment.extend(['    {0}'.format(arg) for arg in restart_cmd])
+            comment.append("Restart using process argv:")
+            comment.extend(["    {0}".format(arg) for arg in restart_cmd])
         else:
             should_restart = False
-            comment.append('Not running in daemon mode - will not restart process after killing')
+            comment.append(
+                "Not running in daemon mode - will not restart process after killing"
+            )
 
     if should_kill:
         ret.update(kill())
-        if 'comment' in ret and ret['comment']:
-            if isinstance(ret['comment'], six.string_types):
-                comment.append(ret['comment'])
+        if "comment" in ret and ret["comment"]:
+            if isinstance(ret["comment"], six.string_types):
+                comment.append(ret["comment"])
             else:
-                comment.extend(ret['comment'])
-        if ret['retcode']:
-            comment.append('Kill failed - not restarting')
+                comment.extend(ret["comment"])
+        if ret["retcode"]:
+            comment.append("Kill failed - not restarting")
             should_restart = False
 
     if should_restart:
-        ret['restart'] = __salt__['cmd.run_all'](restart_cmd, env=os.environ)
+        ret["restart"] = __salt__["cmd.run_all"](restart_cmd, env=os.environ)
         # Do not want to mislead users to think that the returned PID from
         # cmd.run_all() is the PID of the new salt minion - just delete the
         # returned PID.
-        if 'pid' in ret['restart']:
-            del ret['restart']['pid']
-        if ret['restart'].get('retcode', None):
-            comment.append('Restart failed')
-            ret['retcode'] = ret['restart']['retcode']
-        if 'retcode' in ret['restart']:
+        if "pid" in ret["restart"]:
+            del ret["restart"]["pid"]
+        if ret["restart"].get("retcode", None):
+            comment.append("Restart failed")
+            ret["retcode"] = ret["restart"]["retcode"]
+        if "retcode" in ret["restart"]:
             # Just want a single retcode
-            del ret['restart']['retcode']
+            del ret["restart"]["retcode"]
 
     if comment:
-        ret['comment'] = comment
+        ret["comment"] = comment
 
     return ret

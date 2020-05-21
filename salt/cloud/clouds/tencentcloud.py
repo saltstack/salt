@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-'''
+"""
 Tencent Cloud Cloud Module
 =============================
 
@@ -24,26 +24,28 @@ To use this module, set up the cloud configuration at
       location: ap-guangzhou
 
 :depends: tencentcloud-sdk-python
-'''
+"""
 
 # pylint: disable=invalid-name,redefined-builtin,function-redefined,undefined-variable,broad-except,too-many-locals,too-many-branches
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import time
-import pprint
+
 import logging
+import pprint
+import time
+
+import salt.config as config
 
 # Import salt cloud libs
 import salt.utils.cloud
 import salt.utils.data
 import salt.utils.json
-import salt.config as config
 from salt.exceptions import (
+    SaltCloudExecutionFailure,
+    SaltCloudExecutionTimeout,
     SaltCloudNotFound,
     SaltCloudSystemExit,
-    SaltCloudExecutionFailure,
-    SaltCloudExecutionTimeout
 )
 
 # Import 3rd-party libs
@@ -53,11 +55,16 @@ from salt.ext.six.moves import range
 try:
     # Try import tencentcloud sdk
     from tencentcloud.common import credential  # pylint: disable=no-name-in-module
-    from tencentcloud.common.profile.client_profile import ClientProfile  # pylint: disable=no-name-in-module
-    from tencentcloud.cvm.v20170312 import cvm_client  # pylint: disable=no-name-in-module
-    from tencentcloud.cvm.v20170312 import models as cvm_models  # pylint: disable=no-name-in-module
-    from tencentcloud.vpc.v20170312 import vpc_client  # pylint: disable=no-name-in-module
-    from tencentcloud.vpc.v20170312 import models as vpc_models  # pylint: disable=no-name-in-module
+
+    # pylint: disable=no-name-in-module
+    from tencentcloud.common.profile.client_profile import ClientProfile
+    from tencentcloud.cvm.v20170312 import cvm_client
+    from tencentcloud.cvm.v20170312 import models as cvm_models
+    from tencentcloud.vpc.v20170312 import vpc_client
+    from tencentcloud.vpc.v20170312 import models as vpc_models
+
+    # pylint: enable=no-name-in-module
+
     HAS_TENCENTCLOUD_SDK = True
 except ImportError:
     HAS_TENCENTCLOUD_SDK = False
@@ -66,16 +73,16 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 # The default region
-DEFAULT_REGION = 'ap-guangzhou'
+DEFAULT_REGION = "ap-guangzhou"
 
 # The Tencent Cloud
-__virtualname__ = 'tencentcloud'
+__virtualname__ = "tencentcloud"
 
 
 def __virtual__():
-    '''
+    """
     Only load in this module if the Tencent Cloud configurations are in place
-    '''
+    """
     if get_configured_provider() is False:
         return False
 
@@ -86,34 +93,31 @@ def __virtual__():
 
 
 def get_configured_provider():
-    '''
+    """
     Return the first configured instance.
-    '''
+    """
     return config.is_provider_configured(
-        __opts__,
-        __active_provider_name__ or __virtualname__,
-        ('id', 'key')
+        __opts__, __active_provider_name__ or __virtualname__, ("id", "key")
     )
 
 
 def get_dependencies():
-    '''
+    """
     Warn if dependencies aren't met.
-    '''
+    """
     return config.check_driver_dependencies(
-        __virtualname__,
-        {'tencentcloud-sdk-python': HAS_TENCENTCLOUD_SDK}
+        __virtualname__, {"tencentcloud-sdk-python": HAS_TENCENTCLOUD_SDK}
     )
 
 
 def get_provider_client(name=None):
-    '''
+    """
     Return a new provider client
-    '''
+    """
     provider = get_configured_provider()
 
-    secretId = provider.get('id')
-    secretKey = provider.get('key')
+    secretId = provider.get("id")
+    secretKey = provider.get("key")
     region = __get_location(None)
 
     cpf = ClientProfile()
@@ -125,15 +129,13 @@ def get_provider_client(name=None):
     elif name == "vpc_client":
         client = vpc_client.VpcClient(crd, region, cpf)
     else:
-        raise SaltCloudSystemExit(
-            'Client name {0} is not supported'.format(name)
-        )
+        raise SaltCloudSystemExit("Client name {0} is not supported".format(name))
 
     return client
 
 
 def avail_locations(call=None):
-    '''
+    """
     Return Tencent Cloud available region
 
     CLI Example:
@@ -142,11 +144,11 @@ def avail_locations(call=None):
 
         salt-cloud --list-locations my-tencentcloud-config
         salt-cloud -f avail_locations my-tencentcloud-config
-    '''
-    if call == 'action':
+    """
+    if call == "action":
         raise SaltCloudSystemExit(
-            'The avail_locations function must be called with '
-            '-f or --function, or with the --list-locations option'
+            "The avail_locations function must be called with "
+            "-f or --function, or with the --list-locations option"
         )
 
     client = get_provider_client("cvm_client")
@@ -163,7 +165,7 @@ def avail_locations(call=None):
 
 
 def avail_images(call=None):
-    '''
+    """
     Return Tencent Cloud available image
 
     CLI Example:
@@ -172,18 +174,20 @@ def avail_images(call=None):
 
         salt-cloud --list-images my-tencentcloud-config
         salt-cloud -f avail_images my-tencentcloud-config
-    '''
-    if call == 'action':
+    """
+    if call == "action":
         raise SaltCloudSystemExit(
-            'The avail_images function must be called with '
-            '-f or --function, or with the --list-images option'
+            "The avail_images function must be called with "
+            "-f or --function, or with the --list-images option"
         )
 
-    return _get_images(["PUBLIC_IMAGE", "PRIVATE_IMAGE", "IMPORT_IMAGE", "SHARED_IMAGE"])
+    return _get_images(
+        ["PUBLIC_IMAGE", "PRIVATE_IMAGE", "IMPORT_IMAGE", "SHARED_IMAGE"]
+    )
 
 
 def avail_sizes(call=None):
-    '''
+    """
     Return Tencent Cloud available instance type
 
     CLI Example:
@@ -192,11 +196,11 @@ def avail_sizes(call=None):
 
         salt-cloud --list-sizes my-tencentcloud-config
         salt-cloud -f avail_sizes my-tencentcloud-config
-    '''
-    if call == 'action':
+    """
+    if call == "action":
         raise SaltCloudSystemExit(
-            'The avail_sizes function must be called with '
-            '-f or --function, or with the --list-sizes option'
+            "The avail_sizes function must be called with "
+            "-f or --function, or with the --list-sizes option"
         )
 
     client = get_provider_client("cvm_client")
@@ -212,14 +216,13 @@ def avail_sizes(call=None):
             "CPU": "{0}-Core".format(typeConfig.CPU),
         }
         if typeConfig.GPU:
-            ret[typeConfig.InstanceType]["GPU"] = "{0}-Core".format(
-                typeConfig.GPU)
+            ret[typeConfig.InstanceType]["GPU"] = "{0}-Core".format(typeConfig.GPU)
 
     return ret
 
 
 def list_securitygroups(call=None):
-    '''
+    """
     Return all Tencent Cloud security groups in current region
 
     CLI Example:
@@ -227,10 +230,10 @@ def list_securitygroups(call=None):
     .. code-block:: bash
 
         salt-cloud -f list_securitygroups my-tencentcloud-config
-    '''
-    if call == 'action':
+    """
+    if call == "action":
         raise SaltCloudSystemExit(
-            'The list_securitygroups function must be called with -f or --function.'
+            "The list_securitygroups function must be called with -f or --function."
         )
 
     client = get_provider_client("vpc_client")
@@ -253,7 +256,7 @@ def list_securitygroups(call=None):
 
 
 def list_custom_images(call=None):
-    '''
+    """
     Return all Tencent Cloud images in current region
 
     CLI Example:
@@ -261,17 +264,17 @@ def list_custom_images(call=None):
     .. code-block:: bash
 
         salt-cloud -f list_custom_images my-tencentcloud-config
-    '''
-    if call == 'action':
+    """
+    if call == "action":
         raise SaltCloudSystemExit(
-            'The list_custom_images function must be called with -f or --function.'
+            "The list_custom_images function must be called with -f or --function."
         )
 
     return _get_images(["PRIVATE_IMAGE", "IMPORT_IMAGE"])
 
 
 def list_availability_zones(call=None):
-    '''
+    """
     Return all Tencent Cloud availability zones in current region
 
     CLI Example:
@@ -279,10 +282,10 @@ def list_availability_zones(call=None):
     .. code-block:: bash
 
         salt-cloud -f list_availability_zones my-tencentcloud-config
-    '''
-    if call == 'action':
+    """
+    if call == "action":
         raise SaltCloudSystemExit(
-            'The list_availability_zones function must be called with -f or --function.'
+            "The list_availability_zones function must be called with -f or --function."
         )
 
     client = get_provider_client("cvm_client")
@@ -293,13 +296,13 @@ def list_availability_zones(call=None):
     for zone in resp.ZoneSet:
         if zone.ZoneState != "AVAILABLE":
             continue
-        ret[zone.Zone] = zone.ZoneName,
+        ret[zone.Zone] = (zone.ZoneName,)
 
     return ret
 
 
 def list_nodes(call=None):
-    '''
+    """
     Return a list of instances that are on the provider
 
     CLI Examples:
@@ -307,10 +310,10 @@ def list_nodes(call=None):
     .. code-block:: bash
 
         salt-cloud -Q
-    '''
-    if call == 'action':
+    """
+    if call == "action":
         raise SaltCloudSystemExit(
-            'The list_nodes function must be called with -f or --function.'
+            "The list_nodes function must be called with -f or --function."
         )
 
     ret = {}
@@ -330,7 +333,7 @@ def list_nodes(call=None):
 
 
 def list_nodes_full(call=None):
-    '''
+    """
     Return a list of instances that are on the provider, with full details
 
     CLI Examples:
@@ -338,10 +341,10 @@ def list_nodes_full(call=None):
     .. code-block:: bash
 
         salt-cloud -F
-    '''
-    if call == 'action':
+    """
+    if call == "action":
         raise SaltCloudSystemExit(
-            'The list_nodes_full function must be called with -f or --function.'
+            "The list_nodes_full function must be called with -f or --function."
         )
 
     ret = {}
@@ -349,23 +352,30 @@ def list_nodes_full(call=None):
     for instance in nodes:
         instanceAttribute = vars(instance)
         ret[instance.InstanceName] = instanceAttribute
-        for k in ["DataDisks", "InternetAccessible", "LoginSettings",
-                  "Placement", "SystemDisk", "Tags", "VirtualPrivateCloud"]:
+        for k in [
+            "DataDisks",
+            "InternetAccessible",
+            "LoginSettings",
+            "Placement",
+            "SystemDisk",
+            "Tags",
+            "VirtualPrivateCloud",
+        ]:
             ret[instance.InstanceName][k] = six.text_type(instanceAttribute[k])
 
-    provider = __active_provider_name__ or 'tencentcloud'
-    if ':' in provider:
-        comps = provider.split(':')
+    provider = __active_provider_name__ or "tencentcloud"
+    if ":" in provider:
+        comps = provider.split(":")
         provider = comps[0]
 
-    __opts__['update_cachedir'] = True
-    __utils__['cloud.cache_node_list'](ret, provider, __opts__)
+    __opts__["update_cachedir"] = True
+    __utils__["cloud.cache_node_list"](ret, provider, __opts__)
 
     return ret
 
 
 def list_nodes_select(call=None):
-    '''
+    """
     Return a list of instances that are on the provider, with select fields
 
     CLI Examples:
@@ -373,14 +383,14 @@ def list_nodes_select(call=None):
     .. code-block:: bash
 
         salt-cloud -S
-    '''
+    """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full('function'), __opts__['query.selection'], call,
+        list_nodes_full("function"), __opts__["query.selection"], call,
     )
 
 
 def list_nodes_min(call=None):
-    '''
+    """
     Return a list of instances that are on the provider, Only names, and their state, is returned.
 
     CLI Examples:
@@ -388,10 +398,10 @@ def list_nodes_min(call=None):
     .. code-block:: bash
 
         salt-cloud -f list_nodes_min my-tencentcloud-config
-    '''
-    if call == 'action':
+    """
+    if call == "action":
         raise SaltCloudSystemExit(
-            'The list_nodes_min function must be called with -f or --function.'
+            "The list_nodes_min function must be called with -f or --function."
         )
 
     ret = {}
@@ -406,7 +416,7 @@ def list_nodes_min(call=None):
 
 
 def create(vm_):
-    '''
+    """
     Create a single Tencent Cloud instance from a data dict.
 
     Tencent Cloud profiles require a ``provider``, ``availability_zone``, ``image`` and ``size``.
@@ -430,34 +440,40 @@ def create(vm_):
     .. code-block:: bash
 
         salt-cloud -p tencentcloud-guangzhou-s1 myinstance
-    '''
+    """
     try:
         # Check for required profile parameters before sending any API calls.
-        if vm_['profile'] and \
-            config.is_profile_configured(__opts__,
-                                         __active_provider_name__ or 'tencentcloud',
-                                         vm_['profile'],
-                                         vm_=vm_) is False:
+        if (
+            vm_["profile"]
+            and config.is_profile_configured(
+                __opts__,
+                __active_provider_name__ or "tencentcloud",
+                vm_["profile"],
+                vm_=vm_,
+            )
+            is False
+        ):
             return False
     except AttributeError:
         pass
 
-    __utils__['cloud.fire_event'](
-        'event',
-        'starting create',
-        'salt/cloud/{0}/creating'.format(vm_['name']),
-        args=__utils__['cloud.filter_event'](
-            'creating', vm_, ['name', 'profile', 'provider', 'driver']),
-        sock_dir=__opts__['sock_dir'],
-        transport=__opts__['transport']
+    __utils__["cloud.fire_event"](
+        "event",
+        "starting create",
+        "salt/cloud/{0}/creating".format(vm_["name"]),
+        args=__utils__["cloud.filter_event"](
+            "creating", vm_, ["name", "profile", "provider", "driver"]
+        ),
+        sock_dir=__opts__["sock_dir"],
+        transport=__opts__["transport"],
     )
 
-    log.debug('Try creating instance: %s', pprint.pformat(vm_))
+    log.debug("Try creating instance: %s", pprint.pformat(vm_))
 
     # Init cvm client
     client = get_provider_client("cvm_client")
     req = cvm_models.RunInstancesRequest()
-    req.InstanceName = vm_['name']
+    req.InstanceName = vm_["name"]
 
     # Required parameters
     req.InstanceType = __get_size(vm_)
@@ -470,22 +486,23 @@ def create(vm_):
     # Optional parameters
 
     req.SecurityGroupIds = __get_securitygroups(vm_)
-    req.HostName = vm_.get("hostname", vm_['name'])
+    req.HostName = vm_.get("hostname", vm_["name"])
 
-    req.InstanceChargeType = vm_.get(
-        "instance_charge_type", "POSTPAID_BY_HOUR")
+    req.InstanceChargeType = vm_.get("instance_charge_type", "POSTPAID_BY_HOUR")
     if req.InstanceChargeType == "PREPAID":
-        period = vm_.get(
-            "instance_charge_type_prepaid_period", 1)
-        renewFlag = vm_.get("instance_charge_type_prepaid_renew_flag",
-                            "NOTIFY_AND_MANUAL_RENEW")
+        period = vm_.get("instance_charge_type_prepaid_period", 1)
+        renewFlag = vm_.get(
+            "instance_charge_type_prepaid_renew_flag", "NOTIFY_AND_MANUAL_RENEW"
+        )
         req.InstanceChargePrepaid = {"Period": period, "RenewFlag": renewFlag}
 
     allocate_public_ip = vm_.get("allocate_public_ip", False)
     internet_max_bandwidth_out = vm_.get("internet_max_bandwidth_out", 0)
     if allocate_public_ip and internet_max_bandwidth_out > 0:
-        req.InternetAccessible = {"PublicIpAssigned": allocate_public_ip,
-                                  "InternetMaxBandwidthOut": internet_max_bandwidth_out}
+        req.InternetAccessible = {
+            "PublicIpAssigned": allocate_public_ip,
+            "InternetMaxBandwidthOut": internet_max_bandwidth_out,
+        }
         internet_charge_type = vm_.get("internet_charge_type", "")
         if internet_charge_type != "":
             req.InternetAccessible["InternetChargeType"] = internet_charge_type
@@ -522,37 +539,35 @@ def create(vm_):
     if system_disk_type:
         req.SystemDisk["DiskType"] = system_disk_type
 
-    __utils__['cloud.fire_event'](
-        'event',
-        'requesting instance',
-        'salt/cloud/{0}/requesting'.format(vm_['name']),
-        args=__utils__['cloud.filter_event'](
-            'requesting', vm_, list(vm_)),
-        sock_dir=__opts__['sock_dir'],
-        transport=__opts__['transport']
+    __utils__["cloud.fire_event"](
+        "event",
+        "requesting instance",
+        "salt/cloud/{0}/requesting".format(vm_["name"]),
+        args=__utils__["cloud.filter_event"]("requesting", vm_, list(vm_)),
+        sock_dir=__opts__["sock_dir"],
+        transport=__opts__["transport"],
     )
 
     try:
         resp = client.RunInstances(req)
         if not resp.InstanceIdSet:
-            raise SaltCloudSystemExit(
-                "Unexpected error, no instance created"
-            )
+            raise SaltCloudSystemExit("Unexpected error, no instance created")
     except Exception as exc:
         log.error(
-            'Error creating %s on tencentcloud\n\n'
-            'The following exception was thrown when trying to '
-            'run the initial deployment: %s',
-            vm_['name'], six.text_type(exc),
+            "Error creating %s on tencentcloud\n\n"
+            "The following exception was thrown when trying to "
+            "run the initial deployment: %s",
+            vm_["name"],
+            six.text_type(exc),
             # Show the traceback if the debug logging level is enabled
-            exc_info_on_loglevel=logging.DEBUG
+            exc_info_on_loglevel=logging.DEBUG,
         )
         return False
 
     time.sleep(5)
 
     def __query_node_data(vm_name):
-        data = show_instance(vm_name, call='action')
+        data = show_instance(vm_name, call="action")
         if not data:
             return False
         if data["InstanceState"] != "RUNNING":
@@ -563,15 +578,17 @@ def create(vm_):
     try:
         data = salt.utils.cloud.wait_for_ip(
             __query_node_data,
-            update_args=(vm_['name'],),
+            update_args=(vm_["name"],),
             timeout=config.get_cloud_config_value(
-                'wait_for_ip_timeout', vm_, __opts__, default=10 * 60),
+                "wait_for_ip_timeout", vm_, __opts__, default=10 * 60
+            ),
             interval=config.get_cloud_config_value(
-                'wait_for_ip_interval', vm_, __opts__, default=10),
+                "wait_for_ip_interval", vm_, __opts__, default=10
+            ),
         )
     except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
         try:
-            destroy(vm_['name'])
+            destroy(vm_["name"])
         except SaltCloudSystemExit:
             pass
         finally:
@@ -582,34 +599,34 @@ def create(vm_):
     elif data["PrivateIpAddresses"]:
         ssh_ip = data["PrivateIpAddresses"][0]
     else:
-        log.error('No available ip: cant connect to salt')
+        log.error("No available ip: cant connect to salt")
         return False
 
-    log.debug('Instance %s: %s is now running', vm_['name'], ssh_ip)
-    vm_['ssh_host'] = ssh_ip
+    log.debug("Instance %s: %s is now running", vm_["name"], ssh_ip)
+    vm_["ssh_host"] = ssh_ip
 
     # The instance is booted and accessible, let's Salt it!
-    ret = __utils__['cloud.bootstrap'](vm_, __opts__)
+    ret = __utils__["cloud.bootstrap"](vm_, __opts__)
     ret.update(data)
 
-    log.debug('\'%s\' instance creation details:\n%s',
-              vm_['name'], pprint.pformat(data))
+    log.debug("'%s' instance creation details:\n%s", vm_["name"], pprint.pformat(data))
 
-    __utils__['cloud.fire_event'](
-        'event',
-        'created instance',
-        'salt/cloud/{0}/created'.format(vm_['name']),
-        args=__utils__['cloud.filter_event'](
-            'created', vm_, ['name', 'profile', 'provider', 'driver']),
-        sock_dir=__opts__['sock_dir'],
-        transport=__opts__['transport']
+    __utils__["cloud.fire_event"](
+        "event",
+        "created instance",
+        "salt/cloud/{0}/created".format(vm_["name"]),
+        args=__utils__["cloud.filter_event"](
+            "created", vm_, ["name", "profile", "provider", "driver"]
+        ),
+        sock_dir=__opts__["sock_dir"],
+        transport=__opts__["transport"],
     )
 
     return ret
 
 
 def start(name, call=None):
-    '''
+    """
     Start a Tencent Cloud instance
     Notice: the instance state must be stopped
 
@@ -618,11 +635,9 @@ def start(name, call=None):
     .. code-block:: bash
 
         salt-cloud -a start myinstance
-    '''
-    if call != 'action':
-        raise SaltCloudSystemExit(
-            'The stop action must be called with -a or --action.'
-        )
+    """
+    if call != "action":
+        raise SaltCloudSystemExit("The stop action must be called with -a or --action.")
 
     node = _get_node(name)
 
@@ -635,7 +650,7 @@ def start(name, call=None):
 
 
 def stop(name, force=False, call=None):
-    '''
+    """
     Stop a Tencent Cloud running instance
     Note: use `force=True` to make force stop
 
@@ -645,11 +660,9 @@ def stop(name, force=False, call=None):
 
         salt-cloud -a stop myinstance
         salt-cloud -a stop myinstance force=True
-    '''
-    if call != 'action':
-        raise SaltCloudSystemExit(
-            'The stop action must be called with -a or --action.'
-        )
+    """
+    if call != "action":
+        raise SaltCloudSystemExit("The stop action must be called with -a or --action.")
 
     node = _get_node(name)
 
@@ -664,7 +677,7 @@ def stop(name, force=False, call=None):
 
 
 def reboot(name, call=None):
-    '''
+    """
     Reboot a Tencent Cloud instance
 
     CLI Examples:
@@ -672,11 +685,9 @@ def reboot(name, call=None):
     .. code-block:: bash
 
         salt-cloud -a reboot myinstance
-    '''
-    if call != 'action':
-        raise SaltCloudSystemExit(
-            'The stop action must be called with -a or --action.'
-        )
+    """
+    if call != "action":
+        raise SaltCloudSystemExit("The stop action must be called with -a or --action.")
 
     node = _get_node(name)
 
@@ -689,7 +700,7 @@ def reboot(name, call=None):
 
 
 def destroy(name, call=None):
-    '''
+    """
     Destroy a Tencent Cloud instance
 
     CLI Example:
@@ -698,19 +709,19 @@ def destroy(name, call=None):
 
         salt-cloud -a destroy myinstance
         salt-cloud -d myinstance
-    '''
-    if call == 'function':
+    """
+    if call == "function":
         raise SaltCloudSystemExit(
-            'The destroy action must be called with -d, --destroy, -a or --action.'
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
-    __utils__['cloud.fire_event'](
-        'event',
-        'destroying instance',
-        'salt/cloud/{0}/destroying'.format(name),
-        args={'name': name},
-        sock_dir=__opts__['sock_dir'],
-        transport=__opts__['transport']
+    __utils__["cloud.fire_event"](
+        "event",
+        "destroying instance",
+        "salt/cloud/{0}/destroying".format(name),
+        args={"name": name},
+        sock_dir=__opts__["sock_dir"],
+        transport=__opts__["transport"],
     )
 
     node = _get_node(name)
@@ -720,34 +731,34 @@ def destroy(name, call=None):
     req.InstanceIds = [node.InstanceId]
     resp = client.TerminateInstances(req)
 
-    __utils__['cloud.fire_event'](
-        'event',
-        'destroyed instance',
-        'salt/cloud/{0}/destroyed'.format(name),
-        args={'name': name},
-        sock_dir=__opts__['sock_dir'],
-        transport=__opts__['transport']
+    __utils__["cloud.fire_event"](
+        "event",
+        "destroyed instance",
+        "salt/cloud/{0}/destroyed".format(name),
+        args={"name": name},
+        sock_dir=__opts__["sock_dir"],
+        transport=__opts__["transport"],
     )
 
     return resp
 
 
 def script(vm_):
-    '''
+    """
     Return the script deployment object
-    '''
+    """
     return salt.utils.cloud.os_script(
-        config.get_cloud_config_value('script', vm_, __opts__),
+        config.get_cloud_config_value("script", vm_, __opts__),
         vm_,
         __opts__,
         salt.utils.cloud.salt_config_to_yaml(
             salt.utils.cloud.minion_config(__opts__, vm_)
-        )
+        ),
     )
 
 
 def show_image(kwargs, call=None):
-    '''
+    """
     Show the details of Tencent Cloud image
 
     CLI Examples:
@@ -755,19 +766,19 @@ def show_image(kwargs, call=None):
     .. code-block:: bash
 
         salt-cloud -f show_image tencentcloud image=img-31tjrtph
-    '''
-    if call != 'function':
+    """
+    if call != "function":
         raise SaltCloudSystemExit(
-            'The show_image function must be called with -f or --function'
+            "The show_image function must be called with -f or --function"
         )
 
     if not isinstance(kwargs, dict):
         kwargs = {}
 
-    if 'image' not in kwargs:
-        raise SaltCloudSystemExit('No image specified.')
+    if "image" not in kwargs:
+        raise SaltCloudSystemExit("No image specified.")
 
-    image = kwargs['image']
+    image = kwargs["image"]
 
     client = get_provider_client("cvm_client")
     req = cvm_models.DescribeImagesRequest()
@@ -776,7 +787,7 @@ def show_image(kwargs, call=None):
 
     if not resp.ImageSet:
         raise SaltCloudNotFound(
-            'The specified image \'{0}\' could not be found.'.format(image)
+            "The specified image '{0}' could not be found.".format(image)
         )
 
     ret = {}
@@ -795,7 +806,7 @@ def show_image(kwargs, call=None):
 
 
 def show_instance(name, call=None):
-    '''
+    """
     Show the details of Tencent Cloud instance
 
     CLI Examples:
@@ -803,23 +814,30 @@ def show_instance(name, call=None):
     .. code-block:: bash
 
         salt-cloud -a show_instance myinstance
-    '''
-    if call != 'action':
+    """
+    if call != "action":
         raise SaltCloudSystemExit(
-            'The show_instance action must be called with -a or --action.'
+            "The show_instance action must be called with -a or --action."
         )
 
     node = _get_node(name)
     ret = vars(node)
-    for k in ["DataDisks", "InternetAccessible", "LoginSettings",
-              "Placement", "SystemDisk", "Tags", "VirtualPrivateCloud"]:
+    for k in [
+        "DataDisks",
+        "InternetAccessible",
+        "LoginSettings",
+        "Placement",
+        "SystemDisk",
+        "Tags",
+        "VirtualPrivateCloud",
+    ]:
         ret[k] = six.text_type(ret[k])
 
     return ret
 
 
 def show_disk(name, call=None):
-    '''
+    """
     Show the disk details of Tencent Cloud instance
 
     CLI Examples:
@@ -827,10 +845,10 @@ def show_disk(name, call=None):
     .. code-block:: bash
 
         salt-cloud -a show_disk myinstance
-    '''
-    if call != 'action':
+    """
+    if call != "action":
         raise SaltCloudSystemExit(
-            'The show_disks action must be called with -a or --action.'
+            "The show_disks action must be called with -a or --action."
         )
 
     node = _get_node(name)
@@ -858,9 +876,9 @@ def show_disk(name, call=None):
 
 
 def _get_node(name):
-    '''
+    """
     Return Tencent Cloud instance detail by name
-    '''
+    """
     attempts = 5
     while attempts >= 0:
         try:
@@ -872,19 +890,20 @@ def _get_node(name):
         except Exception as ex:
             attempts -= 1
             log.debug(
-                'Failed to get data for node \'%s\': %s. Remaining attempts: %d', name, ex, attempts
+                "Failed to get data for node '%s': %s. Remaining attempts: %d",
+                name,
+                ex,
+                attempts,
             )
             time.sleep(0.5)
 
-    raise SaltCloudNotFound(
-        'Failed to get instance info {0}'.format(name)
-    )
+    raise SaltCloudNotFound("Failed to get instance info {0}".format(name))
 
 
 def _get_nodes():
-    '''
+    """
     Return all list of Tencent Cloud instances
-    '''
+    """
     ret = []
     offset = 0
     limit = 100
@@ -905,9 +924,9 @@ def _get_nodes():
 
 
 def _get_images(image_type):
-    '''
+    """
     Return all list of Tencent Cloud images
-    '''
+    """
     client = get_provider_client("cvm_client")
     req = cvm_models.DescribeImagesRequest()
     req.Filters = [{"Name": "image-type", "Values": image_type}]
@@ -932,42 +951,42 @@ def _get_images(image_type):
 
 
 def __get_image(vm_):
-    vm_image = six.text_type(config.get_cloud_config_value(
-        'image', vm_, __opts__, search_global=False
-    ))
+    vm_image = six.text_type(
+        config.get_cloud_config_value("image", vm_, __opts__, search_global=False)
+    )
 
     if not vm_image:
-        raise SaltCloudNotFound('No image specified.')
+        raise SaltCloudNotFound("No image specified.")
 
     images = avail_images()
     if vm_image in images:
         return vm_image
 
     raise SaltCloudNotFound(
-        'The specified image \'{0}\' could not be found.'.format(vm_image)
+        "The specified image '{0}' could not be found.".format(vm_image)
     )
 
 
 def __get_size(vm_):
-    vm_size = six.text_type(config.get_cloud_config_value(
-        'size', vm_, __opts__, search_global=False
-    ))
+    vm_size = six.text_type(
+        config.get_cloud_config_value("size", vm_, __opts__, search_global=False)
+    )
 
     if not vm_size:
-        raise SaltCloudNotFound('No size specified.')
+        raise SaltCloudNotFound("No size specified.")
 
     sizes = avail_sizes()
     if vm_size in sizes:
         return vm_size
 
     raise SaltCloudNotFound(
-        'The specified size \'{0}\' could not be found.'.format(vm_size)
+        "The specified size '{0}' could not be found.".format(vm_size)
     )
 
 
 def __get_securitygroups(vm_):
     vm_securitygroups = config.get_cloud_config_value(
-        'securitygroups', vm_, __opts__, search_global=False
+        "securitygroups", vm_, __opts__, search_global=False
     )
 
     if not vm_securitygroups:
@@ -978,7 +997,7 @@ def __get_securitygroups(vm_):
         vm_securitygroups[i] = six.text_type(vm_securitygroups[i])
         if vm_securitygroups[i] not in securitygroups:
             raise SaltCloudNotFound(
-                'The specified securitygroups \'{0}\' could not be found.'.format(
+                "The specified securitygroups '{0}' could not be found.".format(
                     vm_securitygroups[i]
                 )
             )
@@ -987,43 +1006,47 @@ def __get_securitygroups(vm_):
 
 
 def __get_availability_zone(vm_):
-    vm_availability_zone = six.text_type(config.get_cloud_config_value(
-        'availability_zone', vm_, __opts__, search_global=False
-    ))
+    vm_availability_zone = six.text_type(
+        config.get_cloud_config_value(
+            "availability_zone", vm_, __opts__, search_global=False
+        )
+    )
 
     if not vm_availability_zone:
-        raise SaltCloudNotFound('No availability_zone specified.')
+        raise SaltCloudNotFound("No availability_zone specified.")
 
     availability_zones = list_availability_zones()
     if vm_availability_zone in availability_zones:
         return vm_availability_zone
 
     raise SaltCloudNotFound(
-        'The specified availability_zone \'{0}\' could not be found.'.format(
+        "The specified availability_zone '{0}' could not be found.".format(
             vm_availability_zone
         )
     )
 
 
 def __get_location(vm_):
-    '''
+    """
     Return the Tencent Cloud region to use, in this order:
         - CLI parameter
         - VM parameter
         - Cloud profile setting
-    '''
-    vm_location = six.text_type(__opts__.get(
-        'location',
-        config.get_cloud_config_value(
-            'location',
-            vm_ or get_configured_provider(),
-            __opts__,
-            default=DEFAULT_REGION,
-            search_global=False
+    """
+    vm_location = six.text_type(
+        __opts__.get(
+            "location",
+            config.get_cloud_config_value(
+                "location",
+                vm_ or get_configured_provider(),
+                __opts__,
+                default=DEFAULT_REGION,
+                search_global=False,
+            ),
         )
-    ))
+    )
 
     if not vm_location:
-        raise SaltCloudNotFound('No location specified.')
+        raise SaltCloudNotFound("No location specified.")
 
     return vm_location
