@@ -374,7 +374,7 @@ def returner(ret):
     show_tasks = _options.get("show_tasks")
     author_icon = _options.get("author_icon")
 
-    if not webhook or webhook is "":
+    if not webhook or webhook == "":
         log.error("%s.webhook not defined in salt config", __virtualname__)
         return
 

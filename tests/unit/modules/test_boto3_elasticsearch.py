@@ -369,7 +369,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_add_tags_positive(self):
         """
-        Test that when adding tags is succesful, the .add_tags method returns {'result': True}.
+        Test that when adding tags is successful, the .add_tags method returns {'result': True}.
         """
         with patch.object(
             self.conn,
@@ -405,7 +405,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_remove_tags_positive(self):
         """
-        Test that when removing tags is succesful, the .remove_tags method returns {'tagged': True}.
+        Test that when removing tags is successful, the .remove_tags method returns {'tagged': True}.
         """
         with patch.object(
             self.conn,
@@ -443,7 +443,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_list_tags_positive(self):
         """
-        Test that when listing tags is succesful,
+        Test that when listing tags is successful,
         the .list_tags method returns a dict with key 'tags'.
         Also test that the tags returned are manipulated properly (i.e. transformed
         into a dict with tags).
@@ -485,7 +485,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
     def test_cancel_elasticsearch_service_software_update_positive(self):
         """
         Test that when calling cancel_elasticsearch_service_software_update and
-        it is succesful, it returns {'result': True}.
+        it is successful, it returns {'result': True}.
         """
         retval = {
             "ServiceSoftwareOptions": {
@@ -534,7 +534,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
     def test_delete_elasticsearch_service_role_positive(self):
         """
         Test that when calling delete_elasticsearch_service_role and
-        it is succesful, it returns {'result': True}.
+        it is successful, it returns {'result': True}.
         """
         with patch.object(
             self.conn, "delete_elasticsearch_service_role", return_value=None
@@ -566,7 +566,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
     def test_describe_elasticsearch_domain_config_positive(self):
         """
         Test that when calling describe_elasticsearch_domain_config and
-        it is succesful, it returns {'result': True}.
+        it is successful, it returns {'result': True}.
         """
         with patch.object(
             self.conn,
@@ -603,7 +603,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_describe_elasticsearch_domains_positive(self):
         """
-        Test that when calling describe_elasticsearch_domains and it is succesful,
+        Test that when calling describe_elasticsearch_domains and it is successful,
         it returns {'result': True, 'response': some_data}.
         """
         with patch.object(

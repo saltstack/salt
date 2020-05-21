@@ -152,18 +152,34 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
         if user:
             octal_sum = sum([_octal.get(i, i) for i in perms])
             need_refresh = False
-            for path in __current_perms:
-                acl_found = False
-                for user_acl in __current_perms[path].get(_acl_type, []):
-                    if (
-                        _search_name in user_acl
-                        and user_acl[_search_name]["octal"] == octal_sum
-                    ):
-                        acl_found = True
+            # If recursive check all paths retrieved via acl.getfacl
+            if recurse:
+                for path in __current_perms:
+                    acl_found = False
+                    if _default:
+                        # Recusive default acls only apply to directories
+                        if not os.path.isdir(path):
+                            continue
+                        _current_perms_path = __current_perms[path].get("defaults", {})
+                    else:
+                        _current_perms_path = __current_perms[path]
+                    for user_acl in _current_perms_path.get(_acl_type, []):
+                        if (
+                            _search_name in user_acl
+                            and user_acl[_search_name]["octal"] == octal_sum
+                        ):
+                            acl_found = True
+                    if not acl_found:
+                        need_refresh = True
                         break
-                if not acl_found:
-                    need_refresh = True
-                    break
+
+            # Check the permissions from the already located file
+            elif user[_search_name]["octal"] == sum([_octal.get(i, i) for i in perms]):
+                need_refresh = False
+            # If they don't match then refresh
+            else:
+                need_refresh = True
+
             if not need_refresh:
                 ret["comment"] = "Permissions are in the desired state"
             else:
@@ -385,7 +401,7 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
     """
     if acl_names is None:
         acl_names = []
-    ret = {"name": name, "result": True, "changes": {}, "pchanges": {}, "comment": ""}
+    ret = {"name": name, "result": True, "changes": {}, "comment": ""}
 
     _octal = {"r": 4, "w": 2, "x": 1, "-": 0}
     _octal_perms = sum([_octal.get(i, i) for i in perms])
@@ -429,7 +445,6 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
                 "name": name,
                 "result": True,
                 "changes": {},
-                "pchanges": {},
                 "comment": "Permissions and {}s are in the desired state".format(
                     acl_type
                 ),
@@ -490,7 +505,7 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
                                         perms,
                                     ),
                                     "result": None,
-                                    "pchanges": changes,
+                                    "changes": changes,
                                 }
                             )
                             return ret
@@ -540,7 +555,7 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
                                 "comment": "New permissions will be applied for "
                                 "{0}: {1}".format(acl_names, perms),
                                 "result": None,
-                                "pchanges": changes,
+                                "changes": changes,
                             }
                         )
                         ret["result"] = None
@@ -593,7 +608,7 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
                         "comment": "New permissions will be applied for "
                         "{0}: {1}".format(acl_names, perms),
                         "result": None,
-                        "pchanges": changes,
+                        "changes": changes,
                     }
                 )
                 ret["result"] = None

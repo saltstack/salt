@@ -517,7 +517,7 @@ def chhome(name, home, persist=False, root=None):
     home
         New home directory for the user account
 
-    presist
+    persist
         Move contents of the home directory to the new location
 
     root

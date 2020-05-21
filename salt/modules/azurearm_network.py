@@ -1820,7 +1820,7 @@ def get_virtual_machine_scale_set_network_interface(
     """
     .. versionadded:: 2019.2.0
 
-    Get information about a specfic network interface within a scale set.
+    Get information about a specific network interface within a scale set.
 
     :param name: The name of the network interface to query.
 

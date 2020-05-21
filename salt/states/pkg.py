@@ -265,14 +265,18 @@ def _fulfills_version_spec(versions, oper, desired_version, ignore_epoch=None):
     return False
 
 
-def _find_unpurge_targets(desired):
+def _find_unpurge_targets(desired, **kwargs):
     """
     Find packages which are marked to be purged but can't yet be removed
     because they are dependencies for other installed packages. These are the
     packages which will need to be 'unpurged' because they are part of
     pkg.installed states. This really just applies to Debian-based Linuxes.
     """
-    return [x for x in desired if x in __salt__["pkg.list_pkgs"](purge_desired=True)]
+    return [
+        x
+        for x in desired
+        if x in __salt__["pkg.list_pkgs"](purge_desired=True, **kwargs)
+    ]
 
 
 def _find_download_targets(
@@ -288,7 +292,7 @@ def _find_download_targets(
     Inspect the arguments to pkg.downloaded and discover what packages need to
     be downloaded. Return a dict of packages to download.
     """
-    cur_pkgs = __salt__["pkg.list_downloaded"]()
+    cur_pkgs = __salt__["pkg.list_downloaded"](**kwargs)
     if pkgs:
         # pylint: disable=not-callable
         to_download = _repack_pkgs(pkgs, normalize=normalize)
@@ -410,7 +414,7 @@ def _find_advisory_targets(name=None, advisory_ids=None, **kwargs):
     Inspect the arguments to pkg.patch_installed and discover what advisory
     patches need to be installed. Return a dict of advisory patches to install.
     """
-    cur_patches = __salt__["pkg.list_installed_patches"]()
+    cur_patches = __salt__["pkg.list_installed_patches"](**kwargs)
     if advisory_ids:
         to_download = advisory_ids
     else:
@@ -619,7 +623,7 @@ def _find_install_targets(
                 "minion log.".format("pkgs" if pkgs else "sources"),
             }
 
-        to_unpurge = _find_unpurge_targets(desired)
+        to_unpurge = _find_unpurge_targets(desired, **kwargs)
     else:
         if salt.utils.platform.is_windows():
             # pylint: disable=not-callable
@@ -646,7 +650,7 @@ def _find_install_targets(
         else:
             desired = {name: version}
 
-        to_unpurge = _find_unpurge_targets(desired)
+        to_unpurge = _find_unpurge_targets(desired, **kwargs)
 
         # FreeBSD pkg supports `openjdk` and `java/openjdk7` package names
         origin = bool(re.search("/", name))
@@ -819,6 +823,7 @@ def _find_install_targets(
                             package_name,
                             ignore_types=ignore_types,
                             verify_options=verify_options,
+                            **kwargs
                         )
                     except (CommandExecutionError, SaltInvocationError) as exc:
                         failed_verify = exc.strerror
@@ -852,6 +857,7 @@ def _find_install_targets(
                             package_name,
                             ignore_types=ignore_types,
                             verify_options=verify_options,
+                            **kwargs
                         )
                     except (CommandExecutionError, SaltInvocationError) as exc:
                         failed_verify = exc.strerror
@@ -1584,10 +1590,20 @@ def installed(
 
     .. seealso:: unless and onlyif
 
-        You can use the :ref:`unless <unless-requisite>` or
-        :ref:`onlyif <onlyif-requisite>` syntax to skip a full package run.
-        This can be helpful in large environments with multiple states that
-        include requisites for packages to be installed.
+        If running pkg commands together with :ref:`aggregate <mod-aggregate-state>`
+        isn't an option, you can use the :ref:`creates <creates-requisite>`,
+        :ref:`unless <unless-requisite>`, or :ref:`onlyif <onlyif-requisite>`
+        syntax to skip a full package run. This can be helpful in large environments
+        with multiple states that include requisites for packages to be installed.
+
+        .. code-block:: yaml
+
+            # Using creates for a simple single-factor check
+            install_nginx:
+              pkg.installed:
+                - name: nginx
+                - creates:
+                  - /etc/nginx/nginx.conf
 
         .. code-block:: yaml
 
@@ -1599,6 +1615,12 @@ def installed(
                   - fun: file.file_exists
                     args:
                       - /etc/nginx/nginx.conf
+
+            # Using unless with a shell test
+            install_nginx:
+              pkg.installed:
+                - name: nginx
+                - unless: test -f /etc/nginx/nginx.conf
 
         .. code-block:: yaml
 
@@ -1612,11 +1634,11 @@ def installed(
                       - /etc/nginx/nginx.conf
                       - 'user www-data;'
 
-        The above examples use two different methods to reasonably ensure
+        The above examples use different methods to reasonably ensure
         that a package has already been installed. First, with checking for a
         file that would be created with the package. Second, by checking for
         specific text within a file that would be created or managed by salt.
-        With these requisists satisfied, unless will return ``True`` and the
+        With these requisists satisfied, creates/unless will return ``True`` and the
         ``pkg.installed`` state will be skipped.
 
         .. code-block:: bash
@@ -2078,7 +2100,10 @@ def installed(
             # No need to wrap this in a try/except because we would already
             # have caught invalid arguments earlier.
             verify_result = __salt__["pkg.verify"](
-                reinstall_pkg, ignore_types=ignore_types, verify_options=verify_options
+                reinstall_pkg,
+                ignore_types=ignore_types,
+                verify_options=verify_options,
+                **kwargs
             )
             if verify_result:
                 failed.append(reinstall_pkg)
@@ -2285,7 +2310,7 @@ def downloaded(
             )
         return ret
 
-    new_pkgs = __salt__["pkg.list_downloaded"]()
+    new_pkgs = __salt__["pkg.list_downloaded"](**kwargs)
     _ok, failed = _verify_install(targets, new_pkgs, ignore_epoch=ignore_epoch)
 
     if failed:
@@ -3218,7 +3243,10 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
         try:
             packages = __salt__["pkg.list_upgrades"](refresh=refresh, **kwargs)
             expected = {
-                pkgname: {"new": pkgver, "old": __salt__["pkg.version"](pkgname)}
+                pkgname: {
+                    "new": pkgver,
+                    "old": __salt__["pkg.version"](pkgname, **kwargs),
+                }
                 for pkgname, pkgver in six.iteritems(packages)
             }
             if isinstance(pkgs, list):
@@ -3408,7 +3436,7 @@ def group_installed(name, skip=None, include=None, **kwargs):
             )
         return ret
 
-    failed = [x for x in targets if x not in __salt__["pkg.list_pkgs"]()]
+    failed = [x for x in targets if x not in __salt__["pkg.list_pkgs"](**kwargs)]
     if failed:
         ret["comment"] = "Failed to install the following packages: {0}".format(
             ", ".join(failed)

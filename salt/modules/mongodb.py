@@ -526,7 +526,7 @@ def update_one(
     objects = six.text_type(objects)
     objs = re.split(r"}\s+{", objects)
 
-    if len(objs) is not 2:
+    if len(objs) != 2:
         return (
             "Your request does not contain a valid "
             + '\'{_"id": "my_id"} {"my_doc": "my_val"}\''

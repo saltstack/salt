@@ -112,7 +112,7 @@ def enter_mainloop(
       it just join the process and return the data.
 
     target
-        the function you want to execute in multiproccessing
+        the function you want to execute in multiprocessing
     pool
         pool object can be None if you want a default pool, but you ll
         have then to define pool_size instead
@@ -123,7 +123,7 @@ def enter_mainloop(
         signal that 'target' is finished and we need to join
         the pool
     queue
-        A custom multiproccessing queue in case you want to do
+        A custom multiprocessing queue in case you want to do
         extra stuff and need it later in your program
     args
         positional arguments to call the function with

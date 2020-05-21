@@ -29,6 +29,7 @@ tcp_master_workers: 64515
 peer:
   '.*':
     - '(x509|test).*'
+    - 'match.*'
 
 ext_pillar:
   - ext_pillar_opts:
@@ -116,11 +117,14 @@ discovery: false
 #ignore_host_keys: True
 
 # test vault
+# set uses to 0 so the token
+# has unlimited uses available.
 vault:
   url: http://127.0.0.1:8200
   auth:
     method: token
     token: testsecret
+    uses: 0
   policies:
   - testpolicy
 peer_run:

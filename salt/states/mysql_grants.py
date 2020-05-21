@@ -172,7 +172,7 @@ def present(
             db_part = database.rpartition(".")
             my_db = db_part[0]
             my_table = db_part[2]
-            my_db = __salt__["mysql.quote_identifier"](my_db, (my_table is "*"))
+            my_db = __salt__["mysql.quote_identifier"](my_db, (my_table == "*"))
             my_table = __salt__["mysql.quote_identifier"](my_table)
             # Removing per table grants in case of database level grant !!!
             if token_grants["database"] == my_db:

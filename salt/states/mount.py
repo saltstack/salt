@@ -1080,10 +1080,10 @@ def _convert_to(maybe_device, convert_to):
     result = None
     if len(blkid) == 1:
         if convert_to == "device":
-            result = list(blkid.keys())[0]
+            result = next(iter(blkid))
         else:
             key = convert_to.upper()
-            result = "{}={}".format(key, list(blkid.values())[0][key])
+            result = "{}={}".format(key, next(iter(blkid.values()))[key])
 
     return result
 
@@ -1101,7 +1101,7 @@ def fstab_present(
     match_on="auto",
     not_change=False,
 ):
-    """Makes sure that a fstab mount point is pressent.
+    """Makes sure that a fstab mount point is present.
 
     name
         The name of block device. Can be any valid fs_spec value.

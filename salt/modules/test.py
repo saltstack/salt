@@ -502,7 +502,7 @@ def rand_str(size=9999999999, hash_type=None):
     This function has been renamed to
     random_hash. This function will stay to
     ensure backwards compatibility, but please
-    switch to using the prefered name random_hash.
+    switch to using the preferred name random_hash.
     """
     return random_hash(size=size, hash_type=hash_type)
 

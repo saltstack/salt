@@ -288,7 +288,7 @@ def _write_cron_lines(user, lines):
     else:
         with salt.utils.files.fpopen(path, "w+", mode=0o600) as fp_:
             fp_.writelines(lines)
-        ret = __salt__["cmd.run_all"](_get_cron_cmdstr(path, user), python_shell=False)
+        ret = __salt__["cmd.run_all"](_get_cron_cmdstr(path), python_shell=False)
     os.remove(path)
     return ret
 

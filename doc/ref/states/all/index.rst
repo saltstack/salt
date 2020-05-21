@@ -225,6 +225,7 @@ state modules
     npm
     ntp
     nxos
+    nxos_upgrade
     openstack_config
     openvswitch_bridge
     openvswitch_port
