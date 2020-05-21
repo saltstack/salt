@@ -82,7 +82,8 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = "hg"
+__virtualname__ = "hgfs"
+__virtual_aliases__ = ("hg",)
 
 
 def __virtual__():
