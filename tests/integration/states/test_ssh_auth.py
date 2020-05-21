@@ -13,17 +13,21 @@ import salt.utils.files
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root, with_system_user
+from tests.support.helpers import (
+    destructiveTest,
+    skip_if_not_root,
+    slowTest,
+    with_system_user,
+)
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 
 class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
     @destructiveTest
     @skip_if_not_root
     @with_system_user("issue_7409", on_existing="delete", delete=True)
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_issue_7409_no_linebreaks_between_keys(self, username):
 
         userdetails = self.run_function("user.info", [username])
@@ -59,7 +63,7 @@ class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
     @destructiveTest
     @skip_if_not_root
     @with_system_user("issue_10198", on_existing="delete", delete=True)
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_issue_10198_keyfile_from_another_env(self, username=None):
         userdetails = self.run_function("user.info", [username])
         user_ssh_dir = os.path.join(userdetails["home"], ".ssh")

@@ -11,7 +11,7 @@
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
 !define PRODUCT_UNINST_KEY_OTHER "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME_OTHER}"
 !define PRODUCT_UNINST_ROOT_KEY "HKLM"
-!define OUTFILE "Salt-Minion-${PRODUCT_VERSION}-${CPUARCH}-Setup.exe"
+!define OUTFILE "Salt-Minion-${PRODUCT_VERSION}-Py${PYTHON_VERSION}-${CPUARCH}-Setup.exe"
 
 # Import Libraries
 !include "MUI2.nsh"
@@ -29,6 +29,12 @@ ${StrStrAdv}
     !define PRODUCT_VERSION "${SaltVersion}"
 !else
     !define PRODUCT_VERSION "Undefined Version"
+!endif
+
+!ifdef PythonVersion
+    !define PYTHON_VERSION "${PythonVersion}"
+!else
+    !define PYTHON_VERSION "3"
 !endif
 
 !if "$%PROCESSOR_ARCHITECTURE%" == "AMD64"
@@ -389,7 +395,7 @@ FunctionEnd
 ###############################################################################
 # Installation Settings
 ###############################################################################
-Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
+Name "${PRODUCT_NAME} ${PRODUCT_VERSION} (Python ${PYTHON_VERSION})"
 OutFile "${OutFile}"
 InstallDir "c:\salt"
 InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
@@ -510,6 +516,23 @@ SectionEnd
 Function .onInit
 
     Call parseCommandLineSwitches
+
+    # Uninstall msi-installed salt
+    # Source    https://nsis-dev.github.io/NSIS-Forums/html/t-303468.html
+    !define upgradecode {FC6FB3A2-65DE-41A9-AD91-D10A402BD641}    ;Salt upgrade code
+    StrCpy $0 0
+    loop:
+    System::Call 'MSI::MsiEnumRelatedProducts(t "${upgradecode}",i0,i r0,t.r1)i.r2'
+    ${If} $2 = 0
+	# Now $1 contains the product code
+        DetailPrint product:$1
+        push $R0
+          StrCpy $R0 $1
+          Call UninstallMSI
+        pop $R0
+        IntOp $0 $0 + 1
+        goto loop
+    ${Endif}
 
     # If custom config passed, verify its existence before continuing so we
     # don't uninstall an existing installation and then fail
@@ -1149,6 +1172,30 @@ Function un.RemoveFromPath
         Pop $2
         Pop $1
         Pop $0
+
+FunctionEnd
+
+#------------------------------------------------------------------------------
+# UninstallMSI Function
+# - Uninstalls MSI by product code
+#
+# Usage:
+#   Push product code
+#   Call UninstallMSI
+#
+# Source:
+#   https://nsis.sourceforge.io/Uninstalling_a_previous_MSI_(Windows_installer_package)
+#------------------------------------------------------------------------------
+Function UninstallMSI
+    ; $R0 === product code
+    MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION \
+        "${PRODUCT_NAME} is already installed via MSI.$\n$\n\
+        Click `OK` to remove the existing installation." \
+        /SD IDOK IDOK UninstallMSI
+    Abort
+
+    UninstallMSI:
+        ExecWait '"msiexec.exe" /x $R0 /qb /quiet /norestart'
 
 FunctionEnd
 

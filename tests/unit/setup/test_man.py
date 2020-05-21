@@ -9,7 +9,7 @@ import pprint
 
 import salt.utils.platform
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
-from tests.support.helpers import VirtualEnv
+from tests.support.helpers import VirtualEnv, slowTest
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
@@ -20,7 +20,7 @@ from tests.support.unit import TestCase, skipIf
     salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, "virtualenv not installed"
 )
 class ManPagesTest(TestCase):
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_man_pages(self):
         """
         Make sure that man pages are installed
