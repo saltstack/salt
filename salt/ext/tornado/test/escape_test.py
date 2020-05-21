@@ -3,7 +3,7 @@
 
 
 from __future__ import absolute_import, division, print_function
-import tornado.escape
+import salt.ext.tornado.escape
 
 from salt.ext.tornado.escape import utf8, xhtml_escape, xhtml_unescape, url_escape, url_unescape, to_unicode, json_decode, json_encode, squeeze, recursive_unicode
 from salt.ext.tornado.util import unicode_type
@@ -136,7 +136,7 @@ linkify_tests = [
 class EscapeTestCase(unittest.TestCase):
     def test_linkify(self):
         for text, kwargs, html in linkify_tests:
-            linked = tornado.escape.linkify(text, **kwargs)
+            linked = salt.ext.tornado.escape.linkify(text, **kwargs)
             self.assertEqual(linked, html)
 
     def test_xhtml_escape(self):

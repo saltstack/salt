@@ -63,7 +63,7 @@ For more information on Salt Stack and GCE, please see `this blog post`_.
 
 Documentation for Salt and GCE can be found :ref:`here <cloud-getting-started-gce>`.
 
-.. _this blog post: http://googlecloudplatform.blogspot.com/2013/12/saltstack-for-google-compute-engine.html
+.. _this blog post: https://cloudplatform.googleblog.com/2013/12/saltstack-for-google-compute-engine.html
 
 
 Salt Virt
@@ -230,14 +230,14 @@ PagerDuty Support
 Initial support for firing events via PagerDuty_ has been added. See the
 documentation for the :mod:`pagerduty <salt.modules.pagerduty>` module.
 
-.. _PagerDuty: http://www.pagerduty.com
+.. _PagerDuty: https://www.pagerduty.com/
 
 
 Virtual Terminal
 ----------------
 
 Sometimes the subprocess module is not good enough, and, in fact, not even
-``askpass`` is. This virtual terminal is still in it's infant childhood, needs
+``askpass`` is. This virtual terminal is still in its infant childhood, needs
 quite some love, and was originally created to replace ``askpass``, but, while
 developing it, it immediately proved that it could do so much more. It's
 currently used by salt-cloud when bootstrapping salt on clouds which require

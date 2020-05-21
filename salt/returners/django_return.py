@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 A returner that will inform a Django system that
 returns are available using Django's signal system.
 
@@ -25,9 +25,10 @@ An example Django module that registers a function called
     def returner_callback(sender, ret):
         print('I received {0} from {1}'.format(ret, sender))
 
-'''
+"""
 # Import Python libraries
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
 # Import Salt libraries
@@ -39,51 +40,56 @@ log = logging.getLogger(__name__)
 HAS_DJANGO = False
 
 try:
-    from django import dispatch
+    from django import dispatch  # pylint: disable=E0611
+
     HAS_DJANGO = True
 except ImportError:
     HAS_DJANGO = False
 
 # Define this module's virtual name
-__virtualname__ = 'django'
+__virtualname__ = "django"
 
 
 def __virtual__():
     if not HAS_DJANGO:
-        return False, 'Could not import django returner; django is not installed.'
+        return False, "Could not import django returner; django is not installed."
     return True
 
 
 def returner(ret):
-    '''
+    """
     Signal a Django server that a return is available
-    '''
-    signaled = dispatch.Signal(providing_args=['ret']).send(sender='returner', ret=ret)
+    """
+    signaled = dispatch.Signal(providing_args=["ret"]).send(sender="returner", ret=ret)
 
     for signal in signaled:
         log.debug(
-            'Django returner function \'returner\' signaled %s '
-            'which responded with %s', signal[0], signal[1]
+            "Django returner function 'returner' signaled %s "
+            "which responded with %s",
+            signal[0],
+            signal[1],
         )
 
 
 def save_load(jid, load, minions=None):
-    '''
+    """
     Save the load to the specified jid
-    '''
-    signaled = dispatch.Signal(
-        providing_args=['jid', 'load']).send(
-            sender='save_load', jid=jid, load=load)
+    """
+    signaled = dispatch.Signal(providing_args=["jid", "load"]).send(
+        sender="save_load", jid=jid, load=load
+    )
 
     for signal in signaled:
         log.debug(
-            'Django returner function \'save_load\' signaled %s '
-            'which responded with %s', signal[0], signal[1]
+            "Django returner function 'save_load' signaled %s "
+            "which responded with %s",
+            signal[0],
+            signal[1],
         )
 
 
 def prep_jid(nocache=False, passed_jid=None):
-    '''
+    """
     Do any work necessary to prepare a JID, including sending a custom ID
-    '''
+    """
     return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)

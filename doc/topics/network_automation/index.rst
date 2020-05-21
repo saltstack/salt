@@ -97,8 +97,8 @@ Getting started
 
 Install NAPALM - follow the notes_ and check the platform-specific dependencies_.
 
-.. _notes: http://napalm.readthedocs.io/en/latest/installation/index.html
-.. _dependencies: http://napalm.readthedocs.io/en/latest/installation/index.html#dependencies
+.. _notes: https://napalm.readthedocs.io/en/latest/installation/index.html
+.. _dependencies: https://napalm.readthedocs.io/en/latest/installation/index.html#dependencies
 
 Salt's Pillar system is ideally suited for configuring proxy-minions
 (though they can be configured in /etc/salt/proxy as well).  Proxies

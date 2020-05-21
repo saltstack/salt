@@ -12,6 +12,7 @@ Follow one of the below links for further information and examples
     :toctree:
     :template: autosummary.rst.tmpl
 
+    dson
     highstate
     json_out
     key
