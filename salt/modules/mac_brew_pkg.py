@@ -13,8 +13,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import copy
 import functools
-import logging
 import re
+import logging
 
 # Import salt libs
 import salt.utils.data
