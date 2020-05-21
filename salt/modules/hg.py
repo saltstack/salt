@@ -1,37 +1,38 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Support for the Mercurial SCM
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
+
+import salt.utils.data
+import salt.utils.path
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError
-import salt.utils.data
-import salt.utils.path
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only load if hg is installed
-    '''
-    if salt.utils.path.which('hg') is None:
-        return (False,
-                'The hg execution module cannot be loaded: hg unavailable.')
+    """
+    if salt.utils.path.which("hg") is None:
+        return (False, "The hg execution module cannot be loaded: hg unavailable.")
     else:
         return True
 
 
 def _ssh_flag(identity_path):
-    return ['--ssh', 'ssh -i {0}'.format(identity_path)]
+    return ["--ssh", "ssh -i {0}".format(identity_path)]
 
 
-def revision(cwd, rev='tip', short=False, user=None):
-    '''
+def revision(cwd, rev="tip", short=False, user=None):
+    """
     Returns the long hash of a given identifier (hash, branch, tag, HEAD, etc)
 
     cwd
@@ -51,29 +52,19 @@ def revision(cwd, rev='tip', short=False, user=None):
     .. code-block:: bash
 
         salt '*' hg.revision /path/to/repo mybranch
-    '''
-    cmd = [
-            'hg',
-            'id',
-            '-i',
-            '--debug' if not short else '',
-            '-r',
-            '{0}'.format(rev)]
+    """
+    cmd = ["hg", "id", "-i", "--debug" if not short else "", "-r", "{0}".format(rev)]
 
-    result = __salt__['cmd.run_all'](
-            cmd,
-            cwd=cwd,
-            runas=user,
-            python_shell=False)
+    result = __salt__["cmd.run_all"](cmd, cwd=cwd, runas=user, python_shell=False)
 
-    if result['retcode'] == 0:
-        return result['stdout']
+    if result["retcode"] == 0:
+        return result["stdout"]
     else:
-        return ''
+        return ""
 
 
-def describe(cwd, rev='tip', user=None):
-    '''
+def describe(cwd, rev="tip", user=None):
+    """
     Mimic git describe and return an identifier for the given revision
 
     cwd
@@ -90,26 +81,22 @@ def describe(cwd, rev='tip', user=None):
     .. code-block:: bash
 
         salt '*' hg.describe /path/to/repo
-    '''
+    """
     cmd = [
-            'hg',
-            'log',
-            '-r',
-            '{0}'.format(rev),
-            '--template',
-            "'{{latesttag}}-{{latesttagdistance}}-{{node|short}}'"
-            ]
-    desc = __salt__['cmd.run_stdout'](
-            cmd,
-            cwd=cwd,
-            runas=user,
-            python_shell=False)
+        "hg",
+        "log",
+        "-r",
+        "{0}".format(rev),
+        "--template",
+        "'{{latesttag}}-{{latesttagdistance}}-{{node|short}}'",
+    ]
+    desc = __salt__["cmd.run_stdout"](cmd, cwd=cwd, runas=user, python_shell=False)
 
     return desc or revision(cwd, rev, short=True)
 
 
-def archive(cwd, output, rev='tip', fmt=None, prefix=None, user=None):
-    '''
+def archive(cwd, output, rev="tip", fmt=None, prefix=None, user=None):
+    """
     Export a tarball from the repository
 
     cwd
@@ -139,25 +126,25 @@ def archive(cwd, output, rev='tip', fmt=None, prefix=None, user=None):
     .. code-block:: bash
 
         salt '*' hg.archive /path/to/repo output=/tmp/archive.tgz fmt=tgz
-    '''
+    """
     cmd = [
-            'hg',
-            'archive',
-            '{0}'.format(output),
-            '--rev',
-            '{0}'.format(rev),
-            ]
+        "hg",
+        "archive",
+        "{0}".format(output),
+        "--rev",
+        "{0}".format(rev),
+    ]
     if fmt:
-        cmd.append('--type')
-        cmd.append('{0}'.format(fmt))
+        cmd.append("--type")
+        cmd.append("{0}".format(fmt))
     if prefix:
-        cmd.append('--prefix')
+        cmd.append("--prefix")
         cmd.append('"{0}"'.format(prefix))
-    return __salt__['cmd.run'](cmd, cwd=cwd, runas=user, python_shell=False)
+    return __salt__["cmd.run"](cmd, cwd=cwd, runas=user, python_shell=False)
 
 
 def pull(cwd, opts=None, user=None, identity=None, repository=None):
-    '''
+    """
     Perform a pull on the given repository
 
     cwd
@@ -182,8 +169,8 @@ def pull(cwd, opts=None, user=None, identity=None, repository=None):
     .. code-block:: bash
 
         salt '*' hg.pull /path/to/repo opts=-u
-    '''
-    cmd = ['hg', 'pull']
+    """
+    cmd = ["hg", "pull"]
     if identity:
         cmd.extend(_ssh_flag(identity))
     if opts:
@@ -192,17 +179,17 @@ def pull(cwd, opts=None, user=None, identity=None, repository=None):
     if repository is not None:
         cmd.append(repository)
 
-    ret = __salt__['cmd.run_all'](cmd, cwd=cwd, runas=user, python_shell=False)
-    if ret['retcode'] != 0:
+    ret = __salt__["cmd.run_all"](cmd, cwd=cwd, runas=user, python_shell=False)
+    if ret["retcode"] != 0:
         raise CommandExecutionError(
-            'Hg command failed: {0}'.format(ret.get('stderr', ret['stdout']))
+            "Hg command failed: {0}".format(ret.get("stderr", ret["stdout"]))
         )
 
-    return ret['stdout']
+    return ret["stdout"]
 
 
 def update(cwd, rev, force=False, user=None):
-    '''
+    """
     Update to a given revision
 
     cwd
@@ -222,22 +209,22 @@ def update(cwd, rev, force=False, user=None):
     .. code-block:: bash
 
         salt devserver1 hg.update /path/to/repo somebranch
-    '''
-    cmd = ['hg', 'update', '{0}'.format(rev)]
+    """
+    cmd = ["hg", "update", "{0}".format(rev)]
     if force:
-        cmd.append('-C')
+        cmd.append("-C")
 
-    ret = __salt__['cmd.run_all'](cmd, cwd=cwd, runas=user, python_shell=False)
-    if ret['retcode'] != 0:
+    ret = __salt__["cmd.run_all"](cmd, cwd=cwd, runas=user, python_shell=False)
+    if ret["retcode"] != 0:
         raise CommandExecutionError(
-            'Hg command failed: {0}'.format(ret.get('stderr', ret['stdout']))
+            "Hg command failed: {0}".format(ret.get("stderr", ret["stdout"]))
         )
 
-    return ret['stdout']
+    return ret["stdout"]
 
 
 def clone(cwd, repository, opts=None, user=None, identity=None):
-    '''
+    """
     Clone a new repository
 
     cwd
@@ -262,25 +249,25 @@ def clone(cwd, repository, opts=None, user=None, identity=None):
     .. code-block:: bash
 
         salt '*' hg.clone /path/to/repo https://bitbucket.org/birkenfeld/sphinx
-    '''
-    cmd = ['hg', 'clone', '{0}'.format(repository), '{0}'.format(cwd)]
+    """
+    cmd = ["hg", "clone", "{0}".format(repository), "{0}".format(cwd)]
     if opts:
         for opt in opts.split():
-            cmd.append('{0}'.format(opt))
+            cmd.append("{0}".format(opt))
     if identity:
         cmd.extend(_ssh_flag(identity))
 
-    ret = __salt__['cmd.run_all'](cmd, runas=user, python_shell=False)
-    if ret['retcode'] != 0:
+    ret = __salt__["cmd.run_all"](cmd, runas=user, python_shell=False)
+    if ret["retcode"] != 0:
         raise CommandExecutionError(
-            'Hg command failed: {0}'.format(ret.get('stderr', ret['stdout']))
+            "Hg command failed: {0}".format(ret.get("stderr", ret["stdout"]))
         )
 
-    return ret['stdout']
+    return ret["stdout"]
 
 
 def status(cwd, opts=None, user=None):
-    '''
+    """
     Show changed files of the given repository
 
     cwd
@@ -297,23 +284,23 @@ def status(cwd, opts=None, user=None):
     .. code-block:: bash
 
         salt '*' hg.status /path/to/repo
-    '''
+    """
+
     def _status(cwd):
-        cmd = ['hg', 'status']
+        cmd = ["hg", "status"]
         if opts:
             for opt in opts.split():
-                cmd.append('{0}'.format(opt))
-        out = __salt__['cmd.run_stdout'](
-            cmd, cwd=cwd, runas=user, python_shell=False)
+                cmd.append("{0}".format(opt))
+        out = __salt__["cmd.run_stdout"](cmd, cwd=cwd, runas=user, python_shell=False)
         types = {
-            'M': 'modified',
-            'A': 'added',
-            'R': 'removed',
-            'C': 'clean',
-            '!': 'missing',
-            '?': 'not tracked',
-            'I': 'ignored',
-            ' ': 'origin of the previous file',
+            "M": "modified",
+            "A": "added",
+            "R": "removed",
+            "C": "clean",
+            "!": "missing",
+            "?": "not tracked",
+            "I": "ignored",
+            " ": "origin of the previous file",
         }
         ret = {}
         for line in out.splitlines():

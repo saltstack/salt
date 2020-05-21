@@ -271,7 +271,7 @@ $MAKE install
 ############################################################################
 # upgrade pip
 ############################################################################
-$PIP install --upgrade pip
+$PIP install --upgrade pip wheel
 
 ############################################################################
 # Download and install salt python dependencies
@@ -283,7 +283,9 @@ cd $BUILDDIR
 echo "################################################################################"
 echo "Installing Salt Dependencies with pip (normal)"
 echo "################################################################################"
-$PIP install -r $SRCDIR/pkg/osx/req.txt \
+$PIP install -r $SRCDIR/pkg/osx/req.txt -r $SRCDIR/pkg/osx/req_pyobjc.txt \
+             --target=$PYDIR/site-packages \
+             --ignore-installed \
              --no-cache-dir
 
 echo "################################################################################"

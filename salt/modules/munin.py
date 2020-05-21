@@ -1,37 +1,41 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Run munin plugins/checks from salt and format the output as data.
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
 import stat
 
-# Import salt libs
-from salt.ext import six
 import salt.utils.files
 import salt.utils.stringutils
 
-PLUGINDIR = '/etc/munin/plugins/'
+# Import salt libs
+from salt.ext import six
+
+PLUGINDIR = "/etc/munin/plugins/"
 
 
 def __virtual__():
-    '''
+    """
     Only load the module if munin-node is installed
-    '''
-    if os.path.exists('/etc/munin/munin-node.conf'):
-        return 'munin'
-    return (False, 'The munin execution module cannot be loaded: munin-node is not installed.')
+    """
+    if os.path.exists("/etc/munin/munin-node.conf"):
+        return "munin"
+    return (
+        False,
+        "The munin execution module cannot be loaded: munin-node is not installed.",
+    )
 
 
-def _get_conf(fname='/etc/munin/munin-node.cfg'):
-    with salt.utils.files.fopen(fname, 'r') as fp_:
+def _get_conf(fname="/etc/munin/munin-node.cfg"):
+    with salt.utils.files.fopen(fname, "r") as fp_:
         return salt.utils.stringutils.to_unicode(fp_.read())
 
 
 def run(plugins):
-    '''
+    """
     Run one or more named munin plugins
 
     CLI Example:
@@ -40,27 +44,27 @@ def run(plugins):
 
         salt '*' munin.run uptime
         salt '*' munin.run uptime,cpu,load,memory
-    '''
+    """
     all_plugins = list_plugins()
 
     if isinstance(plugins, six.string_types):
-        plugins = plugins.split(',')
+        plugins = plugins.split(",")
 
     data = {}
     for plugin in plugins:
         if plugin not in all_plugins:
             continue
         data[plugin] = {}
-        muninout = __salt__['cmd.run'](
-                'munin-run {0}'.format(plugin),
-                python_shell=False)
-        for line in muninout.split('\n'):
-            if 'value' in line:  # This skips multigraph lines, etc
-                key, val = line.split(' ')
-                key = key.split('.')[0]
+        muninout = __salt__["cmd.run"](
+            "munin-run {0}".format(plugin), python_shell=False
+        )
+        for line in muninout.split("\n"):
+            if "value" in line:  # This skips multigraph lines, etc
+                key, val = line.split(" ")
+                key = key.split(".")[0]
                 try:
                     # We only want numbers
-                    if '.' in val:
+                    if "." in val:
                         val = float(val)
                     else:
                         val = int(val)
@@ -71,7 +75,7 @@ def run(plugins):
 
 
 def run_all():
-    '''
+    """
     Run all the munin plugins
 
     CLI Example:
@@ -79,7 +83,7 @@ def run_all():
     .. code-block:: bash
 
         salt '*' munin.run_all
-    '''
+    """
     plugins = list_plugins()
     ret = {}
     for plugin in plugins:
@@ -88,7 +92,7 @@ def run_all():
 
 
 def list_plugins():
-    '''
+    """
     List all the munin plugins
 
     CLI Example:
@@ -96,7 +100,7 @@ def list_plugins():
     .. code-block:: bash
 
         salt '*' munin.list_plugins
-    '''
+    """
     pluginlist = os.listdir(PLUGINDIR)
     ret = []
     for plugin in pluginlist:
