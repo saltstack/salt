@@ -208,12 +208,12 @@ Changelog for v2015.8.3..v2015.8.4
 
     * 5a637420e8 Backport DNF support to 2015.5 branch
 
-* **PR** `#30526`_: (`twangboy`_) Added FlushKey to make sure it's changes are saved to disk
+* **PR** `#30526`_: (`twangboy`_) Added FlushKey to make sure its changes are saved to disk
   @ *2016-01-22 02:33:13 UTC*
 
   * e366f6a7fd Merge pull request `#30526`_ from twangboy/reg_flushkey
 
-  * 23085ffbbb Added FlushKey to make sure it's changes are saved to disk
+  * 23085ffbbb Added FlushKey to make sure its changes are saved to disk
 
 * **PR** `#30521`_: (`basepi`_) [2015.8] Merge forward from 2015.5 to 2015.8
   @ *2016-01-21 23:05:03 UTC*
@@ -1986,14 +1986,14 @@ Changelog for v2015.8.3..v2015.8.4
 
 * **ISSUE** `#29199`_: (`hubez`_) 2015.8.1 and 2015.5.6: salt-minion self-restart doesn't work in daemon mode. Works when not a daemon (refs: `#29642`_)
 
-* **PR** `#29642`_: (`cachedout`_) Correctly restart deamonized minions on failure
+* **PR** `#29642`_: (`cachedout`_) Correctly restart daemonized minions on failure
   @ *2015-12-15 19:02:40 UTC*
 
   * 7c38dec0ad Merge pull request `#29642`_ from cachedout/issue_29199
 
   * 8b2c6817cf Sleep before restart
 
-  * 4105e2abfb Correctly restart deamonized minions on failure
+  * 4105e2abfb Correctly restart daemonized minions on failure
 
 * **PR** `#29599`_: (`cachedout`_) Clean up minion shutdown
   @ *2015-12-15 19:01:35 UTC*
@@ -2990,7 +2990,7 @@ Changelog for v2015.8.3..v2015.8.4
 
   * 7775d65089 Merge pull request `#29178`_ from whytewolf/glance_keystone_profile_fix
 
-  * 807dd426a6 Profile not being passed to keystone.endpoint_get in _auth. so if a profiles are being used, then keystone.endpoint_get will not be able to authenticate causing glance to not be able to get it's endpoint.
+  * 807dd426a6 Profile not being passed to keystone.endpoint_get in _auth. so if a profiles are being used, then keystone.endpoint_get will not be able to authenticate causing glance to not be able to get its endpoint.
 
 .. _`#10157`: https://github.com/saltstack/salt/issues/10157
 .. _`#11`: https://github.com/saltstack/salt/issues/11

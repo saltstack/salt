@@ -320,7 +320,7 @@ The current list of test suite images is on Salt's `docker repository`_.
 Custom `docker`_ containers can be provided by submitting a pull request
 against Salt's `docker Salt test containers`_ repository.
 
-.. _`docker`: https://www.docker.io/
+.. _`docker`: https://www.docker.com/
 .. _`docker repository`: https://index.docker.io/u/salttest/
 .. _`docker Salt test containers`: https://github.com/saltstack/docker-containers
 
@@ -359,7 +359,7 @@ As soon as the pull request is merged, the changes will be added to the
 next branch test run on Jenkins.
 
 For a full list of currently running test environments, go to
-http://jenkins.saltstack.com.
+https://jenkinsci.saltstack.com.
 
 
 Using Salt-Cloud on Jenkins

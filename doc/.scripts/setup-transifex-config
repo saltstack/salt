@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-'''
+"""
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
@@ -8,54 +8,49 @@
     ~~~~~~~~~~~~~~~~~~~~~~
 
     Setup the Transifex client configuration file
-'''
+"""
+
+import getpass
 
 # Import python libs
 import os
 import sys
-import getpass
+
 import ConfigParser
 
-HOST = 'https://www.transifex.com'
+HOST = "https://www.transifex.com"
 RCFILE = os.path.abspath(
-    os.environ.get(
-        'TRANSIFEX_RC',
-        os.path.expanduser('~/.transifexrc')
-    )
+    os.environ.get("TRANSIFEX_RC", os.path.expanduser("~/.transifexrc"))
 )
 
 
 def main():
-    '''
+    """
     Run the setup code
-    '''
+    """
     print(
-        'This script will setup a Transifex client configuration file, or, '
-        'if it already exists, make some minimal checks to see if it\'s '
-        'properly configured\n'
+        "This script will setup a Transifex client configuration file, or, "
+        "if it already exists, make some minimal checks to see if it's "
+        "properly configured\n"
     )
     if not os.path.exists(RCFILE):
         while True:
-            username = os.environ.get('TRANSIFEX_USER', None)
+            username = os.environ.get("TRANSIFEX_USER", None)
             if username is not None:
                 break
             try:
-                username = raw_input(
-                    'What is your username on Transifex.com? '
-                )
+                username = raw_input("What is your username on Transifex.com? ")
                 if username:
                     break
             except KeyboardInterrupt:
                 print
                 sys.exit(1)
         while True:
-            password = os.environ.get('TRANSIFEX_PASS', None)
+            password = os.environ.get("TRANSIFEX_PASS", None)
             if password is not None:
                 break
             try:
-                password = getpass.getpass(
-                    'What is your password on Transifex.com? '
-                )
+                password = getpass.getpass("What is your password on Transifex.com? ")
                 if password:
                     break
             except KeyboardInterrupt:
@@ -64,16 +59,16 @@ def main():
 
         config = ConfigParser.SafeConfigParser()
         config.add_section(HOST)
-        config.set(HOST, 'token', '')
-        config.set(HOST, 'hostname', HOST)
-        config.set(HOST, 'username', username)
-        config.set(HOST, 'password', password)
+        config.set(HOST, "token", "")
+        config.set(HOST, "hostname", HOST)
+        config.set(HOST, "username", username)
+        config.set(HOST, "password", password)
 
-        config.write(open(RCFILE, 'w'))
-        print('username and password stored in \'{0}\''.format(RCFILE))
+        config.write(open(RCFILE, "w"))
+        print("username and password stored in '{0}'".format(RCFILE))
 
         os.chmod(RCFILE, 0600)
-        print('Secured the permissions on \'{0}\' to 0600'.format(RCFILE))
+        print("Secured the permissions on '{0}' to 0600".format(RCFILE))
 
         sys.exit(0)
 
@@ -82,24 +77,30 @@ def main():
     config.read([RCFILE])
 
     if not config.has_section(HOST):
-        print('\'~/.transifexrc\' is not properly configured, it\'s missing '
-              'the {0} section'.format(HOST))
+        print(
+            "'~/.transifexrc' is not properly configured, it's missing "
+            "the {0} section".format(HOST)
+        )
 
-    for setting in ('username', 'password', 'hostname', 'token'):
+    for setting in ("username", "password", "hostname", "token"):
         if not config.has_option(HOST, setting):
-            print('\'~/.transifexrc\' is not properly configured, it\'s '
-                  'missing the {0} option'.format(setting))
+            print(
+                "'~/.transifexrc' is not properly configured, it's "
+                "missing the {0} option".format(setting)
+            )
             sys.exit(1)
 
-        if setting == 'token':
+        if setting == "token":
             # Token should be left empty
             continue
 
         if not config.get(HOST, setting):
-            print('\'~/.transifexrc\' is not properly configured, it\'s '
-                  'missing a value for the {0} option'.format(setting))
+            print(
+                "'~/.transifexrc' is not properly configured, it's "
+                "missing a value for the {0} option".format(setting)
+            )
             sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

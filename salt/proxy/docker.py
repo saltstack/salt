@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Docker Proxy Minion
 
 .. versionadded: 2019.2.0
@@ -31,42 +31,44 @@ container, and use grains to configure the proxy minion:
 name
 
     Name of the docker container
-'''
+"""
 from __future__ import absolute_import, unicode_literals
 
-__proxyenabled__ = ['docker']
-__virtualname__ = 'docker'
+__proxyenabled__ = ["docker"]
+__virtualname__ = "docker"
 
 
 def __virtual__():
-    if __opts__.get('proxy', {}).get('proxytype') != __virtualname__:
-        return False, 'Proxytype does not match: {0}'.format(__virtualname__)
+    if __opts__.get("proxy", {}).get("proxytype") != __virtualname__:
+        return False, "Proxytype does not match: {0}".format(__virtualname__)
     return True
 
 
 def module_executors():
-    '''
+    """
     List of module executors to use for this Proxy Minion
-    '''
-    return ['docker', ]
+    """
+    return [
+        "docker",
+    ]
 
 
 def init(opts):
-    '''
+    """
     Always initialize
-    '''
-    __context__['initialized'] = True
+    """
+    __context__["initialized"] = True
 
 
 def initialized():
-    '''
+    """
     This should always be initialized
-    '''
-    return __context__.get('initialized', False)
+    """
+    return __context__.get("initialized", False)
 
 
 def shutdown(opts):
-    '''
+    """
     Nothing needs to be done to shutdown
-    '''
-    __context__['initialized'] = False
+    """
+    __context__["initialized"] = False
