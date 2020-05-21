@@ -13,8 +13,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import copy
 import functools
-import re
 import logging
+import re
 
 # Import salt libs
 import salt.utils.data
@@ -23,11 +23,7 @@ import salt.utils.json
 import salt.utils.path
 import salt.utils.pkg
 import salt.utils.versions
-from salt.exceptions import (
-        CommandExecutionError,
-        MinionError,
-        SaltInvocationError
-)
+from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
 
 # Import third party libs
 from salt.ext import six
@@ -61,18 +57,18 @@ def _list_taps():
 
 
 def _list_pinned():
-    '''
+    """
     List currently pinned formulas
-    '''
-    cmd = 'list --pinned'
-    return _call_brew(cmd)['stdout'].splitlines()
+    """
+    cmd = "list --pinned"
+    return _call_brew(cmd)["stdout"].splitlines()
 
 
 def _pin(pkg, runas=None):
-    '''
+    """
     Pin pkg
-    '''
-    cmd = 'pin {0}'.format(pkg)
+    """
+    cmd = "pin {0}".format(pkg)
     try:
         _call_brew(cmd)
     except CommandExecutionError:
@@ -83,10 +79,10 @@ def _pin(pkg, runas=None):
 
 
 def _unpin(pkg, runas=None):
-    '''
+    """
     Pin pkg
-    '''
-    cmd = 'unpin {0}'.format(pkg)
+    """
+    cmd = "unpin {0}".format(pkg)
     try:
         _call_brew(cmd)
     except CommandExecutionError:
@@ -642,7 +638,7 @@ def _fix_cask_namespace(name=None, pkgs=None):
 
 
 def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
-    '''
+    """
     Set package in 'hold' state, meaning it will not be upgraded.
 
     .. versionadded:: Sodium
@@ -664,15 +660,11 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     .. code-block:: bash
 
         salt '*' pkg.hold pkgs='["foo", "bar"]'
-    '''
+    """
     if not name and not pkgs and not sources:
-        raise SaltInvocationError(
-            'One of name, pkgs, or sources must be specified.'
-        )
+        raise SaltInvocationError("One of name, pkgs, or sources must be specified.")
     if pkgs and sources:
-        raise SaltInvocationError(
-            'Only one of pkgs or sources can be specified.'
-        )
+        raise SaltInvocationError("Only one of pkgs or sources can be specified.")
 
     targets = []
     if pkgs:
@@ -690,33 +682,32 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
         if isinstance(target, dict):
             target = next(iter(target))
 
-        ret[target] = {'name': target,
-                       'changes': {},
-                       'result': False,
-                       'comment': ''}
+        ret[target] = {"name": target, "changes": {}, "result": False, "comment": ""}
 
         if target not in installed:
-            ret[target]['comment'] = ('Package {0} does not have a state.'
-                                      .format(target))
+            ret[target]["comment"] = "Package {0} does not have a state.".format(target)
         elif target not in pinned:
-            if 'test' in __opts__ and __opts__['test']:
+            if "test" in __opts__ and __opts__["test"]:
                 ret[target].update(result=None)
-                ret[target]['comment'] = ('Package {0} is set to be held.'
-                                          .format(target))
+                ret[target]["comment"] = "Package {0} is set to be held.".format(target)
             else:
                 result = _pin(target)
                 if result:
-                    changes = {'old': 'install', 'new': 'hold'}
+                    changes = {"old": "install", "new": "hold"}
                     ret[target].update(changes=changes, result=True)
-                    ret[target]['comment'] = ('Package {0} is now being held.'
-                                        .format(target))
+                    ret[target]["comment"] = "Package {0} is now being held.".format(
+                        target
+                    )
                 else:
                     ret[target].update(result=False)
-                    ret[target]['comment'] = ('Unable to hold package {0}.'.format(target))
+                    ret[target]["comment"] = "Unable to hold package {0}.".format(
+                        target
+                    )
         else:
             ret[target].update(result=True)
-            ret[target]['comment'] = ('Package {0} is already set to be held.'
-                                      .format(target))
+            ret[target]["comment"] = "Package {0} is already set to be held.".format(
+                target
+            )
     return ret
 
 
@@ -724,7 +715,7 @@ pin = hold
 
 
 def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
-    '''
+    """
     Set package current in 'hold' state to install state,
     meaning it will be upgraded.
 
@@ -747,15 +738,11 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
     .. code-block:: bash
 
         salt '*' pkg.unhold pkgs='["foo", "bar"]'
-    '''
+    """
     if not name and not pkgs and not sources:
-        raise SaltInvocationError(
-            'One of name, pkgs, or sources must be specified.'
-        )
+        raise SaltInvocationError("One of name, pkgs, or sources must be specified.")
     if pkgs and sources:
-        raise SaltInvocationError(
-            'Only one of pkgs or sources can be specified.'
-        )
+        raise SaltInvocationError("Only one of pkgs or sources can be specified.")
 
     targets = []
     if pkgs:
@@ -773,33 +760,34 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
         if isinstance(target, dict):
             target = next(iter(target))
 
-        ret[target] = {'name': target,
-                       'changes': {},
-                       'result': False,
-                       'comment': ''}
+        ret[target] = {"name": target, "changes": {}, "result": False, "comment": ""}
 
         if target not in installed:
-            ret[target]['comment'] = ('Package {0} does not have a state.'
-                                      .format(target))
+            ret[target]["comment"] = "Package {0} does not have a state.".format(target)
         elif target in pinned:
-            if 'test' in __opts__ and __opts__['test']:
+            if "test" in __opts__ and __opts__["test"]:
                 ret[target].update(result=None)
-                ret[target]['comment'] = ('Package {0} is set to be unheld.'
-                                          .format(target))
+                ret[target]["comment"] = "Package {0} is set to be unheld.".format(
+                    target
+                )
             else:
                 result = _unpin(target)
                 if result:
-                    changes = {'old': 'hold', 'new': 'install'}
+                    changes = {"old": "hold", "new": "install"}
                     ret[target].update(changes=changes, result=True)
-                    ret[target]['comment'] = ('Package {0} is no longer being held.'
-                                              .format(target))
+                    ret[target][
+                        "comment"
+                    ] = "Package {0} is no longer being held.".format(target)
                 else:
                     ret[target].update(result=False)
-                    ret[target]['comment'] = ('Unable to unhold package {0}.'.format(target))
+                    ret[target]["comment"] = "Unable to unhold package {0}.".format(
+                        target
+                    )
         else:
             ret[target].update(result=True)
-            ret[target]['comment'] = ('Package {0} is already set not to be held.'
-                                      .format(target))
+            ret[target][
+                "comment"
+            ] = "Package {0} is already set not to be held.".format(target)
     return ret
 
 
