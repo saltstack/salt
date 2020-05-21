@@ -69,6 +69,7 @@ ntc-templates==1.4.1      # via junos-eznc
 oscrypto==1.2.0           # via certvalidator
 packaging==19.2           # via pytest
 paramiko==2.4.2
+passlib==1.7.2
 pathtools==0.1.2          # via watchdog
 pluggy==0.13.0            # via pytest
 portend==2.4              # via cherrypy
