@@ -161,7 +161,7 @@ def commit(name, **kwargs):
 
 
 @resultdecorator
-def rollback(name, id=0, **kwargs):
+def rollback(name, r_id=0, **kwargs):
     """
     Rollbacks the committed changes.
 
@@ -169,12 +169,12 @@ def rollback(name, id=0, **kwargs):
 
             rollback the changes:
               junos.rollback:
-                - id: 5
+                - r_id: 5
 
     Parameters:
       Optional
-        * id:
-          The rollback id value [0-49]. (default = 0)
+        * r_id:
+          The rollback id (r_id) value [0-49]. (default = 0)
         * kwargs: Keyworded arguments which can be provided like-
             * timeout:
               Set NETCONF RPC timeout. Can be used for commands which
@@ -190,7 +190,7 @@ def rollback(name, id=0, **kwargs):
 
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
-    ret["changes"] = __salt__["junos.rollback"](id=id, **kwargs)
+    ret["changes"] = __salt__["junos.rollback"](id=r_id, **kwargs)
     return ret
 
 
