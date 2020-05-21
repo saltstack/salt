@@ -13,6 +13,7 @@ import textwrap
 
 import salt.utils.files
 from tests.support.case import ModuleCase
+from tests.support.helpers import slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
@@ -106,6 +107,7 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
         del cls.top_pillar
         del cls.minion_pillar
 
+    @slowTest
     def test_01_present_from_data(self):
         """
         Test gpg.present and gpg.trusted (called by gpg.present when ``trust``
@@ -170,6 +172,7 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
     # Running this test as part of the standard testsuite might be considered a DDOS,
     # also it is not guaranteed to be stable.
     @skipIf(True, "This test contacts an external service")
+    @slowTest
     def test_02_present_from_keyserver(self):
         """
         Test gpg.present and gpg.trusted (called by gpg.present when ``trust``
@@ -199,6 +202,7 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
             "Target file already exists. Not forcing overwrite.", ret,
         )
 
+    @slowTest
     def test_03_encrypt_decrypt_from_contents(self):
         """
         Test encrypting and decrypting with data provided through ``contents``
@@ -285,6 +289,7 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
             "Target file already exists. Not forcing overwrite.", ret
         )
 
+    @slowTest
     def test_04_encrypt_decrypt_from_contents_pillar(self):
         """
         Test encrypting and decrypting with data from pillar.
@@ -357,6 +362,7 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
                 b"secret data", _fp.read(),
             )
 
+    @slowTest
     def test_05_encrypt_decrypt_from_source(self):
         """
         Test encrypting and decrypting from source argument.
@@ -433,6 +439,7 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
             "Target file already exists. Not forcing overwrite.", ret
         )
 
+    @slowTest
     def test_06_sign_verify_contents(self):
         """
         Test signing and verifying data provided through ``contents``.
@@ -484,6 +491,7 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertInSaltComment("The signature is verified.", ret)
         self.assertSaltStateChangesEqual(ret, {})
 
+    @slowTest
     def test_07_sign_verify_contents_from_pillar(self):
         """
         Test signing and verifying data provided through pillar.
@@ -533,6 +541,7 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertInSaltComment("The signature is verified.", ret)
         self.assertSaltStateChangesEqual(ret, {})
 
+    @slowTest
     def test_08_sign_verify_source(self):
         """
         Test signing and verifying data provided through ``source``.
@@ -583,6 +592,7 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertInSaltComment("The signature is verified.", ret)
         self.assertSaltStateChangesEqual(ret, {})
 
+    @slowTest
     def test_09_sign_verify_contents_detached(self):
         """
         Test signing and verifying directly provided contents with detached
@@ -638,6 +648,7 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertInSaltComment("The signature is verified.", ret)
         self.assertSaltStateChangesEqual(ret, {})
 
+    @slowTest
     def test_10_sign_verify_contents_pillar_detached(self):
         """
         Test signing and verifying pillar-provided contents with detached

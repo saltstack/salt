@@ -16,6 +16,7 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.versions
 from tests.support.case import ModuleCase
+from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -142,6 +143,7 @@ class GpgTestCase(ModuleCase):
         if verbose:
             print()
 
+    @slowTest
     def step_01_create_key(self):
         """
         Test creation of a key.
@@ -253,6 +255,7 @@ class GpgTestCase(ModuleCase):
         )
         self.assertTrue(res["message"].endswith("-----END PGP PUBLIC KEY BLOCK-----\n"))
 
+    @slowTest
     def step_05b_export_secret_key(self):
         """
         Test gpg.export_key to export private key.
@@ -430,6 +433,7 @@ class GpgTestCase(ModuleCase):
         )
         self.assertTrue(res["message"].endswith("\n-----END PGP SIGNATURE-----\n"))
 
+    @slowTest
     def step_07j_sign_verify_detached_signature(self):
         """
         Test signing and verifying a test message, outputting the signature to a separate file.
@@ -475,6 +479,7 @@ class GpgTestCase(ModuleCase):
             },
         )
 
+    @slowTest
     def step_08_verify_message(self):
         """
         Test verification of a signed message.
@@ -500,6 +505,7 @@ class GpgTestCase(ModuleCase):
             },
         )
 
+    @slowTest
     def step_09_encrypt_decrypt_message(self):
         """
         Test encrypting and decrypting a message.
@@ -534,6 +540,7 @@ class GpgTestCase(ModuleCase):
         self.assertTrue(decrypt["result"])
         self.assertEqual(decrypt["message"], "secret")
 
+    @slowTest
     def step_09b_encrypt_decrypt_message_symmetric(self):
         """
         Test encrypting and decrypting a message with symmetric password.
@@ -571,6 +578,7 @@ class GpgTestCase(ModuleCase):
             "decryption failed.\nPlease check the salt-minion log for further details.",
         )
 
+    @slowTest
     def step_09c_encrypt_decrypt_file(self):
         """
         Test encrypting and decrypting a file.
@@ -630,6 +638,7 @@ class GpgTestCase(ModuleCase):
             decrypted_data = salt.utils.stringutils.to_unicode(fp.read())
         self.assertEqual(decrypted_data, "Very big secret! Hush")
 
+    @slowTest
     def step_09c_encrypt_and_sign_decrypt_and_verify(self):
         """
         Test encrypting and signing input data and decrypting and verifying the signature.
@@ -667,6 +676,7 @@ class GpgTestCase(ModuleCase):
             },
         )
 
+    @slowTest
     def step_09d_encrypt_and_sign_decrypt_and_verify_file(self):
         """
         Test encrypting and signing, then decrypting and verifying a file.
@@ -781,6 +791,7 @@ class GpgTestCase(ModuleCase):
             gpg_response = "Unable to receive key: No valid data found"
         self.assertEqual(res, {"result": False, "message": gpg_response})
 
+    @slowTest
     def step_10_delete_key(self):
         """
         Test deleting a key.

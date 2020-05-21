@@ -21,7 +21,6 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import SaltInvocationError
-from tests.support.helpers import destructiveTest, slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
 from tests.support.runtests import RUNTIME_VARS
