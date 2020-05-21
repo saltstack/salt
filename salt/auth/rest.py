@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Provide authentication using a REST call
 
 REST auth can be defined like any other eauth module:
@@ -21,10 +21,11 @@ run any execution module and all runners.
 The REST call should return a JSON object that maps to a regular eauth YAML structure
 as above.
 
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
 # Import salt libs
@@ -32,7 +33,7 @@ import salt.utils.http
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'rest'
+__virtualname__ = "rest"
 
 
 def __virtual__():
@@ -41,30 +42,31 @@ def __virtual__():
 
 def rest_auth_setup():
 
-    if '^url' in __opts__['external_auth']['rest']:
-        return __opts__['external_auth']['rest']['^url']
+    if "^url" in __opts__["external_auth"]["rest"]:
+        return __opts__["external_auth"]["rest"]["^url"]
     else:
         return False
 
 
 def auth(username, password):
-    '''
+    """
     REST authentication
-    '''
+    """
 
     url = rest_auth_setup()
 
-    data = {'username': username, 'password': password}
+    data = {"username": username, "password": password}
 
     # Post to the API endpoint. If 200 is returned then the result will be the ACLs
     # for this user
-    result = salt.utils.http.query(url, method='POST', data=data, status=True,
-                                   decode=True)
-    if result['status'] == 200:
-        log.debug('eauth REST call returned 200: %s', result)
-        if result['dict'] is not None:
-            return result['dict']
+    result = salt.utils.http.query(
+        url, method="POST", data=data, status=True, decode=True
+    )
+    if result["status"] == 200:
+        log.debug("eauth REST call returned 200: %s", result)
+        if result["dict"] is not None:
+            return result["dict"]
         return True
     else:
-        log.debug('eauth REST call failed: %s', result)
+        log.debug("eauth REST call failed: %s", result)
         return False

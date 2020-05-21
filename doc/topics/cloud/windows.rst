@@ -25,7 +25,7 @@ Minion installer.
 
 * `impacket project home`__
 
-.. __: https://code.google.com/p/impacket/
+.. __: https://github.com/SecureAuthCorp/impacket
 
 `winexe` is less commonly available in distribution-specific repositories.
 However, it is currently being built for various distributions in 3rd party
@@ -37,7 +37,7 @@ channels:
 
 * `openSUSE Build Service`__
 
-.. __: http://software.opensuse.org/package/winexe
+.. __: https://software.opensuse.org/package/winexe
 
 * `pypsexec project home`__
 

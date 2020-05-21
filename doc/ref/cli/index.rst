@@ -2,6 +2,12 @@
 Command Line Reference
 ======================
 
+salt-api
+========
+.. toctree::
+
+    salt-api
+
 salt-call
 =========
 .. toctree::
@@ -79,12 +85,6 @@ salt-unity
 .. toctree::
 
     salt-unity
-
-salt-api
-========
-.. toctree::
-
-    salt-api
 
 spm
 ===

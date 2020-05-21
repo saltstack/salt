@@ -53,7 +53,7 @@ build_stubs() {
 get_excludes() {
     # This is a tad convoluted. We need to list all top-level files and
     # directories in the main Salt dir _except_ for the main __init__.py file
-    # and the the module directory for the module we're building for.
+    # and the module directory for the module we're building for.
     # ...that way sphinx-apidoc will exclude them from the build.  (o_O)
 
     exclude="${1:?Dirname to exclude is required.}"

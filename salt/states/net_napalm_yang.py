@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 NAPALM YANG state
 =================
 
@@ -20,20 +20,10 @@ Please check Installation_ for complete details.
 
 .. _NAPALM: https://napalm.readthedocs.io
 .. _Installation: https://napalm.readthedocs.io/en/latest/installation.html
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
-
-log = logging.getLogger(__file__)
-
-# Import third party libs
-try:
-    # pylint: disable=unused-import
-    import napalm_yang
-    HAS_NAPALM_YANG = True
-    # pylint: enable=unused-import
-except ImportError:
-    HAS_NAPALM_YANG = False
 
 # Import salt modules
 import salt.utils.files
@@ -42,11 +32,24 @@ import salt.utils.napalm
 import salt.utils.stringutils
 import salt.utils.yaml
 
+log = logging.getLogger(__file__)
+
+# Import third party libs
+try:
+    # pylint: disable=unused-import
+    import napalm_yang
+
+    HAS_NAPALM_YANG = True
+    # pylint: enable=unused-import
+except ImportError:
+    HAS_NAPALM_YANG = False
+
+
 # ------------------------------------------------------------------------------
 # state properties
 # ------------------------------------------------------------------------------
 
-__virtualname__ = 'napalm_yang'
+__virtualname__ = "napalm_yang"
 
 # ------------------------------------------------------------------------------
 # global variables
@@ -58,13 +61,17 @@ __virtualname__ = 'napalm_yang'
 
 
 def __virtual__():
-    '''
+    """
     NAPALM library must be installed for this module to work and run in a (proxy) minion.
     This module in particular requires also napalm-yang.
-    '''
+    """
     if not HAS_NAPALM_YANG:
-        return (False, 'Unable to load napalm_yang execution module: please install napalm-yang!')
+        return (
+            False,
+            "Unable to load napalm_yang execution module: please install napalm-yang!",
+        )
     return salt.utils.napalm.virtual(__opts__, __virtualname__, __file__)
+
 
 # ------------------------------------------------------------------------------
 # helper functions -- will not be exported
@@ -75,10 +82,8 @@ def __virtual__():
 # ------------------------------------------------------------------------------
 
 
-def managed(name,
-            data,
-            **kwargs):
-    '''
+def managed(name, data, **kwargs):
+    """
     Manage the device configuration given the input data structured
     according to the YANG models.
 
@@ -139,73 +144,74 @@ def managed(name,
               Et2:
                 config:
                   description: "description example"
-    '''
-    models = kwargs.get('models', None)
+    """
+    models = kwargs.get("models", None)
     if isinstance(models, tuple) and isinstance(models[0], list):
         models = models[0]
     ret = salt.utils.napalm.default_ret(name)
-    test = kwargs.get('test', False) or __opts__.get('test', False)
-    debug = kwargs.get('debug', False) or __opts__.get('debug', False)
-    commit = kwargs.get('commit', True) or __opts__.get('commit', True)
-    replace = kwargs.get('replace', False) or __opts__.get('replace', False)
-    return_compliance_report = kwargs.get('compliance_report', False) or __opts__.get('compliance_report', False)
-    profiles = kwargs.get('profiles', [])
-    temp_file = __salt__['temp.file']()
-    log.debug('Creating temp file: %s', temp_file)
-    if 'to_dict' not in data:
-        data = {'to_dict': data}
+    test = kwargs.get("test", False) or __opts__.get("test", False)
+    debug = kwargs.get("debug", False) or __opts__.get("debug", False)
+    commit = kwargs.get("commit", True) or __opts__.get("commit", True)
+    replace = kwargs.get("replace", False) or __opts__.get("replace", False)
+    return_compliance_report = kwargs.get("compliance_report", False) or __opts__.get(
+        "compliance_report", False
+    )
+    profiles = kwargs.get("profiles", [])
+    temp_file = __salt__["temp.file"]()
+    log.debug("Creating temp file: %s", temp_file)
+    if "to_dict" not in data:
+        data = {"to_dict": data}
     data = [data]
-    with salt.utils.files.fopen(temp_file, 'w') as file_handle:
+    with salt.utils.files.fopen(temp_file, "w") as file_handle:
         salt.utils.yaml.safe_dump(
             salt.utils.json.loads(salt.utils.json.dumps(data)),
             file_handle,
-            encoding='utf-8'
+            encoding="utf-8",
         )
-    device_config = __salt__['napalm_yang.parse'](*models,
-                                                  config=True,
-                                                  profiles=profiles)
-    log.debug('Parsed the config from the device:')
+    device_config = __salt__["napalm_yang.parse"](
+        *models, config=True, profiles=profiles
+    )
+    log.debug("Parsed the config from the device:")
     log.debug(device_config)
-    compliance_report = __salt__['napalm_yang.compliance_report'](device_config,
-                                                                  *models,
-                                                                  filepath=temp_file)
-    log.debug('Compliance report:')
+    compliance_report = __salt__["napalm_yang.compliance_report"](
+        device_config, *models, filepath=temp_file
+    )
+    log.debug("Compliance report:")
     log.debug(compliance_report)
-    complies = compliance_report.get('complies', False)
+    complies = compliance_report.get("complies", False)
     if complies:
-        ret.update({
-            'result': True,
-            'comment': 'Already configured as required.'
-        })
-        log.debug('All good here.')
+        ret.update({"result": True, "comment": "Already configured as required."})
+        log.debug("All good here.")
         return ret
-    log.debug('Does not comply, trying to generate and load config')
-    data = data[0]['to_dict']
-    if '_kwargs' in data:
-        data.pop('_kwargs')
-    loaded_changes = __salt__['napalm_yang.load_config'](data,
-                                                         *models,
-                                                         profiles=profiles,
-                                                         test=test,
-                                                         debug=debug,
-                                                         commit=commit,
-                                                         replace=replace)
-    log.debug('Loaded config result:')
+    log.debug("Does not comply, trying to generate and load config")
+    data = data[0]["to_dict"]
+    if "_kwargs" in data:
+        data.pop("_kwargs")
+    loaded_changes = __salt__["napalm_yang.load_config"](
+        data,
+        *models,
+        profiles=profiles,
+        test=test,
+        debug=debug,
+        commit=commit,
+        replace=replace
+    )
+    log.debug("Loaded config result:")
     log.debug(loaded_changes)
-    __salt__['file.remove'](temp_file)
-    loaded_changes['compliance_report'] = compliance_report
-    return salt.utils.napalm.loaded_ret(ret,
-                                        loaded_changes,
-                                        test,
-                                        debug,
-                                        opts=__opts__,
-                                        compliance_report=return_compliance_report)
+    __salt__["file.remove"](temp_file)
+    loaded_changes["compliance_report"] = compliance_report
+    return salt.utils.napalm.loaded_ret(
+        ret,
+        loaded_changes,
+        test,
+        debug,
+        opts=__opts__,
+        compliance_report=return_compliance_report,
+    )
 
 
-def configured(name,
-               data,
-               **kwargs):
-    '''
+def configured(name, data, **kwargs):
+    """
     Configure the network device, given the input data strucuted
     according to the YANG models.
 
@@ -272,23 +278,25 @@ def configured(name,
               Et2:
                 config:
                   description: "description example"
-    '''
-    models = kwargs.get('models', None)
+    """
+    models = kwargs.get("models", None)
     if isinstance(models, tuple) and isinstance(models[0], list):
         models = models[0]
     ret = salt.utils.napalm.default_ret(name)
-    test = kwargs.get('test', False) or __opts__.get('test', False)
-    debug = kwargs.get('debug', False) or __opts__.get('debug', False)
-    commit = kwargs.get('commit', True) or __opts__.get('commit', True)
-    replace = kwargs.get('replace', False) or __opts__.get('replace', False)
-    profiles = kwargs.get('profiles', [])
-    if '_kwargs' in data:
-        data.pop('_kwargs')
-    loaded_changes = __salt__['napalm_yang.load_config'](data,
-                                                         *models,
-                                                         profiles=profiles,
-                                                         test=test,
-                                                         debug=debug,
-                                                         commit=commit,
-                                                         replace=replace)
+    test = kwargs.get("test", False) or __opts__.get("test", False)
+    debug = kwargs.get("debug", False) or __opts__.get("debug", False)
+    commit = kwargs.get("commit", True) or __opts__.get("commit", True)
+    replace = kwargs.get("replace", False) or __opts__.get("replace", False)
+    profiles = kwargs.get("profiles", [])
+    if "_kwargs" in data:
+        data.pop("_kwargs")
+    loaded_changes = __salt__["napalm_yang.load_config"](
+        data,
+        *models,
+        profiles=profiles,
+        test=test,
+        debug=debug,
+        commit=commit,
+        replace=replace
+    )
     return salt.utils.napalm.loaded_ret(ret, loaded_changes, test, debug)

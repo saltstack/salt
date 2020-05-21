@@ -16,68 +16,74 @@
 
 # Import Python LIbs
 from __future__ import absolute_import
+
+from salt.modules.inspectlib.entities import (
+    AllowedDir,
+    IgnoredDir,
+    Package,
+    PackageCfgFile,
+    PayloadFile,
+)
 from salt.modules.inspectlib.fsdb import CsvDB
-from salt.modules.inspectlib.entities import (Package, PackageCfgFile,
-                                              PayloadFile, IgnoredDir, AllowedDir)
 
 
 class DBHandleBase(object):
-    '''
+    """
     Handle for the *volatile* database, which serves the purpose of caching
     the inspected data. This database can be destroyed or corrupted, so it should
     be simply re-created from scratch.
-    '''
+    """
 
     def __init__(self, path):
-        '''
+        """
         Constructor.
-        '''
+        """
         self._path = path
         self.init_queries = list()
         self._db = CsvDB(self._path)
 
     def open(self, new=False):
-        '''
+        """
         Init the database, if required.
-        '''
+        """
         self._db.new() if new else self._db.open()  # pylint: disable=W0106
         self._run_init_queries()
 
     def _run_init_queries(self):
-        '''
+        """
         Initialization queries
-        '''
+        """
         for obj in (Package, PackageCfgFile, PayloadFile, IgnoredDir, AllowedDir):
             self._db.create_table_from_object(obj())
 
     def purge(self):
-        '''
+        """
         Purge whole database.
-        '''
+        """
         for table_name in self._db.list_tables():
             self._db.flush(table_name)
 
         self._run_init_queries()
 
     def flush(self, table):
-        '''
+        """
         Flush the table.
-        '''
+        """
         self._db.flush(table)
 
     def close(self):
-        '''
+        """
         Close the database connection.
-        '''
+        """
         self._db.close()
 
     def __getattr__(self, item):
-        '''
+        """
         Proxy methods from the Database instance.
 
         :param item:
         :return:
-        '''
+        """
         return getattr(self._db, item)
 
 
@@ -85,18 +91,18 @@ class DBHandle(DBHandleBase):
     __instance = None
 
     def __new__(cls, *args, **kwargs):
-        '''
+        """
         Keep singleton.
-        '''
+        """
         if not cls.__instance:
             cls.__instance = super(DBHandle, cls).__new__(cls)
         return cls.__instance
 
     def __init__(self, path):
-        '''
+        """
         Database handle for the specific
 
         :param path:
         :return:
-        '''
+        """
         DBHandleBase.__init__(self, path)
