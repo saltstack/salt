@@ -2334,11 +2334,14 @@ def _get_installed_patterns(root=None):
     # a real error.
     output = __salt__["cmd.run"](cmd, ignore_retcode=True)
 
-    installed_patterns = [
+    # On <= SLE12SP4 we have patterns that have multiple names (alias)
+    # and that are duplicated.  The alias start with ".", so we filter
+    # them.
+    installed_patterns = {
         _pattern_name(line)
         for line in output.splitlines()
-        if line.startswith("pattern() = ")
-    ]
+        if line.startswith("pattern() = ") and not _pattern_name(line).startswith(".")
+    }
 
     patterns = {
         k: v for k, v in _get_visible_patterns(root=root).items() if v["installed"]
