@@ -40,9 +40,9 @@ def __virtual__():
     mdadm provides raid functions for Linux
     """
     if __grains__["kernel"] != "Linux":
-        return False
+        return (False, "Only supported on Linux")
     if not salt.utils.path.which("mdadm"):
-        return False
+        return (False, "Unable to locate command: mdadm")
     return __virtualname__
 
 
@@ -107,12 +107,12 @@ def present(name, level, devices, **kwargs):
         ret[
             "comment"
         ] = "Devices are a mix of RAID constituents with multiple MD_UUIDs: {0}.".format(
-            sorted(uuid_dict.keys())
+            sorted(uuid_dict)
         )
         ret["result"] = False
         return ret
     elif len(uuid_dict) == 1:
-        uuid = list(uuid_dict.keys())[0]
+        uuid = next(iter(uuid_dict))
         if present and present["uuid"] != uuid:
             ret[
                 "comment"

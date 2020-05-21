@@ -290,6 +290,56 @@ def version_clean(verstr):
     return verstr
 
 
+def version_compare(ver1, oper, ver2, ignore_epoch=False):
+    """
+    .. versionadded:: Sodium
+
+    Perform a version comparison, using (where available) platform-specific
+    version comparison tools to make the comparison.
+
+    ver1
+        The first version to be compared
+
+    oper
+        One of `==`, `!=`, `>=`, `<=`, `>`, `<`
+
+    ver2
+        The second version to be compared
+
+    .. note::
+        To avoid shell interpretation, each of the above values should be
+        quoted when this function is used on the CLI.
+
+    ignore_epoch : False
+        If ``True``, both package versions will have their epoch prefix
+        stripped before comparison.
+
+    This function is useful in Jinja templates, to perform specific actions
+    when a package's version meets certain criteria. For example:
+
+    .. code-block:: jinja
+
+        {%- set postfix_version = salt.pkg.version('postfix') %}
+        {%- if postfix_version and salt.pkg_resource.version_compare(postfix_version, '>=', '3.3', ignore_epoch=True) %}
+          {#- do stuff #}
+        {%- endif %}
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt myminion pkg_resource.version_compare '3.5' '<=' '2.4'
+        salt myminion pkg_resource.version_compare '3.5' '<=' '2.4' ignore_epoch=True
+    """
+    return salt.utils.versions.compare(
+        ver1,
+        oper,
+        ver2,
+        ignore_epoch=ignore_epoch,
+        cmp_func=__salt__.get("version_cmp"),
+    )
+
+
 def check_extra_requirements(pkgname, pkgver):
     """
     Check if the installed package already has the given requirements.

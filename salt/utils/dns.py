@@ -95,7 +95,7 @@ class RFC(object):
             return [code for code, name in ref.items() if lookup in name][-1]
         else:
             # OrderedDicts only!(?)
-            return ref.keys()[ref.values().index(lookup)]
+            return {name: code for code, name in ref.items()}[lookup]
 
 
 def _to_port(port):
@@ -130,9 +130,7 @@ def _tree(domain, tld=False):
                 domain,
             ).group()
             log.info(
-                "Without tldextract, dns.util resolves the TLD of {0} to {1}".format(
-                    domain, tld
-                )
+                "Without tldextract, dns.util resolves the TLD of %s to %s", domain, tld
             )
 
     res = [domain]
@@ -165,7 +163,7 @@ def _weighted_order(recs):
 
 def _cast(rec_data, rec_cast):
     if isinstance(rec_cast, dict):
-        rec_data = type(rec_cast.keys()[0])(rec_data)
+        rec_data = type(next(iter(rec_cast.keys())))(rec_data)
         res = rec_cast[rec_data]
         return res
     elif isinstance(rec_cast, (list, tuple)):
@@ -672,7 +670,7 @@ def query(
 ):
     """
     Query DNS for information.
-    Where `lookup()` returns record data, `query()` tries to interpret the data and return it's results
+    Where `lookup()` returns record data, `query()` tries to interpret the data and return its results
 
     :param name: name to lookup
     :param rdtype: DNS record type
@@ -1037,7 +1035,7 @@ def tlsa_rec(rdata):
 
 def service(svc, proto="tcp", domain=None, walk=False, secure=None):
     """
-    Find an SRV service in a domain or it's parents
+    Find an SRV service in a domain or its parents
     :param svc: service to find (ldap, 389, etc)
     :param proto: protocol the service talks (tcp, udp, etc)
     :param domain: domain to start search in

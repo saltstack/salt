@@ -29,7 +29,7 @@ def __virtual__():
 
 def _parse_args(arg):
     """
-    yamlify `arg` and ensure it's outermost datatype is a list
+    yamlify `arg` and ensure its outermost datatype is a list
     """
     yaml_args = salt.utils.args.yamlify_arg(arg)
 

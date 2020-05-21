@@ -12,6 +12,7 @@ cloud modules
 
     aliyun
     azurearm
+    clc
     cloudstack
     digitalocean
     dimensiondata
@@ -26,6 +27,7 @@ cloud modules
     oneandone
     opennebula
     openstack
+    packet
     parallels
     profitbricks
     proxmox

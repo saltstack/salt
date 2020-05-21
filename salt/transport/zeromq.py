@@ -142,6 +142,16 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
     # This class is only a singleton per minion/master pair
     # mapping of io_loop -> {key -> channel}
     instance_map = weakref.WeakKeyDictionary()
+    async_methods = [
+        "crypted_transfer_decode_dictentry",
+        "_crypted_transfer",
+        "_do_transfer",
+        "_uncrypted_transfer",
+        "send",
+    ]
+    close_methods = [
+        "close",
+    ]
 
     def __new__(cls, opts, **kwargs):
         """
@@ -441,6 +451,14 @@ class AsyncZeroMQPubChannel(
     A transport channel backed by ZeroMQ for a Salt Publisher to use to
     publish commands to connected minions
     """
+
+    async_methods = [
+        "connect",
+        "_decode_messages",
+    ]
+    close_methods = [
+        "close",
+    ]
 
     def __init__(self, opts, **kwargs):
         self.opts = opts
@@ -896,7 +914,7 @@ def _set_tcp_keepalive(zmq_socket, opts):
 
     Warning: Failure to set TCP keepalives on the salt-master can result in
     not detecting the loss of a minion when the connection is lost or when
-    it's host has been terminated without first closing the socket.
+    its host has been terminated without first closing the socket.
     Salt's Presence System depends on this connection status to know if a minion
     is "present".
 
@@ -1234,25 +1252,30 @@ class AsyncReqMessageClient(object):
 
     # TODO: timeout all in-flight sessions, or error
     def close(self):
-        if self._closing:
+        try:
+            if self._closing:
+                return
+        except AttributeError:
+            # We must have been called from __del__
+            # The python interpreter has nuked most attributes already
             return
-
-        self._closing = True
-        if hasattr(self, "stream") and self.stream is not None:
-            if ZMQ_VERSION_INFO < (14, 3, 0):
-                # stream.close() doesn't work properly on pyzmq < 14.3.0
-                if self.stream.socket:
-                    self.stream.socket.close()
-                self.stream.io_loop.remove_handler(self.stream.socket)
-                # set this to None, more hacks for messed up pyzmq
-                self.stream.socket = None
-                self.socket.close()
-            else:
-                self.stream.close()
-                self.socket = None
-            self.stream = None
-        if self.context.closed is False:
-            self.context.term()
+        else:
+            self._closing = True
+            if hasattr(self, "stream") and self.stream is not None:
+                if ZMQ_VERSION_INFO < (14, 3, 0):
+                    # stream.close() doesn't work properly on pyzmq < 14.3.0
+                    if self.stream.socket:
+                        self.stream.socket.close()
+                    self.stream.io_loop.remove_handler(self.stream.socket)
+                    # set this to None, more hacks for messed up pyzmq
+                    self.stream.socket = None
+                    self.socket.close()
+                else:
+                    self.stream.close()
+                    self.socket = None
+                self.stream = None
+            if self.context.closed is False:
+                self.context.term()
 
     def destroy(self):
         # Bacwards compat

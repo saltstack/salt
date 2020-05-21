@@ -3,22 +3,17 @@
 """
 Test the ssh module
 """
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
 
-# Import salt libs
+import pytest
 import salt.utils.files
 import salt.utils.platform
-
-# Import 3rd-party libs
 from salt.ext.tornado.httpclient import HTTPClient
 from tests.support.case import ModuleCase
-from tests.support.helpers import skip_if_binaries_missing
-
-# Import Salt Testing libs
+from tests.support.helpers import skip_if_binaries_missing, slowTest
 from tests.support.runtests import RUNTIME_VARS
 
 GITHUB_FINGERPRINT = "9d:38:5b:83:a9:17:52:92:56:1a:5e:c4:d4:81:8e:0a:ca:51:a2:64:f1:74:20:11:2e:f8:8a:c3:a1:39:49:8f"
@@ -35,6 +30,7 @@ def check_status():
 
 
 @skip_if_binaries_missing(["ssh", "ssh-keygen"], check_all=True)
+@pytest.mark.windows_whitelisted
 class SSHModuleTest(ModuleCase):
     """
     Test the ssh module
@@ -69,6 +65,7 @@ class SSHModuleTest(ModuleCase):
         super(SSHModuleTest, self).tearDown()
         del self.key
 
+    @slowTest
     def test_auth_keys(self):
         """
         test ssh.auth_keys
@@ -95,6 +92,7 @@ class SSHModuleTest(ModuleCase):
                 "AssertionError: {0}. Function returned: {1}".format(exc, ret)
             )
 
+    @slowTest
     def test_bad_enctype(self):
         """
         test to make sure that bad key encoding types don't generate an
@@ -113,6 +111,7 @@ class SSHModuleTest(ModuleCase):
         # user will get an indicator of what went wrong.
         self.assertEqual(len(list(ret.items())), 0)  # Zero keys found
 
+    @slowTest
     def test_get_known_host_entries(self):
         """
         Check that known host information is returned from ~/.ssh/config
@@ -132,6 +131,7 @@ class SSHModuleTest(ModuleCase):
                 "AssertionError: {0}. Function returned: {1}".format(exc, ret)
             )
 
+    @slowTest
     def test_recv_known_host_entries(self):
         """
         Check that known host information is returned from remote host
@@ -147,6 +147,7 @@ class SSHModuleTest(ModuleCase):
                 "AssertionError: {0}. Function returned: {1}".format(exc, ret)
             )
 
+    @slowTest
     def test_check_known_host_add(self):
         """
         Check known hosts by its fingerprint. File needs to be updated
@@ -156,6 +157,7 @@ class SSHModuleTest(ModuleCase):
         ret = self.run_function("ssh.check_known_host", arg, **kwargs)
         self.assertEqual(ret, "add")
 
+    @slowTest
     def test_check_known_host_update(self):
         """
         ssh.check_known_host update verification
@@ -174,6 +176,7 @@ class SSHModuleTest(ModuleCase):
         ret = self.run_function("ssh.check_known_host", arg, **dict(kwargs, key="YQ=="))
         self.assertEqual(ret, "update")
 
+    @slowTest
     def test_check_known_host_exists(self):
         """
         Verify check_known_host_exists
@@ -194,6 +197,7 @@ class SSHModuleTest(ModuleCase):
         )
         self.assertEqual(ret, "exists")
 
+    @slowTest
     def test_rm_known_host(self):
         """
         ssh.rm_known_host
@@ -212,6 +216,7 @@ class SSHModuleTest(ModuleCase):
         ret = self.run_function("ssh.check_known_host", arg, **kwargs)
         self.assertEqual(ret, "add")
 
+    @slowTest
     def test_set_known_host(self):
         """
         ssh.set_known_host

@@ -36,7 +36,9 @@ def __virtual__():
     """
     Only load if the pushover module is available in __salt__
     """
-    return "pushover" if "pushover.post_message" in __salt__ else False
+    if "pushover.post_message" in __salt__:
+        return "pushover"
+    return (False, "pushover module could not be loaded")
 
 
 def post_message(

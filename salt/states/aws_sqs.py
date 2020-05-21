@@ -24,7 +24,7 @@ def __virtual__():
     """
     if __salt__["cmd.has_exec"]("aws"):
         return "aws_sqs"
-    return False
+    return (False, "aws command not found")
 
 
 def exists(name, region, user=None, opts=False):

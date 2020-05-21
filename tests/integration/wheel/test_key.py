@@ -1,16 +1,14 @@
 # coding: utf-8
-
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
+import pytest
 import salt.wheel
+from tests.support.helpers import slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
 
 
+@pytest.mark.windows_whitelisted
 class KeyWheelModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
     def setUp(self):
         self.wheel = salt.wheel.Wheel(dict(self.get_config("client_config")))
@@ -18,11 +16,13 @@ class KeyWheelModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
     def tearDown(self):
         del self.wheel
 
+    @slowTest
     def test_list_all(self):
         ret = self.wheel.cmd("key.list_all", print_event=False)
         for host in ["minion", "sub_minion"]:
             self.assertIn(host, ret["minions"])
 
+    @slowTest
     def test_gen(self):
         ret = self.wheel.cmd(
             "key.gen", kwarg={"id_": "soundtechniciansrock"}, print_event=False
@@ -41,6 +41,7 @@ class KeyWheelModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
             ret.get("priv", "").startswith("-----BEGIN RSA PRIVATE KEY-----")
         )
 
+    @slowTest
     def test_master_key_str(self):
         ret = self.wheel.cmd("key.master_key_str", print_event=False)
         self.assertIn("local", ret)

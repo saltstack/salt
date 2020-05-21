@@ -4,18 +4,15 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import random
 import string
 
-# Import Salt libs
+import pytest
 import salt.utils.platform
-
-# Import 3rd-party libs
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import range
 from salt.utils.pycrypto import gen_hash
 from tests.support.case import ModuleCase, ShellCase
 from tests.support.helpers import (
@@ -23,10 +20,9 @@ from tests.support.helpers import (
     requires_salt_modules,
     requires_salt_states,
     skip_if_not_root,
+    slowTest,
 )
 from tests.support.mixins import SaltReturnAssertsMixin
-
-# Import Salt Testing libs
 from tests.support.unit import skipIf
 
 try:
@@ -46,7 +42,11 @@ def gen_password():
     password = "".join(
         random.choice(string.ascii_letters + string.digits) for _ in range(20)
     )
-    hashed_pwd = gen_hash("salt", password, "sha512")
+    hashed_pwd = (
+        password
+        if salt.utils.platform.is_darwin()
+        else gen_hash("salt", password, "sha512")
+    )
 
     return password, hashed_pwd
 
@@ -54,8 +54,9 @@ def gen_password():
 @requires_salt_states("user.absent", "user.present")
 @requires_salt_modules("shadow.set_password")
 @skip_if_not_root
-@skipIf(pwd is None or grp is None, "No crypt module available")
+@skipIf(pwd is None or grp is None, "No pwd or grp module available")
 @destructiveTest
+@pytest.mark.windows_whitelisted
 class UserAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
     """
     Test user auth mechanisms
@@ -72,6 +73,7 @@ class UserAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
         ret = self.run_state("user.absent", name=self.user)
         self.assertSaltTrueReturn(ret)
 
+    @slowTest
     def test_pam_auth_valid_user(self):
         """
         test that pam auth mechanism works with a valid user
@@ -79,10 +81,13 @@ class UserAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
         password, hashed_pwd = gen_password()
 
         # set user password
-        set_pw_cmd = "shadow.set_password {0} '{1}'".format(
-            self.user, password if salt.utils.platform.is_darwin() else hashed_pwd
+        set_pw_cmd = "shadow.set_password {0} '{1}'".format(self.user, hashed_pwd)
+        stdout, stderr, retcode = self.run_call(
+            set_pw_cmd, catch_stderr=True, with_retcode=True
         )
-        self.assertRunCall(set_pw_cmd)
+        if stderr:
+            log.warning(stderr)
+        self.assertFalse(retcode, stderr)
 
         # test user auth against pam
         cmd = '-a pam "*" test.ping --username {0} --password {1}'.format(
@@ -92,6 +97,7 @@ class UserAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
         log.debug("resp = %s", resp)
         self.assertIn("minion", [r.strip(": ") for r in resp])
 
+    @slowTest
     def test_pam_auth_invalid_user(self):
         """
         test pam auth mechanism errors for an invalid user
@@ -125,9 +131,15 @@ class GroupAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
             "user.present", name=self.user, createhome=False, groups=[self.group]
         )
         self.assertSaltTrueReturn(ret)
-        self.assertRunCall(
-            "user.chgroups {0} {1} True".format(self.user, self.group), local=True
+        stdout, stderr, retcode = self.run_call(
+            "user.chgroups {0} {1} True".format(self.user, self.group),
+            local=True,
+            with_retcode=True,
+            catch_stderr=True,
         )
+        if stderr:
+            log.warning(stderr)
+        self.assertFalse(retcode, stderr)
 
     def tearDown(self):
         ret0 = self.run_state("user.absent", name=self.user)
@@ -135,6 +147,7 @@ class GroupAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
         self.assertSaltTrueReturn(ret0)
         self.assertSaltTrueReturn(ret1)
 
+    @slowTest
     def test_pam_auth_valid_group(self):
         """
         test that pam auth mechanism works for a valid group
@@ -142,10 +155,13 @@ class GroupAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
         password, hashed_pwd = gen_password()
 
         # set user password
-        set_pw_cmd = "shadow.set_password {0} '{1}'".format(
-            self.user, password if salt.utils.platform.is_darwin() else hashed_pwd
+        set_pw_cmd = "shadow.set_password {0} '{1}'".format(self.user, hashed_pwd)
+        stdout, stderr, retcode = self.run_call(
+            set_pw_cmd, catch_stderr=True, with_retcode=True
         )
-        self.assertRunCall(set_pw_cmd)
+        if stderr:
+            log.warning(stderr)
+        self.assertFalse(retcode, stderr)
 
         # test group auth against pam: saltadm is not configured in
         # external_auth, but saltops is and saldadm is a member of saltops

@@ -63,7 +63,9 @@ def __virtual__():
     """
     Only load if the ipset module is available in __salt__
     """
-    return "ipset.version" in __salt__
+    if "ipset.version" in __salt__:
+        return True
+    return (False, "ipset module could not be loaded")
 
 
 def set_present(name, set_type, family="ipv4", **kwargs):

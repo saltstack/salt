@@ -66,6 +66,10 @@ The information which can be stored in a roster ``target`` is the following:
                         # does not exist, unless --pre-flight is passed to salt-ssh
                         # command or ssh_run_pre_flight is set to true in the config
                         # Added in Sodium Release.
+        set_path:    # Set the path environment variable, to ensure the expected python
+                     # binary is in the salt-ssh path, when running the command.
+                     # Example: '$PATH:/usr/local/bin/'. Added in Sodium Release.
+
 
 .. _ssh_pre_flight:
 

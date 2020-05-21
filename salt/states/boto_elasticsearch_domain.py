@@ -97,11 +97,9 @@ def __virtual__():
     """
     Only load if boto is available.
     """
-    return (
-        "boto_elasticsearch_domain"
-        if "boto_elasticsearch_domain.exists" in __salt__
-        else False
-    )
+    if "boto_elasticsearch_domain.exists" in __salt__:
+        return "boto_elasticsearch_domain"
+    return (False, "boto_elasticsearch_domain module could not be loaded")
 
 
 def _compare_json(current, desired):

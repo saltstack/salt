@@ -14,16 +14,9 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
+from collections.abc import Mapping
 
 from salt.ext import six
-
-try:
-    from collections.abc import Mapping
-except ImportError:
-    # pylint: disable=no-name-in-module
-    from collections import Mapping
-
-    # pylint: enable=no-name-in-module
 
 
 def diff(current_dict, past_dict):
@@ -68,7 +61,7 @@ def deep_diff(old, new, ignore=None):
     new = copy.deepcopy(new)
     stack = [(old, new, False)]
 
-    while len(stack) > 0:
+    while stack:
         tmps = []
         tmp_old, tmp_new, reentrant = stack.pop()
         for key in set(list(tmp_old) + list(tmp_new)):
@@ -132,7 +125,7 @@ class RecursiveDictDiffer(DictDiffer):
     The class provides access to:
         (1) the added, removed, changes keys and subkeys (using the . notation)
                ``added``, ``removed``, ``changed`` methods
-        (2) the diffs in the format aboce (diff property)
+        (2) the diffs in the format above (diff property)
                 ``diffs`` property
         (3) a dict with the new changed values only (new_values property)
                 ``new_values`` property

@@ -4,9 +4,8 @@ Create ssh executor system
 """
 from __future__ import absolute_import, print_function
 
-import logging
-
 # Import python libs
+import logging
 import os
 import time
 
@@ -877,6 +876,7 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
 
         salt '*' state.sls_id my_state my_module,a_common_module
     """
+    __pillar__.update(kwargs.get("pillar", {}))
     st_kwargs = __salt__.kwargs
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:

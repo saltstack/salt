@@ -35,7 +35,9 @@ def __virtual__():
     """
     Only load if hg is available
     """
-    return __salt__["cmd.has_exec"](HG_BINARY)
+    if __salt__["cmd.has_exec"](HG_BINARY):
+        return True
+    return (False, "Command {0} not found".format(HG_BINARY))
 
 
 def latest(

@@ -59,6 +59,7 @@ from salt.exceptions import FileserverConfigError
 
 PER_REMOTE_OVERRIDES = (
     "base",
+    "fallback",
     "mountpoint",
     "root",
     "ssl_verify",
@@ -80,6 +81,7 @@ log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = "gitfs"
+__virtual_aliases__ = ("git",)
 
 
 def _gitfs(init_remotes=True):

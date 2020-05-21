@@ -96,7 +96,9 @@ import salt.utils.stringutils
 
 
 def __virtual__():
-    return "apache.config" in __salt__
+    if "apache.config" in __salt__:
+        return True
+    return (False, "apache module could not be loaded")
 
 
 def configfile(name, config):

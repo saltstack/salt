@@ -709,19 +709,25 @@ def db_remove(
 
         salt '*' postgres.db_remove 'dbname'
     """
-
-    # db doesn't exist, proceed
-    query = 'DROP DATABASE "{0}"'.format(name)
-    ret = _psql_prepare_and_run(
-        ["-c", query],
-        user=user,
-        host=host,
-        port=port,
-        runas=runas,
-        maintenance_db=maintenance_db,
-        password=password,
-    )
-    return ret["retcode"] == 0
+    for query in [
+        'REVOKE CONNECT ON DATABASE "{db}" FROM public;'.format(db=name),
+        "SELECT pid, pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{db}' AND pid <> pg_backend_pid();".format(
+            db=name
+        ),
+        'DROP DATABASE "{db}";'.format(db=name),
+    ]:
+        ret = _psql_prepare_and_run(
+            ["-c", query],
+            user=user,
+            host=host,
+            port=port,
+            runas=runas,
+            maintenance_db=maintenance_db,
+            password=password,
+        )
+        if ret["retcode"] != 0:
+            raise Exception("Failed: ret={}".format(ret))
+    return True
 
 
 # Tablespace related actions
@@ -887,7 +893,7 @@ def tablespace_alter(
     if set_option:
         queries.append(
             'ALTER TABLESPACE "{0}" SET ({1} = {2})'.format(
-                name, set_option.keys()[0], set_option.values()[0]
+                name, *(next(iter(set_option.items())))
             )
         )
     if reset_option:

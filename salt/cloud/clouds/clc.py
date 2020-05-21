@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 CenturyLink Cloud Module
-===================
+========================
 
 .. versionadded:: Oyxgen
 
@@ -29,9 +29,12 @@ clc-sdk can be installed via pip:
   For sdk reference see: https://github.com/CenturyLinkCloud/clc-python-sdk
 
 Flask
--------
+-----
+
 flask can be installed via pip:
+
 .. code-block:: bash
+
     pip install flask
 
 Configuration
@@ -294,7 +297,7 @@ def avail_sizes(call=None):
 
 def get_build_status(req_id, nodename):
     """
-    get the build status from CLC to make sure we dont return to early
+    get the build status from CLC to make sure we don't return to early
     """
     counter = 0
     req_id = six.text_type(req_id)
