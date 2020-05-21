@@ -211,8 +211,8 @@ def update():
             event.fire_event(
                 data, salt.utils.event.tagify(["roots", "update"], prefix="fileserver")
             )
-    # return data is used for test
-    # but can also to get file changes data with out needing fileserver events
+    # return data is used for tests
+    # but can also be used to get file changes with out needing fileserver events
     return data
 
 
