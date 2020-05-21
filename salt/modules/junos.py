@@ -946,7 +946,11 @@ def install_config(path=None, **kwargs):
 
     test = op.pop("test", False)
 
-    with HandleFileCopy(path, **op) as template_cached_path:
+    kwargs = {}
+    if "template_vars" in op:
+        kwargs.update({"template_vars": op["template_vars"]})
+
+    with HandleFileCopy(path, **kwargs) as template_cached_path:
         if template_cached_path is None:
             ret["message"] = "Invalid file path."
             ret["out"] = False
@@ -1430,7 +1434,11 @@ def load(path=None, **kwargs):
     else:
         op.update(kwargs)
 
-    with HandleFileCopy(path, **op) as template_cached_path:
+    kwargs = {}
+    if "template_vars" in op:
+        kwargs.update({"template_vars": op["template_vars"]})
+
+    with HandleFileCopy(path, **kwargs) as template_cached_path:
         if template_cached_path is None:
             ret["message"] = "Invalid file path."
             ret["out"] = False
