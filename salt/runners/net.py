@@ -81,6 +81,7 @@ try:
     from netaddr import IPNetwork  # netaddr is already required by napalm
     from netaddr.core import AddrFormatError
     from napalm.base import helpers as napalm_helpers
+
     HAS_NAPALM = True
 except ImportError:
     HAS_NAPALM = False
@@ -115,7 +116,7 @@ __virtualname__ = "net"
 def __virtual__():
     if HAS_NAPALM:
         return __virtualname__
-    return (False, 'The napalm module could not be imported')
+    return (False, "The napalm module could not be imported")
 
 
 def _get_net_runner_opts():
@@ -232,9 +233,11 @@ def _find_interfaces_mac(ip):  # pylint: disable=invalid-name
     for device, device_ipaddrs in six.iteritems(all_ipaddrs):
         if not device_ipaddrs.get("result", False):
             continue
-        for interface, interface_ipaddrs in six.iteritems(device_ipaddrs.get('out', {})):
-            ip_addresses = set(interface_ipaddrs.get('ipv4', {}).keys())
-            ip_addresses.update(set(interface_ipaddrs.get('ipv6', {}).keys()))
+        for interface, interface_ipaddrs in six.iteritems(
+            device_ipaddrs.get("out", {})
+        ):
+            ip_addresses = set(interface_ipaddrs.get("ipv4", {}).keys())
+            ip_addresses.update(set(interface_ipaddrs.get("ipv6", {}).keys()))
             for ipaddr in ip_addresses:
                 if ip != ipaddr:
                     continue
@@ -369,8 +372,10 @@ def interfaces(
         ipnet = _get_network_obj(ipnet)
 
     best_row = {}
-    best_net_match = IPNetwork('0.0.0.0/0')
-    for device, net_interfaces_out in six.iteritems(all_interfaces):  # pylint: disable=too-many-nested-blocks
+    best_net_match = IPNetwork("0.0.0.0/0")
+    for device, net_interfaces_out in six.iteritems(
+        all_interfaces
+    ):  # pylint: disable=too-many-nested-blocks
         if not net_interfaces_out:
             continue
         if not net_interfaces_out.get("result", False):

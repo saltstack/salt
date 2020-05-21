@@ -111,6 +111,7 @@ try:
 
     # pylint: disable=unused-import
     from napalm.base import helpers as napalm_helpers
+
     # pylint: enable=unused-import
     HAS_NAPALM = True
 except ImportError:
@@ -151,7 +152,7 @@ _DEFAULT_LABELS_MAPPING = {
 def __virtual__():
     if HAS_NAPALM:
         return __virtualname__
-    return (False, 'The napalm module could not be imported')
+    return (False, "The napalm module could not be imported")
 
 
 # -----------------------------------------------------------------------------
