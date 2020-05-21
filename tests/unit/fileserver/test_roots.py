@@ -21,7 +21,7 @@ from tests.support.mixins import (
 )
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 UNICODE_FILENAME = "питон.txt"
 UNICODE_DIRNAME = UNICODE_ENVNAME = "соль"
@@ -149,8 +149,13 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         self.assertIn("top.sls", ret2)
         self.assertIn("dynamo.sls", ret2)
 
+    @skipIf(
+        salt.utils.platform.is_windows(),
+        "Windows does not support this master function",
+    )
     def test_update_no_change(self):
-        # process all changes that may have happen
+        # process all changes that have happen
+        # changes will always take place the first time during testing
         ret = roots.update()
         self.assertTrue(ret["changed"])
 
