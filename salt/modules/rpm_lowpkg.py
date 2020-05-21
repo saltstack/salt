@@ -461,7 +461,7 @@ def owner(*paths, **kwargs):
         if "not owned" in ret[path].lower():
             ret[path] = ""
     if len(ret) == 1:
-        return next(iter(ret.values()))
+        return list(ret.values())[0]
     return ret
 
 
