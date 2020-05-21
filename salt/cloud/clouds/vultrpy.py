@@ -405,7 +405,7 @@ def create(vm_):
         # print("Waiting for default password")
         # pprint.pprint(data)
         default_password = six.text_type(data.get("default_password", ""))
-        if default_password == "" or default_password == "not supported"
+        if default_password == "" or default_password == "not supported":
             time.sleep(1)
             return False
         return data["default_password"]
