@@ -238,7 +238,7 @@ class EtcdClient(object):
         except etcd.EtcdException as err:
             # EtcdValueError inherits from ValueError, so we don't want to accidentally
             # catch this below on ValueError and give a bogus error message
-            log.error("etcd: {0}".format(err))
+            log.error("etcd: %s", err)
             raise
         except ValueError:
             # python-etcd doesn't fully support python 2.6 and ends up throwing this for *any* exception because
@@ -253,7 +253,7 @@ class EtcdClient(object):
         return result
 
     def _flatten(self, data, path=""):
-        if len(data.keys()) == 0:
+        if not data:
             return {path: {}}
         path = path.strip("/")
         flat = {}

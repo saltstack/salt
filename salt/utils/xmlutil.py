@@ -60,7 +60,7 @@ def _to_full_dict(xmltree):
         xmldict[attrName] = attrValue
 
     if not xmltree:
-        if len(xmldict) == 0:
+        if not xmldict:
             # If we don't have attributes, we should return the value as a string
             # ex: <entry>test</entry>
             return xmltree.text

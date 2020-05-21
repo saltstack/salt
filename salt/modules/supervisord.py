@@ -401,3 +401,46 @@ def options(name, conf_file=None):
         # pylint: enable=maybe-no-member
         ret[key] = val
     return ret
+
+
+def status_bool(name, expected_state=None, user=None, conf_file=None, bin_env=None):
+    """
+    Check for status of a specific supervisord process and return boolean result.
+
+    name
+        name of the process to check
+
+    expected_state
+        search for a specific process state. If set to ``None`` - any process state will match.
+
+    user
+        user to run supervisorctl as
+
+    conf_file
+        path to supervisord config file
+
+    bin_env
+        path to supervisorctl bin or path to virtualenv with supervisor
+        installed
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' supervisord.status_bool nginx expected_state='RUNNING'
+    """
+
+    cmd = "status {}".format(name)
+    for line in custom(cmd, user, conf_file, bin_env).splitlines():
+        if len(line.split()) > 2:
+            process, state, reason = line.split(None, 2)
+        else:
+            process, state, reason = line.split() + [""]
+
+    if reason == "(no such process)" or process != name:
+        return False
+
+    if expected_state is None or state == expected_state:
+        return True
+    else:
+        return False

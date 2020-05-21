@@ -144,8 +144,8 @@ def gen_hash(crypt_salt=None, password=None, algorithm=None):
     else:
         raise SaltInvocationError(
             "Cannot hash using '{0}' hash algorithm. Natively supported "
-            "algorithms are: {1}. If passlib is installed ({3}), the supported "
-            "algorithms are: {2}.".format(
-                algorithm, list(methods), known_methods, HAS_PASSLIB
+            "algorithms are: {1}. If passlib is installed ({2}), the supported "
+            "algorithms are: {3}.".format(
+                algorithm, list(methods), HAS_PASSLIB, known_methods
             )
         )
