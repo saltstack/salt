@@ -240,6 +240,15 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
     # This class is only a singleton per minion/master pair
     # mapping of io_loop -> {key -> channel}
     instance_map = weakref.WeakKeyDictionary()
+    async_methods = [
+        "crypted_transfer_decode_dictentry",
+        "_crypted_transfer",
+        "_uncrypted_transfer",
+        "send",
+    ]
+    close_methods = [
+        "close",
+    ]
 
     def __new__(cls, opts, **kwargs):
         """
@@ -446,6 +455,15 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
 class AsyncTCPPubChannel(
     salt.transport.mixins.auth.AESPubClientMixin, salt.transport.client.AsyncPubChannel
 ):
+    async_methods = [
+        "send_id",
+        "connect_callback",
+        "connect",
+    ]
+    close_methods = [
+        "close",
+    ]
+
     def __init__(self, opts, **kwargs):
         self.opts = opts
 
@@ -545,7 +563,7 @@ class AsyncTCPPubChannel(
                 "tag": tag,
             }
             req_channel = salt.utils.asynchronous.SyncWrapper(
-                AsyncTCPReqChannel, (self.opts,)
+                AsyncTCPReqChannel, (self.opts,), loop_kwarg="io_loop",
             )
             try:
                 req_channel.send(load, timeout=60)
@@ -1660,7 +1678,7 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         # TODO: switch to the actual asynchronous interface
         # pub_sock = salt.transport.ipc.IPCMessageClient(self.opts, io_loop=self.io_loop)
         pub_sock = salt.utils.asynchronous.SyncWrapper(
-            salt.transport.ipc.IPCMessageClient, (pull_uri,)
+            salt.transport.ipc.IPCMessageClient, (pull_uri,), loop_kwarg="io_loop",
         )
         pub_sock.connect()
 
