@@ -33,7 +33,7 @@ class NetTest(TestCase, LoaderModuleMockMixin):
                     "renderer_whitelist": [],
                     "extension_modules": self.extmods_dir,
                 },
-                "__salt__": {"mine.get": mock_get,},
+                "__salt__": {"mine.get": mock_get}
             }
         }
 
