@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 State module for syslog_ng
 ==========================
 
@@ -43,80 +43,87 @@ These constructions are also called statements. There are options inside of them
 You can find more information about syslog-ng's configuration syntax in the
 Syslog-ng Admin guide:
 http://www.balabit.com/sites/default/files/documents/syslog-ng-ose-3.5-guides/en/syslog-ng-ose-v3.5-guide-admin/html-single/index.html#syslog-ng.conf.5
-'''
-from __future__ import absolute_import, unicode_literals, print_function, \
-    generators, with_statement
-import logging
+"""
+from __future__ import (
+    absolute_import,
+    generators,
+    print_function,
+    unicode_literals,
+    with_statement,
+)
 
+import logging
 
 log = logging.getLogger(__name__)
 
 
-def config(name,
-           config,
-           write=True):
-    '''
+def config(name, config, write=True):
+    """
     Builds syslog-ng configuration.
 
     name : the id of the Salt document
     config : the parsed YAML code
     write : if True, it writes  the config into the configuration file,
     otherwise just returns it
-    '''
-    return __salt__['syslog_ng.config'](name, config, write)
+    """
+    return __salt__["syslog_ng.config"](name, config, write)
 
 
 def stopped(name=None):
-    '''
+    """
     Kills syslog-ng.
-    '''
-    return __salt__['syslog_ng.stop'](name)
+    """
+    return __salt__["syslog_ng.stop"](name)
 
 
-def started(name=None,
-            user=None,
-            group=None,
-            chroot=None,
-            caps=None,
-            no_caps=False,
-            pidfile=None,
-            enable_core=False,
-            fd_limit=None,
-            verbose=False,
-            debug=False,
-            trace=False,
-            yydebug=False,
-            persist_file=None,
-            control=None,
-            worker_threads=None,
-            *args,
-            **kwargs):
-    '''
+def started(
+    name=None,
+    user=None,
+    group=None,
+    chroot=None,
+    caps=None,
+    no_caps=False,
+    pidfile=None,
+    enable_core=False,
+    fd_limit=None,
+    verbose=False,
+    debug=False,
+    trace=False,
+    yydebug=False,
+    persist_file=None,
+    control=None,
+    worker_threads=None,
+    *args,
+    **kwargs
+):
+    """
     Ensures, that syslog-ng is started via the given parameters.
 
     Users shouldn't use this function, if the service module is available on
     their system.
-    '''
-    return __salt__['syslog_ng.start'](name=name,
-                                       user=user,
-                                       group=group,
-                                       chroot=chroot,
-                                       caps=caps,
-                                       no_caps=no_caps,
-                                       pidfile=pidfile,
-                                       enable_core=enable_core,
-                                       fd_limit=fd_limit,
-                                       verbose=verbose,
-                                       debug=debug,
-                                       trace=trace,
-                                       yydebug=yydebug,
-                                       persist_file=persist_file,
-                                       control=control,
-                                       worker_threads=worker_threads)
+    """
+    return __salt__["syslog_ng.start"](
+        name=name,
+        user=user,
+        group=group,
+        chroot=chroot,
+        caps=caps,
+        no_caps=no_caps,
+        pidfile=pidfile,
+        enable_core=enable_core,
+        fd_limit=fd_limit,
+        verbose=verbose,
+        debug=debug,
+        trace=trace,
+        yydebug=yydebug,
+        persist_file=persist_file,
+        control=control,
+        worker_threads=worker_threads,
+    )
 
 
 def reloaded(name):
-    '''
+    """
     Reloads syslog-ng.
-    '''
-    return __salt__['syslog_ng.reload'](name)
+    """
+    return __salt__["syslog_ng.reload"](name)

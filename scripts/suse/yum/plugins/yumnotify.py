@@ -3,15 +3,16 @@
 #
 # Author: Bo Maryniuk <bo@suse.de>
 
-from yum.plugins import TYPE_CORE
-from yum import config
-import os
 import hashlib
+import os
+
+from yum import config
+from yum.plugins import TYPE_CORE
 
 CK_PATH = "/var/cache/salt/minion/rpmdb.cookie"
 RPM_PATH = "/var/lib/rpm/Packages"
 
-requires_api_version = '2.5'
+requires_api_version = "2.5"
 plugin_type = TYPE_CORE
 
 
@@ -50,6 +51,8 @@ def posttrans_hook(conduit):
     :return:
     """
     # Integrate Yum with Salt
-    if 'SALT_RUNNING' not in os.environ:
-        with open(CK_PATH, 'w') as ck_fh:
-            ck_fh.write('{chksum} {mtime}\n'.format(chksum=_get_checksum(), mtime=_get_mtime()))
+    if "SALT_RUNNING" not in os.environ:
+        with open(CK_PATH, "w") as ck_fh:
+            ck_fh.write(
+                "{chksum} {mtime}\n".format(chksum=_get_checksum(), mtime=_get_mtime())
+            )

@@ -1,30 +1,32 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Support for haproxy
 
 .. versionadded:: 2014.7.0
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, generators, print_function, unicode_literals
-import os
+
 import logging
+import os
 import stat
 import time
 
 try:
-    import haproxy.cmds
-    import haproxy.conn
+    import haproxy.cmds  # pylint: disable=no-name-in-module
+    import haproxy.conn  # pylint: disable=no-name-in-module
+
     HAS_HAPROXY = True
 except ImportError:
     HAS_HAPROXY = False
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'haproxy'
+__virtualname__ = "haproxy"
 
 # Default socket location
-DEFAULT_SOCKET_URL = '/var/run/haproxy.sock'
+DEFAULT_SOCKET_URL = "/var/run/haproxy.sock"
 
 # Numeric fields returned by stats
 FIELD_NUMERIC = ["weight", "bin", "bout"]
@@ -33,27 +35,30 @@ FIELD_NODE_NAME = "name"
 
 
 def __virtual__():
-    '''
+    """
     Only load the module if haproxyctl is installed
-    '''
+    """
     if HAS_HAPROXY:
         return __virtualname__
-    return (False, 'The haproxyconn execution module cannot be loaded: haproxyctl module not available')
+    return (
+        False,
+        "The haproxyconn execution module cannot be loaded: haproxyctl module not available",
+    )
 
 
 def _get_conn(socket=DEFAULT_SOCKET_URL):
-    '''
+    """
     Get connection to haproxy socket.
-    '''
-    assert os.path.exists(socket), '{0} does not exist.'.format(socket)
+    """
+    assert os.path.exists(socket), "{0} does not exist.".format(socket)
     issock = os.stat(socket).st_mode
-    assert stat.S_ISSOCK(issock), '{0} is not a socket.'.format(socket)
+    assert stat.S_ISSOCK(issock), "{0} is not a socket.".format(socket)
     ha_conn = haproxy.conn.HaPConn(socket)
     return ha_conn
 
 
 def list_servers(backend, socket=DEFAULT_SOCKET_URL, objectify=False):
-    '''
+    """
     List servers in haproxy backend.
 
     backend
@@ -67,14 +72,14 @@ def list_servers(backend, socket=DEFAULT_SOCKET_URL, objectify=False):
     .. code-block:: bash
 
         salt '*' haproxy.list_servers mysql
-    '''
+    """
     ha_conn = _get_conn(socket)
     ha_cmd = haproxy.cmds.listServers(backend=backend)
     return ha_conn.sendCmd(ha_cmd, objectify=objectify)
 
 
-def wait_state(backend, server, value='up', timeout=60*5, socket=DEFAULT_SOCKET_URL):
-    '''
+def wait_state(backend, server, value="up", timeout=60 * 5, socket=DEFAULT_SOCKET_URL):
+    """
 
     Wait for a specific server state
 
@@ -98,16 +103,19 @@ def wait_state(backend, server, value='up', timeout=60*5, socket=DEFAULT_SOCKET_
     .. code-block:: bash
 
         salt '*' haproxy.wait_state mysql server01 up 60
-    '''
+    """
     t = time.time() + timeout
     while time.time() < t:
-        if get_backend(backend=backend, socket=socket)[server]["status"].lower() == value.lower():
+        if (
+            get_backend(backend=backend, socket=socket)[server]["status"].lower()
+            == value.lower()
+        ):
             return True
     return False
 
 
 def get_backend(backend, socket=DEFAULT_SOCKET_URL):
-    '''
+    """
 
     Receive information about a specific backend.
 
@@ -122,9 +130,11 @@ def get_backend(backend, socket=DEFAULT_SOCKET_URL):
     .. code-block:: bash
 
         salt '*' haproxy.get_backend mysql
-    '''
+    """
 
-    backend_data = list_servers(backend=backend, socket=socket).replace('\n', ' ').split(' ')
+    backend_data = (
+        list_servers(backend=backend, socket=socket).replace("\n", " ").split(" ")
+    )
     result = {}
 
     # Convert given string to Integer
@@ -137,7 +147,7 @@ def get_backend(backend, socket=DEFAULT_SOCKET_URL):
     for data in backend_data:
         # Check if field or server name
         if ":" in data:
-            active_field = data.replace(':', '').lower()
+            active_field = data.replace(":", "").lower()
             continue
         elif active_field.lower() == FIELD_NODE_NAME:
             active_server = data
@@ -156,7 +166,7 @@ def get_backend(backend, socket=DEFAULT_SOCKET_URL):
 
 
 def enable_server(name, backend, socket=DEFAULT_SOCKET_URL):
-    '''
+    """
     Enable Server in haproxy
 
     name
@@ -173,10 +183,10 @@ def enable_server(name, backend, socket=DEFAULT_SOCKET_URL):
     .. code-block:: bash
 
         salt '*' haproxy.enable_server web1.example.com www
-    '''
+    """
 
-    if backend == '*':
-        backends = show_backends(socket=socket).split('\n')
+    if backend == "*":
+        backends = show_backends(socket=socket).split("\n")
     else:
         backends = [backend]
 
@@ -191,7 +201,7 @@ def enable_server(name, backend, socket=DEFAULT_SOCKET_URL):
 
 
 def disable_server(name, backend, socket=DEFAULT_SOCKET_URL):
-    '''
+    """
     Disable server in haproxy.
 
     name
@@ -208,10 +218,10 @@ def disable_server(name, backend, socket=DEFAULT_SOCKET_URL):
     .. code-block:: bash
 
         salt '*' haproxy.disable_server db1.example.com mysql
-    '''
+    """
 
-    if backend == '*':
-        backends = show_backends(socket=socket).split('\n')
+    if backend == "*":
+        backends = show_backends(socket=socket).split("\n")
     else:
         backends = [backend]
 
@@ -226,7 +236,7 @@ def disable_server(name, backend, socket=DEFAULT_SOCKET_URL):
 
 
 def get_weight(name, backend, socket=DEFAULT_SOCKET_URL):
-    '''
+    """
     Get server weight
 
     name
@@ -243,14 +253,14 @@ def get_weight(name, backend, socket=DEFAULT_SOCKET_URL):
     .. code-block:: bash
 
         salt '*' haproxy.get_weight web1.example.com www
-    '''
+    """
     ha_conn = _get_conn(socket)
     ha_cmd = haproxy.cmds.getWeight(server=name, backend=backend)
     return ha_conn.sendCmd(ha_cmd)
 
 
 def set_weight(name, backend, weight=0, socket=DEFAULT_SOCKET_URL):
-    '''
+    """
     Set server weight
 
     name
@@ -270,7 +280,7 @@ def set_weight(name, backend, weight=0, socket=DEFAULT_SOCKET_URL):
     .. code-block:: bash
 
         salt '*' haproxy.set_weight web1.example.com www 13
-    '''
+    """
     ha_conn = _get_conn(socket)
     ha_cmd = haproxy.cmds.getWeight(server=name, backend=backend, weight=weight)
     ha_conn.sendCmd(ha_cmd)
@@ -278,7 +288,7 @@ def set_weight(name, backend, weight=0, socket=DEFAULT_SOCKET_URL):
 
 
 def set_state(name, backend, state, socket=DEFAULT_SOCKET_URL):
-    '''
+    """
     Force a server's administrative state to a new state. This can be useful to
     disable load balancing and/or any traffic to a server. Setting the state to
     "ready" puts the server in normal mode, and the command is the equivalent of
@@ -306,13 +316,14 @@ def set_state(name, backend, state, socket=DEFAULT_SOCKET_URL):
 
         salt '*' haproxy.set_state my_proxy_server my_backend ready
 
-    '''
+    """
     # Pulling this in from the latest 0.5 release which is not yet in PyPi.
     # https://github.com/neurogeek/haproxyctl
     class setServerState(haproxy.cmds.Cmd):
         """Set server state command."""
+
         cmdTxt = "set server %(backend)s/%(server)s state %(value)s\r\n"
-        p_args = ['backend', 'server', 'value']
+        p_args = ["backend", "server", "value"]
         helpTxt = "Force a server's administrative state to a new state."
 
     ha_conn = _get_conn(socket)
@@ -321,7 +332,7 @@ def set_state(name, backend, state, socket=DEFAULT_SOCKET_URL):
 
 
 def show_frontends(socket=DEFAULT_SOCKET_URL):
-    '''
+    """
     Show HaProxy frontends
 
     socket
@@ -332,14 +343,14 @@ def show_frontends(socket=DEFAULT_SOCKET_URL):
     .. code-block:: bash
 
         salt '*' haproxy.show_frontends
-    '''
+    """
     ha_conn = _get_conn(socket)
     ha_cmd = haproxy.cmds.showFrontends()
     return ha_conn.sendCmd(ha_cmd)
 
 
 def list_frontends(socket=DEFAULT_SOCKET_URL):
-    '''
+    """
 
     List HaProxy frontends
 
@@ -351,12 +362,12 @@ def list_frontends(socket=DEFAULT_SOCKET_URL):
     .. code-block:: bash
 
         salt '*' haproxy.list_frontends
-    '''
-    return show_frontends(socket=socket).split('\n')
+    """
+    return show_frontends(socket=socket).split("\n")
 
 
 def show_backends(socket=DEFAULT_SOCKET_URL):
-    '''
+    """
     Show HaProxy Backends
 
     socket
@@ -367,14 +378,14 @@ def show_backends(socket=DEFAULT_SOCKET_URL):
     .. code-block:: bash
 
         salt '*' haproxy.show_backends
-    '''
+    """
     ha_conn = _get_conn(socket)
     ha_cmd = haproxy.cmds.showBackends()
     return ha_conn.sendCmd(ha_cmd)
 
 
 def list_backends(servers=True, socket=DEFAULT_SOCKET_URL):
-    '''
+    """
 
     List HaProxy Backends
 
@@ -389,9 +400,9 @@ def list_backends(servers=True, socket=DEFAULT_SOCKET_URL):
     .. code-block:: bash
 
         salt '*' haproxy.list_backends
-    '''
+    """
     if not servers:
-        return show_backends(socket=socket).split('\n')
+        return show_backends(socket=socket).split("\n")
     else:
         result = {}
         for backend in list_backends(servers=False, socket=socket):
@@ -400,7 +411,7 @@ def list_backends(servers=True, socket=DEFAULT_SOCKET_URL):
 
 
 def get_sessions(name, backend, socket=DEFAULT_SOCKET_URL):
-    '''
+    """
     .. versionadded:: 2016.11.0
 
     Get number of current sessions on server in backend (scur)
@@ -419,7 +430,8 @@ def get_sessions(name, backend, socket=DEFAULT_SOCKET_URL):
     .. code-block:: bash
 
         salt '*' haproxy.get_sessions web1.example.com www
-    '''
+    """
+
     class getStats(haproxy.cmds.Cmd):
         p_args = ["backend", "server"]
         cmdTxt = "show stat\r\n"
@@ -428,8 +440,8 @@ def get_sessions(name, backend, socket=DEFAULT_SOCKET_URL):
     ha_conn = _get_conn(socket)
     ha_cmd = getStats(server=name, backend=backend)
     result = ha_conn.sendCmd(ha_cmd)
-    for line in result.split('\n'):
+    for line in result.split("\n"):
         if line.startswith(backend):
-            outCols = line.split(',')
+            outCols = line.split(",")
             if outCols[1] == name:
                 return outCols[4]

@@ -1,2 +1,1 @@
-pycryptodome; sys.platform != 'win32'
-pycryptodomex; sys.platform == 'win32'
+pycryptodomex>=3.9.7

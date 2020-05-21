@@ -27,3 +27,5 @@ order_masters: True
 # enable using ssh minions and regular minions
 enable_ssh_minions: True
 ignore_host_keys: True
+
+zmq_filtering: True

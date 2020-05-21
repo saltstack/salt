@@ -1599,7 +1599,7 @@ Changelog for v2015.5.2..v2015.5.3
 
   * b93dc5ef6c Linting!
 
-  * 2dd5904119 Fixes an issue where Pagerduty states/modules couldn't find it's profile in the Pillar
+  * 2dd5904119 Fixes an issue where Pagerduty states/modules couldn't find its profile in the Pillar
 
 * **PR** `#24366`_: (`terminalmage`_) Use yes $'\\n' instead of printf '\\n' for pecl commands
   @ *2015-06-03 21:28:58 UTC*

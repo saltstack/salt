@@ -102,7 +102,7 @@ same way as in the above example, only without a top-level ``grains:`` key:
 Matching Grains in the Top File
 ===============================
 
-With correctly configured grains on the Minion, the :term:`top file` used in
+With correctly configured grains on the Minion, the :term:`top file <Top File>` used in
 Pillar or during Highstate can be made very efficient. For example, consider
 the following configuration:
 
