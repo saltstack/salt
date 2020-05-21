@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-    tests.nts.conftest
-    ~~~~~~~~~~~~~~~~~~
+    tests.pytests.conftest
+    ~~~~~~~~~~~~~~~~~~~~~~
 """
 import pathlib
 
