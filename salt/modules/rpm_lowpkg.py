@@ -727,6 +727,11 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                     "labelCompare function. Not using rpm.labelCompare for "
                     "version comparison."
                 )
+        else:
+            log.warning(
+                "Please install a package that provides rpm.labelCompare for "
+                "more accurate version comparisons."
+            )
         if cmp_func is None and HAS_RPMUTILS:
             try:
                 cmp_func = rpmUtils.miscutils.compareEVR
@@ -735,6 +740,10 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
 
         if cmp_func is None:
             if salt.utils.path.which("rpmdev-vercmp"):
+                log.warning(
+                    "Installing the rpmdevtools package may surface dev tools in production."
+                )
+
                 # rpmdev-vercmp always uses epochs, even when zero
                 def _ensure_epoch(ver):
                     def _prepend(ver):
@@ -773,10 +782,8 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                         result["stdout"],
                     )
             else:
-                # We'll need to fall back to salt.utils.versions.version_cmp()
                 log.warning(
-                    "rpmdevtools is not installed, please install it for "
-                    "more accurate version comparisons"
+                    "Falling back on salt.utils.versions.version_cmp() for version comparisons"
                 )
         else:
             # If one EVR is missing a release but not the other and they
