@@ -105,6 +105,14 @@ Options
 
    Pass a JID to be used instead of generating one.
 
+.. option:: --pre-flight
+
+   Run the ssh_pre_flight script defined in the roster.
+   By default this script will only run if the thin dir
+   does not exist on the target minion. This option will
+   force the script to run regardless of the thin dir
+   existing or not.
+
 Authentication Options
 ----------------------
 

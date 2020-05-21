@@ -4,8 +4,8 @@
 Salt Masterless Quickstart
 ==========================
 
-.. _`Vagrant`: http://www.vagrantup.com/
-.. _`Vagrant salt provisioner`: http://docs.vagrantup.com/v2/provisioning/salt.html
+.. _`Vagrant`: https://www.vagrantup.com/
+.. _`Vagrant salt provisioner`: https://www.vagrantup.com/docs/provisioning/salt.html
 .. _`salt-bootstrap`: https://github.com/saltstack/salt-bootstrap
 
 Running a masterless salt-minion lets you use Salt's configuration management

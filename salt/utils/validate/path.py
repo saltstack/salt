@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
@@ -7,7 +7,7 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~
 
     Several path related validators
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
@@ -15,14 +15,14 @@ import os
 
 
 def is_writeable(path, check_parent=False):
-    '''
+    """
     Check if a given path is writeable by the current user.
 
     :param path: The path to check
     :param check_parent: If the path to check does not exist, check for the
            ability to write to the parent directory instead
     :returns: True or False
-    '''
+    """
 
     if os.access(path, os.F_OK) and os.access(path, os.W_OK):
         # The path exists and is writeable
@@ -51,12 +51,12 @@ def is_writeable(path, check_parent=False):
 
 
 def is_readable(path):
-    '''
+    """
     Check if a given path is readable by the current user.
 
     :param path: The path to check
     :returns: True or False
-    '''
+    """
 
     if os.access(path, os.F_OK) and os.access(path, os.R_OK):
         # The path exists and is readable
@@ -67,11 +67,11 @@ def is_readable(path):
 
 
 def is_executable(path):
-    '''
+    """
     Check if a given path is executable by the current user.
 
     :param path: The path to check
     :returns: True or False
-    '''
+    """
 
     return os.access(path, os.X_OK)

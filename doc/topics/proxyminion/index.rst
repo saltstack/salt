@@ -617,7 +617,7 @@ are interested in.  Here's an example.  Note the function below called ``proxy_f
 It demonstrates how a grains function can take a single argument, which will be
 set to the value of ``__proxy__``.  Dunder variables are not yet injected into Salt processes
 at the time grains are loaded, so this enables us to get a handle to the proxymodule so we
-can cross-call the functions therein used to commmunicate with the controlled device.
+can cross-call the functions therein used to communicate with the controlled device.
 
 Note that as of 2016.3, grains values can also be calculated in a function called ``grains()``
 in the proxymodule itself.  This might be useful if a proxymodule author wants to keep

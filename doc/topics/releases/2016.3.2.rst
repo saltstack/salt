@@ -1338,7 +1338,7 @@ Changelog for v2016.3.1..v2016.3.2
 
       * b7ac6c735a Moved imports to top, out of _get_moto_version function
 
-      * 02f9ba99ba Updated version check. Moved check into it's own function
+      * 02f9ba99ba Updated version check. Moved check into its own function
 
       * d445026c56 Updated test to work with new moto version. Changed strings to unicode
 
