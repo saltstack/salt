@@ -1,5 +1,4 @@
 mock >= 3.0.0
-azure
 # PyTest
 pytest >=4.6.9,<4.7   # PyTest 4.6.x are the last Py2 and Py3 releases
 pytest-salt
