@@ -1107,7 +1107,7 @@ class SSHThinTestCase(TestCase):
             name = thin.tarfile.open().method_calls[idx + 2][1][0]
             self.assertEqual(name, fname)
         thin.tarfile.open().close.assert_called()
-        
+
     def test_get_tops_python(self):
         """
         test get_tops_python
