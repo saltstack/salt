@@ -68,22 +68,9 @@ class PycryptoTestCase(TestCase):
             )
             self.assertNotEqual(ret, expected["hashed"])
 
-        with self.assertRaises(ValueError):
-            salt.utils.pycrypto.gen_hash(
-                crypt_salt="long", password=self.passwd, algorithm="crypt"
-            )
-
-        # This will also try passlib if installed
-        with self.assertRaises(SaltInvocationError):
-            salt.utils.pycrypto.gen_hash(algorithm="garbage")
-
-        # This will not trying passlib
-        with patch("salt.utils.pycrypto.HAS_CRYPT", False):
-            with self.assertRaises(SaltInvocationError):
-                salt.utils.pycrypto.gen_hash(algorithm="garbage")
-
         # Assert it works without arguments passed
         self.assertIsNotNone(salt.utils.pycrypto.gen_hash())
+
         # Assert it works without algorithm passed
         default_algorithm = salt.utils.pycrypto.crypt.methods[0].name.lower()
         expected = self.expecteds[default_algorithm]
@@ -120,18 +107,9 @@ class PycryptoTestCase(TestCase):
             )
             self.assertNotEqual(ret, expected["hashed"])
 
-            with self.assertRaises(ValueError):
-                salt.utils.pycrypto.gen_hash(
-                    crypt_salt=self.invalid_salt,
-                    password=self.passwd,
-                    algorithm=algorithm,
-                )
-
-        with self.assertRaises(SaltInvocationError):
-            salt.utils.pycrypto.gen_hash(algorithm="garbage")
-
         # Assert it works without arguments passed
         self.assertIsNotNone(salt.utils.pycrypto.gen_hash())
+
         # Assert it works without algorithm passed
         default_algorithm = salt.utils.pycrypto.known_methods[0]
         expected = self.expecteds[default_algorithm]
@@ -150,12 +128,41 @@ class PycryptoTestCase(TestCase):
         with self.assertRaises(SaltInvocationError):
             salt.utils.pycrypto.gen_hash()
 
-    def test_gen_hash_bad_algorithm(self):
+    @patch("salt.utils.pycrypto.HAS_CRYPT", True)
+    @patch("salt.utils.pycrypto.methods", {"crypt": None})
+    @patch("salt.utils.pycrypto.HAS_PASSLIB", True)
+    def test_gen_hash_selection(self):
         """
-        test gen_hash with no crypt library available
+        verify the hash backend selection works correctly
         """
-        with self.assertRaises(SaltInvocationError):
-            salt.utils.pycrypto.gen_hash(algorithm="doesntexist")
+        with patch("salt.utils.pycrypto._gen_hash_crypt", autospec=True) as gh_crypt:
+            with patch(
+                "salt.utils.pycrypto._gen_hash_passlib", autospec=True
+            ) as gh_passlib:
+                with self.assertRaises(SaltInvocationError):
+                    salt.utils.pycrypto.gen_hash(algorithm="doesntexist")
+
+                salt.utils.pycrypto.gen_hash(algorithm="crypt")
+                gh_crypt.assert_called_once()
+                gh_passlib.assert_not_called()
+
+                gh_crypt.reset_mock()
+                salt.utils.pycrypto.gen_hash(algorithm="sha512")
+                gh_crypt.assert_not_called()
+                gh_passlib.assert_called_once()
+
+    def test_gen_hash_crypt_warning(self):
+        """
+        Verify that a bad crypt salt triggers a warning
+        """
+        with patch("salt.utils.pycrypto.log", autospec=True) as log:
+            try:
+                salt.utils.pycrypto.gen_hash(
+                    crypt_salt="toolong", password=self.passwd, algorithm="crypt"
+                )
+            except Exception:  # pylint: disable=broad-except
+                pass
+        log.warning.assert_called_with("Hash salt is too long for 'crypt' hash.")
 
     def test_secure_password(self):
         """

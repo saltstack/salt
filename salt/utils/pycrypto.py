@@ -98,7 +98,8 @@ def _gen_hash_passlib(crypt_salt=None, password=None, algorithm=None):
         rounds = int(roundsstr.split("=")[-1])
         kwargs.update({"salt": split_salt, "rounds": rounds})
     else:
-        kwargs.update({"salt": crypt_salt})
+        # relaxed = allow salts that are too long
+        kwargs.update({"salt": crypt_salt, "relaxed": True})
     return ctx.hash(**kwargs)
 
 
@@ -111,14 +112,8 @@ def _gen_hash_crypt(crypt_salt=None, password=None, algorithm=None):
         #  a salt compatible with the specified algorithm.
         crypt_salt = methods[algorithm]
     else:
-        if algorithm == "crypt":
-            if len(crypt_salt) != 2:
-                # excess salt characters would be added to the password, blow up instead
-                raise ValueError(
-                    "Invalid salt for hash, 'crypt' salt must be 2 characters."
-                )
-        else:
-            # all other algorithms need to be specified in the salt
+        if algorithm != "crypt":
+            # all non-crypt algorithms are specified as part of the salt
             crypt_salt = "${}${}".format(methods[algorithm].ident, crypt_salt)
 
     return crypt.crypt(password, crypt_salt)
@@ -135,6 +130,9 @@ def gen_hash(crypt_salt=None, password=None, algorithm=None):
         # prefer the most secure natively supported method
         algorithm = crypt.methods[0].name.lower() if HAS_CRYPT else known_methods[0]
 
+    if algorithm == "crypt" and crypt_salt and len(crypt_salt) != 2:
+        log.warning("Hash salt is too long for 'crypt' hash.")
+
     if HAS_CRYPT and algorithm in methods:
         return _gen_hash_crypt(
             crypt_salt=crypt_salt, password=password, algorithm=algorithm
@@ -146,7 +144,7 @@ def gen_hash(crypt_salt=None, password=None, algorithm=None):
     else:
         raise SaltInvocationError(
             "Cannot hash using '{0}' hash algorithm. Natively supported "
-            "algorithms are: {1}. If passlib is installed ({4}), the supported "
+            "algorithms are: {1}. If passlib is installed ({3}), the supported "
             "algorithms are: {2}.".format(
                 algorithm, list(methods), known_methods, HAS_PASSLIB
             )
