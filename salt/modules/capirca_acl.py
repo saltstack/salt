@@ -413,8 +413,8 @@ def _lookup_element(lst, key):
     for ele in lst:
         if not ele or not isinstance(ele, dict):
             continue
-        if ele.keys()[0] == key:
-            return ele.values()[0]
+        if key in ele:
+            return ele[key]
     return {}
 
 
@@ -462,14 +462,14 @@ def _merge_list_of_dict(first, second, prepend=True):
     merged = []
     appended = []
     for ele in first:
-        if _lookup_element(second, ele.keys()[0]):
+        if _lookup_element(second, next(iter(ele))):
             overlaps.append(ele)
         elif prepend:
             merged.append(ele)
         elif not prepend:
             appended.append(ele)
     for ele in second:
-        ele_key = ele.keys()[0]
+        ele_key = next(iter(ele))
         if _lookup_element(overlaps, ele_key):
             # If there's an overlap, get the value from the first
             # But inserted into the right position
@@ -545,8 +545,7 @@ def _get_policy_object(
     for filter_ in filters:
         if not filter_ or not isinstance(filter_, dict):
             continue  # go to the next filter
-        filter_name = filter_.keys()[0]
-        filter_config = filter_.values()[0]
+        filter_name, filter_config = next(iter(filter_.items()))
         header = capirca.lib.policy.Header()  # same header everywhere
         target_opts = [platform, filter_name]
         filter_options = filter_config.pop("options", None)
@@ -559,8 +558,7 @@ def _get_policy_object(
         filter_terms = []
         for term_ in filter_config.get("terms", []):
             if term_ and isinstance(term_, dict):
-                term_name = term_.keys()[0]
-                term_fields = term_.values()[0]
+                term_name, term_fields = next(iter(term_.items()))
                 term = _get_term_object(
                     filter_name,
                     term_name,

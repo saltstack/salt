@@ -1529,10 +1529,10 @@ def hardlink(
         return _error(ret, msg)
 
     if __opts__["test"]:
-        presult, pcomment, pchanges = _hardlink_check(name, target, force)
-        ret["result"] = presult
-        ret["comment"] = pcomment
-        ret["changes"] = pchanges
+        tresult, tcomment, tchanges = _hardlink_check(name, target, force)
+        ret["result"] = tresult
+        ret["comment"] = tcomment
+        ret["changes"] = tchanges
         return ret
 
     # We use zip_longest here because there's a number of issues in pylint's
@@ -1811,14 +1811,14 @@ def symlink(
             msg += "."
         return _error(ret, msg)
 
-    presult, pcomment, pchanges = _symlink_check(
+    tresult, tcomment, tchanges = _symlink_check(
         name, target, force, user, group, win_owner
     )
 
     if not os.path.isdir(os.path.dirname(name)):
         if makedirs:
             if __opts__["test"]:
-                pcomment += "\n{0} will be created".format(os.path.dirname(name))
+                tcomment += "\n{0} will be created".format(os.path.dirname(name))
             else:
                 try:
                     _makedirs(
@@ -1835,7 +1835,7 @@ def symlink(
                     return _error(ret, "Drive {0} is not mapped".format(exc.message))
         else:
             if __opts__["test"]:
-                pcomment += "\nDirectory {0} for symlink is not present" "".format(
+                tcomment += "\nDirectory {0} for symlink is not present" "".format(
                     os.path.dirname(name)
                 )
             else:
@@ -1847,9 +1847,9 @@ def symlink(
                 )
 
     if __opts__["test"]:
-        ret["result"] = presult
-        ret["comment"] = pcomment
-        ret["changes"] = pchanges
+        ret["result"] = tresult
+        ret["comment"] = tcomment
+        ret["changes"] = tchanges
         return ret
 
     if __salt__["file.is_link"](name):
@@ -2091,7 +2091,7 @@ def tidied(name, age=0, matches=None, rmdirs=False, size=0, **kwargs):
     """
     name = os.path.expanduser(name)
 
-    ret = {"name": name, "changes": {}, "pchanges": {}, "result": True, "comment": ""}
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
     # Check preconditions
     if not os.path.isabs(name):
@@ -3715,7 +3715,7 @@ def directory(
 
     # Check directory?
     if salt.utils.platform.is_windows():
-        presult, pcomment, pchanges = _check_directory_win(
+        tresult, tcomment, tchanges = _check_directory_win(
             name=name,
             win_owner=win_owner,
             win_perms=win_perms,
@@ -3724,7 +3724,7 @@ def directory(
             win_perms_reset=win_perms_reset,
         )
     else:
-        presult, pcomment, pchanges = _check_directory(
+        tresult, tcomment, tchanges = _check_directory(
             name,
             user,
             group,
@@ -3738,14 +3738,14 @@ def directory(
             follow_symlinks,
         )
 
-    if pchanges:
-        ret["changes"].update(pchanges)
+    if tchanges:
+        ret["changes"].update(tchanges)
 
     # Don't run through the reset of the function if there are no changes to be
     # made
     if __opts__["test"] or not ret["changes"]:
-        ret["result"] = presult
-        ret["comment"] = pcomment
+        ret["result"] = tresult
+        ret["comment"] = tcomment
         return ret
 
     if not os.path.isdir(name):
@@ -5327,7 +5327,6 @@ def keyvalue(
     ret = {
         "name": name,
         "changes": {},
-        "pchanges": {},
         "result": None,
         "comment": "",
     }
@@ -5522,10 +5521,10 @@ def keyvalue(
                 # For some reason, giving an actual diff even in test=True mode
                 # will be seen as both a 'changed' and 'unchanged'. this seems to
                 # match the other modules behaviour though
-                ret["pchanges"]["diff"] = "".join(diff)
+                ret["changes"]["diff"] = "".join(diff)
 
                 # add changes to comments for now as well because of how
-                # stateoutputter seems to handle pchanges etc.
+                # stateoutputter seems to handle changes etc.
                 # See: https://github.com/saltstack/salt/issues/40208
                 ret["comment"] += "\nPredicted diff:\n\r\t\t"
                 ret["comment"] += "\r\t\t".join(diff)
@@ -7788,8 +7787,10 @@ def serialize(
                     "name": name,
                     "result": False,
                 }
-
-            with salt.utils.files.fopen(name, "r") as fhr:
+            open_args = "r"
+            if formatter == "plist":
+                open_args += "b"
+            with salt.utils.files.fopen(name, open_args) as fhr:
                 try:
                     existing_data = __serializers__[deserializer_name](
                         fhr, **deserializer_options.get(deserializer_name, {})
@@ -7821,7 +7822,11 @@ def serialize(
         dataset, **serializer_options.get(serializer_name, {})
     )
 
-    contents += "\n"
+    if isinstance(contents, str):
+        contents += "\n"
+    # adding a new line to a binary plist will invalidate it.
+    elif isinstance(contents, bytes) and formatter != "plist":
+        contents += b"\n"
 
     # Make sure that any leading zeros stripped by YAML loader are added back
     mode = salt.utils.files.normalize_mode(mode)
@@ -8321,13 +8326,13 @@ def shortcut(
             msg += "."
         return _error(ret, msg)
 
-    presult, pcomment, pchanges = _shortcut_check(
+    tresult, tcomment, tchanges = _shortcut_check(
         name, target, arguments, working_dir, description, icon_location, force, user
     )
     if __opts__["test"]:
-        ret["result"] = presult
-        ret["comment"] = pcomment
-        ret["changes"] = pchanges
+        ret["result"] = tresult
+        ret["comment"] = tcomment
+        ret["changes"] = tchanges
         return ret
 
     if not os.path.isdir(os.path.dirname(name)):

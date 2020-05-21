@@ -7,14 +7,11 @@ Nox configuration script
 """
 # pylint: disable=resource-leakage,3rd-party-module-not-gated
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import glob
-import json
 import os
-import pprint
 import shutil
 import sys
 import tempfile
@@ -28,10 +25,8 @@ if __name__ == "__main__":
     exit(1)
 # fmt: on
 
-# Import 3rd-party libs
 import nox  # isort:skip
 from nox.command import CommandFailed  # isort:skip
-
 
 IS_PY3 = sys.version_info > (2,)
 
@@ -43,6 +38,7 @@ CI_RUN = (
 )
 PIP_INSTALL_SILENT = CI_RUN is False
 SKIP_REQUIREMENTS_INSTALL = "SKIP_REQUIREMENTS_INSTALL" in os.environ
+EXTRA_REQUIREMENTS_INSTALL = os.environ.get("EXTRA_REQUIREMENTS_INSTALL")
 
 # Global Path Definitions
 REPO_ROOT = os.path.abspath(os.path.dirname(__file__))
@@ -50,7 +46,7 @@ SITECUSTOMIZE_DIR = os.path.join(REPO_ROOT, "tests", "support", "coverage")
 IS_DARWIN = sys.platform.lower().startswith("darwin")
 IS_WINDOWS = sys.platform.lower().startswith("win")
 # Python versions to run against
-_PYTHON_VERSIONS = ("2", "2.7", "3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9")
+_PYTHON_VERSIONS = ("3", "3.5", "3.6", "3.7", "3.8", "3.9")
 
 # Nox options
 #  Reuse existing virtualenvs
@@ -129,30 +125,9 @@ def _get_session_python_site_packages_dir(session):
 
 def _get_pydir(session):
     version_info = _get_session_python_version_info(session)
-    if version_info < (2, 7):
-        session.error("Only Python >= 2.7 is supported")
+    if version_info < (3, 5):
+        session.error("Only Python >= 3.5 is supported")
     return "py{}.{}".format(*version_info)
-
-
-def _get_distro_info(session):
-    try:
-        distro = session._runner._distro
-    except AttributeError:
-        # The distro package doesn't output anything for Windows
-        old_install_only_value = session._runner.global_config.install_only
-        try:
-            # Force install only to be false for the following chunk of code
-            # For additional information as to why see:
-            #   https://github.com/theacodes/nox/pull/181
-            session._runner.global_config.install_only = False
-            session.install("--progress-bar=off", "distro", silent=PIP_INSTALL_SILENT)
-            output = session.run("distro", "-j", silent=True)
-            distro = json.loads(output.strip())
-            session.log("Distro information:\n%s", pprint.pformat(distro))
-            session._runner._distro = distro
-        finally:
-            session._runner.global_config.install_only = old_install_only_value
-    return distro
 
 
 def _install_system_packages(session):
@@ -162,51 +137,25 @@ def _install_system_packages(session):
     on our virtualenvs, we copy the required system python packages into
     the virtualenv
     """
-    system_python_packages = {
-        "__debian_based_distros__": ["/usr/lib/python{py_version}/dist-packages/*apt*"]
-    }
-
-    distro = _get_distro_info(session)
-    if not distro["id"].startswith(("debian", "ubuntu")):
-        # This only applies to debian based distributions
-        return
-
-    system_python_packages["{id}-{version}".format(**distro)] = system_python_packages[
-        "{id}-{version_parts[major]}".format(**distro)
-    ] = system_python_packages["__debian_based_distros__"][:]
-
-    distro_keys = [
-        "{id}".format(**distro),
-        "{id}-{version}".format(**distro),
-        "{id}-{version_parts[major]}".format(**distro),
-    ]
     version_info = _get_session_python_version_info(session)
     py_version_keys = ["{}".format(*version_info), "{}.{}".format(*version_info)]
     session_site_packages_dir = _get_session_python_site_packages_dir(session)
-    for distro_key in distro_keys:
-        if distro_key not in system_python_packages:
+    session_site_packages_dir = os.path.relpath(session_site_packages_dir, REPO_ROOT)
+    for py_version in py_version_keys:
+        dist_packages_path = "/usr/lib/python{}/dist-packages".format(py_version)
+        if not os.path.isdir(dist_packages_path):
             continue
-        patterns = system_python_packages[distro_key]
-        for pattern in patterns:
-            for py_version in py_version_keys:
-                matches = set(glob.glob(pattern.format(py_version=py_version)))
-                if not matches:
-                    continue
-                for match in matches:
-                    src = os.path.realpath(match)
-                    dst = os.path.join(
-                        session_site_packages_dir, os.path.basename(match)
-                    )
-                    if os.path.exists(dst):
-                        session.log(
-                            "Not overwritting already existing %s with %s", dst, src
-                        )
-                        continue
-                    session.log("Copying %s into %s", src, dst)
-                    if os.path.isdir(src):
-                        shutil.copytree(src, dst)
-                    else:
-                        shutil.copyfile(src, dst)
+        for aptpkg in glob.glob(os.path.join(dist_packages_path, "*apt*")):
+            src = os.path.realpath(aptpkg)
+            dst = os.path.join(session_site_packages_dir, os.path.basename(src))
+            if os.path.exists(dst):
+                session.log("Not overwritting already existing %s with %s", dst, src)
+                continue
+            session.log("Copying %s into %s", src, dst)
+            if os.path.isdir(src):
+                shutil.copytree(src, dst)
+            else:
+                shutil.copyfile(src, dst)
 
 
 def _get_pip_requirements_file(session, transport, crypto=None):
@@ -248,41 +197,22 @@ def _get_pip_requirements_file(session, transport, crypto=None):
             return _requirements_file
     else:
         _install_system_packages(session)
-        distro = _get_distro_info(session)
-        distro_keys = [
-            "linux",
-            "{id}".format(**distro),
-            "{id}-{version}".format(**distro),
-            "{id}-{version_parts[major]}".format(**distro),
-        ]
-        for distro_key in distro_keys:
-            if crypto is None:
-                _requirements_file = os.path.join(
-                    "requirements", "static", pydir, "{}.txt".format(distro_key)
-                )
-                if os.path.exists(_requirements_file):
-                    return _requirements_file
-                _requirements_file = os.path.join(
-                    "requirements",
-                    "static",
-                    pydir,
-                    "{}-{}.txt".format(transport, distro_key),
-                )
-                if os.path.exists(_requirements_file):
-                    return _requirements_file
+        if crypto is None:
             _requirements_file = os.path.join(
-                "requirements", "static", pydir, "{}-crypto.txt".format(distro_key),
+                "requirements", "static", pydir, "{}-linux.txt".format(transport)
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
             _requirements_file = os.path.join(
-                "requirements",
-                "static",
-                pydir,
-                "{}-{}-crypto.txt".format(transport, distro_key),
+                "requirements", "static", pydir, "linux.txt"
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
+        _requirements_file = os.path.join(
+            "requirements", "static", pydir, "linux-crypto.txt"
+        )
+        if os.path.exists(_requirements_file):
+            return _requirements_file
 
 
 def _install_requirements(session, transport, *extra_requirements):
@@ -292,10 +222,11 @@ def _install_requirements(session, transport, *extra_requirements):
         )
         return
     # Install requirements
+    requirements_file = _get_pip_requirements_file(session, transport)
     install_command = [
         "--progress-bar=off",
         "-r",
-        _get_pip_requirements_file(session, transport),
+        requirements_file,
     ]
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
@@ -304,6 +235,18 @@ def _install_requirements(session, transport, *extra_requirements):
             "--progress-bar=off",
         ]
         install_command += list(extra_requirements)
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+
+    if EXTRA_REQUIREMENTS_INSTALL:
+        session.log(
+            "Installing the following extra requirements because the EXTRA_REQUIREMENTS_INSTALL environment variable "
+            "was set: %s",
+            EXTRA_REQUIREMENTS_INSTALL,
+        )
+        # We pass --constraint in this step because in case any of these extra dependencies has a requirement
+        # we're already using, we want to maintain the locked version
+        install_command = ["--progress-bar=off", "--constraint", requirements_file]
+        install_command += EXTRA_REQUIREMENTS_INSTALL.split()
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
 
@@ -365,6 +308,8 @@ def _run_with_coverage(session, *test_cmd):
             "--omit=salt/*",
             "--include=tests/*",
         )
+        # Move the coverage DB to artifacts/coverage in order for it to be archived by CI
+        shutil.move(".coverage", os.path.join("artifacts", "coverage", ".coverage"))
 
 
 def _runtests(session, coverage, cmd_args):
@@ -1168,13 +1113,10 @@ def changelog(session, draft):
     """
     Generate salt's changelog
     """
-    requirements_file = "requirements/static/changelog.in"
-    distro_constraints = [
-        "requirements/static/{}/changelog.txt".format(_get_pydir(session))
-    ]
+    requirements_file = os.path.join(
+        "requirements", "static", _get_pydir(session), "changelog.txt"
+    )
     install_command = ["--progress-bar=off", "-r", requirements_file]
-    for distro_constraint in distro_constraints:
-        install_command.extend(["--constraint", distro_constraint])
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     town_cmd = ["towncrier", "--version={}".format(session.posargs[0])]

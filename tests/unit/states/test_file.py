@@ -4,12 +4,14 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
+import plistlib
 import pprint
 import shutil
 from datetime import datetime
 
 import salt.modules.file as filemod
 import salt.serializers.json as jsonserializer
+import salt.serializers.plist as plistserializer
 import salt.serializers.python as pythonserializer
 import salt.serializers.yaml as yamlserializer
 import salt.states.file as filestate
@@ -49,6 +51,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     "yaml.serialize": yamlserializer.serialize,
                     "python.serialize": pythonserializer.serialize,
                     "json.serialize": jsonserializer.serialize,
+                    "plist.serialize": plistserializer.serialize,
                 },
                 "__opts__": {"test": False, "cachedir": ""},
                 "__instance_id__": "",
@@ -84,6 +87,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
             filestate.serialize("/tmp", dataset, formatter="json")
             self.assertEqual(salt.utils.json.loads(returner.returned), dataset)
+
+            filestate.serialize("/tmp", dataset, formatter="plist")
+            self.assertEqual(plistlib.loads(returner.returned), dataset)
 
             filestate.serialize("/tmp", dataset, formatter="python")
             self.assertEqual(returner.returned, pprint.pformat(dataset) + "\n")
@@ -2788,7 +2794,6 @@ class TestFileTidied(TestCase):
                     os.path.join("test", "file3"),
                 ]
             },
-            "pchanges": {},
             "result": True,
             "comment": "Removed 3 files or directories from directory {0}".format(name),
         }
@@ -2820,7 +2825,6 @@ class TestFileTidied(TestCase):
                     os.path.join("test", "test2"),
                 ]
             },
-            "pchanges": {},
             "result": True,
             "comment": "Removed 6 files or directories from directory {0}".format(name),
         }
@@ -2831,7 +2835,6 @@ class TestFileTidied(TestCase):
         exp = {
             "name": "test/",
             "changes": {},
-            "pchanges": {},
             "result": False,
             "comment": "Specified file test/ is not an absolute path",
         }
@@ -2839,7 +2842,6 @@ class TestFileTidied(TestCase):
         exp = {
             "name": "/bad-directory-name/",
             "changes": {},
-            "pchanges": {},
             "result": False,
             "comment": "/bad-directory-name/ does not exist or is not a directory.",
         }
