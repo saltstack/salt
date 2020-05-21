@@ -92,18 +92,14 @@ from xml.etree import ElementTree
 from xml.sax import saxutils
 
 # Import third party libs
-import jinja2
 import jinja2.exceptions
 
 # Import salt libs
 import salt.utils.files
 import salt.utils.json
-import salt.utils.network
 import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.templates
-import salt.utils.validate.net
-import salt.utils.versions
 import salt.utils.xmlutil as xmlutil
 import salt.utils.yaml
 from salt._compat import ipaddress
