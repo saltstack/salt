@@ -344,6 +344,7 @@ class MasterMinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     """
     MasterMinion test class
     """
+
     def setUp(self):
         super(MasterMinionTestCase, self).setUp()
         self.opts = {}

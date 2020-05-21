@@ -894,8 +894,8 @@ class MasterMinion(object):
         )
         self.opts.update(opts)
         self.whitelist = whitelist
-        self.opts['grains'] = {}
-        self.opts['pillar'] = {}
+        self.opts["grains"] = {}
+        self.opts["pillar"] = {}
         self.mk_returners = returners
         self.mk_states = states
         self.mk_rend = rend
