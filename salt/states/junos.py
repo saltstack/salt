@@ -195,7 +195,7 @@ def rollback(name, r_id=0, **kwargs):
 
 
 @resultdecorator
-def diff(name, d_id, **kwargs):
+def diff(name, d_id=0, **kwargs):
     """
     .. versionchanged:: Sodium
 

@@ -308,6 +308,8 @@ def _run_with_coverage(session, *test_cmd):
             "--omit=salt/*",
             "--include=tests/*",
         )
+        # Move the coverage DB to artifacts/coverage in order for it to be archived by CI
+        shutil.move(".coverage", os.path.join("artifacts", "coverage", ".coverage"))
 
 
 def _runtests(session, coverage, cmd_args):
