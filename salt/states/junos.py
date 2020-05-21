@@ -161,7 +161,7 @@ def commit(name, **kwargs):
 
 
 @resultdecorator
-def rollback(name, id, **kwargs):
+def rollback(name, id=0, **kwargs):
     """
     Rollbacks the committed changes.
 

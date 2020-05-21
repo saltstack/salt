@@ -221,7 +221,7 @@ def rpc(cmd=None, dest=None, **kwargs):
 
     format_ = op.pop("format", "xml")
     # when called from state, dest becomes part of op via __pub_arg
-    dest = dest or op.pop("dest", None)
+    dest = op.pop("dest", None) or dest
 
     if cmd in ["get-config", "get_config"]:
         filter_reply = None
