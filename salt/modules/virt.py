@@ -691,6 +691,13 @@ def _gen_xml(
 
     context["boot"] = boot if boot else {}
 
+    # if efi parameter is specified, prepare os_attrib
+    efi_value = context["boot"].get("efi", None) if boot else None
+    if efi_value is True:
+        context["boot"]["os_attrib"] = "firmware='efi'"
+    elif efi_value is not None and type(efi_value) != bool:
+        raise SaltInvocationError("Invalid efi value")
+
     if os_type == "xen":
         # Compute the Xen PV boot method
         if __grains__["os_family"] == "Suse":
@@ -1514,17 +1521,24 @@ def _handle_remote_boot_params(orig_boot):
     new_boot = orig_boot.copy()
     keys = orig_boot.keys()
     cases = [
+        {"efi"},
+        {"kernel", "initrd", "efi"},
+        {"kernel", "initrd", "cmdline", "efi"},
         {"loader", "nvram"},
         {"kernel", "initrd"},
         {"kernel", "initrd", "cmdline"},
-        {"loader", "nvram", "kernel", "initrd"},
-        {"loader", "nvram", "kernel", "initrd", "cmdline"},
+        {"kernel", "initrd", "loader", "nvram"},
+        {"kernel", "initrd", "cmdline", "loader", "nvram"},
     ]
 
     try:
         if keys in cases:
             for key in keys:
-                if orig_boot.get(key) is not None and check_remote(orig_boot.get(key)):
+                if key == "efi" and type(orig_boot.get(key)) == bool:
+                    new_boot[key] = orig_boot.get(key)
+                elif orig_boot.get(key) is not None and check_remote(
+                    orig_boot.get(key)
+                ):
                     if saltinst_dir is None:
                         os.makedirs(CACHE_DIR)
                         saltinst_dir = CACHE_DIR
@@ -1532,10 +1546,39 @@ def _handle_remote_boot_params(orig_boot):
             return new_boot
         else:
             raise SaltInvocationError(
-                "Invalid boot parameters, (kernel, initrd) or/and (loader, nvram) must be both present"
+                "Invalid boot parameters,It has to follow this combination: [(kernel, initrd) or/and cmdline] or/and [(loader, nvram) or efi]"
             )
     except Exception as err:  # pylint: disable=broad-except
         raise err
+
+
+def _handle_efi_param(boot, desc):
+    """
+       Checks if boot parameter contains efi boolean value, if so, handles the firmware attribute.
+       :param boot: The boot parameters passed to the init or update functions.
+       :param desc: The XML description of that domain.
+       :return: A boolean value.
+    """
+    efi_value = boot.get("efi", None) if boot else None
+    parent_tag = desc.find("os")
+    os_attrib = parent_tag.attrib
+
+    # newly defined vm without running, loader tag might not be filled yet
+    if efi_value is False and os_attrib != {}:
+        parent_tag.attrib.pop("firmware", None)
+        return True
+
+    # check the case that loader tag might be present. This happens after the vm ran
+    elif type(efi_value) == bool and os_attrib == {}:
+        if efi_value is True and parent_tag.find("loader") is None:
+            parent_tag.set("firmware", "efi")
+        if efi_value is False and parent_tag.find("loader") is not None:
+            parent_tag.remove(parent_tag.find("loader"))
+            parent_tag.remove(parent_tag.find("nvram"))
+        return True
+    elif type(efi_value) != bool:
+        raise SaltInvocationError("Invalid efi value")
+    return False
 
 
 def init(
@@ -1627,7 +1670,8 @@ def init(
         This is an optional parameter, all of the keys are optional within the dictionary. The structure of
         the dictionary is documented in :ref:`init-boot-def`. If a remote path is provided to kernel or initrd,
         salt will handle the downloading of the specified remote file and modify the XML accordingly.
-        To boot VM with UEFI, specify loader and nvram path.
+        To boot VM with UEFI, specify loader and nvram path or specify 'efi': ``True`` if your libvirtd version
+        is >= 5.2.0 and QEMU >= 3.0.0.
 
         .. versionadded:: 3000
 
@@ -1665,6 +1709,11 @@ def init(
         The path to the UEFI data template. The file will be copied when creating the virtual machine.
 
         .. versionadded:: sodium
+
+    efi
+       A boolean value.
+
+       .. versionadded:: sodium
 
     .. _init-nic-def:
 
@@ -2218,6 +2267,8 @@ def update(
         To update any boot parameters, specify the new path for each. To remove any boot parameters,
         pass a None object, for instance: 'kernel': ``None``.
 
+        To switch back to BIOS boot, specify ('loader': ``None`` and 'nvram': ``None``)  or 'efi': ``False``
+
         .. versionadded:: 3000
 
     :param test: run in dry-run mode if set to True
@@ -2267,6 +2318,8 @@ def update(
 
     if boot is not None:
         boot = _handle_remote_boot_params(boot)
+        if boot.get("efi", None) is not None:
+            need_update = _handle_efi_param(boot, desc)
 
     new_desc = ElementTree.fromstring(
         _gen_xml(
@@ -2296,7 +2349,6 @@ def update(
     boot_tags = ["kernel", "initrd", "cmdline", "loader", "nvram"]
     parent_tag = desc.find("os")
 
-    # We need to search for each possible subelement, and update it.
     for tag in boot_tags:
         # The Existing Tag...
         found_tag = parent_tag.find(tag)
@@ -2306,11 +2358,10 @@ def update(
 
         # Existing tag is found and values don't match
         if found_tag is not None and found_tag.text != boot_tag_value:
-
             # If the existing tag is found, but the new value is None
             # remove it. If the existing tag is found, and the new value
             # doesn't match update it. In either case, mark for update.
-            if boot_tag_value is None and boot is not None and parent_tag is not None:
+            if boot_tag_value == "None" and boot is not None and parent_tag is not None:
                 parent_tag.remove(found_tag)
             else:
                 found_tag.text = boot_tag_value
