@@ -578,6 +578,34 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 if os.path.exists(managed_files[typ]):
                     os.remove(managed_files[typ])
 
+    def test_onchanges_any_recursive_error_issues_50811(self):
+        """
+        test that onchanges_any does not causes a recursive error
+        """
+        state_name = "onchanges_any_recursive_error"
+        state_filename = state_name + ".sls"
+        state_file = os.path.join(RUNTIME_VARS.BASE_FILES, state_filename)
+
+        try:
+            with salt.utils.files.fopen(state_file, "w") as fd_:
+                fd_.write(
+                    textwrap.dedent(
+                        """\
+                    command-test:
+                      cmd.run:
+                          - name: ls
+                          - onchanges_any:
+                            - file: /tmp/an-unfollowed-file
+                    """
+                    )
+                )
+
+            ret = self.run_function("state.sls", [state_name])
+            self.assertSaltFalseReturn(ret)
+        finally:
+            if os.path.exists(state_file):
+                os.remove(state_file)
+
     def test_prerequired_issues_55775(self):
         """
         Test that __prereqired__ is filter from file.replace
