@@ -496,9 +496,9 @@ def clear_password(name, runas=None):
 
 
 def _get_server_version(runas=None):
-    '''
+    """
     Uses rabbitmqctl to get the version of the running rabbitmq server
-    '''
+    """
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
 
@@ -515,13 +515,13 @@ def _get_server_version(runas=None):
         server_version = re.search(r"RabbitMQ version:\s*(.+)", res)
 
         if server_version is None:
-            server_version = re.search(r'^RabbitMQ version: (.*)$', res, re.M)
+            server_version = re.search(r"^RabbitMQ version: (.*)$", res, re.M)
 
         if server_version is None:
             raise ValueError
 
-        server_version = server_version.group(1).split('-')[0]
-        version = [int(i) for i in server_version.split('.')]
+        server_version = server_version.group(1).split("-")[0]
+        version = [int(i) for i in server_version.split(".")]
 
         if len(version) < 3:
             raise ValueError
@@ -532,7 +532,7 @@ def _get_server_version(runas=None):
 
 
 def check_password(name, password, runas=None):
-    '''
+    """
     .. versionadded:: 2016.3.0
 
     Checks if a user's password is valid.
@@ -542,7 +542,7 @@ def check_password(name, password, runas=None):
     .. code-block:: bash
 
         salt '*' rabbitmq.check_password rabbit_user password
-    '''
+    """
     version = _get_server_version(runas=runas)
 
     # rabbitmq introduced a native api to check a username and password in version 3.5.7.
