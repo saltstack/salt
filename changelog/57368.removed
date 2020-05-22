@@ -1,0 +1,1 @@
+Removed deprecated misc. internal Salt functions. See https://github.com/saltstack/salt/issues/57368 for more info.

@@ -10,6 +10,7 @@ from tests.support.helpers import slowTest
 
 
 @pytest.mark.windows_whitelisted
+@pytest.mark.usefixtures("salt_sub_minion")
 class ManageTest(ShellCase):
     """
     Test the manage runner

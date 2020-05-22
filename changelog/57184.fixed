@@ -1,0 +1,2 @@
+Fix UnicodeDecodeError when apply file.managed with binary contents in
+test mode.

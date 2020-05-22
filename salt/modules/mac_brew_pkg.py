@@ -304,7 +304,6 @@ def remove(name=None, pkgs=None, **kwargs):
         salt '*' pkg.remove pkgs='["foo", "bar"]'
     """
     try:
-        name, pkgs = _fix_cask_namespace(name, pkgs)
         pkg_params = __salt__["pkg_resource.parse_targets"](name, pkgs, **kwargs)[0]
     except MinionError as exc:
         raise CommandExecutionError(exc)
@@ -441,7 +440,6 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
         salt '*' pkg.install 'package package package'
     """
     try:
-        name, pkgs = _fix_cask_namespace(name, pkgs)
         pkg_params, pkg_type = __salt__["pkg_resource.parse_targets"](
             name, pkgs, kwargs.get("sources", {})
         )
