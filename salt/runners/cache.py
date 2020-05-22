@@ -32,7 +32,7 @@ __func_alias__ = {
 }
 
 
-def grains(tgt=None, tgt_type="glob", **kwargs):
+def grains(tgt, tgt_type="glob", **kwargs):
     """
     .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
@@ -58,16 +58,6 @@ def grains(tgt=None, tgt_type="glob", **kwargs):
 
         salt-run cache.grains '*'
     """
-    if tgt is None:
-        # Change ``tgt=None`` to ``tgt`` (mandatory kwarg) in Salt 3001.
-        # This behavior was changed in PR #45588 to fix Issue #45489.
-        salt.utils.versions.warn_until(
-            "3001",
-            "Detected missing 'tgt' option. Cached grains will not be returned "
-            "without a specified 'tgt'. This option will be required starting in "
-            "Salt 3001 and this warning will be removed.",
-        )
-
     pillar_util = salt.utils.master.MasterPillarUtil(
         tgt, tgt_type, use_cached_grains=True, grains_fallback=False, opts=__opts__
     )
