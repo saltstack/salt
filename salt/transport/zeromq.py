@@ -558,17 +558,6 @@ class AsyncZeroMQPubChannel(
         if hasattr(self, "context") and self.context.closed is False:
             self.context.term()
 
-    def destroy(self):
-        # Bacwards compat
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "Calling {0}.destroy() is deprecated. Please call {0}.close() instead.".format(
-                self.__class__.__name__
-            ),
-            stacklevel=3,
-        )
-        self.close()
-
     # pylint: disable=W1701
     def __del__(self):
         self.close()
@@ -694,6 +683,13 @@ class ZeroMQReqServerChannel(
         self.clients.setsockopt(zmq.BACKLOG, self.opts.get("zmq_backlog", 1000))
         self._start_zmq_monitor()
         self.workers = self.context.socket(zmq.DEALER)
+
+        if self.opts["mworker_queue_niceness"] and not salt.utils.platform.is_windows():
+            log.info(
+                "setting mworker_queue niceness to %d",
+                self.opts["mworker_queue_niceness"],
+            )
+            os.nice(self.opts["mworker_queue_niceness"])
 
         if self.opts.get("ipc_mode", "") == "tcp":
             self.w_uri = "tcp://127.0.0.1:{0}".format(
@@ -952,6 +948,14 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         Bind to the interface specified in the configuration file
         """
         salt.utils.process.appendproctitle(self.__class__.__name__)
+
+        if self.opts["pub_server_niceness"] and not salt.utils.platform.is_windows():
+            log.info(
+                "setting Publish daemon niceness to %i",
+                self.opts["pub_server_niceness"],
+            )
+            os.nice(self.opts["pub_server_niceness"])
+
         if log_queue:
             salt.log.setup.set_multiprocessing_logging_queue(log_queue)
             salt.log.setup.setup_multiprocessing_logging(log_queue)
@@ -1191,17 +1195,6 @@ class AsyncReqMessageClientPool(salt.transport.MessageClientPool):
         message_clients = sorted(self.message_clients, key=lambda x: len(x.send_queue))
         return message_clients[0].send(*args, **kwargs)
 
-    def destroy(self):
-        # Bacwards compat
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "Calling {0}.destroy() is deprecated. Please call {0}.close() instead.".format(
-                self.__class__.__name__
-            ),
-            stacklevel=3,
-        )
-        self.close()
-
     # pylint: disable=W1701
     def __del__(self):
         self.close()
@@ -1276,17 +1269,6 @@ class AsyncReqMessageClient(object):
                 self.stream = None
             if self.context.closed is False:
                 self.context.term()
-
-    def destroy(self):
-        # Bacwards compat
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "Calling {0}.destroy() is deprecated. Please call {0}.close() instead.".format(
-                self.__class__.__name__
-            ),
-            stacklevel=3,
-        )
-        self.close()
 
     # pylint: disable=W1701
     def __del__(self):

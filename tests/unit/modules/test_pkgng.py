@@ -252,3 +252,29 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
                     output_loglevel="trace",
                     python_shell=False,
                 )
+
+    def test_stats_with_local(self):
+        """
+        Test pkg.stats for local packages
+        """
+        pkg_cmd = MagicMock(return_value="")
+
+        with patch.dict(pkgng.__salt__, {"cmd.run": pkg_cmd}):
+            result = pkgng.stats(local=True)
+            self.assertEqual(result, [])
+            pkg_cmd.assert_called_with(
+                ["pkg", "stats", "-l"], output_loglevel="trace", python_shell=False,
+            )
+
+    def test_stats_with_remote(self):
+        """
+        Test pkg.stats for remote packages
+        """
+        pkg_cmd = MagicMock(return_value="")
+
+        with patch.dict(pkgng.__salt__, {"cmd.run": pkg_cmd}):
+            result = pkgng.stats(remote=True)
+            self.assertEqual(result, [])
+            pkg_cmd.assert_called_with(
+                ["pkg", "stats", "-r"], output_loglevel="trace", python_shell=False,
+            )
