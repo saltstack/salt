@@ -558,17 +558,6 @@ class AsyncZeroMQPubChannel(
         if hasattr(self, "context") and self.context.closed is False:
             self.context.term()
 
-    def destroy(self):
-        # Bacwards compat
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "Calling {0}.destroy() is deprecated. Please call {0}.close() instead.".format(
-                self.__class__.__name__
-            ),
-            stacklevel=3,
-        )
-        self.close()
-
     # pylint: disable=W1701
     def __del__(self):
         self.close()
@@ -1191,17 +1180,6 @@ class AsyncReqMessageClientPool(salt.transport.MessageClientPool):
         message_clients = sorted(self.message_clients, key=lambda x: len(x.send_queue))
         return message_clients[0].send(*args, **kwargs)
 
-    def destroy(self):
-        # Bacwards compat
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "Calling {0}.destroy() is deprecated. Please call {0}.close() instead.".format(
-                self.__class__.__name__
-            ),
-            stacklevel=3,
-        )
-        self.close()
-
     # pylint: disable=W1701
     def __del__(self):
         self.close()
@@ -1276,17 +1254,6 @@ class AsyncReqMessageClient(object):
                 self.stream = None
             if self.context.closed is False:
                 self.context.term()
-
-    def destroy(self):
-        # Bacwards compat
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "Calling {0}.destroy() is deprecated. Please call {0}.close() instead.".format(
-                self.__class__.__name__
-            ),
-            stacklevel=3,
-        )
-        self.close()
 
     # pylint: disable=W1701
     def __del__(self):

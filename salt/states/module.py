@@ -342,7 +342,7 @@ def wait(name, **kwargs):
 watch = salt.utils.functools.alias_function(wait, "watch")
 
 
-@with_deprecated(globals(), "Sodium", policy=with_deprecated.OPT_IN)
+@with_deprecated(globals(), "Phosphorus", policy=with_deprecated.OPT_IN)
 def run(**kwargs):
     """
     Run a single module function or a range of module functions in a batch.
